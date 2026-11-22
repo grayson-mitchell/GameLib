@@ -264,7 +264,8 @@
       // on near-white -- and it is live in the picker (`themeLabels.ts:43`).
       //
       // Root cause is structural, and is why no earlier gate could see it:
-      // `nord-light` is the ONLY light theme in themes.scss. Everywhere else
+      // `nord-light` was the ONLY light theme in themes.scss (it and its
+      // verbatim copy `gamelib-light` are now the two). Everywhere else
       // the navbar and the body are both dark, so one navbar-surface token
       // coincidentally serves this body-surface element too. `#d0ddff` is
       // CORRECT where it was chosen -- `NavItem` paints it on
@@ -288,6 +289,11 @@
       // because source gates and contrast math both said "correct" while a
       // live WKWebView sweep did not. A live look at `nord-light` is owed.
       body.nord-light & {
+        color: var(--accent);
+      }
+      // gamelib-light is the pre-261122-qwk nord-light, so it carries the same
+      // override with the same value.
+      body.gamelib-light & {
         color: var(--accent);
       }
       // HANDOFF FROM 34.10-18 (34.10-18-SUMMARY.md "Findings"): this line

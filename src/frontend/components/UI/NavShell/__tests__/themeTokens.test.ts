@@ -50,7 +50,7 @@ const NAV_SHELL_SCSS = 'src/frontend/components/UI/NavShell/index.scss'
 const HEADER_CSS = 'src/frontend/components/UI/Header/index.css'
 
 /**
- * The 10 real theme root selectors in themes.scss. Quick task 261004-bz3
+ * The 11 real theme root selectors in themes.scss. Quick task 261004-bz3
  * trimmed the theme set from 14 selectable names to 10, deleting four
  * near-duplicate/recoloured variants that were reachable through
  * `defaultThemes` and three CSS-only blocks that were never reachable
@@ -61,7 +61,8 @@ const HEADER_CSS = 'src/frontend/components/UI/Header/index.css'
  * picked for a comma-join quirk. Verified by hand against
  * `grep -n '^body\.' src/frontend/themes.scss`:
  *   midnightMirage; cyberSpaceOasis; gruvbox_dark; high-contrast; dracula;
- *   nord-light; nord-dark; marine; zombie; sweet.
+ *   nord-light; gamelib-light; nord-dark; marine; zombie; sweet.
+ * (gamelib-light, quick 261122-qwk, is the pre-change nord-light kept verbatim.)
  * cssBlock() throws if any of these no longer resolves to a real block, so a
  * renamed/removed theme fails loudly instead of a count silently drifting.
  *
@@ -76,6 +77,7 @@ const themeSelectors = [
   'body.high-contrast',
   'body.dracula',
   'body.nord-light',
+  'body.gamelib-light',
   'body.nord-dark',
   'body.marine',
   'body.zombie',
@@ -765,7 +767,7 @@ describe('FocusRowStrip FOCUS ROW divider labels are >= 4.5:1 on the tier-2 pane
       (t) =>
         dividerColourDecl(filterFocusRowScss, t) !== 'var(--text-secondary)'
     )
-    expect(overridden).toEqual(['dracula', 'nord-light'])
+    expect(overridden).toEqual(['dracula', 'nord-light', 'gamelib-light'])
     expect(panelDecls).toEqual(['var(--navbar-background)'])
   })
 
@@ -1226,7 +1228,7 @@ describe('Library sign-in row text contrast in every theme (F-49-R1-6)', () => {
           expiredTriangleColourDecl(noticeScss, t) !==
           SIGN_IN_TRIANGLE_BASE_COLOUR
       )
-    expect(overridden).toEqual(['nord-light'])
+    expect(overridden).toEqual(['nord-light', 'gamelib-light'])
   })
 
   it.each(themeSelectors)(
@@ -2745,7 +2747,7 @@ describe('Button .is-link / .is-text families: render-site census and contrast i
 
   it('non-vacuity: global tokens and every theme class resolved', () => {
     expect(globals.size).toBeGreaterThan(0)
-    expect(themeClasses).toHaveLength(10)
+    expect(themeClasses).toHaveLength(11)
   })
 
   // --- Task 2 (261015-7tt): MainButton dropdown .is-link pair -----------
@@ -3035,8 +3037,8 @@ describe('Button .is-link / .is-text families: render-site census and contrast i
     expect(isTextHoverThemeOverrides.length).toBeGreaterThan(0)
   })
 
-  it('pure .is-text HOVER fix (nord-light, nord-dark): load-bearing, cannot reach disabled, cannot reach an excluded sibling (.is-link)', () => {
-    for (const theme of ['nord-light', 'nord-dark']) {
+  it('pure .is-text HOVER fix (nord-light, gamelib-light, nord-dark): load-bearing, cannot reach disabled, cannot reach an excluded sibling (.is-link)', () => {
+    for (const theme of ['nord-light', 'gamelib-light', 'nord-dark']) {
       const override = isTextHoverThemeOverrides.find(
         (rule) =>
           rule.selector === `body.${theme} &:not(.is-link):not(:disabled)`
@@ -3057,15 +3059,20 @@ describe('Button .is-link / .is-text families: render-site census and contrast i
         ''
       )
       .replace(
+        /body\.gamelib-light &:not\(\.is-link\):not\(:disabled\) \{[^}]*\}/,
+        ''
+      )
+      .replace(
         /body\.nord-dark &:not\(\.is-link\):not\(:disabled\) \{[^}]*\}/,
         ''
       )
     expect(nestedRules(withoutOverrides)).toHaveLength(0)
     const preFixRatios: Record<string, number> = {
       'nord-light': 3.356770572062584,
+      'gamelib-light': 3.356770572062584,
       'nord-dark': 4.41083696523498
     }
-    for (const theme of ['nord-light', 'nord-dark']) {
+    for (const theme of ['nord-light', 'gamelib-light', 'nord-dark']) {
       const scope = themeTokens(themesScss, `body.${theme}`)
       const preFixFg = resolveValue(
         applyTextColourDecl(isTextBlock, theme),
@@ -3085,9 +3092,9 @@ describe('Button .is-link / .is-text families: render-site census and contrast i
   })
 
   it('pure .is-text HOVER fix does not regress any other theme: no other theme carries a hover override here', () => {
-    expect(isTextHoverThemeOverrides).toHaveLength(2)
+    expect(isTextHoverThemeOverrides).toHaveLength(3)
     for (const theme of themeClasses.filter(
-      (t) => t !== 'nord-light' && t !== 'nord-dark'
+      (t) => t !== 'nord-light' && t !== 'gamelib-light' && t !== 'nord-dark'
     )) {
       expect(isTextHoverForeground(theme)).toBe(
         applyTextColourDecl(isTextBlock, theme)

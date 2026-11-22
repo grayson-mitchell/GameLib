@@ -72,6 +72,7 @@ const REAL_THEME_BLOCK_PATTERNS = [
   /^body\.high-contrast\s*\{/m,
   /^body\.dracula\s*\{/m,
   /^body\.nord-light\s*\{/m,
+  /^body\.gamelib-light\s*\{/m,
   /^body\.nord-dark\s*\{/m,
   /^body\.marine\s*\{/m,
   /^body\.zombie\s*\{/m,

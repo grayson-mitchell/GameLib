@@ -44,7 +44,7 @@ import { createTheme, Theme } from '@mui/material/styles'
  * `cyberSpaceOasis` and `gruvbox_dark` define it (still three, now of 10
  * themes rather than of 14) -- the fallback covers every other theme.
  *
- * Why no `palette.mode`: `nord-light` is a light theme; the rest are dark.
+ * Why no `palette.mode`: `nord-light` and `gamelib-light` are light themes; the rest are dark.
  * A single hard-coded mode would be wrong for at least one theme, and MUI's
  * mode switch also changes unrelated defaults beyond these two keys.
  */

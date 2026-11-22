@@ -43,6 +43,7 @@ const expectedLabels: Record<string, string> = {
   dracula: 'Dracula',
   marine: 'Marine',
   zombie: 'Zombie',
+  'gamelib-light': 'GameLib Light',
   'nord-light': 'Nord Light',
   'nord-dark': 'Nord Dark',
   gruvbox_dark: 'Gruvbox Dark',
@@ -50,11 +51,11 @@ const expectedLabels: Record<string, string> = {
 }
 
 describe('resolveThemeLabel', () => {
-  it('covers exactly the 10 known theme keys (guards against silent drift from defaultThemes)', () => {
+  it('covers exactly the 11 known theme keys (guards against silent drift from defaultThemes)', () => {
     expect(Object.keys(defaultThemes).sort()).toEqual(
       Object.keys(expectedLabels).sort()
     )
-    expect(Object.keys(defaultThemes)).toHaveLength(10)
+    expect(Object.keys(defaultThemes)).toHaveLength(11)
   })
 
   it.each(Object.entries(expectedLabels))(

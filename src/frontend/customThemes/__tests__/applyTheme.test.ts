@@ -134,8 +134,8 @@ describe('applyTheme', () => {
       expect(themeClassesOn(body)).toHaveLength(1)
     })
 
-    it('covers all 10 built-ins', () => {
-      expect(builtinKeys).toHaveLength(10)
+    it('covers all 11 built-ins', () => {
+      expect(builtinKeys).toHaveLength(11)
     })
   })
 })

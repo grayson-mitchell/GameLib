@@ -104,7 +104,8 @@
   &__row--expired > svg {
     color: var(--status-danger, orange);
 
-    // nord-light is the one theme whose banner is a mid grey (#4c566a), and
+    // nord-light (and gamelib-light, its verbatim copy) are the themes whose
+    // banner is a mid grey (#4c566a), and
     // the global `--status-danger` (#f97881) is 2.82:1 on it against the 3:1
     // non-text floor; the other nine themes read 3.50 (dracula) to 7.25. A
     // lighter tint of the same red clears it at 4.35:1. A theme-scoped
@@ -116,6 +117,11 @@
     // NOT LIVE-VERIFIED: contrast arithmetic; the operator's next nord-light
     // look owes the appearance.
     body.nord-light & {
+      color: #ffb3b8;
+    }
+    // gamelib-light is the pre-261122-qwk nord-light, so it carries the same
+    // override with the same value.
+    body.gamelib-light & {
       color: #ffb3b8;
     }
   }

@@ -9,7 +9,7 @@
  *
  * The surface is the Library tile title-plate token `--gamecard-title-color` instead: it is
  * themeable, the theme editor exposes it, and every built-in theme sets it (light in Nord
- * Light). The token half of this suite measures it in all ten built-ins, over each theme's body,
+ * Light). The token half of this suite measures it in all eleven built-ins, over each theme's body,
  * against the text colours that sit on it (sketch-findings multi-theme survival rule).
  *
  * Source-text only, like storeSearchThumbBox.test.ts: it proves the stylesheets and the tokens
@@ -140,8 +140,8 @@ const isLight = (colour: string): boolean =>
 describe('--gamecard-title-color is a legible row surface in every built-in theme (G-47-12c)', () => {
   const themes = Object.entries(BUILTIN_TOKENS)
 
-  it('covers all ten built-in themes', () => {
-    expect(themes).toHaveLength(10)
+  it('covers all eleven built-in themes', () => {
+    expect(themes).toHaveLength(11)
   })
 
   describe.each(themes)('%s', (_name, tokens) => {
@@ -170,6 +170,8 @@ describe('--gamecard-title-color is a legible row surface in every built-in them
     const light = themes.filter(([, tokens]) =>
       isLight(tokens['--body-background'] ?? '')
     )
-    expect(light.map(([name]) => name)).toContain('nord-light')
+    expect(light.map(([name]) => name)).toEqual(
+      expect.arrayContaining(['nord-light', 'gamelib-light'])
+    )
   })
 })

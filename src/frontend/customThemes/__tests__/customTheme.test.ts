@@ -214,8 +214,8 @@ describe('parseCustomThemes token handling', () => {
     expect(out[0]?.tokens).toEqual({ '--accent': '#112233' })
   })
 
-  it('D-09: nested-override colours of nord-light are not stored as tokens', () => {
-    const seed = BUILTIN_TOKENS['nord-light'] ?? {}
+  it('D-09: nested-override colours of gamelib-light are not stored as tokens', () => {
+    const seed = BUILTIN_TOKENS['gamelib-light'] ?? {}
     const entries = Object.entries(seed)
     // `.runnerIcon` #88c0d0 and the log box #dde1e7 are nested rules: no token carries them
     for (const nested of ['#88c0d0', '#dde1e7']) {
@@ -226,9 +226,9 @@ describe('parseCustomThemes token handling', () => {
       entries.filter(([, v]) => v === '#2e3440').map(([name]) => name)
     ).toEqual(['--neutral-06'])
     // a copy stores exactly the declared seed, nothing selector-derived
-    const copy = makeCopy({ base: 'nord-light', tokens: seed }, id(1), 'c')
+    const copy = makeCopy({ base: 'gamelib-light', tokens: seed }, id(1), 'c')
     expect(Object.keys(copy.tokens).sort()).toEqual(Object.keys(seed).sort())
-    expect(copy.base).toBe('nord-light')
+    expect(copy.base).toBe('gamelib-light')
   })
 })
 

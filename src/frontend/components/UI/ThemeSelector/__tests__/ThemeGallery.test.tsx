@@ -49,15 +49,15 @@ const renderGallery = () =>
 const keys = Object.keys(defaultThemes)
 
 describe('ThemeSelector gallery', () => {
-  it('shows all 10 built-in themes in defaultThemes order inside the Built-in group', () => {
+  it('shows all 11 built-in themes in defaultThemes order inside the Built-in group', () => {
     const { container, getByRole } = renderGallery()
     const group = getByRole('group', { name: 'Built-in' })
     const cards = Array.from(
       group.querySelectorAll<HTMLElement>('[data-theme-key]')
     )
-    expect(cards).toHaveLength(10)
+    expect(cards).toHaveLength(11)
     expect(cards.map((c) => c.dataset.themeKey)).toEqual(keys)
-    expect(container.querySelectorAll('[data-theme-key]')).toHaveLength(10)
+    expect(container.querySelectorAll('[data-theme-key]')).toHaveLength(11)
   })
 
   it('marks only the stored theme as current', () => {

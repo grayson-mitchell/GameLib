@@ -12,6 +12,7 @@ import {
 
 const dracula = BUILTIN_TOKENS['dracula'] ?? {}
 const nordLight = BUILTIN_TOKENS['nord-light'] ?? {}
+const gamelibLight = BUILTIN_TOKENS['gamelib-light'] ?? {}
 
 const without = (
   tokens: Readonly<Record<string, string>>,
@@ -125,7 +126,10 @@ describe('Nord Light base overrides (OD-2)', () => {
       successLabel: { token: '--text-default' },
       primaryLabel: { token: '--text-default' }
     })
-    expect(Object.keys(BASE_PREVIEW_OVERRIDES)).toEqual(['nord-light'])
+    expect(Object.keys(BASE_PREVIEW_OVERRIDES)).toEqual([
+      'gamelib-light',
+      'nord-light'
+    ])
   })
 
   it('draws the success button #81a1c1 whatever --success-button holds', () => {
@@ -153,6 +157,47 @@ describe('Nord Light base overrides (OD-2)', () => {
       fs.readFileSync(path.join(__dirname, '../../themes.scss'), 'utf8')
     )
     const block = cssBlock(scss, 'body.nord-light')
+    // `button.is-primary` also matches inside `.button.is-primary`, so anchor on a line start.
+    const primaryStart = block.search(/^\s*button\.is-primary \{/m)
+    expect(primaryStart).toBeGreaterThanOrEqual(0)
+    const primary = cssBlock(block.slice(primaryStart), 'button.is-primary')
+    const success = cssBlock(block, '.button.is-success')
+    expect(primary).toMatch(/color:\s*var\(--text-default\)\s*;/)
+    expect(success).toMatch(/background-color:\s*#81a1c1\s*;/)
+    expect(success).toMatch(/(^|[\s;])color:\s*var\(--text-default\)\s*;/)
+  })
+})
+
+describe('GameLib Light base overrides (OD-2)', () => {
+  it('names exactly the three base-owned preview colours', () => {
+    expect(BASE_PREVIEW_OVERRIDES['gamelib-light']).toEqual({
+      success: { literal: '#81a1c1' },
+      successLabel: { token: '--text-default' },
+      primaryLabel: { token: '--text-default' }
+    })
+  })
+
+  it('draws the success button #81a1c1 whatever --success-button holds', () => {
+    const palette = thumbnailPalette(
+      { ...gamelibLight, '--success-button': '#ff0000' },
+      'gamelib-light'
+    )
+    expect(palette.success).toBe('#81a1c1')
+    expect(palette.successLabel).toBe(gamelibLight['--text-default'])
+    expect(palette.primaryLabel).toBe(gamelibLight['--text-default'])
+  })
+
+  it('records --success-button as set by the gamelib-light base', () => {
+    expect(BASE_OVERRIDDEN_TOKENS['gamelib-light']).toEqual([
+      '--success-button'
+    ])
+  })
+
+  it('pins the overrides to the gamelib-light rules in themes.scss', () => {
+    const scss = stripSourceComments(
+      fs.readFileSync(path.join(__dirname, '../../themes.scss'), 'utf8')
+    )
+    const block = cssBlock(scss, 'body.gamelib-light')
     // `button.is-primary` also matches inside `.button.is-primary`, so anchor on a line start.
     const primaryStart = block.search(/^\s*button\.is-primary \{/m)
     expect(primaryStart).toBeGreaterThanOrEqual(0)

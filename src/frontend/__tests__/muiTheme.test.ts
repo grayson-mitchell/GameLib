@@ -100,7 +100,7 @@ describe('buildMuiTheme', () => {
     expect(theme.typography.fontFamily).toBe('var(--primary-font-family)')
   })
 
-  it('does not set palette.mode -- nord-light is a light theme; the rest are dark; a fixed mode is wrong for at least one', () => {
+  it('does not set palette.mode -- nord-light and gamelib-light are light themes; the rest are dark; a fixed mode is wrong for at least one', () => {
     const theme = buildMuiTheme(false)
     // MUI's own default when no `mode` is requested is 'light'. Asserting
     // this pins the ABSENCE of an explicit mode choice, not an intentional

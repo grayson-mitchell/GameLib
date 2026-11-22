@@ -5,6 +5,7 @@ import { ThemeThumbnail } from '../ThemeThumbnail'
 
 const dracula = BUILTIN_TOKENS['dracula'] ?? {}
 const nordLight = BUILTIN_TOKENS['nord-light'] ?? {}
+const gamelibLight = BUILTIN_TOKENS['gamelib-light'] ?? {}
 
 describe('ThemeThumbnail', () => {
   it('draws every palette colour as a fill or stroke', () => {
@@ -60,6 +61,19 @@ describe('ThemeThumbnail', () => {
       <ThemeThumbnail
         tokens={{ ...nordLight, '--success-button': '#ff0000' }}
         base="nord-light"
+      />
+    )
+    expect(markup).toMatch(
+      /data-part="button-success"><rect[^>]*fill="#81a1c1"/
+    )
+    expect(markup).not.toContain('#ff0000')
+  })
+
+  it('draws the GameLib Light success button in the base theme colour', () => {
+    const markup = renderToStaticMarkup(
+      <ThemeThumbnail
+        tokens={{ ...gamelibLight, '--success-button': '#ff0000' }}
+        base="gamelib-light"
       />
     )
     expect(markup).toMatch(

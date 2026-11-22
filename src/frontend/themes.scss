@@ -426,6 +426,165 @@ body.dracula {
   }
 }
 
+/* GameLib Light: the pre-261122-qwk nord-light, kept verbatim. customThemes/__tests__/nordLightPalette.test.ts pins it. */
+body.gamelib-light {
+  --background-light: #eceff4;
+  --body-background: var(--background-light);
+  --fav: #a03a45;
+  --accent-overlay: #81a1c1;
+  --navbar-accent: #81a1c1;
+  --background-darker: var(--body-background);
+  --current-background: var(--body-background);
+  --navbar-active-background: #60697a; /* lighter than --navbar-background, so the active row stands out */
+  --gradient-body-background: linear-gradient(
+    90deg,
+    var(--background-light) -32px,
+    var(--body-background) 64px,
+    var(--body-background) 100%
+  );
+  --modal-background: var(--body-background);
+  --modal-border: var(--body-background);
+  --primary: #b48ead;
+  --primary-hover: #a17399;
+  --danger: #bf616a;
+  --text-tertiary: var(--brand-text-01);
+  --osk-background: var(--body-background);
+  --osk-button-background: var(--input-background);
+  --osk-button-border: var(--navbar-background);
+  --action-icon-hover: var(--accent);
+  --action-icon-active: var(--text-default);
+  --navbar-inactive: #ffffff;
+  --navbar-active: #d0ddff;
+  --success-button: #3687a9;
+  --secondary-button: #15a3e0;
+  --icons-background: #6f738f;
+  --tertiary-button: #6f738f;
+
+  --brand-text-01: #e0f9ff;
+
+  --neutral-06: #2e3440;
+  --neutral-03: #429ec5;
+  --accent: #30444a;
+  --background: var(--background-light);
+  --navbar-background: #4c566a;
+  --input-background: #d8dee9;
+  --success: #3e532d;
+  --success-hover: #617550;
+  --text-title: #20242c;
+  --text-default: var(--text-title);
+  --text-secondary: #393b41;
+  --text-hover: #5e81ac;
+  --action-icon: #748aa0;
+  --status-warning: #b86901;
+  --gamecard-title-color: #ccdaf8cc;
+  --install-button: var(--primary);
+  --status-success-hover: #5e81ac;
+  --text-log: var(--status-warning);
+  --tour-popup-background: var(--input-background);
+  --tour-bullet-active: var(--accent);
+  --tour-bullet-inactive: var(--accent-overlay);
+  --tour-popup-title: var(--text-title);
+  --tour-popup-skip-color: var(--text-secondary);
+  --tour-popup-skip-color-hover: var(--text-title);
+
+  .developer,
+  .releaseDate,
+  .timeContainerLabel {
+    color: var(--text-default) !important;
+  }
+
+  .MuiDialog-paper {
+    background-color: var(--background-light);
+    color: var(--text-default);
+  }
+
+  .runnerIcon {
+    background: #88c0d0;
+  }
+
+  .genre {
+    background: #2e3440 !important;
+    color: #e5e9f0 !important;
+  }
+
+  button.is-primary {
+    color: var(--text-default);
+  }
+
+  .button.is-success {
+    color: var(--text-default);
+    background-color: #81a1c1;
+  }
+
+  .playIcon circle {
+    fill: var(--status-success);
+  }
+
+  .downIcon circle {
+    fill: var(--primary-active);
+  }
+
+  .button.is-link {
+    color: var(--navbar-active);
+  }
+
+  .currentDownload {
+    color: var(--navbar-active);
+    --success: var(--status-success);
+  }
+
+  .selectFieldWrapper select > option {
+    background: var(--background);
+  }
+
+  .searchBarInput {
+    &::placeholder {
+      color: var(--text-default);
+      opacity: 1;
+    }
+  }
+
+  .heroicVersion:hover {
+    color: var(--navbar-active);
+  }
+  .contextMenu > .MuiPaper-root {
+    &,
+    & > .MuiMenu-list {
+      background-color: var(--input-background);
+      .MuiMenuItem-root:hover {
+        background-color: var(--navbar-accent);
+      }
+    }
+  }
+  .progressDialog.log-box,
+  .errorDialog.error-box {
+    background-color: #dde1e7;
+  }
+
+  .gameCard > .gameCardStatus {
+    color: var(--navbar-active);
+  }
+
+  .CategoriesManager__Dialog {
+    .MuiDialogContent-root {
+      .Category {
+        &:hover,
+        &:focus-within {
+          background-color: rgba(0, 0, 0, 0.05);
+        }
+      }
+    }
+  }
+
+  .tour-button {
+    --tour-button-color: var(--accent);
+  }
+
+  .alternative > svg {
+    fill: var(--accent) !important;
+  }
+}
+
 body.nord-light {
   --background-light: #eceff4;
   --body-background: var(--background-light);

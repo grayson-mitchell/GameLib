@@ -38,6 +38,7 @@ export const defaultThemes: Record<string, true> = {
   dracula: true,
   marine: true,
   zombie: true,
+  'gamelib-light': true,
   'nord-light': true,
   'nord-dark': true,
   gruvbox_dark: true,
@@ -100,6 +101,8 @@ export function resolveThemeLabel(themeKey: string, t: TFunction): string {
       return t('gamelib:themeSelector.marine', 'Marine')
     case 'zombie':
       return t('gamelib:themeSelector.zombie', 'Zombie')
+    case 'gamelib-light':
+      return t('gamelib:themeSelector.gamelibLight', 'GameLib Light')
     case 'nord-light':
       return t('gamelib:themeSelector.nordLight', 'Nord Light')
     case 'nord-dark':

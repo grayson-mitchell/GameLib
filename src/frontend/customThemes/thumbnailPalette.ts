@@ -65,14 +65,20 @@ type PreviewOverride = { literal: string } | { token: string }
 
 /**
  * Colours the BASE theme's own CSS sets with nested rules that beat the generic chains, so a copy
- * keeps them whatever its stored tokens say (OD-2). Nord Light's `.button.is-success` is a literal
- * `#81a1c1` with `--text-default` text, and its `button.is-primary` text is `--text-default`
- * (themes.scss, `body.nord-light`); a source-text test pins both rules. NavTabs' Nord Light
+ * keeps them whatever its stored tokens say (OD-2). Nord Light's and GameLib Light's (the
+ * pre-261122-qwk Nord Light, kept verbatim) `.button.is-success` is a literal `#81a1c1` with
+ * `--text-default` text, and their `button.is-primary` text is `--text-default` (themes.scss,
+ * `body.nord-light` and `body.gamelib-light`); a source-text test pins both rules per theme. NavTabs' Nord Light
  * selected-tab label is deliberately NOT mirrored here (UI-SPEC OD-2 lists only the two button rules).
  */
 export const BASE_PREVIEW_OVERRIDES: Readonly<
   Record<string, Partial<Record<keyof ThumbnailPalette, PreviewOverride>>>
 > = {
+  'gamelib-light': {
+    success: { literal: '#81a1c1' },
+    successLabel: { token: '--text-default' },
+    primaryLabel: { token: '--text-default' }
+  },
   'nord-light': {
     success: { literal: '#81a1c1' },
     successLabel: { token: '--text-default' },
@@ -83,7 +89,10 @@ export const BASE_PREVIEW_OVERRIDES: Readonly<
 /** Tokens a base theme sets directly, so editing them does not change the real app (Plan 08 chip). */
 export const BASE_OVERRIDDEN_TOKENS: Readonly<
   Record<string, readonly string[]>
-> = { 'nord-light': ['--success-button'] }
+> = {
+  'gamelib-light': ['--success-button'],
+  'nord-light': ['--success-button']
+}
 
 /** Every token any palette chain or base override reads (Plan 08 derives "Not in preview" from it). */
 export const PREVIEW_TOKENS: ReadonlySet<string> = new Set([
