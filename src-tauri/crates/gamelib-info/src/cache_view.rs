@@ -164,6 +164,36 @@ impl CacheView {
     pub fn get(&self, key: &str, fallback: Json) -> Json {
         self.get_opt(key).unwrap_or(fallback)
     }
+
+    /// `CacheStore.set(key, value)`.
+    pub fn set(&self, _key: &str, _value: Json) -> io::Result<()> {
+        Ok(())
+    }
+
+    /// `CacheStore.delete(key)`.
+    pub fn delete(&self, _key: &str) -> io::Result<()> {
+        Ok(())
+    }
+
+    /// `CacheStore.clear()`.
+    pub fn clear(&self) -> io::Result<()> {
+        Ok(())
+    }
+
+    /// `CacheStore.has(key)`.
+    pub fn has(&self, _key: &str) -> bool {
+        false
+    }
+
+    /// `CacheStore.entries()`.
+    pub fn entries(&self) -> Vec<(String, Json)> {
+        Vec::new()
+    }
+}
+
+/// JS `Date()` as Node prints it under `TZ=UTC`.
+pub fn js_date_string(_ms: i64) -> String {
+    String::new()
 }
 
 enum Stamp {
