@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 86-02-PLAN.md
-last_updated: "2026-11-22T09:10:00.942Z"
+stopped_at: Completed 86-03-PLAN.md
+last_updated: "2026-11-22T09:29:06.865Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 86 execution started
-state_head: 80423986eb07b652bf83eda873ee458ecb55247c
+state_head: 9312891531ca57ed90aa90d4884213d11c95733c
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 86 (Pure leaf services) — EXECUTING
-Plan: 3 of 26
+Plan: 4 of 26
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 86 execution started
 Progress: [██████████] 100%
@@ -386,6 +386,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 85 P25 | 44min | 3 tasks | 3 files |
 | Phase 86 P01 | 24min | 3 tasks | 3 files |
 | Phase 86 P02 | 25min | 2 tasks | 1 files |
+| Phase 86 P03 | 20min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -756,6 +757,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: 85-25: push of the post-deletion head pre-authorised by the operator; first push blocked by the open-time check (quick-261122-qwk code), re-proven at D' 6ef75501d, pushed 88b48b70d from a clean worktree; CI green on all three legs
 - [Phase 86]: 86-01: Operator approved Phase 86 slice work on the shipped host; EXTRA_ROWS added by each delete plan (86-11/17/24) in the same commit keeping tsNames; Rust games.recent and overrides ops stay unreachable until 86-09/86-11 forwarding shims (precondition for 86-08/86-10)
 - [Phase 86]: 86-02: item 4's no-prompt claim is scored only in a launch where both the ITAD and SteamGridDB keys were read; it runs first so its byte comparison precedes any cache or recent-games mutation
+- [Phase 86]: CacheView follows TS CacheStore.get: an expired entry kept by the invalidate check (CrossOver index, ITAD caches, umu truthy) is returned and kept, not answered as the fallback
+- [Phase 86]: gamelib-info dispatch_sync blocks on a two-worker multi-thread runtime like gamelib-steamcm, not a current-thread one, because the shell calls in from several worker threads
+- [Phase 86]: Replay pins requests in both directions on nine headers, hides key-like query values and secret headers in its messages, and keeps the first mismatch sticky so finish() reports it
+- [Phase 86]: SVC-01 stays open after 86-03: it is the whole phase's requirement
 
 ### Pending Todos
 
@@ -1025,8 +1030,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T09:09:59.749Z
-Stopped at: Completed 86-02-PLAN.md
+Last session: 2026-11-22T09:29:05.665Z
+Stopped at: Completed 86-03-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

@@ -562,7 +562,7 @@ Plans:
   3. Recorded fixtures exist for each previously untested directory before it is ported
   4. Each ported slice's TypeScript and sidecar registrations are deleted in this phase (the delete gate per slice passes)
 
-**Plans:** 2/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
+**Plans:** 3/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
 
 Plans:
 **Wave 1**
@@ -570,7 +570,7 @@ Plans:
 - [x] 86-02-PLAN.md — The live macOS gate contract 86-HUMAN-UAT.md (four D-14 items, D-15 signed upgrade), authored before coding
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 86-03-PLAN.md — `gamelib-info` (+cli) crate: CacheView over StoreHost, Http trait with pinned Replay, op wrapper with shutdown registrant; CI wiring
+- [x] 86-03-PLAN.md — `gamelib-info` (+cli) crate: CacheView over StoreHost, Http trait with pinned Replay, op wrapper with shutdown registrant; CI wiring
 - [ ] 86-04-PLAN.md — TS oracle recorder and harness; goldens for the zero-test slices (recent games, overrides, anticheat) before any Rust; redaction scan
 - [ ] 86-05-PLAN.md — Delete-gate machinery (infoPortComplete, shim/resolver schedule) proven by deleting images_cache (D-22)
 
