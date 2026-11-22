@@ -5,10 +5,15 @@ area: info
 files:
   - src-tauri/crates/gamelib-info/src/wiki/hltb.rs (get: the title the by-title search and the GOG entry use)
   - src-tauri/crates/gamelib-info/src/wiki/gamesdb.rs (get: the title is unused)
-  - src/backend/wiki_game_info/wiki_game_info.ts (getWikiGameInfo: game.getGameInfo().title)
+  - src-tauri/crates/gamelib-info/src/wiki/mod.rs (WikiArgs.title; lookup: the cache key and search term)
+  - src-tauri/src/info_dispatch.rs (parse_get_wiki_game_info / get_wiki_game_info: the renderer's title arg)
+  - src/frontend/screens/Game/GamePage/index.tsx (getWikiGameInfo callers at :342 and :358)
+  - src/frontend/screens/Settings/sections/WinetricksSettings/index.tsx (getWikiGameInfo caller at :238)
+  - src/backend/info/wiki.ts (getWikiGameInfo shim: game.getGameInfo().title, the non-Steam shortcut flow)
 severity: minor
 platform: any
-ready: code
+ready: blocked
+needs: phase-92
 ---
 
 ## Problem
@@ -28,7 +33,19 @@ The renderer shows the game it is asking about by its library title, and the TS 
 lookup (86-22, 86-23) are meant to pass `gameInfo.title` straight from the library, so no caller is expected to pass
 a different one.
 
-## If it ever matters
+## Resolve in Phase 92
+
+Decided 2026-11-23: fix this in **Phase 92 (GOG, Amazon and sideloaded runners)**, not before. Rust can map
+`appName` + `runner` to a library title only once all five runners that `info_wiki_get` accepts have a Rust
+library owner: Steam (Phase 89), legendary (Phase 91), and gog, nile and sideload (Phase 92). Routing the native
+channel back through the sidecar now would undo 86-22's native routing (D-17) just to redo it in 92.
+
+In Phase 92: drop `title` from `WikiArgs` and from the `getWikiGameInfo` channel's arguments (`info_dispatch.rs`
+and the three renderer call sites), and have `wiki::get` resolve the title from the Rust library by app name and
+runner, as the TS did with `game.getGameInfo()`. The non-Steam shortcut shim in `src/backend/info/wiki.ts` is
+deleted with the shortcut flow in Phase 94 and should use the same resolution.
+
+## Original note: if it ever matters
 
 Have the sidecar (or the Rust library, once it owns game info) resolve the title from the app name and runner
 before the lookup, and ignore the argument's title.
