@@ -482,7 +482,7 @@ Plans:
   4. The legendary store migration is ported only if a supported upgrade path still reaches it (reachability recorded), otherwise it is deleted
   5. The TS write-through mirror's deletion point is named and executed for every family flipped in this phase, and `storeVersioning`, `storeMigrations` and `migration/*` TypeScript are deleted
 
-**Plans:** 21/25 plans executed in 20 waves; planned 2026-11-21
+**Plans:** 22/25 plans executed in 20 waves; planned 2026-11-21
 
 Plans:
 **Wave 1**
@@ -539,7 +539,7 @@ Plans:
 - [x] 85-21-PLAN.md — D-03 deletion after the gate, part 1: migration system (SC4 recorded) and migrationsStore, mirror schedule pinned (D-19); flag, TS owner path and `conf`
 
 **Wave 17** *(blocked on Wave 16 completion)*
-- [ ] 85-22-PLAN.md — D-03 deletion, part 2: the engine, tools, launcher, flow and bridge-runtime side stops carrying the TS versioning engine
+- [x] 85-22-PLAN.md — D-03 deletion, part 2: the engine, tools, launcher, flow and bridge-runtime side stops carrying the TS versioning engine
 
 **Wave 18** *(blocked on Wave 17 completion)*
 - [ ] 85-23-PLAN.md — D-03 deletion, part 3: configs, store managers and StoreRoot stop carrying it; test helper forbidden and deleted
