@@ -34,6 +34,10 @@ good. But an offline start shouldn't wipe a good cache.
 2. **A failed refresh must not overwrite a good cache.** When every fetch fails (offline, ENOTFOUND), keep
    the existing cache and report the refresh as failed. Today the empty result is persisted.
 
+## Cause (found by the Phase 85 verifier, 2026-11-22)
+
+Before the `No cache found` line, `gamelib-launch-1.log` line 21 shows `Updated to a new version, cleaaning up the cache.`, and the v0.10.0 baseline logs the same message (`gamelib-old-after-p5.log` line 126). The renderer's `HeroicVersion` effect calls `clearCache(false, true)` on any version change. That clears the GOG cache, and offline the refetch can't refill it. So this is the app's version-change cleanup, not the Phase 85 store host. Another session's debug record, `.planning/debug/gog-offline-empties-cache.md`, reaches the same cause. The fix is to not clear (or to keep) the library caches on a version change when the refetch can't succeed.
+
 ## Evidence
 
 The gate dir `/tmp/gamelib-gate-2026-11-22T03:38:53Z/` holds `launch1-gog_library.emptied.json` and
