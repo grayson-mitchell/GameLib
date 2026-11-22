@@ -1,7 +1,10 @@
 //! Recent games against the TS goldens (86-04, SC3 and D-18): every case in
 //! `tests/fixtures/golden/recent/cases.json` runs over a copy of its before-state in a FakeHome,
 //! and the bytes of every file it left must equal the TS oracle's `after/` tree, and the sink must
-//! have seen exactly the payloads the TS `recentGamesChanged` push carried.
+//! have seen exactly the payloads the TS `recentGamesChanged` push carried. `sixty-entry-list` is the
+//! one case that is not a TS recording: it is hand-derived from the 50-entry cap (quick 261123-bax,
+//! operator ruling 2026-11-23), because the TS original never trimmed and its oracle was deleted in
+//! 86-24; its note in cases.json says so.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -321,6 +324,125 @@ fn adding_the_same_game_twice_leaves_one_entry_and_identical_bytes() {
     let list = recent::list(&p.ctx).unwrap().to_value();
     assert_eq!(list.as_array().unwrap().len(), 1);
     assert_eq!(list[0]["appName"], "app1");
+}
+
+/// Adds `g0..g{n-1}` through the dispatcher, so the list ends newest first: `g{n-1}..g0`.
+fn seed(ctx: &InfoCtx, n: usize) {
+    for i in 0..n {
+        let add =
+            json!({ "appName": format!("g{i}"), "title": format!("Game {i}"), "runner": "gog" });
+        dispatch_sync("info_recent_add", &[add], ctx).unwrap();
+    }
+}
+
+/// The `appName`s of the stored list, newest first.
+fn names(ctx: &InfoCtx) -> Vec<String> {
+    recent::list(ctx)
+        .unwrap()
+        .to_value()
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| e["appName"].as_str().unwrap().to_string())
+        .collect()
+}
+
+fn add_new(ctx: &InfoCtx) {
+    let add = json!({ "appName": "new", "title": "New", "runner": "gog" });
+    dispatch_sync("info_recent_add", &[add], ctx).unwrap();
+}
+
+/// Quick 261123-bax (trim on add only): 50 plus a new game keeps 50 and drops the oldest, in the
+/// list, in the sink payload and on disk.
+#[test]
+fn a_full_list_plus_a_new_game_keeps_fifty_and_drops_the_oldest() {
+    let p = profile(None);
+    seed(&p.ctx, 50);
+    let mut want: Vec<String> = (0..50).rev().map(|i| format!("g{i}")).collect();
+    assert_eq!(names(&p.ctx), want);
+    add_new(&p.ctx);
+    want.pop();
+    want.insert(0, "new".to_string());
+    assert_eq!(want.len(), 50);
+    assert_eq!(names(&p.ctx), want);
+    assert!(!names(&p.ctx).contains(&"g0".to_string()));
+    let last = p.sink.0.lock().unwrap().last().unwrap().clone();
+    assert_eq!(last, recent::list(&p.ctx).unwrap().to_value());
+    let disk = read_json(&p.user_data.join("store/config.json"));
+    assert_eq!(disk["games"]["recent"].as_array().unwrap().len(), 50);
+    assert_eq!(disk["games"]["recent"][0]["appName"], "new");
+}
+
+/// Quick 261123-bax (trim on add only): re-adding a game already in a full list drops no other entry.
+#[test]
+fn re_adding_a_game_in_a_full_list_drops_no_other_entry() {
+    let p = profile(None);
+    seed(&p.ctx, 50);
+    let mut set_before = names(&p.ctx);
+    set_before.sort();
+
+    let readd = json!({ "appName": "g10", "title": "Game 10", "runner": "gog" });
+    dispatch_sync("info_recent_add", &[readd], &p.ctx).unwrap();
+    let mut want: Vec<String> = vec!["g10".to_string()];
+    want.extend((11..50).rev().map(|i| format!("g{i}")));
+    want.extend((0..10).rev().map(|i| format!("g{i}")));
+    assert_eq!(names(&p.ctx), want);
+    let mut set_after = names(&p.ctx);
+    set_after.sort();
+    assert_eq!(set_after, set_before);
+
+    let readd = json!({ "appName": "g0", "title": "Game 0", "runner": "gog" });
+    dispatch_sync("info_recent_add", &[readd], &p.ctx).unwrap();
+    let now = names(&p.ctx);
+    assert_eq!(now.len(), 50);
+    assert_eq!(now[0], "g0");
+    let mut set_after = now;
+    set_after.sort();
+    assert_eq!(set_after, set_before);
+}
+
+/// Quick 261123-bax (trim on add only): below the cap nothing is dropped.
+#[test]
+fn an_add_below_the_cap_drops_nothing() {
+    let p = profile(None);
+    seed(&p.ctx, 49);
+    add_new(&p.ctx);
+    let now = names(&p.ctx);
+    assert_eq!(now.len(), 50);
+    assert_eq!(now[0], "new");
+    assert_eq!(now[49], "g0");
+}
+
+/// Quick 261123-bax (trim on add only): `list` and `remove` never trim an oversized stored list; the
+/// next add does.
+#[test]
+fn list_and_remove_leave_an_oversized_list_untrimmed_until_the_next_add() {
+    let before_dir = fixtures().join("state/recent/sixty-entry-list");
+    let p = profile(Some(&before_dir));
+    assert_eq!(names(&p.ctx).len(), 60);
+    assert_eq!(tree(&p.user_data), tree(&before_dir), "list wrote");
+    assert!(p.sink.0.lock().unwrap().is_empty(), "list told the sink");
+
+    dispatch_sync(
+        "info_recent_remove",
+        &[json!({ "appName": "app130" })],
+        &p.ctx,
+    )
+    .unwrap();
+    assert_eq!(names(&p.ctx).len(), 59);
+    {
+        let seen = p.sink.0.lock().unwrap();
+        assert_eq!(seen.len(), 1);
+        assert_eq!(seen[0].as_array().unwrap().len(), 59);
+    }
+
+    let add = json!({ "appName": "app1", "title": "Game 1", "runner": "sideload" });
+    dispatch_sync("info_recent_add", &[add], &p.ctx).unwrap();
+    let now = names(&p.ctx);
+    assert_eq!(now.len(), 50);
+    assert_eq!(now[0], "app1");
+    let seen = p.sink.0.lock().unwrap();
+    assert_eq!(seen.last().unwrap().as_array().unwrap().len(), 50);
 }
 
 #[test]
