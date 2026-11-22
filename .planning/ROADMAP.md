@@ -188,7 +188,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 84: Logger** — 18/18 plans (11 + 7 gap closure); completed 2026-11-22
 - [x] **Phase 85: Store host, config and versioned migrations** — 25/25 plans in 20 waves (the D-03 deletion split into four plans for context budget); completed 2026-11-22
 - [ ] **Phase 86: Pure leaf services** — 26 plans in 21 waves; planned 2026-11-22 (executes after 85-19/20)
-- [ ] **Phase 87: Engine, Wine and tools** — not planned
+- [ ] **Phase 87: Engine, Wine and tools** — 59 plans in 38 waves; planned 2026-11-23 (executes after Phase 86 closes)
 - [ ] **Phase 88: Launch pipeline** — not planned
 - [ ] **Phase 89: Steam library state** — not planned
 - [ ] **Phase 90: Steam services and TypeScript depot path** — not planned
@@ -648,10 +648,148 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase
 
-**Plans:** 0 plans
+**Plans:** 59 plans in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 87 to break down)
+**Wave 1**
+- [ ] 87-01-PLAN.md — Live macOS gate contract 87-HUMAN-UAT.md (four D-11 items, D-12 signed upgrade), the 82 ownership amendment (D-05) and the SC4 wording (D-23)
+- [ ] 87-02-PLAN.md — gamelib-engine and gamelib-wine (+cli) crates, CI wiring, the shared enginePins.json (tracer: engine_pins through the CLI)
+- [ ] 87-03-PLAN.md — Delete-gate machinery: engineWinePortComplete (no rollback flag) and the shim/resolver/twin/view schedule with exact discovery rules
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 87-04-PLAN.md — SpecRunner spawn seam in gamelib-core/gamelib-proc with the spec-tree orphan arm (D-17)
+- [ ] 87-05-PLAN.md — TS oracle harness (HTTP, spawn-trace, tree recorders), the runtimes goldens and the fixture redaction scan
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 87-06-PLAN.md — Fetch with pinned Replay, the full EngineCtx/WineCtx, the DxvkInstaller trait and the UI sinks
+- [ ] 87-07-PLAN.md — Goldens: wine manager (seven feeds, checksum, install, abort, remove)
+- [ ] 87-08-PLAN.md — Goldens: wine command core and discovery (D-22)
+- [ ] 87-09-PLAN.md — Goldens: DXVK/vkd3d/nvapi and DXMT
+- [ ] 87-10-PLAN.md — Goldens: Winetricks (install lifecycle, pure vectors, queue)
+- [ ] 87-11-PLAN.md — Goldens: bottles, markers, the D-07 fixture set and the twin/view vectors
+- [ ] 87-12-PLAN.md — Goldens: engine configuration and the engine twin vectors
+- [ ] 87-13-PLAN.md — Goldens: the decision matrix and demo status
+- [ ] 87-14-PLAN.md — Goldens: fallback engine, engine state and notices
+- [ ] 87-15-PLAN.md — Goldens: launch step, deadline and process watch
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 87-16-PLAN.md — Goldens: engine switch, including the WR-02 interleave
+- [ ] 87-17-PLAN.md — Tracer: Wine runtimes end to end (shell contexts, `wine` slice, `isRuntimeInstalled` native, crate download)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 87-18-PLAN.md — `downloadRuntime` native, ShellEngineUi, launcher shims; runtimes TS deleted
+- [ ] 87-19-PLAN.md — Wine manager in the crate (refresh, store, install, remove); no caller switched
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 87-20-PLAN.md — Every wine-manager caller flipped in one plan (three native channels, four shims); opens the DXMT wine-install gap 87-31 closes
+- [ ] 87-21-PLAN.md — Wine command core in the crate (D-22)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 87-22-PLAN.md — Wine-manager TS deleted; single-stream quirk todo
+- [ ] 87-23-PLAN.md — Wine discovery and the PATH default in the crate
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 87-24-PLAN.md — `wine.isValidVersion` native, validWine shim, sync env builders as pinned twins
+- [ ] 87-25-PLAN.md — Engine configuration in the crate
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 87-26-PLAN.md — `getAlternativeWine` native, discovery shims and twin; discovery TS deleted
+- [ ] 87-27-PLAN.md — DXVK/vkd3d/nvapi in the crate with the incident tests
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 87-28-PLAN.md — Three engine channels native, the default-wine hook, the non-bridge pure twin
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 87-29-PLAN.md — WineDxvkInstaller behind the engine trait, ShellDxvk
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 87-30-PLAN.md — DXMT in the crate (gate, bounded boot update, hooks, online flag); nothing wired
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 87-31-PLAN.md — Online-state shim and the one-commit DXMT ownership switch; closes the DXMT gap
+- [ ] 87-32-PLAN.md — Winetricks in the crate (install, parsers, guard, catalog)
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 87-33-PLAN.md — Rust ops behind the resolvers: Winetricks queue, runWineCommandForGame, callTool
+- [ ] 87-34-PLAN.md — DXVK family flipped: three D-23 resolvers and the DXVK shim
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 87-35-PLAN.md — Winetricks family flipped: queue channels native, three resolvers, launcher shims
+
+**Wave 16** *(blocked on Wave 15 completion)*
+- [ ] 87-36-PLAN.md — Wine-command family flipped: three resolvers; wineToolsFlowRegistration deleted
+
+**Wave 17** *(blocked on Wave 16 completion)*
+- [ ] 87-37-PLAN.md — Tools TS and the wine-downloader-info TS mirror deleted
+
+**Wave 18** *(blocked on Wave 17 completion)*
+- [ ] 87-38-PLAN.md — Bottle state primitives in the crate (markers with the version gate, conf, pins, ledger, registry)
+
+**Wave 19** *(blocked on Wave 18 completion)*
+- [ ] 87-39-PLAN.md — Bottle lifecycle (create, kill, sibling-safe removal) and the bridge's pure twin
+
+**Wave 20** *(blocked on Wave 19 completion)*
+- [ ] 87-40-PLAN.md — Engine switch tracer, fallback bottles and per-game bottles in the crate
+
+**Wave 21** *(blocked on Wave 20 completion)*
+- [ ] 87-41-PLAN.md — Engine switch: per-bottle serialisation, every branch, the incident tests
+
+**Wave 22** *(blocked on Wave 21 completion)*
+- [ ] 87-42-PLAN.md — Bridge bottle shims and the engineSelectionView (D-24): every bottle caller in one plan
+
+**Wave 23** *(blocked on Wave 22 completion)*
+- [ ] 87-43-PLAN.md — Direct twin imports; bottles, ledger and switch TS deleted; copied quirks recorded
+
+**Wave 24** *(blocked on Wave 23 completion)*
+- [ ] 87-44-PLAN.md — CrossOver location, demo-status (real-profile arm), run_tool (isolated arm) in Rust
+
+**Wave 25** *(blocked on Wave 24 completion)*
+- [ ] 87-45-PLAN.md — Engine decision structure, creation decision and override options in Rust
+
+**Wave 26** *(blocked on Wave 25 completion)*
+- [ ] 87-46-PLAN.md — The full CrossOver-first decision matrix in Rust
+- [ ] 87-47-PLAN.md — The pinned fallback engine in Rust (download, verify, extract, prune)
+
+**Wave 27** *(blocked on Wave 26 completion)*
+- [ ] 87-48-PLAN.md — Bounded Rust boot sweep, moved from the sidecar in one commit
+
+**Wave 28** *(blocked on Wave 27 completion)*
+- [ ] 87-49-PLAN.md — Engine state and notices in Rust; `dismissEngineNotice` native
+
+**Wave 29** *(blocked on Wave 28 completion)*
+- [ ] 87-50-PLAN.md — Launch-step selection, dialogs and toasts in Rust (D-01, D-02)
+
+**Wave 30** *(blocked on Wave 29 completion)*
+- [ ] 87-51-PLAN.md — Launch deadline, process watch and the bridge deadline event in Rust
+
+**Wave 31** *(blocked on Wave 30 completion)*
+- [ ] 87-52-PLAN.md — Non-Steam callers switched: launch shims, getLaunchSettings, the getEngineState resolver
+
+**Wave 32** *(blocked on Wave 31 completion)*
+- [ ] 87-53-PLAN.md — Engine dialog acks forwarded; engineFlowRegistration deleted
+
+**Wave 33** *(blocked on Wave 32 completion)*
+- [ ] 87-54-PLAN.md — Bridge callers switched: decision, deadline, state publishes
+
+**Wave 34** *(blocked on Wave 33 completion)*
+- [ ] 87-55-PLAN.md — Bridge callers switched: run_tool, CrossOver bin dir, engine types to common
+
+**Wave 35** *(blocked on Wave 34 completion)*
+- [ ] 87-56-PLAN.md — Engine TS, boot steps and the notices store registration deleted
+
+**Wave 36** *(blocked on Wave 35 completion)*
+- [ ] 87-57-PLAN.md — Survivor sweep item by item against D-22/D-23/D-24, census and ratchets (SC4)
+
+**Wave 37** *(blocked on Wave 36 completion)*
+- [ ] 87-58-PLAN.md — Clean-worktree proof with the DXMT gap re-check, push checkpoint, three-OS CI, signed Phase 87 build identity
+
+**Wave 38** *(blocked on Wave 37 completion)*
+- [ ] 87-59-PLAN.md — Run the live macOS gate (signed Phase 86 -> signed Phase 87, D-11/D-12)
+
+**Cross-cutting constraints:** <!-- gsd:generated -->
+- Memory-note shape: any offline step turns the network off only for the action (off, act, on, report)
+- Two-profile rule: every golden runs on an isolated createFakeHomeProfile(); no case reads the real HOME
+- D-25 (c): `callTool` (winecfg, runExe) and `runWineCommandForGame` spawn in Rust as `SpawnClass::Helper`; the GOG offline-installer check, `pushGameToLibrary` and the final `gameStatusUpdate done` stay in the TS registration glue after the resolver returns, in the TS order
 
 ### Phase 88: Launch pipeline
 
