@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 
 use gamelib_info::ctx::InfoLog;
 use gamelib_info::http::{Http, HttpError, HttpFuture, Request, Response};
-use gamelib_info::wiki::{agw, pcgw, Outcome};
+use gamelib_info::wiki::{agw, deck, pcgw, protondb, Outcome};
 use gamelib_testutil::FakeHome;
 use serde_json::json;
 use wiki_golden::*;
@@ -503,5 +503,147 @@ async fn applegamingwiki_no_page_and_no_text_are_the_empty_value_and_a_failure_i
     ] {
         let run = run(rules);
         assert_eq!(agw::get_info(&run.ctx, "Game").await, want, "{name}");
+    }
+}
+
+#[tokio::test]
+async fn protondb_and_the_deck_ask_nothing_without_a_steam_id() {
+    let run = run(vec![]);
+    for id in [None, Some("")] {
+        assert_eq!(protondb::get_info(&run.ctx, id).await, None);
+        assert_eq!(deck::get_comp(&run.ctx, id).await, None);
+    }
+    assert!(urls(&run).is_empty());
+}
+
+#[tokio::test]
+async fn protondb_builds_the_ts_url_sends_the_gamelib_user_agent_and_reads_the_tier() {
+    let run = run(vec![(
+        "summaries/1234.json",
+        ok(json!({ "tier": "gold", "score": 0.7 })),
+    )]);
+    let got = protondb::get_info(&run.ctx, Some("1234")).await.unwrap();
+    assert_eq!(got.to_value(), json!({ "level": "gold" }));
+    assert_eq!(
+        urls(&run),
+        ["https://www.protondb.com/api/v1/reports/summaries/1234.json"]
+    );
+    assert_eq!(run.http.seen.lock().unwrap()[0].1.as_deref(), Some(PCGW_UA));
+}
+
+/// What the TS did with an answer that is not what it expected: `null`, and one line of fixed text.
+#[tokio::test]
+async fn protondb_answers_none_for_a_changed_api_and_for_every_failure() {
+    for (name, rules) in [
+        (
+            "tierLevel instead of tier",
+            vec![("summaries", ok(json!({ "tierLevel": "gold" })))],
+        ),
+        ("empty tier", vec![("summaries", ok(json!({ "tier": "" })))]),
+        (
+            "null tier",
+            vec![("summaries", ok(json!({ "tier": null })))],
+        ),
+        ("null body", vec![("summaries", ok(json!(null)))]),
+        (
+            "text body",
+            vec![("summaries", Ok((200, "<html>".to_string())))],
+        ),
+        ("404", vec![("summaries", Ok((404, "{}".to_string())))]),
+        ("transport failure", vec![]),
+        ("timeout", vec![("summaries", Err(HttpError::Timeout))]),
+    ] {
+        let run = run(rules);
+        assert_eq!(
+            protondb::get_info(&run.ctx, Some("1234")).await,
+            None,
+            "{name}"
+        );
+        let lines = run.lines.0.lock().unwrap();
+        assert_eq!(lines.len(), 1, "{name}: {lines:?}");
+        assert!(
+            !lines[0].contains("1234") && !lines[0].contains("://"),
+            "{name}: {}",
+            lines[0]
+        );
+    }
+    // A tier that is truthy but not a text is passed through, as the TS passed it.
+    let run = run(vec![("summaries", ok(json!({ "tier": 3 })))]);
+    assert_eq!(
+        protondb::get_info(&run.ctx, Some("1"))
+            .await
+            .unwrap()
+            .to_value(),
+        json!({ "level": 3 })
+    );
+}
+
+#[tokio::test]
+async fn the_deck_builds_the_ts_url_and_reads_a_finite_number() {
+    let run = run(vec![(
+        "nAppID=1234",
+        ok(json!({ "success": 1, "results": { "resolved_category": 3 } })),
+    )]);
+    let got = deck::get_comp(&run.ctx, Some("1234")).await.unwrap();
+    assert_eq!(got.to_value(), json!({ "category": 3 }));
+    assert_eq!(
+        urls(&run),
+        ["https://store.steampowered.com/saleaction/ajaxgetdeckappcompatibilityreport?nAppID=1234"]
+    );
+    assert_eq!(run.http.seen.lock().unwrap()[0].1.as_deref(), Some(PCGW_UA));
+    // Category 0 (unknown) is a finite number, so it is an answer (the TS tested `isFinite`, not truth).
+    let zero = self::run(vec![(
+        "nAppID",
+        ok(json!({ "results": { "resolved_category": 0 } })),
+    )]);
+    assert_eq!(
+        deck::get_comp(&zero.ctx, Some("1"))
+            .await
+            .unwrap()
+            .to_value(),
+        json!({ "category": 0 })
+    );
+}
+
+#[tokio::test]
+async fn the_deck_answers_none_unless_the_category_is_a_finite_number() {
+    for (name, rules) in [
+        (
+            "tierLevel",
+            vec![("nAppID", ok(json!({ "results": { "tierLevel": "gold" } })))],
+        ),
+        (
+            "numeric text",
+            vec![(
+                "nAppID",
+                ok(json!({ "results": { "resolved_category": "3" } })),
+            )],
+        ),
+        (
+            "null category",
+            vec![(
+                "nAppID",
+                ok(json!({ "results": { "resolved_category": null } })),
+            )],
+        ),
+        ("no results", vec![("nAppID", ok(json!({})))]),
+        (
+            "null results",
+            vec![("nAppID", ok(json!({ "results": null })))],
+        ),
+        ("null body", vec![("nAppID", ok(json!(null)))]),
+        ("text body", vec![("nAppID", Ok((200, "nope".to_string())))]),
+        ("500", vec![("nAppID", Ok((500, "{}".to_string())))]),
+        ("transport failure", vec![]),
+    ] {
+        let run = run(rules);
+        assert_eq!(deck::get_comp(&run.ctx, Some("1234")).await, None, "{name}");
+        let lines = run.lines.0.lock().unwrap();
+        assert_eq!(lines.len(), 1, "{name}: {lines:?}");
+        assert!(
+            !lines[0].contains("1234") && !lines[0].contains("://"),
+            "{name}: {}",
+            lines[0]
+        );
     }
 }

@@ -14,7 +14,8 @@ use std::sync::Arc;
 
 use gamelib_info::http::{Http, Replay};
 use gamelib_info::js::remove_special_characters;
-use gamelib_info::wiki::{agw, pcgw};
+use gamelib_info::runner_caps;
+use gamelib_info::wiki::{agw, deck, pcgw, protondb};
 use gamelib_testutil::FakeHome;
 use serde_json::Value;
 use url::Url;
@@ -208,4 +209,61 @@ async fn applegamingwiki_matches_every_ts_golden_that_asked_it() {
         }
     }
     assert!(found > 0 && empty > 0, "{found} {empty}");
+}
+
+const PROTONDB_HOST: &str = "www.protondb.com";
+const DECK_HOST: &str = "store.steampowered.com";
+
+/// The Steam id the aggregator hands ProtonDB and the Deck lookup (`wiki_game_info.ts`): the app name
+/// itself for a runner whose app name is a Steam app id, else the first truthy of GamesDB's and
+/// PCGamingWiki's `steamID` (the last one when neither is).
+fn steam_id_of(run: &Run) -> Option<String> {
+    let runner = run.game["runner"].as_str().unwrap();
+    if runner_caps::caps(runner).is_some_and(|c| c.app_name_is_steam_app_id) {
+        return run.game["app_name"].as_str().map(str::to_string);
+    }
+    let from = |part: &Value| {
+        part["steamID"]
+            .as_str()
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+    };
+    from(&run.result["gamesdb"]).or_else(|| from(&run.result["pcgamingwiki"]))
+}
+
+#[tokio::test]
+async fn protondb_and_the_steam_deck_match_every_ts_golden_that_asked_them() {
+    let runs = runs_for(&[PROTONDB_HOST, DECK_HOST]);
+    assert!(runs.len() >= 4, "{} steam-info runs", runs.len());
+    let mut levels = 0;
+    for run in &runs {
+        let id = run.case["id"].as_str().unwrap();
+        let h = harness(run, &[PROTONDB_HOST, DECK_HOST]);
+        let steam_id = steam_id_of(run);
+        let protondb = protondb::get_info(&h.ctx, steam_id.as_deref()).await;
+        let deck = deck::get_comp(&h.ctx, steam_id.as_deref()).await;
+        h.check(run);
+
+        // `steamInfo` is `{ compatibilityLevel, steamDeckCatagory }` when either answered, else null.
+        let want = &run.result["steamInfo"];
+        assert_eq!(
+            protondb.as_ref().map(|p| &p.level),
+            want.get("compatibilityLevel"),
+            "{id}: compatibilityLevel"
+        );
+        assert_eq!(
+            deck.as_ref().map(|d| Value::Number(d.category.clone())),
+            want.get("steamDeckCatagory").cloned(),
+            "{id}: steamDeckCatagory"
+        );
+        assert_eq!(
+            want.is_null(),
+            protondb.is_none() && deck.is_none(),
+            "{id}: steamInfo is null exactly when neither answered"
+        );
+        if protondb.is_some() {
+            levels += 1;
+        }
+    }
+    assert!(levels > 0);
 }

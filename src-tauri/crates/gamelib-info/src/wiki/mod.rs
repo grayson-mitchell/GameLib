@@ -20,7 +20,10 @@ use crate::ctx::InfoCtx;
 use crate::http::{HttpError, Request};
 
 pub mod agw;
+pub mod codeweavers;
+pub mod deck;
 pub mod pcgw;
+pub mod protondb;
 pub mod regexes;
 
 /// The TS `axiosClient`'s `timeout: 10 * 1000`.
