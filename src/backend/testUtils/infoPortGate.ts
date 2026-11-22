@@ -250,7 +250,27 @@ export function findRustInfoCalls(
   return calls
 }
 
-interface ShimRow {
+/** Names of every exported function in `source`: declarations, and `export const f = () => ...`. */
+export function findExportedFunctions(path: string, source: string): string[] {
+  void path
+  void source
+  return []
+}
+
+/**
+ * Repo-relative paths of every file in `files` that imports `target` (a repo-relative .ts path).
+ * Bare specifiers resolve against `src/` (the tsconfig `baseUrl`), relative ones against the importer.
+ */
+export function findImporters(
+  files: readonly StrippedFile[],
+  target: string
+): string[] {
+  void files
+  void target
+  return []
+}
+
+export interface ShimRow {
   shape: 'shim' | 'resolver'
   /** Resolvers only: the names of the `const` declarations that gather TS-only inputs. */
   inputs?: readonly string[]
