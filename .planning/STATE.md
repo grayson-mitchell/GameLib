@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 86-24-PLAN.md
-last_updated: "2026-11-22T18:28:57.891Z"
+stopped_at: Completed 86-25-PLAN.md
+last_updated: "2026-11-22T18:32:37.010Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 86 execution started
-state_head: 31bd2e304a4f30925b1bf548890487824caa8ef3
+state_head: b1910d9f2e6910eb74e54d8391a29fe6f74f109f
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 86 (Pure leaf services) — EXECUTING
-Plan: 24 of 26
+Plan: 25 of 26
 Status: Ready to execute
 Last activity: 2026-11-23 - Completed quick task 261123-9x9: resetHeroic deletes the settings documents but never drops their mirror cells (Phase 85 review C-WR-01)
 Progress: [██████████] 100%
@@ -408,6 +408,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 86 P22 | 2h 10m | 3 tasks | 23 files |
 | Phase 86 P23 | 1h30m | 2 tasks | 21 files |
 | Phase 86 P24 | 1h | 3 tasks | 60 files |
+| Phase 86 P25 | 2h30m | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -815,6 +816,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 86]: 86-24: meta/measureCrossoverMatching.ts deleted (Phase 19 one-off harness; its import target crossover_index/normalize is gone)
 - [Phase 86]: 86-24: wiki, umu and crossover_index cache rows kept in genStoreTable EXTRA_ROWS (tsNames kept); storeTable.json byte-identical
 - [Phase 86]: 86-24: infoCaches and appRuntime stay inert optional members on the enrichment and shortcuts deps (foreign-dirty handlers.ts still passes them); INERT_DEPS_EXEMPT pins the files
+- [Phase 86]: 86-25: Gate item 4 blocked: the authorised release run 45051040572 was a dry run and uploads no artifact; a dry_run=false run is owed (main is 0.11.0, so it would overwrite the Phase 85 v0.11.0 draft assets unless the version is bumped first)
+- [Phase 86]: 86-25: R4 fixed by DI seams instead of jest.mock (no baseline); R5 stale i18nForkTouchedFiles.json deferred by the operator
 
 ### Pending Todos
 
@@ -1091,8 +1094,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T15:49:46.000Z
-Stopped at: Completed 86-24-PLAN.md
+Last session: 2026-11-22T18:32:35.206Z
+Stopped at: Completed 86-25-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
