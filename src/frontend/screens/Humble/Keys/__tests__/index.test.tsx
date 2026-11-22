@@ -495,6 +495,77 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
     })
   })
 
+  // Quick task 261123-bbi: the Refresh button spins for max(1 s from the
+  // click, end of the sync). `humbleSync()` is fire-and-forget and can return
+  // at once, so `humble.syncing` may never turn true; the click window alone
+  // must keep the spin. This harness does not re-render on its own, so every
+  // click and every timer advance is followed by an explicit `rerender()`.
+  describe('261123-bbi: refresh button minimum spin', () => {
+    beforeEach(() => {
+      jest.useFakeTimers()
+    })
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    function refreshButton(tree: ReactElement) {
+      const button = findByClassName(tree, 'humbleKeysRefreshButton')
+      expect(button).toBeDefined()
+      return button as ReactElement<{
+        className: string
+        disabled: boolean
+        onClick: () => void
+        children: ReactElement<{ className?: string }>
+      }>
+    }
+    const hasSpinning = (tree: ReactElement) => {
+      const button = refreshButton(tree)
+      const buttonSpins = button.props.className.split(' ').includes('spinning')
+      const iconSpins = (button.props.children.props.className ?? '')
+        .split(' ')
+        .includes('fa-spin')
+      expect(iconSpins).toBe(buttonSpins)
+      return buttonSpins
+    }
+
+    it('spins for 1 s after a click even though syncing is never true', () => {
+      contextValue.humble.syncing = false
+      const first = mount()
+      expect(hasSpinning(first)).toBe(false)
+
+      refreshButton(first).props.onClick()
+      expect(mockApi.humbleSync).toHaveBeenCalledTimes(1)
+
+      expect(hasSpinning(rerender())).toBe(true)
+      expect(refreshButton(rerender()).props.disabled).toBe(false)
+
+      jest.advanceTimersByTime(999)
+      expect(hasSpinning(rerender())).toBe(true)
+      jest.advanceTimersByTime(1)
+      expect(hasSpinning(rerender())).toBe(false)
+      expect(refreshButton(rerender()).props.disabled).toBe(false)
+    })
+
+    it('keeps spinning while a sync outlasts the window, then stops', () => {
+      contextValue.humble.syncing = false
+      const first = mount()
+      refreshButton(first).props.onClick()
+      contextValue.humble.syncing = true
+      expect(hasSpinning(rerender())).toBe(true)
+      jest.advanceTimersByTime(1500)
+      expect(hasSpinning(rerender())).toBe(true)
+      contextValue.humble.syncing = false
+      expect(hasSpinning(rerender())).toBe(false)
+    })
+
+    it('spins while syncing with no click and stops with no tail', () => {
+      contextValue.humble.syncing = true
+      expect(hasSpinning(mount())).toBe(true)
+      contextValue.humble.syncing = false
+      expect(hasSpinning(rerender())).toBe(false)
+    })
+  })
+
   // ── Ported from Waiting/__tests__/index.test.tsx (13 tests) ──────────────
   describe('ported from Waiting/__tests__ (annotation lifecycle)', () => {
     it('PORT: fetches claim annotations once on mount', () => {

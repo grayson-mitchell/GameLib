@@ -15,6 +15,7 @@ import {
   useSteamAccount
 } from 'frontend/state/accountHooks'
 import useUiState from 'frontend/state/uiState'
+import { useMinimumSpin } from 'frontend/hooks/useMinimumSpin'
 import WarningMessage from 'frontend/components/UI/WarningMessage'
 import SearchBar from 'frontend/components/UI/SearchBar'
 import SelectField from 'frontend/components/UI/SelectField'
@@ -264,6 +265,13 @@ export default function HumbleKeys() {
       cancelled = true
     }
   }, [])
+
+  // Quick task 261123-bbi: the Refresh button spins for max(1 s from the
+  // click, end of the sync). Declared above the route-guard early return
+  // (Rules of Hooks). `humbleSync()` is fire-and-forget, so `syncing` alone
+  // can stay false for an instant sync.
+  const { spinning: refreshSpinning, onClickStart: startRefreshSpin } =
+    useMinimumSpin(!!humble?.syncing)
 
   // D-20: route guard — a disconnected user never sees this page rendered
   // disconnected; deep links / back-button bounce to the login route.
@@ -578,7 +586,7 @@ export default function HumbleKeys() {
           />
           <button
             className={classNames('humbleKeysRefreshButton', {
-              spinning: humble.syncing
+              spinning: refreshSpinning
             })}
             aria-label={tGamelib(
               'gamelib:humbleKeys.refresh',
@@ -596,11 +604,14 @@ export default function HumbleKeys() {
                 : tGamelib('gamelib:humbleKeys.refresh', 'Refresh Humble Keys')
             }
             disabled={humble.syncing || inCooldown}
-            onClick={() => window.api.humbleSync()}
+            onClick={() => {
+              startRefreshSpin()
+              void window.api.humbleSync()
+            }}
           >
             <FontAwesomeIcon
               icon={faSyncAlt}
-              className={classNames({ 'fa-spin': humble.syncing })}
+              className={classNames({ 'fa-spin': refreshSpinning })}
             />
           </button>
         </div>
