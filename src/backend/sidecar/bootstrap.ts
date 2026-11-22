@@ -2363,7 +2363,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           clock: ctx.clock,
           steamProcesses: requireSteamProcesses(state),
           getDownloadQueue: () => requireServices(state).downloadQueue,
-          versioning: requireStoreRoot(state).versioning,
           storeRoot: requireStoreRoot(state),
           config,
           gameConfigs,

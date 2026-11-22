@@ -31,7 +31,7 @@ import { createWineManagerStores } from '../wine/manager/stores'
 import { createEngineStores } from '../engine/engineNoticeStore'
 import { createPciIdCaches } from '../utils/systeminfo/gpu/pci_ids'
 import type { StoreFamilyDeps, StoreRoot } from '../stores/storeRoot'
-import { createTestStoreRoot, createTestVersioning } from './testStoreRoot'
+import { createTestStoreRoot } from './testStoreRoot'
 import type { EngineServices } from '../engine/engineServices'
 import { createFakeClock } from './fakeClock'
 import { createTestOnlineMonitor } from './testOnlineMonitor'
@@ -399,7 +399,6 @@ export function createTestManagerDeps(
   return {
     libraryManagers: overrides.libraryManagers ?? createTestManagers().library,
     stores,
-    versioning: overrides.versioning ?? createTestVersioning(),
     commandRunner:
       overrides.commandRunner ??
       unscriptedMembers<CommandRunner>('command runner', {}),

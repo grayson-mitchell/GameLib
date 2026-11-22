@@ -22,6 +22,7 @@ import { createStoreRegistry } from '../storeRegistry'
 import type { StoreFrame, StoreFrameSink } from '../storeFrames'
 import { isRustOwnedStoreKey } from '../storeFrames'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+import { storeSchemaVersionOf } from '../../testUtils/storeSchemaVersions'
 
 const ACCOUNT_ROWS = tableFile.rows.filter(
   (row) => row.family === 'account' && row.name !== null
@@ -228,8 +229,7 @@ describe('steam_store/config: steamConfigStore and steamBottleConfigStore are on
     const { __internal__: envelope, ...data } = onDisk
     expect(envelope).toEqual({
       gamelib: {
-        schemaVersion:
-          rust.root.versioning.currentVersionOf('steam_store/config')
+        schemaVersion: storeSchemaVersionOf('steam_store/config')
       }
     })
     expect(data).toEqual({
@@ -267,8 +267,7 @@ describe('older profiles: ciphertext and unknown keys survive a re-save untouche
   it.each(['steam_store/config', 'humble_store/config'])(
     '%s re-saves with every other key byte-identical',
     (rowKey) => {
-      const probe = createTestStoreRoot(userData)
-      const version = probe.versioning.currentVersionOf(rowKey)
+      const version = storeSchemaVersionOf(rowKey)
       const file = join(userData, `${rowKey}.json`)
       mkdirSync(join(file, '..'), { recursive: true })
       const doc = fixture(rowKey, version)

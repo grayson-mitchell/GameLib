@@ -4,7 +4,7 @@ import { deletePath, setPath } from '../stores/dotPath'
 import type { MirrorRegistry } from '../stores/mirrorCell'
 import type { StoreFrame, StoreFrameSink } from '../stores/storeFrames'
 import { dotPathsFor } from '../stores/storeFrames'
-import type { StoreVersioning } from '../storeVersioning/engine'
+import { storeSchemaVersionOf } from './storeSchemaVersions'
 
 /**
  * The in-process stand-in for the Rust store owner, for jest (Phase 85 plan 11, research
@@ -29,11 +29,8 @@ type Doc = Record<string, unknown>
 
 export interface DiskStoreSink {
   readonly sink: StoreFrameSink
-  /** Connects the sink to the mirrors it answers and the versioning engine that names store versions. */
-  attach(root: {
-    readonly mirrors: Pick<MirrorRegistry, 'applyEvent'>
-    readonly versioning: Pick<StoreVersioning, 'currentVersionOf'>
-  }): void
+  /** Connects the sink to the mirrors it answers. */
+  attach(root: { readonly mirrors: Pick<MirrorRegistry, 'applyEvent'> }): void
 }
 
 export interface DiskStoreSinkOptions {
@@ -115,9 +112,7 @@ export function createDiskStoreSink(
           ...internal,
           gamelib: {
             ...gamelib,
-            schemaVersion: (
-              root as NonNullable<typeof root>
-            ).versioning.currentVersionOf(frame.store)
+            schemaVersion: storeSchemaVersionOf(frame.store)
           }
         }
       }

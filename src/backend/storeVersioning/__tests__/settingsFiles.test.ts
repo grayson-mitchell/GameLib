@@ -1,7 +1,7 @@
 import {
   createVersioningHarness,
   type VersioningHarness
-} from '../../testUtils/testStoreRoot'
+} from './versioningHarness'
 import {
   copyFileSync,
   mkdirSync,

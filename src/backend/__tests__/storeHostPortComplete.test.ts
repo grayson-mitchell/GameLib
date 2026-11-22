@@ -86,7 +86,10 @@ const FORBIDDEN_IDENTIFIERS = [
   'applyMigrations',
   // 85-21 Task 2: the TS mode resolution and the `store:ts-*` internal channels Rust forwarded to.
   'resolveStoreMode',
-  'store:ts-'
+  'store:ts-',
+  // 85-23 Task 2: the test helper that built a TS versioning engine for a consumer under test.
+  // Built from parts so this file does not name it either.
+  ['createTest', 'Versioning'].join('')
 ]
 
 /**

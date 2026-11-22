@@ -40,7 +40,6 @@ function build(over: Partial<Parameters<typeof createStoreManagers>[0]> = {}) {
     sendFrontendMessage: fakes.host.sendFrontendMessage,
     requestRustInvoke: fakes.host.requestRustInvoke,
     stores: fakes.stores,
-    versioning: fakes.storeRoot.versioning,
     commandRunner: fakes.commandRunner,
     spawnAsync: fakes.spawnAsync,
     runner: fakes.runner,

@@ -3,7 +3,6 @@ import { join } from 'path'
 import { resolveAppDataDir } from '../process/appPaths'
 import type { StoreFrame, StoreFrameSink } from '../stores/storeFrames'
 import { createStoreRoot, type StoreRoot } from '../stores/storeRoot'
-import type { Migration } from '../storeVersioning/types'
 import { createDiskStoreSink } from './diskStoreSink'
 
 /**
@@ -37,7 +36,7 @@ export function createTestStoreRoot(
   userData?: string,
   options: Pick<
     Parameters<typeof createStoreRoot>[0],
-    'readOnlySinks' | 'migrationOverrides' | 'boot' | 'frameSink'
+    'readOnlySinks' | 'boot' | 'frameSink'
   > & {
     recordFrames?: StoreFrame[]
     wrapSink?: (inner: StoreFrameSink) => StoreFrameSink
@@ -57,31 +56,3 @@ export function createTestStoreRoot(
   disk?.attach(root)
   return root
 }
-
-/** A fresh versioning engine (its own root) for a consumer test that only needs the migration guard. */
-export function createTestVersioning(
-  options?: Parameters<typeof createTestStoreRoot>[1]
-): StoreRoot['versioning'] {
-  return createTestStoreRoot(undefined, options).versioning
-}
-
-/**
- * A versioning engine plus its read-only tracker with a per-instance migration override map, for
- * the suites that script chains mid-test. `setMigrations(key, undefined)` clears an override.
- * Nothing here is module state: a test builds one in `beforeEach` and drops it.
- */
-export function createVersioningHarness() {
-  const overrides = new Map<string, readonly Migration[]>()
-  const root = createTestStoreRoot(undefined, { migrationOverrides: overrides })
-  return {
-    root,
-    versioning: root.versioning,
-    readOnly: root.readOnly,
-    setMigrations(chainKey: string, chain: readonly Migration[] | undefined) {
-      if (chain === undefined) overrides.delete(chainKey)
-      else overrides.set(chainKey, chain)
-    }
-  }
-}
-
-export type VersioningHarness = ReturnType<typeof createVersioningHarness>

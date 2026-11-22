@@ -16,7 +16,7 @@ import { storeVersionCodec } from '../../storeMigrations'
 import {
   createVersioningHarness,
   type VersioningHarness
-} from '../../testUtils/testStoreRoot'
+} from './versioningHarness'
 
 jest.mock('graceful-fs', () => ({
   ...jest.requireActual('graceful-fs'),

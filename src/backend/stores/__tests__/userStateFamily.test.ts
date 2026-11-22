@@ -16,6 +16,7 @@ import { createStoreRegistry } from '../storeRegistry'
 import type { StoreFrame } from '../storeFrames'
 import { isRustOwnedStoreKey } from '../storeFrames'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+import { storeSchemaVersionOf } from '../../testUtils/storeSchemaVersions'
 
 const USER_STATE_ROWS = tableFile.rows.filter(
   (row) => row.family === 'user-state' && row.name !== null
@@ -193,7 +194,7 @@ describe('store/timestamp end to end: TS set -> frame -> bytes', () => {
     const { __internal__: envelope, ...data } = onDisk
     expect(envelope).toEqual({
       gamelib: {
-        schemaVersion: rust.root.versioning.currentVersionOf('store/timestamp')
+        schemaVersion: storeSchemaVersionOf('store/timestamp')
       }
     })
     expect(Object.keys(data)).toEqual(['7', '1245620', 'zeta-app', 'alpha-app'])

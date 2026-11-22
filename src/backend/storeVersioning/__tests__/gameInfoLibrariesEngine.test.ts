@@ -17,7 +17,7 @@ import {
 import {
   createVersioningHarness,
   type VersioningHarness
-} from '../../testUtils/testStoreRoot'
+} from './versioningHarness'
 
 const STEAM_KEY = 'store_cache/steam_library'
 const SIDELOAD_KEY = 'sideload_apps/library'

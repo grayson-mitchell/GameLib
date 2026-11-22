@@ -60,7 +60,6 @@ export default class NileGameManager implements Game {
         | 'onlineMonitor'
         | 'engineState'
         | 'engineRuntime'
-        | 'versioning'
         | 'paths'
         | 'steamBottle'
         | 'steamLaunchRuntime'

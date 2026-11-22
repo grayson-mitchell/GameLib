@@ -14,7 +14,7 @@ import { STORE_MIGRATIONS, storeVersionCodec } from '../../storeMigrations'
 import {
   createVersioningHarness,
   type VersioningHarness
-} from '../../testUtils/testStoreRoot'
+} from './versioningHarness'
 import type { Migration, StoreDeclaration } from '../types'
 
 const KEY = 'store_cache/probe'

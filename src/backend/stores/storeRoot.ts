@@ -7,14 +7,14 @@
  * hands it to every store, so two boots (or two tests) share nothing and no store resolves a
  * path at import.
  *
- * Import budget: the pure versioning layer (storeVersioning/engine, readOnlyStores,
- * storeMigrations: no logger, no IPC), the pure mirror layer (mirrorCell, storeFrames: no logger,
- * no IPC, the output stream injected) and type-only imports. Stores import this module; it must
- * never reach the IPC layer (see the changes-channel note below) or construct a store.
+ * Import budget: the pure read-only aggregate (storeVersioning/readOnlyStores: no logger, no IPC),
+ * the pure mirror layer (mirrorCell, storeFrames: no logger, no IPC, the output stream injected)
+ * and type-only imports. Stores import this module; it must never reach the IPC layer (see the
+ * changes-channel note below) or construct a store.
  *
- * Plan 18 adds `versioning` (the per-file version engine, former module state in
- * storeVersioning/engine.ts) and `readOnly` (the read-only tracker, former readOnlyStores.ts
- * module state): every store of a boot shares them, two roots never do.
+ * Plan 18 added `readOnly` (the read-only tracker, former readOnlyStores.ts module state): every
+ * store of a boot shares it, two roots never do. The per-file version engine plan 18 added beside it
+ * is gone (85-23): the shell migrates and guards every store.
  *
  * The changes channel (formerly `storeChangeNotifier.ts`)
  *
@@ -33,11 +33,6 @@
  */
 import { basename } from 'path'
 import type { StoreChangedPayload } from 'common/types/sidecarTransport'
-import { createMigrations, type MigrationOverrides } from '../storeMigrations'
-import {
-  createStoreVersioning,
-  type StoreVersioning
-} from '../storeVersioning/engine'
 import {
   createReadOnlyStores,
   type ReadOnlyStores,
@@ -74,7 +69,6 @@ interface StoreChangeChannel {
 export interface StoreRoot {
   readonly userData: string
   readonly changes: StoreChangeChannel
-  readonly versioning: StoreVersioning
   readonly readOnly: ReadOnlyStores
   readonly boot: StoreBootEnv
   readonly frameSink: StoreFrameSink
@@ -209,8 +203,6 @@ export function createStoreRoot(deps: {
   userData: string
   /** Test seam: read-only sinks installed at construction (production installs them at flush). */
   readOnlySinks?: ReadOnlySinks
-  /** Test seam: replacement migration chains for this root's versioning engine. */
-  migrationOverrides?: MigrationOverrides
   /** `GAMELIB_STORE_BOOT`, parsed (`readStoreBootEnv`). */
   boot?: StoreBootEnv
   /** Where a mirror's frames go. Absent, a store write on this root throws. */
@@ -220,14 +212,9 @@ export function createStoreRoot(deps: {
   const boot = deps.boot ?? NO_BOOT
   const readOnly = createReadOnlyStores({ sinks: deps.readOnlySinks })
   seedBootReadOnly(readOnly, boot)
-  const versioning = createStoreVersioning({
-    migrations: createMigrations({ overrides: deps.migrationOverrides }),
-    readOnly
-  })
   return {
     userData: deps.userData,
     changes: createStoreChangeChannel(),
-    versioning,
     readOnly,
     boot,
     frameSink,

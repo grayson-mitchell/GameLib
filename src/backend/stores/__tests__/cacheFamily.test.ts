@@ -19,6 +19,7 @@ import {
   createTestStoreRoot,
   testUserDataDir
 } from '../../testUtils/testStoreRoot'
+import { storeSchemaVersionOf } from '../../testUtils/storeSchemaVersions'
 
 const CACHE_ROWS = tableFile.rows.filter(
   (row) => row.family === 'cache' && row.name !== null
@@ -159,9 +160,7 @@ describe('CacheStore.commit() on a Rust-owned cache', () => {
     const { __internal__: envelope, ...data } = onDisk
     expect(envelope).toEqual({
       gamelib: {
-        schemaVersion: rust.root.versioning.currentVersionOf(
-          'store_cache/crossover_index'
-        )
+        schemaVersion: storeSchemaVersionOf('store_cache/crossover_index')
       }
     })
     const stamped = { ...data, __internal__: envelope }

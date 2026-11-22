@@ -145,8 +145,7 @@ describe('createDiskStoreSink', () => {
     const events: unknown[] = []
     const disk = createDiskStoreSink({ userData })
     disk.attach({
-      mirrors: { applyEvent: (e) => (events.push(e), true) },
-      versioning: { currentVersionOf: () => 1 }
+      mirrors: { applyEvent: (e) => (events.push(e), true) }
     })
     // `settings/global` is the app folder's config.json (85-15, the shell's path_for), written
     // whole by a replace; a GamesConfig document sits at its own key's path.
@@ -181,8 +180,7 @@ describe('createDiskStoreSink', () => {
       userData: join(userData, 'blocker', 'x')
     })
     disk.attach({
-      mirrors: { applyEvent: (e) => (events.push(e), true) },
-      versioning: { currentVersionOf: () => 1 }
+      mirrors: { applyEvent: (e) => (events.push(e), true) }
     })
     // `blocker` is a plain file, so mkdir beneath it fails.
     writeFileSync(join(userData, 'blocker'), 'x')
