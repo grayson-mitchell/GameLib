@@ -383,9 +383,21 @@ pub(crate) fn route_log_frame(
     line_len: usize,
     value: Value,
 ) -> Result<(), gamelib_log::frame::FrameReject> {
-    let batches = gamelib_log::frame::parse_frame(line_len, value)?;
-    logger.submit(batches);
-    Ok(())
+    // A rejected frame is never submitted, so a rotation its batches claimed would be lost with it
+    // (IN-06): read the claims first, and owe them to the targets' next batches on a reject.
+    let rotating = gamelib_log::frame::rotating_targets(&value);
+    match gamelib_log::frame::parse_frame(line_len, value) {
+        Ok(batches) => {
+            logger.submit(batches);
+            Ok(())
+        }
+        Err(reject) => {
+            for target in &rotating {
+                logger.owe_rotation(target);
+            }
+            Err(reject)
+        }
+    }
 }
 
 /// The reader thread's log arm. With no global logger (a headless run, or no home directory) the
@@ -1067,6 +1079,48 @@ mod tests {
         assert_eq!(err.as_str(), "unknown-field");
         assert!(logger.flush(Duration::from_secs(10)));
         assert!(!home.root().join("gamelib.log").exists());
+    }
+
+    /// IN-06 (a): a frame the shell rejects never reaches the writer, so the rotation its batch
+    /// claimed is owed to the target's next batch instead of being lost with it.
+    #[test]
+    fn log_frame_rejection_owes_the_rotation_its_batches_claimed() {
+        let home = FakeHome::new("gamelib-shell-log-frame-");
+        let launch = home
+            .root()
+            .join("games")
+            .join("480_steam")
+            .join("launch.log");
+        std::fs::create_dir_all(launch.parent().expect("parent")).expect("games dir");
+        std::fs::write(&launch, "previous session\n").expect("seed");
+        let logger = logger_on(&home);
+        let target = serde_json::json!({"kind": "game", "appName": "480", "runner": "steam", "type": "launch"});
+        let rotating = serde_json::json!({
+            "target": target, "rotate": true, "entries": [{"raw": "never written\n"}]
+        });
+        let (len, frame) = frame_of(&rotating);
+        let rejected = route_log_frame(
+            &logger,
+            gamelib_log::frame::LOG_FRAME_MAX_BYTES + len,
+            frame,
+        )
+        .expect_err("over the frame cap");
+        assert_eq!(rejected.as_str(), "too-large");
+        let next = serde_json::json!({
+            "target": target, "rotate": false, "entries": [{"raw": "this session\n"}]
+        });
+        let (len, frame) = frame_of(&next);
+        route_log_frame(&logger, len, frame).expect("a valid frame routes");
+        assert!(logger.flush(Duration::from_secs(10)));
+        let old = launch.with_file_name("launch.log.old");
+        assert_eq!(
+            std::fs::read_to_string(&old).unwrap_or_default(),
+            "previous session\n"
+        );
+        assert_eq!(
+            std::fs::read_to_string(&launch).unwrap_or_default(),
+            "this session\n"
+        );
     }
 
     fn files_under(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {

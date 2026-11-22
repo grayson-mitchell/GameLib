@@ -211,15 +211,25 @@ impl Logger {
                     entries += b.entries.len() as u64;
                     // A lost rotation is owed to the target's next batch, so a launch log is never
                     // appended to the previous session's (the general target rotates once per Logger).
-                    if b.rotate && b.target != LogTarget::General {
-                        let mut owed = self.owed.lock().unwrap_or_else(|e| e.into_inner());
-                        if !owed.contains(&b.target) {
-                            owed.push(b.target.clone());
-                        }
+                    if b.rotate {
+                        self.owe_rotation(&b.target);
                     }
                 }
             }
             self.dropped.fetch_add(entries, Ordering::Relaxed);
+        }
+    }
+
+    /// Records that a rotation claimed for `target` never reached the writer (a frame lost in
+    /// `send`, or one the shell rejected before it was submitted), so the target's next batch rotates
+    /// instead. The general target rotates once per `Logger` and owes nothing. Deduplicated.
+    pub fn owe_rotation(&self, target: &LogTarget) {
+        if *target == LogTarget::General {
+            return;
+        }
+        let mut owed = self.owed.lock().unwrap_or_else(|e| e.into_inner());
+        if !owed.contains(target) {
+            owed.push(target.clone());
         }
     }
 

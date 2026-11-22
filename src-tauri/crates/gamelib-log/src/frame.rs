@@ -201,6 +201,35 @@ pub fn parse_frame(line_len: usize, value: Value) -> Result<Vec<TargetBatch>, Fr
     Ok(out)
 }
 
+/// The targets of the batches in a raw frame `value` that claim a rotation (`rotate: true`) and
+/// name a valid non-general target, read without validating anything else. For a frame about to be
+/// rejected whole: the rotation it claimed is not lost with it, the caller owes it
+/// ([`crate::writer::Logger::owe_rotation`]). Reads only what it needs; a malformed frame yields
+/// nothing.
+pub fn rotating_targets(value: &Value) -> Vec<LogTarget> {
+    let Some(batches) = value.get("batch").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for b in batches {
+        if b.get("rotate").and_then(Value::as_bool) != Some(true) {
+            continue;
+        }
+        let Some(raw) = b.get("target") else {
+            continue;
+        };
+        let Ok(parsed) = serde_json::from_value::<FrameTarget>(raw.clone()) else {
+            continue;
+        };
+        if let Ok(target) = target_of(parsed) {
+            if target != LogTarget::General && !out.contains(&target) {
+                out.push(target);
+            }
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -311,6 +340,26 @@ mod tests {
         let line = general_frame(json!({"line": {"ts": 1, "tz": 0, "level": "INFO",
             "prefix": "Backend", "msg": "a".repeat(LOG_ENTRY_MAX_UTF16 + 1)}}));
         assert_eq!(parse(&line).err(), Some(FrameReject::TooLarge));
+    }
+
+    #[test]
+    fn rotating_targets_reads_only_the_valid_non_general_claims() {
+        let game = json!({"kind": "game", "appName": "480", "runner": "steam", "type": "launch"});
+        let frame = json!({"kind": "log", "batch": [
+            {"target": {"kind": "general"}, "rotate": true, "entries": []},
+            {"target": game, "rotate": false, "entries": []},
+            {"target": {"kind": "game", "appName": "../x", "runner": "steam", "type": "launch"},
+             "rotate": true, "entries": []},
+            {"target": game, "rotate": true, "entries": [{"raw": 7}]},
+            {"target": game, "rotate": true, "entries": []},
+            {"target": {"kind": "runner", "runner": "legendary"}, "rotate": true, "entries": []}
+        ]});
+        let got = rotating_targets(&frame);
+        assert_eq!(got.len(), 2, "{got:?}");
+        assert!(matches!(got[0], LogTarget::Game { .. }));
+        assert!(matches!(got[1], LogTarget::Runner(_)));
+        assert!(rotating_targets(&json!(7)).is_empty());
+        assert!(rotating_targets(&json!({"batch": 3})).is_empty());
     }
 
     #[test]
