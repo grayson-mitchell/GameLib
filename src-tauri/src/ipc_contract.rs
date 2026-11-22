@@ -811,6 +811,7 @@ pub(crate) fn is_renderer_channel(name: &str) -> bool {
 pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "deleteUploadedLogFile",
     "getAllGameOverrides",
+    "getAnticheatInfo",
     "getGameMetadataOverride",
     "getHeroicVersion",
     "getLogContent",

@@ -8,9 +8,10 @@
 //! through [`dispatch`], which answers `unknown op: <op>` for a name not in [`OPS`].
 //!
 //! Persisted state goes through the Phase 85 StoreHost only (D-18): [`cache_view`] reproduces the TS
-//! `CacheStore` semantics over it. The two documented exceptions, `areweanticheatyet.json` and the
-//! override image files, are added by their slices.
+//! `CacheStore` semantics over it. The two documented exceptions, `areweanticheatyet.json` (the
+//! [`anticheat`] slice) and the override image files, are plain files.
 
+pub mod anticheat;
 pub mod cache_view;
 pub mod ctx;
 pub mod http;
@@ -29,6 +30,7 @@ use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each slice adds its own.
 pub const OPS: &[&str] = &[
+    "info_anticheat_info",
     "info_overrides_attach",
     "info_overrides_get",
     "info_overrides_get_all",
@@ -49,6 +51,7 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, 
 /// Each slice adds its arms here, in step with `OPS`.
 async fn route(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, String> {
     match op {
+        "info_anticheat_info" => anticheat::info(ctx, decode(op, args)?),
         "info_overrides_attach" => overrides::attach(ctx, decode(op, args)?),
         "info_overrides_get" => Ok(overrides::get(ctx, &decode(op, args)?).to_value()),
         "info_overrides_get_all" => {

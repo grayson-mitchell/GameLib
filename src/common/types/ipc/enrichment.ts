@@ -1,11 +1,6 @@
 import { z } from 'zod'
 
-import type {
-  AntiCheatInfo,
-  GamelibFixStatus,
-  KnowFixesInfo,
-  WikiInfo
-} from '../../types'
+import type { GamelibFixStatus, KnowFixesInfo, WikiInfo } from '../../types'
 import type { CatalogProduct } from '../discounts'
 import type { RunsForMeState } from '../../runsForMe'
 import type { StoreSearchDeal, StoreSearchResponse } from '../storeSearch'
@@ -45,7 +40,6 @@ const steamGridQuery = z.strictObject({
 })
 
 export const enrichmentAsyncArgs = {
-  getAnticheatInfo: z.tuple([z.string().max(1024)]),
   getKnownFixes: z.tuple([appName, runnerArg()]),
   getGamelibFixStatus: z.tuple([appName, runnerArg()]),
   getRunsForMeMap: noArgs,
@@ -85,7 +79,6 @@ export const enrichmentAsyncArgs = {
 }
 
 interface EnrichmentAsyncReturns {
-  getAnticheatInfo: Promise<AntiCheatInfo | null>
   getKnownFixes: KnowFixesInfo | null
   getGamelibFixStatus: Promise<GamelibFixStatus | null>
   getRunsForMeMap: Promise<Record<string, RunsForMeState>>

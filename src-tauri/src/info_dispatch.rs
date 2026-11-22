@@ -323,6 +323,41 @@ pub(crate) fn get_all_game_overrides(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> 
     })
 }
 
+/// Decodes the one `appNamespace` argument of `getAnticheatInfo`: exactly one string of 0 to
+/// [`gamelib_info::anticheat::NAMESPACE_MAX_UTF16`] UTF-16 code units (an empty namespace is a valid
+/// lookup: the crate answers the first entry with an Epic namespace, as the TS did).
+fn parse_get_anticheat_info(args: &[Value]) -> Result<&str, Rejection> {
+    let [arg] = args else {
+        return Err(("(args)", "invalid_type"));
+    };
+    let Value::String(namespace) = arg else {
+        return Err(("0", "invalid_type"));
+    };
+    if namespace.encode_utf16().count() > gamelib_info::anticheat::NAMESPACE_MAX_UTF16 {
+        return Err(("0", "too_big"));
+    }
+    Ok(namespace)
+}
+
+/// The native `getAnticheatInfo` handler (slice `info`, D-17): the entry of the AreWeAntiCheatYet
+/// data file for an Epic namespace, or `null`. Validated before the context is looked at, like
+/// `removeRecent`.
+pub(crate) fn get_anticheat_info(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        let namespace = parse_get_anticheat_info(&args)
+            .map_err(|(path, code)| invalid_args("getAnticheatInfo", &[path], &[code]))?
+            .to_string();
+        let info = info_ctx().ok_or_else(|| "getAnticheatInfo: not ready".to_string())?;
+        run_info_op(
+            Arc::clone(info),
+            "info_anticheat_info",
+            vec![serde_json::json!({ "appNamespace": namespace })],
+            "getAnticheatInfo: the lookup did not finish",
+        )
+        .await
+    })
+}
+
 #[cfg(test)]
 use gamelib_store::host::StoreHost;
 #[cfg(test)]
@@ -746,6 +781,85 @@ mod tests {
                 vec![json!("")],
             )),
             tauri::async_runtime::block_on(get_all_game_overrides(router_ctx, vec![json!(1)])),
+        ] {
+            let error = bad.unwrap_err();
+            assert!(
+                error.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+                "{error}"
+            );
+            assert!(!error.contains("SECRET"), "{error}");
+        }
+    }
+
+    #[test]
+    fn get_anticheat_info_accepts_exactly_one_bounded_string_and_the_empty_one() {
+        assert_eq!(parse_get_anticheat_info(&[json!("abc")]), Ok("abc"));
+        assert_eq!(parse_get_anticheat_info(&[json!("")]), Ok(""));
+        assert_eq!(
+            parse_get_anticheat_info(&[json!("x".repeat(1024))]).map(str::len),
+            Ok(1024)
+        );
+        for (args, want) in [
+            (vec![], ("(args)", "invalid_type")),
+            (vec![json!(1)], ("0", "invalid_type")),
+            (vec![json!(null)], ("0", "invalid_type")),
+            (vec![json!({})], ("0", "invalid_type")),
+            (vec![json!("a"), json!("b")], ("(args)", "invalid_type")),
+            (vec![json!("x".repeat(1025))], ("0", "too_big")),
+            // Two UTF-16 units per astral character: 513 of them are 1026 units.
+            (vec![json!("\u{1F3AE}".repeat(513))], ("0", "too_big")),
+        ] {
+            assert_eq!(parse_get_anticheat_info(&args), Err(want), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn the_anticheat_lookup_answers_the_ts_golden_through_the_blocking_pool() {
+        let home = FakeHome::new("info-dispatch-");
+        let info = Arc::new(test_ctx(&home, None));
+        let state = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("crates/gamelib-info/tests/fixtures/state/anticheat/lookup-namespace-present-mixed-case");
+        std::fs::copy(
+            state.join("areweanticheatyet.json"),
+            info.paths.app_folder.join("areweanticheatyet.json"),
+        )
+        .unwrap();
+        let found = tauri::async_runtime::block_on(run_info_op(
+            Arc::clone(&info),
+            "info_anticheat_info",
+            vec![json!({ "appNamespace": "abcdef" })],
+            "x",
+        ))
+        .unwrap();
+        assert_eq!(found["storeIds"]["epic"]["namespace"], json!("AbCdEf0123"));
+        let absent = tauri::async_runtime::block_on(run_info_op(
+            info,
+            "info_anticheat_info",
+            vec![json!({ "appNamespace": "nomatch" })],
+            "x",
+        ));
+        assert_eq!(absent, Ok(Value::Null));
+    }
+
+    #[test]
+    fn the_anticheat_handler_validates_first_and_answers_not_ready_before_install() {
+        assert!(info_ctx().is_none());
+        let router_ctx = Arc::new(crate::native_router::NativeCtx::for_tests(
+            Arc::new(NoHost),
+            None,
+        ));
+        let not_ready = tauri::async_runtime::block_on(get_anticheat_info(
+            Arc::clone(&router_ctx),
+            vec![json!("abc")],
+        ));
+        assert_eq!(not_ready, Err("getAnticheatInfo: not ready".to_string()));
+        let secret = "SECRET-NAMESPACE-".repeat(80);
+        for bad in [
+            tauri::async_runtime::block_on(get_anticheat_info(
+                Arc::clone(&router_ctx),
+                vec![json!(secret)],
+            )),
+            tauri::async_runtime::block_on(get_anticheat_info(router_ctx, vec![])),
         ] {
             let error = bad.unwrap_err();
             assert!(

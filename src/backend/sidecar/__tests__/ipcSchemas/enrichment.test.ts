@@ -21,10 +21,6 @@ const gridQuery = {
 }
 
 const table: FixtureTable<typeof enrichmentAsyncArgs> = {
-  getAnticheatInfo: {
-    valid: [['ns-1'], ['']],
-    invalid: [[], [1], ['x'.repeat(2000)]]
-  },
   getKnownFixes: {
     valid: [['abc', 'gog']],
     invalid: [[], ['abc'], ['abc', 'epic'], ['', 'gog']]
@@ -104,9 +100,9 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
 }
 
 describe('enrichment channel schemas', () => {
-  it('has a fixture for every key (18 total)', () => {
+  it('has a fixture for every key (17 total)', () => {
     expectFixtureCoverage(enrichmentAsyncArgs, table)
-    expect(Object.keys(enrichmentAsyncArgs).length).toBe(18)
+    expect(Object.keys(enrichmentAsyncArgs).length).toBe(17)
   })
   runFixtureTable(enrichmentAsyncArgs, table)
 

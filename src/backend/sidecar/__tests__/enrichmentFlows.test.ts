@@ -436,24 +436,12 @@ async function flush(): Promise<void> {
 }
 
 /**
- * Polls for a response frame instead of assuming any fixed delay was long
- * enough. `getAnticheatInfo` is the only channel this file drives whose
- * handler (`gameAnticheatInfo`, `anticheat/utils.ts`) awaits a real
- * `fs/promises` `readFile()`: that resolves through libuv's threadpool, so
- * its round-trip is bounded by OS thread scheduling, NOT by the JS event
- * loop. `flush()`'s `setImmediate` chain therefore cannot bound it, and
- * neither can a real timer of any fixed length — this file previously used a
- * `flush()` + fixed 20ms `setTimeout` helper for exactly this reason, and
- * under full-suite CPU contention that ALSO dropped a frame (1 failure in 12
- * repeated `--selectProjects Backend` runs, on a test already using it).
- * Both the ENOENT fast path and the file-present path go through the same
- * threadpool round-trip. Polling every 10ms up to `timeoutMs` (default
- * 3000ms, comfortably inside jest's default 5000ms per-test timeout) returns
- * as soon as the frame actually arrives and bakes in no upper-bound
- * assumption beyond the test's own timeout budget. Used only for
- * `getAnticheatInfo`'s call sites -- the file's other `flush()` call sites
- * drive channels that resolve via microtasks or synchronous fs calls and are
- * not subject to this race. See debug session `anticheat-response-frame-drop`.
+ * Polls for a response frame instead of assuming any fixed delay was long enough. It was written
+ * for `getAnticheatInfo` (a real `fs/promises` `readFile()` resolves through libuv's threadpool, so
+ * its round-trip is bounded by OS thread scheduling, not the JS event loop; see debug session
+ * `anticheat-response-frame-drop`). That channel is native since Phase 86 Plan 12, but the helper
+ * stays for the UNPORTED-marker sweep below: polling every 10ms up to `timeoutMs` returns as soon as
+ * the frame arrives and bakes in no upper-bound assumption beyond the test's own timeout budget.
  */
 async function waitForResponse(
   frames: Frame[],
@@ -1010,124 +998,12 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     })
   })
 
-  // ── REQ-34.2-07: anticheat riders, asserted rather than assumed ───────────
-  describe('REQ-34.2-07 getAnticheatInfo (invoke) — anticheat riders', () => {
-    const anticheatDataPath = join(appFolder, 'areweanticheatyet.json')
-
-    beforeEach(() => {
-      const dir = join(appFolder)
-      if (!existsSync(dir)) {
-        mkdirSync(dir, { recursive: true })
-      }
-    })
-
-    afterEach(() => {
-      if (existsSync(anticheatDataPath)) {
-        rmSync(anticheatDataPath, { force: true })
-      }
-    })
-
-    it('REQ-34.2-07 returns the record for a matching Epic namespace', async () => {
-      writeFileSync(
-        anticheatDataPath,
-        JSON.stringify([
-          {
-            status: 'Working',
-            anticheats: [],
-            notes: [],
-            native: false,
-            storeIds: { epic: { namespace: 'epicnamespace1', slug: 'x' } },
-            reference: 'ref',
-            updates: []
-          }
-        ])
-      )
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'gai-1', 'getAnticheatInfo', ['epicnamespace1'])
-
-      // waitForResponse(), not a fixed-delay flush: this test used to await
-      // a flush() + fixed 20ms timer, and that still intermittently dropped
-      // this frame under full-suite CPU contention (reproduced -- debug
-      // session anticheat-response-frame-drop). Polling removes the
-      // fixed-delay assumption entirely. See waitForResponse()'s docstring.
-      const response = await waitForResponse(frames, 'gai-1')
-      expect(response?.ok).toBe(true)
-      expect(response?.result).toMatchObject({ status: 'Working' })
-    })
-
-    it('REQ-34.2-07 a Steam-shaped namespace (no Epic namespace match) returns null — proves the Epic-namespace-only keying rider is real', async () => {
-      writeFileSync(
-        anticheatDataPath,
-        JSON.stringify([
-          {
-            status: 'Working',
-            anticheats: [],
-            notes: [],
-            native: false,
-            storeIds: { steam: '440' },
-            reference: 'ref',
-            updates: []
-          }
-        ])
-      )
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'gai-2', 'getAnticheatInfo', ['440'])
-
-      // waitForResponse(), not a fixed-delay flush -- see gai-1's comment above.
-      const response = await waitForResponse(frames, 'gai-2')
-      expect(response?.ok).toBe(true)
-      // gameAnticheatInfo resolves via Array.prototype.find, whose "no
-      // match" value is `undefined` (not `null` despite the declared
-      // `Promise<AntiCheatInfo | null>` signature) — over the wire this
-      // serializes to an absent `result` key entirely (JSON.stringify drops
-      // `undefined`), which is exactly what a genuinely falsy/no-match
-      // result looks like here. Asserted falsy rather than strictly `null`
-      // to match the real, observed runtime behavior instead of the
-      // type declaration.
-      expect(response?.result).toBeFalsy()
-    })
-
-    it('REQ-34.2-07 with isWindows pinned true, returns null regardless of the data file', async () => {
-      envMock.isWindows = true
-      writeFileSync(
-        anticheatDataPath,
-        JSON.stringify([
-          {
-            status: 'Working',
-            anticheats: [],
-            notes: [],
-            native: false,
-            storeIds: { epic: { namespace: 'windows-namespace', slug: 'x' } },
-            reference: 'ref',
-            updates: []
-          }
-        ])
-      )
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'gai-3', 'getAnticheatInfo', ['windows-namespace'])
-      await flush()
-
-      const response = findResponse(frames, 'gai-3')
-      expect(response?.ok).toBe(true)
-      expect(response?.result).toBeNull()
-    })
-
-    it('REQ-34.2-07 with no data file at all, returns null rather than throwing', async () => {
-      const { input, frames } = boot()
-      writeInvoke(input, 'gai-4', 'getAnticheatInfo', ['anything'])
-      // waitForResponse(), not flush(): the missing-file path still goes
-      // through `readFile()`'s libuv threadpool round-trip before rejecting
-      // with ENOENT (see waitForResponse()'s docstring above), and no fixed
-      // real-timer wait is a safe upper bound on that under full-suite CPU
-      // contention (reproduced -- debug session
-      // anticheat-response-frame-drop).
-      const response = await waitForResponse(frames, 'gai-4')
-      expect(response?.ok).toBe(true)
-      expect(response?.result).toBeNull()
-    })
+  // ── Phase 86 (86-12, D-17): the anticheat lookup is a native `info` channel ───────────────────
+  // Its behavior (the Epic-namespace-only keying, null on Windows, null for a missing data file) is
+  // pinned by the Rust golden `golden_anticheat.rs` and the native vectors, not here.
+  it('Phase 86 (D-17) getAnticheatInfo is a native `info` channel: the sidecar no longer registers it', () => {
+    boot()
+    expect(handlerRegistry.has('getAnticheatInfo')).toBe(false)
   })
 
   // ── Phase 47 D-05/D-06 (T-47-41/42): itad.getKeyStatus / itad.setApiKey go through the boot's
@@ -1436,9 +1312,8 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
 
   // ── REQ-34.2-14 / SEAM Invariant B ──────────────────────────────────────────
   describe('REQ-34.2-14/SEAM Invariant B', () => {
-    const ALL_8_CHANNELS: [string, unknown[]][] = [
+    const ALL_7_CHANNELS: [string, unknown[]][] = [
       ['getWikiGameInfo', ['t', 'app-x', 'legendary', false]],
-      ['getAnticheatInfo', ['ns-x']],
       ['getKnownFixes', ['app-x', 'gog']],
       ['getCrossoverIndex', []],
       ['searchStores', ['query-x']],
@@ -1447,7 +1322,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       // `removeRecent` left this list in Phase 86 Plan 08 (D-17): it is a native `info` channel.
     ]
 
-    it.each(ALL_8_CHANNELS)(
+    it.each(ALL_7_CHANNELS)(
       'REQ-34.2-14 channel "%s" does not return UNPORTED_CHANNEL_MARKER and is present in the handler registry',
       async (channel, args) => {
         mockAxiosGet.mockImplementation(() =>
@@ -1458,21 +1333,9 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         )
 
         const { input, frames } = boot()
-        writeInvoke(input, `all8-${channel}`, channel, args)
-        // waitForResponse(), not flush(): `getAnticheatInfo` (one of the 8
-        // channels this same block dispatches) awaits a real
-        // `fs/promises.readFile()` libuv threadpool round-trip even on its
-        // ENOENT fast path (see waitForResponse()'s docstring above), and no
-        // fixed real-timer wait is a safe upper bound on that under
-        // full-suite CPU contention -- the previously-used flush() + fixed
-        // 20ms timer intermittently dropped this frame too (debug session
-        // anticheat-response-frame-drop: reproduced RED with `flush()`
-        // before this change, and a SEPARATE reproduction showed the fixed
-        // 20ms helper still failing once in 12 full-suite runs on the
-        // pre-existing `gai-1` test). Polling removes the fixed-delay
-        // assumption entirely for all 8 channels; the other 7 resolve via
-        // microtasks/sync fs so they return on the first check.
-        const response = await waitForResponse(frames, `all8-${channel}`)
+        writeInvoke(input, `all7-${channel}`, channel, args)
+        // waitForResponse(), not flush(): see its docstring above.
+        const response = await waitForResponse(frames, `all7-${channel}`)
         expect(response).toBeDefined()
         expect(String(response?.error ?? '')).not.toContain(
           UNPORTED_CHANNEL_MARKER

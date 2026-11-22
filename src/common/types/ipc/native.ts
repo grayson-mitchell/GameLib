@@ -6,7 +6,7 @@
  * The keys below must equal the manifest's channels by kind (`ipcDomainCensus` test (e)): invoke
  * channels in `NativeAsync`, send channels in `NativeSync`.
  */
-import type { UploadedLogData } from '../../types'
+import type { AntiCheatInfo, UploadedLogData } from '../../types'
 import type { GetLogFileArgs } from './logger'
 import type { MetadataOverride } from './gameDetails'
 
@@ -51,6 +51,11 @@ export interface NativeAsync {
   // Phase 86 (86-10, D-17): one game's stored override or `null`, read by the Rust `info` slice
   // (`info_overrides_get`). The appName is 1 to 256 UTF-16 units.
   getGameMetadataOverride: (appName: string) => Promise<MetadataOverride | null>
+  // Phase 86 (86-12, D-17): the game page's anti-cheat badge, looked up by the Rust `info` slice in
+  // `<appFolder>/areweanticheatyet.json` (`info_anticheat_info`). `null` for no match (where the TS
+  // returned `undefined`, D-03), on Windows, and when the data file is missing or unreadable. The
+  // namespace is 0 to 1024 UTF-16 units.
+  getAnticheatInfo: (appNamespace: string) => Promise<AntiCheatInfo | null>
 }
 
 export interface NativeSync {

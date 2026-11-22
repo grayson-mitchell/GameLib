@@ -1081,19 +1081,16 @@
     {
       "channel": "getAnticheatInfo",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "maxLength": 1024
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "appNamespace",
+          "type": "string",
+          "maxLength": 1024,
+          "maxLengthUnit": "utf16"
+        }
+      ],
+      "returns": "AntiCheatInfo | null"
     },
     {
       "channel": "getAppManagementStatus",

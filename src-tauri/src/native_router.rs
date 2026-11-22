@@ -441,6 +441,9 @@ impl NativeRouter {
             "getGameMetadataOverride",
             info_dispatch::get_game_metadata_override,
         );
+        // Phase 86 (86-12, D-17): the anti-cheat badge lookup, served from `areweanticheatyet.json`
+        // by the `info` slice. The sidecar no longer registers `getAnticheatInfo`.
+        invoke.insert("getAnticheatInfo", info_dispatch::get_anticheat_info);
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -796,6 +799,7 @@ mod tests {
         assert!(info.contains(&"removeRecent"), "{info:?}");
         assert!(info.contains(&"getAllGameOverrides"), "{info:?}");
         assert!(info.contains(&"getGameMetadataOverride"), "{info:?}");
+        assert!(info.contains(&"getAnticheatInfo"), "{info:?}");
         for name in info {
             // The info slice is invoke-only: no send queue exists for it.
             assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");

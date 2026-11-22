@@ -2,21 +2,20 @@
  * Curated enrichment-channel registration (Phase 34.2 Plan 06, D-04/D-07/
  * D-10, REQ-34.2-04/REQ-34.2-11/REQ-34.2-12/REQ-34.2-14).
  *
- * Registers the 18 enrichment channels the game-details page and store
+ * Registers the 17 enrichment channels the game-details page and store
  * search container depend on, onto platformApi's own `ipcMain` recorder,
  * importing the REAL underlying bodies plans 34.2-01/34.2-03 already
  * extracted or wired unchanged (mirrors `gameDetailsFlowRegistration.ts`'s
  * own objective — prove the real logic runs behind the new transport, not a
  * reimplementation, so the Electron and Tauri builds cannot drift apart):
  *
- *   invoke (8, `ipcMain.handle`, all confirmed `addHandler` in their current
+ *   invoke (7, `ipcMain.handle`, all confirmed `addHandler` in their current
  *   Electron homes):
  *     - `getWikiGameInfo` -> `wiki_game_info/wiki_game_info.ts`'s
  *       `getWikiGameInfo(game, forceRefresh)`, `game` resolved via
  *       `backend/utils`'s `deps.managers.library[runner].getGame(appName)`
  *       (`wiki_game_info/ipc_handler.ts:5`)
- *     - `getAnticheatInfo` -> `anticheat/utils.ts`'s
- *       `gameAnticheatInfo(appNamespace)` (`anticheat/ipc_handler.ts:8`)
+ *     - (Phase 86, 86-12) `getAnticheatInfo` is now a native `info` channel.
  *     - `getKnownFixes` -> `backend/knownFixes.ts`'s
  *       `readKnownFixes(appName, runner)` (Plan 34.2-03 extraction;
  *       registered at `main.ts:1615` today)
@@ -37,9 +36,9 @@
  *       `storeSearch/index.ts` on the Electron side)
  *
  * A `send` channel registered with `ipcMain.handle` (or the reverse) fails
- * 100% SILENTLY at runtime (Phase 31 Pitfall 2) — all eight registrations
+ * 100% SILENTLY at runtime (Phase 31 Pitfall 2) — all seven registrations
  * below were cross-checked against their current homes' own `addHandler`
- * call for that exact channel before being written: every one of the eight
+ * call for that exact channel before being written: every one of the seven
  * is INVOKE.
  *
  * `getWikiGameInfo` note: the `title` argument is accepted and INTENTIONALLY
@@ -48,21 +47,11 @@
  * inside `getWikiGameInfo` itself. This is not a bug in this registration;
  * it reproduces the existing Electron contract byte-for-byte.
  *
- * `getAnticheatInfo` D-07 declaration rider: even fully primed by plan
- * 34.2-01's bootstrap wiring (which re-homed `fetchLastestReleases()` and
- * the `releasesInfoReady` -> `downloadAntiCheatData` listener into
- * `bootstrap.ts`), `gameAnticheatInfo` returns `null` for EVERY Steam title
- * on EVERY platform — it matches exclusively on `info.storeIds.epic?.namespace`
- * (`anticheat/utils.ts:76`), and Steam games have no Epic namespace to match
- * against — and returns `null` for EVERYTHING on Windows regardless of
- * namespace (`anticheat/utils.ts:70`'s `isWindows` early-return). "Ported
- * and primed" must not be read as "anticheat badges appear for Steam games
- * on any platform, or for anything at all on Windows". The `releasesInfoReady`
- * listener is deliberately NOT registered a second time here: plan 34.2-01
- * already re-homed it into `bootstrap.ts` because `anticheat/ipc_handler.ts`
- * itself cannot be imported (it calls `addHandler`, which imports the real
- * `electron`) — registering it again here would double-fire
- * `downloadAntiCheatData` per `releasesInfoReady` event.
+ * `getAnticheatInfo` (Phase 86, 86-12, D-17): served natively by the Rust `info` slice, so it is not
+ * registered here. Its D-07 declaration rider (null for every Steam title on every platform, as the
+ * lookup matches only an Epic namespace, and null for everything on Windows) now lives in
+ * `gamelib-info`'s `anticheat.rs`. The `releasesInfoReady` listener stays in `bootstrap.ts` and is
+ * deliberately NOT registered a second time here (a double registration double-fires the download).
  *
  * `searchStores` / `getStoreSearchDeals` / `getItadSteamGids` error
  * contract: this registration now IMPORTS the three shared handler bodies
@@ -166,7 +155,6 @@ import type { FrontendMessageDeps } from '../host/frontendMessage'
 import type { AppInfo } from '../process/context'
 import type { IpcRegistry } from './ipcRegistry'
 import { getWikiGameInfo } from '../wiki_game_info/wiki_game_info'
-import { gameAnticheatInfo } from '../anticheat/utils'
 import { readGamelibFixStatus, readKnownFixes } from '../knownFixes'
 import { buildCrossoverRatingMap } from '../crossover_index/crossoverRatingMap'
 import {
@@ -232,7 +220,7 @@ const RUNS_FOR_ME_RUNNERS: readonly string[] = Object.freeze([
 ] as const)
 
 /**
- * Registers the 18 enrichment channels. Called once from `handlers.ts`
+ * Registers the 17 enrichment channels. Called once from `handlers.ts`
  * — this module owns no side effects at import time beyond the imports
  * above; the caller decides when registration onto the handler registry
  * happens.
@@ -261,16 +249,9 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
     }
   )
 
-  // D-07 rider: returns null for every Steam title on every platform
-  // (matches only on `info.storeIds.epic?.namespace`) and null for
-  // everything on Windows (`isWindows` early-return) — see module
-  // docstring. `releasesInfoReady` is NOT registered here; it lives in
-  // `bootstrap.ts` (plan 34.2-01).
-  deps.ipc.handle(
-    'getAnticheatInfo',
-    async (_event: unknown, ...args: unknown[]) =>
-      gameAnticheatInfo(deps, args[0] as string)
-  )
+  // Phase 86 (86-12, D-17): `getAnticheatInfo` is a native `info` channel served by Rust from
+  // `<appFolder>/areweanticheatyet.json`, so it is no longer registered here and has one owner. The
+  // D-07 rider on it (null for Steam titles and for everything on Windows) now lives in Rust.
 
   deps.ipc.handle(
     'getKnownFixes',
