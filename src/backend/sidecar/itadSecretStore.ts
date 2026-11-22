@@ -2,7 +2,7 @@
  * `SidecarItadKeyStore` -- the keyring-backed `ItadKeyStore` for the optional user-supplied
  * IsThereAnyDeal key (Phase 47 D-05).
  *
- * Modeled on `steamgridSecretStore.ts`: one per-instance `SidecarKeyringSlotStore` bound to
+ * Modeled on the Humble secret store: one per-instance `SidecarKeyringSlotStore` bound to
  * the `itad-api-key` slot, delegating every method to it. The slot store is already total
  * (a genuine failure logs one warning naming the failure mode, never the secret value), so
  * this class adds no behavior of its own and has no fallback of any kind.

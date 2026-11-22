@@ -285,6 +285,119 @@ describe('anticheatPortComplete', () => {
   })
 })
 
+/**
+ * 86-15 (SC4, D-13, D-17, D-19, D-26): SteamGridDB is Rust. The five `steamgriddb.*` renderer channels
+ * are native `info` channels, the key owner and its one-time plaintext migration live in
+ * `gamelib-info` (the migration runs at boot, bounded, from `info_dispatch::install`), and the TS
+ * slice, its secret store and the oracle are deleted. The goldens and the recorded exchanges stay for
+ * the Rust goldens (`golden_steamgrid`).
+ */
+const STEAMGRID: SliceSpec = {
+  deleted: [
+    'src/backend/steamgrid/utils.ts',
+    'src/backend/steamgrid/secretStore.ts',
+    'src/backend/steamgrid/secureKey.ts',
+    'src/backend/sidecar/steamgridSecretStore.ts',
+    'src/backend/sidecar/__tests__/steamgridSecretStore.test.ts',
+    'src/backend/info/__tests__/oracle/steamgrid.oracle.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-info/tests/fixtures/golden/steamgrid',
+    'src-tauri/crates/gamelib-info/tests/fixtures/recorded/steamgrid'
+  ],
+  forbiddenIdentifiers: [
+    'SteamGridDbSecretStore',
+    'SidecarSteamGridDbSecretStore',
+    'SteamGridDbMigrationDeps',
+    'createSteamGridDbSecrets',
+    'startSidecarSteamGridDbSecretStore',
+    'migrateSteamGridDbApiKey',
+    'encryptApiKey',
+    'decryptApiKey'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_STEAMGRID'
+}
+
+const STEAMGRID_CHANNELS = [
+  'steamgriddb.getGrids',
+  'steamgriddb.getHeroes',
+  'steamgriddb.hasApiKey',
+  'steamgriddb.searchGame',
+  'steamgriddb.setApiKey'
+]
+
+/**
+ * `steamGridSecrets` is gone from every owner and consumer. Three files still name an inert
+ * `steamGridSecrets?: undefined` member, because `sidecar/handlers.ts` (a file another session had
+ * uncommitted edits in when 86-15 ran) still passes it on. The exception is exactly those three paths
+ * and can only shrink: delete the member, the handlers.ts line and the enrichment deps member, then
+ * empty this list.
+ */
+const STEAMGRID_SECRETS_EXEMPT = [
+  'src/backend/services/types.ts',
+  'src/backend/sidecar/enrichmentFlowRegistration.ts',
+  'src/backend/sidecar/handlers.ts'
+]
+
+describe('steamgridPortComplete', () => {
+  runSlice(STEAMGRID)
+
+  it('the five steamgriddb.* channels are native info channels', () => {
+    const native = channelsOf('info').filter((c) =>
+      c.startsWith('steamgriddb.')
+    )
+    expect([...native].sort()).toEqual(STEAMGRID_CHANNELS)
+  })
+
+  it.each(STEAMGRID_CHANNELS)(
+    '%s has no sidecar ipc.on or ipc.handle',
+    (channel) => {
+      expect(findTsRegistrations(tsWalk.files, [channel])).toEqual([])
+    }
+  )
+
+  it('no zod schema key survives for a steamgriddb.* channel (native.ts types them; the Rust decode owns the bounds)', () => {
+    const hits = findIdentifiers(
+      tsWalk.files.filter(
+        (f) =>
+          f.path.startsWith('src/common/') && !f.path.endsWith('/native.ts')
+      ),
+      STEAMGRID_CHANNELS.map((c) => `'${c}'`)
+    )
+    expect(hits).toEqual([])
+  })
+
+  it('steamGridSecrets is named only in the three files that still carry the inert member', () => {
+    const hits = findIdentifiers(
+      tsWalk.files.filter((f) => f.path.startsWith('src/backend/')),
+      ['steamGridSecrets']
+    ).map((h) => h.slice(0, h.indexOf(': ')))
+    expect(hits.filter((p) => !STEAMGRID_SECRETS_EXEMPT.includes(p))).toEqual(
+      []
+    )
+  })
+
+  it("the dev vault's TS slot set no longer holds steamGridDbApiKey (Rust owns that slot)", () => {
+    const vault = tsWalk.files.find(
+      (f) => f.path === 'src/backend/sidecar/devSecretVault.ts'
+    )
+    expect(vault).toBeDefined()
+    expect(vault?.code).not.toContain('steamGridDbApiKey')
+    expect(vault?.code).toContain("'itadApiKey'")
+  })
+
+  it('the migration is wired in Rust at boot and the TS one is gone', () => {
+    const shell = rustWalk.files.find(
+      (f) => f.path === 'src-tauri/src/info_dispatch.rs'
+    )
+    expect(shell?.code).toContain('spawn_sgdb_migration')
+    expect(findIdentifiers(tsWalk.files, ['migrateSteamGridDbApiKey'])).toEqual(
+      []
+    )
+  })
+})
+
 describe('infoPortComplete scans', () => {
   it('anti-vacuity: the walks read real trees', () => {
     assertAtOrAboveFloor(

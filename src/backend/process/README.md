@@ -202,13 +202,12 @@ memory probe reads `os.totalmem()` / `os.freemem()` (plain Node has no `getSyste
 **Config is built at boot:** `createGlobalConfig()` (runs `ensureSettingsMigrated` first) and
 `createGameConfigs({ config })` (the per-game Map lives in its closure) are called only by the
 `config` boot step. `GlobalConfig.get()`, `GameConfig.get()`, `GlobalConfig.globalInstance`, the static
-`instances` Map and the interim `adoptGlobalConfig()` are deleted. The SteamGridDB secret deps carry
-the config slice, so no module reaches for a static config.
+`instances` Map and the interim `adoptGlobalConfig()` are deleted. No module reaches for a static config.
 
 **Owners now instances, built by named boot steps:** the online monitor, engine state, the Steam
 anonymous client, game-session/sign-in state, auth trigger, `steam/state`, the bridge helper registry,
 shim coverage, the winetricks queue, the sign-in probe pass/outcomes/epochs, `SteamUser`, the Steam
-bottle helper, dxmt, the SteamGridDB and Humble secret stores and the Humble services (classify,
+bottle helper, dxmt, the Humble secret stores and the Humble services (classify,
 library, login-window seam, sync fence, user), and the process guards (entry-built, D-66.3-10).
 Constant `Set`s were frozen rather than moved (D-66.3-09), and stateful cascade edits that only
 thread a slice through an unconverted module follow D-66.3-11 (the module keeps its census count).
@@ -279,7 +278,7 @@ Phase 66.4 owns:
 - **D-66.3-08:** the 66.2 Windows spawn-path live gate (passed since: quick 261111-5fw).
 - **D-17 (open until 66.4-22/23):** the non-autonomous live smoke.
 
-Known loose ends, status after 66.4: the quit-handler release of the anonymous Steam client has no unit test (still open; 66.4-16 did not pick it up); `ElectronSteamGridDbSecretStore` is test-only dead code (open); `isMacSonomaOrHigher()` compares the Darwin kernel
+Known loose ends, status after 66.4: the quit-handler release of the anonymous Steam client has no unit test (still open; 66.4-16 did not pick it up); `isMacSonomaOrHigher()` compares the Darwin kernel
 major (`os.release()`) with the macOS major 14, which is not the same number (open: a behaviour change, out of scope for 66.4). Fixed since: `SteamUser.logout()`
 now calls `resetSteamAuthTrigger()` (quick 261112-7wv).
 

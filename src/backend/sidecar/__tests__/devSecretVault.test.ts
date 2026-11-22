@@ -202,7 +202,6 @@ describe('devSecretVault', () => {
     if (!vault) throw new Error('expected the dev vault to be built')
     expect(vault.tokenStore).toBeDefined()
     expect(vault.humbleSecretStore).toBeDefined()
-    expect(vault.steamGridDbSecretStore).toBeDefined()
     expect(vault.itadKeyStore).toBeDefined()
 
     const installedLine = mockLogWarning.mock.calls
@@ -359,24 +358,6 @@ describe('devSecretVault', () => {
     expect(onDisk['csrfToken']).toBe('')
   })
 
-  it('clearing the SteamGridDB API key emits a strictly-pinned wipe line', async () => {
-    process.env[ENV_VAR] = '1'
-    mockIsPackagedSidecar.mockReturnValue(false)
-    const vault = createDevSecretVault({ temp: vaultDir })
-    if (!vault) throw new Error('expected the dev vault to be built')
-
-    const steamGridDbStore = vault.steamGridDbSecretStore
-    await steamGridDbStore.setApiKey('pV4tK9nC6yB2mR8gS5wE')
-    await steamGridDbStore.clearApiKey()
-
-    expect(
-      mockLogWarning.mock.calls.some(
-        ([message]) =>
-          message === '[dev-secret-vault] write key=steamGridDbApiKey op=wipe'
-      )
-    ).toBe(true)
-  })
-
   it('the ITAD user key round-trips through its own slot and clearing emits a value-free wipe line', async () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
@@ -387,10 +368,6 @@ describe('devSecretVault', () => {
     await expect(itadStore.getApiKey()).resolves.toBeUndefined()
     await itadStore.setApiKey('qZ7mN3xW9cL4vB8hT2jD')
     await expect(itadStore.getApiKey()).resolves.toBe('qZ7mN3xW9cL4vB8hT2jD')
-    // The slot is its own: the SteamGridDB key is untouched.
-    await expect(
-      vault.steamGridDbSecretStore.getApiKey()
-    ).resolves.toBeUndefined()
 
     await itadStore.clearApiKey()
     await expect(itadStore.getApiKey()).resolves.toBeUndefined()
@@ -507,12 +484,6 @@ describe('devSecretVault', () => {
           getSecret: async () => '',
           setSecret: async () => undefined,
           clearSecrets: async () => undefined
-        },
-        steamGridDbSecretStore: {
-          isAvailable: () => true,
-          getApiKey: async () => undefined,
-          setApiKey: async () => undefined,
-          clearApiKey: async () => undefined
         },
         itadKeyStore: {
           getApiKey: async () => undefined,

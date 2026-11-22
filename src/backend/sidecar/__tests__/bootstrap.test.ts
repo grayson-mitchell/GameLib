@@ -146,7 +146,6 @@ describe('sidecar bootstrap (headless boot)', () => {
         'signInProbe',
         'spawnAsync',
         'steamBottle',
-        'steamGridSecrets',
         'steamInstallRuntime',
         'steamLaunchRuntime',
         'steamProcesses',

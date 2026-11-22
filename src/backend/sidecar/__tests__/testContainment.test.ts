@@ -1021,7 +1021,6 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'steamCmConfigGate.test.ts',
   'steamFlows.test.ts',
   'steamFocusRefreshWire.test.ts',
-  'steamgridSecretStore.test.ts',
   'steamNativeInstallDefault.test.ts',
   'stdinEofRelease.test.ts',
   'storeEmbedFlows.test.ts',

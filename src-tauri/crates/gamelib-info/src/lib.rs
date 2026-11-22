@@ -27,6 +27,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::pin::Pin;
 use std::sync::OnceLock;
 use std::task::{Context, Poll};
+use std::time::Duration;
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each slice adds its own.
@@ -144,6 +145,55 @@ fn runtime() -> Result<&'static Runtime, String> {
         })
         .as_ref()
         .map_err(Clone::clone)
+}
+
+/// How long the boot migration may run before the shell stops waiting for it (D-26): a cold Keychain
+/// can hold a read for the shell's own 45 s bound, and boot must not wait on that.
+pub const SGDB_MIGRATION_BOUND: Duration = Duration::from_secs(10);
+
+/// Runs [`secrets::migrate_sgdb_plaintext`] once, in the background, as bounded boot work (D-26), and
+/// hands `report` exactly one word describing how it ended: an outcome label (see
+/// [`secrets::MigrationOutcome::label`]), `timeout` when it ran past `bound`, `shutdown` when the
+/// application began to exit first (the work is then not started at all if it had not begun), or
+/// `panic`. The word never carries a key, a length or a path.
+///
+/// The work holds a `Shutdown` registrant named `info-sgdb-migrate` for as long as it really runs, so
+/// an exit waits for it within the one exit budget instead of cutting a settings write short. After
+/// `bound` the wait is abandoned (the blocking read cannot be interrupted) but the registrant is
+/// still held by the worker until it returns.
+///
+/// Callable from any thread: the work runs on the crate's own runtime. An error is only a runtime
+/// that could not be built.
+pub fn spawn_sgdb_migration(
+    ctx: std::sync::Arc<InfoCtx>,
+    bound: Duration,
+    report: impl FnOnce(&'static str) + Send + 'static,
+) -> Result<(), String> {
+    let runtime = runtime().map_err(|e| format!("sgdb_migrate:no-runtime ({e})"))?;
+    runtime.spawn(async move {
+        let token = ctx.shutdown.token();
+        if token.is_cancelled() {
+            report("shutdown");
+            return;
+        }
+        let registrant = ctx.shutdown.register("info-sgdb-migrate");
+        let worker = std::sync::Arc::clone(&ctx);
+        let work = tokio::task::spawn_blocking(move || {
+            let _registrant = registrant;
+            secrets::migrate_sgdb_plaintext(&worker)
+        });
+        let word = tokio::select! {
+            biased;
+            _ = token.cancelled() => "shutdown",
+            done = tokio::time::timeout(bound, work) => match done {
+                Ok(Ok(outcome)) => outcome.label(),
+                Ok(Err(_)) => "panic",
+                Err(_) => "timeout",
+            },
+        };
+        report(word);
+    });
+    Ok(())
 }
 
 /// [`dispatch`] for a plain thread: blocks on the crate's own runtime. Called from inside a tokio

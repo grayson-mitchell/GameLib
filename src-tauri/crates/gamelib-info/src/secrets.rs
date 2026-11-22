@@ -419,6 +419,19 @@ pub enum MigrationOutcome {
     Failed,
 }
 
+impl MigrationOutcome {
+    /// The one word the boot log line carries for this outcome. Never a key, a length or a path.
+    pub fn label(self) -> &'static str {
+        match self {
+            MigrationOutcome::Migrated => "migrated",
+            MigrationOutcome::NothingToDo => "nothing-to-do",
+            MigrationOutcome::Ciphertext => "ciphertext-left-in-place",
+            MigrationOutcome::ReadBackFailed => "read-back-failed",
+            MigrationOutcome::Failed => "failed",
+        }
+    }
+}
+
 /// The `sgdb:v1:` prefix of a ciphertext written by an Electron `safeStorage` build.
 const SGDB_CIPHERTEXT_PREFIX: &str = "sgdb:v1:";
 const SETTING: &str = "steamGridDbApiKey";
@@ -428,7 +441,7 @@ const SETTING: &str = "steamGridDbApiKey";
 /// Any failure leaves the setting where it is. A value that is empty after trimming is not a key
 /// (storing it would delete a real one) and counts as nothing to do.
 ///
-/// Not called at boot in this plan: 86-15 wires it when the TS migration it replaces is deleted.
+/// Run once per boot by [`crate::spawn_sgdb_migration`], which bounds it (86-15, D-26).
 pub fn migrate_sgdb_plaintext(ctx: &InfoCtx) -> MigrationOutcome {
     const OP: &str = "sgdb_migrate";
     let Ok(global) = ctx

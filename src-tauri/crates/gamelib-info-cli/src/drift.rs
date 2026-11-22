@@ -20,7 +20,7 @@ use gamelib_core::clock::SystemClock;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_info::ctx::{InfoCtx, InfoPaths, Platform};
 use gamelib_info::http::{Http, ReqwestHttp};
-use gamelib_info::secrets::EnvSecretSource;
+use gamelib_info::secrets::{EnvSecretSource, SecretSource};
 use gamelib_store::host::StoreHost;
 use serde_json::Value;
 
@@ -58,7 +58,13 @@ struct Case {
     golden: &'static str,
     pointer: &'static str,
     mode: Mode,
+    /// The environment variable that must hold an API key for the case to run. Without it the case
+    /// is SKIPPED with a printed reason (never a failure: the live service refuses an unkeyed call).
+    needs_env: Option<&'static str>,
 }
+
+/// The variable the SteamGridDB cases read their key from.
+const SGDB_KEY_VAR: &str = "GAMELIB_INFO_SGDB_KEY";
 
 /// The fixed case table. Anticheat's: the data file each platform downloads, and one lookup over the
 /// file just downloaded. The lookup's empty namespace matches the first entry that carries an Epic
@@ -77,6 +83,7 @@ const CASES: &[Case] = &[
         golden: "anticheat/expected/download-no-local-file-mac/after/areweanticheatyet.json",
         pointer: "",
         mode: Mode::Whole,
+        needs_env: None,
     },
     Case {
         id: "anticheat-download-linux",
@@ -89,6 +96,7 @@ const CASES: &[Case] = &[
         golden: "anticheat/expected/download-no-local-file-linux/after/areweanticheatyet.json",
         pointer: "",
         mode: Mode::Whole,
+        needs_env: None,
     },
     Case {
         id: "anticheat-lookup",
@@ -101,6 +109,50 @@ const CASES: &[Case] = &[
         golden: "anticheat/expected/download-no-local-file-linux/after/areweanticheatyet.json",
         pointer: "",
         mode: Mode::EntryOfList,
+        needs_env: None,
+    },
+    // SteamGridDB (86-15): the three read ops over the live service, each held against the shape the
+    // operator's 86-07 recording showed. They need the operator's own key in GAMELIB_INFO_SGDB_KEY and
+    // are skipped without it. The game is Celeste, SteamGridDB id 13136, the first answer of the
+    // recorded search; the grids and heroes cases run the search first, as the recordings did.
+    Case {
+        id: "steamgrid-search",
+        slice: "steamgrid",
+        platform: Platform::Linux,
+        setup: &[],
+        op: "info_steamgrid_search",
+        args: r#"[{"query":"Celeste"}]"#,
+        read: Read::Answer,
+        golden: "steamgrid/expected/live-search-celeste/result.json",
+        pointer: "/ops/0/ok",
+        mode: Mode::Whole,
+        needs_env: Some(SGDB_KEY_VAR),
+    },
+    Case {
+        id: "steamgrid-grids",
+        slice: "steamgrid",
+        platform: Platform::Linux,
+        setup: &[("info_steamgrid_search", r#"[{"query":"Celeste"}]"#)],
+        op: "info_steamgrid_grids",
+        args: r#"[{"gameId":13136,"styles":["alternate"],"dimensions":["460x215","920x430"]}]"#,
+        read: Read::Answer,
+        golden: "steamgrid/expected/live-grids-styles-and-dimensions/result.json",
+        pointer: "/ops/1/ok",
+        mode: Mode::Whole,
+        needs_env: Some(SGDB_KEY_VAR),
+    },
+    Case {
+        id: "steamgrid-heroes",
+        slice: "steamgrid",
+        platform: Platform::Linux,
+        setup: &[("info_steamgrid_search", r#"[{"query":"Celeste"}]"#)],
+        op: "info_steamgrid_heroes",
+        args: r#"[{"gameId":13136}]"#,
+        read: Read::Answer,
+        golden: "steamgrid/expected/live-heroes/result.json",
+        pointer: "/ops/1/ok",
+        mode: Mode::Whole,
+        needs_env: Some(SGDB_KEY_VAR),
     },
 ];
 
@@ -262,6 +314,7 @@ fn parse_args(op: &str, text: &str) -> Result<Vec<Value>, String> {
 fn run_case(
     case: &Case,
     http: Arc<dyn Http>,
+    secrets: Arc<dyn SecretSource>,
     app_version: &str,
     golden_root: &Path,
 ) -> Result<String, String> {
@@ -289,10 +342,7 @@ fn run_case(
         http,
     );
     // The environment source and nothing else: drift never reads the Keychain (D-12).
-    ctx.secrets = Some(Arc::new(EnvSecretSource::new(
-        "GAMELIB_INFO_ITAD_KEY",
-        "GAMELIB_INFO_SGDB_KEY",
-    )));
+    ctx.secrets = Some(secrets);
 
     for (op, args) in case.setup {
         let answer = gamelib_info::dispatch_sync(op, &parse_args(op, args)?, &ctx)?;
@@ -326,6 +376,20 @@ fn refused(op: &str, answer: &Value) -> Result<(), String> {
         return Err(format!("{op} fetched nothing ({why})"));
     }
     Ok(())
+}
+
+/// The key source drift uses: the two `GAMELIB_INFO_*` variables, never the Keychain.
+fn env_secrets() -> Arc<dyn SecretSource> {
+    Arc::new(EnvSecretSource::new("GAMELIB_INFO_ITAD_KEY", SGDB_KEY_VAR))
+}
+
+/// Why `case` cannot run, when it cannot: the variable it needs is unset or blank.
+fn skip_reason(case: &Case, var: impl Fn(&str) -> Option<String>) -> Option<String> {
+    let name = case.needs_env?;
+    match var(name) {
+        Some(value) if !value.trim().is_empty() => None,
+        _ => Some(format!("{name} is not set")),
+    }
 }
 
 /// `drift [--slice <name>] [--list]`.
@@ -364,7 +428,17 @@ pub fn run(args: &[String]) {
     let root = golden_root();
     let mut failed = 0;
     for case in cases {
-        match run_case(case, http.clone(), env!("CARGO_PKG_VERSION"), &root) {
+        if let Some(reason) = skip_reason(case, |name| std::env::var(name).ok()) {
+            println!("SKIP {}: {reason}", case.id);
+            continue;
+        }
+        match run_case(
+            case,
+            http.clone(),
+            env_secrets(),
+            env!("CARGO_PKG_VERSION"),
+            &root,
+        ) {
             Ok(note) if note.is_empty() => println!("PASS {}", case.id),
             Ok(note) => println!("PASS {} ({note})", case.id),
             Err(reason) => {
@@ -478,6 +552,17 @@ mod tests {
             CASES.iter().filter(|c| c.slice == "anticheat").count() >= 3,
             "anticheat carries a download per platform and a lookup"
         );
+        assert!(
+            CASES.iter().filter(|c| c.slice == "steamgrid").count() >= 3,
+            "steamgrid carries search, grids and heroes"
+        );
+        assert!(
+            CASES
+                .iter()
+                .filter(|c| c.slice == "steamgrid")
+                .all(|c| c.needs_env == Some(SGDB_KEY_VAR)),
+            "every steamgrid case needs the operator's key"
+        );
         for case in CASES {
             let text = std::fs::read(golden_root().join(case.golden)).expect(case.golden);
             let golden: Value = serde_json::from_slice(&text).unwrap();
@@ -491,13 +576,18 @@ mod tests {
     /// The recorded 86-04 service stands in for the live one. The `Replay` pins the request, so this
     /// also checks that drift asks for exactly what the app asks for (apart from the version in the
     /// User-Agent, which the test sets to the recorded one).
-    fn recorded(id: &str) -> Arc<Replay> {
+    fn recorded(slice: &str, id: &str) -> Arc<Replay> {
         let dir = golden_root()
             .join("..")
             .join("recorded")
-            .join("anticheat")
+            .join(slice)
             .join(id);
         Arc::new(Replay::from_case(&dir).expect(id))
+    }
+
+    /// No keys at all: the anticheat cases never read one.
+    fn no_keys() -> Arc<dyn SecretSource> {
+        Arc::new(gamelib_info::secrets::MemorySecretSource::new())
     }
 
     #[test]
@@ -509,11 +599,71 @@ mod tests {
             ("anticheat-lookup", "download-no-local-file-linux"),
         ] {
             let case = CASES.iter().find(|c| c.id == case_id).unwrap();
-            let replay = recorded(recording);
-            let outcome = run_case(case, replay.clone(), "0.11.0", &golden_root());
+            let replay = recorded("anticheat", recording);
+            let outcome = run_case(case, replay.clone(), no_keys(), "0.11.0", &golden_root());
             assert_eq!(outcome, Ok(String::new()), "{case_id}");
             replay.finish().expect(case_id);
         }
+    }
+
+    #[test]
+    fn a_recorded_service_that_matches_the_golden_passes_every_steamgrid_case() {
+        use gamelib_info::secrets::{MemorySecretSource, Slot};
+        for (case_id, recording) in [
+            ("steamgrid-search", "live-search-celeste"),
+            ("steamgrid-grids", "live-grids-styles-and-dimensions"),
+            ("steamgrid-heroes", "live-heroes"),
+        ] {
+            let case = CASES.iter().find(|c| c.id == case_id).unwrap();
+            let replay = recorded("steamgrid", recording);
+            // The recorder stores the key as REDACTED; any non-empty Authorization value matches.
+            let keys = Arc::new(MemorySecretSource::with(Slot::SteamGridDb, "a-test-key"));
+            let outcome = run_case(case, replay.clone(), keys, "0.11.0", &golden_root());
+            assert_eq!(outcome, Ok(String::new()), "{case_id}");
+            replay.finish().expect(case_id);
+        }
+    }
+
+    #[test]
+    fn a_steamgrid_case_is_skipped_with_a_reason_when_the_key_variable_is_unset_or_blank() {
+        let case = CASES.iter().find(|c| c.id == "steamgrid-search").unwrap();
+        let unset = skip_reason(case, |_| None);
+        assert_eq!(
+            unset.as_deref(),
+            Some("GAMELIB_INFO_SGDB_KEY is not set"),
+            "unset"
+        );
+        let blank = skip_reason(case, |_| Some("  ".to_string()));
+        assert!(blank.is_some(), "blank");
+        assert_eq!(skip_reason(case, |_| Some("k".to_string())), None);
+        // A case with no key requirement is never skipped.
+        let anticheat = CASES.iter().find(|c| c.slice == "anticheat").unwrap();
+        assert_eq!(skip_reason(anticheat, |_| None), None);
+    }
+
+    #[test]
+    fn a_steamgrid_service_that_changes_shape_fails_with_the_path() {
+        use gamelib_info::secrets::{MemorySecretSource, Slot};
+        let case = CASES.iter().find(|c| c.id == "steamgrid-search").unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("body.json"),
+            r#"{"success":true,"data":[{"id":1}]}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.path().join("exchanges.json"),
+            r#"[{"id":"e","request":{"method":"GET","url":"https://www.steamgriddb.com/api/v2/search/autocomplete/Celeste","headers":{"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeroicGamesLauncher/0.11.0","authorization":"REDACTED"}},"response":{"status":200,"headers":{},"bodyFile":"body.json"}}]"#,
+        )
+        .unwrap();
+        let replay = Arc::new(Replay::from_case(dir.path()).unwrap());
+        let keys = Arc::new(MemorySecretSource::with(Slot::SteamGridDb, "k"));
+        let err = run_case(case, replay, keys, "0.11.0", &golden_root()).unwrap_err();
+        // The live entry lost its `name`.
+        assert!(
+            err.contains("[].name is missing from the live result"),
+            "{err}"
+        );
     }
 
     #[test]
@@ -531,7 +681,7 @@ mod tests {
         )
         .unwrap();
         let replay = Arc::new(Replay::from_case(dir.path()).unwrap());
-        let err = run_case(case, replay, "0.11.0", &golden_root()).unwrap_err();
+        let err = run_case(case, replay, no_keys(), "0.11.0", &golden_root()).unwrap_err();
         assert!(err.contains("status 403"), "{err}");
 
         // A body that parses but has another shape (a list of strings).
@@ -542,7 +692,7 @@ mod tests {
         )
         .unwrap();
         let replay = Arc::new(Replay::from_case(dir.path()).unwrap());
-        let err = run_case(case, replay, "0.11.0", &golden_root()).unwrap_err();
+        let err = run_case(case, replay, no_keys(), "0.11.0", &golden_root()).unwrap_err();
         assert!(
             err.contains("[] is string where the golden have object"),
             "{err}"

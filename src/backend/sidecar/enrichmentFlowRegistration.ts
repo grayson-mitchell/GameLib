@@ -148,7 +148,6 @@ import {
   handleGetItadSteamGids
 } from '../storeSearch/handlers'
 import { getRunsForMeMap, setRunsForMeByUser } from '../runsForMe'
-import type { SteamGridDbSecretStore } from '../steamgrid/secretStore'
 import type { ItadSecrets } from '../storeSearch/itadSecrets'
 import { getGogDiscounts } from '../discounts/fetchDiscounts'
 import { logWarning, LogPrefix } from '../logger'
@@ -187,10 +186,10 @@ export interface EnrichmentFlowDeps
     | 'bundledFixesPath'
     | 'localFixesPath'
   >
-  /** The boot-built SteamGridDB API-key owner (D-66.3-17); the key never touches GlobalConfig here. */
-  steamGridSecrets: SteamGridDbSecretStore
   /** The optional ITAD user-key owner (Phase 47 D-05); the key never leaves the sidecar. */
   itadSecrets: ItadSecrets
+  /** Always `undefined`: see `BootServices['steamGridSecrets']` (Phase 86 Plan 15). */
+  steamGridSecrets?: undefined
 }
 import type { CatalogLocaleSettings } from 'common/types/discounts'
 import type { OnlineMonitor } from '../online_monitor'

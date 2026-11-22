@@ -208,35 +208,9 @@ jest.mock('../../storeManagers/legendary/user', () => ({
   LegendaryUser: { getUserInfo: jest.fn() }
 }))
 
-// ── steamgrid/secretStore — Amendment A-03 seam. Every steamgriddb.*
-// handler under test MUST call deps.steamGridSecrets exclusively —
-// never GlobalConfig or steamgrid/secureKey.ts directly (see
-// mockedGlobalConfigGet.not.toHaveBeenCalled() assertion below). Fully
-// controllable per test; re-armed in beforeEach because `resetMocks: true`
-// strips the factory's own jest.fn() implementations before every test
-// (WR-08 gotcha, same as isOnline/runOnceWhenOnline above) ──────────────────
-const mockSecretStoreGetApiKey = jest.fn()
-const mockSecretStoreSetApiKey = jest.fn()
-const mockSecretStoreClearApiKey = jest.fn()
-const mockGetSteamGridDbSecretStore = jest.fn(() => ({
-  isAvailable: () => true,
-  getApiKey: mockSecretStoreGetApiKey,
-  setApiKey: mockSecretStoreSetApiKey,
-  clearApiKey: mockSecretStoreClearApiKey
-}))
-// The sidecar's REAL (unmocked) bootstrap.ts builds the boot's SteamGridDB
-// secret owner through createSteamGridDbSecrets() in the 'steamgrid-secrets'
-// step, handing it the keyring/dev-vault store it selected. Here that factory
-// always returns the SAME fixed test double regardless of the store it is
-// given, so bootstrap's real selection cannot affect what this suite's
-// handlers actually resolve.
-jest.mock('../../steamgrid/secretStore', () => ({
-  createSteamGridDbSecrets: () => mockGetSteamGridDbSecretStore()
-}))
-
 // ── discounts/fetchDiscounts — getGogDiscounts's Plan 34.6-09 extraction
 // out of discounts/index.ts's previously-inline addHandler body. Mocked
-// here for the same reason as steamgrid/utils above: this suite tests the
+// here because this suite tests the
 // channel-routing, not fetchDiscounts.ts's own GOG-catalog-fetching body ───
 const mockGetGogDiscounts = jest.fn()
 jest.mock('../../discounts/fetchDiscounts', () => ({
@@ -313,9 +287,7 @@ type ManagerMock = Record<'getGame' | 'getListOfGames', jest.Mock>
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
 // handles the cases configure or inspect are rebound from that registry in
 // freshRegistry() (run before each case, ahead of any mock configuration), and
-// boot() then boots without a second reset. The SteamGridDB secret store the
-// boot reads is a file-level double (`mockGetSteamGridDbSecretStore`), so it
-// is configured in the beforeEach, which runs before the boot.
+// boot() then boots without a second reset.
 let wikiGameInfoStore: ReturnType<
   typeof import('../../wiki_game_info/stores').createWikiGameInfoStores
 >['wikiGameInfoStore']
@@ -533,19 +505,6 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       .mockReset()
       .mockImplementation((callback: () => unknown) => callback())
 
-    // Re-armed per WR-08 (resetMocks: true strips factory implementations
-    // before every test). Default: no key stored, so hasApiKey/searchGame/
-    // getGrids/getHeroes exercise their "no key" branch unless a test
-    // explicitly overrides mockSecretStoreGetApiKey's return value.
-    mockGetSteamGridDbSecretStore.mockReset().mockImplementation(() => ({
-      isAvailable: () => true,
-      getApiKey: mockSecretStoreGetApiKey,
-      setApiKey: mockSecretStoreSetApiKey,
-      clearApiKey: mockSecretStoreClearApiKey
-    }))
-    mockSecretStoreGetApiKey.mockReset().mockResolvedValue(undefined)
-    mockSecretStoreSetApiKey.mockReset().mockResolvedValue(undefined)
-    mockSecretStoreClearApiKey.mockReset().mockResolvedValue(undefined)
     mockGetGogDiscounts.mockReset()
 
     envMock.isWindows = false

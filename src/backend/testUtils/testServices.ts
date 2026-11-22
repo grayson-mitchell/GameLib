@@ -294,8 +294,6 @@ export function createTestServices(
     steamBottle:
       overrides.steamBottle ?? createTestSteamBottle({ stores, config }),
     steamUser,
-    steamGridSecrets:
-      overrides.steamGridSecrets ?? createTestSteamGridSecrets(),
     itadSecrets: overrides.itadSecrets ?? createTestItadSecrets(),
     humble:
       overrides.humble ??
@@ -304,23 +302,6 @@ export function createTestServices(
         steamUser,
         signInOutcomes: signInProbe.outcomes
       })
-  }
-}
-
-/** An in-memory SteamGridDB key owner: no keyring, no config. */
-function createTestSteamGridSecrets(
-  initial?: string
-): BootServices['steamGridSecrets'] {
-  let key = initial
-  return {
-    isAvailable: () => true,
-    getApiKey: async () => key,
-    setApiKey: async (value) => {
-      key = value.trim() || undefined
-    },
-    clearApiKey: async () => {
-      key = undefined
-    }
   }
 }
 

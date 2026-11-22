@@ -157,7 +157,34 @@ pub(crate) fn install(app: &AppHandle, user_data: &Path) {
     ));
     ctx.itad_baked_key = baked;
     ctx.itad_env_key = env;
-    let _ = INFO_CTX.set(Arc::new(ctx));
+    if INFO_CTX.set(Arc::new(ctx)).is_ok() {
+        start_sgdb_migration();
+    }
+}
+
+/// The one-line report of the boot migration: the outcome word and nothing else (T-86-31).
+fn sgdb_migration_line(word: &str) -> String {
+    format!("steamgrid key migration: {word}")
+}
+
+/// Starts the one-time move of an old plaintext SteamGridDB key into the Keychain as bounded boot
+/// work (D-26): in the background on the crate's runtime, holding the `info-sgdb-migrate` shutdown
+/// registrant, abandoned after [`gamelib_info::SGDB_MIGRATION_BOUND`], and logging one line with the
+/// outcome word only. It replaces the sidecar's `migrateSteamGridDbApiKey`, which is deleted in the
+/// same commit so the two never race. A profile with no plaintext key reads no Keychain at all.
+fn start_sgdb_migration() {
+    let Some(ctx) = info_ctx() else {
+        return;
+    };
+    let started = gamelib_info::spawn_sgdb_migration(
+        Arc::clone(ctx),
+        gamelib_info::SGDB_MIGRATION_BOUND,
+        |word| shell_log(&sgdb_migration_line(word)),
+    );
+    if started.is_err() {
+        // The crate's error names only a runtime that could not be built; the line carries a word.
+        shell_log(&sgdb_migration_line("not-started"));
+    }
 }
 
 /// The installed context for op `op`, or the fixed "not ready" answer.
@@ -1116,6 +1143,26 @@ mod tests {
                 "{error}"
             );
             assert!(!error.contains("SECRET"), "{error}");
+        }
+    }
+
+    #[test]
+    fn the_migration_log_line_carries_the_outcome_word_only() {
+        assert_eq!(
+            sgdb_migration_line("migrated"),
+            "steamgrid key migration: migrated"
+        );
+        // Every word the crate can report, none of which can hold a key.
+        for outcome in [
+            gamelib_info::secrets::MigrationOutcome::Migrated,
+            gamelib_info::secrets::MigrationOutcome::NothingToDo,
+            gamelib_info::secrets::MigrationOutcome::Ciphertext,
+            gamelib_info::secrets::MigrationOutcome::ReadBackFailed,
+            gamelib_info::secrets::MigrationOutcome::Failed,
+        ] {
+            let line = sgdb_migration_line(outcome.label());
+            assert!(line.starts_with("steamgrid key migration: "), "{line}");
+            assert!(!line.contains("sgdb:v1"), "{line}");
         }
     }
 

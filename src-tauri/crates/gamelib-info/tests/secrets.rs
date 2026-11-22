@@ -582,3 +582,147 @@ fn a_migration_without_a_mirror_still_clears_the_document() {
     assert_eq!(migrate_sgdb_plaintext(&f.ctx), MigrationOutcome::Migrated);
     assert!(!f.app_folder().join("store").join("config.json").exists());
 }
+
+// ---- spawn_sgdb_migration: the migration as bounded boot work (86-15, D-26) ----
+
+use gamelib_info::{spawn_sgdb_migration, SGDB_MIGRATION_BOUND};
+use std::sync::mpsc;
+use std::time::Duration;
+
+/// Runs the boot migration over `ctx` and returns the one word it reported.
+fn run_boot_migration(ctx: Arc<InfoCtx>, bound: Duration) -> String {
+    let (tx, rx) = mpsc::channel();
+    spawn_sgdb_migration(ctx, bound, move |word| {
+        let _ = tx.send(word.to_string());
+    })
+    .unwrap();
+    rx.recv_timeout(Duration::from_secs(10))
+        .expect("the boot migration reported nothing")
+}
+
+#[test]
+fn the_boot_migration_is_bounded_at_ten_seconds() {
+    assert_eq!(SGDB_MIGRATION_BOUND, Duration::from_secs(10));
+}
+
+#[test]
+fn the_boot_migration_moves_the_key_in_the_background_and_releases_its_registrant() {
+    let f = Fixture::new();
+    f.write_settings(&settings_doc("\"plain-key\""));
+    let shutdown = f.ctx.shutdown.clone();
+    let probe = f.probe.clone();
+    let settings = f.app_folder().join("config.json");
+    let word = run_boot_migration(Arc::new(f.ctx), Duration::from_secs(10));
+    assert_eq!(word, "migrated");
+    assert_eq!(
+        probe.inner.get(Slot::SteamGridDb).unwrap().as_deref(),
+        Some("plain-key")
+    );
+    assert!(!std::fs::read_to_string(settings)
+        .unwrap()
+        .contains("plain-key"));
+    // The registrant named for the work is gone once it has finished.
+    assert!(shutdown.drain(Duration::from_secs(2)).is_empty());
+}
+
+#[test]
+fn the_boot_migration_with_nothing_to_move_reports_it_and_touches_no_keyring() {
+    let f = Fixture::new();
+    let probe = f.probe.clone();
+    assert_eq!(
+        run_boot_migration(Arc::new(f.ctx), Duration::from_secs(10)),
+        "nothing-to-do"
+    );
+    assert_eq!(probe.gets.load(Ordering::SeqCst), 0);
+    assert_eq!(probe.sets.load(Ordering::SeqCst), 0);
+}
+
+#[test]
+fn the_report_word_is_never_the_key() {
+    let f = Fixture::new();
+    f.write_settings(&settings_doc("\"sgdb:v1:AAAA\""));
+    let word = run_boot_migration(Arc::new(f.ctx), Duration::from_secs(10));
+    assert_eq!(word, "ciphertext-left-in-place");
+    assert!(!word.contains("AAAA"));
+}
+
+/// A keyring whose write takes `0` to finish.
+struct SlowSet(Duration, MemorySecretSource);
+
+impl SecretSource for SlowSet {
+    fn get(&self, slot: Slot) -> Result<Option<String>, String> {
+        self.1.get(slot)
+    }
+    fn set(&self, slot: Slot, value: &str) -> Result<(), String> {
+        std::thread::sleep(self.0);
+        self.1.set(slot, value)
+    }
+    fn delete(&self, slot: Slot) -> Result<(), String> {
+        self.1.delete(slot)
+    }
+}
+
+#[test]
+fn a_slow_keyring_ends_the_wait_at_the_bound_but_the_work_keeps_its_registrant_until_done() {
+    let mut f = Fixture::new();
+    f.write_settings(&settings_doc("\"plain-key\""));
+    f.ctx.secrets = Some(Arc::new(SlowSet(
+        Duration::from_millis(600),
+        MemorySecretSource::new(),
+    )));
+    let shutdown = f.ctx.shutdown.clone();
+    let started = std::time::Instant::now();
+    let word = run_boot_migration(Arc::new(f.ctx), Duration::from_millis(50));
+    assert_eq!(word, "timeout");
+    assert!(
+        started.elapsed() < Duration::from_millis(500),
+        "the wait ended at the bound, not when the keyring answered"
+    );
+    // The worker is still inside the keyring write: it holds the registrant, so an exit that began
+    // now would wait for it within its budget rather than cut the write short.
+    assert_eq!(
+        shutdown.drain(Duration::from_millis(1)),
+        ["info-sgdb-migrate"]
+    );
+}
+
+#[test]
+fn a_migration_that_panics_reports_panic() {
+    struct Boom;
+    impl SecretSource for Boom {
+        fn get(&self, _slot: Slot) -> Result<Option<String>, String> {
+            panic!("boom")
+        }
+        fn set(&self, _slot: Slot, _value: &str) -> Result<(), String> {
+            panic!("boom")
+        }
+        fn delete(&self, _slot: Slot) -> Result<(), String> {
+            panic!("boom")
+        }
+    }
+    let mut f = Fixture::new();
+    f.write_settings(&settings_doc("\"plain-key\""));
+    f.ctx.secrets = Some(Arc::new(Boom));
+    assert_eq!(
+        run_boot_migration(Arc::new(f.ctx), Duration::from_secs(10)),
+        "panic"
+    );
+}
+
+#[test]
+fn a_migration_requested_after_shutdown_began_is_not_started() {
+    let f = Fixture::new();
+    f.write_settings(&settings_doc("\"plain-key\""));
+    let probe = f.probe.clone();
+    let settings = f.app_folder().join("config.json");
+    // Begin the exit: the token is cancelled.
+    assert!(f.ctx.shutdown.drain(Duration::from_millis(1)).is_empty());
+    assert_eq!(
+        run_boot_migration(Arc::new(f.ctx), Duration::from_secs(10)),
+        "shutdown"
+    );
+    assert_eq!(probe.sets.load(Ordering::SeqCst), 0);
+    assert!(std::fs::read_to_string(settings)
+        .unwrap()
+        .contains("plain-key"));
+}

@@ -356,8 +356,6 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     'src/backend/storeManagers/steam/user.ts',
     'src/backend/storeManagers/steam/bottle.ts',
     'src/backend/tools/dxmt.ts',
-    'src/backend/steamgrid/secretStore.ts',
-    'src/backend/sidecar/steamgridSecretStore.ts',
     'src/backend/humble/classify.ts',
     'src/backend/humble/library.ts',
     'src/backend/humble/loginWindowSeam.ts',
@@ -400,10 +398,13 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     expect(callsStaticConfigGet('gameConfigs.get(appName)')).toBe(false)
   })
 
-  it('OWNED_66_3 lists the 28 files 66.3 owns, all existing (but the deleted platform delegate) and none sanctioned', () => {
+  it('OWNED_66_3 lists the 26 files 66.3 owns, all existing (but the deleted platform delegate) and none sanctioned', () => {
     // 66.3-17 deleted humble/humbleStores.ts outright (its holder had no remaining reader), so it
     // leaves the owned list: the file went away, it did not move.
-    expect(OWNED_66_3).toHaveLength(28)
+    // Phase 86 plan 86-15 (2026-11-23): 28 -> 26. The SteamGridDB secret store and its sidecar
+    // keyring owner moved to Rust and were deleted, so both leave the list with the files; the count
+    // tracks the list this plan shrinks.
+    expect(OWNED_66_3).toHaveLength(26)
     const root = join(BACKEND, '..', '..')
     const sanctioned = [
       'src/backend/logger/index.ts',

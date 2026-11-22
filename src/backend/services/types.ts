@@ -57,7 +57,6 @@ import type {
 } from 'backend/storeManagers/steam/bridge/helperRegistry'
 import type { AnonymousClient } from 'backend/storeManagers/steam/anonymousClient'
 import type { SteamUser } from 'backend/storeManagers/steam/user'
-import type { SteamGridDbSecretStore } from 'backend/steamgrid/secretStore'
 import type { ItadSecrets } from 'backend/storeSearch/itadSecrets'
 import type { HumbleServices } from 'backend/humble'
 import type { LoginWindowSeamSlot } from 'backend/humble/loginWindowSeam'
@@ -391,10 +390,12 @@ export interface BootServices {
   /** Built by the 'steam-user' boot step, after 'command-runner' and before 'store-managers' (D-66.3-16). */
   steamUser: SteamUser
   /**
-   * Built by the 'steamgrid-secrets' boot step, before 'register-handlers' (D-66.3-17): the one
-   * SteamGridDB API-key owner, over the store this boot selected (keyring or dev vault).
+   * Always `undefined`. The SteamGridDB key owner is Rust's now (Phase 86 Plan 15, D-19); this inert
+   * member stays only because `sidecar/handlers.ts` still passes it on (a file another session had
+   * uncommitted edits in when Plan 15 ran, so it was not touched). Delete it together with that one
+   * line and the matching member of `EnrichmentFlowDeps`.
    */
-  steamGridSecrets: SteamGridDbSecretStore
+  steamGridSecrets?: undefined
   /** Built by the 'itad-secrets' boot step, before 'register-handlers' (Phase 47 D-05): the optional user ITAD key owner. */
   itadSecrets: ItadSecrets
   /**

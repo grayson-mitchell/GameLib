@@ -60,7 +60,6 @@ import type {
   HumbleSecretStore,
   HumbleSecretKey
 } from 'backend/humble/secretStore'
-import type { SteamGridDbSecretStore } from 'backend/steamgrid/secretStore'
 import type { ItadKeyStore } from 'backend/storeSearch/itadSecrets'
 
 /** The exact-match env var this vault gates on. Read ONLY inside `createDevSecretVault()` —
@@ -77,18 +76,15 @@ const VAULT_FILE_NAME = 'gamelib-dev-secret-vault.json'
 
 /** The slot/key identifiers this vault ever logs or stores under. A closed set, not a free
  * string, mirroring `HumbleSecretKey`'s own closed-union reasoning one layer up — nothing else
- * may ever appear in a `[dev-secret-vault]` log line. Extended by Phase 34.6 plan 02 (A-03) with
- * `steamGridDbApiKey` for `DevVaultSteamGridDbSecretStore` below — same closed-set discipline,
- * one more literal. */
+ * may ever appear in a `[dev-secret-vault]` log line. The SteamGridDB key slot left this set in
+ * Phase 86 Plan 15 (D-19): Rust owns that key now (`info_secrets.rs`'s `DevVaultSecretSource`). */
 type VaultSlot =
   | 'steam-refresh-token'
   | 'sessionCookie'
   | 'csrfToken'
-  | 'steamGridDbApiKey'
   | 'itadApiKey'
 
 const STEAM_SLOT: VaultSlot = 'steam-refresh-token'
-const STEAMGRID_SLOT: VaultSlot = 'steamGridDbApiKey'
 const ITAD_SLOT: VaultSlot = 'itadApiKey'
 
 /** The write direction logged alongside a slot identifier (guardrail (b)/T-fz5-02). A closed
@@ -238,41 +234,9 @@ class DevVaultHumbleSecretStore implements HumbleSecretStore {
   }
 }
 
-/** The SteamGridDB `SteamGridDbSecretStore` half of the vault (Phase 34.6 plan 02, A-03), bound
- * to the fixed `steamGridDbApiKey` slot. Total-method contract, same as the real
- * `SidecarSteamGridDbSecretStore` this stands in for — `isAvailable()` is declared SYNCHRONOUS by
- * the seam's own interface (`steamgrid/secretStore.ts`, plan 34.6-01), so this always reports
- * `true`, mirroring that implementation's identical choice; a real unavailability has no meaning
- * for a local plaintext file. This arm is NOT optional (see `createDevSecretVault()`'s own doc
- * comment below): the branch this function's return value gates is exclusive, so a
- * `GAMELIB_DEV_SECRET_VAULT=1` boot that omitted this class would fall through to
- * `ElectronSteamGridDbSecretStore` — whose `safeStorage` resolves to the sidecar's dead stub —
- * and re-open the exact plaintext hazard A-03 exists to close, on the development machines most
- * likely to hold a real key. */
-class DevVaultSteamGridDbSecretStore implements SteamGridDbSecretStore {
-  constructor(private readonly path: string) {}
-
-  isAvailable(): boolean {
-    return true
-  }
-
-  async getApiKey(): Promise<string | undefined> {
-    const value = readSlot(this.path, STEAMGRID_SLOT)
-    return value ? value : undefined
-  }
-
-  async setApiKey(value: string): Promise<void> {
-    writeSlot(this.path, STEAMGRID_SLOT, value, 'store')
-  }
-
-  async clearApiKey(): Promise<void> {
-    clearSlot(this.path, STEAMGRID_SLOT)
-  }
-}
-
 /** The ITAD user-key half of the vault (Phase 47 D-05), bound to the fixed `itadApiKey` slot.
  * Total-method contract, same as the real `SidecarItadKeyStore` it stands in for. Dev-only
- * plaintext, behind `GAMELIB_DEV_SECRET_VAULT`, same posture as the SteamGridDB slot (T-47-40). */
+ * plaintext, behind `GAMELIB_DEV_SECRET_VAULT` (T-47-40). */
 class DevVaultItadKeyStore implements ItadKeyStore {
   constructor(private readonly path: string) {}
 
@@ -290,19 +254,17 @@ class DevVaultItadKeyStore implements ItadKeyStore {
   }
 }
 
-/** The four stores the vault stands in for, built by `createDevSecretVault()` (D-66.3-01: the
+/** The three stores the vault stands in for, built by `createDevSecretVault()` (D-66.3-01: the
  * boot selects and injects them; nothing is swapped into a module-level registry here). */
 export interface DevSecretVault {
   tokenStore: TokenStore
   humbleSecretStore: HumbleSecretStore
-  steamGridDbSecretStore: SteamGridDbSecretStore
   itadKeyStore: ItadKeyStore
 }
 
 /**
  * Builds the dev-only plaintext secret vault as the Steam `TokenStore`, the Humble
- * `HumbleSecretStore`, AND the SteamGridDB `SteamGridDbSecretStore` (Phase 34.6 plan 02, A-03),
- * if and only if every guardrail passes:
+ * `HumbleSecretStore` and the ITAD key store, if and only if every guardrail passes:
  *
  *   1. `process.env.GAMELIB_DEV_SECRET_VAULT === '1'` (exact match — guardrail (a)). Anything
  *      else, including unset/`'0'`/`'false'`, returns `null` and builds nothing.
@@ -367,7 +329,6 @@ export function createDevSecretVault(
   return {
     tokenStore: new DevVaultTokenStore(path),
     humbleSecretStore: new DevVaultHumbleSecretStore(path),
-    steamGridDbSecretStore: new DevVaultSteamGridDbSecretStore(path),
     itadKeyStore: new DevVaultItadKeyStore(path)
   }
 }

@@ -40,10 +40,10 @@ describe('bootstrap.ts source shape (D-08)', () => {
       'logger',
       'stores',
       'config',
-      // 66.3-17: the secret-store choice and the Humble/SteamGridDB owners are built before any
-      // handler is registered; the keyring touch (migration) stays in 'secret-stores' below.
+      // 66.3-17: the secret-store choice and the Humble owners are built before any handler is
+      // registered; the keyring touch (migration) stays in 'secret-stores' below. (The SteamGridDB
+      // owner left with Phase 86 Plan 15: Rust owns that key.)
       'secret-vault',
-      'steamgrid-secrets',
       'itad-secrets',
       'command-runner',
       'humble-services',
