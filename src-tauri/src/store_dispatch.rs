@@ -120,14 +120,10 @@ fn disallowed_segment(segment: &str) -> bool {
 }
 
 /// A plain file name: what `GamesConfig/<app>` may name (never a path). The boot sweep skips a
-/// `GamesConfig` file whose stem is not one (no frame could ever name it).
+/// `GamesConfig` file whose stem is not one (no frame could ever name it). One definition, shared
+/// with the store host, so the two cannot drift (B-WR-07).
 pub(crate) fn plain_name(name: &str) -> bool {
-    !name.is_empty()
-        && name.len() <= 255
-        && name != "."
-        && name != ".."
-        && !name.contains(['/', '\\', '\0'])
-        && !name.contains("..")
+    gamelib_store::host::plain_segment(name)
 }
 
 /// A runtime cache name: `CACHE_STORE_NAME_PATTERN` of `storePolicy.ts` (`^[A-Za-z0-9_-]{1,64}$`).

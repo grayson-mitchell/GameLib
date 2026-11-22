@@ -525,15 +525,58 @@ fn tighten_token_paths(key: &str, path: &Path) {
 }
 
 /// One plain path segment: what a `GamesConfig/<app>` name must be (`isContainedGameConfig` /
-/// `isPlainAppName` on the TS side, `plain_name` in the shell's dispatcher): 1-255 bytes, not `.`
-/// or `..`, no separator, NUL or `..` run.
-fn plain_segment(name: &str) -> bool {
-    !name.is_empty()
-        && name.len() <= 255
-        && name != "."
-        && name != ".."
-        && !name.contains(['/', '\\', '\0'])
-        && !name.contains("..")
+/// `isPlainAppName` on the TS side). The shell's dispatcher calls this one definition (B-WR-07).
+///
+/// 1-255 bytes of ASCII letters, digits, `-`, `_`, `.` and space; not `.` or `..`, no `..` run, and
+/// no trailing dot or space. A closed character class, not a deny list: on Windows `PathBuf::join`
+/// lets `C:foo` replace the whole base path, `name:stream` is an alternate data stream, and the
+/// device names `CON`, `NUL`, `COM1` and the like name a device whatever the extension, so none of
+/// those may reach a path.
+pub fn plain_segment(name: &str) -> bool {
+    if name.is_empty()
+        || name.len() > 255
+        || name == "."
+        || name == ".."
+        || name.contains("..")
+        || name.ends_with(['.', ' '])
+        || !name
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b' '))
+    {
+        return false;
+    }
+    // A reserved device name is the part before the first dot, ignoring trailing spaces.
+    let stem = name
+        .split('.')
+        .next()
+        .unwrap_or_default()
+        .trim_end_matches(' ');
+    let reserved = matches!(
+        stem.to_ascii_uppercase().as_str(),
+        "CON"
+            | "PRN"
+            | "AUX"
+            | "NUL"
+            | "COM1"
+            | "COM2"
+            | "COM3"
+            | "COM4"
+            | "COM5"
+            | "COM6"
+            | "COM7"
+            | "COM8"
+            | "COM9"
+            | "LPT1"
+            | "LPT2"
+            | "LPT3"
+            | "LPT4"
+            | "LPT5"
+            | "LPT6"
+            | "LPT7"
+            | "LPT8"
+            | "LPT9"
+    );
+    !reserved
 }
 
 /// A file that is not a readable store: a cache that starts empty over it, or any store that opens
@@ -1800,6 +1843,16 @@ mod doc_tests {
             "GamesConfig/a\\b",
             "GamesConfig/a..b",
             "GamesConfig/a\0b",
+            "GamesConfig/C:foo",
+            "GamesConfig/name:stream",
+            "GamesConfig/NUL",
+            "GamesConfig/con.txt",
+            "GamesConfig/COM1",
+            "GamesConfig/lpt9.x",
+            "GamesConfig/trailing.",
+            "GamesConfig/trailing ",
+            "GamesConfig/a*b",
+            "GamesConfig/a?b",
             &format!("GamesConfig/{long}"),
             "settings/game",
             "store/config",
