@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
-stopped_at: Completed 85-13-PLAN.md
-last_updated: "2026-11-21T23:57:35.982Z"
+stopped_at: Completed 85-14-PLAN.md
+last_updated: "2026-11-22T00:11:15.178Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: ff56fd3f66d6d48620d79bf8163b6f5805e7c8a4
+state_head: a63ed76fd9ae7db89fbb60ed20f22ddfc11eb39e
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 14 of 25
+Plan: 15 of 25
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
@@ -373,6 +373,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 85 P12 | 90 min | 2 tasks | 6 files |
 | Phase 85 P18 | 16 min | 2 tasks | 26 files |
 | Phase 85 P13 | 8 min | 2 tasks | 6 files |
+| Phase 85 P14 | 10 min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -714,6 +715,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: 85-18: a bottle version gate Rust cannot answer is treated as unprimed (writes refused, same-engine launches proceed, engine changes refused as marker-newer), never as writable
 - [Phase 85]: 85-13: user-state family flipped by the one flag; store_backend.ts unchanged (absolute-cwd stores join deps.root.userData, no user-state store passes defaults)
 - [Phase 85]: 85-13: boot-migration proofs run Ownership::embedded() so they fail if the shipped flag moves; every older user-state corpus file (14, 7 chained rows) is proven, not just steam_library
+- [Phase 85]: 85-14: the account family (steam_store, humble_store, gog_store, nile_store, legendary_store configs) is Rust-owned behind GAMELIB_STORE; store_backend.ts needed no change (no defaults, table paths, cells keyed by path so the two steam_store names share one)
+- [Phase 85]: 85-14: token-bearing files are tightened (0600 file, 0700 dir, only when group/other bits are set, unix only) in StoreHost::open_inner before the engine reads, so the boot sweep and the strict entry both tighten; failures log key and io::ErrorKind only
+- [Phase 85]: 85-14: keyring_names_are_pinned asserts the Keychain service and slot names as literals in cargo test --bin gamelib-shell (all three CI legs); neither store crate depends on a keyring crate
 
 ### Pending Todos
 
@@ -979,8 +983,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T23:57:34.434Z
-Stopped at: Completed 85-13-PLAN.md
+Last session: 2026-11-22T00:11:13.597Z
+Stopped at: Completed 85-14-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
