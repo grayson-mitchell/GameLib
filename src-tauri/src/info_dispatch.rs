@@ -4,9 +4,9 @@
 //!
 //! D-20: one `Arc<InfoCtx>` is built in `run_setup` right after the store host opens, from the
 //! shell's own paths, `SystemClock`, the platform, the app version, `ReqwestHttp` and the
-//! process-wide `gamelib_core::shutdown::global()`. Its secrets stay `None` until 86-14. Nothing
-//! here spawns a process or waits without a bound: every op runs inside the crate's `guarded`
-//! wrapper (a shutdown registrant raced against the token).
+//! process-wide `gamelib_core::shutdown::global()`. Its secret source is the Keychain-backed one from
+//! `info_secrets` (86-14, D-19). Nothing here spawns a process or waits without a bound: every op
+//! runs inside the crate's `guarded` wrapper (a shutdown registrant raced against the token).
 //!
 //! D-08: a change Rust makes to the recent-games list reaches the renderer (`recentGamesChanged`
 //! through the shell's `FrontendEmitter`) and the tray (`update_tray_recent_games` on the main
@@ -120,6 +120,7 @@ pub(crate) fn install(app: &AppHandle, user_data: &Path) {
         Arc::new(ReqwestHttp::new()),
     );
     ctx.recent_sink = Some(Arc::new(TrayRecentSink::for_app(app)));
+    ctx.secrets = Some(info_secrets::secret_source());
     let _ = INFO_CTX.set(Arc::new(ctx));
 }
 

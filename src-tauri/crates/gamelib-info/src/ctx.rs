@@ -10,7 +10,7 @@ use gamelib_store::host::StoreHost;
 
 use crate::http::Http;
 use crate::recent::RecentSink;
-use crate::secrets::{SecretSource, Slot};
+use crate::secrets::{ItadKey, SecretSource, SgdbKey, Slot};
 
 /// The platform the app runs on, as the shell reports it (the crate never asks the OS).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,7 +44,7 @@ pub struct InfoCtx {
     /// In-flight ops hold a registrant of this and race its token (D-20).
     pub shutdown: Shutdown,
     pub http: Arc<dyn Http>,
-    /// The Keychain-backed source the shell installs (86-14); `None` until then, and in the CLI
+    /// The Keychain-backed source the shell installs (86-14); `None` in the CLI
     /// unless it passes its environment source. An op that needs a key and finds `None` answers
     /// `<op>:no-secret-source`.
     pub secrets: Option<Arc<dyn SecretSource>>,
@@ -55,6 +55,10 @@ pub struct InfoCtx {
     /// Told about every change of the recent-games list (D-08); `None` in the CLI and in tests
     /// that do not watch it.
     pub recent_sink: Option<Arc<dyn RecentSink>>,
+    /// The key owners (86-14). They live here so their read caches and the ITAD `rejected` flag
+    /// are per context, that is per process in the shell.
+    pub itad_key: ItadKey,
+    pub sgdb_key: SgdbKey,
 }
 
 impl InfoCtx {
@@ -79,6 +83,8 @@ impl InfoCtx {
             itad_baked_key: None,
             itad_env_key: None,
             recent_sink: None,
+            itad_key: ItadKey::new(),
+            sgdb_key: SgdbKey::new(),
         }
     }
 

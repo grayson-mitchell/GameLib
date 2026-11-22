@@ -121,6 +121,7 @@ mod clipboard;
 mod depot_dispatch;
 mod dialogs;
 mod info_dispatch;
+mod info_secrets;
 mod ipc_contract;
 mod keyring_dispatch;
 mod log_dispatch;
@@ -2386,6 +2387,7 @@ mod tests {
         "clipboard.rs",
         "dialogs.rs",
         "info_dispatch.rs",
+        "info_secrets.rs",
         "ipc_contract.rs",
         "keyring_dispatch.rs",
         "log_dispatch.rs",
@@ -2446,6 +2448,7 @@ mod tests {
         include_str!("clipboard.rs"),
         include_str!("dialogs.rs"),
         include_str!("info_dispatch.rs"),
+        include_str!("info_secrets.rs"),
         include_str!("ipc_contract.rs"),
         include_str!("keyring_dispatch.rs"),
         include_str!("log_dispatch.rs"),
