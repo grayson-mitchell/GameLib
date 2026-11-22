@@ -123,10 +123,6 @@ jest.mock('../redist', () => ({
   updateRedist: jest.fn()
 }))
 
-jest.mock('backend/wiki_game_info/umu/utils', () => ({
-  getUmuId: jest.fn()
-}))
-
 jest.mock('../constants', () => ({
   deriveGogPaths: () => ({
     gogdlConfigPath: '/fake/gog_store/gogdlConfig',

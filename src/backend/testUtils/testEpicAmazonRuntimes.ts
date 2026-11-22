@@ -23,16 +23,13 @@ export function createTestNileRuntime(): NileRuntime {
   return createNileRuntime()
 }
 
-/** Fresh system-info and HowLongToBeat caches (66.4-12): one pair per call, so two tests never share a memo. */
+/** A fresh system-info cache (66.4-12): one per call, so two tests never share a memo. */
 export function createTestInfoCaches(): InfoCaches {
   /* eslint-disable @typescript-eslint/no-require-imports */
   const { createSystemInfoCache } =
     require('../utils/systeminfo') as typeof import('../utils/systeminfo')
-  const { createHltbCredentials } =
-    require('../wiki_game_info/howlongtobeat/utils') as typeof import('../wiki_game_info/howlongtobeat/utils')
   /* eslint-enable @typescript-eslint/no-require-imports */
   return {
-    systemInfo: createSystemInfoCache(),
-    hltb: createHltbCredentials()
+    systemInfo: createSystemInfoCache()
   }
 }

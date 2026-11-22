@@ -130,7 +130,6 @@ import { createGogRuntime } from '../storeManagers/gog/gogRuntime'
 import { createLegendaryRuntime } from '../storeManagers/legendary/legendaryRuntime'
 import { createNileRuntime } from '../storeManagers/nile/nileRuntime'
 import { createSystemInfoCache } from '../utils/systeminfo'
-import { createHltbCredentials } from '../wiki_game_info/howlongtobeat/utils'
 import { createSteamInstallRuntime } from '../storeManagers/steam/steamInstallRuntime'
 import { createWinetricksQueue } from '../tools/winetricksQueue'
 import { createToolsState, type ToolsState } from '../tools/toolsState'
@@ -1808,13 +1807,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'app-runtime',
       // Builds the app runtime of this boot (D-05, 66.4-17): event bus, frontend-ready flag, launch
-      // single-flight, image fetches, CrossOver index fetch and memo, overlay install single-flight.
+      // single-flight, overlay install single-flight.
       // Construction only: no I/O, no timer, no listener. After 'abort-registry', before
       // 'store-managers' (and every consumer of the bus, flags and flights).
-      run: (ctx, _io, state) => {
-        state.services.appRuntime =
-          prebuilt.appRuntime ??
-          createAppRuntime({ clock: ctx.clock, paths: ctx.paths })
+      run: (_ctx, _io, state) => {
+        state.services.appRuntime = prebuilt.appRuntime ?? createAppRuntime()
       }
     },
     {
@@ -2178,12 +2175,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'info-caches',
-      // Builds the system-information and HowLongToBeat credential caches of this boot (D-05, 66.4-12).
+      // Builds the system-information cache of this boot (D-05, 66.4-12); HowLongToBeat credentials are Rust's (86-21).
       // No I/O, no timer, no handle: each cache fetches on first use. After 'nile-runtime', before 'store-managers'.
       run: (_ctx, _io, state) => {
         state.services.infoCaches = prebuilt.infoCaches ?? {
-          systemInfo: createSystemInfoCache(),
-          hltb: createHltbCredentials()
+          systemInfo: createSystemInfoCache()
         }
       }
     },

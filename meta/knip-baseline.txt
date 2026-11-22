@@ -16,7 +16,6 @@ devDependencies	package.json	node-gyp
 devDependencies	package.json	unimported
 devDependencies	package.json	xvfb-maybe
 duplicates	meta/gen_vtables.ts	WIRE_IN_BUFFER_MAX_BYTES,WIRE_LARGE_MAX_BYTES,WIRE_OUT_MESSAGES_MAX_BYTES
-duplicates	src/backend/crossover_index/normalize.ts	normalize,normalizePunctuationAndEditionStripped
 duplicates	src/frontend/screens/WebView/storeExitRefresh.ts	resetSteamStoreExitRefreshState,resetStoreExitRefreshState
 exports	meta/hardcodedStringGate.ts	StaleExemptionError
 exports	meta/logSecretGate.ts	LOG_FUNCTION_RE
@@ -294,7 +293,6 @@ exports	src/preload/api/wine.ts	Wine.winetricksListAvailable
 exports	src/preload/api/wine.ts	Wine.winetricksListInstalled
 exports	src/preload/api/wine.ts	Wine.winetricksQueueState
 files	meta/coldBootTiming.ts	-
-files	meta/measureCrossoverMatching.ts	-
 files	meta/probeSeaInWorker.ts	-
 files	src/common/types/proxy-types.ts	-
 files	src/frontend/components/UI/WikiGameInfo/components/MacOSCompatibility/index.scss	-

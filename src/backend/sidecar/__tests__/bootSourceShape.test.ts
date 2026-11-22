@@ -74,7 +74,6 @@ describe('bootstrap.ts source shape (D-08)', () => {
 describe('stores modules construct nothing at import (66.1-25, MH-1)', () => {
   const STORE_MODULES = [
     'constants/key_value_stores.ts',
-    'crossover_index/stores.ts',
     'downloadmanager/stores.ts',
     'humble/stores.ts',
     'macArch/stores.ts',
@@ -84,7 +83,6 @@ describe('stores modules construct nothing at import (66.1-25, MH-1)', () => {
     'storeManagers/nile/stores.ts',
     'storeManagers/sideload/stores.ts',
     'storeManagers/steam/stores.ts',
-    'wiki_game_info/stores.ts',
     'wine/manager/stores.ts'
   ]
 

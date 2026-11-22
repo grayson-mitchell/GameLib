@@ -42,10 +42,9 @@
  *     `ratingMap.test.ts`'s own `envMock` pattern) so `isMac`/`isWindows` can
  *     be flipped per test for the D-10/D-16 crossover-map states and the
  *     anticheat Windows rider.
- *   - `backend/crossover_index/index` — only its `createCrossoverIndex` factory, which the boot calls
- *     (66.4-17); the lookups it returns are not exercised here. (`getCrossoverIndex` is the D-24
- *     resolver `info/crossover.ts` since 86-19 and runs for real: the harness answers its one
- *     `info_crossover_rating_map` Rust frame.)
+ *   - (`getCrossoverIndex` is the D-24 resolver `info/crossover.ts` since 86-19 and runs for real: the
+ *     harness answers its one `info_crossover_rating_map` Rust frame. The TS `crossover_index` module
+ *     that this suite once mocked was deleted in 86-24.)
  *   - `backend/config` (`GlobalConfig.get`) — avoids a real on-disk
  *     config.json write while bootstrap.ts's real i18next init still runs.
  *   - `backend/online_monitor` (full surface) — deterministic, no real
@@ -165,16 +164,6 @@ jest.mock('backend/storeManagers', () => {
     })
   }
 })
-
-// ── backend/crossover_index/index mock — the boot builds its lookups with `createCrossoverIndex`
-// (66.4-17), which the TS wiki still reads; the lookups are not under test here. ───────────────
-jest.mock('../../crossover_index/index', () => ({
-  createCrossoverIndex: () => ({
-    buildIndexResolver: jest.fn(),
-    getCodeweaversFromIndex: jest.fn(),
-    crossoverIndexHas: jest.fn()
-  })
-}))
 
 // ── backend/dialog/dialog / backend/utils / legendary/user / aborthandler —
 // carried over unchanged from gameDetailsFlowRegistration.ts's own harness;

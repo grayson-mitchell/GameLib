@@ -108,7 +108,6 @@ import { logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
 import type {
   BootServices,
-  InfoCaches,
   QuitHandler,
   StoreManagers,
   Stores
@@ -119,13 +118,18 @@ export interface ShortcutsFlowDeps
   extends
     NotifyDeps,
     DialogBoxDeps,
-    Pick<NonSteamGameDeps, 'appRuntime' | 'requestRustInvoke'> {
+    Pick<NonSteamGameDeps, 'requestRustInvoke'> {
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
   managers: Pick<StoreManagers, 'library'>
   quit: Pick<QuitHandler, 'handleExit'>
-  stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
-  /** The boot-owned HowLongToBeat credentials cache (66.4-12). */
-  infoCaches: Pick<InfoCaches, 'hltb'>
+  stores: Pick<Stores, 'kvs'>
+  /**
+   * Read by nothing here since 86-24 deleted the TS wiki and CrossOver index they served. Inert: the
+   * foreign-dirty `sidecar/handlers.ts` still passes both. OWED: delete them once `handlers.ts` is
+   * clean (`INFO_CACHES_EXEMPT` and `APP_RUNTIME_EXEMPT` in infoPortComplete.test.ts).
+   */
+  infoCaches?: unknown
+  appRuntime?: unknown
   /** The boot-owned abort registry the icon and artwork downloads register in (66.4-13). */
   aborts: Pick<AbortRegistry, 'create'>
   /** The boot process runner: reg.exe (Desktop folder) and powershell.exe (.lnk) on win32. */
@@ -383,7 +387,6 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
       {
         libraryManagers: deps.managers.library,
         stores: deps.stores,
-        infoCaches: deps.infoCaches,
         aborts: deps.aborts,
         runner: deps.runner,
         config: deps.config,
@@ -391,7 +394,6 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
         imageTools: deps.imageTools,
         dialogs: deps.dialogs,
         sendFrontendMessage: deps.sendFrontendMessage,
-        appRuntime: deps.appRuntime,
         appState: deps.appState,
         notifications: deps.notifications,
         requestRustInvoke: deps.requestRustInvoke

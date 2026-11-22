@@ -175,18 +175,11 @@ describe('createStores', () => {
     }
   })
 
-  it('pins the TTL and invalidateCheck of the umu, wikigameinfo and crossover_index caches', () => {
+  it('builds no umu, wikigameinfo or crossover_index cache: the wiki and CrossOver slices are Rust-owned (86-24)', () => {
     const built = builtCacheStores()
-    const umu = built.get('umu')
-    expect(umu?.lifespan).toBe(60 * 6)
-    expect(umu?.invalidateCheck(null)).toBe(true) // a cached "no umu id" is re-resolved
-    expect(umu?.invalidateCheck('umu-123')).toBe(false)
-    const wiki = built.get('wikigameinfo')
-    expect(wiki?.lifespan).toBe(60 * 24 * 30)
-    expect(wiki?.invalidateCheck({})).toBe(true) // the CacheStore default
-    const crossover = built.get('crossover_index')
-    expect(crossover?.lifespan).toBe(60 * 24)
-    expect(crossover?.invalidateCheck({})).toBe(false) // keep-last-good (D-09)
+    for (const name of ['umu', 'wikigameinfo', 'crossover_index']) {
+      expect(built.has(name)).toBe(false)
+    }
   })
 
   it('builds no itad_prices or itad_steam_gids cache: the ITAD store search is Rust-owned (86-17)', () => {

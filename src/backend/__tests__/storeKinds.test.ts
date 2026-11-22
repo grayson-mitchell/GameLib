@@ -57,8 +57,13 @@ const EXEMPT_NAMES: readonly { name: string; reason: string }[] = [
 // 51 -> 50 at Phase 86 plan 86-17 (2026-11-23): the walk found 52 constructions at the start of the
 // plan; deleting storeSearch/stores.ts removed exactly two (itad_prices, itad_steam_gids), leaving 50.
 // The floor tracks the construction list that plan shrank; it is not lowered to turn a run green.
-const MIN_CONSTRUCTIONS = 50
-const MIN_FILES_WITH_CONSTRUCTION = 15
+// 50 -> 47 at Phase 86 plan 86-24 (2026-11-23): deleting wiki_game_info/stores.ts (umu, wikigameinfo) and
+// crossover_index/stores.ts (crossover_index) removed exactly three constructions, leaving 47. The floor
+// tracks the construction list that plan shrank; it is not lowered to turn a run green.
+const MIN_CONSTRUCTIONS = 47
+// 15 -> 13 at Phase 86 plan 86-24 (2026-11-23): the same two deleted files, wiki_game_info/stores.ts and
+// crossover_index/stores.ts, were two of the files holding a construction.
+const MIN_FILES_WITH_CONSTRUCTION = 13
 const MIN_MIRRORS = 10
 
 // This is a shrink-and-grow equality ratchet. Never widen it to admit a failing case
@@ -115,11 +120,8 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   humble_notified_expiration: 'user-state',
   humble_settle_declined: 'user-state',
   humble_steam_appid: 'cache',
-  crossover_index: 'cache',
   pci_ids_device: 'cache',
-  pci_ids_vendor: 'cache',
-  wikigameinfo: 'cache',
-  umu: 'cache'
+  pci_ids_vendor: 'cache'
 }
 
 const EXPECTED_TOKEN_BEARING = [

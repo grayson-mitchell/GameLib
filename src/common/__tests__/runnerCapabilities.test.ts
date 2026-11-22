@@ -5,45 +5,14 @@
  * needs to know about a runner: whether its `app_name` is a Steam appId, whether it has a store
  * catalog, which store name the wiki lookups use, and which store name umu's API takes. The TS sources
  * of those facts stay where they are until their callers move, so this test proves the JSON equals
- * each of them: `common/storeCapabilities.ts`, `common/utils.ts` `storeMap` and the `storeMapping`
- * const in `wiki_game_info/umu/utils.ts` (private to that module, so it is read as source text).
+ * each of them: `common/storeCapabilities.ts` and `common/utils.ts` `storeMap`. The umu store names had
+ * a third TS source, the `storeMapping` const in `wiki_game_info/umu/utils.ts`, deleted in 86-24 with the
+ * TS wiki: the JSON is now their only source and the Rust golden umu cases pin the names it yields.
  * A new runner, or a changed flag or name on either side, fails here before the two sides disagree.
  */
-import { readFileSync } from 'fs'
-import { join } from 'path'
-
 import { storeMap } from '../utils'
 import { storeCapabilities } from '../storeCapabilities'
 import runnerCapabilities from '../runnerCapabilities.json'
-
-const UMU_UTILS = join(
-  __dirname,
-  '..',
-  '..',
-  'backend',
-  'wiki_game_info',
-  'umu',
-  'utils.ts'
-)
-
-/** The `storeMapping` object literal of umu/utils.ts, as `{ runner: store }`. */
-function umuStoreMapping(): Record<string, string> {
-  const source = readFileSync(UMU_UTILS, 'utf8')
-  const block = /const storeMapping: Record<Runner, string> = \{([^}]*)\}/.exec(
-    source
-  )?.[1]
-  if (block === undefined) throw new Error('umu storeMapping literal not found')
-  const mapping: Record<string, string> = {}
-  for (const line of block.split(/[\n,]/)) {
-    const pair = /^\s*(\w+):\s*'([^']*)'\s*$/.exec(line)
-    if (pair?.[1] !== undefined && pair[2] !== undefined) {
-      mapping[pair[1]] = pair[2]
-    } else if (line.trim() !== '') {
-      throw new Error(`unparsed umu storeMapping line: ${line}`)
-    }
-  }
-  return mapping
-}
 
 const runners = Object.keys(storeCapabilities).sort()
 
@@ -89,9 +58,5 @@ describe('runnerCapabilities.json', () => {
         store: storeMap[runner as keyof typeof storeMap] ?? null
       })
     }
-  })
-
-  it('umuStore equals the storeMapping const in wiki_game_info/umu/utils.ts', () => {
-    expect(runnerCapabilities.umuStore).toEqual(umuStoreMapping())
   })
 })

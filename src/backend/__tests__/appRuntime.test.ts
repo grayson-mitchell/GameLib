@@ -1,23 +1,12 @@
 /**
  * 66.4-17: the boot-owned app runtime. Two runtimes share nothing (event bus, launch flights,
- * index memo, overlay installs); launch single-flight joins per instance; the
- * CrossOver index backs off on the injected clock; the frontend-ready flag flips once per
- * instance; construction arms nothing.
+ * overlay installs); launch single-flight joins per instance; the frontend-ready flag flips once per
+ * instance; construction arms nothing. (The CrossOver index fetch layer and memo it once held are
+ * Rust's, 86-19, and their cases moved with the TS module, 86-24.)
  */
 import * as logger from 'backend/logger'
 
-import { createFakeClock } from 'backend/testUtils/fakeClock'
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
-import { createTestStoreRoot } from 'backend/testUtils/testStoreRoot'
-import { axiosClient } from 'backend/utils'
-import { createCrossoverIndexStores } from 'backend/crossover_index/stores'
-import { crossoverIndexSchema } from 'backend/crossover_index/schema'
-import type { CrossoverIndex } from 'backend/crossover_index/schema'
-import {
-  FAILURE_BACKOFF_MINUTES,
-  type IndexDescriptor
-} from 'backend/crossover_index/fetcher'
-import { crossoverIndexDescriptor } from 'backend/crossover_index'
 import type { GameStatus } from 'common/types'
 
 beforeEach(() => {
@@ -25,13 +14,16 @@ beforeEach(() => {
   jest.spyOn(logger, 'logWarning').mockImplementation(() => undefined)
   jest.spyOn(logger, 'logError').mockImplementation(() => undefined)
 })
-afterEach(() => jest.restoreAllMocks())
+afterEach(() => {
+  jest.restoreAllMocks()
+  jest.useRealTimers()
+})
 
 describe('createAppRuntime', () => {
   it('construction arms no timer and adds no listener', () => {
-    const clock = createFakeClock()
-    const runtime = createTestAppRuntime({ clock })
-    expect(clock.pendingCount()).toBe(0)
+    jest.useFakeTimers()
+    const runtime = createTestAppRuntime()
+    expect(jest.getTimerCount()).toBe(0)
     expect(runtime.events.eventNames()).toEqual([])
   })
 
@@ -109,86 +101,5 @@ describe('launch single-flight', () => {
     expect(runB).toHaveBeenCalledTimes(1)
     release()
     await owner
-  })
-})
-
-describe('crossover index', () => {
-  const stores = {
-    crossoverIndex: createCrossoverIndexStores({ root: createTestStoreRoot() })
-  }
-  const deps = { stores }
-  const index = (generatedAt: string, name = 'Game'): CrossoverIndex => ({
-    version: 1,
-    generatedAt,
-    entries: Array.from({ length: 1000 }, (_, i) => ({
-      name: i === 0 ? name : `Filler ${i}`,
-      rating: 3
-    }))
-  })
-  const stale: IndexDescriptor<CrossoverIndex> = {
-    name: 'app-runtime-stale',
-    url: 'https://example.com/index.json.gz',
-    bundledPath: 'absent.json.gz',
-    schema: crossoverIndexSchema,
-    ttlMinutes: 60
-  }
-
-  beforeEach(() => stores.crossoverIndex.crossoverIndexStore.clear())
-
-  it('backs off after a failure and retries once the window elapses on the injected clock', async () => {
-    const clock = createFakeClock(Date.now())
-    const { crossoverFetcher } = createTestAppRuntime({ clock })
-    stores.crossoverIndex.crossoverIndexStore.set(stale.name, {
-      data: index('2026-01-01T00:00:00.000Z'),
-      fetchedAt: clock.now() - 1000 * 60 * 60 * 25
-    })
-    const get = jest
-      .spyOn(axiosClient, 'get')
-      .mockRejectedValue(new Error('network down'))
-    await crossoverFetcher.loadIndex(deps, stale)
-    await crossoverFetcher.loadIndex(deps, stale)
-    expect(get).toHaveBeenCalledTimes(1)
-    clock.advance(FAILURE_BACKOFF_MINUTES * 60 * 1000 + 1000)
-    await crossoverFetcher.loadIndex(deps, stale)
-    expect(get).toHaveBeenCalledTimes(2)
-  })
-
-  it('the backoff is per runtime: a second boot retries at once', async () => {
-    const clock = createFakeClock(Date.now())
-    const a = createTestAppRuntime({ clock })
-    const b = createTestAppRuntime({ clock })
-    stores.crossoverIndex.crossoverIndexStore.set(stale.name, {
-      data: index('2026-01-01T00:00:00.000Z'),
-      fetchedAt: clock.now() - 1000 * 60 * 60 * 25
-    })
-    const get = jest
-      .spyOn(axiosClient, 'get')
-      .mockRejectedValue(new Error('network down'))
-    await a.crossoverFetcher.loadIndex(deps, stale)
-    await b.crossoverFetcher.loadIndex(deps, stale)
-    expect(get).toHaveBeenCalledTimes(2)
-  })
-
-  it('memoizes the maps per runtime and rebuilds when generatedAt swaps', async () => {
-    const a = createTestAppRuntime({ clock: createFakeClock(Date.now()) })
-    const set = (generatedAt: string, name: string) =>
-      stores.crossoverIndex.crossoverIndexStore.set(
-        crossoverIndexDescriptor.name,
-        { data: index(generatedAt, name), fetchedAt: Date.now() }
-      )
-    const game = { runner: 'gog', app_name: 'x', title: 'Zork' } as const
-    set('2026-01-01T00:00:00.000Z', 'Zork')
-    const get = jest.spyOn(axiosClient, 'get')
-    expect(a.crossoverIndex.crossoverIndexHas(deps, game)).toBe(true)
-    // Same generatedAt, different payload: the memo is returned, so the stale map still answers.
-    set('2026-01-01T00:00:00.000Z', 'Other')
-    expect(a.crossoverIndex.crossoverIndexHas(deps, game)).toBe(true)
-    // A fresh runtime has no memo, so it sees the new payload.
-    const b = createTestAppRuntime()
-    expect(b.crossoverIndex.crossoverIndexHas(deps, game)).toBe(false)
-    // A new generatedAt rebuilds.
-    set('2026-02-01T00:00:00.000Z', 'Other')
-    expect(a.crossoverIndex.crossoverIndexHas(deps, game)).toBe(false)
-    expect(get).not.toHaveBeenCalled()
   })
 })

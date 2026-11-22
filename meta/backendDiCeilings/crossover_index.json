@@ -1,8 +1,0 @@
-{
-  "jestMock": {
-    "src/backend/crossover_index/__tests__/fetcher.test.ts": 3,
-    "src/backend/crossover_index/__tests__/index.test.ts": 3,
-    "src/backend/crossover_index/__tests__/ratingMap.test.ts": 2,
-    "src/backend/crossover_index/__tests__/ratingMapIndexLoads.test.ts": 3
-  }
-}

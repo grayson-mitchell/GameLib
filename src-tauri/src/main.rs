@@ -212,14 +212,16 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     "checkGameUpdates",
     "refreshLibrary",
     // Phase 34.2 Plan 06, D-10: fans out over every game in every library manager
-    // (`crossover_index/crossoverRatingMap.ts`'s `buildCrossoverRatingMap()`) — the same
-    // library-wide shape as checkGameUpdates/refreshLibrary above.
+    // (`src/backend/info/crossover.ts`'s `getCrossoverIndex`, the 86-19 resolver that gathers every
+    // library's games before the one Rust rating-map call; the TS `crossover_index/` module and its
+    // `buildCrossoverRatingMap()` were deleted in 86-24) — the same library-wide shape as
+    // checkGameUpdates/refreshLibrary above.
     //
     // IN-03 correction (2026-08-22, `34.2-REVIEW.md` round 1): this entry used to cite a SECOND
     // reason — that the pass called `loadIndex`/`buildMaps` once PER GAME rather than once
     // overall, "a known inefficiency deliberately not fixed by this slice". Round-1 WR-07 fixed
-    // it: the resolver is now built once per pass, gated by
-    // `crossover_index/__tests__/ratingMapIndexLoads.test.ts`. Only the fan-out reason remains.
+    // it: the index is now loaded once per pass (the Rust `crossover` slice loads it once per call).
+    // Only the fan-out reason remains.
     // Left exempt rather than re-measured — dropping the exemption on reasoning alone would
     // trade a never-settling promise for a spurious timeout, and this list's own precedent
     // (getWikiGameInfo, above) is that the bound comes back on a MEASUREMENT, not an argument.

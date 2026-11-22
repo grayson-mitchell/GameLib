@@ -35,13 +35,16 @@ const CURRENT_PHASE = 85
  * Mirrors a Phase 86 plan has already deleted. Their schedule cell is still 86 (the slice that
  * deletes them, 82-STATE-OWNERSHIP.md), but 86 is not finished, so `CURRENT_PHASE` stays 85 and the
  * "due after 85 still exists" rule would fail them. Each 86 plan that deletes a registration adds its
- * store here (86-11: `gameOverridesStore`; 86-17: `itad_prices`, `itad_steam_gids`) and its `storeTable.json` row moves to `EXTRA_ROWS`
+ * store here (86-11: `gameOverridesStore`; 86-17: `itad_prices`, `itad_steam_gids`; 86-24: `crossover_index`, `umu`, `wikigameinfo`) and its `storeTable.json` row moves to `EXTRA_ROWS`
  * (D-29 row 5); when 86 closes, `CURRENT_PHASE` moves to 86 and this set empties.
  */
 const DELETED_IN_PHASE_86: ReadonlySet<string> = new Set([
   'gameOverridesStore',
   'itad_prices',
-  'itad_steam_gids'
+  'itad_steam_gids',
+  'crossover_index',
+  'umu',
+  'wikigameinfo'
 ])
 
 /** Store (TS name) -> the slice that deletes its TS mirror (82-STATE-OWNERSHIP.md). */

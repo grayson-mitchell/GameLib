@@ -44,7 +44,6 @@ import type { MiscRuntime } from 'backend/miscRuntime'
 import type { SystemInfoCache } from 'backend/utils/systeminfo'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { WineWindowRaiser } from 'backend/utils/wineWindowRaise'
-import type { HltbCredentials } from 'backend/wiki_game_info/howlongtobeat/utils'
 import type { SteamInstallRuntime } from 'backend/storeManagers/steam/steamInstallRuntime'
 import type { ToolsState } from 'backend/tools/toolsState'
 import type { WinetricksQueue } from 'backend/tools/winetricksQueue'
@@ -77,9 +76,6 @@ export interface Stores {
   kvs: ReturnType<
     typeof import('backend/constants/key_value_stores').createKvsStores
   >
-  crossoverIndex: ReturnType<
-    typeof import('backend/crossover_index/stores').createCrossoverIndexStores
-  >
   downloadManager: ReturnType<
     typeof import('backend/downloadmanager/stores').createDownloadManagerStores
   >
@@ -104,9 +100,6 @@ export interface Stores {
   >
   steam: ReturnType<
     typeof import('backend/storeManagers/steam/stores').createSteamStores
-  >
-  wikiGameInfo: ReturnType<
-    typeof import('backend/wiki_game_info/stores').createWikiGameInfoStores
   >
   wineManager: ReturnType<
     typeof import('backend/wine/manager/stores').createWineManagerStores
@@ -146,10 +139,9 @@ export type CommandRunner = CommandRunnerImpl
 export type { SpawnAsync, QuitHandler }
 
 /** What every library manager receives through its constructor (66.1, R2). */
-/** The boot-owned info caches: system information and HowLongToBeat credentials. */
+/** The boot-owned info caches: system information (the HowLongToBeat credentials are Rust's since 86-21). */
 export interface InfoCaches {
   systemInfo: SystemInfoCache
-  hltb: HltbCredentials
 }
 
 export interface ManagerDeps {

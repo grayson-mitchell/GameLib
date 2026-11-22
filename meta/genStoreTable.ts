@@ -147,6 +147,19 @@ const EXTRA_ROWS: Omit<Row, 'family' | 'chain'>[] = [
     dotPaths: true,
     flavour: 'store'
   },
+  // 86-24 (D-29 row 5): the TS wiki game info, umu and CrossOver index stores are deleted; the Rust
+  // `gamelib-info` wiki and crossover slices still open these three caches (the renderer's wiki read
+  // resolves `wikigameinfo` through ts_names), so the rows live here with the cache kind unchanged.
+  ...['crossover_index', 'umu', 'wikigameinfo'].map((name) => ({
+    key: `store_cache/${name}`,
+    dir: 'store_cache',
+    name,
+    tsNames: [name],
+    kind: 'cache' as const,
+    tokenBearing: false,
+    dotPaths: true,
+    flavour: 'store' as const
+  })),
   ...['itad_prices', 'itad_steam_gids'].map((name) => ({
     key: `store_cache/${name}`,
     dir: 'store_cache',

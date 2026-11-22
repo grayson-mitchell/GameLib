@@ -5,7 +5,6 @@
  * stores through.
  */
 import { createKvsStores } from 'backend/constants/key_value_stores'
-import { createCrossoverIndexStores } from 'backend/crossover_index/stores'
 import { createDownloadManagerStores } from 'backend/downloadmanager/stores'
 import { createHumbleStores } from 'backend/humble/stores'
 import { createMacArchStores } from 'backend/macArch/stores'
@@ -15,7 +14,6 @@ import { createLegendaryStores } from 'backend/storeManagers/legendary/stores'
 import { createNileStores } from 'backend/storeManagers/nile/stores'
 import { createSideloadStores } from 'backend/storeManagers/sideload/stores'
 import { createSteamStores } from 'backend/storeManagers/steam/stores'
-import { createWikiGameInfoStores } from 'backend/wiki_game_info/stores'
 import { createWineManagerStores } from 'backend/wine/manager/stores'
 import type { Stores } from 'backend/services/types'
 import { createEngineStores } from 'backend/engine/engineNoticeStore'
@@ -25,7 +23,6 @@ import type { StoreFamilyDeps } from './storeRoot'
 export function createStores(deps: StoreFamilyDeps): Stores {
   return {
     kvs: createKvsStores(deps),
-    crossoverIndex: createCrossoverIndexStores(deps),
     downloadManager: createDownloadManagerStores(deps),
     humble: createHumbleStores(deps),
     macArch: createMacArchStores(deps),
@@ -35,7 +32,6 @@ export function createStores(deps: StoreFamilyDeps): Stores {
     nile: createNileStores(deps),
     sideload: createSideloadStores(deps),
     steam: createSteamStores(deps),
-    wikiGameInfo: createWikiGameInfoStores(deps),
     wineManager: createWineManagerStores(deps),
     engine: createEngineStores(deps),
     systemInfo: createPciIdCaches(deps)

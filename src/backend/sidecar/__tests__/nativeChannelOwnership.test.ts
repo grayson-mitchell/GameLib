@@ -71,14 +71,6 @@ const MULTI_REGISTRATION: Record<string, { files: string[]; reason: string }> =
       reason:
         'language.ts only quotes the old main.ts addListener in its header; the live ipc.on is in appShellFlowRegistration.ts'
     },
-    getCrossoverIndex: {
-      files: [
-        'crossover_index/crossoverRatingMap.ts',
-        'sidecar/enrichmentFlowRegistration.ts'
-      ],
-      reason:
-        'crossoverRatingMap.ts only quotes the old addHandler in its header; the live ipc.handle is in enrichmentFlowRegistration.ts'
-    },
     logoutSteam: {
       files: [
         'sidecar/steamAuthFlowRegistration.ts',

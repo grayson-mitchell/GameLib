@@ -167,8 +167,10 @@ describe('66.1 end state: stores modules', () => {
   // overrides are Rust's).
   // 14 -> 13 at Phase 86 plan 86-17 (2026-11-23): storeSearch/stores.ts was deleted (the ITAD store
   // search and its two caches are Rust's).
-  it('finds the 13 stores modules', () => {
-    expect(STORES_MODULES).toHaveLength(13)
+  // 13 -> 11 at Phase 86 plan 86-24 (2026-11-23): crossover_index/stores.ts and wiki_game_info/stores.ts
+  // were deleted (the wiki and CrossOver index slices are Rust's).
+  it('finds the 11 stores modules', () => {
+    expect(STORES_MODULES).toHaveLength(11)
     for (const m of STORES_MODULES) {
       expect(existsSync(join(BACKEND, m))).toBe(true)
     }
@@ -242,7 +244,9 @@ describe('66.1 end state: stores modules', () => {
     // game_overrides/stores.ts was deleted with the slice. The deletion is the only change.
     // 15 -> 14 at Phase 86 plan 86-17 (2026-11-23): index.ts plus 13 stores modules now, after
     // storeSearch/stores.ts was deleted with the slice.
-    assertAtOrAboveFloor('66.1 stores modules', files.length, 14)
+    // 14 -> 12 at Phase 86 plan 86-24 (2026-11-23): index.ts plus 11 stores modules now, after
+    // crossover_index/stores.ts and wiki_game_info/stores.ts were deleted with their slices.
+    assertAtOrAboveFloor('66.1 stores modules', files.length, 12)
     const offenders: string[] = []
     for (const f of files) {
       const text = source(join(BACKEND, f))
@@ -637,8 +641,6 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
   // entries at the start of 66.4, less the modules deleted outright).
   const OWNED_66_4 = [
     'src/backend/backend_events.ts',
-    'src/backend/crossover_index/fetcher.ts',
-    'src/backend/crossover_index/index.ts',
     'src/backend/dialog/dialog.ts',
     'src/backend/dialog/displayAck.ts',
     'src/backend/engine/bottleLedger.ts',
@@ -705,8 +707,7 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     'src/backend/utils/aborthandler/aborthandler.ts',
     'src/backend/utils/systeminfo/gpu/pci_ids.ts',
     'src/backend/utils/systeminfo/index.ts',
-    'src/backend/utils/wineWindowRaise.ts',
-    'src/backend/wiki_game_info/howlongtobeat/utils.ts'
+    'src/backend/utils/wineWindowRaise.ts'
   ] as const
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const ceilings = require('../../../meta/backendDiCeilings.cjs') as {
@@ -758,7 +759,9 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     // storeVersioning/readOnlyStores.ts (D-03, SC5): 76 -> 73.
     // Phase 86 Plan 05 deleted images_cache.ts (D-22, a deliberate deletion, not a lowered floor): 73 -> 72.
     // Phase 86 Plan 17 deleted storeSearch/itad.ts with the TS store-search slice (D-13): 72 -> 71.
-    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 71)
+    // Phase 86 Plan 24 deleted crossover_index/fetcher.ts, crossover_index/index.ts and
+    // wiki_game_info/howlongtobeat/utils.ts with the TS wiki and CrossOver slices (D-13): 71 -> 68.
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 68)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {

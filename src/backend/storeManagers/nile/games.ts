@@ -79,10 +79,7 @@ export default class NileGameManager implements Game {
         | 'appRuntime'
         | 'requestRustInvoke'
       > & {
-        stores: Pick<
-          ManagerDeps['stores'],
-          'kvs' | 'wineManager' | 'wikiGameInfo' | 'crossoverIndex'
-        >
+        stores: Pick<ManagerDeps['stores'], 'kvs' | 'wineManager'>
       }
   ) {
     this.id = id

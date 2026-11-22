@@ -61,7 +61,7 @@
  * `LONG_RUNNING_CHANNELS`: the resolver enumerates every game in every library manager, and the first call after a
  * stale cache fetches the index. Phase 86 (86-19) moved the index fetch, the lookups and the rating map to Rust
  * (`gamelib-info` `crossover`), which loads the index once per call and memoizes its lookup maps; the TS
- * `crossover_index/` module stays only for the TS wiki that still reads it, and goes with it (86-24).
+ * `crossover_index/` module went with the TS wiki (86-24).
  *
  * Phase 86 (86-08, D-17): `removeRecent` is no longer registered here. It is a
  * native `info` channel served by Rust (`nativeChannels.json`), so it has exactly
@@ -78,12 +78,7 @@
  * four gated entry points. Every import below reaches an
  * UNDERLYING module (`../knownFixes`,
  * `../info/crossover`,
- * `../wiki_game_info/wiki_game_info`,
  * `../utils`) — NEVER a feature module's `ipc_handler.ts`.
- *
- * `wiki_game_info/stores` is already registered by
- * `createStores` (Phase 29) — this module needs no new store
- * plumbing for the `getWikiGameInfo` cache self-heal path.
  *
  * Deliberately does NOT wrap the invoke bodies in
  * try/catch: an invoke rejection travels back to the renderer as a
@@ -125,17 +120,18 @@ import type { ManagerDeps, StoreManagers, Stores } from 'backend/services/types'
 
 /** Narrow slice (66.1 D-01): library managers for game lookup. */
 export interface EnrichmentFlowDeps
-  extends FrontendMessageDeps, AppRuntimeSlice<'events' | 'crossoverIndex'> {
+  extends FrontendMessageDeps, AppRuntimeSlice<'events'> {
   ipc: Pick<IpcRegistry, 'handle'>
   appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>
-  stores: Pick<
-    Stores,
-    'kvs' | 'runsForMe' | 'wikiGameInfo' | 'crossoverIndex' | 'gog'
-  >
+  stores: Pick<Stores, 'kvs' | 'runsForMe' | 'gog'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
-  /** The boot-owned HowLongToBeat credentials cache (66.4-12). */
-  infoCaches: Pick<ManagerDeps['infoCaches'], 'hltb'>
+  /**
+   * Read by nothing here since 86-24 deleted the TS HowLongToBeat credentials it carried. Inert: the
+   * foreign-dirty `sidecar/handlers.ts` still passes it. OWED: delete with the other inert members
+   * below once `handlers.ts` is clean (`INFO_CACHES_EXEMPT` in infoPortComplete.test.ts).
+   */
+  infoCaches?: unknown
   /** The GOG credential cache and path roots the discounts handler reads (66.4-10). */
   gogRuntime: Pick<ManagerDeps['gogRuntime'], 'credentials'>
   paths: Pick<
@@ -182,7 +178,8 @@ const RUNS_FOR_ME_RUNNERS: readonly string[] = Object.freeze([
 export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   // Phase 86 (86-22, D-17): `getWikiGameInfo` is a native `info` channel served by Rust
   // (`info_wiki_get`, `nativeChannels.json`), so it is no longer registered here and has one owner. The
-  // TS `wiki_game_info.ts` stays only for the non-Steam shortcut resolver and `clearCache` until 86-23/24.
+  // TS wiki module is deleted (86-24); the non-Steam shortcut and the sign-out clear call Rust through
+  // the shims in `info/wiki.ts`.
 
   // Phase 86 (86-12, D-17): `getAnticheatInfo` is a native `info` channel served by Rust from
   // `<appFolder>/areweanticheatyet.json`, so it is no longer registered here and has one owner. The

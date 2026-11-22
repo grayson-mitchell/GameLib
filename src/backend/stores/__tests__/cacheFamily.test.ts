@@ -28,11 +28,14 @@ const CACHE_ROWS = tableFile.rows.filter(
 /**
  * Rows whose TS store a Phase 86 plan deleted: the row stays (D-29 row 5) so the shell still opens the
  * cache file, but `createStores` builds nothing over it, so there is no mirror to probe (86-17: the
- * two ITAD caches, owned by `gamelib-info`).
+ * two ITAD caches; 86-24: the umu, wiki game info and CrossOver index caches, all owned by `gamelib-info`).
  */
 const NO_TS_STORE: readonly string[] = [
   'store_cache/itad_prices',
-  'store_cache/itad_steam_gids'
+  'store_cache/itad_steam_gids',
+  'store_cache/crossover_index',
+  'store_cache/umu',
+  'store_cache/wikigameinfo'
 ]
 
 interface Probe {

@@ -13,7 +13,6 @@ import { TEST_APP_INFO } from './testContext'
 import type { AppPaths } from '../process/context'
 import { createStoreRegistry } from '../stores/storeRegistry'
 import { createKvsStores } from '../constants/key_value_stores'
-import { createCrossoverIndexStores } from '../crossover_index/stores'
 import { createDownloadManagerStores } from '../downloadmanager/stores'
 import { createHumbleStores } from '../humble/stores'
 import { createMacArchStores } from '../macArch/stores'
@@ -23,7 +22,6 @@ import { createLegendaryStores } from '../storeManagers/legendary/stores'
 import { createNileStores } from '../storeManagers/nile/stores'
 import { createSideloadStores } from '../storeManagers/sideload/stores'
 import { createSteamStores } from '../storeManagers/steam/stores'
-import { createWikiGameInfoStores } from '../wiki_game_info/stores'
 import { createWineManagerStores } from '../wine/manager/stores'
 import { createEngineStores } from '../engine/engineNoticeStore'
 import { createPciIdCaches } from '../utils/systeminfo/gpu/pci_ids'
@@ -143,7 +141,6 @@ export function createTestManagers(
 
 const STORE_KEYS = [
   'kvs',
-  'crossoverIndex',
   'downloadManager',
   'humble',
   'macArch',
@@ -153,7 +150,6 @@ const STORE_KEYS = [
   'nile',
   'sideload',
   'steam',
-  'wikiGameInfo',
   'wineManager',
   'engine',
   'systemInfo'
@@ -173,7 +169,6 @@ type FamilyBuilders = {
 function familyBuilders(): FamilyBuilders {
   return {
     kvs: (deps) => createKvsStores(deps),
-    crossoverIndex: (deps) => createCrossoverIndexStores(deps),
     downloadManager: (deps) => createDownloadManagerStores(deps),
     humble: (deps) => createHumbleStores(deps),
     macArch: (deps) => createMacArchStores(deps),
@@ -183,7 +178,6 @@ function familyBuilders(): FamilyBuilders {
     nile: (deps) => createNileStores(deps),
     sideload: (deps) => createSideloadStores(deps),
     steam: (deps) => createSteamStores(deps),
-    wikiGameInfo: (deps) => createWikiGameInfoStores(deps),
     wineManager: (deps) => createWineManagerStores(deps),
     engine: (deps) => createEngineStores(deps),
     systemInfo: (deps) => createPciIdCaches(deps)

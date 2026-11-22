@@ -50,7 +50,8 @@ describe('createTestStores', () => {
     // 18 -> 17 at Phase 85 plan 85-21 (2026-11-22): the `migration` family was deleted (D-06).
     // 17 -> 16 at Phase 86 plan 86-11 (2026-11-23): the `gameOverrides` family was deleted.
     // 16 -> 15 at Phase 86 plan 86-17 (2026-11-23): the `storeSearch` family was deleted.
-    expect(Object.keys(stores)).toHaveLength(15)
+    // 15 -> 13 at Phase 86 plan 86-24 (2026-11-23): the `crossoverIndex` and `wikiGameInfo` families were deleted.
+    expect(Object.keys(stores)).toHaveLength(13)
     const desc = Object.getOwnPropertyDescriptor(stores, 'steam')
     expect(typeof desc?.get).toBe('function')
   })
