@@ -96,9 +96,6 @@ export interface Stores {
   macArch: ReturnType<
     typeof import('backend/macArch/stores').createMacArchStores
   >
-  migration: ReturnType<
-    typeof import('backend/migration/stores').createMigrationStores
-  >
   runsForMe: ReturnType<
     typeof import('backend/runsForMe/stores').createRunsForMeStores
   >

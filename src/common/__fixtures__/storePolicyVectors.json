@@ -161,16 +161,6 @@
       "allowed": true
     },
     {
-      "store": "migrationsStore",
-      "key": "appliedMigrations",
-      "allowed": true
-    },
-    {
-      "store": "migrationsStore",
-      "key": "notAField",
-      "allowed": false
-    },
-    {
       "store": "gameOverridesStore",
       "key": "overrides",
       "allowed": true
@@ -426,16 +416,6 @@
       "store": "wikigameinfo",
       "key": "notAField",
       "allowed": true
-    },
-    {
-      "store": "migrationsStore",
-      "key": "appliedMigrations",
-      "allowed": true
-    },
-    {
-      "store": "migrationsStore",
-      "key": "notAField",
-      "allowed": false
     },
     {
       "store": "gameOverridesStore",

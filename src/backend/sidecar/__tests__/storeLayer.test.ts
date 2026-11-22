@@ -208,7 +208,6 @@ describe('round-trip', () => {
     // resolve it — it round-trips through the same mechanism as the D-13
     // cache stores instead, immediately below.
     //
-    'migrationsStore',
     'gameOverridesStore',
     'runsForMeStore'
   ] as const

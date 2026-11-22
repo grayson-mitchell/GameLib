@@ -11,7 +11,6 @@ import { createGameOverridesStores } from 'backend/game_overrides/stores'
 import { createHumbleStores } from 'backend/humble/stores'
 import { createMacArchStores } from 'backend/macArch/stores'
 import { createStoreSearchStores } from 'backend/storeSearch/stores'
-import { createMigrationStores } from 'backend/migration/stores'
 import { createRunsForMeStores } from 'backend/runsForMe/stores'
 import { createGogStores } from 'backend/storeManagers/gog/stores'
 import { createLegendaryStores } from 'backend/storeManagers/legendary/stores'
@@ -34,7 +33,6 @@ export function createStores(deps: StoreFamilyDeps): Stores {
     gameOverrides: createGameOverridesStores(deps),
     humble: createHumbleStores(deps),
     macArch: createMacArchStores(deps),
-    migration: createMigrationStores(deps),
     runsForMe: createRunsForMeStores(deps),
     gog: createGogStores(deps),
     legendary: createLegendaryStores(deps),

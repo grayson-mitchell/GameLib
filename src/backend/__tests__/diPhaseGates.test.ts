@@ -161,8 +161,10 @@ describe('66.1 end state: removed collaborators', () => {
 describe('66.1 end state: stores modules', () => {
   // 17 -> 16 at Phase 84 plan 84-06 (2026-11-21): logger/stores.ts was deleted (its one store,
   // `uploadedLogs`, is owned by Rust now); the walk found one fewer module, not a parse miss.
-  it('finds the 16 stores modules', () => {
-    expect(STORES_MODULES).toHaveLength(16)
+  // 16 -> 15 at Phase 85 plan 85-21 (2026-11-22): migration/stores.ts was deleted with the TS
+  // migration system (D-06).
+  it('finds the 15 stores modules', () => {
+    expect(STORES_MODULES).toHaveLength(15)
     for (const m of STORES_MODULES) {
       expect(existsSync(join(BACKEND, m))).toBe(true)
     }
@@ -232,7 +234,7 @@ describe('66.1 end state: stores modules', () => {
 
   it('storeManagers/index.ts and every stores module have no top-level new', () => {
     const files = ['storeManagers/index.ts', ...STORES_MODULES]
-    assertAtOrAboveFloor('66.1 stores modules', files.length, 17)
+    assertAtOrAboveFloor('66.1 stores modules', files.length, 16)
     const offenders: string[] = []
     for (const f of files) {
       const text = source(join(BACKEND, f))

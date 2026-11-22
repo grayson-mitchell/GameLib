@@ -8,8 +8,8 @@
  * Skipped when `GameLib` already exists. Non-fatal: the worst case is an app that starts with a
  * fresh config. (The e2e temp-folder branch was deleted in Phase 82, D-19.)
  *
- * It runs before 'logger', 'stores', 'migrations', 'config' and 'secret-vault', because every one
- * of them reads under the app folder; `pathsBootOrder.test.ts` pins that.
+ * It runs before 'logger', 'stores', 'config' and 'secret-vault', because every one of them
+ * reads under the app folder; `pathsBootOrder.test.ts` pins that.
  *
  * Exit contract: synchronous and bounded (two existsSync and one renameSync). No timer, watcher,
  * socket or child handle; no in-flight work at boot.

@@ -663,8 +663,8 @@ const IN_SCOPE_SUITES = [
  * already rely on. A `readdirSync` recount at this plan's execution time puts the directory at
  * 46 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 42 below.
  *
- * `migrationsWiring.test.ts` (todo 2026-08-16, quick task 260822-s8y) is classified as
- * structurally contained, and is the clearest case yet for why the structural floor replaced the
+ * `migrationsWiring.test.ts` (todo 2026-08-16, quick task 260822-s8y; deleted with the TS migration
+ * system in Phase 85 plan 21, D-06) was classified as structurally contained, and is the clearest case yet for why the structural floor replaced the
  * hand-maintained kit. It declares NO `jest.mock('os', ...)` of its own -- it mocks only
  * `electron`/`electron-store` (routed at the real sidecar shims) plus `axios` and `fs/promises`'s
  * `cp`. It does REAL filesystem work under `homedir()`: it drives the real
@@ -984,7 +984,6 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'keyringTokenStore.test.ts',
   'knownFolders.test.ts',
   'legacyZoomDataCleanup.test.ts',
-  'migrationsWiring.test.ts',
   'nativeChannelOwnership.test.ts',
   'nativeImageShim.test.ts',
   'oauthLoginCapture.test.ts',

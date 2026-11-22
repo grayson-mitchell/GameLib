@@ -62,7 +62,7 @@ const MIN_MIRRORS = 10
 // without making the kind decision: cache = discarded on a shape-changing version bump,
 // user-state = migrated, never discarded (D-01).
 const EXPECTED_KINDS: Record<string, Kind> = {
-  // TypeCheckedStoreBackend (19)
+  // TypeCheckedStoreBackend (17)
   configStore: 'user-state',
   timestampStore: 'user-state',
   steamConfigStore: 'user-state',
@@ -77,7 +77,6 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   humbleConfigStore: 'user-state',
   downloadManager: 'user-state',
   gameOverridesStore: 'user-state',
-  migrationsStore: 'user-state',
   wineDownloaderInfoStore: 'cache',
   macArchStore: 'user-state',
   runsForMeStore: 'user-state',

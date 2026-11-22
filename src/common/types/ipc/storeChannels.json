@@ -47,7 +47,6 @@
     "gogSyncStore": "*",
     "gogPrivateBranches": "*",
     "wikigameinfo": "*",
-    "migrationsStore": ["appliedMigrations"],
     "gameOverridesStore": ["overrides"]
   },
   "writeDeniedFields": {
@@ -89,8 +88,7 @@
     "downloadManager",
     "gogSyncStore",
     "gogPrivateBranches",
-    "wikigameinfo",
-    "migrationsStore"
+    "wikigameinfo"
   ],
   "readOnlyAreas": {
     "byKey": {

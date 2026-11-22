@@ -121,8 +121,8 @@ Transition (A3, expand/contract): every service is currently filled by an identi
 facade is deleted by the plan that lands the real factory: command runner (05), `spawnAsync` and
 quit (06), managers and launcher (23), stores (25). The file goes with the last one.
 
-Step order: `logger`, `stores`, `migrations`, `command-runner`, `store-managers`,
-`register-handlers`. `stores` precedes `migrations` because migrations read `migrationsStore`.
+Step order: `logger`, `stores`, `config`, `command-runner`, `store-managers`,
+`register-handlers`. (The `migrations` step and the TS migration system were deleted in Phase 85, D-06.)
 
 Tests: `bootFresh({ services })` hands prebuilt services to the boot (returned `services` carries
 them by reference); `createTestServices`, `createTestManagers` and `createTestStores` in

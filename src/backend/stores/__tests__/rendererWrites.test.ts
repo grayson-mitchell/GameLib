@@ -281,8 +281,7 @@ describe('the sidecar pushes storeChanged only for stores Rust does not own', ()
     expect(stores).toContain('wikigameinfo')
   })
 
-  it('a store TS still owns under rust (the excluded migrations store) keeps its TS push', () => {
-    expect(isRustOwnedStoreName('migrationsStore', 'rust')).toBe(false)
+  it('only a store TS still owns keeps its TS push', () => {
     expect(isRustOwnedStoreName('timestampStore', 'rust')).toBe(true)
     expect(isRustOwnedStoreName('steamBottleConfigStore', 'rust')).toBe(true)
     expect(isRustOwnedStoreName('wikigameinfo', 'rust')).toBe(true)

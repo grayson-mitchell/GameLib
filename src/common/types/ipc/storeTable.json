@@ -185,7 +185,7 @@
       "key": "store/migrations",
       "dir": "store",
       "name": "migrations",
-      "tsNames": ["migrationsStore"],
+      "tsNames": [],
       "kind": "user-state",
       "tokenBearing": false,
       "dotPaths": true,

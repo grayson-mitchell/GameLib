@@ -953,7 +953,6 @@ pub(crate) mod tests {
         assert_eq!(key_of("wikigameinfo"), "store_cache/wikigameinfo");
         assert_eq!(key_of("steam_library"), "store_cache/steam_library");
         assert_eq!(key_of("steamBottleConfigStore"), "steam_store/config");
-        assert_eq!(key_of("migrationsStore"), "store/migrations");
         assert_eq!(key_of("fontsStore"), "<none>");
         for name in [
             "humble_library",
@@ -1048,17 +1047,6 @@ pub(crate) mod tests {
         );
         assert!(host.read_only_entries().is_empty());
         assert_eq!(host.in_flight(), 0);
-    }
-
-    #[test]
-    fn store_native_a_row_rust_never_opens_is_forwarded_under_rust_mode() {
-        let home = FakeHome::new("gamelib-store-native-excluded-");
-        let host = StoreHost::new();
-        let proxy = RecordingProxy::new(json!({"appliedMigrations": []}));
-        let reads = reads(&home, StoreMode::Rust, Arc::clone(&proxy));
-        let out = fetch_blocking(&host, &reads, &resolved("migrationsStore")).unwrap();
-        assert_eq!(out, json!({"values": {"appliedMigrations": []}}));
-        assert_eq!(proxy.calls.lock().unwrap().len(), 1);
     }
 
     #[test]

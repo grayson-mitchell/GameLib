@@ -248,10 +248,10 @@ export function createSidecarRpc(deps: SidecarRpcDeps): SidecarRpc {
    *
    *   - `bootstrap.ts:40`'s `import './handlers'` runs at MODULE scope and
    *     constructs every store manager long before `init()` is called.
-   *   - `init()` floats `applyMigrations()` (bootstrap.ts, "Data migrations")
-   *     well above its own `startRpcServer()` call, and a migration writes
-   *     `migrationsStore.appliedMigrations` -- a real `storeChanged` push. This
-   *     one happens in PRODUCTION, not only under Jest.
+   *   - Until Phase 85 (D-06), `init()` floated the TS migration system's run
+   *     well above its own `startRpcServer()` call, and a migration wrote its
+   *     applied-ids store -- a real `storeChanged` push in PRODUCTION, not only
+   *     under Jest. That system is deleted; the queue stays for the others.
    *   - Test setup that touches a store before starting its sidecar.
    *
    * Under Jest that put 77 transport frames on the real terminal across the

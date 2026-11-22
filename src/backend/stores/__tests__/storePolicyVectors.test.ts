@@ -54,7 +54,6 @@ const ALLOWED_KEY_BY_STORE: Record<string, string> = {
   gogSyncStore: 'someGame',
   gogPrivateBranches: 'someGame',
   wikigameinfo: 'someGame',
-  migrationsStore: 'appliedMigrations',
   gameOverridesStore: 'overrides'
 }
 

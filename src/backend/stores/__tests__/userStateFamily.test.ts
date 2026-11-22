@@ -4,11 +4,11 @@
  * `storeOwnership.json` sets `families.user-state`, so under `GAMELIB_STORE=rust` (the default)
  * every `family: user-state` row of `storeTable.json` is a window onto a mirror cell and each write
  * is a frame for the shell's single writer; under `GAMELIB_STORE=ts` the same stores are conf-backed
- * exactly as before. `store/migrations` is the one user-state looking store that stays TS-owned (its
- * family is `excluded`, D-07) until plan 21 deletes it. The Rust half of these cases is
+ * exactly as before. `store/migrations` lost its TS store in plan 21 (D-06); its row stays
+ * `excluded` (D-07), so neither side opens it. The Rust half of these cases is
  * `cargo test --bin gamelib-shell store_boot` and `store_frame`.
  */
-import { mkdtempSync, readFileSync, rmSync } from 'fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import ownershipFile from 'common/types/ipc/storeOwnership.json'
@@ -164,18 +164,20 @@ describe(`the user-state family (${USER_STATE_ROWS.length} user-state rows)`, ()
   )
 })
 
-describe('store/migrations stays conf-backed in both modes', () => {
+describe('store/migrations has no TS store (85-21, D-06) and stays on disk (D-07)', () => {
   it.each<StoreMode>(['rust', 'ts'])(
-    'writes through conf, no frame, under %s',
+    'createStores builds no store over it and leaves the file alone, under %s',
     (mode) => {
+      const file = join(userData, 'store', 'migrations.json')
+      mkdirSync(join(userData, 'store'), { recursive: true })
+      writeFileSync(file, '{"appliedMigrations":["x"]}')
       const frames: StoreFrame[] = []
       const { stores } = build(userData, mode, frames)
-      const store = storeOfRow(userData, 'store/migrations', stores)
-      store.set('userStateFamilyProbe', { n: 1 })
+      expect(() => storeOfRow(userData, 'store/migrations', stores)).toThrow(
+        /built no store/
+      )
       expect(frames).toEqual([])
-      expect(
-        readFileSync(join(userData, 'store', 'migrations.json'), 'utf8')
-      ).toContain('userStateFamilyProbe')
+      expect(readFileSync(file, 'utf8')).toBe('{"appliedMigrations":["x"]}')
     }
   )
 })

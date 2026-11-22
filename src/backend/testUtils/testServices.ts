@@ -20,7 +20,6 @@ import { createDownloadManagerStores } from '../downloadmanager/stores'
 import { createGameOverridesStores } from '../game_overrides/stores'
 import { createHumbleStores } from '../humble/stores'
 import { createMacArchStores } from '../macArch/stores'
-import { createMigrationStores } from '../migration/stores'
 import { createRunsForMeStores } from '../runsForMe/stores'
 import { createGogStores } from '../storeManagers/gog/stores'
 import { createLegendaryStores } from '../storeManagers/legendary/stores'
@@ -153,7 +152,6 @@ const STORE_KEYS = [
   'gameOverrides',
   'humble',
   'macArch',
-  'migration',
   'runsForMe',
   'gog',
   'legendary',
@@ -173,7 +171,7 @@ type FamilyBuilders = {
 
 /**
  * The factories are imported eagerly (importing a stores module has no side effect: the
- * 16 modules only declare factories, and diPhaseGates pins that none constructs at import).
+ * 15 modules only declare factories, and diPhaseGates pins that none constructs at import).
  * What stays lazy is the factory CALL, in the getters of createTestStores, so a family a suite
  * never reads never touches the real store backend.
  */
@@ -186,7 +184,6 @@ function familyBuilders(): FamilyBuilders {
     gameOverrides: (deps) => createGameOverridesStores(deps),
     humble: (deps) => createHumbleStores(deps),
     macArch: (deps) => createMacArchStores(deps),
-    migration: (deps) => createMigrationStores(deps),
     runsForMe: (deps) => createRunsForMeStores(deps),
     gog: (deps) => createGogStores(deps),
     legendary: (deps) => createLegendaryStores(deps),

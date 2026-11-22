@@ -185,7 +185,7 @@ describe('Tauri renderer bridge contract (spike 012 parity)', () => {
 })
 
 describe('lazy hydrate', () => {
-  // Use LAZY_STORES names never touched by the describe block above (which hydrates
+  // Use store names never hydrated by the describe block above (which hydrates
   // `configStore`/`steamConfigStore` eagerly) -- module-level snapshot/hydrated state in
   // `tauriTransport.ts` persists for the lifetime of this file's test run, so a fresh,
   // never-hydrated store name per test keeps these assertions independent of run order.
@@ -197,11 +197,12 @@ describe('lazy hydrate', () => {
   it('a synchronous read of an un-hydrated store returns the caller default, warns exactly once with the STORE_LAZY_MISS_MARKER, and does not throw', () => {
     mockedInvoke.mockResolvedValue({})
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
-    // `migrationsStore` is an allow-listed lazy store, so the read uses its one allowed key.
+    // Every lazy store has its own case in this file, so this miss reads `nileConfigStore`: allow-listed
+    // and never hydrated here (the boot snapshot above carries only configStore and steamConfigStore).
 
     let result: unknown
     expect(() => {
-      result = snapshotGet('migrationsStore', 'appliedMigrations', 'FALLBACK')
+      result = snapshotGet('nileConfigStore', 'expired', 'FALLBACK')
     }).not.toThrow()
 
     expect(result).toBe('FALLBACK')
@@ -215,7 +216,7 @@ describe('lazy hydrate', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {})
 
     // A different, still-un-hydrated store from the test above -- the previous test's
-    // fetch of `migrationsStore` resolves asynchronously and marks it hydrated, which would
+    // fetch of `nileConfigStore` resolves asynchronously and marks it hydrated, which would
     // make a second miss on that same store name silently skip the fetch (correctly, per
     // D-03/D-04) and falsify this assertion.
     snapshotGet('gogSyncStore', 'lazyMissB', 'FALLBACK')
@@ -518,7 +519,7 @@ describe('change events', () => {
     })
     // A change to a different store does not fire this subscriber.
     storeChangedHandler!({
-      payload: { channel: STORE_CHANGED_CHANNEL, args: [{ store: 'migrationsStore', key: 'unrelated', value: 1 }] }
+      payload: { channel: STORE_CHANGED_CHANNEL, args: [{ store: 'legendaryConfigStore', key: 'unrelated', value: 1 }] }
     })
     expect(seen).toEqual(['listener-a'])
 

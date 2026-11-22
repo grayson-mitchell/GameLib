@@ -543,17 +543,6 @@
     }
   },
   {
-    "registeredAs": "migrationsStore",
-    "options": {
-      "cwd": "store",
-      "name": "migrations",
-      "schemaKeys": null
-    },
-    "declaration": {
-      "kind": "user-state"
-    }
-  },
-  {
     "registeredAs": "nileConfigStore",
     "options": {
       "cwd": "nile_store",

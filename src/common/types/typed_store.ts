@@ -156,9 +156,6 @@ export interface StoreStructure {
   wikigameinfo: {
     [title: string]: WikiInfo
   }
-  migrationsStore: {
-    appliedMigrations: string[]
-  }
   gameOverridesStore: {
     overrides: Record<
       string,

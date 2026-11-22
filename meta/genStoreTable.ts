@@ -80,7 +80,10 @@ const ACCOUNT_CONFIG_DIRS = new Set([
  * registration scan does not see; `EXPECTED_KINDS` in `storeKinds.test.ts` names both as user-state
  * and 82-STATE-OWNERSHIP lists them under "Persisted stores". `uploadedLogs` flipped to the native
  * logger in Phase 84 (no TS store is built for it any more) and uses a literal URL as a key, so its
- * dot paths are off. The two settings rows are the documents `config.json` and `GamesConfig/<app>.json`.
+ * dot paths are off. `store/migrations` lost its TS store in 85-21 with the TS migration system (D-06);
+ * the file stays on disk (D-07) and its row stays so the table still records that Rust never opens it
+ * (the `excluded` family) and the corpus's `migrations.json` files still resolve to a row. The two
+ * settings rows are the documents `config.json` and `GamesConfig/<app>.json`.
  */
 const EXTRA_ROWS: Omit<Row, 'family' | 'chain'>[] = [
   ...['steam_update_prompt_ack', 'steam_engine_notices'].map((name) => ({
@@ -93,6 +96,16 @@ const EXTRA_ROWS: Omit<Row, 'family' | 'chain'>[] = [
     dotPaths: true,
     flavour: 'store' as const
   })),
+  {
+    key: 'store/migrations',
+    dir: 'store',
+    name: 'migrations',
+    tsNames: [],
+    kind: 'user-state',
+    tokenBearing: false,
+    dotPaths: true,
+    flavour: 'store'
+  },
   {
     key: 'store/uploadedLogs',
     dir: 'store',

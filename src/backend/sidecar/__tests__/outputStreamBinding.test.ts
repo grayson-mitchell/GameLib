@@ -13,8 +13,8 @@
  *
  * Three real producers get in ahead of the bind, so this is not a
  * test-only concern: the `register-handlers` boot step (handler registration) runs at
- * boot, ahead of the bind; `init()` floats `applyMigrations()` above its own `startRpcServer()`
- * call and a migration writes `migrationsStore.appliedMigrations`; and test
+ * boot, ahead of the bind; until Phase 85 (D-06) `init()` floated the TS migration system above
+ * its own `startRpcServer()` call and a migration wrote its applied-ids store; and test
  * setup may touch a store before starting its sidecar.
  *
  * This suite gates the queue-until-bound behaviour directly. It deliberately

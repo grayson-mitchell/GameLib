@@ -2,7 +2,7 @@
  * Boot-order gate for the 'app-folder' step (D-66.4-04). Boots nothing and mocks nothing: it
  * reads BOOT_STEP_NAMES from source text. The heroic -> GameLib config-folder rename must happen before anything reads under the app folder, and `constants/paths`
  * used to guarantee that implicitly by running at import. 'app-folder' is therefore the FIRST
- * step, ahead of 'logger', 'stores', 'migrations', 'config' and 'secret-vault'.
+ * step, ahead of 'logger', 'stores', 'config' and 'secret-vault'.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -19,7 +19,7 @@ function stepNames(source: string): string[] {
 
 /** The readers of the app folder that 'app-folder' must precede (empty result when the order is right). */
 function appFolderOrderViolations(names: readonly string[]): string[] {
-  const readers = ['logger', 'stores', 'migrations', 'config', 'secret-vault']
+  const readers = ['logger', 'stores', 'config', 'secret-vault']
   const first = names.indexOf('app-folder')
   const violations: string[] = []
   if (first !== 0) violations.push('app-folder must be the first boot step')
@@ -42,14 +42,7 @@ describe("the 'app-folder' boot step order (D-66.4-04)", () => {
   })
 
   it('flags a fixture where stores precede app-folder', () => {
-    const seeded = [
-      'logger',
-      'stores',
-      'app-folder',
-      'migrations',
-      'config',
-      'secret-vault'
-    ]
+    const seeded = ['logger', 'stores', 'app-folder', 'config', 'secret-vault']
     expect(appFolderOrderViolations(seeded)).toEqual([
       'app-folder must be the first boot step',
       'app-folder must precede logger',
@@ -58,8 +51,8 @@ describe("the 'app-folder' boot step order (D-66.4-04)", () => {
   })
 
   it('flags a fixture with no app-folder step at all', () => {
-    expect(
-      appFolderOrderViolations(['logger', 'stores', 'migrations', 'config'])
-    ).toContain('app-folder must be the first boot step')
+    expect(appFolderOrderViolations(['logger', 'stores', 'config'])).toContain(
+      'app-folder must be the first boot step'
+    )
   })
 })

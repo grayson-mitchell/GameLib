@@ -269,14 +269,6 @@ import {
   type AbortRegistry
 } from '../utils/aborthandler/aborthandler'
 import { createWineWindowRaiser } from '../utils/wineWindowRaise'
-// Todo 2026-08-16 (quick task 260822-s8y): `applyMigrations()` had exactly ONE call site in
-// the whole repo -- `main.ts:412`, inside Electron's `app.whenReady()` -- so under Tauri the
-// entire migration system was dead code that PRESENTED as live (`createStores`
-// registers `migrationsStore`, so grepping for "migration" made it look wired). Two
-// consequences: `LegendaryGlobalConfigFolderMigration` had never run on the shipping runtime,
-// and any future `Migration` added to `getAllMigrations()` would have shipped as a silent
-// no-op. Same family as the `initOnlineMonitor()` gap above.
-import MigrationSystem from '../migration'
 
 // ---- Step 3: start the RPC server, wire the transport, signal READY -------
 
@@ -288,9 +280,7 @@ import MigrationSystem from '../migration'
  * would stack another `ipcMain` listener, another `runOnceWhenOnline` registration, another
  * i18next init); a second boot now throws instead, and tests boot once per fresh registry.
  *
- * Ordering constraints each step records on itself, summarised: migrations come first after
- * the logger (the migration system logs and `heroicLogWriter` is unset until `initLogger()`);
- * the logger step binds the processGuards sinks once (WR-04); secret stores and the online
+ * Ordering constraints each step records on itself, summarised: the logger step binds the processGuards sinks once (WR-04); secret stores and the online
  * monitor come after the RPC server and transport and before READY; rosetta comes after i18n
  * (it awaits that boot's own `state.i18nReady`); register-handlers comes after the logger (the
  * download-queue notice logs synchronously, C-04) and before rpc-server (no frame may arrive
@@ -300,9 +290,9 @@ import MigrationSystem from '../migration'
  * 'app-folder' is FIRST (D-66.4-04): the heroic -> GameLib config-folder rename must
  * precede every step that reads under the app folder (pathsBootOrder.test.ts pins it).
  *
- * 'stores' follows 'logger' and precedes 'migrations' (which reads `migrationsStore`);
- * 'command-runner' and 'store-managers' follow 'migrations'. They fill the per-boot
- * `BootServices` from `prebuilt` or the identity facades (66.1).
+ * 'stores' follows 'logger' and precedes 'config'; 'command-runner' and 'store-managers'
+ * follow 'config'. They fill the per-boot `BootServices` from `prebuilt` or the identity
+ * facades (66.1).
  *
  * Exit contract: no step may create an unref()-less handle or leave unbounded in-flight work.
  *
@@ -321,7 +311,6 @@ export const BOOT_STEP_NAMES = [
   'steam-anonymous-client',
   'bridge-helper-registry',
   'stores',
-  'migrations',
   'config',
   'secret-vault',
   'steamgrid-secrets',
@@ -938,7 +927,7 @@ export function clearStrandedPlaytimeSyncLock(deps: {
  * `GOGUser.getUserDetails()`'s promise gets an explicit `.catch`: `runOnceWhenOnline`'s callback
  * return value is discarded, so an unhandled rejection would otherwise surface only via
  * `processGuards`' process-wide net. Relying on that net for a known-floatable promise is exactly
- * what `deliverStartupProtocolUrl` and the migrations block above already refuse to do in this
+ * what `deliverStartupProtocolUrl` already refuses to do in this
  * file. `getUserDetails()` does `await axios.get(...).catch(...)` internally but can still reject
  * earlier — `getCredentials()` (`gog/user.ts:303`) spawns a `gogdl auth` subprocess.
  *
@@ -1027,8 +1016,8 @@ export function reconcileStoreUsersWhenOnline(deps: {
  * swallowing -- the `finally` only releases the lock -- and `postPlaytimeSession` does network
  * I/O. `runOnceWhenOnline`'s callback return value is discarded, so a floated
  * `syncQueuedPlaytime()` promise needs its OWN explicit `.catch`, or the rejection would surface
- * only via `processGuards`' process-wide net -- exactly what `deliverStartupProtocolUrl` and the
- * migrations block above already refuse to rely on. Do not "simplify" this back down to fewer
+ * only via `processGuards`' process-wide net -- exactly what `deliverStartupProtocolUrl` already
+ * refuses to rely on. Do not "simplify" this back down to fewer
  * guards.
  *
  * SETTINGS READ OUTSIDE THE CALLBACK (D5): `deps.config.getSettings()` runs synchronously
@@ -1125,8 +1114,7 @@ export function syncQueuedPlaytimeWhenOnline(deps: {
  *    instead of the callee leaves `checkRosettaInstall()`'s own test suite
  *    (`checkRosettaInstall.test.ts`) valid and unmodified.
  * 2. **Why floated, not awaited**: `init()` is synchronous by contract -- `src/sidecar/
- *    index.ts` and ~10 test suites call it as such. Same constraint the `applyMigrations()`
- *    comment above records.
+ *    index.ts` and ~10 test suites call it as such.
  * 3. **Why chained off `i18nReady` rather than relying on statement order**: the dialog's
  *    title/message come from `i18next.t()`, and `i18next.use(Backend).init()` is
  *    asynchronous (installed i18next is 22.5.1; `i18next-fs-backend` reads catalogs off
@@ -1509,7 +1497,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'outbound-http-tracking',
       run: (_ctx, _io, state) => {
-        // Track outbound HTTP first, ahead of migrations/i18next/boot work, so boot-time requests
+        // Track outbound HTTP first, ahead of i18next/boot work, so boot-time requests
         // are tracked too and destroyed at stdin EOF (quick 261110-9w2). One tracker per boot
         // (66.4-15); its diagnostics_channel subscription is the only side effect.
         const outboundHttp = createOutboundHttpTracker()
@@ -1742,63 +1730,14 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
-      name: 'migrations',
-      run: (ctx, _io, state) => {
-        // ---- Data migrations (todo 2026-08-16, quick task 260822-s8y) -----------
-        // Mirrors `main.ts:412`'s `await MigrationSystem.get().applyMigrations()`, which the headless
-        // sidecar never runs -- the same class of gap as `initOnlineMonitor()` below.
-        //
-        // Placement: FIRST after `initLogger()`, matching Electron's ordering (migrations are the
-        // very next statement after its own `initLogger()`), and required to be after it because
-        // `applyMigration` calls `logInfo`/`logError` unconditionally and `heroicLogWriter` is unset
-        // until `initLogger()` runs (the standing sidecar-logger finding).
-        //
-        // WHAT THIS DELIBERATELY DOES NOT REPRODUCE, and why. Electron AWAITS migrations before
-        // `initStoreManagers()`. The sidecar cannot: `./handlers` (Step 2, above) is imported at
-        // MODULE SCOPE, long before `init()` is ever called, so every store manager already exists by
-        // the time this line runs -- and `initStoreManagers()` is itself dead under Tauri. `init()` is
-        // also synchronous by contract (`src/sidecar/index.ts` and ~10 test suites call it as such),
-        // so the promise is floated the way `fetchLastestReleases()` below is.
-        //
-        // The real constraint is narrower than Electron's: migrations must finish before the FIRST
-        // read of `legendaryConfigPath`, which arrives as an RPC call after the READY_SENTINEL write
-        // below. READY is deliberately NOT delayed on this promise. That is a known, bounded
-        // limitation rather than a proof of safety: `LegendaryGlobalConfigFolderMigration` only does
-        // any work when `legendaryConfigPath` is ABSENT -- i.e. the user has never logged into Epic in
-        // GameLib -- so a read that loses the race finds nothing, which is precisely today's
-        // behaviour, and the copy is local filesystem I/O begun milliseconds into boot. A migration
-        // that ever needs a hard happens-before guarantee against a handler will need `init()` to
-        // become async; do not assume this placement covers that case.
-        try {
-          // 'stores' runs before this step (pinned by bootSourceShape): same migrationsStore instance.
-          const { stores } = state.services
-          if (!stores) throw new Error('stores step has not run')
-          new MigrationSystem({ stores, paths: ctx.paths })
-            .applyMigrations()
-            .catch((error: unknown) => {
-              logWarning(
-                `[bootstrap] applyMigrations() failed: ${String(error)}`,
-                LogPrefix.Backend
-              )
-            })
-        } catch (error) {
-          logWarning(
-            `[bootstrap] applyMigrations() could not be started: ${error}`,
-            LogPrefix.Backend
-          )
-        }
-      }
-    },
-    {
       name: 'config',
       run: (ctx, _io, state) => {
-        // Placement is load-bearing: AFTER 'logger' and 'migrations', BEFORE 'command-runner' and
+        // Placement is load-bearing: AFTER 'logger' and 'stores', BEFORE 'command-runner' and
         // 'i18n'. This builds the process's first-ever global-config read, and the
         // config-version-upgrade path (config.ts:145/152) can itself call `logInfo`/`logError`
         // synchronously, which throws while `heroicLogWriter` is unset (same ordering reason as
         // `initOnlineMonitor()`'s and `tokenStore.configure()`'s placement comments below).
-        // MigrationSystem's only migration copies the legendary config folder and never writes
-        // config.json, so running after 'migrations' loses nothing. configBootOrder.test.ts pins it.
+        // configBootOrder.test.ts pins it.
         // createGlobalConfig() runs the settings migration first when TS owns config.json (the
         // shell migrated it at boot when it owns it, 85-15); the per-game registry holds its cache
         // in its closure and reads global defaults through the config built here. Both read and

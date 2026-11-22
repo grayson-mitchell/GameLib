@@ -39,7 +39,6 @@ const ALL_VALID_STORE_NAMES = [
   'gogSyncStore',
   'gogPrivateBranches',
   'wikigameinfo',
-  'migrationsStore',
   'gameOverridesStore'
 ]
 

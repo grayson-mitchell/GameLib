@@ -39,7 +39,6 @@ describe('bootstrap.ts source shape (D-08)', () => {
     const anchors = [
       'logger',
       'stores',
-      'migrations',
       'config',
       // 66.3-17: the secret-store choice and the Humble/SteamGridDB owners are built before any
       // handler is registered; the keyring touch (migration) stays in 'secret-stores' below.
@@ -81,7 +80,6 @@ describe('stores modules construct nothing at import (66.1-25, MH-1)', () => {
     'game_overrides/stores.ts',
     'humble/stores.ts',
     'macArch/stores.ts',
-    'migration/stores.ts',
     'runsForMe/stores.ts',
     'storeManagers/gog/stores.ts',
     'storeManagers/legendary/stores.ts',
