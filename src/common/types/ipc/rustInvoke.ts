@@ -58,6 +58,8 @@ import {
   RUST_STEAMPOLL_STATUS,
   RUST_STEAMPOLL_UNINSTALL_START,
   RUST_STEAMPOLL_UNINSTALL_STOP,
+  RUST_INFO_RECENT_ADD,
+  RUST_INFO_RECENT_REMOVE,
   RUST_STEAMCM_ANON_CLOSE,
   RUST_STEAMCM_ANON_PRODUCT_INFO,
   RUST_STEAMCM_CONFIGURE,
@@ -664,6 +666,21 @@ export const rustInvokeArgs = {
   ]),
   [RUST_STEAMCM_WRAP_RESTORE_IF_OWED]: z.tuple([
     z.object({ trigger: z.enum(['boot', 'shutdown']) }).strict()
+  ]),
+  // ---- Phase 86 (SVC-01): recent games, served by the `gamelib-info` crate. The generator takes no
+  // length keywords, so the crate itself bounds appName (1 to 1024 UTF-16 units) in `recent::add`
+  // and `recent::remove`; that holds for the CLI and the native `removeRecent` as well.
+  [RUST_INFO_RECENT_ADD]: z.tuple([
+    z
+      .object({
+        appName: z.string(),
+        title: z.string(),
+        runner: z.string()
+      })
+      .strict()
+  ]),
+  [RUST_INFO_RECENT_REMOVE]: z.tuple([
+    z.object({ appName: z.string() }).strict()
   ]),
   [RUST_STEAM_API_PIN_RESOLVE]: empty
 } satisfies Record<RustInvokeChannel, z.ZodTuple>

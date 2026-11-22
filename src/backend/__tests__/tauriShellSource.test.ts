@@ -484,7 +484,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
   test('71-07 rust_dispatch.rs is a flat router: 123 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(123)
+    // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(125)
     expect(router).not.toContain('_ =>')
   })
 
@@ -834,7 +835,14 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // Quick 261117-ubb -- the pinned libsteam_api.dylib resolver (macOS bridge helper).
       // PROVEN: `gamelib_depot::steam_api_pin` tests (cache, snapshot, CDN, every integrity failure).
       // NOT ATTEMPTED here: a live rustInvoke round trip (the operator's live gate).
-      'steam_api_pin_resolve'
+      'steam_api_pin_resolve',
+
+      // Phase 86 plan 08 -- recent games, pass-through arms into the Tauri-free `gamelib-info`
+      // crate. PROVEN: `golden_recent.rs` replays every 86-04 TS golden against the crate's op, and
+      // `info_dispatch::tests` drives the arm's validation against a FakeHome host.
+      // NOT ATTEMPTED here: a live rustInvoke round trip (no TS caller until 86-09).
+      'info_recent_add',
+      'info_recent_remove'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

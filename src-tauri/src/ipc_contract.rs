@@ -146,6 +146,8 @@ pub(crate) enum RustInvokeChannel {
     SteampollStatus,
     SteampollUninstallStart,
     SteampollUninstallStop,
+    InfoRecentAdd,
+    InfoRecentRemove,
 }
 
 impl RustInvokeChannel {
@@ -273,6 +275,8 @@ impl RustInvokeChannel {
         RustInvokeChannel::SteampollStatus,
         RustInvokeChannel::SteampollUninstallStart,
         RustInvokeChannel::SteampollUninstallStop,
+        RustInvokeChannel::InfoRecentAdd,
+        RustInvokeChannel::InfoRecentRemove,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -400,6 +404,8 @@ impl RustInvokeChannel {
             "steampoll_status" => Some(RustInvokeChannel::SteampollStatus),
             "steampoll_uninstall_start" => Some(RustInvokeChannel::SteampollUninstallStart),
             "steampoll_uninstall_stop" => Some(RustInvokeChannel::SteampollUninstallStop),
+            "info_recent_add" => Some(RustInvokeChannel::InfoRecentAdd),
+            "info_recent_remove" => Some(RustInvokeChannel::InfoRecentRemove),
             _ => None,
         }
     }
@@ -529,6 +535,8 @@ impl RustInvokeChannel {
             RustInvokeChannel::SteampollStatus => "steampoll_status",
             RustInvokeChannel::SteampollUninstallStart => "steampoll_uninstall_start",
             RustInvokeChannel::SteampollUninstallStop => "steampoll_uninstall_stop",
+            RustInvokeChannel::InfoRecentAdd => "info_recent_add",
+            RustInvokeChannel::InfoRecentRemove => "info_recent_remove",
         }
     }
 }
@@ -2773,5 +2781,33 @@ impl SteampollUninstallStopArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "steampoll_uninstall_stop:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "steampoll_uninstall_stop:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoRecentAddArgs {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) title: String,
+    pub(crate) runner: String,
+}
+
+impl InfoRecentAddArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "info_recent_add:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "info_recent_add:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoRecentRemoveArgs {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+}
+
+impl InfoRecentRemoveArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "info_recent_remove:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "info_recent_remove:bad-args".to_string())
     }
 }

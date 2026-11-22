@@ -14,6 +14,7 @@
 pub mod cache_view;
 pub mod ctx;
 pub mod http;
+pub mod recent;
 pub mod secrets;
 
 use ctx::InfoCtx;
@@ -26,7 +27,7 @@ use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each slice adds its own.
-pub const OPS: &[&str] = &[];
+pub const OPS: &[&str] = &["info_recent_add", "info_recent_remove"];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
 /// shutdown, a wrong thread or a panic (`<op>:panic`).
@@ -38,8 +39,21 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, 
 }
 
 /// Each slice adds its arms here, in step with `OPS`.
-async fn route(op: &str, _args: &[Value], _ctx: &InfoCtx) -> Result<Value, String> {
-    Err(format!("unknown op: {op}"))
+async fn route(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, String> {
+    match op {
+        "info_recent_add" => recent::add(ctx, decode(op, args)?).map(|()| Value::Null),
+        "info_recent_remove" => recent::remove(ctx, decode(op, args)?).map(|()| Value::Null),
+        _ => Err(format!("unknown op: {op}")),
+    }
+}
+
+/// The one object argument of an op, decoded strictly (the arg structs deny unknown fields). The
+/// error is a fixed `<op>:bad-args`: a renderer or sidecar string never reaches it.
+fn decode<T: serde::de::DeserializeOwned>(op: &str, args: &[Value]) -> Result<T, String> {
+    let [arg] = args else {
+        return Err(format!("{op}:bad-args"));
+    };
+    serde_json::from_value(arg.clone()).map_err(|_| format!("{op}:bad-args"))
 }
 
 /// The op wrapper (D-20): `work` runs holding a `Shutdown` registrant for exactly its lifetime and

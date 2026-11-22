@@ -9,6 +9,7 @@ use gamelib_core::shutdown::Shutdown;
 use gamelib_store::host::StoreHost;
 
 use crate::http::Http;
+use crate::recent::RecentSink;
 use crate::secrets::{SecretSource, Slot};
 
 /// The platform the app runs on, as the shell reports it (the crate never asks the OS).
@@ -51,6 +52,9 @@ pub struct InfoCtx {
     pub itad_baked_key: Option<String>,
     /// The ITAD key from `GAMELIB_ITAD_API_KEY`, read once by the shell at boot.
     pub itad_env_key: Option<String>,
+    /// Told about every change of the recent-games list (D-08); `None` in the CLI and in tests
+    /// that do not watch it.
+    pub recent_sink: Option<Arc<dyn RecentSink>>,
 }
 
 impl InfoCtx {
@@ -74,6 +78,7 @@ impl InfoCtx {
             secrets: None,
             itad_baked_key: None,
             itad_env_key: None,
+            recent_sink: None,
         }
     }
 

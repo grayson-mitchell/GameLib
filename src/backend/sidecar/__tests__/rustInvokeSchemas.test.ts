@@ -25,7 +25,8 @@ describe('rustInvokeArgs', () => {
     // Debug bridged-launch-steam-signed-out: 119 -> 120, steamfiles_read_loginusers_offline_mode.
     // Phase 85 plan 18: 120 -> 122, store_version_gate and store_backup_file.
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(123)
+    // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(125)
   })
 
   it('parses the store-embed wire fixtures', () => {

@@ -44,7 +44,7 @@ impl InvalidateCheck {
 }
 
 /// JS falsiness of a parsed JSON value: `null`, `false`, `0`, `-0`, `NaN` and `""`.
-fn is_falsy(value: &Json) -> bool {
+pub(crate) fn is_falsy(value: &Json) -> bool {
     match value {
         Json::Null => true,
         Json::Bool(b) => !*b,

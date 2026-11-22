@@ -925,6 +925,24 @@ export const RUST_STEAMCM_WRAP_RESTORE_IF_OWED =
   'steamcm_wrap_restore_if_owed' as const
 
 /**
+ * Phase 86 (SVC-01): the Rust leaf information services, pass-throughs to the Tauri-free
+ * `gamelib-info` crate (the same dispatch `gamelib-info-cli` uses). Each takes ONE object arg
+ * mirroring the crate's `deny_unknown_fields` arg struct. Bad args reject `<op>:bad-args`.
+ *
+ * `info_recent_add`: adds a game to the head of `games.recent` in `store/config.json`. Args
+ * `{ appName, title, runner }` (appName 1 to 1024 UTF-16 units). Resolves `null`. The change
+ * reaches the renderer (`recentGamesChanged`) and the tray from Rust.
+ */
+export const RUST_INFO_RECENT_ADD = 'info_recent_add' as const
+
+/**
+ * Phase 86 (SVC-01): `info_recent_remove` drops a game from `games.recent`. Args `{ appName }`.
+ * Resolves `null`. The renderer's Remove-from-recent does not use this channel: it is the native
+ * `removeRecent`, which runs the same op.
+ */
+export const RUST_INFO_RECENT_REMOVE = 'info_recent_remove' as const
+
+/**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
  * the macOS bridge helper loads: the GameLib cache, else a snapshot of the Steam client's own copy
  * when it already hashes to the pin, else a fetch from Valve's client-update CDN (sha2vz, VZ decode,
@@ -1244,7 +1262,9 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_STEAMPOLL_RUNNING_STOP,
   RUST_STEAMPOLL_STATUS,
   RUST_STEAMPOLL_UNINSTALL_START,
-  RUST_STEAMPOLL_UNINSTALL_STOP
+  RUST_STEAMPOLL_UNINSTALL_STOP,
+  RUST_INFO_RECENT_ADD,
+  RUST_INFO_RECENT_REMOVE
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
@@ -1357,6 +1377,12 @@ export const RUST_STEAMCM_CHANNELS = [
   RUST_STEAMCM_STORE_APPDETAILS,
   RUST_STEAMCM_STORE_ENRICH,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED
+] as const
+
+/** Phase 86: the Rust leaf information channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
+export const RUST_INFO_CHANNELS = [
+  RUST_INFO_RECENT_ADD,
+  RUST_INFO_RECENT_REMOVE
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */
