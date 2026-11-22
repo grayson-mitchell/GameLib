@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
-stopped_at: Completed 85-22-PLAN.md
-last_updated: "2026-11-22T06:06:20.720Z"
+stopped_at: Completed 85-23-PLAN.md
+last_updated: "2026-11-22T06:28:34.088Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: b8bccd130de3abec0be4ee4f6d1d1d4f97985889
+state_head: e91b28baae9143a7124b321dca5f2c9adcf22f88
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 22 of 25
+Plan: 23 of 25
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
@@ -381,6 +381,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 85 P20 | 1h 24min | 3 tasks | 1 files |
 | Phase 85 P21 | 50min | 2 tasks | 102 files |
 | Phase 85 P22 | 25 min | 2 tasks | 31 files |
+| Phase 85 P23 | 70 min | 2 tasks | 49 files |
 
 ## Accumulated Context
 
@@ -743,6 +744,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: 85-21: every TS store is a mirror; GameLibStore accepts any resolvable store key but the excluded row (isMirrorStoreKey); the recognised-cache list decides only Rust ownership and the TS push filter
 - [Phase 85]: 85-21: with no home directory the shell's store reads and writes are errors, not sidecar forwards; the store:ts-* channels and applyStoreWrite are gone
 - [Phase 85]: 85-22: the engine side carries no versioning engine; readStoredGameConfig reads the document the shell migrated at boot; ManagerDeps/StoreRoot keep the member for 85-23
+- [Phase 85]: 85-23: settingsDocs.writeSettingsDoc throws for a path the shell does not own; there is no TS settings writer once the versioning engine is gone — Production always passes the root; a test builds a root over the folder its paths name
+- [Phase 85]: 85-23: stamped schema versions for test fakes come from testUtils/storeSchemaVersions.ts, and createVersioningHarness lives beside the engine suites until 85-24 — StoreRoot no longer carries an engine; the table mirrors the shell's Chains::baseline (settings v2, library chains v3, rest v1)
 
 ### Pending Todos
 
@@ -1009,8 +1012,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T06:06:19.016Z
-Stopped at: Completed 85-22-PLAN.md
+Last session: 2026-11-22T06:28:32.324Z
+Stopped at: Completed 85-23-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
