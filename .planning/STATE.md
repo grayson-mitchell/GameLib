@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 86-03-PLAN.md
-last_updated: "2026-11-22T09:29:06.865Z"
+stopped_at: Completed 86-04-PLAN.md
+last_updated: "2026-11-22T09:39:34.998Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 86 execution started
-state_head: 9312891531ca57ed90aa90d4884213d11c95733c
+state_head: 9b36e8e136cac879f03e630e890c7408c7d6d4e5
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 86 (Pure leaf services) — EXECUTING
-Plan: 4 of 26
+Plan: 5 of 26
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 86 execution started
 Progress: [██████████] 100%
@@ -387,6 +387,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 86 P01 | 24min | 3 tasks | 3 files |
 | Phase 86 P02 | 25min | 2 tasks | 1 files |
 | Phase 86 P03 | 20min | 3 tasks | 18 files |
+| Phase 86 P04 | 40min | 3 tasks | 195 files |
 
 ## Accumulated Context
 
@@ -761,6 +762,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 86]: gamelib-info dispatch_sync blocks on a two-worker multi-thread runtime like gamelib-steamcm, not a current-thread one, because the shell calls in from several worker threads
 - [Phase 86]: Replay pins requests in both directions on nine headers, hides key-like query values and secret headers in its messages, and keeps the first mismatch sticky so finish() reports it
 - [Phase 86]: SVC-01 stays open after 86-03: it is the whole phase's requirement
+- [Phase 86]: 86-04: oracle platform is switched with jest.replaceProperty, not jest.mock, so the backend-di-ceilings jestMock ratchet is untouched
+- [Phase 86]: 86-04: recorded response bodies are decoded bytes, so content-length and transfer-encoding are dropped from recorded response headers
 
 ### Pending Todos
 
@@ -1030,8 +1033,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T09:29:05.665Z
-Stopped at: Completed 86-03-PLAN.md
+Last session: 2026-11-22T09:39:33.734Z
+Stopped at: Completed 86-04-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
