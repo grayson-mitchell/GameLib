@@ -14,6 +14,7 @@
 pub mod cache_view;
 pub mod ctx;
 pub mod http;
+pub mod overrides;
 pub mod recent;
 pub mod secrets;
 
@@ -27,7 +28,12 @@ use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each slice adds its own.
-pub const OPS: &[&str] = &["info_recent_add", "info_recent_remove"];
+pub const OPS: &[&str] = &[
+    "info_overrides_get",
+    "info_overrides_get_all",
+    "info_recent_add",
+    "info_recent_remove",
+];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
 /// shutdown, a wrong thread or a panic (`<op>:panic`).
@@ -41,6 +47,13 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, 
 /// Each slice adds its arms here, in step with `OPS`.
 async fn route(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, String> {
     match op {
+        "info_overrides_get" => Ok(overrides::get(ctx, &decode(op, args)?).to_value()),
+        "info_overrides_get_all" => {
+            if !args.is_empty() {
+                return Err(format!("{op}:bad-args"));
+            }
+            Ok(overrides::get_all(ctx).to_value())
+        }
         "info_recent_add" => recent::add(ctx, decode(op, args)?).map(|()| Value::Null),
         "info_recent_remove" => recent::remove(ctx, decode(op, args)?).map(|()| Value::Null),
         _ => Err(format!("unknown op: {op}")),

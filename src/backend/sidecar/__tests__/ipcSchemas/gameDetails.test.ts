@@ -114,7 +114,6 @@ const asyncTable: FixtureTable<typeof gameDetailsAsyncArgs> = {
     valid: [['a']],
     invalid: [[''], [], [5]]
   },
-  getAllGameOverrides: { valid: [[]], invalid: [['x']] },
   isGameAvailable: {
     valid: [[{ appName: 'a', runner: 'steam' }]],
     invalid: [

@@ -179,20 +179,31 @@ fn remove_recent_rejected((path, code): Rejection) -> String {
     invalid_args("removeRecent", &[path], &[code])
 }
 
-/// Runs `info_recent_remove` for an already validated `app_name` on the blocking pool. The crate's
-/// own async `dispatch` is driven with `block_on` there (never `dispatch_sync`, which refuses a
-/// thread inside a runtime), so the file write stays off the async workers and the op still holds
-/// its shutdown registrant.
-async fn run_remove_recent(info: Arc<InfoCtx>, app_name: String) -> Result<Value, String> {
+/// Runs `op` over `args` on the blocking pool. The crate's own async `dispatch` is driven with
+/// `block_on` there (never `dispatch_sync`, which refuses a thread inside a runtime), so a file read
+/// or write stays off the async workers and the op still holds its shutdown registrant.
+async fn run_info_op(
+    info: Arc<InfoCtx>,
+    op: &'static str,
+    args: Vec<Value>,
+    failed: &'static str,
+) -> Result<Value, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        tauri::async_runtime::block_on(gamelib_info::dispatch(
-            "info_recent_remove",
-            &[serde_json::json!({ "appName": app_name })],
-            &info,
-        ))
+        tauri::async_runtime::block_on(gamelib_info::dispatch(op, &args, &info))
     })
     .await
-    .map_err(|_| "removeRecent: the removal did not finish".to_string())?
+    .map_err(|_| failed.to_string())?
+}
+
+/// Runs `info_recent_remove` for an already validated `app_name`.
+async fn run_remove_recent(info: Arc<InfoCtx>, app_name: String) -> Result<Value, String> {
+    run_info_op(
+        info,
+        "info_recent_remove",
+        vec![serde_json::json!({ "appName": app_name })],
+        "removeRecent: the removal did not finish",
+    )
+    .await
 }
 
 /// The native `removeRecent` handler (slice `info`, D-17). The arguments are validated first, so a
@@ -205,6 +216,71 @@ pub(crate) fn remove_recent(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFut
             .to_string();
         let info = info_ctx().ok_or_else(|| "removeRecent: not ready".to_string())?;
         run_remove_recent(Arc::clone(info), app_name).await
+    })
+}
+
+/// The longest `appName` `getGameMetadataOverride` accepts, in UTF-16 code units.
+const OVERRIDE_APP_NAME_MAX_UTF16: usize = 256;
+
+/// Decodes the one `appName` argument of `getGameMetadataOverride`: exactly one string of 1 to
+/// [`OVERRIDE_APP_NAME_MAX_UTF16`] UTF-16 code units.
+fn parse_get_game_metadata_override(args: &[Value]) -> Result<&str, Rejection> {
+    let [arg] = args else {
+        return Err(("(args)", "invalid_type"));
+    };
+    let Value::String(name) = arg else {
+        return Err(("0", "invalid_type"));
+    };
+    if name.is_empty() {
+        return Err(("0", "too_small"));
+    }
+    if name.encode_utf16().count() > OVERRIDE_APP_NAME_MAX_UTF16 {
+        return Err(("0", "too_big"));
+    }
+    Ok(name)
+}
+
+/// `getAllGameOverrides` takes no argument.
+fn parse_get_all_game_overrides(args: &[Value]) -> Result<(), Rejection> {
+    if args.is_empty() {
+        Ok(())
+    } else {
+        Err(("(args)", "too_big"))
+    }
+}
+
+/// The native `getGameMetadataOverride` handler (slice `info`, D-17): the stored override of one
+/// game, or `null`. Validated before the context is looked at, like `removeRecent`.
+pub(crate) fn get_game_metadata_override(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        let app_name = parse_get_game_metadata_override(&args)
+            .map_err(|(path, code)| invalid_args("getGameMetadataOverride", &[path], &[code]))?
+            .to_string();
+        let info = info_ctx().ok_or_else(|| "getGameMetadataOverride: not ready".to_string())?;
+        run_info_op(
+            Arc::clone(info),
+            "info_overrides_get",
+            vec![serde_json::json!({ "appName": app_name })],
+            "getGameMetadataOverride: the read did not finish",
+        )
+        .await
+    })
+}
+
+/// The native `getAllGameOverrides` handler (slice `info`, D-17): every stored override, keyed by
+/// game.
+pub(crate) fn get_all_game_overrides(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        parse_get_all_game_overrides(&args)
+            .map_err(|(path, code)| invalid_args("getAllGameOverrides", &[path], &[code]))?;
+        let info = info_ctx().ok_or_else(|| "getAllGameOverrides: not ready".to_string())?;
+        run_info_op(
+            Arc::clone(info),
+            "info_overrides_get_all",
+            Vec::new(),
+            "getAllGameOverrides: the read did not finish",
+        )
+        .await
     })
 }
 
@@ -243,6 +319,35 @@ pub(crate) fn test_ctx(home: &FakeHome, before: Option<&str>) -> InfoCtx {
         gamelib_core::shutdown::Shutdown::new(),
         Arc::new(ReqwestHttp::new()),
     )
+}
+
+/// The 86-04 overrides goldens' before-states.
+#[cfg(test)]
+const OVERRIDES_STATE: &str = "crates/gamelib-info/tests/fixtures/state/overrides";
+
+/// An `InfoCtx` on a FakeHome whose `userData` is a copy of an overrides golden's before-state.
+#[cfg(test)]
+pub(crate) fn overrides_ctx(home: &FakeHome, before: &str) -> InfoCtx {
+    fn copy_tree(from: &Path, to: &Path) {
+        std::fs::create_dir_all(to).unwrap();
+        for entry in std::fs::read_dir(from).unwrap() {
+            let entry = entry.unwrap();
+            let target = to.join(entry.file_name());
+            if entry.file_type().unwrap().is_dir() {
+                copy_tree(&entry.path(), &target);
+            } else {
+                std::fs::copy(entry.path(), target).unwrap();
+            }
+        }
+    }
+    let ctx = test_ctx(home, None);
+    copy_tree(
+        &Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(OVERRIDES_STATE)
+            .join(before),
+        &ctx.paths.user_data,
+    );
+    ctx
 }
 
 #[cfg(test)]
@@ -496,6 +601,120 @@ mod tests {
         assert!(bad
             .unwrap_err()
             .starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER));
+    }
+
+    #[test]
+    fn get_game_metadata_override_accepts_exactly_one_bounded_non_empty_string() {
+        assert_eq!(parse_get_game_metadata_override(&[json!("abc")]), Ok("abc"));
+        assert_eq!(
+            parse_get_game_metadata_override(&[json!("x".repeat(256))]).map(str::len),
+            Ok(256)
+        );
+        for (args, want) in [
+            (vec![], ("(args)", "invalid_type")),
+            (vec![json!(1)], ("0", "invalid_type")),
+            (vec![json!(null)], ("0", "invalid_type")),
+            (vec![json!({})], ("0", "invalid_type")),
+            (vec![json!("a"), json!("b")], ("(args)", "invalid_type")),
+            (vec![json!("")], ("0", "too_small")),
+            (vec![json!("x".repeat(257))], ("0", "too_big")),
+            // Two UTF-16 units per astral character: 129 of them are 258 units.
+            (vec![json!("\u{1F3AE}".repeat(129))], ("0", "too_big")),
+        ] {
+            assert_eq!(
+                parse_get_game_metadata_override(&args),
+                Err(want),
+                "{args:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn get_all_game_overrides_takes_no_argument() {
+        assert_eq!(parse_get_all_game_overrides(&[]), Ok(()));
+        for args in [vec![json!(1)], vec![json!(null)], vec![json!({}), json!(1)]] {
+            assert_eq!(
+                parse_get_all_game_overrides(&args),
+                Err(("(args)", "too_big")),
+                "{args:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_override_reads_answer_the_ts_golden_results_through_the_blocking_pool() {
+        let home = FakeHome::new("info-dispatch-");
+        let info = Arc::new(overrides_ctx(&home, "get-present"));
+        let one = tauri::async_runtime::block_on(run_info_op(
+            Arc::clone(&info),
+            "info_overrides_get",
+            vec![json!({ "appName": "app2" })],
+            "x",
+        ));
+        assert_eq!(
+            one,
+            Ok(json!({
+                "title": "Other",
+                "art_cover": "/img/app2-1.png",
+                "art_square": "/img/app2-2.png"
+            }))
+        );
+        let absent = tauri::async_runtime::block_on(run_info_op(
+            Arc::clone(&info),
+            "info_overrides_get",
+            vec![json!({ "appName": "ghost" })],
+            "x",
+        ));
+        assert_eq!(absent, Ok(Value::Null));
+        let all = tauri::async_runtime::block_on(run_info_op(
+            info,
+            "info_overrides_get_all",
+            Vec::new(),
+            "x",
+        ))
+        .unwrap();
+        assert_eq!(all["app1"], json!({ "title": "My Title" }));
+        assert_eq!(all.as_object().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn the_override_handlers_validate_first_and_answer_not_ready_before_install() {
+        assert!(info_ctx().is_none());
+        let router_ctx = Arc::new(crate::native_router::NativeCtx::for_tests(
+            Arc::new(NoHost),
+            None,
+        ));
+        let not_ready = tauri::async_runtime::block_on(get_game_metadata_override(
+            Arc::clone(&router_ctx),
+            vec![json!("abc")],
+        ));
+        assert_eq!(
+            not_ready,
+            Err("getGameMetadataOverride: not ready".to_string())
+        );
+        let not_ready =
+            tauri::async_runtime::block_on(get_all_game_overrides(Arc::clone(&router_ctx), vec![]));
+        assert_eq!(not_ready, Err("getAllGameOverrides: not ready".to_string()));
+        // A bad call is rejected with the marker and a fixed literal, before the context.
+        let secret = "SECRET-APP-NAME-".repeat(40);
+        for bad in [
+            tauri::async_runtime::block_on(get_game_metadata_override(
+                Arc::clone(&router_ctx),
+                vec![json!(secret)],
+            )),
+            tauri::async_runtime::block_on(get_game_metadata_override(
+                Arc::clone(&router_ctx),
+                vec![json!("")],
+            )),
+            tauri::async_runtime::block_on(get_all_game_overrides(router_ctx, vec![json!(1)])),
+        ] {
+            let error = bad.unwrap_err();
+            assert!(
+                error.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+                "{error}"
+            );
+            assert!(!error.contains("SECRET"), "{error}");
+        }
     }
 
     /// A host that does nothing: `remove_recent` never reaches the native host.

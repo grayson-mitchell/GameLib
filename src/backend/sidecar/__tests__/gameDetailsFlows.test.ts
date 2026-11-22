@@ -436,7 +436,7 @@ async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
 }
 
-const ALL_15_CHANNELS: [string, unknown[]][] = [
+const ALL_14_CHANNELS: [string, unknown[]][] = [
   ['getGameInfo', ['app-1', 'legendary']],
   ['getExtraInfo', ['app-1', 'legendary']],
   ['getGameSettings', ['app-1', 'legendary']],
@@ -453,8 +453,7 @@ const ALL_15_CHANNELS: [string, unknown[]][] = [
   ['getGameSdl', ['app-1']],
   ['getAvailableCyberpunkMods', []],
   ['setCyberpunkModConfig', [{ enabled: true, modsToLoad: [] }]],
-  ['getGameMetadataOverride', ['app-1']],
-  ['getAllGameOverrides', []]
+  ['getGameMetadataOverride', ['app-1']]
 ]
 
 describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
@@ -965,22 +964,9 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     expect(response?.result).toEqual({ title: 'Custom Title' })
   })
 
-  it('REQ-34.2-08 getAllGameOverrides reads the REAL, already-registered gameOverridesStore — zero new plumbing', async () => {
-    gameOverridesStore.set('overrides', {
-      'app-a': { title: 'A' },
-      'app-b': { title: 'B' }
-    })
-
-    const { input, frames } = boot()
-    writeInvoke(input, 'ago-1', 'getAllGameOverrides', [])
-    await flush()
-
-    const response = findResponse(frames, 'ago-1')
-    expect(response?.ok).toBe(true)
-    expect(response?.result).toEqual({
-      'app-a': { title: 'A' },
-      'app-b': { title: 'B' }
-    })
+  it('Phase 86 (D-17) getAllGameOverrides is a native `info` channel: the sidecar no longer registers it', () => {
+    boot()
+    expect(handlerRegistry.has('getAllGameOverrides')).toBe(false)
   })
 
   // ── REQ-34.2-14 / SEAM Invariant B ──────────────────────────────────────────
@@ -1008,21 +994,21 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     expect(response?.error).toContain(UNPORTED_CHANNEL_MARKER)
   })
 
-  it('REQ-34.2-14 none of the 15 ported channels return UNPORTED_CHANNEL_MARKER', async () => {
+  it('REQ-34.2-14 none of the 14 sidecar-owned ported channels return UNPORTED_CHANNEL_MARKER', async () => {
     const { input, frames } = boot()
-    ALL_15_CHANNELS.forEach(([channel, args], index) => {
+    ALL_14_CHANNELS.forEach(([channel, args], index) => {
       writeInvoke(input, `all15-${index}`, channel, args)
     })
     await flush()
 
-    for (let index = 0; index < ALL_15_CHANNELS.length; index++) {
-      const [channel] = defined(ALL_15_CHANNELS[index], 'ALL_15_CHANNELS entry')
+    for (let index = 0; index < ALL_14_CHANNELS.length; index++) {
+      const [channel] = defined(ALL_14_CHANNELS[index], 'ALL_14_CHANNELS entry')
       const response = findResponse(frames, `all15-${index}`)
       expect(response).toBeDefined()
       expect(String(response?.error ?? '')).not.toContain(
         UNPORTED_CHANNEL_MARKER
       )
-      // Every one of the 15 must have actually been dispatched (present in
+      // Every one of the 14 must have actually been dispatched (present in
       // the handler registry), not merely "didn't error" by coincidence.
       expect(handlerRegistry.has(channel)).toBe(true)
     }
@@ -1074,19 +1060,14 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
 
   // ── REQ-34.2-08: setGameMetadataOverride round-trip, push, delete ────────
 
-  it('REQ-34.2-08 setGameMetadataOverride (send) round-trip: a subsequent getAllGameOverrides invoke reads back the exact write', async () => {
-    const { input, frames } = boot()
+  it('REQ-34.2-08 setGameMetadataOverride (send) round-trip: the store holds the exact write', async () => {
+    const { input } = boot()
     writeSend(input, 'sgmo-rt-1', 'setGameMetadataOverride', [
       { appName: 'X', title: 'T', art_cover: 'C', art_square: 'S' }
     ])
     await flush()
 
-    writeInvoke(input, 'ago-rt-1', 'getAllGameOverrides', [])
-    await flush()
-
-    const response = findResponse(frames, 'ago-rt-1')
-    expect(response?.ok).toBe(true)
-    expect(response?.result).toMatchObject({
+    expect(gameOverridesStore.get('overrides', {})).toMatchObject({
       X: { title: 'T', art_cover: 'C', art_square: 'S' }
     })
   })
@@ -1098,10 +1079,6 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
     ])
     await flush()
 
-    writeInvoke(input, 'ago-push-1', 'getAllGameOverrides', [])
-    await flush()
-    const storeResponse = findResponse(frames, 'ago-push-1')
-
     const pushFrame = frames.find(
       (f) => f.kind === 'frontendMessage' && f.channel === 'metadataChanged'
     ) as { args?: unknown[] } | undefined
@@ -1109,7 +1086,9 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
     // The proof is the FRAME reaching the transport, not a spy on the
     // notifier function — asserted against the collected output stream.
     expect(pushFrame).toBeDefined()
-    expect(pushFrame?.args?.[0]).toEqual(storeResponse?.result)
+    expect(pushFrame?.args?.[0]).toEqual(
+      gameOverridesStore.get('overrides', {})
+    )
     expect(pushFrame?.args?.[0]).toMatchObject({ Y: { title: 'Pushed Title' } })
   })
 

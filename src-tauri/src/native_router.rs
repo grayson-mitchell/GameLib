@@ -434,6 +434,9 @@ impl NativeRouter {
         // Phase 86 (86-08, D-17): the renderer's Remove-from-recent, run by the `info` slice. The
         // sidecar no longer registers it, so the channel has exactly one owner.
         invoke.insert("removeRecent", info_dispatch::remove_recent);
+        // Phase 86 (86-10, D-17): the renderer's override reads, served from the StoreHost by the
+        // `info` slice. The sidecar no longer registers `getAllGameOverrides`, so it has one owner.
+        invoke.insert("getAllGameOverrides", info_dispatch::get_all_game_overrides);
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -787,6 +790,7 @@ mod tests {
             .map(|(name, _)| name.as_str())
             .collect();
         assert!(info.contains(&"removeRecent"), "{info:?}");
+        assert!(info.contains(&"getAllGameOverrides"), "{info:?}");
         for name in info {
             // The info slice is invoke-only: no send queue exists for it.
             assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");

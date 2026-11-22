@@ -8,6 +8,7 @@
  */
 import type { UploadedLogData } from '../../types'
 import type { GetLogFileArgs } from './logger'
+import type { MetadataOverride } from './gameDetails'
 
 /**
  * The renderer's log text: a string, an array of strings, or an Error-like object. A real `Error`
@@ -44,6 +45,9 @@ export interface NativeAsync {
   // Phase 86 (86-08, D-17): the renderer's Remove-from-recent, run by the Rust `info` slice
   // (`gamelib-info`'s `info_recent_remove`). The appName is 1 to 1024 UTF-16 units.
   removeRecent: (appName: string) => Promise<void>
+  // Phase 86 (86-10, D-17): every stored per-game metadata override, read by the Rust `info` slice
+  // from the StoreHost (`gamelib-info`'s `info_overrides_get_all`).
+  getAllGameOverrides: () => Promise<Record<string, MetadataOverride>>
 }
 
 export interface NativeSync {

@@ -63,7 +63,6 @@ export const gameDetailsAsyncArgs = {
     })
   ]),
   getGameMetadataOverride: z.tuple([nonEmptyString()]),
-  getAllGameOverrides: noArgs,
   isGameAvailable: z.tuple([
     z.strictObject({ appName: nonEmptyString(), runner: runnerArg() })
   ]),
@@ -79,7 +78,7 @@ export const gameDetailsAsyncArgs = {
   ])
 }
 
-type MetadataOverride = {
+export type MetadataOverride = {
   title?: string
   art_cover?: string
   art_square?: string
@@ -95,7 +94,6 @@ interface GameDetailsAsyncReturns {
   repair: Promise<void>
   changeInstallPath: Promise<void>
   getGameMetadataOverride: Promise<MetadataOverride | null>
-  getAllGameOverrides: Promise<Record<string, MetadataOverride>>
   isGameAvailable: Promise<boolean>
   getLaunchOptions: Promise<LaunchOption[]>
   getGameOverride: Promise<GameOverride>

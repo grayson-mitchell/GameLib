@@ -1041,13 +1041,9 @@
     {
       "channel": "getAllGameOverrides",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [],
-        "items": false,
-        "maxItems": 0
-      }
+      "owner": "native",
+      "args": [],
+      "returns": "{ [appName]: { title?, art_cover?, art_square? } }"
     },
     {
       "channel": "getAlternativeWine",

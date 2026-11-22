@@ -378,6 +378,14 @@
       "returns": "void",
       "valid": [["abc"]],
       "invalid": [[], [1], ["a", "b"], [""]]
+    },
+    "getAllGameOverrides": {
+      "kind": "invoke",
+      "slice": "info",
+      "args": [],
+      "returns": "{ [appName]: { title?, art_cover?, art_square? } }",
+      "valid": [[]],
+      "invalid": [[1], [null]]
     }
   }
 }
