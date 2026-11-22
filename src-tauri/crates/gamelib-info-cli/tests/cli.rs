@@ -121,3 +121,85 @@ fn usage_errors_exit_64_and_bad_input_exits_2() {
         .unwrap();
     assert_eq!(out.status.code(), Some(2));
 }
+
+#[test]
+fn an_unknown_op_exits_2_naming_it() {
+    let home = FakeHome::new("info-cli-");
+    let out = cli()
+        .args(["op", "info_nope", "[]", "--user-data"])
+        .arg(home.root())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("unknown op"));
+    assert!(out.stdout.is_empty());
+}
+
+#[test]
+fn op_usage_and_bad_input_are_told_apart() {
+    let home = FakeHome::new("info-cli-");
+    // Missing --user-data and missing arguments are usage errors.
+    assert_eq!(
+        cli()
+            .args(["op", "info_nope", "[]"])
+            .output()
+            .unwrap()
+            .status
+            .code(),
+        Some(64)
+    );
+    assert_eq!(cli().arg("op").output().unwrap().status.code(), Some(64));
+    // Arguments that are not a JSON array, an unreadable replay case: bad input.
+    let out = cli()
+        .args(["op", "info_nope", "{}", "--user-data"])
+        .arg(home.root())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    let out = cli()
+        .args([
+            "op",
+            "info_nope",
+            "[]",
+            "--replay",
+            "/definitely/not/here",
+            "--user-data",
+        ])
+        .arg(home.root())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+}
+
+#[test]
+fn replay_failure_is_reported_even_when_the_op_is_unknown() {
+    // An empty case has nothing to consume, so a clean replay does not change the outcome...
+    let home = FakeHome::new("info-cli-");
+    let case = home.root().join("case");
+    std::fs::create_dir_all(&case).unwrap();
+    std::fs::write(case.join("exchanges.json"), "[]").unwrap();
+    let out = cli()
+        .args(["op", "info_nope", "[]", "--replay"])
+        .arg(&case)
+        .arg("--user-data")
+        .arg(home.root())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("unknown op"));
+    // ...but a recorded exchange nobody requested fails the run.
+    std::fs::write(
+        case.join("exchanges.json"),
+        r#"[{"id":"unused","request":{"method":"GET","url":"https://example.test/"},"response":{"status":200,"headers":{}}}]"#,
+    )
+    .unwrap();
+    let out = cli()
+        .args(["op", "info_nope", "[]", "--replay"])
+        .arg(&case)
+        .arg("--user-data")
+        .arg(home.root())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("unused"));
+}

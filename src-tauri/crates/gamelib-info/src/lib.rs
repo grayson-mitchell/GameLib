@@ -19,7 +19,10 @@ pub mod secrets;
 use ctx::InfoCtx;
 use serde_json::Value;
 use std::future::Future;
+use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::pin::Pin;
 use std::sync::OnceLock;
+use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each slice adds its own.
@@ -41,12 +44,40 @@ async fn route(op: &str, _args: &[Value], _ctx: &InfoCtx) -> Result<Value, Strin
 
 /// The op wrapper (D-20): `work` runs holding a `Shutdown` registrant for exactly its lifetime and
 /// is raced against the shutdown token, answering `<op>:shutdown` when cancelled and `<op>:panic`
-/// when it panics.
-pub async fn guarded<F>(_op: &str, _ctx: &InfoCtx, work: F) -> Result<Value, String>
+/// when it panics. Once shutdown has begun, `work` is not started at all.
+pub async fn guarded<F>(op: &str, ctx: &InfoCtx, work: F) -> Result<Value, String>
 where
     F: Future<Output = Result<Value, String>>,
 {
-    work.await
+    let _registrant = ctx.shutdown.register("info");
+    let token = ctx.shutdown.token();
+    let work = std::pin::pin!(work);
+    let mut work = CatchUnwind(work);
+    tokio::select! {
+        biased;
+        _ = token.cancelled() => Err(format!("{op}:shutdown")),
+        done = &mut work => match done {
+            Ok(result) => result,
+            Err(()) => Err(format!("{op}:panic")),
+        },
+    }
+}
+
+/// `futures::FutureExt::catch_unwind` for one future, without the crate: a panic in `poll` is an
+/// `Err(())` and the future is never polled again.
+struct CatchUnwind<'a, F>(Pin<&'a mut F>);
+
+impl<F: Future> Future for CatchUnwind<'_, F> {
+    type Output = Result<F::Output, ()>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = self.get_mut();
+        match catch_unwind(AssertUnwindSafe(|| this.0.as_mut().poll(cx))) {
+            Ok(Poll::Ready(value)) => Poll::Ready(Ok(value)),
+            Ok(Poll::Pending) => Poll::Pending,
+            Err(_) => Poll::Ready(Err(())),
+        }
+    }
 }
 
 /// The crate-owned runtime the synchronous entry point blocks on. Two workers, like
