@@ -114,19 +114,97 @@ the operator writes by hand. Nothing below asks a transcript for a log line.
 
 ## Required literals
 
-Sinks are `gamelib.log` unless stated. Every row is CONDITIONAL: at authoring no Phase 86 emitter exists, and a row whose
-emitter already exists may still move or change wording when a plan ports the code behind it. Plan 86-26 Task 1 owns the
-re-check: re-grep the literal over `src-tauri/src`, `src-tauri/crates` and `src/backend` at the then-current HEAD, record the
-emitter file:line and sink in a `## Pre-run re-check` section, and stop the run if a row cannot be emitted (it is then
-IMPOSSIBLE, amended, never scored). For a row that must be ABSENT, the re-check also confirms the presence case would log.
+Sinks are `gamelib.log` unless stated. At authoring (HEAD `afb0a4912`) no Phase 86 emitter existed, so every row was held
+open for re-check, and a row whose emitter already existed could still move or change wording when a plan ported the code
+behind it. Plan 86-26 Task 1 re-grepped each literal at the shipped code (the signed build's commit `7c50262f4`) and
+resolved every row below; the emitters, sinks and the one amended wording are recorded under `## Pre-run re-check`. A row
+that cannot be emitted would be IMPOSSIBLE, amended, never scored. For a row that must be ABSENT, the re-check also confirms
+the presence case would log.
 
 | Literal | Emitter at authoring | Sink | Status |
 |---|---|---|---|
-| Rust info dispatch failure line for a source (a failed wiki, anticheat, ITAD, SteamGridDB or recent-games call), must be ABSENT for every call that answered in launches 1 to 3 | none: no `gamelib-info` crate exists at HEAD (`ls src-tauri/crates`); the wording is chosen by the porting plans | `gamelib.log` as `[Shell]`, or a mapped crate prefix | CONDITIONAL, re-check: 86-26 Task 1 |
-| `keyring keyring_get account=itad-api-key outcome=found` and `keyring keyring_get account=steamgrid-api-key outcome=found` (the positive evidence that item 4's keys were read from the Keychain in launch 1) | `src-tauri/src/keyring_dispatch.rs:418` (`keyring_outcome_message`, logged by `shell_log`) for sidecar-dispatched reads; a Rust-internal read through D-26's `SecretSource` may not pass through it | `gamelib.log` as `[Shell]` | CONDITIONAL, re-check: 86-26 Task 1 |
-| `[dev-secret-vault]` (any line), must be ABSENT on the signed build | `src/backend/sidecar/devSecretVault.ts:163` (`logWarning`, `[dev-secret-vault] read key=<slot>`) on every vault read, plus whatever line D-26's Rust vault port writes | `gamelib.log` as `[Backend]` (TS) or `[Shell]` (Rust port) | CONDITIONAL, re-check: 86-26 Task 1 |
-| `store boot: ` summary line (the positive line proving the `[Shell]` sink is live on each launch) | `src-tauri/src/store_boot.rs:283` (`summary_line`), logged at `:250`, per the 85 gate's re-check | `gamelib.log` as `[Shell]` | CONDITIONAL, re-check: 86-26 Task 1 |
-| `store frame rejected` and `refused a store write:` (each must be ABSENT) | `src-tauri/src/store_dispatch.rs:460` and `src-tauri/src/store_native.rs:567` per the 85 gate's re-check; the Phase 86 ops write `games.recent`, `store/game-overrides.json` and the info caches through the same host | `gamelib.log` as `[Shell]` | CONDITIONAL, re-check: 86-26 Task 1 |
+| Rust info dispatch failure line for a source (a failed wiki, anticheat, ITAD, SteamGridDB or recent-games call), must be ABSENT for every call that answered in launches 1 to 3 | none: no `gamelib-info` crate exists at HEAD (`ls src-tauri/crates`); the wording is chosen by the porting plans | `gamelib.log` as `[Shell]`, or a mapped crate prefix | REACHABLE at `7c50262f4` for wiki, CrossOver, discounts and ITAD (crate lines through `ShellInfoLog`, `src-tauri/src/info_dispatch.rs:111`, e.g. `wiki lookup failed (` `gamelib-info/src/wiki/mod.rs:226`; `itad <channel> failed (` `info_dispatch.rs:834`) and anticheat (`[Backend]` warning, `src/backend/sidecar/bootstrap.ts:2923`); SteamGridDB and recent games write no failure line at all (re-check L1) |
+| `keyring keyring_get account=itad-api-key outcome=found` and `keyring keyring_get account=steamgrid-api-key outcome=found` (the positive evidence that item 4's keys were read from the Keychain in launch 1) | `src-tauri/src/keyring_dispatch.rs:418` (`keyring_outcome_message`, logged by `shell_log`) for sidecar-dispatched reads; a Rust-internal read through D-26's `SecretSource` may not pass through it | `gamelib.log` as `[Shell]` | REACHABLE as amended (re-check L2): the reads are Rust-internal, so the line is `keyring info_secret_get account=itad-api-key outcome=found` / `keyring info_secret_get account=steamgrid-api-key outcome=found`, `src-tauri/src/info_secrets.rs:69` via `keyring_dispatch.rs:418`; the authored `keyring keyring_get` wording has no caller for these two slots at `7c50262f4` |
+| `[dev-secret-vault]` (any line), must be ABSENT on the signed build | `src/backend/sidecar/devSecretVault.ts:163` (`logWarning`, `[dev-secret-vault] read key=<slot>`) on every vault read, plus whatever line D-26's Rust vault port writes | `gamelib.log` as `[Backend]` (TS) or `[Shell]` (Rust port) | REACHABLE at `7c50262f4`: Rust `src-tauri/src/info_secrets.rs:175` (read), `:182` (write), `:322`/`:329`/`:336` (REFUSED/INSTALLED); TS `src/backend/sidecar/devSecretVault.ts:154` (read), `:169` (write), `:273`/`:281`/`:292` (REFUSED); positive control `info secret source: keyring`, `info_secrets.rs:349` (re-check L3) |
+| `store boot: ` summary line (the positive line proving the `[Shell]` sink is live on each launch) | `src-tauri/src/store_boot.rs:283` (`summary_line`), logged at `:250`, per the 85 gate's re-check | `gamelib.log` as `[Shell]` | REACHABLE at `7c50262f4`: `src-tauri/src/store_boot.rs:192` (format in `summary_line`, `:190`), logged at `:163` (re-check L4) |
+| `store frame rejected` and `refused a store write:` (each must be ABSENT) | `src-tauri/src/store_dispatch.rs:460` and `src-tauri/src/store_native.rs:567` per the 85 gate's re-check; the Phase 86 ops write `games.recent`, `store/game-overrides.json` and the info caches through the same host | `gamelib.log` as `[Shell]` | REACHABLE at `7c50262f4`: `WARN: store frame rejected: <reason>` `src-tauri/src/store_dispatch.rs:449`; `WARN: native <channel> refused a store write: <kind>` `src-tauri/src/store_native.rs:423` (re-check L5) |
+
+## Pre-run re-check
+
+Run by plan 86-26 Task 1 on 2026-11-23 (2026-11-22T19:05Z), before the operator starts. Repository HEAD `c77d60509` on
+`main`. The shipped code is the signed Phase 86 build's commit `7c50262f4` (`release/v0.12`), so every literal was located
+with `git grep` at `7c50262f4` over `src-tauri/src`, `src-tauri/crates/*/src` and `src/backend`. Between `7c50262f4` and
+HEAD the only change in an emitter file is `src-tauri/crates/gamelib-info/src/wiki/pcgw.rs` (`aacc9c11f`, the PCGamingWiki
+search term URL-encoding), which changes no log line. That fix is NOT in the signed build: on the build, a title holding `#`,
+`&`, `=` or `;` searches PCGamingWiki as the 85 build's TS did, so item 1's titles are best chosen without those characters
+(the result is "as before" either way).
+
+### Literal table
+
+| Row | Literal at `7c50262f4` | Emitter file:line | Sink | Status |
+|---|---|---|---|---|
+| L1 | Info failure lines, each must be ABSENT for a call that answered: `wiki lookup failed (`; `pcgamingwiki lookup failed (`; `applegamingwiki lookup failed (`; `hltb game page failed (`, `hltb gog page failed (`, `hltb search session failed (`, `hltb search failed (`; `gamesdb request failed (`, `gog games request failed (`; `crossover index refresh failed (`; `gog discounts: the request failed (`, `gog discounts: page <n> failed (`; `itad <channel> failed (` | `gamelib-info/src/wiki/mod.rs:226`, `wiki/pcgw.rs:106`, `wiki/agw.rs:57`, `wiki/hltb.rs:215`/`:274`/`:376`/`:513`, `wiki/gog_ctx.rs:46`/`:62`, `crossover/fetcher.rs:112` (text) logged at `:314`, `discounts.rs:327`/`:277`; all through `ctx.note` (`ctx.rs:116`) into `ShellInfoLog` (`src-tauri/src/info_dispatch.rs:111`, `shell_log`); ITAD `info_dispatch.rs:834` (`shell_log_detail`, category only) | `gamelib.log` as `[Shell]` | REACHABLE |
+| L1a | Anticheat download failure: the crate answers `{ written: false, warning }` with a bare category (`<transport error>`, `status <n>`, `write failed: <kind>`) and the sidecar listener logs it | `gamelib-info/src/anticheat.rs:193`/`:196`/`:201`; logged by `src/backend/sidecar/bootstrap.ts:2923` (`logWarning(warning, LogPrefix.Backend)`) | `gamelib.log` as `[Backend]` WARN | REACHABLE, no fixed prefix: its absence is read as no `[Backend]` WARN line naming a status, transport or `write failed` from the anticheat download |
+| L1b | SteamGridDB (`steamgriddb.*` channels) and recent games (`removeRecent`, the recent list): no failure line | none: a failed native call answers the renderer only (`native_router.rs` logs no per-call failure; `gamelib-info/src/steamgrid.rs` and the recent ops have no `note`) | none | REACHABLE as a non-literal: these two are scored by observation (picker results, tray and Library order) and the state files, never by a log absence (Test 3) |
+| L2 | `keyring info_secret_get account=itad-api-key outcome=found` and `keyring info_secret_get account=steamgrid-api-key outcome=found` (`outcome=absent` for an empty slot; `keyring info_secret_get account=<slot> failed (<kind>)` on a Keychain error) | `src-tauri/src/info_secrets.rs:69` (found), `:77` (absent), `:86` (failed), text from `keyring_outcome_message`, `src-tauri/src/keyring_dispatch.rs:418`; channel label `CHANNEL_GET = "info_secret_get"`, `info_secrets.rs:42` | `gamelib.log` as `[Shell]` | REACHABLE as amended. The authored `keyring keyring_get account=<slot>` wording is not emitted for these slots: the TS readers were deleted (86-15, 86-17; `KEYRING_SLOT_ITAD_API_KEY` / `KEYRING_SLOT_STEAMGRID_API_KEY` in `keyringTokenStore.ts:29`/`:31` have no reader), and the Rust reads go through `KeyringSecretSource`, which labels its lines `info_secret_get`. The row itself named this case ("a Rust-internal read through D-26's `SecretSource` may not pass through it"), so this is the anticipated wording change, not a missing emitter. Each slot is read once per process (the crate caches the answer, `gamelib-info/src/secrets.rs:196`), so launch 1 holds at most one such line per slot. Same Keychain service as P6 (`KEYRING_SERVICE = "com.gamelib.launcher"`, `src-tauri/src/main.rs:464`) |
+| L3 | `[dev-secret-vault]` (any line), must be ABSENT | Rust `src-tauri/src/info_secrets.rs:175` (read), `:182` (write), `:322` (REFUSED, packaged build with the variable set), `:329` (INSTALLED), `:336` (REFUSED, unsafe file); TS `src/backend/sidecar/devSecretVault.ts:154` (read), `:169` (write), `:273`/`:281`/`:292` (REFUSED) | `[Shell]` (Rust), `[Backend]` (TS) | REACHABLE. Presence case: a dev build with `GAMELIB_DEV_SECRET_VAULT=1` logs `INSTALLED` and a `read key=` line per read. Positive control on the signed build: `info secret source: keyring` (`info_secrets.rs:349`). `launchctl getenv GAMELIB_DEV_SECRET_VAULT` printed nothing (unset for apps opened from Finder or `open -a`), so not even the `REFUSED` line is expected |
+| L4 | `store boot: <n> opened, <a> adopted, <m> migrated, <r> read-only, <e> start-empty, <d> deferred in <t> ms` | `src-tauri/src/store_boot.rs:192` in `summary_line` (`:190`), logged at `:163` | `gamelib.log` as `[Shell]` | REACHABLE |
+| L5 | `WARN: store frame rejected: <reason>` and `WARN: native <channel> refused a store write: <kind>`, each must be ABSENT | `src-tauri/src/store_dispatch.rs:449`; `src-tauri/src/store_native.rs:423` | `gamelib.log` as `[Shell]` | REACHABLE |
+
+Further positive lines the run can use (not required literals): `itad key source: <env|baked|none>`
+(`info_dispatch.rs:192`, one per launch; the signed build is expected to say `baked`) and `steamgrid key migration: <word>`
+(`info_dispatch.rs:203`, logged at `:219`/`:223`, one per launch). The `recentGamesChanged` push that item 3's tray check depends on still exists:
+`TrayRecentSink::changed` emits it and rebuilds the tray menu in the same call (`info_dispatch.rs:29`, `:99`), so Test 7's
+finding holds.
+
+No row is IMPOSSIBLE, so the run is not stopped.
+
+### Signed builds (D-15)
+
+From `86-VALIDATION.md` "## Signed builds (D-15)" (recorded and committed by 86-26 in `c77d60509`):
+
+| | Phase 85 build | Phase 86 build |
+|---|---|---|
+| Release | draft `GameLib v0.11.0`, run `44978855761` | draft `GameLib v0.12.0`, run `45056179067` (`release/v0.12` @ `7c50262f4`) |
+| Artifact | `GameLib_0.11.0_aarch64.app.tar.gz` | `GameLib_0.12.0_aarch64.app.tar.gz` sha256 `3887a0e3...32231`; `GameLib_0.12.0_aarch64.dmg` sha256 `e8699ad2...2f9` |
+| Identifier | `com.gamelib.shell` | `com.gamelib.shell` |
+| Leaf / Team | Developer ID Application: grayson mitchell (S7U223QWXJ) / `S7U223QWXJ` | same / same |
+| Designated requirement | recorded string | byte-identical (sha256 `af622dc0...d131` both) |
+| spctl / stapler | accepted, Notarized Developer ID / stapled | accepted, Notarized Developer ID / stapled |
+| CDHash | `4ca4869a...` | `06c8dcf0...` (differs, a different build) |
+
+The identities match: `Gate item 4: pending`, so item 4 is run, not blocked. The install-over source is in place:
+`/Applications/GameLib.app` reads `0.11.0` with `CDHash=4ca4869a7ce92359eb2ca453ac9dcaf5978bfb4e` (read with
+`codesign -dv`, not launched), the Phase 85 build. The Phase 86 build to install is the `GameLib v0.12.0` draft's
+`GameLib_0.12.0_aarch64.dmg` (or the app tar), installed over it at the same path.
+
+### Item 1 Epic title
+
+Picked from the profile's `areweanticheatyet.json` (1166 entries, sha256 `93f110e0...97979` at the pick) against
+`store_cache/legendary_library.json` (20 Epic entries) by Epic namespace: one match, **ARK: Survival Evolved** (namespace
+`ark`, status `Denied`, anticheats BattlEye and VAC; not installed, which the badge does not need). F8 still applies: the
+file's sha256 is re-taken at launch 2's quit, and the title is re-picked if the entry is gone.
+
+### Automatable preflight
+
+- **P1:** session directory created 2026-11-22T19:03:45Z, `$S` = `gamelib-gate-86-2026-11-22T19:03:45Z` under this
+  session's Claude scratchpad, which is itself under `/private/tmp` (the contract's `/tmp` rule holds; the scratchpad is used
+  because the executor's environment directs temporary files there). `notes.log` started.
+- **P2:** zero GameLib instances (`pgrep -fl 'gamelib-shell|GameLib\.app|build/main/sidecar\.js'` and
+  `pgrep -f -- '--gamelib-reaper'` both empty). `/Applications/GameLib.app/Contents/MacOS` holds `gamelib-shell` and
+  `gamelib-sidecar`.
+- **P3:** the contract takes `profile-before/` AFTER P5 (run order; the item 4 baseline must include the seed), and P5 is an
+  operator step on the 85 build, so P3 proper is taken in Task 2 right after P5. A pre-seed safety copy was taken now so the
+  seed step itself has a restore path (T-86-63): `ditto` into `$S/profile-preseed/`, exit 0 in 7 s, 5.6G, 32499 files against
+  32502 in the live profile (the same 3-file difference the 85 gate recorded: `ditto` folds the AppleDouble files under
+  `nile_config/nile/SDK/App/Amazon Games Services/` into extended attributes).
+- **P4:** likewise after P5. State now, for the seed check: `store/config.json` `games.recent` holds 52 entries;
+  `store/game-overrides.json` absent; `game_overrides_images/` absent. So P5 (b) must create an override.
+- **P5:** operator step (Task 2).
+- **P6 (pre-seed):** `steamgrid-api-key` absent, `itad-api-key` absent (existence only, no `-w`/`-g`). P5 (c) must set the
+  SteamGridDB key. With no ITAD user key, item 4's ITAD half is `blocked` unless the operator sets an ITAD key of their own in
+  P5 (the build uses the baked key for item 2 either way). P6 is re-taken after P5.
+- Item 3 candidates (installed, non-Steam): SOMA (Epic) and Caravan SandWitch (Amazon); the operator picks one that launches.
 
 ## Structural Reachability Review
 
@@ -242,7 +320,7 @@ Task 1 re-check confirms the push still exists.
 
 ## Current Test
 
-[pending: 0 of 4 scored]
+[pending: 0 of 4 scored; Task 1 re-check done (no row IMPOSSIBLE, Gate item 4: pending); awaiting the operator (Task 2)]
 
 ## Tests
 
