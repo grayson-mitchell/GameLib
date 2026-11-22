@@ -234,6 +234,15 @@ fn parse_open(args: &[String]) -> Option<OpenArgs> {
     Some(parsed)
 }
 
+/// The scratch directory a `--dry-run` created: only that directory is removed, when this drops.
+struct Scratch(PathBuf);
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
 fn open_profile(args: OpenArgs) {
     let app_folder = args
         .app_folder
@@ -250,9 +259,13 @@ fn open_profile(args: OpenArgs) {
             .map_or(0, |d| d.as_nanos());
         base.join(format!("gamelib-store-cli-{}-{nanos}", std::process::id()))
     });
+    // Removes the scratch copy (token stores included) on every way out of this function, a panic
+    // in `open_file` too. `exit` skips destructors, so the copy-error arm removes it by hand.
+    let _cleanup = scratch.clone().map(Scratch);
     let (user_data, app_folder) = match &scratch {
         Some(dir) => copy_profile(&args.user_data, &app_folder, dir).unwrap_or_else(|e| {
             eprintln!("cannot copy the profile: {e}");
+            let _ = fs::remove_dir_all(dir);
             exit(2)
         }),
         None => (args.user_data.clone(), app_folder),
@@ -267,10 +280,6 @@ fn open_profile(args: OpenArgs) {
             let opened = open_file(&path, row.flavour, kind, row.chain_key(), &chains, now);
             println!("{label} {}", describe(&opened.outcome));
         }
-    }
-    if let Some(dir) = scratch {
-        // Only the directory this run created.
-        let _ = fs::remove_dir_all(dir);
     }
 }
 
