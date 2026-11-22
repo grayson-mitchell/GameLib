@@ -1,0 +1,170 @@
+/**
+ * Phase 86 D-25: the Rust shell bakes the IsThereAnyDeal key at COMPILE time, so the release
+ * workflow's Tauri build step (the one that runs cargo) must carry `ITAD_API_KEY` from the repo
+ * secret, exactly as the sidecar SEA step already does. Without it a signed release shows "not set
+ * up in this build" for Store Search once the Rust ITAD port is live.
+ *
+ * A workflow cannot be run from jest, so this is wiring: the workflow is parsed to a steps array
+ * and compared by INDEX (a raw-text order check is unsound against step comments), and the two
+ * Rust source lines the env var feeds are pinned by text in files other than this one.
+ */
+import { load } from 'js-yaml'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+const REPO_ROOT = join(__dirname, '..', '..')
+
+interface Step {
+  name?: string
+  uses?: string
+  run?: string
+  env?: Record<string, unknown>
+}
+
+interface Workflow {
+  jobs: Record<string, { steps?: Step[] }>
+}
+
+const SECRET = '${{ secrets.ITAD_API_KEY }}'
+const SEA_STEP = 'Build self-contained sidecar (Node SEA)'
+
+const read = (rel: string): string => readFileSync(join(REPO_ROOT, rel), 'utf8')
+
+/** The file without its `//` comment lines, so prose cannot satisfy a code assertion. */
+const rustCode = (rel: string): string =>
+  read(rel)
+    .split('\n')
+    .filter((line) => !line.trimStart().startsWith('//'))
+    .join('\n')
+
+function releaseSteps(doc: Workflow): Step[] {
+  const steps = doc.jobs.release?.steps
+  if (!steps) throw new Error('jobs.release.steps not found')
+  return steps
+}
+
+const isTauriBuild = (s: Step): boolean =>
+  (s.uses ?? '').startsWith('tauri-apps/tauri-action')
+
+const isFailFast = (s: Step): boolean =>
+  (s.run ?? '').includes('test -n "$IN_ITAD_API_KEY"')
+
+/**
+ * What the workflow must look like: the fail-fast step first, then the SEA step and the Tauri build
+ * step both carrying the secret. Returns the failures, empty when it holds.
+ */
+function problems(doc: Workflow): string[] {
+  const steps = releaseSteps(doc)
+  const found: string[] = []
+  const failFast = steps.findIndex(isFailFast)
+  const sea = steps.findIndex((s) => s.name === SEA_STEP)
+  const tauri = steps.findIndex(isTauriBuild)
+  if (failFast < 0) found.push('no "Require the ITAD_API_KEY secret" step')
+  if (sea < 0) found.push('no sidecar SEA step')
+  if (tauri < 0) found.push('no tauri-action step')
+  if (found.length > 0) return found
+  if (steps[failFast]?.env?.IN_ITAD_API_KEY !== SECRET) {
+    found.push('the fail-fast step does not read the secret')
+  }
+  if (steps[sea]?.env?.ITAD_API_KEY !== SECRET) {
+    found.push('the sidecar step does not carry ITAD_API_KEY from secrets')
+  }
+  if (steps[tauri]?.env?.ITAD_API_KEY !== SECRET) {
+    found.push('the Tauri build step does not carry ITAD_API_KEY from secrets')
+  }
+  if (!(failFast < sea))
+    found.push('the fail-fast step runs after the SEA step')
+  if (!(failFast < tauri)) {
+    found.push('the fail-fast step runs after the Tauri build step')
+  }
+  return found
+}
+
+const workflow = load(read('.github/workflows/release-tauri.yml')) as Workflow
+
+describe('release-tauri.yml bakes the ITAD key into the Rust shell (D-25)', () => {
+  test('self-test: the workflow has the three steps and each carries the secret', () => {
+    expect(problems(workflow)).toEqual([])
+  })
+
+  test('the Tauri build step maps ITAD_API_KEY to the secret, in its own step env', () => {
+    const step = releaseSteps(workflow).find(isTauriBuild)
+    expect(step?.env?.ITAD_API_KEY).toBe(SECRET)
+  })
+
+  test('the sidecar step still maps ITAD_API_KEY to the secret', () => {
+    const step = releaseSteps(workflow).find((s) => s.name === SEA_STEP)
+    expect(step?.env?.ITAD_API_KEY).toBe(SECRET)
+  })
+
+  test('the fail-fast step still runs before both builds', () => {
+    const steps = releaseSteps(workflow)
+    const failFast = steps.findIndex(isFailFast)
+    expect(failFast).toBeGreaterThan(-1)
+    expect(failFast).toBeLessThan(steps.findIndex(isTauriBuild))
+    expect(failFast).toBeLessThan(steps.findIndex((s) => s.name === SEA_STEP))
+  })
+
+  test('the key is a step-level env, never job-level, and no run body echoes it', () => {
+    const job = (workflow.jobs.release as { env?: Record<string, unknown> }).env
+    expect(Object.keys(job ?? {})).not.toContain('ITAD_API_KEY')
+    for (const step of releaseSteps(workflow)) {
+      expect(step.run ?? '').not.toMatch(/echo[^\n]*\$\{?(IN_)?ITAD_API_KEY/)
+    }
+  })
+
+  test('mutation: removing the Tauri step env makes the check fail', () => {
+    const mutated = structuredClone(workflow)
+    const step = releaseSteps(mutated).find(isTauriBuild)
+    if (!step) throw new Error('tauri-action step not found')
+    delete step.env
+    expect(problems(mutated)).toEqual([
+      'the Tauri build step does not carry ITAD_API_KEY from secrets'
+    ])
+  })
+
+  test('mutation: a Tauri step env that names another secret makes the check fail', () => {
+    const mutated = structuredClone(workflow)
+    const step = releaseSteps(mutated).find(isTauriBuild)
+    if (!step) throw new Error('tauri-action step not found')
+    step.env = { ITAD_API_KEY: '${{ secrets.OTHER }}' }
+    expect(problems(mutated)).toHaveLength(1)
+  })
+
+  test('mutation: moving the fail-fast step after the Tauri build step makes the check fail', () => {
+    const mutated = structuredClone(workflow)
+    const steps = releaseSteps(mutated)
+    const at = steps.findIndex(isFailFast)
+    const [moved] = steps.splice(at, 1)
+    if (!moved) throw new Error('fail-fast step not found')
+    steps.splice(steps.findIndex(isTauriBuild) + 1, 0, moved)
+    expect(problems(mutated)).toContain(
+      'the fail-fast step runs after the Tauri build step'
+    )
+  })
+})
+
+describe('the Rust shell reads the baked key at compile time (D-25)', () => {
+  test('build.rs reruns when ITAD_API_KEY changes, and still calls tauri_build', () => {
+    const buildRs = read('src-tauri/build.rs')
+    expect(
+      buildRs.match(/cargo:rerun-if-env-changed=ITAD_API_KEY/g)
+    ).toHaveLength(1)
+    expect(buildRs).toContain('tauri_build::build()')
+  })
+
+  test('info_dispatch.rs compiles the key with option_env! and reads the runtime override once', () => {
+    const source = rustCode('src-tauri/src/info_dispatch.rs')
+    expect(source.match(/option_env!\("ITAD_API_KEY"\)/g)).toHaveLength(1)
+    expect(source.match(/"GAMELIB_ITAD_API_KEY"/g)).toHaveLength(1)
+  })
+
+  test('the crate hard-codes no environment variable name and bakes nothing (D-25)', () => {
+    // EnvSecretSource takes its variable names from the caller; the crate itself names none.
+    for (const file of ['secrets.rs', 'ctx.rs', 'lib.rs']) {
+      const code = rustCode(`src-tauri/crates/gamelib-info/src/${file}`)
+      expect(code).not.toMatch(/option_env!|[^_]env!\(|env::var\("/)
+      expect(code).not.toContain('ITAD_API_KEY')
+    }
+  })
+})

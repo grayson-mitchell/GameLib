@@ -101,6 +101,35 @@ impl RecentSink for TrayRecentSink {
     }
 }
 
+/// The IsThereAnyDeal key compiled into this build (D-25): `option_env!("ITAD_API_KEY")`, with
+/// `cargo:rerun-if-env-changed=ITAD_API_KEY` in build.rs so a changed key rebuilds the shell. A
+/// release build gets it from the workflow's secret; a dev or PR build has none.
+fn baked_itad_key() -> Option<String> {
+    option_env!("ITAD_API_KEY")
+        .filter(|key| !key.trim().is_empty())
+        .map(str::to_owned)
+}
+
+/// The key `GAMELIB_ITAD_API_KEY` carries, read once at boot (the crate reads no environment).
+fn env_itad_key() -> Option<String> {
+    std::env::var("GAMELIB_ITAD_API_KEY")
+        .ok()
+        .filter(|key| !key.trim().is_empty())
+}
+
+/// The built-in key's source as a word, for the one boot log line: the env key wins over the baked
+/// one, as in `resolveBuiltInItadKey`. A key never reaches the line (T-86-27). The user's own key
+/// lives in the keyring and is not read at boot, so it is not part of this.
+fn itad_key_source_word(env: &Option<String>, baked: &Option<String>) -> &'static str {
+    if env.is_some() {
+        "env"
+    } else if baked.is_some() {
+        "baked"
+    } else {
+        "none"
+    }
+}
+
 /// Builds the one context and stores it. Called from `run_setup` after the store host opened and
 /// before the sidecar is spawned. A second call is ignored (the first context stays).
 pub(crate) fn install(app: &AppHandle, user_data: &Path) {
@@ -121,6 +150,13 @@ pub(crate) fn install(app: &AppHandle, user_data: &Path) {
     );
     ctx.recent_sink = Some(Arc::new(TrayRecentSink::for_app(app)));
     ctx.secrets = Some(info_secrets::secret_source());
+    let (baked, env) = (baked_itad_key(), env_itad_key());
+    shell_log(&format!(
+        "itad key source: {}",
+        itad_key_source_word(&env, &baked)
+    ));
+    ctx.itad_baked_key = baked;
+    ctx.itad_env_key = env;
     let _ = INFO_CTX.set(Arc::new(ctx));
 }
 
@@ -1040,6 +1076,28 @@ mod tests {
             rpc_info_anticheat_download(&[json!({})]),
             Err("info_anticheat_download:not-ready".to_string())
         );
+    }
+
+    #[test]
+    fn the_itad_key_source_word_follows_the_env_then_baked_precedence() {
+        let some = |k: &str| Some(k.to_string());
+        assert_eq!(itad_key_source_word(&some("e"), &some("b")), "env");
+        assert_eq!(itad_key_source_word(&some("e"), &None), "env");
+        assert_eq!(itad_key_source_word(&None, &some("b")), "baked");
+        assert_eq!(itad_key_source_word(&None, &None), "none");
+    }
+
+    #[test]
+    fn build_rs_reruns_when_the_baked_key_changes() {
+        // The needle lives in build.rs, not in this file, so this cannot match itself.
+        let build_rs = include_str!("../build.rs");
+        assert_eq!(
+            build_rs
+                .matches("cargo:rerun-if-env-changed=ITAD_API_KEY")
+                .count(),
+            1
+        );
+        assert!(build_rs.contains("tauri_build::build()"));
     }
 
     /// A host that does nothing: `remove_recent` never reaches the native host.

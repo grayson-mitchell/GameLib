@@ -707,8 +707,16 @@ jobs:
       # exists to remove, failing in the dangerous direction. Inverting the
       # condition puts the non-empty branch on the truthy side, which is the
       # only form that behaves correctly.
+      # Phase 86 D-25: the Rust shell bakes the IsThereAnyDeal key at COMPILE time
+      # (`option_env!("ITAD_API_KEY")` in src-tauri/src/info_dispatch.rs, with
+      # `cargo:rerun-if-env-changed=ITAD_API_KEY` in build.rs), so the step that
+      # runs the cargo build must carry it, exactly as the sidecar SEA step does.
+      # The "Require the ITAD_API_KEY secret" step above already failed the job if
+      # it is empty. Pinned by meta/__tests__/releaseItadKey.test.ts.
       - uses: tauri-apps/tauri-action@v1
         timeout-minutes: 60
+        env:
+          ITAD_API_KEY: ${{ secrets.ITAD_API_KEY }}
         with:
           tagName: ${{ env.GAMELIB_DRY_RUN != 'true' && 'v__VERSION__' || '' }}
           releaseName: ${{ env.GAMELIB_DRY_RUN != 'true' && 'GameLib v__VERSION__' || '' }}
