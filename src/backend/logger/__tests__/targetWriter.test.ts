@@ -371,37 +371,44 @@ describe('LogWriter facade over the forwarder', () => {
     })
 
     it('a Promise message and a line behind it keep their call-time ts and tz', async () => {
-      jest.useFakeTimers({ now: new Date(2026, 10, 20, 13, 5, 9) })
-      const { index, LogWriter, frames } = load()
-      const w = new LogWriter(GAME, false)
-      let release: (v: string) => void = () => undefined
-      const slow = new Promise<string>((resolve) => {
-        release = resolve
-      })
-      const promiseCall = Date.now()
-      void w.logInfo(slow)
-      jest.setSystemTime(promiseCall + 10_000)
-      const behindCall = Date.now()
-      void w.logWarning('logged behind the promise')
-      jest.setSystemTime(promiseCall + 30_000)
-      release('slow line')
-      await index.flushLogForwarder()
-      const entries = batchesFor(frames, 'game').flatMap((b) => b.entries)
-      expect(entries).toHaveLength(2)
-      expect(entries[0]).toMatchObject({
-        line: {
-          ts: promiseCall,
-          tz: -new Date(promiseCall).getTimezoneOffset(),
-          msg: 'slow line'
-        }
-      })
-      expect(entries[1]).toMatchObject({
-        line: {
-          ts: behindCall,
-          tz: -new Date(behindCall).getTimezoneOffset(),
-          msg: 'logged behind the promise'
-        }
-      })
+      // The offset source is pinned to a DST end (New York, 2026-11-01 06:00Z: -240 before, -300
+      // after) so the window below straddles an offset change in any host zone, and a tz taken at
+      // settle time instead of call time fails (IN-12).
+      const dstEnd = Date.parse('2026-11-01T06:00:00Z')
+      const offset = jest
+        .spyOn(Date.prototype, 'getTimezoneOffset')
+        .mockImplementation(function (this: Date) {
+          return this.getTime() < dstEnd ? 240 : 300
+        })
+      try {
+        jest.useFakeTimers({ now: dstEnd - 10_000 })
+        const { index, LogWriter, frames } = load()
+        const w = new LogWriter(GAME, false)
+        let release: (v: string) => void = () => undefined
+        const slow = new Promise<string>((resolve) => {
+          release = resolve
+        })
+        const promiseCall = Date.now()
+        void w.logInfo(slow)
+        jest.setSystemTime(promiseCall + 5_000)
+        const behindCall = Date.now()
+        void w.logWarning('logged behind the promise')
+        jest.setSystemTime(promiseCall + 30_000)
+        // The settle-time offset differs from both call-time offsets.
+        expect(-new Date(Date.now()).getTimezoneOffset()).toBe(-300)
+        release('slow line')
+        await index.flushLogForwarder()
+        const entries = batchesFor(frames, 'game').flatMap((b) => b.entries)
+        expect(entries).toHaveLength(2)
+        expect(entries[0]).toMatchObject({
+          line: { ts: promiseCall, tz: -240, msg: 'slow line' }
+        })
+        expect(entries[1]).toMatchObject({
+          line: { ts: behindCall, tz: -240, msg: 'logged behind the promise' }
+        })
+      } finally {
+        offset.mockRestore()
+      }
     })
 
     it('a Promise message that is already queued behind another keeps its own call time too', async () => {
