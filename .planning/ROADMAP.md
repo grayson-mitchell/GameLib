@@ -562,7 +562,7 @@ Plans:
   3. Recorded fixtures exist for each previously untested directory before it is ported
   4. Each ported slice's TypeScript and sidecar registrations are deleted in this phase (the delete gate per slice passes)
 
-**Plans:** 12/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
+**Plans:** 13/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
 
 Plans:
 **Wave 1**
@@ -592,7 +592,7 @@ Plans:
 - [x] 86-12-PLAN.md — Anticheat in Rust (native lookup, status/download ops, md-5); the D-12 drift command
 
 **Wave 8** *(blocked on Wave 7 completion)*
-- [ ] 86-13-PLAN.md — Anticheat shims; TS online hook calls status then download (D-07, D-28); TS slice deleted
+- [x] 86-13-PLAN.md — Anticheat shims; TS online hook calls status then download (D-07, D-28); TS slice deleted
 
 **Wave 9** *(blocked on Wave 8 completion)*
 - [ ] 86-14-PLAN.md — Keys: shell SecretSource over the keyring, dev vault port, SteamGridDB plaintext migration, baked ITAD key (D-19, D-25, D-26)

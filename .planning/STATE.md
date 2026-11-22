@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 86-12-PLAN.md
-last_updated: "2026-11-22T11:39:36.633Z"
+stopped_at: Completed 86-13-PLAN.md
+last_updated: "2026-11-22T11:47:03.104Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 86 execution started
-state_head: b6da3cff7ca22d564ac3b06b8e478fe0eb7ebc4b
+state_head: d574b1d5b9486c2ffd06304288197cea3af6a34d
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 86 (Pure leaf services) — EXECUTING
-Plan: 12 of 26
+Plan: 13 of 26
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 86 execution started
 Progress: [██████████] 100%
@@ -396,6 +396,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 86 P10 | 70min | 2 tasks | 20 files |
 | Phase 86 P11 | 35min | 2 tasks | 25 files |
 | Phase 86 P12 | 60min | 3 tasks | 28 files |
+| Phase 86 P13 | 30min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -784,6 +785,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 86]: 86-11: storeMirrorSchedule gains DELETED_IN_PHASE_86 (cell stays 86, CURRENT_PHASE stays 85); 86-17 and 86-24 add their stores to it
 - [Phase 86]: 86-12: info_anticheat_download answers { written, warning? } (the crate has no logger; the 86-13 caller logs the warning); status rejects an unreadable present data file as TS createMD5 did
 - [Phase 86]: 86-12: drift compares JSON shape in two modes (Whole document, EntryOfList) and is opt-in: never run by tests or CI, env key source only
+- [Phase 86]: 86-13: the anticheat download callback carries its own .catch because runOnceWhenOnline drops the callback's return; shims resolve unknown and callers cast
 
 ### Pending Todos
 
@@ -1053,8 +1055,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T11:39:34.903Z
-Stopped at: Completed 86-12-PLAN.md
+Last session: 2026-11-22T11:47:01.450Z
+Stopped at: Completed 86-13-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
