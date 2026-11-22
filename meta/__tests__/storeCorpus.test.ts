@@ -496,6 +496,43 @@ describe('harvester redactValue', () => {
     })
   })
 
+  it('denylists the documented secret key names and redacts account shapes embedded in a string or a key (C-WR-04)', () => {
+    for (const key of [
+      'sessionCookie',
+      'csrfToken',
+      'authToken',
+      'idToken',
+      'sessionToken',
+      'loginToken',
+      'bearer',
+      'oauth'
+    ]) {
+      expect(isDenylistedKey(key)).toBe(true)
+      expect(redactValue([], { [key]: 'abcdefghijklmnop' }, ctx())).toEqual({
+        [key]: 'REDACTED'
+      })
+    }
+    // `author` is not an auth secret.
+    expect(isDenylistedKey('author')).toBe(false)
+    const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0In0.c2ln'
+    const out = redactValue(
+      [],
+      {
+        url: 'https://x.test/u/76561197960287930/inventory',
+        note: 'mail someone@example.com about it',
+        header: `Bearer ${jwt}`,
+        'who someone@example.com': 1
+      },
+      ctx()
+    ) as Record<string, unknown>
+    expect(out).toEqual({
+      url: 'https://x.test/u/REDACTED/inventory',
+      note: 'mail REDACTED about it',
+      header: 'Bearer REDACTED',
+      'who REDACTED': 1
+    })
+  })
+
   it('keeps a __proto__ key as an own key instead of setting the prototype (C-WR-05)', () => {
     const parsed = JSON.parse('{"__proto__":{"a":"secret"},"b":1}') as unknown
     const out = redactValue([], parsed, ctx()) as Record<string, unknown>

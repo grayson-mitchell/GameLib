@@ -159,7 +159,15 @@ const DENY_KEY_PATTERNS: readonly RegExp[] = [
   /api[_-]?key/i,
   /secret/i,
   /passw(or)?d/i,
-  /credential/i
+  /credential/i,
+  // The secret key names this codebase documents (`sessionCookie`, `csrfToken` of the Humble store,
+  // `authToken`, `idToken`, `loginToken`): a plaintext value under one of them must not reach a public repo.
+  /token/i,
+  /cookie/i,
+  /csrf/i,
+  /session/i,
+  /auth(?!or)/i,
+  /bearer/i
 ]
 
 export function isDenylistedKey(key: string): boolean {
@@ -266,6 +274,22 @@ function pastePlaceholder(url: string, ctx: RedactionContext): string {
   return placeholder
 }
 
+/**
+ * The account shapes found anywhere inside a string, not only when they are the whole of it: a SteamID64, an email or a
+ * bearer token inside a URL or a sentence is as much a leak. The same shapes `storeCorpus.test.ts` scans for, so a value
+ * the harvester keeps is a value the scan accepts.
+ */
+const JWT_ANYWHERE_RE = /eyJ[A-Za-z0-9_-]{10,}(?:\.[A-Za-z0-9_-]+)*/g
+const STEAMID64_ANYWHERE_RE = /7656119\d{10}/g
+const EMAIL_ANYWHERE_RE = /[^\s@"]+@[^\s@"]+\.[A-Za-z]{2,}/g
+
+function redactEmbedded(text: string): string {
+  return text
+    .replace(JWT_ANYWHERE_RE, PLACEHOLDER)
+    .replace(STEAMID64_ANYWHERE_RE, PLACEHOLDER)
+    .replace(EMAIL_ANYWHERE_RE, PLACEHOLDER)
+}
+
 function redactString(value: string, ctx: RedactionContext): string {
   if (PASTE_URL_RE.test(value)) return pastePlaceholder(value, ctx)
   if (
@@ -276,7 +300,7 @@ function redactString(value: string, ctx: RedactionContext): string {
   ) {
     return PLACEHOLDER
   }
-  return replaceUsername(value, ctx)
+  return replaceUsername(redactEmbedded(value), ctx)
 }
 
 /** Key names are kept, except a Humble gamekey prefix and the OS account name: a key is never replaced wholesale. */
@@ -293,7 +317,7 @@ function redactKey(key: string, ctx: RedactionContext): string {
     }
     out = `${placeholder}:${key.slice(gk[0].length)}`
   }
-  return replaceUsername(out, ctx)
+  return replaceUsername(redactEmbedded(out), ctx)
 }
 
 /**
