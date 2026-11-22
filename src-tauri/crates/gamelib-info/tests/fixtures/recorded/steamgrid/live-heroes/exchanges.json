@@ -1,0 +1,64 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://www.steamgriddb.com/api/v2/search/autocomplete/Celeste",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "authorization": "REDACTED",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:11:17 GMT",
+        "content-type": "application/json",
+        "connection": "keep-alive",
+        "server": "cloudflare",
+        "set-cookie": "REDACTED",
+        "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+        "cache-control": "no-store, no-cache, must-revalidate",
+        "pragma": "no-cache",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "cf-cache-status": "DYNAMIC",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=5LRpWGoKT4q0z%2FXQurL5TH4Ju%2B4mJ9tT%2FlUn1c93AfH09HMoXPFpNX4zCEnkD5PYs%2BYCxkWf6fPN%2BcBNgKnHmRqkBtoNTRe%2BqzT5iRoUn9BGWeVv9oeUzFjGpMprF98%2FOT7YK1S8\"}]}",
+        "cf-ray": "a5e7262e59a0d994-AKL",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-1.json"
+    }
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://www.steamgriddb.com/api/v2/heroes/game/13136",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "authorization": "REDACTED",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:11:17 GMT",
+        "content-type": "application/json",
+        "connection": "keep-alive",
+        "server": "cloudflare",
+        "set-cookie": "REDACTED",
+        "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+        "cache-control": "no-store, no-cache, must-revalidate",
+        "pragma": "no-cache",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "cf-cache-status": "DYNAMIC",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=s2tcvuEk7X7rqmw99RibgpKVokTbrM2qj%2BbVh%2F5SFFBdMVes%2FxwGFQUdGY0AmBcMHCrtBuzvfB8VVAtEBBWDBmeLqXrNsin2F1z0A53Ba24q8Pc8mtMf%2FELUeaHpWQMo40h%2BGmz%2F\"}]}",
+        "cf-ray": "a5e7262f7a5fd994-AKL",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-2.json"
+    }
+  }
+]

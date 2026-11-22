@@ -1,0 +1,60 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://api.isthereanydeal.com/games/search/v1?title=portal&results=20&key=REDACTED",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:11:16 GMT",
+        "content-type": "application/json",
+        "connection": "keep-alive",
+        "server": "cloudflare",
+        "x-frame-options": "DENY",
+        "access-control-allow-origin": "*",
+        "cf-cache-status": "DYNAMIC",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=qGZ8BaxiukfIWhR4LhWgqg9UmeiKgGHLMwVnYs7e%2Fmobfnfs5h%2Fo%2B%2F8qwtp%2BTi4Ct3l8JqDZdZ%2F9JQfaIUCnv88191KaFYyaY3LkNYP9pDjqj4d2poPSu673CN2QmV0T1nC6j3ek58k%3D\"}]}",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "cf-ray": "a5e726264badad90-WLG",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-1.json"
+    }
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "POST",
+      "url": "https://api.isthereanydeal.com/games/prices/v3?country=US&key=REDACTED",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "user-agent": "GameLib/0.11.0"
+      },
+      "body": "[\"018d937f-21e1-728e-86d7-9acb3c59f2bb\",\"018d937f-1749-73f8-bf5a-8e0aa3cdd9ff\",\"018d937f-084b-7329-a656-5c2898b189e3\",\"018d937f-246c-73c2-bb59-9858a505a532\",\"018d937f-664a-725d-8f4a-c1f4c280f7f8\",\"018d937f-265f-73b1-9648-f612c807c613\",\"018d937e-f4fa-7062-9af1-2c1e41ee2ce6\",\"018d937f-2970-7318-b465-29cbe06c2c86\",\"018d937f-2e92-7174-9906-458703167bf5\",\"018d937f-0fb3-70f1-8e98-f79e17be7187\",\"018d937e-f4e3-73cd-b87c-7bfe0f4ee243\",\"0191cf33-36cf-7251-b712-4fc251825e9b\",\"018d937f-13bf-7090-b6b2-1c72ceb22899\",\"018d937f-7ba0-7029-a716-0155a72f4c14\",\"018d937f-73b6-73a1-9bda-ba1dbdbb77df\",\"018d937f-3a5e-70b7-8551-505207a972c2\",\"018d937f-3e55-70cc-bd5e-7d34167d6b53\",\"018d937f-2be9-73f0-bf04-cfffd2511920\",\"018f3da3-aa77-7005-b53c-4657dbe11b2a\",\"018d937f-67c3-728b-a344-afa416a93954\"]"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:11:17 GMT",
+        "content-type": "application/json",
+        "connection": "keep-alive",
+        "server": "cloudflare",
+        "x-frame-options": "DENY",
+        "access-control-allow-origin": "*",
+        "cf-cache-status": "DYNAMIC",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=oHLfXejrX43ebuqMuOLBjiwUTojUJDB02xUndTIvCUaaGm620eGOb5FG%2FbVIe%2F40kyQj3IkZGH0iSkxK5mzUYEwWZzLtoEVSN7o%2F1u7Bw9RBOE1CzTLux%2BDk%2F1nxCSmDaJ8pbdZSu4M%3D\"}]}",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "cf-ray": "a5e7262ddc60ad90-WLG",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-2.json"
+    }
+  }
+]

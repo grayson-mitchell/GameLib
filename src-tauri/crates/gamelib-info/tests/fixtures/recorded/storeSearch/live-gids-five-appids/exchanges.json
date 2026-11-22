@@ -1,0 +1,32 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "POST",
+      "url": "https://api.isthereanydeal.com/lookup/id/shop/61/v1",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "user-agent": "GameLib/0.11.0"
+      },
+      "body": "[\"app/220\",\"app/400\",\"app/292030\",\"app/1245620\",\"app/99999999\"]"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:11:19 GMT",
+        "content-type": "application/json",
+        "connection": "keep-alive",
+        "server": "cloudflare",
+        "x-frame-options": "DENY",
+        "access-control-allow-origin": "*",
+        "cf-cache-status": "DYNAMIC",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=vT9ZjEhuHEOOAUm9qG%2FMxEBV7x3ctd22EmXG5Rrtyzz3fey28Uby%2Fsu70CmAU5gmfRcW%2BkvFmOBDHhTTOEsiiSgMyoRkGP77QYBYf5Lreb3Sk33KtOXC1hIy%2BFAMYgDTmhdPzkfxl4w%3D\"}]}",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "cf-ray": "a5e7263c7a1aad90-WLG",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-1.json"
+    }
+  }
+]

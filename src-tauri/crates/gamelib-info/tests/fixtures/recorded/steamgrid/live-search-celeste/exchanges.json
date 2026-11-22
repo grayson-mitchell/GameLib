@@ -1,0 +1,33 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://www.steamgriddb.com/api/v2/search/autocomplete/Celeste",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "authorization": "REDACTED",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:11:15 GMT",
+        "content-type": "application/json",
+        "connection": "keep-alive",
+        "server": "cloudflare",
+        "set-cookie": "REDACTED",
+        "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+        "cache-control": "no-store, no-cache, must-revalidate",
+        "pragma": "no-cache",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "cf-cache-status": "DYNAMIC",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=a3%2FgT1%2BilN4FNH01HGmNU41hcLrONTL1mR1NtsWU8iJ5uoCMm2qlXbLs%2BNJOfgmWqCwBTaEMbH39Dn3nEKERVKwZSbTP%2BL4QQn7AFFprTnLceZKYcVoeTnb%2BPWcLVtjyY%2BQ9qhhO\"}]}",
+        "cf-ray": "a5e726273b3cd994-AKL",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-1.json"
+    }
+  }
+]

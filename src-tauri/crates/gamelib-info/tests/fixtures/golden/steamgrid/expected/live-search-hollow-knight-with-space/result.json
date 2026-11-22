@@ -1,0 +1,51 @@
+{
+  "ops": [
+    {
+      "ok": [
+        {
+          "id": 7545,
+          "name": "Hollow Knight"
+        },
+        {
+          "id": 1043,
+          "name": "Hollow Knight: Silksong"
+        },
+        {
+          "id": 5248781,
+          "name": "Hollow Knight: Hidden Dreams"
+        },
+        {
+          "id": 5248782,
+          "name": "Hollow Knight: Voidheart Edition"
+        },
+        {
+          "id": 5248783,
+          "name": "Hollow Knight: Lifeblood"
+        },
+        {
+          "id": 5442657,
+          "name": "Hollow Knight: Pale Court"
+        },
+        {
+          "id": 5454634,
+          "name": "Hollow Knight: The Grimm Troupe"
+        },
+        {
+          "id": 5454653,
+          "name": "Hollow Knight: Godmaster"
+        },
+        {
+          "id": 5512976,
+          "name": "Hollow Knight Silksong [Gameboy Demake]"
+        },
+        {
+          "id": 16706,
+          "name": "Hollow"
+        }
+      ]
+    }
+  ],
+  "requests": [
+    "GET https://www.steamgriddb.com/api/v2/search/autocomplete/Hollow%20Knight"
+  ]
+}

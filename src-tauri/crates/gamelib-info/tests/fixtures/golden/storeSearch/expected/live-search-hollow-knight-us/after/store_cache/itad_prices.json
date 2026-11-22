@@ -1,0 +1,327 @@
+{
+	"search:US:4ebd9ec2cb527a82a0b7ecd2103c612f": {
+		"data": {
+			"results": [
+				{
+					"gameId": "018d937f-1ae9-734c-ba47-bd357cf07edd",
+					"title": "Hollow Knight",
+					"thumb": "https://assets.isthereanydeal.com/018d937f-1ae9-734c-ba47-bd357cf07edd/banner300.jpg?t=1776126009",
+					"cheapestPrice": "14.99",
+					"currencyCode": "USD",
+					"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed64f078477/?app=tagwff"
+				},
+				{
+					"gameId": "018d937f-1e67-708d-989d-b38bde2520fb",
+					"title": "Hollow Knight: Silksong",
+					"thumb": "https://assets.isthereanydeal.com/018d937f-1e67-708d-989d-b38bde2520fb/banner300.jpg?t=1776126912",
+					"cheapestPrice": "19.99",
+					"currencyCode": "USD",
+					"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed65b81eb80/?app=tagwff"
+				},
+				{
+					"gameId": "018d937f-0883-7333-9d60-fa78e40c5fa3",
+					"title": "Hollow Knight - Gods & Nightmares",
+					"thumb": "https://assets.isthereanydeal.com/018d937f-0883-7333-9d60-fa78e40c5fa3/banner300.jpg?t=1732770735",
+					"cheapestPrice": "4.99",
+					"currencyCode": "USD",
+					"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed656f6f2e4/?app=tagwff"
+				},
+				{
+					"gameId": "018d937f-1614-7145-83f4-61e0cf36215b",
+					"title": "Hollow Knight - Official Soundtrack",
+					"thumb": "https://assets.isthereanydeal.com/018d937f-1614-7145-83f4-61e0cf36215b/banner300.jpg?t=1732770044",
+					"cheapestPrice": "9.99",
+					"currencyCode": "USD",
+					"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed6592ea7b5/?app=tagwff"
+				},
+				{
+					"gameId": "01991258-b913-715a-a2ce-871a07a021b9",
+					"title": "Hollow Knight: Silksong - Official Soundtrack",
+					"thumb": "https://assets.isthereanydeal.com/01991258-b913-715a-a2ce-871a07a021b9/banner300.jpg?t=1766232909",
+					"cheapestPrice": "11.99",
+					"currencyCode": "USD",
+					"buyUrl": "https://itad.link/01991519-a321-73eb-9088-9bb9d6d88231/?app=tagwff"
+				},
+				{
+					"gameId": "018d937f-0643-71f3-84b7-12c578d81e1f",
+					"title": "Hollow Knight Game & Soundtracks",
+					"thumb": "https://assets.isthereanydeal.com/018d937f-0643-71f3-84b7-12c578d81e1f/banner300.jpg?t=1783565418",
+					"cheapestPrice": "23.97",
+					"currencyCode": "USD",
+					"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed65ceb2c22/?app=tagwff"
+				},
+				{
+					"gameId": "01991519-a337-71df-8866-8f5f11e71a6b",
+					"title": "Hollow Knight: Silksong & Soundtrack Bundle",
+					"thumb": "https://assets.isthereanydeal.com/01991519-a337-71df-8866-8f5f11e71a6b/banner300.jpg?t=1759107624",
+					"cheapestPrice": "25.58",
+					"currencyCode": "USD",
+					"buyUrl": "https://itad.link/01991519-a31f-7209-ab55-603ffb9997c0/?app=tagwff"
+				},
+				{
+					"gameId": "018d937f-5d95-71eb-98ff-39af7b4eb998",
+					"title": "Hollow Knight: Voidheart Edition",
+					"thumb": "",
+					"cheapestPrice": "14.99",
+					"currencyCode": "USD",
+					"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed65d9b654f/?app=tagwff"
+				}
+			],
+			"pricedCountry": "US"
+		},
+		"fetchedAt": 1795348800000
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"search:US:4ebd9ec2cb527a82a0b7ecd2103c612f": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"index": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"deals:US:018d937f-0643-71f3-84b7-12c578d81e1f": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"deals:US:018d937f-0883-7333-9d60-fa78e40c5fa3": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"deals:US:018d937f-1614-7145-83f4-61e0cf36215b": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"deals:US:018d937f-1ae9-734c-ba47-bd357cf07edd": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"deals:US:018d937f-1e67-708d-989d-b38bde2520fb": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"deals:US:018d937f-5d95-71eb-98ff-39af7b4eb998": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"deals:US:01991258-b913-715a-a2ce-871a07a021b9": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"deals:US:01991519-a337-71df-8866-8f5f11e71a6b": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)"
+	},
+	"index": {
+		"data": [
+			"search:US:4ebd9ec2cb527a82a0b7ecd2103c612f",
+			"deals:US:018d937f-0643-71f3-84b7-12c578d81e1f",
+			"deals:US:018d937f-0883-7333-9d60-fa78e40c5fa3",
+			"deals:US:018d937f-1614-7145-83f4-61e0cf36215b",
+			"deals:US:018d937f-1ae9-734c-ba47-bd357cf07edd",
+			"deals:US:018d937f-1e67-708d-989d-b38bde2520fb",
+			"deals:US:018d937f-5d95-71eb-98ff-39af7b4eb998",
+			"deals:US:01991258-b913-715a-a2ce-871a07a021b9",
+			"deals:US:01991519-a337-71df-8866-8f5f11e71a6b"
+		],
+		"fetchedAt": 1795348800000
+	},
+	"deals:US:018d937f-0643-71f3-84b7-12c578d81e1f": {
+		"data": [
+			{
+				"storeId": "61",
+				"storeName": "Steam",
+				"runner": "steam",
+				"price": "23.97",
+				"retailPrice": "23.97",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed65ceb2c22/?app=tagwff"
+			},
+			{
+				"storeId": "35",
+				"storeName": "GOG",
+				"runner": "gog",
+				"price": "23.99",
+				"retailPrice": "23.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed654a8dffc/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	},
+	"deals:US:018d937f-0883-7333-9d60-fa78e40c5fa3": {
+		"data": [
+			{
+				"storeId": "35",
+				"storeName": "GOG",
+				"runner": "gog",
+				"price": "4.99",
+				"retailPrice": "4.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed656f6f2e4/?app=tagwff"
+			},
+			{
+				"storeId": "36",
+				"storeName": "GreenManGaming",
+				"price": "4.99",
+				"retailPrice": "4.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/019b3248-2e77-73bb-93f1-ec15f00b7310/?app=tagwff"
+			},
+			{
+				"storeId": "61",
+				"storeName": "Steam",
+				"runner": "steam",
+				"price": "4.99",
+				"retailPrice": "4.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed658779bb8/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	},
+	"deals:US:018d937f-1614-7145-83f4-61e0cf36215b": {
+		"data": [
+			{
+				"storeId": "35",
+				"storeName": "GOG",
+				"runner": "gog",
+				"price": "9.99",
+				"retailPrice": "9.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed6592ea7b5/?app=tagwff"
+			},
+			{
+				"storeId": "36",
+				"storeName": "GreenManGaming",
+				"price": "9.99",
+				"retailPrice": "9.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/019b3248-2ec5-720f-bb95-f0b7e67b2abf/?app=tagwff"
+			},
+			{
+				"storeId": "61",
+				"storeName": "Steam",
+				"runner": "steam",
+				"price": "9.99",
+				"retailPrice": "9.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed659f29ac7/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	},
+	"deals:US:018d937f-1ae9-734c-ba47-bd357cf07edd": {
+		"data": [
+			{
+				"storeId": "35",
+				"storeName": "GOG",
+				"runner": "gog",
+				"price": "14.99",
+				"retailPrice": "14.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed64f078477/?app=tagwff"
+			},
+			{
+				"storeId": "36",
+				"storeName": "GreenManGaming",
+				"price": "14.99",
+				"retailPrice": "14.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/019a2fc9-9492-715a-bc60-6f701e81b332/?app=tagwff"
+			},
+			{
+				"storeId": "61",
+				"storeName": "Steam",
+				"runner": "steam",
+				"price": "14.99",
+				"retailPrice": "14.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed65401ef32/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	},
+	"deals:US:018d937f-1e67-708d-989d-b38bde2520fb": {
+		"data": [
+			{
+				"storeId": "35",
+				"storeName": "GOG",
+				"runner": "gog",
+				"price": "19.99",
+				"retailPrice": "19.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed65b81eb80/?app=tagwff"
+			},
+			{
+				"storeId": "36",
+				"storeName": "GreenManGaming",
+				"price": "19.99",
+				"retailPrice": "19.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/019a2fc9-942b-7051-b4b7-fc4b7b6fbc49/?app=tagwff"
+			},
+			{
+				"storeId": "48",
+				"storeName": "Microsoft Store",
+				"price": "19.99",
+				"retailPrice": "19.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/0198cd46-21d9-70b6-90ad-03ada500ba72/?app=tagwff"
+			},
+			{
+				"storeId": "61",
+				"storeName": "Steam",
+				"runner": "steam",
+				"price": "19.99",
+				"retailPrice": "19.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/01991522-bb90-710b-aa2f-4e4dd1bbbe49/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	},
+	"deals:US:018d937f-5d95-71eb-98ff-39af7b4eb998": {
+		"data": [
+			{
+				"storeId": "48",
+				"storeName": "Microsoft Store",
+				"price": "14.99",
+				"retailPrice": "14.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed65d9b654f/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	},
+	"deals:US:01991258-b913-715a-a2ce-871a07a021b9": {
+		"data": [
+			{
+				"storeId": "35",
+				"storeName": "GOG",
+				"runner": "gog",
+				"price": "11.99",
+				"retailPrice": "11.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/01991519-a321-73eb-9088-9bb9d6d88231/?app=tagwff"
+			},
+			{
+				"storeId": "36",
+				"storeName": "GreenManGaming",
+				"price": "11.99",
+				"retailPrice": "11.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/019b3248-2ec9-721d-8ccb-1c7b9cecb80b/?app=tagwff"
+			},
+			{
+				"storeId": "61",
+				"storeName": "Steam",
+				"runner": "steam",
+				"price": "11.99",
+				"retailPrice": "11.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/01991540-ca76-7157-829d-c8f44423def1/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	},
+	"deals:US:01991519-a337-71df-8866-8f5f11e71a6b": {
+		"data": [
+			{
+				"storeId": "35",
+				"storeName": "GOG",
+				"runner": "gog",
+				"price": "25.58",
+				"retailPrice": "25.58",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/01991519-a31f-7209-ab55-603ffb9997c0/?app=tagwff"
+			},
+			{
+				"storeId": "61",
+				"storeName": "Steam",
+				"runner": "steam",
+				"price": "25.58",
+				"retailPrice": "25.58",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/01991522-bb92-7295-9ac4-076fe0ea31b2/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	}
+}

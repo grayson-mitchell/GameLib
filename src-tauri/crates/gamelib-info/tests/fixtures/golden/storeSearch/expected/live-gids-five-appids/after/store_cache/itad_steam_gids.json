@@ -1,0 +1,34 @@
+{
+	"app220": {
+		"data": "018d937f-012f-73b8-ab2c-898516969e6a",
+		"fetchedAt": 1795348800000
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"app220": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"app400": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"app292030": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"app1245620": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"app99999999": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)"
+	},
+	"app400": {
+		"data": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+		"fetchedAt": 1795348800000
+	},
+	"app292030": {
+		"data": "018d937f-1212-7232-b23f-a046f6fd4a57",
+		"fetchedAt": 1795348800000
+	},
+	"app1245620": {
+		"data": "018d937f-590c-728b-ac35-38bcff85f086",
+		"fetchedAt": 1795348800000
+	},
+	"app99999999": {
+		"data": null,
+		"fetchedAt": 1795348800000
+	}
+}

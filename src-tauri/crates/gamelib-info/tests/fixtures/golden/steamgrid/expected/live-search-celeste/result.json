@@ -1,0 +1,51 @@
+{
+  "ops": [
+    {
+      "ok": [
+        {
+          "id": 13136,
+          "name": "Celeste"
+        },
+        {
+          "id": 5253956,
+          "name": "Celeste Classic"
+        },
+        {
+          "id": 5264134,
+          "name": "Celeste Downhill"
+        },
+        {
+          "id": 5276021,
+          "name": "Celeste Classic 2: Lani's Trek"
+        },
+        {
+          "id": 5410710,
+          "name": "Celeste Strawberry Jam"
+        },
+        {
+          "id": 5429919,
+          "name": "Celeste.smc"
+        },
+        {
+          "id": 5430546,
+          "name": "Celeste Mario's Zap & Dash!"
+        },
+        {
+          "id": 5442661,
+          "name": "Celeste 64: Fragments of the Mountain"
+        },
+        {
+          "id": 5476010,
+          "name": "Celeste & Luna: Hentai Puzzle 18+"
+        },
+        {
+          "id": 5514610,
+          "name": "Celeste: The D-Sides Pack"
+        }
+      ]
+    }
+  ],
+  "requests": [
+    "GET https://www.steamgriddb.com/api/v2/search/autocomplete/Celeste"
+  ]
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "POST",
+      "url": "https://api.isthereanydeal.com/games/prices/v3?country=US&key=REDACTED",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "user-agent": "GameLib/0.11.0"
+      },
+      "body": "[\"018d937f-1749-73f8-bf5a-8e0aa3cdd9ff\"]"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:11:19 GMT",
+        "content-type": "application/json",
+        "connection": "keep-alive",
+        "server": "cloudflare",
+        "x-frame-options": "DENY",
+        "access-control-allow-origin": "*",
+        "cf-cache-status": "DYNAMIC",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=LASOMUSa645bVpVugkP9t3bVker5IHH8W6cZeHDw2qTVaaFwlAeuq9MpqZ%2Fw1ijqLmXr7jU0JE3%2Bw32Qfrrq941z1pp2F2EM2ifjiEDNVOdLiEMpnFdK0XmlE%2FI43RYBrTnlyQJMK%2BI%3D\"}]}",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "cf-ray": "a5e7263a8848ad90-WLG",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-1.json"
+    }
+  }
+]

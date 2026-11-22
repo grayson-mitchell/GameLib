@@ -1,0 +1,306 @@
+{
+  "ops": [
+    {
+      "ok": [
+        {
+          "id": 13136,
+          "name": "Celeste"
+        },
+        {
+          "id": 5253956,
+          "name": "Celeste Classic"
+        },
+        {
+          "id": 5264134,
+          "name": "Celeste Downhill"
+        },
+        {
+          "id": 5276021,
+          "name": "Celeste Classic 2: Lani's Trek"
+        },
+        {
+          "id": 5410710,
+          "name": "Celeste Strawberry Jam"
+        },
+        {
+          "id": 5429919,
+          "name": "Celeste.smc"
+        },
+        {
+          "id": 5430546,
+          "name": "Celeste Mario's Zap & Dash!"
+        },
+        {
+          "id": 5442661,
+          "name": "Celeste 64: Fragments of the Mountain"
+        },
+        {
+          "id": 5476010,
+          "name": "Celeste & Luna: Hentai Puzzle 18+"
+        },
+        {
+          "id": 5514610,
+          "name": "Celeste: The D-Sides Pack"
+        }
+      ]
+    },
+    {
+      "ok": [
+        {
+          "id": 25973,
+          "url": "https://cdn2.steamgriddb.com/hero/c66e591693fd6e7b26fc5a60efb68817.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/c66e591693fd6e7b26fc5a60efb68817.jpg"
+        },
+        {
+          "id": 32555,
+          "url": "https://cdn2.steamgriddb.com/hero/262e7707a161061c2b75c75215c2c4a9.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/262e7707a161061c2b75c75215c2c4a9.jpg"
+        },
+        {
+          "id": 6889,
+          "url": "https://cdn2.steamgriddb.com/hero/0a552abf945aad2831a917bd58bbdc70.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/0a552abf945aad2831a917bd58bbdc70.jpg"
+        },
+        {
+          "id": 44044,
+          "url": "https://cdn2.steamgriddb.com/hero/9b3a07fc75f89cd8eeca533e11947204.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/9b3a07fc75f89cd8eeca533e11947204.jpg"
+        },
+        {
+          "id": 22644,
+          "url": "https://cdn2.steamgriddb.com/hero/8b9b3436fc4466e9d5432fb4296d23fd.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/8b9b3436fc4466e9d5432fb4296d23fd.jpg"
+        },
+        {
+          "id": 4705,
+          "url": "https://cdn2.steamgriddb.com/hero/d33174c464c877fb03e77efdab4ae804.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/d33174c464c877fb03e77efdab4ae804.jpg"
+        },
+        {
+          "id": 6464,
+          "url": "https://cdn2.steamgriddb.com/hero/894a9b94bcc5969b60bd18e8ea9c0ddc.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/894a9b94bcc5969b60bd18e8ea9c0ddc.jpg"
+        },
+        {
+          "id": 6888,
+          "url": "https://cdn2.steamgriddb.com/hero/69c7e73fea7ad35e9000ce41e1622036.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/69c7e73fea7ad35e9000ce41e1622036.jpg"
+        },
+        {
+          "id": 118370,
+          "url": "https://cdn2.steamgriddb.com/hero/f38235f25eaa591cef3271cd682f0a97.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/f38235f25eaa591cef3271cd682f0a97.jpg"
+        },
+        {
+          "id": 22638,
+          "url": "https://cdn2.steamgriddb.com/hero/3155c3cd32750b623b04e923d2cf879d.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/3155c3cd32750b623b04e923d2cf879d.jpg"
+        },
+        {
+          "id": 18494,
+          "url": "https://cdn2.steamgriddb.com/hero/38ba51573e7ad3ef5a0be37be4260246.jpg",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/38ba51573e7ad3ef5a0be37be4260246.jpg"
+        },
+        {
+          "id": 2496,
+          "url": "https://cdn2.steamgriddb.com/hero/12ffb0968f2f56e51a59a6beb37b2859.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/12ffb0968f2f56e51a59a6beb37b2859.jpg"
+        },
+        {
+          "id": 141044,
+          "url": "https://cdn2.steamgriddb.com/hero/95c50fcf7cbe8605aebb69565b2ec610.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/95c50fcf7cbe8605aebb69565b2ec610.jpg"
+        },
+        {
+          "id": 106676,
+          "url": "https://cdn2.steamgriddb.com/hero/d91fd87c915abca0e4b05ee10d7b2077.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/d91fd87c915abca0e4b05ee10d7b2077.jpg"
+        },
+        {
+          "id": 94715,
+          "url": "https://cdn2.steamgriddb.com/hero/911285503d1458f7d7023b39fa36837b.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/911285503d1458f7d7023b39fa36837b.png"
+        },
+        {
+          "id": 22643,
+          "url": "https://cdn2.steamgriddb.com/hero/dfd1e5f05a19b577a89a80f1cc545b7e.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/dfd1e5f05a19b577a89a80f1cc545b7e.jpg"
+        },
+        {
+          "id": 22642,
+          "url": "https://cdn2.steamgriddb.com/hero/d1d88beb304d082e37a8b584ff39c03d.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/d1d88beb304d082e37a8b584ff39c03d.jpg"
+        },
+        {
+          "id": 5732,
+          "url": "https://cdn2.steamgriddb.com/hero/c19af480c40e343bbac3e2c01967b09f.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/c19af480c40e343bbac3e2c01967b09f.jpg"
+        },
+        {
+          "id": 127911,
+          "url": "https://cdn2.steamgriddb.com/hero/9eff5fa78cf75cb0adac1d31a4e1ded8.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/9eff5fa78cf75cb0adac1d31a4e1ded8.jpg"
+        },
+        {
+          "id": 94722,
+          "url": "https://cdn2.steamgriddb.com/hero/126254512b592178fc9a48e8141b40b6.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/126254512b592178fc9a48e8141b40b6.png"
+        },
+        {
+          "id": 69587,
+          "url": "https://cdn2.steamgriddb.com/hero/c960f4d46e293a26f409644c13b7c1fe.jpg",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/c960f4d46e293a26f409644c13b7c1fe.jpg"
+        },
+        {
+          "id": 29426,
+          "url": "https://cdn2.steamgriddb.com/hero/443a4c031f05c42f729a1ff2ac219b5a.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/443a4c031f05c42f729a1ff2ac219b5a.jpg"
+        },
+        {
+          "id": 106677,
+          "url": "https://cdn2.steamgriddb.com/hero/3c37cd4414c23996a02cdd2f3ba464fe.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/3c37cd4414c23996a02cdd2f3ba464fe.jpg"
+        },
+        {
+          "id": 83411,
+          "url": "https://cdn2.steamgriddb.com/hero/5c89b3b0e32f1a73e0d8d7c190f921b7.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/5c89b3b0e32f1a73e0d8d7c190f921b7.jpg"
+        },
+        {
+          "id": 175372,
+          "url": "https://cdn2.steamgriddb.com/hero/d6610a57deb944a4df1a9ad298a6685f.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/d6610a57deb944a4df1a9ad298a6685f.jpg"
+        },
+        {
+          "id": 173499,
+          "url": "https://cdn2.steamgriddb.com/hero/35726019a12b84c5d110d19388b95d95.jpg",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/35726019a12b84c5d110d19388b95d95.jpg"
+        },
+        {
+          "id": 173498,
+          "url": "https://cdn2.steamgriddb.com/hero/db5fa1f2a115d1c983308d37ff0f00cc.jpg",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/db5fa1f2a115d1c983308d37ff0f00cc.jpg"
+        },
+        {
+          "id": 173495,
+          "url": "https://cdn2.steamgriddb.com/hero/6f070782d2d4eb4d8fbaa20da5b24ee7.jpg",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/6f070782d2d4eb4d8fbaa20da5b24ee7.jpg"
+        },
+        {
+          "id": 173494,
+          "url": "https://cdn2.steamgriddb.com/hero/7d84b24e8b26431c4091fece5c93c7b1.jpg",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/7d84b24e8b26431c4091fece5c93c7b1.jpg"
+        },
+        {
+          "id": 173493,
+          "url": "https://cdn2.steamgriddb.com/hero/1890678d1ee22296f58fe138d0b7dc0d.jpg",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/1890678d1ee22296f58fe138d0b7dc0d.jpg"
+        },
+        {
+          "id": 161130,
+          "url": "https://cdn2.steamgriddb.com/hero/2c94f01e1c33bbb5f604e4206c5b1071.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/2c94f01e1c33bbb5f604e4206c5b1071.jpg"
+        },
+        {
+          "id": 158428,
+          "url": "https://cdn2.steamgriddb.com/hero/9e691f10062621ae38a4a27c434121c0.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/9e691f10062621ae38a4a27c434121c0.jpg"
+        },
+        {
+          "id": 158427,
+          "url": "https://cdn2.steamgriddb.com/hero/b1d26f423786306feab80b76205d4808.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/b1d26f423786306feab80b76205d4808.jpg"
+        },
+        {
+          "id": 155794,
+          "url": "https://cdn2.steamgriddb.com/hero/135536c8fe5751b59b74ff3d4bb6a766.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/135536c8fe5751b59b74ff3d4bb6a766.jpg"
+        },
+        {
+          "id": 155792,
+          "url": "https://cdn2.steamgriddb.com/hero/3ed7f521fb66f92e9f45059e5512ad1a.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/3ed7f521fb66f92e9f45059e5512ad1a.jpg"
+        },
+        {
+          "id": 141045,
+          "url": "https://cdn2.steamgriddb.com/hero/ba5db6da8eca096fdde282d12a9833db.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/ba5db6da8eca096fdde282d12a9833db.jpg"
+        },
+        {
+          "id": 118369,
+          "url": "https://cdn2.steamgriddb.com/hero/c4f4fa4aa609b93ed43bfd9511d85680.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/c4f4fa4aa609b93ed43bfd9511d85680.jpg"
+        },
+        {
+          "id": 118368,
+          "url": "https://cdn2.steamgriddb.com/hero/f861bf27f1620f36d79ebe801070acf7.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/f861bf27f1620f36d79ebe801070acf7.jpg"
+        },
+        {
+          "id": 111923,
+          "url": "https://cdn2.steamgriddb.com/hero/ff9d29ccadcf32f64b2e3cbdf938e6e1.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/ff9d29ccadcf32f64b2e3cbdf938e6e1.jpg"
+        },
+        {
+          "id": 95342,
+          "url": "https://cdn2.steamgriddb.com/hero/6f47bd5a46462d35930e41179af1a428.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/6f47bd5a46462d35930e41179af1a428.png"
+        },
+        {
+          "id": 94745,
+          "url": "https://cdn2.steamgriddb.com/hero/9f2a7be7307a257fba74ce8a62630299.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/9f2a7be7307a257fba74ce8a62630299.png"
+        },
+        {
+          "id": 94726,
+          "url": "https://cdn2.steamgriddb.com/hero/23aa7ff72f65a0dbddedb338b688fe71.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/23aa7ff72f65a0dbddedb338b688fe71.png"
+        },
+        {
+          "id": 126607,
+          "url": "https://cdn2.steamgriddb.com/hero/5be3732d0f44c5c3810c6af438c046f9.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/5be3732d0f44c5c3810c6af438c046f9.jpg"
+        },
+        {
+          "id": 769,
+          "url": "https://cdn2.steamgriddb.com/hero/288cc0ff022877bd3df94bc9360b9c5d.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/288cc0ff022877bd3df94bc9360b9c5d.jpg"
+        },
+        {
+          "id": 83410,
+          "url": "https://cdn2.steamgriddb.com/hero/218a20fbe7647493d52c16a43d09935e.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/218a20fbe7647493d52c16a43d09935e.jpg"
+        },
+        {
+          "id": 71382,
+          "url": "https://cdn2.steamgriddb.com/hero/23b842523634f21fb6f878244ad6d3d5.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/23b842523634f21fb6f878244ad6d3d5.jpg"
+        },
+        {
+          "id": 184306,
+          "url": "https://cdn2.steamgriddb.com/hero/d30526fb9b48235b3ca0f8786f22127a.jpg",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/d30526fb9b48235b3ca0f8786f22127a.jpg"
+        },
+        {
+          "id": 173496,
+          "url": "https://cdn2.steamgriddb.com/hero/ed6e4317aec654085ea9d58f549c65ed.jpg",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/ed6e4317aec654085ea9d58f549c65ed.jpg"
+        },
+        {
+          "id": 172545,
+          "url": "https://cdn2.steamgriddb.com/hero/a0691df3ff297f99df22847748915bd7.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/a0691df3ff297f99df22847748915bd7.png"
+        },
+        {
+          "id": 172544,
+          "url": "https://cdn2.steamgriddb.com/hero/53ea53436bc67f8ef4fabf5155ded18a.png",
+          "thumb": "https://cdn2.steamgriddb.com/hero_thumb/53ea53436bc67f8ef4fabf5155ded18a.png"
+        }
+      ]
+    }
+  ],
+  "requests": [
+    "GET https://www.steamgriddb.com/api/v2/search/autocomplete/Celeste",
+    "GET https://www.steamgriddb.com/api/v2/heroes/game/13136"
+  ]
+}

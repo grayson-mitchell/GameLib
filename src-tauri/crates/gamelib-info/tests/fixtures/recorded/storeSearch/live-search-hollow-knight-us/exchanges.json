@@ -1,0 +1,60 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://api.isthereanydeal.com/games/search/v1?title=hollow+knight&results=20&key=REDACTED",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:11:17 GMT",
+        "content-type": "application/json",
+        "connection": "keep-alive",
+        "server": "cloudflare",
+        "x-frame-options": "DENY",
+        "access-control-allow-origin": "*",
+        "cf-cache-status": "DYNAMIC",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=0mpPrFrBrDCVOipPBNVGeeznZjXrZffkCyiSA0sA%2BObkw%2BDAsJSQ5PeXs9jaHfuOuYXm69vMpj9tG2Fbiz%2Bwn7ZV1P%2BJqsgH8kezcD264TIdNu23%2FeDBNotHavsFqaUjqq4iFd7SA5I%3D\"}]}",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "cf-ray": "a5e726311f36ad90-WLG",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-1.json"
+    }
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "POST",
+      "url": "https://api.isthereanydeal.com/games/prices/v3?country=US&key=REDACTED",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "user-agent": "GameLib/0.11.0"
+      },
+      "body": "[\"018d937f-1ae9-734c-ba47-bd357cf07edd\",\"018d937f-1e67-708d-989d-b38bde2520fb\",\"018d937f-0883-7333-9d60-fa78e40c5fa3\",\"018d937f-1614-7145-83f4-61e0cf36215b\",\"01991258-b913-715a-a2ce-871a07a021b9\",\"018d937f-0643-71f3-84b7-12c578d81e1f\",\"01991519-a337-71df-8866-8f5f11e71a6b\",\"018d937f-5d95-71eb-98ff-39af7b4eb998\",\"019d4eb8-6e54-72c9-bb03-3df637fc31c0\",\"019d4eb8-6e52-73e4-a1fb-d5e12bab4039\"]"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:11:17 GMT",
+        "content-type": "application/json",
+        "connection": "keep-alive",
+        "server": "cloudflare",
+        "x-frame-options": "DENY",
+        "access-control-allow-origin": "*",
+        "cf-cache-status": "DYNAMIC",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=5%2BY9xXaEVMwxZHxA81k86dzA9kv8Sf59ApgBsv3WXNcUCJjaaU%2FcWhpPD3Y9%2B5wcXVRCclhW8pRQArVtGbqSZT6ns1yfvYCdxm0kV736PeXaY%2F7i0W3iU5pw%2BcSXxmd%2BRFbjCJ83EUE%3D\"}]}",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "cf-ray": "a5e72633393bad90-WLG",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-2.json"
+    }
+  }
+]

@@ -1,0 +1,85 @@
+{
+  "ops": [
+    {
+      "ok": {
+        "results": [
+          {
+            "gameId": "018d937f-1ae9-734c-ba47-bd357cf07edd",
+            "title": "Hollow Knight",
+            "thumb": "https://assets.isthereanydeal.com/018d937f-1ae9-734c-ba47-bd357cf07edd/banner300.jpg?t=1776126009",
+            "cheapestPrice": "14.99",
+            "currencyCode": "USD",
+            "buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed64f078477/?app=tagwff"
+          },
+          {
+            "gameId": "018d937f-1e67-708d-989d-b38bde2520fb",
+            "title": "Hollow Knight: Silksong",
+            "thumb": "https://assets.isthereanydeal.com/018d937f-1e67-708d-989d-b38bde2520fb/banner300.jpg?t=1776126912",
+            "cheapestPrice": "19.99",
+            "currencyCode": "USD",
+            "buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed65b81eb80/?app=tagwff"
+          },
+          {
+            "gameId": "018d937f-0883-7333-9d60-fa78e40c5fa3",
+            "title": "Hollow Knight - Gods & Nightmares",
+            "thumb": "https://assets.isthereanydeal.com/018d937f-0883-7333-9d60-fa78e40c5fa3/banner300.jpg?t=1732770735",
+            "cheapestPrice": "4.99",
+            "currencyCode": "USD",
+            "buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed656f6f2e4/?app=tagwff"
+          },
+          {
+            "gameId": "018d937f-1614-7145-83f4-61e0cf36215b",
+            "title": "Hollow Knight - Official Soundtrack",
+            "thumb": "https://assets.isthereanydeal.com/018d937f-1614-7145-83f4-61e0cf36215b/banner300.jpg?t=1732770044",
+            "cheapestPrice": "9.99",
+            "currencyCode": "USD",
+            "buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed6592ea7b5/?app=tagwff"
+          },
+          {
+            "gameId": "01991258-b913-715a-a2ce-871a07a021b9",
+            "title": "Hollow Knight: Silksong - Official Soundtrack",
+            "thumb": "https://assets.isthereanydeal.com/01991258-b913-715a-a2ce-871a07a021b9/banner300.jpg?t=1766232909",
+            "cheapestPrice": "11.99",
+            "currencyCode": "USD",
+            "buyUrl": "https://itad.link/01991519-a321-73eb-9088-9bb9d6d88231/?app=tagwff"
+          },
+          {
+            "gameId": "018d937f-0643-71f3-84b7-12c578d81e1f",
+            "title": "Hollow Knight Game & Soundtracks",
+            "thumb": "https://assets.isthereanydeal.com/018d937f-0643-71f3-84b7-12c578d81e1f/banner300.jpg?t=1783565418",
+            "cheapestPrice": "23.97",
+            "currencyCode": "USD",
+            "buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed65ceb2c22/?app=tagwff"
+          },
+          {
+            "gameId": "01991519-a337-71df-8866-8f5f11e71a6b",
+            "title": "Hollow Knight: Silksong & Soundtrack Bundle",
+            "thumb": "https://assets.isthereanydeal.com/01991519-a337-71df-8866-8f5f11e71a6b/banner300.jpg?t=1759107624",
+            "cheapestPrice": "25.58",
+            "currencyCode": "USD",
+            "buyUrl": "https://itad.link/01991519-a31f-7209-ab55-603ffb9997c0/?app=tagwff"
+          },
+          {
+            "gameId": "018d937f-5d95-71eb-98ff-39af7b4eb998",
+            "title": "Hollow Knight: Voidheart Edition",
+            "thumb": "",
+            "cheapestPrice": "14.99",
+            "currencyCode": "USD",
+            "buyUrl": "https://itad.link/018d9386-75a1-73f0-9fff-3ed65d9b654f/?app=tagwff"
+          }
+        ],
+        "pricedCountry": "US"
+      }
+    }
+  ],
+  "requests": [
+    "GET https://api.isthereanydeal.com/games/search/v1?title=hollow+knight&results=20&key=REDACTED",
+    "POST https://api.isthereanydeal.com/games/prices/v3?country=US&key=REDACTED"
+  ],
+  "keyPerRequest": [
+    "env",
+    "env"
+  ],
+  "userKeyMarkedRejected": 0,
+  "gateBlockedForMs": null
+}
