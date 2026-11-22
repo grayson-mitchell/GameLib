@@ -634,6 +634,68 @@
       "returns": "StoreSearchResponse",
       "valid": [["portal"], [""], ["portal", "US"], ["portal", null]],
       "invalid": [[], [1], [null], [{}], ["a", 1], ["a", {}], ["a", "US", "x"]]
+    },
+    "getStoreSearchDeals": {
+      "kind": "invoke",
+      "slice": "info",
+      "args": [
+        {
+          "name": "gameId",
+          "type": "string",
+          "pattern": "^[0-9a-fA-F-]{1,64}$"
+        },
+        {
+          "name": "country",
+          "type": "string",
+          "optional": true,
+          "nullable": true,
+          "maxLength": 16,
+          "maxLengthUnit": "utf16"
+        }
+      ],
+      "returns": "StoreSearchDeal[]",
+      "valid": [
+        ["018d937f-1749-73f8-bf5a-8e0aa3cdd9ff"],
+        ["018d937f-1749-73f8-bf5a-8e0aa3cdd9ff", "DE"],
+        ["018d937f-1749-73f8-bf5a-8e0aa3cdd9ff", null],
+        ["abc"]
+      ],
+      "invalid": [
+        [],
+        [1],
+        [null],
+        [""],
+        ["../x"],
+        ["a.b"],
+        ["not-hex"],
+        ["abc", 1],
+        ["abc", "US", "x"]
+      ]
+    },
+    "getItadSteamGids": {
+      "kind": "invoke",
+      "slice": "info",
+      "args": [
+        {
+          "name": "appIds",
+          "type": "string[]",
+          "maxItems": 5000,
+          "itemPattern": "^\\d{1,10}$"
+        }
+      ],
+      "returns": "Record<string, string>",
+      "valid": [[[]], [["220"]], [["220", "1234567890"]]],
+      "invalid": [
+        [],
+        [[1]],
+        [["abc"]],
+        [[""]],
+        [["12345678901"]],
+        [["1.5"]],
+        ["220"],
+        [null],
+        [[], []]
+      ]
     }
   }
 }

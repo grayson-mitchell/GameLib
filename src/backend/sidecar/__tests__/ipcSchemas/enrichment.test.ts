@@ -55,17 +55,6 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
       [locale, 'y']
     ]
   },
-  getStoreSearchDeals: {
-    valid: [
-      ['018d937f-0f7e-7172-b2c5-9a6e6b4e38a1'],
-      ['018d937f-0f7e-7172-b2c5-9a6e6b4e38a1', 'US']
-    ],
-    invalid: [[], [''], [1], ['a.b']]
-  },
-  getItadSteamGids: {
-    valid: [[['220', '400']], [[]]],
-    invalid: [[['abc']], [[220]], [Array(5001).fill('1')]]
-  },
   'itad.getKeyStatus': noArgs,
   'itad.setApiKey': {
     valid: [['k'], ['']],
@@ -74,9 +63,9 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
 }
 
 describe('enrichment channel schemas', () => {
-  it('has a fixture for every key (11 total)', () => {
+  it('has a fixture for every key (9 total)', () => {
     expectFixtureCoverage(enrichmentAsyncArgs, table)
-    expect(Object.keys(enrichmentAsyncArgs).length).toBe(11)
+    expect(Object.keys(enrichmentAsyncArgs).length).toBe(9)
   })
   runFixtureTable(enrichmentAsyncArgs, table)
 

@@ -1580,23 +1580,16 @@
     {
       "channel": "getItadSteamGids",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "maxItems": 5000,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^\\d{1,10}$"
-            }
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "appIds",
+          "type": "string[]",
+          "maxItems": 5000,
+          "itemPattern": "^\\d{1,10}$"
+        }
+      ],
+      "returns": "Record<string, string>"
     },
     {
       "channel": "getKnownFixes",
@@ -2037,30 +2030,23 @@
     {
       "channel": "getStoreSearchDeals",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "pattern": "^[0-9a-fA-F-]{1,64}$"
-          },
-          {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 16
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 2
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "gameId",
+          "type": "string",
+          "pattern": "^[0-9a-fA-F-]{1,64}$"
+        },
+        {
+          "name": "country",
+          "type": "string",
+          "optional": true,
+          "nullable": true,
+          "maxLength": 16,
+          "maxLengthUnit": "utf16"
+        }
+      ],
+      "returns": "StoreSearchDeal[]"
     },
     {
       "channel": "getSystemInfo",

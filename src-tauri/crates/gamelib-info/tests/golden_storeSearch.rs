@@ -37,11 +37,11 @@ const FLOOR: usize = 19;
 
 /// Every case op this file replays; a case holding an op not listed is not replayed (and counts
 /// against the replayed floor below).
-const REPLAYED: &[&str] = &["search"];
+const REPLAYED: &[&str] = &["search", "deals", "gids"];
 
 /// The cases the oracle recorded that this file must replay, so a stale `REPLAYED` list cannot
 /// quietly skip the golden.
-const REPLAYED_FLOOR: usize = 22;
+const REPLAYED_FLOOR: usize = 37;
 
 /// The instant every case runs at (the oracle's `ORACLE_NOW`): 2026-11-22T12:00:00Z.
 const ORACLE_NOW: u64 = 1_795_348_800_000;
@@ -126,7 +126,9 @@ fn an_empty_case_list_fails_the_manifest_guard() {
 
 #[test]
 fn the_itad_ops_are_in_the_sorted_op_table() {
-    assert!(OPS.contains(&"info_itad_search"));
+    for op in ["info_itad_deals", "info_itad_gids", "info_itad_search"] {
+        assert!(OPS.contains(&op), "{op}");
+    }
     let mut sorted = OPS.to_vec();
     sorted.sort_unstable();
     assert_eq!(OPS, sorted.as_slice());
@@ -351,6 +353,32 @@ fn run_op(ctx: &InfoCtx, op: &Value) -> Value {
                 args["country"] = country.clone();
             }
             dispatch_sync("info_itad_search", &[args], ctx)
+        }
+        "deals" => {
+            let mut args = json!({ "gameId": op["gameId"] });
+            if let Some(country) = op.get("country") {
+                args["country"] = country.clone();
+            }
+            dispatch_sync("info_itad_deals", &[args], ctx)
+        }
+        "gids" => {
+            let app_ids: Vec<String> = match op.get("appIds") {
+                Some(list) => list
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|v| v.as_str().unwrap().to_string())
+                    .collect(),
+                None => {
+                    let range = &op["appIdRange"];
+                    let (from, count) = (
+                        range["from"].as_u64().unwrap(),
+                        range["count"].as_u64().unwrap(),
+                    );
+                    (from..from + count).map(|n| n.to_string()).collect()
+                }
+            };
+            dispatch_sync("info_itad_gids", &[json!({ "appIds": app_ids })], ctx)
         }
         other => panic!("unknown op {other}"),
     };
@@ -749,4 +777,256 @@ fn a_pending_search_is_cancelled_by_shutdown_with_a_fixed_literal() {
         dispatch_sync("info_itad_search", &[json!({ "query": "portal" })], &ctx).unwrap_err();
     canceller.join().unwrap();
     assert_eq!(error, "info_itad_search:shutdown");
+}
+
+// ---------------------------------------------------------------------------------------------
+// Deals and Steam gids beyond the goldens
+// ---------------------------------------------------------------------------------------------
+
+const DEALS_URL: &str = "https://api.isthereanydeal.com/games/prices/v3?country=US&key=REDACTED";
+const LOOKUP_URL: &str = "https://api.isthereanydeal.com/lookup/id/shop/61/v1";
+
+fn deals_exchange(id: &str, status: u16, body: Option<&str>) -> Value {
+    let mut response = json!({ "status": status, "headers": {} });
+    if let Some(file) = body {
+        response["bodyFile"] = json!(file);
+    }
+    json!({
+        "id": id,
+        "request": {
+            "method": "POST",
+            "url": DEALS_URL,
+            "headers": { "user-agent": "GameLib/0.11.0", "content-type": "application/json" },
+            "body": format!("[\"{PORTAL}\"]")
+        },
+        "response": response
+    })
+}
+
+fn lookup_exchange(id: &str, ids: std::ops::Range<u32>, body_file: &str) -> Value {
+    let body: Vec<String> = ids.map(|n| format!("app/{n}")).collect();
+    json!({
+        "id": id,
+        "request": {
+            "method": "POST",
+            "url": LOOKUP_URL,
+            "headers": { "user-agent": "GameLib/0.11.0", "content-type": "application/json" },
+            "body": serde_json::to_string(&body).unwrap()
+        },
+        "response": { "status": 200, "headers": {}, "bodyFile": body_file }
+    })
+}
+
+#[tokio::test]
+async fn two_concurrent_identical_deals_requests_make_one_http_request_and_both_resolve() {
+    // One price exchange is recorded: a second flight would find no twin and the replay would fail.
+    let (_dir, replay) = synthetic_replay(
+        json!([deals_exchange("d", 200, Some("prices.json"))]),
+        &[("prices.json", PRICES_BODY)],
+    );
+    let tap = Tap::new(
+        Arc::new(Slow(Arc::clone(&replay) as Arc<dyn Http>)),
+        vec![("env", KEY_ENV.to_string())],
+    );
+    let (_home, _user_data, ctx) = context(
+        Arc::clone(&tap) as Arc<dyn Http>,
+        TestClock::at(ORACLE_NOW),
+        &env_only_keys(),
+        None,
+    );
+    let args = [json!({ "gameId": PORTAL, "country": "US" })];
+    let (a, b) = tokio::join!(
+        dispatch("info_itad_deals", &args, &ctx),
+        dispatch("info_itad_deals", &args, &ctx),
+    );
+    let (a, b) = (a.unwrap(), b.unwrap());
+    assert_eq!(a, b);
+    assert_eq!(a[0]["storeName"], "Steam");
+    assert_eq!(a[0]["runner"], "steam");
+    assert_eq!(tap.requests().len(), 1, "{:?}", tap.requests());
+    replay.finish().unwrap();
+}
+
+#[test]
+fn deals_are_cached_so_a_second_call_makes_no_request() {
+    let (_dir, replay) = synthetic_replay(
+        json!([deals_exchange("d", 200, Some("prices.json"))]),
+        &[("prices.json", PRICES_BODY)],
+    );
+    let tap = Tap::new(
+        Arc::clone(&replay) as Arc<dyn Http>,
+        vec![("env", KEY_ENV.to_string())],
+    );
+    let (_home, _user_data, ctx) = context(
+        Arc::clone(&tap) as Arc<dyn Http>,
+        TestClock::at(ORACLE_NOW),
+        &env_only_keys(),
+        None,
+    );
+    let args = [json!({ "gameId": PORTAL })];
+    let first = dispatch_sync("info_itad_deals", &args, &ctx).unwrap();
+    let second = dispatch_sync("info_itad_deals", &args, &ctx).unwrap();
+    assert_eq!(first, second);
+    assert_eq!(tap.requests().len(), 1);
+    replay.finish().unwrap();
+}
+
+#[test]
+fn a_game_id_that_is_not_a_uuid_is_the_provider_error_without_a_request() {
+    let (_home, _user_data, ctx) = context(
+        Arc::new(LeakyFailure),
+        TestClock::at(ORACLE_NOW),
+        &env_only_keys(),
+        None,
+    );
+    for bad in [
+        "../not-a-uuid",
+        "",
+        "018d937f",
+        "018d937f-1749-73f8-bf5a-8e0aa3cdd9fg",
+    ] {
+        assert_eq!(
+            dispatch_sync("info_itad_deals", &[json!({ "gameId": bad })], &ctx),
+            Err("[storeSearch:provider] deals none".to_string()),
+            "{bad:?}"
+        );
+    }
+    let bad = "info_itad_deals:bad-args".to_string();
+    assert_eq!(
+        dispatch_sync(
+            "info_itad_deals",
+            &[json!({ "gameId": "a".repeat(65) })],
+            &ctx
+        ),
+        Err(bad.clone())
+    );
+    assert_eq!(
+        dispatch_sync(
+            "info_itad_deals",
+            &[json!({ "gameId": PORTAL, "country": "C".repeat(17) })],
+            &ctx
+        ),
+        Err(bad.clone())
+    );
+    assert_eq!(
+        dispatch_sync(
+            "info_itad_deals",
+            &[json!({ "gameId": PORTAL, "x": 1 })],
+            &ctx
+        ),
+        Err(bad.clone())
+    );
+    assert_eq!(dispatch_sync("info_itad_deals", &[], &ctx), Err(bad));
+}
+
+#[test]
+fn four_hundred_and_fifty_app_ids_make_three_lookups_of_200_200_and_50() {
+    let ids = |range: std::ops::Range<u32>| -> String {
+        let map: serde_json::Map<String, Value> = range
+            .map(|n| {
+                (
+                    format!("app/{n}"),
+                    json!(format!("018d937f-0000-7000-8000-{n:012}")),
+                )
+            })
+            .collect();
+        serde_json::to_string(&map).unwrap()
+    };
+    let (b1, b2, b3) = (ids(1000..1200), ids(1200..1400), ids(1400..1450));
+    let (_dir, replay) = synthetic_replay(
+        json!([
+            lookup_exchange("l1", 1000..1200, "b1.json"),
+            lookup_exchange("l2", 1200..1400, "b2.json"),
+            lookup_exchange("l3", 1400..1450, "b3.json"),
+        ]),
+        &[("b1.json", &b1), ("b2.json", &b2), ("b3.json", &b3)],
+    );
+    let tap = Tap::new(Arc::clone(&replay) as Arc<dyn Http>, vec![]);
+    let (_home, user_data, ctx) = context(
+        Arc::clone(&tap) as Arc<dyn Http>,
+        TestClock::at(ORACLE_NOW),
+        &json!({}),
+        None,
+    );
+    let app_ids: Vec<String> = (1000..1450).map(|n| n.to_string()).collect();
+    let answer = dispatch_sync("info_itad_gids", &[json!({ "appIds": app_ids })], &ctx).unwrap();
+    assert_eq!(answer.as_object().unwrap().len(), 450);
+    assert_eq!(answer["1000"], "018d937f-0000-7000-8000-000000001000");
+    assert_eq!(answer["1449"], "018d937f-0000-7000-8000-000000001449");
+    // Keyless: no request carries a key.
+    assert_eq!(tap.requests().len(), 3);
+    assert!(tap.key_per_request().iter().all(Value::is_null));
+    replay.finish().unwrap();
+    // Every id is cached, so a second call makes no request at all.
+    let again = dispatch_sync(
+        "info_itad_gids",
+        &[json!({ "appIds": (1000..1450).map(|n: u32| n.to_string()).collect::<Vec<_>>() })],
+        &ctx,
+    )
+    .unwrap();
+    assert_eq!(again, answer);
+    assert_eq!(tap.requests().len(), 3);
+    assert!(user_data.join("store_cache/itad_steam_gids.json").is_file());
+}
+
+#[test]
+fn gid_arguments_are_bounded_and_a_non_digit_id_is_skipped_as_ts_filtered_it() {
+    let (_home, _user_data, ctx) = context(
+        Arc::new(LeakyFailure),
+        TestClock::at(ORACLE_NOW),
+        &json!({}),
+        None,
+    );
+    let bad = "info_itad_gids:bad-args".to_string();
+    let too_many: Vec<String> = (0..5001).map(|n| n.to_string()).collect();
+    assert_eq!(
+        dispatch_sync("info_itad_gids", &[json!({ "appIds": too_many })], &ctx),
+        Err(bad.clone())
+    );
+    assert_eq!(
+        dispatch_sync("info_itad_gids", &[json!({ "appIds": [1] })], &ctx),
+        Err(bad.clone())
+    );
+    assert_eq!(
+        dispatch_sync("info_itad_gids", &[json!({ "appIds": [], "x": 1 })], &ctx),
+        Err(bad.clone())
+    );
+    assert_eq!(dispatch_sync("info_itad_gids", &[], &ctx), Err(bad));
+    // Exactly 5000 is fine; ids that are not 1 to 10 ASCII digits are dropped, so nothing is asked
+    // and the answer is empty even though the transport would fail every request.
+    let junk = [
+        "abc",
+        "",
+        "12345678901",
+        "1.5",
+        "-1",
+        "\u{0663}",
+        " 1",
+        "1\n",
+    ];
+    assert_eq!(
+        dispatch_sync("info_itad_gids", &[json!({ "appIds": junk })], &ctx),
+        Ok(json!({}))
+    );
+    let at_limit: Vec<&str> = vec!["abc"; 5000];
+    assert_eq!(
+        dispatch_sync("info_itad_gids", &[json!({ "appIds": at_limit })], &ctx),
+        Ok(json!({}))
+    );
+}
+
+#[test]
+fn a_failed_lookup_batch_keeps_the_expired_mapping_and_never_fails() {
+    // `synthetic-cache-gids-expired-refresh-fails-keeps-stale` through the golden loop covers the
+    // recorded 5xx; here the transport itself is down.
+    let state =
+        fixtures().join("state/storeSearch/synthetic-cache-gids-expired-refresh-fails-keeps-stale");
+    let (_home, _user_data, ctx) = context(
+        Arc::new(LeakyFailure),
+        TestClock::at(ORACLE_NOW),
+        &json!({}),
+        Some(&state),
+    );
+    let answer = dispatch_sync("info_itad_gids", &[json!({ "appIds": ["220"] })], &ctx).unwrap();
+    assert!(answer["220"].is_string(), "{answer}");
 }

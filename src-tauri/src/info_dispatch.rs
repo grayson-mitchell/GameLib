@@ -670,34 +670,44 @@ async fn run_itad_op(
     result
 }
 
+/// The optional `country` argument at `index` (1): absent or null, else a string of 0 to
+/// [`gamelib_info::itad::COUNTRY_MAX_UTF16`] UTF-16 code units (the zod `nullish` bound).
+fn parse_itad_country(country: Option<&Value>) -> Result<Option<&str>, Rejection> {
+    match country {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(country)) => {
+            if country.encode_utf16().count() > gamelib_info::itad::COUNTRY_MAX_UTF16 {
+                return Err(("1", "too_big"));
+            }
+            Ok(Some(country.as_str()))
+        }
+        Some(_) => Err(("1", "invalid_type")),
+    }
+}
+
+/// Splits the positional arguments of a one-then-optional-country call: one or two, never none and
+/// never three.
+fn first_and_country(args: &[Value]) -> Result<(&Value, Option<&Value>), Rejection> {
+    match args {
+        [] => Err(("(args)", "too_small")),
+        [first] => Ok((first, None)),
+        [first, country] => Ok((first, Some(country))),
+        _ => Err(("(args)", "too_big")),
+    }
+}
+
 /// Decodes the arguments of `searchStores`: a search term of 0 to
-/// [`gamelib_info::itad::QUERY_MAX_UTF16`] UTF-16 code units and an optional country (absent or null,
-/// else a string of 0 to [`gamelib_info::itad::COUNTRY_MAX_UTF16`] units), the zod bounds they replace.
-/// Fixed literals only, never the renderer's value.
+/// [`gamelib_info::itad::QUERY_MAX_UTF16`] UTF-16 code units and an optional country, the zod bounds
+/// they replace. Fixed literals only, never the renderer's value.
 fn parse_search_stores(args: &[Value]) -> Result<(&str, Option<&str>), Rejection> {
-    let (query, country) = match args {
-        [] => return Err(("(args)", "too_small")),
-        [query] => (query, None),
-        [query, country] => (query, Some(country)),
-        _ => return Err(("(args)", "too_big")),
-    };
+    let (query, country) = first_and_country(args)?;
     let Value::String(query) = query else {
         return Err(("0", "invalid_type"));
     };
     if query.encode_utf16().count() > gamelib_info::itad::QUERY_MAX_UTF16 {
         return Err(("0", "too_big"));
     }
-    let country = match country {
-        None | Some(Value::Null) => None,
-        Some(Value::String(country)) => {
-            if country.encode_utf16().count() > gamelib_info::itad::COUNTRY_MAX_UTF16 {
-                return Err(("1", "too_big"));
-            }
-            Some(country.as_str())
-        }
-        Some(_) => return Err(("1", "invalid_type")),
-    };
-    Ok((query, country))
+    Ok((query, parse_itad_country(country)?))
 }
 
 /// The native `searchStores` handler (slice `info`, D-17): rows for a title, one per game from its
@@ -716,6 +726,89 @@ pub(crate) fn search_stores(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFut
             "info_itad_search",
             op_args,
             "searchStores: the search did not finish",
+        )
+        .await
+    })
+}
+
+/// Whether `text` is a game id the zod schema accepted: 1 to 64 characters of `[0-9a-fA-F-]`. The
+/// shape blocks dots and path separators before the cache layer (T-47-25).
+fn is_deals_game_id(text: &str) -> bool {
+    (1..=gamelib_info::itad::GAME_ID_MAX_UTF16).contains(&text.len())
+        && text.bytes().all(|b| b.is_ascii_hexdigit() || b == b'-')
+}
+
+/// Decodes the arguments of `getStoreSearchDeals`: an ITAD game id and an optional country.
+fn parse_get_store_search_deals(args: &[Value]) -> Result<(&str, Option<&str>), Rejection> {
+    let (game_id, country) = first_and_country(args)?;
+    let Value::String(game_id) = game_id else {
+        return Err(("0", "invalid_type"));
+    };
+    if !is_deals_game_id(game_id) {
+        return Err(("0", "invalid_string"));
+    }
+    Ok((game_id, parse_itad_country(country)?))
+}
+
+/// The native `getStoreSearchDeals` handler (slice `info`, D-17): the deals for one ITAD game id,
+/// cheapest first, from the cache when fresh. Validated before the context is looked at.
+pub(crate) fn get_store_search_deals(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        let (game_id, country) = parse_get_store_search_deals(&args)
+            .map_err(|(path, code)| invalid_args("getStoreSearchDeals", &[path], &[code]))?;
+        let op_args = vec![serde_json::json!({ "gameId": game_id, "country": country })];
+        let info = info_ctx().ok_or_else(|| "getStoreSearchDeals: not ready".to_string())?;
+        run_itad_op(
+            info,
+            "getStoreSearchDeals",
+            "info_itad_deals",
+            op_args,
+            "getStoreSearchDeals: the lookup did not finish",
+        )
+        .await
+    })
+}
+
+/// Decodes the one argument of `getItadSteamGids`: a list of at most
+/// [`gamelib_info::itad::GIDS_MAX`] Steam app ids, each 1 to 10 ASCII digits (T-47-26). The list is
+/// handed on as it came; the crate decodes it again strictly.
+fn parse_get_itad_steam_gids(args: &[Value]) -> Result<&Value, Rejection> {
+    let [arg] = args else {
+        return Err(("(args)", "invalid_type"));
+    };
+    let Value::Array(ids) = arg else {
+        return Err(("0", "invalid_type"));
+    };
+    if ids.len() > gamelib_info::itad::GIDS_MAX {
+        return Err(("0", "too_big"));
+    }
+    for id in ids {
+        let Value::String(id) = id else {
+            return Err(("0", "invalid_type"));
+        };
+        if !(1..=gamelib_info::itad::APP_ID_MAX_DIGITS).contains(&id.len())
+            || !id.bytes().all(|b| b.is_ascii_digit())
+        {
+            return Err(("0", "invalid_string"));
+        }
+    }
+    Ok(arg)
+}
+
+/// The native `getItadSteamGids` handler (slice `info`, D-17): the Steam app id to ITAD game id map
+/// over the keyless lookup route, cached 30 days. It never rejects for a network failure.
+pub(crate) fn get_itad_steam_gids(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        let app_ids = parse_get_itad_steam_gids(&args)
+            .map_err(|(path, code)| invalid_args("getItadSteamGids", &[path], &[code]))?
+            .clone();
+        let info = info_ctx().ok_or_else(|| "getItadSteamGids: not ready".to_string())?;
+        run_itad_op(
+            info,
+            "getItadSteamGids",
+            "info_itad_gids",
+            vec![serde_json::json!({ "appIds": app_ids })],
+            "getItadSteamGids: the lookup did not finish",
         )
         .await
     })
@@ -1564,6 +1657,113 @@ mod tests {
             (vec![json!("\u{1F3AE}".repeat(129))], ("0", "too_big")),
         ] {
             assert_eq!(parse_search_stores(&args), Err(want), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn get_store_search_deals_accepts_a_hex_and_dash_id_and_an_optional_country() {
+        let id = "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff";
+        assert_eq!(parse_get_store_search_deals(&[json!(id)]), Ok((id, None)));
+        assert_eq!(
+            parse_get_store_search_deals(&[json!(id), json!("DE")]),
+            Ok((id, Some("DE")))
+        );
+        assert_eq!(
+            parse_get_store_search_deals(&[json!(id), json!(null)]),
+            Ok((id, None))
+        );
+        assert_eq!(
+            parse_get_store_search_deals(&[json!("a".repeat(64))]).map(|(i, _)| i.len()),
+            Ok(64)
+        );
+        for (args, want) in [
+            (vec![], ("(args)", "too_small")),
+            (
+                vec![json!(id), json!("US"), json!("x")],
+                ("(args)", "too_big"),
+            ),
+            (vec![json!(1)], ("0", "invalid_type")),
+            (vec![json!(null)], ("0", "invalid_type")),
+            (vec![json!("")], ("0", "invalid_string")),
+            (vec![json!("../x")], ("0", "invalid_string")),
+            (vec![json!("a.b")], ("0", "invalid_string")),
+            (vec![json!("abg")], ("0", "invalid_string")),
+            (vec![json!("a".repeat(65))], ("0", "invalid_string")),
+            (vec![json!("\u{FF21}")], ("0", "invalid_string")),
+            (vec![json!(id), json!(1)], ("1", "invalid_type")),
+            (vec![json!(id), json!("C".repeat(17))], ("1", "too_big")),
+        ] {
+            assert_eq!(parse_get_store_search_deals(&args), Err(want), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn get_itad_steam_gids_accepts_up_to_5000_digit_strings_of_1_to_10_digits() {
+        let ok = json!(["220", "1", "1234567890"]);
+        assert_eq!(parse_get_itad_steam_gids(&[ok.clone()]), Ok(&ok));
+        let empty = json!([]);
+        assert_eq!(parse_get_itad_steam_gids(&[empty.clone()]), Ok(&empty));
+        let full = Value::Array(vec![json!("1"); 5000]);
+        assert_eq!(parse_get_itad_steam_gids(&[full.clone()]), Ok(&full));
+        for (args, want) in [
+            (vec![], ("(args)", "invalid_type")),
+            (vec![json!([]), json!([])], ("(args)", "invalid_type")),
+            (vec![json!("220")], ("0", "invalid_type")),
+            (vec![json!(null)], ("0", "invalid_type")),
+            (vec![json!({})], ("0", "invalid_type")),
+            (vec![json!([220])], ("0", "invalid_type")),
+            (vec![json!([null])], ("0", "invalid_type")),
+            (vec![json!(["abc"])], ("0", "invalid_string")),
+            (vec![json!([""])], ("0", "invalid_string")),
+            (vec![json!(["12345678901"])], ("0", "invalid_string")),
+            (vec![json!(["1.5"])], ("0", "invalid_string")),
+            (vec![json!([" 1"])], ("0", "invalid_string")),
+            (vec![json!(["1\n"])], ("0", "invalid_string")),
+            (vec![json!(["\u{0663}"])], ("0", "invalid_string")),
+            (vec![Value::Array(vec![json!("1"); 5001])], ("0", "too_big")),
+        ] {
+            assert_eq!(parse_get_itad_steam_gids(&args), Err(want), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn the_deals_and_gids_handlers_validate_first_and_answer_not_ready_before_install() {
+        assert!(info_ctx().is_none());
+        let router_ctx = Arc::new(crate::native_router::NativeCtx::for_tests(
+            Arc::new(NoHost),
+            None,
+        ));
+        let id = "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff";
+        assert_eq!(
+            tauri::async_runtime::block_on(get_store_search_deals(
+                Arc::clone(&router_ctx),
+                vec![json!(id)]
+            )),
+            Err("getStoreSearchDeals: not ready".to_string())
+        );
+        assert_eq!(
+            tauri::async_runtime::block_on(get_itad_steam_gids(
+                Arc::clone(&router_ctx),
+                vec![json!(["220"])]
+            )),
+            Err("getItadSteamGids: not ready".to_string())
+        );
+        for bad in [
+            tauri::async_runtime::block_on(get_store_search_deals(
+                Arc::clone(&router_ctx),
+                vec![json!("SECRET/../ID")],
+            )),
+            tauri::async_runtime::block_on(get_itad_steam_gids(
+                Arc::clone(&router_ctx),
+                vec![json!(["SECRET"])],
+            )),
+        ] {
+            let error = bad.unwrap_err();
+            assert!(
+                error.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+                "{error}"
+            );
+            assert!(!error.contains("SECRET"), "{error}");
         }
     }
 

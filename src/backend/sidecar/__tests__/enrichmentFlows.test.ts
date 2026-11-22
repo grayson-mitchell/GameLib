@@ -427,24 +427,6 @@ function makeGameInfo(overrides: Partial<GameInfo> = {}): GameInfo {
   } as GameInfo
 }
 
-const ITAD_BASE = 'https://api.isthereanydeal.com'
-const ITAD_GID = '018d937f-0f7e-7172-b2c5-9a6e6b4e38a1'
-const ITAD_KEY_ENV = 'GAMELIB_ITAD_API_KEY'
-
-const itadPricesFixture = [
-  {
-    id: ITAD_GID,
-    deals: [
-      {
-        shop: { id: 61, name: 'Steam' },
-        price: { amount: 4.99, amountInt: 499, currency: 'USD' },
-        regular: { amount: 9.99, amountInt: 999, currency: 'USD' },
-        url: 'https://store.steampowered.com/app/440/?ref=itad'
-      }
-    ]
-  }
-]
-
 // Behavioural pin for the os-mock shadowing rule (quick 260905-jg4), rehomed here from the deleted
 // loggerFlows.test.ts by Phase 84 plan 84-06: `structuralContainment.test.ts` leg 3 holds this test
 // in place and needs a suite that declares a per-suite `os` mock in code. It sits in its own
@@ -534,85 +516,10 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     }
   })
 
-  // ── REQ-34.2-11 / Phase 20 D-14: the storeSearch error-propagation
-  // contract. Every test uses a query / gid no other test cached, so a prior
-  // happy path can never mask a reject scenario ─────────────────────────────
-  describe('REQ-34.2-11/Phase 20 D-14 storeSearch error contract (load-bearing trio)', () => {
-    beforeEach(() => {
-      process.env[ITAD_KEY_ENV] = 'test-key'
-    })
-    afterEach(() => {
-      delete process.env[ITAD_KEY_ENV]
-    })
-
-    it('REQ-34.2-11 getStoreSearchDeals (invoke): a rejecting provider surfaces an ERROR response frame carrying the [storeSearch:provider] marker, not an empty array', async () => {
-      mockAxiosPost.mockImplementation(() =>
-        Promise.reject(new Error('itad unreachable'))
-      )
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'gsd-err-1', 'getStoreSearchDeals', [ITAD_GID])
-      await flush()
-
-      const response = findResponse(frames, 'gsd-err-1')
-      expect(response?.ok).toBe(false)
-      expect(typeof response?.error).toBe('string')
-      expect(response?.error as string).toContain('[storeSearch:provider]')
-      expect(response?.result).toBeUndefined()
-    })
-  })
-
-  // ── REQ-34.2-11: storeSearch trio happy paths ────────────────────────────
-  describe('REQ-34.2-11 storeSearch trio (happy path)', () => {
-    beforeEach(() => {
-      process.env[ITAD_KEY_ENV] = 'test-key'
-    })
-    afterEach(() => {
-      delete process.env[ITAD_KEY_ENV]
-    })
-
-    it('REQ-34.2-11 getStoreSearchDeals (invoke) returns the mapped ITAD deal breakdown', async () => {
-      mockAxiosPost.mockImplementation((url: string) => {
-        if (url === `${ITAD_BASE}/games/prices/v3`) {
-          return Promise.resolve({ data: itadPricesFixture })
-        }
-        return Promise.reject(new Error(`unexpected axios.post(${url})`))
-      })
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'gsd-1', 'getStoreSearchDeals', [ITAD_GID, 'US'])
-      await flush()
-
-      const response = findResponse(frames, 'gsd-1')
-      expect(response?.ok).toBe(true)
-      expect(response?.result).toMatchObject([
-        {
-          storeId: '61',
-          storeName: 'Steam',
-          price: '4.99',
-          retailPrice: '9.99',
-          currencyCode: 'USD'
-        }
-      ])
-    })
-
-    it('PRICE-02 getItadSteamGids (invoke) returns the keyless appid -> gid map', async () => {
-      mockAxiosPost.mockImplementation((url: string) => {
-        if (url.startsWith(`${ITAD_BASE}/lookup/id/shop/`)) {
-          return Promise.resolve({ data: { 'app/440': ITAD_GID } })
-        }
-        return Promise.reject(new Error(`unexpected axios.post(${url})`))
-      })
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'gig-1', 'getItadSteamGids', [['440']])
-      await flush()
-
-      const response = findResponse(frames, 'gig-1')
-      expect(response?.ok).toBe(true)
-      expect(response?.result).toEqual({ '440': ITAD_GID })
-    })
-  })
+  // ── Phase 86 (86-16, D-17): the storeSearch trio (`searchStores`, `getStoreSearchDeals`,
+  // `getItadSteamGids`) are native `info` channels served by Rust. Their error contract, request
+  // shapes, caches and stale-serve behaviour are proven against the 86-07 goldens in
+  // `gamelib-info`'s `golden_storeSearch.rs`, not through the sidecar. ──────────────────────────
 
   // ── REQ-34.2-11: getKnownFixes ────────────────────────────────────────────
   describe('REQ-34.2-11 getKnownFixes (invoke)', () => {
@@ -973,11 +880,10 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     const ALL_7_CHANNELS: [string, unknown[]][] = [
       ['getWikiGameInfo', ['t', 'app-x', 'legendary', false]],
       ['getKnownFixes', ['app-x', 'gog']],
-      ['getCrossoverIndex', []],
-      ['getStoreSearchDeals', [ITAD_GID]],
-      ['getItadSteamGids', [['440']]]
+      ['getCrossoverIndex', []]
       // `removeRecent` left this list in Phase 86 Plan 08 (D-17): it is a native `info` channel.
-      // `searchStores` left it in Phase 86 Plan 16 (D-17), for the same reason.
+      // `searchStores`, `getStoreSearchDeals` and `getItadSteamGids` left it in Phase 86 Plan 16 (D-17),
+      // for the same reason.
     ]
 
     it.each(ALL_7_CHANNELS)(

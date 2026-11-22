@@ -7,7 +7,7 @@
  * channels in `NativeAsync`, send channels in `NativeSync`.
  */
 import type { AntiCheatInfo, UploadedLogData } from '../../types'
-import type { StoreSearchResponse } from '../storeSearch'
+import type { StoreSearchDeal, StoreSearchResponse } from '../storeSearch'
 import type { GetLogFileArgs } from './logger'
 import type { MetadataOverride } from './gameDetails'
 
@@ -94,6 +94,15 @@ export interface NativeAsync {
     query: string,
     country?: string | null
   ) => Promise<StoreSearchResponse>
+  // Phase 86 (86-16, D-17): the deal list for one ITAD game id (`info_itad_deals`) and the keyless
+  // Steam app id to ITAD game id lookup (`info_itad_gids`), served by the same slice. The game id is
+  // 1 to 64 characters of `[0-9a-fA-F-]`; `getItadSteamGids` takes at most 5000 ids of 1 to 10 digits
+  // and never rejects for a network failure (it answers what the cache holds).
+  getStoreSearchDeals: (
+    gameId: string,
+    country?: string | null
+  ) => Promise<StoreSearchDeal[]>
+  getItadSteamGids: (appIds: string[]) => Promise<Record<string, string>>
 }
 
 export interface NativeSync {

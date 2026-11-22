@@ -30,18 +30,21 @@ use std::time::Duration;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use crate::cache_view::{CacheView, ITAD_PRICES};
+use crate::cache_view::{CacheView, ITAD_PRICES, ITAD_STEAM_GIDS};
 use crate::ctx::InfoCtx;
 use crate::http::{axios_query, Request};
 use crate::secrets::{KeySource, ResolvedKey};
 use gamelib_store::json::{Json, Obj};
 
 use cache::{
-    deals_cache_key, parse_retry_after, read_entry, search_cache_key, write_price_entry, Entry,
-    FRESH_MS,
+    deals_cache_key, gid_cache_key, is_gid_entry_fresh, parse_retry_after, read_entry,
+    search_cache_key, write_gid_entry, write_price_entry, Entry, FRESH_MS,
 };
-use coverage::{FALLBACK_COUNTRY, PRICED_COUNTRIES, SEARCH_RESULTS_PARAM, SEARCH_RESULT_COUNT};
-use mapping::{map_search_results, prices_by_id, search_items, Deal};
+use coverage::{
+    FALLBACK_COUNTRY, LOOKUP_BATCH_SIZE, PRICED_COUNTRIES, SEARCH_RESULTS_PARAM,
+    SEARCH_RESULT_COUNT, SHOP_ID_STEAM,
+};
+use mapping::{is_uuid, map_search_results, prices_by_id, search_items, Deal};
 
 const ITAD_BASE: &str = "https://api.isthereanydeal.com";
 /// One request's bound, as `REQUEST_TIMEOUT_MS` in TS.
@@ -51,6 +54,11 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(15);
 /// in the shell checks them first; the crate checks them again.
 pub const QUERY_MAX_UTF16: usize = 256;
 pub const COUNTRY_MAX_UTF16: usize = 16;
+/// The longest game id `getStoreSearchDeals` accepts (the zod regex was `{1,64}`).
+pub const GAME_ID_MAX_UTF16: usize = 64;
+/// The most Steam app ids one `getItadSteamGids` call takes, each of 1 to 10 digits.
+pub const GIDS_MAX: usize = 5000;
+pub const APP_ID_MAX_DIGITS: usize = 10;
 
 /// The three error codes and their fixed markers (`STORE_SEARCH_ERROR_MARKER`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -526,6 +534,222 @@ pub async fn search(ctx: &InfoCtx, args: SearchArgs) -> Result<Value, String> {
             }
         })
         .await
+}
+
+// --- deals ------------------------------------------------------------------------------------
+
+/// `{gameId, country?}`: one game's deals. Unknown fields are rejected.
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct DealsArgs {
+    pub game_id: String,
+    #[serde(default)]
+    pub country: Option<String>,
+}
+
+/// A cached deals list.
+struct DealsHit {
+    deals: Vec<Json>,
+    fetched_at: Option<Json>,
+    fresh: bool,
+}
+
+/// `readTyped(store, key, now, isDealsPayload)`: the entry when its data is an array.
+fn read_deals_hit(prices: &Option<CacheView>, key: &str, now: u64) -> Option<DealsHit> {
+    let entry = read(prices, key)?;
+    let fresh = entry.is_fresh(now, FRESH_MS);
+    let Some(Json::Arr(deals)) = entry.data else {
+        return None;
+    };
+    Some(DealsHit {
+        deals,
+        fetched_at: entry.fetched_at,
+        fresh,
+    })
+}
+
+fn deals_value(deals: Vec<Json>) -> Value {
+    Json::Arr(deals).to_value()
+}
+
+fn serve_stale_deals(hit: &DealsHit) -> Value {
+    deals_value(
+        hit.deals
+            .iter()
+            .map(|deal| with_cached_at(deal, &hit.fetched_at))
+            .collect(),
+    )
+}
+
+/// The network half of a deals request: one price lookup for the game, then the cache writes.
+async fn deals_remote(
+    ctx: &InfoCtx,
+    prices: &Option<CacheView>,
+    game_id: &str,
+    country: &str,
+    resolved: ResolvedKey,
+) -> Result<Value, Fail> {
+    let gids = [game_id.to_string()];
+    let (by_id, priced_country) = post_prices(ctx, "deals", &gids, country, Some(resolved)).await?;
+    let deals = by_id
+        .into_iter()
+        .find(|(id, _)| id == game_id)
+        .map(|(_, deals)| deals)
+        .unwrap_or_default();
+    let for_game = [(game_id.to_string(), deals)];
+    cache_deals(
+        prices,
+        &[country, &priced_country],
+        &for_game,
+        ctx.clock.now_ms(),
+    );
+    Ok(deals_value(
+        for_game[0].1.iter().map(Deal::to_json).collect(),
+    ))
+}
+
+/// `getGameDeals` (through `handleGetStoreSearchDeals`): the deals for one ITAD game id, cheapest
+/// first. `Err` is the fixed `[storeSearch:<code>] <endpoint> <status>` string, or `<op>:bad-args`.
+pub async fn deals(ctx: &InfoCtx, args: DealsArgs) -> Result<Value, String> {
+    const OP: &str = "info_itad_deals";
+    if utf16_len(&args.game_id) > GAME_ID_MAX_UTF16
+        || args
+            .country
+            .as_deref()
+            .is_some_and(|c| utf16_len(c) > COUNTRY_MAX_UTF16)
+    {
+        return Err(format!("{OP}:bad-args"));
+    }
+    // Cache-key safety: the id reaches a store key and a request body.
+    if !is_uuid(&args.game_id) {
+        return Err(error_message(Code::Provider, "deals", None));
+    }
+    let country = priced_country_for(normalize_country(args.country.as_deref())).to_string();
+    let game_id = args.game_id;
+    let prices = open_cache(ctx);
+    let cache_key = deals_cache_key(&country, &game_id);
+    let hit = read_deals_hit(&prices, &cache_key, ctx.clock.now_ms());
+    if let Some(hit) = hit.as_ref().filter(|h| h.fresh) {
+        return Ok(deals_value(hit.deals.clone()));
+    }
+    if ctx.itad_gate.is_blocked(ctx.clock.now_ms()) {
+        return match &hit {
+            Some(hit) => Ok(serve_stale_deals(hit)),
+            None => Err(error_message(Code::RateLimited, "deals", Some(429))),
+        };
+    }
+    let resolved = resolve_key(ctx, "deals").map_err(|fail| fail.into_message("deals"))?;
+    ctx.itad_gate
+        .single_flight(&cache_key, async {
+            match deals_remote(ctx, &prices, &game_id, &country, resolved).await {
+                Ok(value) => Ok(value),
+                Err(fail) => {
+                    note_rate_limit(ctx, &fail);
+                    if fail.is_stale_coverable() {
+                        if let Some(hit) = &hit {
+                            return Ok(serve_stale_deals(hit));
+                        }
+                    }
+                    Err(fail.into_message("deals"))
+                }
+            }
+        })
+        .await
+}
+
+// --- Steam gids -------------------------------------------------------------------------------
+
+/// `{appIds}`: Steam app ids to map to ITAD game ids. Unknown fields are rejected.
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct GidsArgs {
+    pub app_ids: Vec<String>,
+}
+
+/// `/^\d{1,10}$/`: ASCII digits only, 1 to 10 of them.
+fn is_app_id(id: &str) -> bool {
+    (1..=APP_ID_MAX_DIGITS).contains(&id.len()) && id.bytes().all(|b| b.is_ascii_digit())
+}
+
+/// `lookupSteamGids` (through `handleGetItadSteamGids`, PRICE-02): app id to ITAD game id over the
+/// keyless lookup route, `{ "<appId>": "<gid>" }`. Cached 30 days (a miss one day, D-10); only unseen
+/// or expired ids are requested, in batches of 200; an id that is not 1 to 10 digits is skipped, as
+/// TS filtered it. On a failed batch it answers what it has and never fails. It does not touch the
+/// 429 gate (the keyless route's limit is separate).
+pub async fn steam_gids(ctx: &InfoCtx, args: GidsArgs) -> Result<Value, String> {
+    const OP: &str = "info_itad_gids";
+    if args.app_ids.len() > GIDS_MAX {
+        return Err(format!("{OP}:bad-args"));
+    }
+    let store = CacheView::open(
+        &ctx.host,
+        &ctx.paths.user_data,
+        ITAD_STEAM_GIDS,
+        Arc::clone(&ctx.clock),
+    )
+    .ok();
+    let mut ids: Vec<&str> = Vec::new();
+    for id in args
+        .app_ids
+        .iter()
+        .map(String::as_str)
+        .filter(|i| is_app_id(i))
+    {
+        if !ids.contains(&id) {
+            ids.push(id);
+        }
+    }
+    let mut out = serde_json::Map::new();
+    let mut to_fetch: Vec<&str> = Vec::new();
+    let now = ctx.clock.now_ms();
+    for id in ids {
+        let entry = store
+            .as_ref()
+            .and_then(|view| read_entry(view, &gid_cache_key(id)));
+        let mapped = entry.as_ref().and_then(|e| match &e.data {
+            Some(Json::Str(gid)) if !gid.is_empty() => Some(gid.clone()),
+            _ => None,
+        });
+        if entry.as_ref().is_some_and(|e| is_gid_entry_fresh(e, now)) {
+            if let Some(gid) = mapped {
+                out.insert(id.to_string(), Value::String(gid));
+            }
+            continue;
+        }
+        to_fetch.push(id);
+        // An expired mapping is still the best answer if the refresh fails.
+        if let Some(gid) = mapped {
+            out.insert(id.to_string(), Value::String(gid));
+        }
+    }
+    for chunk in to_fetch.chunks(LOOKUP_BATCH_SIZE) {
+        let body: Vec<String> = chunk.iter().map(|id| format!("app/{id}")).collect();
+        let url = format!("{ITAD_BASE}/lookup/id/shop/{SHOP_ID_STEAM}/v1");
+        let Ok(data) = send(ctx, post_request(ctx, url, &body)).await else {
+            // A failed batch keeps what the cache gave; the next call tries again.
+            continue;
+        };
+        let fetched_at = ctx.clock.now_ms();
+        for id in chunk {
+            let gid = data
+                .as_object()
+                .and_then(|map| map.get(&format!("app/{id}")))
+                .and_then(Value::as_str)
+                .filter(|v| is_uuid(v));
+            if let Some(view) = &store {
+                write_gid_entry(view, &gid_cache_key(id), gid, fetched_at);
+            }
+            match gid {
+                Some(gid) => {
+                    out.insert((*id).to_string(), Value::String(gid.to_string()));
+                }
+                None => {
+                    out.remove(*id);
+                }
+            }
+        }
+    }
+    Ok(Value::Object(out))
 }
 
 #[cfg(test)]

@@ -455,6 +455,10 @@ impl NativeRouter {
         // ITAD caches with the key from the Keychain owner. The sidecar no longer registers
         // `searchStores`.
         invoke.insert("searchStores", info_dispatch::search_stores);
+        // Phase 86 (86-16, D-17): the deal list for one game and the Steam app id to ITAD game id
+        // lookup, run by the same `info` slice. The sidecar no longer registers them.
+        invoke.insert("getStoreSearchDeals", info_dispatch::get_store_search_deals);
+        invoke.insert("getItadSteamGids", info_dispatch::get_itad_steam_gids);
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -818,6 +822,8 @@ mod tests {
             "steamgriddb.searchGame",
             "steamgriddb.setApiKey",
             "searchStores",
+            "getStoreSearchDeals",
+            "getItadSteamGids",
         ] {
             assert!(info.contains(&name), "{name}: {info:?}");
         }

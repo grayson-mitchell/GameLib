@@ -2,7 +2,7 @@
  * Curated enrichment-channel registration (Phase 34.2 Plan 06, D-04/D-07/
  * D-10, REQ-34.2-04/REQ-34.2-11/REQ-34.2-12/REQ-34.2-14).
  *
- * Registers the 11 enrichment channels the game-details page and store
+ * Registers the 9 enrichment channels the game-details page and store
  * search container depend on, onto platformApi's own `ipcMain` recorder,
  * importing the REAL underlying bodies plans 34.2-01/34.2-03 already
  * extracted or wired unchanged (mirrors `gameDetailsFlowRegistration.ts`'s
@@ -34,6 +34,8 @@
  *       `handleGetItadSteamGids(appIds)`
  *       (Plan 34.2-13 extraction; imported the same way by
  *       `storeSearch/index.ts` on the Electron side)
+ *       Phase 86 (86-16, D-17): these three are native `info` channels served by Rust now and are
+ *       no longer registered here; the TS bodies are deleted in 86-17.
  *
  * A `send` channel registered with `ipcMain.handle` (or the reverse) fails
  * 100% SILENTLY at runtime (Phase 31 Pitfall 2) — all seven registrations
@@ -142,10 +144,6 @@ import type { IpcRegistry } from './ipcRegistry'
 import { getWikiGameInfo } from '../wiki_game_info/wiki_game_info'
 import { readGamelibFixStatus, readKnownFixes } from '../knownFixes'
 import { buildCrossoverRatingMap } from '../crossover_index/crossoverRatingMap'
-import {
-  handleGetStoreSearchDeals,
-  handleGetItadSteamGids
-} from '../storeSearch/handlers'
 import { getRunsForMeMap, setRunsForMeByUser } from '../runsForMe'
 import type { ItadSecrets } from '../storeSearch/itadSecrets'
 import { getGogDiscounts } from '../discounts/fetchDiscounts'
@@ -202,7 +200,7 @@ const RUNS_FOR_ME_RUNNERS: readonly string[] = Object.freeze([
 ] as const)
 
 /**
- * Registers the 11 enrichment channels. Called once from `handlers.ts`
+ * Registers the 9 enrichment channels. Called once from `handlers.ts`
  * — this module owns no side effects at import time beyond the imports
  * above; the caller decides when registration onto the handler registry
  * happens.
@@ -294,28 +292,9 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
     })
   )
 
-  // storeSearch trio — `searchStores` has moved to Rust (86-16); the other two delegate to the
-  // shared bodies in storeSearch/handlers.ts (Phase 34.2 Plan 13, closes WR-09), which carry the
-  // Phase 20 D-14 try/log/RETHROW contract. A bare pass-through would silently change the
-  // error-propagation contract the frontend depends on.
-  // Phase 86 (86-16, D-17): `searchStores` is a native `info` channel served by Rust
-  // (`info_itad_search`, `nativeChannels.json`), so it is no longer registered here.
-
-  deps.ipc.handle(
-    'getStoreSearchDeals',
-    async (_event: unknown, ...args: unknown[]) =>
-      handleGetStoreSearchDeals(
-        deps,
-        args[0] as string,
-        args[1] as string | null | undefined
-      )
-  )
-
-  deps.ipc.handle(
-    'getItadSteamGids',
-    async (_event: unknown, ...args: unknown[]) =>
-      handleGetItadSteamGids(deps, args[0] as string[])
-  )
+  // Phase 86 (86-16, D-17): the storeSearch trio (`searchStores`, `getStoreSearchDeals`,
+  // `getItadSteamGids`) are native `info` channels served by Rust (`info_itad_search`,
+  // `info_itad_deals`, `info_itad_gids`, `nativeChannels.json`), so they are no longer registered here.
 
   deps.ipc.handle(
     'getGogDiscounts',
