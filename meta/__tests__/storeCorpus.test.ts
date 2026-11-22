@@ -23,6 +23,7 @@ import {
   expectFor,
   flavourOf,
   GAMEKEY_PREFIX_RE,
+  PASTE_URL_RE,
   isDenylistedKey,
   isPlaceholder,
   newRedactionContext,
@@ -139,6 +140,7 @@ function leakInString(
   if (CIPHERTEXT_RE.test(text)) return 'steam:v1: / humble:v1: ciphertext'
   if (STEAMID64_RE.test(text)) return 'SteamID64'
   if (EMAIL_RE.test(text)) return 'email'
+  if (PASTE_URL_RE.test(text)) return 'live paste link'
   if (BEARER_RE.test(text)) return 'bearer token'
   if (COOKIE_RE.test(text)) return 'cookie'
   if (text.length >= 40 && !HASH_KEYS.has(key.toLowerCase())) {
@@ -410,6 +412,18 @@ describe('store corpus redaction', () => {
     ).toHaveLength(1)
     expect(
       scanDocument({ 'GKREDACTED000001:game_choice': 1 }, username)
+    ).toEqual([])
+    expect(
+      scanDocument({ 'https://dpaste.com/AAAAAAAAA': { name: 'x' } }, username)
+    ).toHaveLength(1)
+    expect(
+      scanDocument({ u: 'https://pastebin.com/AAAAAAAA' }, username)
+    ).toHaveLength(1)
+    expect(
+      scanDocument(
+        { 'https://paste.invalid/PASTEREDACTED000001': { name: 'x' } },
+        username
+      )
     ).toEqual([])
   })
 

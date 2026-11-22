@@ -1002,7 +1002,7 @@
     },
     {
       "path": "operator/store/uploadedLogs.json",
-      "sha256": "18c16e6a9445ad366dac814d7759ea8a03a5231b4c7d98ecc9c58d304b0a44c9",
+      "sha256": "bad97ca317aa1517c832c22ad310fd4fd0970362c06f547937af4622284f641c",
       "source": "operator",
       "flavour": "store",
       "expect": "roundtrip",

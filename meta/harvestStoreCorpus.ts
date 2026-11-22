@@ -200,6 +200,14 @@ export function isPlaceholder(value: unknown): boolean {
 /** A Humble order key (16 alphanumerics) leading a cache key as `<gamekey>:<product>`; it grants access to the order. */
 export const GAMEKEY_PREFIX_RE = /^[A-Za-z0-9]{16}:/
 
+/**
+ * A link to an uploaded log on a public paste host (`store/uploadedLogs.json` keys its records by it). The paste is
+ * live and its text carries the operator's paths, so the link is replaced like a gamekey: a stable placeholder per run.
+ */
+export const PASTE_URL_RE =
+  /^https?:\/\/(?:www\.)?(?:dpaste\.com|dpaste\.org|pastebin\.com|0x0\.st|termbin\.com|hastebin\.com)\//i
+export const PASTE_PLACEHOLDER_PREFIX = 'https://paste.invalid/PASTEREDACTED'
+
 const CIPHERTEXT_PREFIX_RE = /^(steam|humble):v1:/
 const JWT_RE = /^eyJ[A-Za-z0-9_-]{10,}/
 const STEAMID64_RE = /^7656119\d{10}$/
@@ -210,12 +218,14 @@ interface RedactionContext {
   username: string
   /** Humble gamekey -> stable placeholder, so the same order keeps the same placeholder across files in one run. */
   gamekeys: Map<string, string>
+  /** Paste link -> stable placeholder, for the same reason. */
+  pastes: Map<string, string>
 }
 
 export function newRedactionContext(
   username = userInfo().username
 ): RedactionContext {
-  return { username, gamekeys: new Map() }
+  return { username, gamekeys: new Map(), pastes: new Map() }
 }
 
 function escapeRegExp(text: string): string {
@@ -228,7 +238,17 @@ function replaceUsername(text: string, ctx: RedactionContext): string {
   return text.replace(new RegExp(escapeRegExp(ctx.username), 'gi'), 'operator')
 }
 
+function pastePlaceholder(url: string, ctx: RedactionContext): string {
+  let placeholder = ctx.pastes.get(url)
+  if (placeholder === undefined) {
+    placeholder = `${PASTE_PLACEHOLDER_PREFIX}${String(ctx.pastes.size + 1).padStart(6, '0')}`
+    ctx.pastes.set(url, placeholder)
+  }
+  return placeholder
+}
+
 function redactString(value: string, ctx: RedactionContext): string {
+  if (PASTE_URL_RE.test(value)) return pastePlaceholder(value, ctx)
   if (
     CIPHERTEXT_PREFIX_RE.test(value) ||
     JWT_RE.test(value) ||
@@ -242,6 +262,7 @@ function redactString(value: string, ctx: RedactionContext): string {
 
 /** Key names are kept, except a Humble gamekey prefix and the OS account name: a key is never replaced wholesale. */
 function redactKey(key: string, ctx: RedactionContext): string {
+  if (PASTE_URL_RE.test(key)) return pastePlaceholder(key, ctx)
   let out = key
   const gk = GAMEKEY_PREFIX_RE.exec(key)
   if (gk) {
