@@ -50,8 +50,11 @@ import { createHostServices, type HostServices } from '../host'
 import { createIpcRegistry, type IpcRegistry } from './ipcRegistry'
 import { createStores } from '../stores/createStores'
 import { createStoreRegistry } from '../stores/storeRegistry'
-import { createStoreRoot, type StoreRoot } from '../stores/storeRoot'
-import { readStoreBootEnv, resolveStoreMode } from '../stores/storeOwnership'
+import {
+  createStoreRoot,
+  readStoreBootEnv,
+  type StoreRoot
+} from '../stores/storeRoot'
 import { createStoreManagers } from '../storeManagers'
 import {
   createSteamProcesses,
@@ -1707,14 +1710,13 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           )
         }
         // The one place a store directory is decided: every store resolves under it.
-        // Phase 85 (FND-06): the root carries who owns each store. `GAMELIB_STORE` and what the
-        // shell reported about the stores it opened arrive in the environment; a store the
-        // ownership file moved to Rust is written as ordered frames on this boot's stdout.
+        // Phase 85 (FND-06, D-03): every store is a mirror over the shell's StoreHost, written as
+        // ordered frames on this boot's stdout; what the shell reported about the stores it opened
+        // (read-only, start-empty) arrives in the environment.
         const root =
           prebuilt.storeRoot ??
           createStoreRoot({
             userData: ctx.paths.userData,
-            storeMode: resolveStoreMode(),
             boot: readStoreBootEnv(),
             frameSink: requireRpc(state).storeFrameSink
           })
@@ -1738,8 +1740,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // synchronously, which throws while `heroicLogWriter` is unset (same ordering reason as
         // `initOnlineMonitor()`'s and `tokenStore.configure()`'s placement comments below).
         // configBootOrder.test.ts pins it.
-        // createGlobalConfig() runs the settings migration first when TS owns config.json (the
-        // shell migrated it at boot when it owns it, 85-15); the per-game registry holds its cache
+        // createGlobalConfig() reads config.json the shell migrated at boot (85-15; the shell owns
+        // the settings family, no flag since 85-21); the per-game registry holds its cache
         // in its closure and reads global defaults through the config built here. Both read and
         // write the settings documents through the store root's mirror (settingsDocs.ts).
         const config =

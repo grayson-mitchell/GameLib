@@ -2,30 +2,21 @@
  * Manual mock for `backend/store_backend` (Phase 35 Plan 05 — renamed from
  * `__mocks__/electron-store.ts` when D-04 removed `electron-store`).
  *
- * Subclasses the REAL shim and forces every `cwd` under a fixed subdirectory,
- * so a suite doing a bare `jest.mock('backend/store_backend')` gets its own
- * store tree rather than sharing one with production code paths.
+ * Subclasses the REAL shim and gives a store built with no root one rooted at the jest-contained
+ * userData. For the whole `Backend` jest project, `jest.setupContainment.ts` has already redirected
+ * `os.homedir()` and `HOME`/`APPDATA`/`XDG_*` into a disposable per-test-file root, so that userData
+ * is itself throwaway.
  *
- * The redirect target is a RELATIVE cwd, which the real shim joins onto
- * the store root's `userData` (a test root when the caller passes none). That is what makes it safe: for the whole
- * `Backend` jest project, `jest.setupContainment.ts` has already redirected
- * `os.homedir()` and `HOME`/`APPDATA`/`XDG_*` into a disposable per-test-file
- * root, so the resolved userData is itself throwaway.
- *
- * This mock previously pointed `cwd` at an ABSOLUTE `tmp.dirSync()` path. That
- * worked only because `electron-store` had no containment check of its own —
- * the check lived in a second store (`sidecar/`, since deleted). Now that
- * `store_backend.ts` carries WR-11's containment, an absolute path outside userData throws, which is the
- * correct behaviour and is what caught this during Plan 05's own gate run.
+ * Until Phase 85 plan 21 this mock also forced every `cwd` under a `jest_store_root/` subdirectory.
+ * Every store is now a mirror whose file the shell writes at the store table's own path
+ * (`<userData>/<store key>.json`), and a store anywhere else is refused, so the redirect is gone; the
+ * disposable userData is the isolation.
  */
 
-import { join } from 'path'
 import type RealStore from '../store_backend'
 import type { StoreRoot } from '../stores/storeRoot'
 
 const OriginalStore = jest.requireActual('../store_backend').default
-
-const MOCK_STORE_ROOT = 'jest_store_root'
 
 /** The facade's own constructor options (`declaration` and `root` included), so the mock never drifts from it. */
 type FacadeOptions<T extends Record<string, unknown>> = NonNullable<
@@ -50,8 +41,7 @@ export default class Store<
   constructor(options?: FacadeOptions<T>) {
     super({
       ...(options ?? {}),
-      root: options?.root ?? fallbackRoot(),
-      cwd: options?.cwd ? join(MOCK_STORE_ROOT, options.cwd) : MOCK_STORE_ROOT
+      root: options?.root ?? fallbackRoot()
     })
   }
 }

@@ -117,14 +117,13 @@ describe('renderer channel allow-list', () => {
     )
   })
 
-  test('shell-only, dev and store-snapshot channels are excluded', () => {
+  test('shell-only and dev channels are excluded', () => {
     const l = new Set(rustList())
     for (const n of [
       'health',
       'trayResolveRunner',
       'shellWindowFocused',
       'handleProtocolUrl',
-      'store:ts-snapshot',
       'minimizeWindow'
     ]) {
       expect(l.has(n)).toBe(false)

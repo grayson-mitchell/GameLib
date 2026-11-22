@@ -221,7 +221,9 @@ describe('backend/stores/storeRoot.ts (changes channel)', () => {
       // store by its name, and `StoreChangedPayload.store` must carry that identity.
       //
       // Uses `fontsStore` (a StoreStructure entry with no production construction site, and
-      // NOT the store this generic test is really about) rather than a locally-constructed
+      // NOT the store this generic test is really about), over a store table file no other store
+      // in this suite builds (`store/mac-arch`: every store is a mirror over a table path since
+      // 85-21), rather than a locally-constructed
       // `gogInstalledGamesStore` instance — the `gogInstalledGamesStore` describe block
       // below imports the PRODUCTION `installedGamesStore` singleton instead, and a second,
       // locally-constructed instance under the same `ValidStoreName` would trip
@@ -229,8 +231,8 @@ describe('backend/stores/storeRoot.ts (changes channel)', () => {
       const store = new TypeCheckedStoreBackend(
         'fontsStore',
         {
-          cwd: 'fonts_store',
-          name: 'fonts'
+          cwd: 'store',
+          name: 'mac-arch'
         },
         { kind: 'user-state' },
         { root }

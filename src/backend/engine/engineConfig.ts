@@ -117,7 +117,6 @@ export function readStoredGameConfig(
   if (rel.startsWith('..') || isAbsolute(rel)) return undefined
   const path = join(root, `${appName}.json`)
   const docs: SettingsDocRoot = deps.storeRoot ?? {
-    storeMode: 'ts',
     versioning: deps.versioning
   }
   if (!settingsDocExists(docs, path)) return undefined

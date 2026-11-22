@@ -135,7 +135,6 @@ describe('sidecar stdout carries RPC frames only', () => {
     let wire = ''
     stdoutPipe.on('data', (chunk: Buffer) => (wire += chunk.toString()))
     const root = createTestStoreRoot(undefined, {
-      storeMode: 'rust',
       frameSink: rpc.storeFrameSink
     })
     const store = new GameLibStore({

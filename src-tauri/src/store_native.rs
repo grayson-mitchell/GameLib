@@ -3,14 +3,9 @@
 //! `sidecar:store-fetch` is a native invoke channel (`nativeChannels.json`, slice `store`): the
 //! renderer names one store, Rust resolves it, applies the shared policy and answers from the one
 //! `StoreHost`, with the store's `rev` beside the values. There is one owner per channel (the 83
-//! rule); the sidecar keeps its old handler only under the renamed internal channel
-//! `store:ts-fetch`, which the renderer cannot name.
-//!
-//! Who answers inside the handler (research Pattern 4, D-01): under `GAMELIB_STORE=ts` every read
-//! is forwarded to the sidecar's internal channel, all or nothing. Under `rust` a store whose row
-//! Rust owns is read from `StoreHost`; a row Rust never opens (`store/migrations`, D-07) is still
-//! forwarded, so each file has exactly one reader of record. The forward rides `SidecarState`,
-//! whose invoke is bounded by the relay timeout.
+//! rule). Since 85-21 (D-03) there is no rollback flag and no sidecar fallback: every store a
+//! renderer name resolves to is read and written here, and the sidecar's renamed `store:ts-*`
+//! handlers are deleted.
 //!
 //! A renderer store name maps to a file through the store table only: a row whose `tsNames` holds
 //! the name, else a recognised cache store's `store_cache/<name>` row (T-85-41). A name the policy
@@ -19,7 +14,7 @@
 //! [`filter_store_snapshot`], so `__internal__` and unlisted fields never leave (T-85-40).
 //!
 //! The fetch result is `{ "values": {...}, "rev": <n> }`: `rev` is the store's change count when
-//! Rust read it, absent when the sidecar answered. The values are wrapped rather than given a `rev`
+//! Rust read it (0 for a policy store no file backs). The values are wrapped rather than given a `rev`
 //! sibling because a `"*"` store's top-level keys are arbitrary strings.
 //!
 //! The read-only stores notice (D-12) is raised here too, once per process:
@@ -28,11 +23,9 @@
 //! [`area_for_store_key`], de-duplicated in first-seen order and pushed as `readOnlyStoresNotice`
 //! with the unchanged ids-only payload `{entries: [{area, reason}]}`.
 //!
-//! The boot snapshot (`sidecar_store_snapshot`, every `bootSetStores` store) is built the same way
-//! under `rust`: each store read from `StoreHost` and filtered, plus one extra key, [`STORE_REV_KEY`]
-//! (`"@rev"`, which no store name can be), mapping each Rust-read store to its rev. A boot store Rust
-//! does not open is taken from the sidecar's `store:ts-snapshot`. Under `ts` the sidecar's snapshot
-//! is returned unchanged.
+//! The boot snapshot (`sidecar_store_snapshot`, every `bootSetStores` store) is built the same way:
+//! each store read from `StoreHost` and filtered, plus one extra key, [`STORE_REV_KEY`] (`"@rev"`,
+//! which no store name can be), mapping each store to its rev.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -47,12 +40,10 @@ use gamelib_store::ops::Op;
 use gamelib_store::table::{row_for_key, table, TableRow};
 use serde_json::{json, Map, Value};
 
-use crate::ipc_contract::{
-    StoreReadOnlyNoticeArgs, StoreReadOnlyNoticeArgsTsEntriesItemReason, STORE_SNAPSHOT_CHANNEL,
-};
+use crate::ipc_contract::{StoreReadOnlyNoticeArgs, StoreReadOnlyNoticeArgsTsEntriesItemReason};
 use crate::native_router::{invalid_args, NativeCtx, NativeFuture};
 use crate::relay_commands::echo_channel;
-use crate::store_boot::{is_rust_owned, Ownership, StoreMode};
+use crate::store_boot::is_rust_owned;
 use crate::store_policy::{
     area_for_store_key, filter_store_snapshot, is_allowed_store_field, is_plausible_cache_name,
     is_safe_key_path, is_writable_store_field, policy,
@@ -60,9 +51,6 @@ use crate::store_policy::{
 
 /// The renderer's lazy per-store fetch (native, slice `store`).
 pub(crate) const STORE_FETCH_CHANNEL: &str = "sidecar:store-fetch";
-
-/// The sidecar's fetch handler, renamed so only the shell can reach it (85-16).
-pub(crate) const STORE_TS_FETCH_CHANNEL: &str = "store:ts-fetch";
 
 /// The key beside the store names in the Rust snapshot that maps each Rust-read store to its rev
 /// (TS `STORE_REV_KEY`). Store names are `[A-Za-z0-9_-]`, so it never collides with one.
@@ -104,67 +92,24 @@ pub(crate) fn resolve_renderer_store(name: &str) -> Option<ResolvedStore> {
     })
 }
 
-/// How a read reaches the sidecar for a store TS answers. A trait so the handlers are tested with
-/// a recording fake and no child process.
-pub(crate) trait SidecarProxy: Send + Sync + 'static {
-    fn invoke(&self, channel: &str, args: Vec<Value>) -> Result<Value, String>;
-    /// A fire-and-forget frame (85-17: a renderer write forwarded to a store TS owns).
-    fn send(&self, channel: &str, args: Vec<Value>) -> Result<(), String>;
-}
-
-/// The real proxy: the sidecar state `store_dispatch` holds (installed when the sidecar spawns).
-pub(crate) struct DispatcherSidecar;
-
-impl SidecarProxy for DispatcherSidecar {
-    fn invoke(&self, channel: &str, args: Vec<Value>) -> Result<Value, String> {
-        let state = crate::store_dispatch::sidecar_state()
-            .ok_or_else(|| "the sidecar is not running".to_string())?;
-        state.invoke(channel.to_string(), args)
-    }
-
-    fn send(&self, channel: &str, args: Vec<Value>) -> Result<(), String> {
-        let state = crate::store_dispatch::sidecar_state()
-            .ok_or_else(|| "the sidecar is not running".to_string())?;
-        state.write_frame(&crate::SidecarRpcRequest {
-            id: state.next_id(),
-            kind: "send",
-            channel: channel.to_string(),
-            args,
-        })
-    }
-}
-
-/// Where Rust-owned stores live and who owns them: the values the boot open used.
+/// Where the stores live: the user-data directory the boot open used.
 #[derive(Debug, Clone)]
 pub(crate) struct ReadConfig {
     pub(crate) user_data: PathBuf,
-    pub(crate) mode: StoreMode,
-    pub(crate) ownership: Ownership,
 }
 
-/// What the store read handlers reach: the boot's configuration (`None` without a home directory,
-/// when every read is forwarded) and the sidecar proxy.
+/// What the store handlers reach: the boot's configuration, `None` without a home directory, when no
+/// store can be read or written (the sidecar's mirrors have no file either).
 pub(crate) struct StoreReads {
     pub(crate) config: Option<ReadConfig>,
-    pub(crate) sidecar: Arc<dyn SidecarProxy>,
 }
 
 impl StoreReads {
-    /// Whether Rust owns the store files this boot moved (`GAMELIB_STORE=rust` with a home
-    /// directory). Otherwise every renderer store call is forwarded to the sidecar.
-    fn rust_mode(&self) -> bool {
+    /// The configuration, or the error a read or write without a home directory answers.
+    fn config(&self) -> Result<&ReadConfig, String> {
         self.config
             .as_ref()
-            .is_some_and(|c| c.mode == StoreMode::Rust)
-    }
-
-    /// The configuration when Rust answers `store` itself; `None` when the sidecar does. A store no
-    /// file backs is answered by Rust (empty) unless the mode is `ts`.
-    fn owner_of(&self, store: &ResolvedStore) -> Option<&ReadConfig> {
-        self.config.as_ref().filter(|c| match store.row {
-            Some(row) => is_rust_owned(row, c.mode, &c.ownership),
-            None => c.mode == StoreMode::Rust,
-        })
+            .ok_or_else(|| "no store directory: the shell has no home directory".to_string())
     }
 }
 
@@ -217,52 +162,23 @@ fn parse_store_name(args: &[Value]) -> Result<ResolvedStore, String> {
     })
 }
 
-/// The sidecar's answer, wrapped as a fetch result (no `rev`: TS has no change count).
-fn forwarded(reads: &StoreReads, store: &ResolvedStore) -> Result<Value, String> {
-    let values = reads
-        .sidecar
-        .invoke(STORE_TS_FETCH_CHANNEL, vec![json!(store.name)])?;
-    let values = match values {
-        Value::Object(o) => Value::Object(o),
-        _ => Value::Object(Map::new()),
-    };
-    Ok(json!({ "values": values }))
-}
-
 /// `sidecar:store-fetch` with a parsed name, on the caller's (blocking) thread.
 pub(crate) fn fetch_blocking(
     host: &StoreHost,
     reads: &StoreReads,
     store: &ResolvedStore,
 ) -> Result<Value, String> {
-    match reads.owner_of(store) {
-        Some(config) => {
-            let (values, rev) = read_owned(host, config, store)?;
-            Ok(json!({ "values": values, "rev": rev }))
-        }
-        None => forwarded(reads, store),
-    }
+    let (values, rev) = read_owned(host, reads.config()?, store)?;
+    Ok(json!({ "values": values, "rev": rev }))
 }
 
 /// The boot snapshot for `sidecar_store_snapshot`, on the caller's (blocking) thread.
 pub(crate) fn snapshot_blocking(host: &StoreHost, reads: &StoreReads) -> Result<Value, String> {
-    let rust_mode = reads
-        .config
-        .as_ref()
-        .is_some_and(|c| c.mode == StoreMode::Rust);
-    if !rust_mode {
-        // GAMELIB_STORE=ts (or no home directory): the sidecar's snapshot, unchanged.
-        return reads.sidecar.invoke(STORE_SNAPSHOT_CHANNEL, vec![]);
-    }
+    let config = reads.config()?;
     let mut stores = Map::new();
     let mut revs = Map::new();
-    let mut from_ts: Vec<String> = Vec::new();
     for name in policy().boot_set_stores() {
         let Some(store) = resolve_renderer_store(name) else {
-            continue;
-        };
-        let Some(config) = reads.owner_of(&store) else {
-            from_ts.push(name.clone());
             continue;
         };
         match read_owned(host, config, &store) {
@@ -281,25 +197,6 @@ pub(crate) fn snapshot_blocking(host: &StoreHost, reads: &StoreReads) -> Result<
             }
         }
     }
-    if !from_ts.is_empty() {
-        let ts = match reads.sidecar.invoke(STORE_SNAPSHOT_CHANNEL, vec![]) {
-            Ok(Value::Object(ts)) => ts,
-            _ => {
-                crate::shell_log(&format!(
-                    "WARN: store snapshot: the sidecar did not answer for {} store(s); they boot empty",
-                    from_ts.len()
-                ));
-                Map::new()
-            }
-        };
-        for name in from_ts {
-            let values = match ts.get(&name) {
-                Some(Value::Object(o)) => Value::Object(o.clone()),
-                _ => Value::Object(Map::new()),
-            };
-            stores.insert(name, values);
-        }
-    }
     stores.insert(STORE_REV_KEY.to_string(), Value::Object(revs));
     Ok(Value::Object(stores))
 }
@@ -309,26 +206,14 @@ pub(crate) fn snapshot_blocking(host: &StoreHost, reads: &StoreReads) -> Result<
 /// The renderer's fire-and-forget store write (native send, slice `store`).
 pub(crate) const STORE_SET_CHANNEL: &str = "storeSet";
 
-/// The sidecar's `storeSet` handler, renamed so only the shell can reach it (85-17).
-pub(crate) const STORE_TS_SET_CHANNEL: &str = "store:ts-set";
-
 /// The renderer's confirmed write (native invoke, slice `store`): `true` only once on disk.
 pub(crate) const STORE_SET_CHECKED_CHANNEL: &str = "sidecar:store-set-checked";
-
-/// The sidecar's confirmed-write handler, renamed (85-17).
-pub(crate) const STORE_TS_SET_CHECKED_CHANNEL: &str = "store:ts-set-checked";
 
 /// The renderer's fire-and-forget store delete (native send, slice `store`).
 pub(crate) const STORE_DELETE_CHANNEL: &str = "storeDelete";
 
-/// The sidecar's `storeDelete` handler, renamed (85-17).
-pub(crate) const STORE_TS_DELETE_CHANNEL: &str = "store:ts-delete";
-
 /// The renderer's store registration (native send, slice `store`).
 pub(crate) const STORE_NEW_CHANNEL: &str = "storeNew";
-
-/// The sidecar's `storeNew` handler, renamed (85-17).
-pub(crate) const STORE_TS_NEW_CHANNEL: &str = "store:ts-new";
 
 /// The renderer push that patches its snapshot (`STORE_CHANGED_CHANNEL`).
 pub(crate) const STORE_CHANGED_CHANNEL: &str = "storeChanged";
@@ -361,24 +246,6 @@ impl RendererWrite {
     fn key(&self) -> &str {
         match self {
             RendererWrite::Set { key, .. } | RendererWrite::Delete { key, .. } => key,
-        }
-    }
-
-    /// The args the renamed TS handler takes, which are the renderer's own.
-    fn ts_args(&self) -> Vec<Value> {
-        match self {
-            RendererWrite::Set { store, key, value } => {
-                vec![json!(store), json!(key), value.clone()]
-            }
-            RendererWrite::Delete { store, key } => vec![json!(store), json!(key)],
-        }
-    }
-
-    /// The sidecar channel a fire-and-forget write is forwarded to when TS owns the store.
-    fn ts_send_channel(&self) -> &'static str {
-        match self {
-            RendererWrite::Set { .. } => STORE_TS_SET_CHANNEL,
-            RendererWrite::Delete { .. } => STORE_TS_DELETE_CHANNEL,
         }
     }
 
@@ -487,11 +354,6 @@ pub(crate) enum WriteOutcome {
     /// On disk (or already held: a no-op is a success, as conf's was).
     Persisted,
     Refused(WriteRefusal),
-    /// TS owns the store; the write went to its renamed handler, which answered `persisted` (a
-    /// fire-and-forget forward has no answer and reports `false`).
-    Forwarded {
-        persisted: bool,
-    },
 }
 
 /// The policy a renderer write passes before anything is opened (T-85-43): the `__internal__`
@@ -510,32 +372,22 @@ fn check_write_policy(store: &str, key: &str) -> Result<(), WriteRefusal> {
     Ok(())
 }
 
-/// Applies one renderer write on the caller's (blocking) thread. Under `GAMELIB_STORE=ts` (or with
-/// no home directory) every write is forwarded through `forward`, unchanged and unchecked, exactly
-/// as the renderer sent it before (D-01); under `rust` an unknown store is refused, a row TS still
-/// owns is forwarded, and a Rust-owned store is checked and applied with `Origin::Renderer`, whose
-/// change the host's listeners then announce.
+/// Applies one renderer write on the caller's (blocking) thread: an unknown store is refused, and a
+/// known one is checked and applied with `Origin::Renderer`, whose change the host's listeners then
+/// announce. Without a home directory there is no store to write (an error, logged by the caller).
 pub(crate) fn apply_renderer_write(
     host: &StoreHost,
     reads: &StoreReads,
     write: &RendererWrite,
-    forward: &dyn Fn(&RendererWrite) -> Result<bool, String>,
 ) -> Result<WriteOutcome, String> {
-    if !reads.rust_mode() {
-        let persisted = forward(write)?;
-        return Ok(WriteOutcome::Forwarded { persisted });
-    }
+    let config = reads.config()?;
     let Some(store) = resolve_renderer_store(write.store()) else {
         return Ok(WriteOutcome::Refused(WriteRefusal::UnknownStore));
-    };
-    let Some(config) = reads.owner_of(&store) else {
-        let persisted = forward(write)?;
-        return Ok(WriteOutcome::Forwarded { persisted });
     };
     if let Err(refusal) = check_write_policy(&store.name, write.key()) {
         return Ok(WriteOutcome::Refused(refusal));
     }
-    let Some(row) = store.row else {
+    let Some(row) = store.row.filter(|row| is_rust_owned(row)) else {
         return Ok(WriteOutcome::Refused(WriteRefusal::NoStoreBacksIt));
     };
     let name = row.name.as_deref().unwrap_or_default();
@@ -572,37 +424,25 @@ fn log_refusal(channel: &str, store: &str, refusal: WriteRefusal) {
 /// The `storeSet` / `storeDelete` slice job: applies the write; a refusal is logged and dropped, as
 /// the sidecar dropped one (a send has no answer).
 pub(crate) fn run_send_write(ctx: &NativeCtx, channel: &str, write: &RendererWrite) {
-    let sidecar = &ctx.store_reads.sidecar;
-    let forward = |w: &RendererWrite| -> Result<bool, String> {
-        sidecar.send(w.ts_send_channel(), w.ts_args())?;
-        Ok(false)
-    };
-    match apply_renderer_write(&ctx.store_host, &ctx.store_reads, write, &forward) {
+    match apply_renderer_write(&ctx.store_host, &ctx.store_reads, write) {
         Ok(WriteOutcome::Refused(refusal)) => log_refusal(channel, write.store(), refusal),
-        Ok(WriteOutcome::Persisted | WriteOutcome::Forwarded { .. }) => {}
-        Err(forward_error) => crate::shell_log_detail(
-            &format!("WARN: native {channel} could not forward a store write"),
-            &forward_error,
+        Ok(WriteOutcome::Persisted) => {}
+        Err(error) => crate::shell_log_detail(
+            &format!("WARN: native {channel} could not apply a store write"),
+            &error,
         ),
     }
 }
 
-/// The confirmed write on the caller's (blocking) thread: `true` only once the value is on disk (or
-/// TS answered `true` for a store it owns); `false` for any refusal, logged by category.
+/// The confirmed write on the caller's (blocking) thread: `true` only once the value is on disk;
+/// `false` for any refusal, logged by category.
 pub(crate) fn set_checked_blocking(
     host: &StoreHost,
     reads: &StoreReads,
     write: &RendererWrite,
 ) -> Result<bool, String> {
-    let forward = |w: &RendererWrite| -> Result<bool, String> {
-        let answer = reads
-            .sidecar
-            .invoke(STORE_TS_SET_CHECKED_CHANNEL, w.ts_args())?;
-        Ok(answer == Value::Bool(true))
-    };
-    Ok(match apply_renderer_write(host, reads, write, &forward)? {
+    Ok(match apply_renderer_write(host, reads, write)? {
         WriteOutcome::Persisted => true,
-        WriteOutcome::Forwarded { persisted } => persisted,
         WriteOutcome::Refused(refusal) => {
             log_refusal(STORE_SET_CHECKED_CHANNEL, write.store(), refusal);
             false
@@ -623,7 +463,7 @@ fn parse_store_set_checked(args: &[Value]) -> Result<RendererWrite, String> {
 }
 
 /// The `sidecar:store-set-checked` invoke handler. A refusal resolves `false`, never an error, as the
-/// sidecar's did; only bad args (the marker) or a failed forward reject.
+/// sidecar's did; only bad args (the marker) or a missing store directory reject.
 pub(crate) fn store_set_checked(ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
     Box::pin(async move {
         let write = parse_store_set_checked(&args)?;
@@ -641,10 +481,8 @@ pub(crate) enum NewOutcome {
     /// A typed store (constructed by the sidecar's `createStores`, opened by Rust at boot): nothing
     /// to do, as before.
     Typed,
-    /// A recognised cache store Rust owns, now open.
+    /// A recognised cache store, now open.
     Opened,
-    /// TS owns it (or the mode is `ts`): forwarded to `store:ts-new`.
-    Forwarded,
     /// Not a recognised cache name: no store, no file (WR-02, T-85-43).
     Refused,
 }
@@ -655,12 +493,7 @@ pub(crate) fn store_new_blocking(
     host: &StoreHost,
     reads: &StoreReads,
     new: &StoreNew,
-    forward: &dyn Fn(&StoreNew) -> Result<(), String>,
 ) -> Result<NewOutcome, String> {
-    if !reads.rust_mode() {
-        forward(new)?;
-        return Ok(NewOutcome::Forwarded);
-    }
     let name = new.store.as_str();
     if table().iter().any(|r| r.ts_names.iter().any(|n| n == name))
         && !policy().is_recognized_cache(name)
@@ -680,13 +513,10 @@ pub(crate) fn store_new_blocking(
         );
     }
     let key = format!("store_cache/{name}");
-    let (Some(row), Some(config)) = (row_for_key(&key), reads.config.as_ref()) else {
+    let Some(row) = row_for_key(&key).filter(|row| is_rust_owned(row)) else {
         return Ok(NewOutcome::Refused);
     };
-    if !is_rust_owned(row, config.mode, &config.ownership) {
-        forward(new)?;
-        return Ok(NewOutcome::Forwarded);
-    }
+    let config = reads.config()?;
     let path = config.user_data.join(&row.dir).join(format!("{name}.json"));
     host.open_row(row, path)
         .map_err(|e| format!("store open failed: {}", e.kind()))?;
@@ -695,15 +525,7 @@ pub(crate) fn store_new_blocking(
 
 /// The `storeNew` slice job.
 pub(crate) fn run_store_new(ctx: &NativeCtx, new: &StoreNew) {
-    let sidecar = &ctx.store_reads.sidecar;
-    let forward = |n: &StoreNew| -> Result<(), String> {
-        let mut args = vec![json!(n.store)];
-        if let Some(options) = &n.options {
-            args.push(options.clone());
-        }
-        sidecar.send(STORE_TS_NEW_CHANNEL, args)
-    };
-    if let Err(open_error) = store_new_blocking(&ctx.store_host, &ctx.store_reads, new, &forward) {
+    if let Err(open_error) = store_new_blocking(&ctx.store_host, &ctx.store_reads, new) {
         crate::shell_log_detail("WARN: native storeNew could not open a store", &open_error);
     }
 }
@@ -888,45 +710,11 @@ pub(crate) mod tests {
     use std::fs;
     use std::sync::Mutex;
 
-    /// A proxy that records what it was asked and answers with a fixed value.
-    pub(crate) struct RecordingProxy {
-        pub(crate) calls: Mutex<Vec<(String, Vec<Value>)>>,
-        pub(crate) answer: Value,
-    }
-
-    impl RecordingProxy {
-        pub(crate) fn new(answer: Value) -> Arc<RecordingProxy> {
-            Arc::new(RecordingProxy {
-                calls: Mutex::new(Vec::new()),
-                answer,
-            })
-        }
-    }
-
-    impl SidecarProxy for RecordingProxy {
-        fn invoke(&self, channel: &str, args: Vec<Value>) -> Result<Value, String> {
-            self.calls.lock().unwrap().push((channel.to_string(), args));
-            Ok(self.answer.clone())
-        }
-
-        fn send(&self, channel: &str, args: Vec<Value>) -> Result<(), String> {
-            self.calls.lock().unwrap().push((channel.to_string(), args));
-            Ok(())
-        }
-    }
-
-    pub(crate) fn reads(
-        home: &FakeHome,
-        mode: StoreMode,
-        proxy: Arc<RecordingProxy>,
-    ) -> StoreReads {
+    pub(crate) fn reads(home: &FakeHome) -> StoreReads {
         StoreReads {
             config: Some(ReadConfig {
                 user_data: home.root().to_path_buf(),
-                mode,
-                ownership: Ownership::embedded().clone(),
             }),
-            sidecar: proxy,
         }
     }
 
@@ -984,8 +772,7 @@ pub(crate) mod tests {
             "{\n\t\"theme\": \"dark\",\n\t\"notAField\": 1,\n\t\"__internal__\": {\"migrations\": {\"version\": \"1\"}}\n}",
         );
         let host = StoreHost::new();
-        let proxy = RecordingProxy::new(json!({}));
-        let reads = reads(&home, StoreMode::Rust, Arc::clone(&proxy));
+        let reads = reads(&home);
         let out = fetch_blocking(&host, &reads, &resolved("configStore")).unwrap();
         assert_eq!(out, json!({"values": {"theme": "dark"}, "rev": 0}));
 
@@ -1004,7 +791,6 @@ pub(crate) mod tests {
             .unwrap();
         let out = fetch_blocking(&host, &reads, &resolved("configStore")).unwrap();
         assert_eq!(out, json!({"values": {"theme": "light"}, "rev": 1}));
-        assert!(proxy.calls.lock().unwrap().is_empty(), "nothing forwarded");
     }
 
     #[test]
@@ -1016,7 +802,7 @@ pub(crate) mod tests {
             "{\n\t\"Some Game\": {\"timestampLastFetch\": \"x\"}\n}",
         );
         let host = StoreHost::new();
-        let reads = reads(&home, StoreMode::Rust, RecordingProxy::new(json!({})));
+        let reads = reads(&home);
         let out = fetch_blocking(&host, &reads, &resolved("wikigameinfo")).unwrap();
         assert_eq!(
             out,
@@ -1030,34 +816,16 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn store_native_ts_mode_forwards_every_read_and_never_opens_a_file() {
-        let home = FakeHome::new("gamelib-store-native-ts-");
-        write(&home, "store/config.json", "{\n\t\"theme\": \"dark\"\n}");
+    fn store_native_without_a_home_a_read_or_a_write_is_an_error_not_a_forward() {
+        let reads = StoreReads { config: None };
         let host = StoreHost::new();
-        let proxy = RecordingProxy::new(json!({"theme": "from-ts"}));
-        let reads = reads(&home, StoreMode::Ts, Arc::clone(&proxy));
-        let out = fetch_blocking(&host, &reads, &resolved("configStore")).unwrap();
-        assert_eq!(out, json!({"values": {"theme": "from-ts"}}));
-        assert_eq!(
-            proxy.calls.lock().unwrap().as_slice(),
-            &[(
-                STORE_TS_FETCH_CHANNEL.to_string(),
-                vec![json!("configStore")]
-            )]
+        let err = fetch_blocking(&host, &reads, &resolved("configStore")).unwrap_err();
+        assert!(err.contains("no store directory"), "{err}");
+        assert!(snapshot_blocking(&host, &reads).is_err());
+        assert!(
+            apply_renderer_write(&host, &reads, &set("configStore", "theme", json!("x"))).is_err()
         );
-        assert!(host.read_only_entries().is_empty());
         assert_eq!(host.in_flight(), 0);
-    }
-
-    #[test]
-    fn store_native_without_a_home_every_read_is_forwarded() {
-        let proxy = RecordingProxy::new(json!("not an object"));
-        let reads = StoreReads {
-            config: None,
-            sidecar: proxy,
-        };
-        let out = fetch_blocking(&StoreHost::new(), &reads, &resolved("configStore")).unwrap();
-        assert_eq!(out, json!({"values": {}}));
     }
 
     #[test]
@@ -1093,7 +861,7 @@ pub(crate) mod tests {
             "{\n\t\"isLoggedIn\": true,\n\t\"refreshToken\": \"steam:v1:secret\"\n}",
         );
         let mut ctx = NativeCtx::for_tests(Arc::new(NullHost), None);
-        ctx.store_reads = reads(&home, StoreMode::Rust, RecordingProxy::new(json!({})));
+        ctx.store_reads = reads(&home);
         let ctx = Arc::new(ctx);
         let out = tauri::async_runtime::block_on(store_fetch(
             Arc::clone(&ctx),
@@ -1121,8 +889,7 @@ pub(crate) mod tests {
         );
         write(&home, "store/config.json", "{\n\t\"theme\": \"dark\"\n}");
         let host = StoreHost::new();
-        let proxy = RecordingProxy::new(json!({"configStore": {"theme": "from-ts"}}));
-        let reads = reads(&home, StoreMode::Rust, Arc::clone(&proxy));
+        let reads = reads(&home);
         // One change, so a rev other than 0 is visible.
         let row = resolved("configStore").row.unwrap();
         host.open_row(row, home.root().join("store/config.json"))
@@ -1158,53 +925,8 @@ pub(crate) mod tests {
         assert_eq!(revs["configStore"], json!(1));
         assert_eq!(revs["steamConfigStore"], json!(0));
         assert_eq!(revs.len(), policy().boot_set_stores().len());
-        assert!(proxy.calls.lock().unwrap().is_empty(), "nothing forwarded");
         assert!(!out.to_string().contains("refreshToken"));
         assert!(!out.to_string().contains("__internal__"));
-    }
-
-    #[test]
-    fn store_native_snapshot_under_ts_mode_is_the_sidecar_result_unchanged() {
-        let home = FakeHome::new("gamelib-store-native-snapshot-ts-");
-        let ts = json!({"configStore": {"theme": "ts"}, "steamConfigStore": {}});
-        let proxy = RecordingProxy::new(ts.clone());
-        let host = StoreHost::new();
-        let out =
-            snapshot_blocking(&host, &reads(&home, StoreMode::Ts, Arc::clone(&proxy))).unwrap();
-        assert_eq!(out, ts);
-        assert_eq!(
-            proxy.calls.lock().unwrap().as_slice(),
-            &[(STORE_SNAPSHOT_CHANNEL.to_string(), vec![])]
-        );
-        assert_eq!(STORE_SNAPSHOT_CHANNEL, "store:ts-snapshot");
-        assert_eq!(host.in_flight(), 0);
-    }
-
-    #[test]
-    fn store_native_snapshot_takes_a_boot_store_rust_does_not_open_from_the_sidecar() {
-        let home = FakeHome::new("gamelib-store-native-snapshot-mixed-");
-        write(&home, "store/config.json", "{\n\t\"theme\": \"dark\"\n}");
-        let proxy = RecordingProxy::new(json!({
-            "steamConfigStore": {"isLoggedIn": false},
-            "configStore": {"theme": "ts-should-not-win"}
-        }));
-        // The account family held back by a per-store override: steam_store/config is TS's.
-        let ownership: Ownership =
-            serde_json::from_str(r#"{"families":{"cache":true,"user-state":true,"account":true,"settings":true},"stores":{"steam_store/config":false}}"#)
-                .unwrap();
-        let reads = StoreReads {
-            config: Some(ReadConfig {
-                user_data: home.root().to_path_buf(),
-                mode: StoreMode::Rust,
-                ownership,
-            }),
-            sidecar: proxy.clone(),
-        };
-        let out = snapshot_blocking(&StoreHost::new(), &reads).unwrap();
-        assert_eq!(out["steamConfigStore"], json!({"isLoggedIn": false}));
-        assert_eq!(out["configStore"], json!({"theme": "dark"}));
-        assert!(out[STORE_REV_KEY].get("steamConfigStore").is_none());
-        assert_eq!(proxy.calls.lock().unwrap().len(), 1);
     }
 
     #[test]
@@ -1344,8 +1066,6 @@ pub(crate) mod tests {
             Arc::clone(&host),
             crate::store_dispatch::Config {
                 user_data: home.root().to_path_buf(),
-                mode: StoreMode::Rust,
-                ownership: Ownership::embedded().clone(),
             },
             gamelib_core::shutdown::Shutdown::new(),
             Arc::new(move |e| sink.lock().unwrap().push(e)),
@@ -1368,10 +1088,6 @@ pub(crate) mod tests {
         }
     }
 
-    fn no_forward(_: &RendererWrite) -> Result<bool, String> {
-        panic!("a Rust-owned store is never forwarded")
-    }
-
     #[test]
     fn store_native_tracer_a_renderer_set_is_persisted_and_announced_once_to_each_side() {
         let rig = write_rig("gamelib-store-native-write-");
@@ -1380,12 +1096,11 @@ pub(crate) mod tests {
             "store/config.json",
             "{\n\t\"theme\": \"dark\"\n}",
         );
-        let reads = reads(&rig.home, StoreMode::Rust, RecordingProxy::new(json!({})));
+        let reads = reads(&rig.home);
         let out = apply_renderer_write(
             &rig.host,
             &reads,
             &set("configStore", "theme", json!("light")),
-            &no_forward,
         )
         .unwrap();
         assert_eq!(out, WriteOutcome::Persisted);
@@ -1427,7 +1142,7 @@ pub(crate) mod tests {
             "{\n\t\"isLoggedIn\": true,\n\t\"refreshToken\": \"steam:v1:secret\"\n}",
         );
         let before = fs::read(rig.home.root().join("steam_store/config.json")).unwrap();
-        let reads = reads(&rig.home, StoreMode::Rust, RecordingProxy::new(json!({})));
+        let reads = reads(&rig.home);
         let cases = [
             (
                 set("steamConfigStore", "refreshToken", json!("attacker")),
@@ -1461,7 +1176,7 @@ pub(crate) mod tests {
             (set("fontsStore", "k", json!(1)), WriteRefusal::NotWritable),
         ];
         for (write, want) in cases {
-            let out = apply_renderer_write(&rig.host, &reads, &write, &no_forward).unwrap();
+            let out = apply_renderer_write(&rig.host, &reads, &write).unwrap();
             assert_eq!(out, WriteOutcome::Refused(want), "{write:?}");
         }
         delivered(&rig.host);
@@ -1471,67 +1186,6 @@ pub(crate) mod tests {
         );
         assert!(rig.pushes.0.lock().unwrap().is_empty());
         assert!(rig.events.lock().unwrap().is_empty());
-    }
-
-    #[test]
-    fn store_native_ts_mode_forwards_a_renderer_write_unchanged_and_rust_announces_nothing() {
-        let rig = write_rig("gamelib-store-native-write-ts-");
-        let reads = reads(&rig.home, StoreMode::Ts, RecordingProxy::new(json!({})));
-        let forwarded = Mutex::new(Vec::new());
-        let forward = |w: &RendererWrite| -> Result<bool, String> {
-            forwarded
-                .lock()
-                .unwrap()
-                .push((w.ts_send_channel(), w.ts_args()));
-            Ok(false)
-        };
-        // Unchecked under ts: TS's own guards decide, exactly as before this plan.
-        let write = set("steamConfigStore", "refreshToken", json!("x"));
-        let out = apply_renderer_write(&rig.host, &reads, &write, &forward).unwrap();
-        assert_eq!(out, WriteOutcome::Forwarded { persisted: false });
-        assert_eq!(
-            forwarded.lock().unwrap().as_slice(),
-            &[(
-                STORE_TS_SET_CHANNEL,
-                vec![json!("steamConfigStore"), json!("refreshToken"), json!("x")]
-            )]
-        );
-        delivered(&rig.host);
-        assert!(rig.pushes.0.lock().unwrap().is_empty());
-        assert!(rig.events.lock().unwrap().is_empty());
-        assert_eq!(rig.host.in_flight(), 0);
-        assert!(!rig.home.root().join("steam_store").exists());
-    }
-
-    #[test]
-    fn store_native_a_row_ts_owns_under_rust_mode_is_forwarded() {
-        let home = FakeHome::new("gamelib-store-native-write-mixed-");
-        let ownership: Ownership = serde_json::from_str(
-            r#"{"families":{"cache":true,"user-state":true,"account":true,"settings":true},"stores":{"store/config":false}}"#,
-        )
-        .unwrap();
-        let reads = StoreReads {
-            config: Some(ReadConfig {
-                user_data: home.root().to_path_buf(),
-                mode: StoreMode::Rust,
-                ownership,
-            }),
-            sidecar: RecordingProxy::new(json!({})),
-        };
-        let calls = Mutex::new(0);
-        let forward = |_: &RendererWrite| -> Result<bool, String> {
-            *calls.lock().unwrap() += 1;
-            Ok(false)
-        };
-        let out = apply_renderer_write(
-            &StoreHost::new(),
-            &reads,
-            &set("configStore", "theme", json!("x")),
-            &forward,
-        )
-        .unwrap();
-        assert_eq!(out, WriteOutcome::Forwarded { persisted: false });
-        assert_eq!(*calls.lock().unwrap(), 1);
     }
 
     #[test]
@@ -1605,7 +1259,7 @@ pub(crate) mod tests {
             r#"{"a":1,"__internal__":{"gamelib":{"schemaVersion":999}}}"#,
         );
         write(&rig.home, "store_cache/steam_library.json", "{}");
-        let reads = reads(&rig.home, StoreMode::Rust, RecordingProxy::new(json!(true)));
+        let reads = reads(&rig.home);
 
         assert_eq!(
             set_checked_blocking(
@@ -1677,10 +1331,10 @@ pub(crate) mod tests {
             "store/config.json",
             "{\n\t\"theme\": \"dark\",\n\t\"language\": \"en\"\n}",
         );
-        let reads = reads(&rig.home, StoreMode::Rust, RecordingProxy::new(json!({})));
+        let reads = reads(&rig.home);
         let delete = parse_store_delete(&[json!("configStore"), json!("theme")]).unwrap();
         assert_eq!(
-            apply_renderer_write(&rig.host, &reads, &delete, &no_forward),
+            apply_renderer_write(&rig.host, &reads, &delete),
             Ok(WriteOutcome::Persisted)
         );
         delivered(&rig.host);
@@ -1704,102 +1358,34 @@ pub(crate) mod tests {
         parse_store_new(args).unwrap()
     }
 
-    fn no_new_forward(_: &StoreNew) -> Result<(), String> {
-        panic!("a Rust-owned store is never forwarded")
-    }
-
     #[test]
     fn store_native_store_new_opens_a_recognised_cache_lazily_and_ignores_options() {
         let rig = write_rig("gamelib-store-native-new-");
-        let reads = reads(&rig.home, StoreMode::Rust, RecordingProxy::new(json!({})));
+        let reads = reads(&rig.home);
         // Hostile options: never a path, never a name.
         let new = new_of(&[
             json!("steam_library"),
             json!({"cwd": "../../evil", "name": "pwned"}),
         ]);
         assert_eq!(
-            store_new_blocking(&rig.host, &reads, &new, &no_new_forward),
+            store_new_blocking(&rig.host, &reads, &new),
             Ok(NewOutcome::Opened)
         );
         // Opened, not created: no file until a write, and nothing at the options' path.
         assert!(!rig.home.root().join("store_cache").exists());
         assert!(!rig.home.root().join("pwned.json").exists());
         assert_eq!(
-            store_new_blocking(
-                &rig.host,
-                &reads,
-                &new_of(&[json!("configStore")]),
-                &no_new_forward
-            ),
+            store_new_blocking(&rig.host, &reads, &new_of(&[json!("configStore")])),
             Ok(NewOutcome::Typed)
         );
         for name in ["brand_new_cache", "../config", "a/b"] {
             assert_eq!(
-                store_new_blocking(&rig.host, &reads, &new_of(&[json!(name)]), &no_new_forward),
+                store_new_blocking(&rig.host, &reads, &new_of(&[json!(name)])),
                 Ok(NewOutcome::Refused),
                 "{name}"
             );
         }
         assert!(!rig.home.root().join("store_cache").exists());
-    }
-
-    #[test]
-    fn store_native_ts_mode_forwards_each_write_handler_to_its_ts_channel_and_rust_pushes_nothing()
-    {
-        let rig = write_rig("gamelib-store-native-ts-all-");
-        let proxy = RecordingProxy::new(json!(true));
-        let reads = reads(&rig.home, StoreMode::Ts, Arc::clone(&proxy));
-        let ctx = {
-            let mut ctx = NativeCtx::for_tests(Arc::new(NullHost), None);
-            ctx.store_host = Arc::clone(&rig.host);
-            ctx.store_reads = reads;
-            ctx
-        };
-        run_send_write(
-            &ctx,
-            STORE_SET_CHANNEL,
-            &set("configStore", "theme", json!("x")),
-        );
-        run_send_write(
-            &ctx,
-            STORE_DELETE_CHANNEL,
-            &parse_store_delete(&[json!("configStore"), json!("theme")]).unwrap(),
-        );
-        run_store_new(
-            &ctx,
-            &new_of(&[json!("steam_library"), json!({"cwd": "x"})]),
-        );
-        let checked = set_checked_blocking(
-            &ctx.store_host,
-            &ctx.store_reads,
-            &set("configStore", "theme", json!("y")),
-        );
-        assert_eq!(checked, Ok(true), "TS's own answer is the result");
-        delivered(&rig.host);
-        assert_eq!(
-            proxy.calls.lock().unwrap().as_slice(),
-            &[
-                (
-                    STORE_TS_SET_CHANNEL.to_string(),
-                    vec![json!("configStore"), json!("theme"), json!("x")]
-                ),
-                (
-                    STORE_TS_DELETE_CHANNEL.to_string(),
-                    vec![json!("configStore"), json!("theme")]
-                ),
-                (
-                    STORE_TS_NEW_CHANNEL.to_string(),
-                    vec![json!("steam_library"), json!({"cwd": "x"})]
-                ),
-                (
-                    STORE_TS_SET_CHECKED_CHANNEL.to_string(),
-                    vec![json!("configStore"), json!("theme"), json!("y")]
-                ),
-            ]
-        );
-        assert!(rig.pushes.0.lock().unwrap().is_empty());
-        assert!(rig.events.lock().unwrap().is_empty());
-        assert!(!rig.home.root().join("store").exists());
     }
 
     #[test]

@@ -4,7 +4,6 @@ import { TypeCheckedStoreBackend } from '../../typed_store'
 import { defined } from '../../testUtils/indexed'
 import { createStores } from '../createStores'
 import { createStoreRegistry } from '../storeRegistry'
-import { createStoreRoot } from '../storeRoot'
 import {
   createTestStoreRoot,
   testUserDataDir
@@ -113,19 +112,23 @@ describe('createStores', () => {
   })
 
   type CacheInternals = {
-    store: { path: string }
+    store: { path: string; declaration?: { kind: string } }
     lifespan: number | null
     invalidateCheck: (data: unknown) => boolean
   }
 
+  /**
+   * The kind a built cache store was declared with at its construction site (its StoreDeclaration,
+   * which the store keeps). Since 85-21 no TS engine records a per-path kind: the conf
+   * composition's prepare step that fed it is gone with the TS owner path.
+   */
+  const kindOf = (store: CacheInternals) => store.store.declaration?.kind
+
   /** Every CacheStore `createStores` builds, keyed by its file name under store_cache. */
-  let builtRoot = createTestStoreRoot()
-  const kindOf = (path: string) => builtRoot.versioning.kindOf(path)
   function builtCacheStores(): Map<string, CacheInternals> {
-    builtRoot = createTestStoreRoot()
     const stores = createStores({
       registry: createStoreRegistry(),
-      root: builtRoot
+      root: createTestStoreRoot()
     })
     const built = new Map<string, CacheInternals>()
     for (const family of Object.values(stores)) {
@@ -158,19 +161,17 @@ describe('createStores', () => {
         UPDATE_PROMPT_ACK_CACHE
       ].sort()
     )
+    expect(kindOf(defined(built.get(ENGINE_NOTICE_CACHE), 'notices'))).toBe(
+      'user-state'
+    )
     expect(
-      kindOf(defined(built.get(ENGINE_NOTICE_CACHE), 'notices').store.path)
-    ).toBe('user-state')
-    expect(
-      kindOf(
-        defined(built.get(UPDATE_PROMPT_ACK_CACHE), 'update prompt ack').store
-          .path
-      )
+      kindOf(defined(built.get(UPDATE_PROMPT_ACK_CACHE), 'update prompt ack'))
     ).toBe('user-state')
     for (const entry of fixtureCaches) {
       const name = defined(entry.options.name, 'fixture cache name')
-      const path = defined(built.get(name), name).store.path
-      expect(kindOf(path)).toBe(entry.declaration.kind)
+      expect(kindOf(defined(built.get(name), name))).toBe(
+        entry.declaration.kind
+      )
     }
   })
 
@@ -198,8 +199,8 @@ describe('createStores', () => {
   })
 
   it('two roots build independent stores: engine notices and pci caches do not share cells', () => {
-    const rootA = createStoreRoot({ userData: createTestStoreRoot().userData })
-    const rootB = createStoreRoot({ userData: createTestStoreRoot().userData })
+    const rootA = createTestStoreRoot()
+    const rootB = createTestStoreRoot()
     const a = createStores({ registry: createStoreRegistry(), root: rootA })
     const b = createStores({ registry: createStoreRegistry(), root: rootB })
     expect(a.engine.noticeStore).not.toBe(b.engine.noticeStore)

@@ -5416,9 +5416,9 @@ describe('Phase 85 plan 09: store boot wiring', () => {
     }
   })
 
-  test('the ownership file flips every family (cache, user-state, account, settings), no per-store override', () => {
-    const own = JSON.parse(
-      readFileSync(
+  test("85-21 (D-03): no ownership file and no store mode reach the shell; every openable row is Rust's", () => {
+    expect(
+      existsSync(
         join(
           __dirname,
           '..',
@@ -5427,25 +5427,16 @@ describe('Phase 85 plan 09: store boot wiring', () => {
           'types',
           'ipc',
           'storeOwnership.json'
-        ),
-        'utf-8'
+        )
       )
-    ) as { families: Record<string, boolean>; stores: Record<string, boolean> }
-    expect(Object.keys(own.families).sort()).toEqual([
-      'account',
-      'cache',
-      'settings',
-      'user-state'
-    ])
-    // Phase 85 plan 12 flipped the cache family and retired plan 10's tracer
-    // override; plan 13 flipped user-state and plan 14 the account family. The
-    // settings flip (85-15) completed the set, last as D-01 orders.
-    expect(own.families).toEqual({
-      account: true,
-      cache: true,
-      settings: true,
-      'user-state': true
-    })
-    expect(own.stores).toEqual({})
+    ).toBe(false)
+    const boot = loadMainRsCode(readTauriShellProductionFile('store_boot.rs'))
+    expect(boot).not.toContain('Ownership')
+    expect(boot).not.toContain('StoreMode')
+    expect(boot).toContain('row.family != Family::Excluded')
+    const setup = readTopLevelFnBody(loadMainRsCode(), 'run_setup', 5)
+    expect(setup).toContain(
+      'store_dispatch::configure(std::path::PathBuf::from(&paths.user_data))'
+    )
   })
 })

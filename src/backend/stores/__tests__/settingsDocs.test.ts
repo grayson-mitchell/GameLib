@@ -2,10 +2,10 @@
  * The settings-document seam (Phase 85 plan 15, D-01, research Pattern 3): `readSettingsDoc`,
  * `writeSettingsDoc` and `dropSettingsDoc`, and GameConfig on top of them.
  *
- * Under `GAMELIB_STORE=rust` with the settings family flipped, a per-game document is a mirror cell
- * keyed `GamesConfig/<app>`: a GameConfig flush is ONE `replace` frame, and GameConfig.readSettings
- * sees it at once, before the shell answers. Under `GAMELIB_STORE=ts` the document is TS-owned and
- * written by `writeSettingsFile` exactly as before. The Rust half (2-space bytes, the chain's
+ * Over the boot's root a per-game document is a mirror cell keyed `GamesConfig/<app>`: a GameConfig
+ * flush is ONE `replace` frame, and GameConfig.readSettings sees it at once, before the shell
+ * answers (no flag since 85-21, D-03). A caller with no root (a test) reads and writes the file
+ * directly through `writeSettingsFile`, as before. The Rust half (2-space bytes, the chain's
  * version, a set/delete/clear refused, a path-like app name refused) is `cargo test -p
  * gamelib-store host::doc_tests` and `cargo test --bin gamelib-shell store_frame`.
  */
@@ -28,7 +28,7 @@ import {
   writeSettingsDoc
 } from '../settingsDocs'
 import type { StoreFrame, StoreFrameSink } from '../storeFrames'
-import type { StoreBootEnv, StoreMode } from '../storeOwnership'
+import type { StoreBootEnv } from '../storeRoot'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { createTestAppPaths } from '../../testUtils/testAppPaths'
 import { createTestAppRuntime } from '../../testUtils/testAppRuntime'
@@ -81,7 +81,6 @@ function paths() {
 
 /** A root over `userData`, its frames, and a per-game registry built on it (the boot's wiring). */
 function build(
-  mode: StoreMode,
   opts: {
     silent?: boolean
     boot?: StoreBootEnv
@@ -89,7 +88,6 @@ function build(
 ) {
   const frames: StoreFrame[] = []
   const root = createTestStoreRoot(userData, {
-    storeMode: mode,
     ...(opts.silent
       ? { frameSink: silentSink(frames) }
       : { recordFrames: frames }),
@@ -116,10 +114,10 @@ function seedGlobal() {
   )
 }
 
-describe('the tracer: one per-game setting end to end under GAMELIB_STORE=rust', () => {
+describe('the tracer: one per-game setting end to end', () => {
   it('a GameConfig flush is one replace frame on GamesConfig/<app> and readSettings sees it before any ack', async () => {
     seedGlobal()
-    const { frames, gameConfigs } = build('rust', { silent: true })
+    const { frames, gameConfigs } = build({ silent: true })
     const game = gameConfigs.get(APP)
     expect(frames).toEqual([])
 
@@ -147,13 +145,13 @@ describe('the tracer: one per-game setting end to end under GAMELIB_STORE=rust',
     expect(settings.disableUMU).toBe(false)
     expect((doc[APP] as Record<string, unknown>).disableUMU).toBe(false)
     expect(
-      readSettingsDoc(build('rust', { silent: true }).root, gamePath())
+      readSettingsDoc(build({ silent: true }).root, gamePath())
     ).toBeUndefined()
   })
 
   it('the shell-side bytes are two-space JSON with no trailing newline and read back through the helper', async () => {
     seedGlobal()
-    const { root, frames, gameConfigs } = build('rust')
+    const { root, frames, gameConfigs } = build()
     gameConfigs.get(APP).setSetting('maxSharpness', 9)
 
     expect(frames.map((f) => [f.store, f.op])).toEqual([
@@ -171,7 +169,7 @@ describe('the tracer: one per-game setting end to end under GAMELIB_STORE=rust',
     const again = createGameConfigs({
       config: GLOBAL,
       versioning: root.versioning,
-      root: createTestStoreRoot(userData, { storeMode: 'rust' }),
+      root: createTestStoreRoot(userData),
       paths: paths()
     })
     expect((await again.get(APP).getSettings()).maxSharpness).toBe(9)
@@ -180,7 +178,7 @@ describe('the tracer: one per-game setting end to end under GAMELIB_STORE=rust',
   it('an app name that is not one plain path segment never reaches a frame or the disk (T-85-37)', () => {
     seedGlobal()
     const before = readFileSync(configPath(), 'utf8')
-    const { frames, gameConfigs } = build('rust', { silent: true })
+    const { frames, gameConfigs } = build({ silent: true })
     for (const bad of ['a/b', '../config', '..', 'a\\b']) {
       gameConfigs.get(bad).setSetting('maxSharpness', 1)
     }
@@ -191,7 +189,7 @@ describe('the tracer: one per-game setting end to end under GAMELIB_STORE=rust',
 
   it('a document the shell reported read-only at boot takes no write and sends nothing', () => {
     seedGlobal()
-    const { frames, gameConfigs } = build('rust', {
+    const { frames, gameConfigs } = build({
       silent: true,
       boot: {
         readOnly: new Map([[`GamesConfig/${APP}`, 'newer' as const]]),
@@ -202,10 +200,15 @@ describe('the tracer: one per-game setting end to end under GAMELIB_STORE=rust',
     expect(frames).toEqual([])
   })
 
-  it('under GAMELIB_STORE=ts the document is TS-owned: no frame, writeSettingsFile writes it', async () => {
+  it('without a root (a test caller) the document is TS-written: no frame, writeSettingsFile writes it', async () => {
     seedGlobal()
     mkdirSync(gamesConfig(), { recursive: true })
-    const { frames, gameConfigs } = build('ts')
+    const { frames, root } = build()
+    const gameConfigs = createGameConfigs({
+      config: GLOBAL,
+      versioning: root.versioning,
+      paths: paths()
+    })
     gameConfigs.get(APP).setSetting('maxSharpness', 5)
     expect(frames).toEqual([])
     const doc = JSON.parse(readFileSync(gamePath(), 'utf8')) as Record<
@@ -219,14 +222,14 @@ describe('the tracer: one per-game setting end to end under GAMELIB_STORE=rust',
 
 describe('readSettingsDoc / writeSettingsDoc / dropSettingsDoc', () => {
   it('a missing Rust-owned document reads as absent and creates no cell', () => {
-    const { root } = build('rust', { silent: true })
+    const { root } = build({ silent: true })
     expect(readSettingsDoc(root, gamePath())).toBeUndefined()
     expect(settingsDocExists(root, gamePath())).toBe(false)
     expect(root.mirrors.peek(gamePath())).toBeUndefined()
   })
 
   it('a written document exists before it is applied and reads back whole', () => {
-    const { root, frames } = build('rust', { silent: true })
+    const { root, frames } = build({ silent: true })
     writeSettingsDoc(root, configPath(), {
       defaultSettings: { language: 'de' },
       version: 'v2'
@@ -242,7 +245,7 @@ describe('readSettingsDoc / writeSettingsDoc / dropSettingsDoc', () => {
   })
 
   it('dropSettingsDoc forgets the cell, so a later read goes to disk (absent after a removal)', () => {
-    const { root } = build('rust')
+    const { root } = build()
     writeSettingsDoc(root, gamePath(), {
       [APP]: { maxSharpness: 1 },
       version: 'v2'
@@ -256,8 +259,8 @@ describe('readSettingsDoc / writeSettingsDoc / dropSettingsDoc', () => {
     expect(dropSettingsDoc(root, gamePath())).toBe(false)
   })
 
-  it('a path that is not a settings document stays TS-owned under rust mode', () => {
-    const { root, frames } = build('rust', { silent: true })
+  it('a path that is not a settings document is read and written by TS', () => {
+    const { root, frames } = build({ silent: true })
     const elsewhere = join(userData, 'other', 'config.json')
     mkdirSync(join(userData, 'other'))
     writeSettingsDoc(root, elsewhere, { version: 'v2' })
@@ -265,12 +268,12 @@ describe('readSettingsDoc / writeSettingsDoc / dropSettingsDoc', () => {
     expect(readSettingsDoc(root, elsewhere)).toEqual({ version: 'v2' })
   })
 
-  it('under GAMELIB_STORE=ts a corrupt document throws, as the direct reads did', () => {
-    const { root } = build('ts')
+  it('without a root a corrupt document throws, as the direct reads did', () => {
+    const docs = { versioning: build().root.versioning }
     mkdirSync(gamesConfig())
     writeFileSync(gamePath(), '{not json')
-    expect(() => readSettingsDoc(root, gamePath())).toThrow()
-    expect(dropSettingsDoc(root, gamePath())).toBe(false)
+    expect(() => readSettingsDoc(docs, gamePath())).toThrow()
+    expect(dropSettingsDoc(docs, gamePath())).toBe(false)
   })
 })
 
@@ -314,7 +317,7 @@ describe('uninstall drops the settings cell when the removal reports removed (T-
 
   it('a removed settings document reads absent afterwards; the cell is gone', async () => {
     seedGlobal()
-    const { root, gameConfigs } = build('rust')
+    const { root, gameConfigs } = build()
     gameConfigs.get(APP).setSetting('maxSharpness', 3)
     expect(existsSync(gamePath())).toBe(true)
     expect(root.mirrors.peek(gamePath())).toBeDefined()
@@ -338,7 +341,7 @@ describe('uninstall drops the settings cell when the removal reports removed (T-
 
   it('a written-but-unapplied document is sent for removal and its cell dropped too', async () => {
     seedGlobal()
-    const { root, frames, gameConfigs } = build('rust', { silent: true })
+    const { root, frames, gameConfigs } = build({ silent: true })
     gameConfigs.get(APP).setSetting('maxSharpness', 3)
     expect(frames).toHaveLength(1)
     expect(existsSync(gamePath())).toBe(false)
@@ -359,7 +362,7 @@ describe('uninstall drops the settings cell when the removal reports removed (T-
 
   it('a refused removal keeps the cell and the settings', async () => {
     seedGlobal()
-    const { root, gameConfigs } = build('rust')
+    const { root, gameConfigs } = build()
     gameConfigs.get(APP).setSetting('maxSharpness', 3)
     const { requestRustInvoke } = fakeSafetyRustInvoke({
       checkVerdict: 'no',

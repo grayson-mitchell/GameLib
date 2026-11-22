@@ -2,7 +2,8 @@ import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import GameLibStore, { translateStoreOptions } from '../../store_backend'
-import { createStoreRoot } from '../storeRoot'
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+import { createStoreRoot, readStoreBootEnv } from '../storeRoot'
 
 describe('createStoreRoot', () => {
   let dirA: string
@@ -16,27 +17,45 @@ describe('createStoreRoot', () => {
     rmSync(dirB, { recursive: true, force: true })
   })
 
-  // The production store gives same-path instances a shared view because conf
-  // re-reads the file on every access. These cases replaced the deleted file
-  // store's cell-registry cases (quick 261121-pwt).
+  // Same-path instances on one root share the root's mirror cell (85-21: every store is a mirror,
+  // D-03). The test roots carry the in-process disk sink that stands in for the shell.
   it('two roots never share a store file, even for the same name', () => {
-    const a = createStoreRoot({ userData: dirA })
-    const b = createStoreRoot({ userData: dirB })
-    const storeA = new GameLibStore({ root: a, cwd: 'store', name: 'same' })
-    const storeB = new GameLibStore({ root: b, cwd: 'store', name: 'same' })
+    const a = createTestStoreRoot(dirA)
+    const b = createTestStoreRoot(dirB)
+    const opts = { cwd: 'store', name: 'download-manager' }
+    const storeA = new GameLibStore({ root: a, ...opts })
+    const storeB = new GameLibStore({ root: b, ...opts })
     storeA.set('k', 'from-a')
     expect(storeA.get('k')).toBe('from-a')
     expect(storeB.get('k')).toBeUndefined()
   })
 
   it("two stores on one root and one resolved path see each other's writes", () => {
-    const root = createStoreRoot({ userData: dirA })
-    const first = new GameLibStore({ root, cwd: 'store', name: 'shared' })
-    const second = new GameLibStore({ root, cwd: 'store', name: 'shared' })
+    const root = createTestStoreRoot(dirA)
+    const opts = { cwd: 'store', name: 'download-manager' }
+    const first = new GameLibStore({ root, ...opts })
+    const second = new GameLibStore({ root, ...opts })
     first.set('k', 'v')
     expect(second.get('k')).toBe('v')
     second.delete('k')
     expect(first.has('k')).toBe(false)
+  })
+
+  it('refuses a store the shell does not own, and a write on a root with no frame sink', () => {
+    const root = createTestStoreRoot(dirA)
+    // No table row, and the excluded store/migrations (D-07): nobody writes those files.
+    expect(
+      () => new GameLibStore({ root, cwd: 'store', name: 'not-a-store' })
+    ).toThrow(/not a store the shell owns/)
+    expect(
+      () => new GameLibStore({ root, cwd: 'store', name: 'migrations' })
+    ).toThrow(/not a store the shell owns/)
+    const sinkless = new GameLibStore({
+      root: createStoreRoot({ userData: dirB }),
+      cwd: 'store',
+      name: 'download-manager'
+    })
+    expect(() => sinkless.set('k', 1)).toThrow(/without a frame sink/)
   })
 
   describe('changes channel', () => {
@@ -120,5 +139,81 @@ describe('createStoreRoot', () => {
       const abs = join(dirA, 'store')
       expect(translateStoreOptions({ cwd: abs, name: 'x' }, root).cwd).toBe(abs)
     })
+  })
+})
+
+// Moved here with `readStoreBootEnv` from the deleted storeOwnership module (85-21).
+describe('readStoreBootEnv', () => {
+  let stderr: jest.SpiedFunction<typeof process.stderr.write>
+  beforeEach(() => {
+    stderr = jest.spyOn(process.stderr, 'write').mockImplementation(() => true)
+  })
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+  const logged = () => stderr.mock.calls.map((c) => String(c[0])).join('')
+  const parse = (value: unknown) =>
+    readStoreBootEnv({ GAMELIB_STORE_BOOT: JSON.stringify(value) })
+
+  it('is empty, silently, when the shell reported nothing', () => {
+    for (const env of [
+      {},
+      { GAMELIB_STORE_BOOT: undefined },
+      { GAMELIB_STORE_BOOT: '' }
+    ]) {
+      const boot = readStoreBootEnv(env)
+      expect(boot.readOnly.size).toBe(0)
+      expect(boot.startEmpty.size).toBe(0)
+    }
+    expect(stderr).not.toHaveBeenCalled()
+  })
+
+  it('reads the read-only stores with their reasons and the stores that start empty', () => {
+    const boot = parse({
+      readOnly: [
+        { store: 'store/config', reason: 'newer' },
+        { store: 'steam_store/config', reason: 'failed' }
+      ],
+      startEmpty: ['store_cache/steam_metadata']
+    })
+    expect([...boot.readOnly]).toEqual([
+      ['store/config', 'newer'],
+      ['steam_store/config', 'failed']
+    ])
+    expect([...boot.startEmpty]).toEqual(['store_cache/steam_metadata'])
+    expect(stderr).not.toHaveBeenCalled()
+  })
+
+  it('skips entries of the wrong shape or with an unknown reason, keeping the good ones', () => {
+    const boot = parse({
+      readOnly: [
+        null,
+        'store/config',
+        { store: 4, reason: 'newer' },
+        { store: 'store/config', reason: 'whatever' },
+        { store: 'store/config' },
+        { store: 'gog_store/config', reason: 'newer' }
+      ],
+      startEmpty: [1, null, 'store_cache/umu']
+    })
+    expect([...boot.readOnly]).toEqual([['gog_store/config', 'newer']])
+    expect([...boot.startEmpty]).toEqual(['store_cache/umu'])
+  })
+
+  it('returns no entries and writes one line for malformed input, never echoing it', () => {
+    for (const text of ['{nope TOKEN-VALUE', '[1,2]', '"text"', '4', 'null']) {
+      const boot = readStoreBootEnv({ GAMELIB_STORE_BOOT: text })
+      expect(boot.readOnly.size).toBe(0)
+      expect(boot.startEmpty.size).toBe(0)
+    }
+    expect(stderr).toHaveBeenCalledTimes(5)
+    expect(logged()).not.toContain('TOKEN-VALUE')
+  })
+
+  it('ignores fields it does not know and a non-array readOnly or startEmpty', () => {
+    const boot = parse({ readOnly: 'store/config', startEmpty: {}, extra: 1 })
+    expect(boot.readOnly.size).toBe(0)
+    expect(boot.startEmpty.size).toBe(0)
+    expect(stderr).not.toHaveBeenCalled()
   })
 })

@@ -553,34 +553,6 @@ describe('sidecar bootstrap (headless boot)', () => {
         logInfoSpy.mock.calls.filter(([message]) => message === RECEIPT)
       ).toHaveLength(1)
     })
-
-    it('does NOT route through applyStoreWrite -- the D-04 write guard is never invoked, yet the key is still gone', () => {
-      let applyStoreWriteSpy!: jest.SpyInstance
-      let store!: SteamStore
-      const root = createTestStoreRoot()
-      bootFresh({
-        services: { storeRoot: root },
-        before: () => {
-          store = fresh<typeof import('../../storeManagers/steam/stores')>(
-            '../../storeManagers/steam/stores'
-          ).createSteamStores({
-            registry: createStoreRegistry(),
-            root
-          }).configStore
-          lastStore = store
-          store.set('refreshToken', LEGACY_VALUE)
-          applyStoreWriteSpy = jest.spyOn(
-            fresh<typeof import('../storeWriteHandlers')>(
-              '../storeWriteHandlers'
-            ),
-            'applyStoreWrite'
-          )
-        }
-      })
-
-      expect(store.get_nodefault('refreshToken')).toBeUndefined()
-      expect(applyStoreWriteSpy).not.toHaveBeenCalled()
-    })
   })
 })
 

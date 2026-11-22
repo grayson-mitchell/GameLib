@@ -155,8 +155,7 @@ export const STORE_ALLOWLIST: Readonly<Record<string, FieldPolicy>> =
  * store yields an EMPTY object `{}` from `filterStoreSnapshot()` — the same behavior it
  * has under Tauri today (no store-fetch path exists for it yet).
  */
-export const DENIED_CACHE_STORES: readonly string[] =
-  storeChannels.deniedCacheStores
+const DENIED_CACHE_STORES: readonly string[] = storeChannels.deniedCacheStores
 
 /**
  * Recognized cache-store names — the boot-set four (`legendary_library`, `gog_library`,

@@ -183,8 +183,8 @@ const changesDuringFetch = new Map<string, StoreChangedPayload[]>()
  * Phase 85 (85-17, research Pitfall 8, S1 rule 9): the newest rev each store's snapshot reflects,
  * from the boot snapshot (`STORE_REV_KEY`), a fetch result (`{ values, rev }`) or an applied push.
  * A push whose `rev` is present and not above it is stale (it is already in the snapshot, or a newer
- * state replaced it) and is dropped. A store with no entry here (`GAMELIB_STORE=ts`, or a store the
- * sidecar answered) takes every push, exactly as before. Revs are never required to be gapless: a
+ * state replaced it) and is dropped. A store with no entry here (no rev read yet, or a store no
+ * Rust-owned file backs) takes every push, exactly as before. Revs are never required to be gapless: a
  * change to a field the renderer may not read is never pushed, so a gap is normal, not a resync.
  */
 const lastRev = new Map<string, number>()
@@ -429,7 +429,7 @@ async function hydrateStore(storeName: string): Promise<void> {
       // payload is authoritative for the store it names.
       const fresh = { ...(result ?? {}) }
       // 85-17: a change buffered during the fetch is replayed only when it is newer than the rev the
-      // fetch read at (a rev-less one, under GAMELIB_STORE=ts, always is, as before).
+      // fetch read at (a rev-less one always is, as before).
       for (const change of buffered) {
         if (newerThanRead(change, readRev)) applyFieldChange(fresh, change)
       }

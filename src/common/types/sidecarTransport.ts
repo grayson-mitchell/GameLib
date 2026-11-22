@@ -532,7 +532,7 @@ export const RUST_STORE_BACKUP_FILE = 'store_backup_file' as const
 
 /**
  * Rust-side channel name: Phase 85 (85-16, D-12) `store_read_only_notice`. The renderer's read-only
- * stores notice is raised by Rust once per launch: `frontendReady` (under `GAMELIB_STORE=rust`)
+ * stores notice is raised by Rust once per launch: `frontendReady`
  * sends ONE object arg `{ tsEntries: [{ storeKey, reason }] }` with the stores TS still reported
  * read-only (`reason` is `newer` or `failed`); Rust merges them with its own read-only stores, maps
  * each to its area, de-duplicates, and emits `readOnlyStoresNotice` with the unchanged ids-only
@@ -1467,39 +1467,23 @@ export const FRONTEND_MESSAGE_EVENT = 'frontend_message' as const
  * by `tauriTransport.ts`'s `snapshotSet()` (`send('storeSet', [storeName, key, value])`) —
  * this constant must match that literal exactly, or the renderer's existing writes silently
  * orphan. Since Phase 85 (85-17) it is a NATIVE channel (`nativeChannels.json`, slice `store`):
- * the Rust shell checks the policy and applies it through `StoreHost`. The sidecar's own handler
- * is `STORE_TS_SET_CHANNEL`, which only the shell can reach.
+ * the Rust shell checks the policy and applies it through `StoreHost`. The sidecar has no handler
+ * of its own (its shell-only fallback was deleted in 85-21, D-03).
  */
 export const STORE_SET_CHANNEL = 'storeSet' as const
-
-/**
- * The sidecar's `storeSet` handler, renamed in Phase 85 (85-17) so `STORE_SET_CHANNEL` has one
- * owner (the Rust native router). Shell-only: the native handler forwards to it, unchanged, under
- * `GAMELIB_STORE=ts` and for a store whose row Rust never opens.
- */
-export const STORE_TS_SET_CHANNEL = 'store:ts-set' as const
-
-/** The sidecar's `storeDelete` handler, renamed in Phase 85 (85-17); shell-only, like `STORE_TS_SET_CHANNEL`. */
-export const STORE_TS_DELETE_CHANNEL = 'store:ts-delete' as const
-
-/** The sidecar's `storeNew` handler, renamed in Phase 85 (85-17); shell-only, like `STORE_TS_SET_CHANNEL`. */
-export const STORE_TS_NEW_CHANNEL = 'store:ts-new' as const
-
-/** The sidecar's confirmed-write handler, renamed in Phase 85 (85-17); shell-only. */
-export const STORE_TS_SET_CHECKED_CHANNEL = 'store:ts-set-checked' as const
 
 /**
  * `send`-kind (fire-and-forget) channel name for a single-key store delete. ALREADY emitted
  * by `tauriTransport.ts`'s `snapshotDelete()` (`send('storeDelete', [storeName, key])`) —
  * must match that literal exactly. A native channel since Phase 85 (85-17), like
- * `STORE_SET_CHANNEL`; the sidecar's handler is `STORE_TS_DELETE_CHANNEL`.
+ * `STORE_SET_CHANNEL`.
  */
 export const STORE_DELETE_CHANNEL = 'storeDelete' as const
 
 /**
  * `send`-kind (fire-and-forget) channel name for registering a new store (mirrors
  * `misc.ts`'s `storeNew` / `tauriTransport.ts`'s `registerStore()`). A native channel since
- * Phase 85 (85-17); the sidecar's handler is `STORE_TS_NEW_CHANNEL`.
+ * Phase 85 (85-17).
  */
 export const STORE_NEW_CHANNEL = 'storeNew' as const
 
@@ -1507,43 +1491,23 @@ export const STORE_NEW_CHANNEL = 'storeNew' as const
  * `invoke`-kind renderer channel for D-03's lazy per-store hydrate: the renderer fetches one
  * `LAZY_STORES` store's filtered snapshot on first access instead of every store being eagerly
  * hydrated at boot. Since Phase 85 (85-16) it is a NATIVE channel (`nativeChannels.json`, slice
- * `store`): the Rust shell answers it from `StoreHost` and the result is
- * `{ values, rev? }` (`rev` absent when the sidecar answered). The sidecar's own handler is
- * `STORE_TS_FETCH_CHANNEL`, which only the shell can reach.
+ * `store`): the Rust shell answers it from `StoreHost` and the result is `{ values, rev }`.
  */
 export const STORE_FETCH_CHANNEL = 'sidecar:store-fetch' as const
-
-/**
- * The sidecar's store fetch, renamed in Phase 85 (85-16) so `STORE_FETCH_CHANNEL` has one owner
- * (the Rust native router). Shell-only: the native handler forwards to it under
- * `GAMELIB_STORE=ts` and for a store whose row Rust never opens. Its result is the bare filtered
- * store object.
- */
-export const STORE_TS_FETCH_CHANNEL = 'store:ts-fetch' as const
 
 /**
  * `invoke`-kind INTERNAL RPC channel, ridden over `SIDECAR_INVOKE`, for a CONFIRMED single-key
  * store write (Phase 64 plan 03). Unlike the fire-and-forget `STORE_SET_CHANNEL` it carries a
  * response: `true` only when the write was persisted, and `false` when any write guard refused it
  * or the write threw. Since Phase 85 (85-17) it is a NATIVE channel: the Rust shell applies it
- * through `StoreHost` behind the same policy; the sidecar's handler is
- * `STORE_TS_SET_CHECKED_CHANNEL`, which only the shell can reach.
+ * through `StoreHost` behind the same policy.
  */
 export const STORE_SET_CHECKED_CHANNEL = 'sidecar:store-set-checked' as const
 
 /**
- * The sidecar's boot-snapshot handler, shell-only. DISTINCT from `SIDECAR_STORE_SNAPSHOT` (the
- * renderer-facing Tauri COMMAND). Phase 85 (85-16) renamed it from `sidecar:store-snapshot`: the
- * command now builds the snapshot from the Rust `StoreHost` and asks this channel only under
- * `GAMELIB_STORE=ts` (its result is then returned unchanged) or for a boot store Rust does not
- * open. Under `rust` the command's result carries one extra key, `STORE_REV_KEY`, mapping each
- * Rust-read store to its rev.
- */
-export const STORE_SNAPSHOT_CHANNEL = 'store:ts-snapshot' as const
-
-/**
- * The key beside the store names in the Rust snapshot under which each store's rev rides
- * (`{ [store]: rev }`). It can never be a store name: store names are `[A-Za-z0-9_-]` (85-16).
+ * The key beside the store names in the Rust snapshot (`SIDECAR_STORE_SNAPSHOT`, built from the
+ * `StoreHost` since 85-16) under which each store's rev rides (`{ [store]: rev }`). It can never be
+ * a store name: store names are `[A-Za-z0-9_-]`.
  */
 export const STORE_REV_KEY = '@rev' as const
 
@@ -1588,8 +1552,8 @@ export interface StoreChangedPayload {
    * The store's change count after this change. Present when Rust owns the store (Phase 85, 85-17):
    * the shell emits every push in rev order and the boot snapshot (`STORE_REV_KEY`) and the lazy
    * fetch (`{ values, rev }`) carry the rev they were read at, so the renderer drops a push that is
-   * not newer than what it already holds. Absent under `GAMELIB_STORE=ts` (the sidecar pushes).
-   * Revs can skip: a change to a field the renderer may not read is never pushed.
+   * not newer than what it already holds. Absent on a push the sidecar makes itself (a store no
+   * Rust-owned file backs). Revs can skip: a change to a field the renderer may not read is never pushed.
    */
   rev?: number
 }

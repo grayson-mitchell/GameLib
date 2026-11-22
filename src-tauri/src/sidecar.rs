@@ -1,7 +1,7 @@
 use super::*;
 
 // Transport constants (READY_SENTINEL, FRONTEND_MESSAGE_EVENT, SHELL_WINDOW_FOCUSED,
-// STORE_SNAPSHOT_CHANNEL, RUST_INVOKE_KIND) come from the generated `ipc_contract.rs`
+// RUST_INVOKE_KIND) come from the generated `ipc_contract.rs`
 // (regenerate with `pnpm gen:ipc-contract`).
 
 // ---- Sidecar lifecycle + stdout reader ----

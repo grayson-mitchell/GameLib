@@ -262,8 +262,7 @@ pub(crate) fn open_external(url: String, app: AppHandle) -> Result<(), String> {
 }
 
 /// The boot store snapshot for the renderer's synchronous store bridge (every `bootSetStores`
-/// store). Phase 85 (85-16): built from the Rust `StoreHost` under `GAMELIB_STORE=rust`, each store
-/// filtered with its rev; under `ts` the sidecar's `store:ts-snapshot` result unchanged
+/// store). Phase 85 (85-16): built from the Rust `StoreHost`, each store filtered with its rev
 /// (`store_native::snapshot_blocking`).
 #[tauri::command]
 pub(crate) async fn sidecar_store_snapshot(
@@ -297,7 +296,6 @@ mod relay_allow_list_tests {
     fn ipc_contract_relay_rejects_unknown_channel() {
         assert!(relay_channel_verdict("definitelyNotAChannel").is_err());
         assert!(relay_channel_verdict("").is_err());
-        assert!(relay_channel_verdict(STORE_SNAPSHOT_CHANNEL).is_err());
     }
 
     #[test]

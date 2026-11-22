@@ -292,9 +292,8 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   // set): with a mocked poll that reports success, the refresh token —
   // written through tokenStore.current().setToken() exactly as SteamUser's real
   // 'authenticated' handler does (user.ts) — round-trips over the real
-  // rustInvoke wire protocol (never a direct configStore write), and no
-  // snapshot served by store:ts-snapshot ever surfaces a refreshToken
-  // field for steamConfigStore.
+  // rustInvoke wire protocol (never a direct configStore write). That no
+  // store snapshot surfaces a refreshToken is the shell's (store_native).
   it('Test 4 (token seam): a successful QR poll writes the token through the TokenStore seam via rustInvoke, and it never surfaces in a store snapshot', async () => {
     jest
       .mocked(pollQRLogin)
@@ -346,33 +345,10 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       result: { status: 'done', username: 'gsd-tester' }
     })
 
-    // Phase 28 D-04 regression, extended to this new channel set: even if a
-    // refreshToken value ends up on steamConfigStore (e.g. a legacy write, or
-    // an attacker-controlled storeSet), the eager snapshot must never surface
-    // it. userData passes through; refreshToken never does.
-    steamConfigStore.set(
-      'refreshToken',
-      'super-secret-should-never-leave-the-sidecar'
-    )
-    writeInvoke(input, 'snapshot-1', 'store:ts-snapshot', [])
-    await flush()
-    const snapshotResponse = frames.find(
-      (frame) => frame.id === 'snapshot-1'
-    ) as
-      | {
-          ok: boolean
-          result: { steamConfigStore?: Record<string, unknown> }
-        }
-      | undefined
-
-    expect(snapshotResponse?.ok).toBe(true)
-    expect(snapshotResponse?.result.steamConfigStore?.userData).toEqual({
-      username: 'gsd-tester',
-      steamId: 'STEAMID_TEST'
-    })
-    expect(snapshotResponse?.result.steamConfigStore).not.toHaveProperty(
-      'refreshToken'
-    )
+    // Phase 28 D-04: the eager snapshot never surfaces a refreshToken. Since 85-16 the snapshot is
+    // built by the shell from its StoreHost and filtered there (`cargo test --bin gamelib-shell
+    // store_native_snapshot_reads_every_boot_store_filtered_with_its_rev`), and since 85-21 the
+    // sidecar keeps no snapshot handler of its own.
   })
 
   // Test 5 (Invariant B guard) — REWRITTEN by Phase 34.4 Plan 01, RE-POINTED by Phase 34.4.1

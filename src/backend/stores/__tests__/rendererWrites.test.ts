@@ -13,11 +13,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import {
   STORE_CHANGED_CHANNEL,
-  STORE_MIRROR_EVENT_CHANNEL,
-  STORE_TS_DELETE_CHANNEL,
-  STORE_TS_NEW_CHANNEL,
-  STORE_TS_SET_CHANNEL,
-  STORE_TS_SET_CHECKED_CHANNEL
+  STORE_MIRROR_EVENT_CHANNEL
 } from 'common/types/sidecarTransport'
 import { sidecarInternalSendArgs } from 'common/types/ipc/sidecarInternal'
 import { createKvsStores } from 'backend/constants/key_value_stores'
@@ -25,8 +21,7 @@ import CacheStore from '../../cache'
 import Store from '../../store_backend'
 import { registerStoreWriteHandlers } from '../../sidecar/storeWriteHandlers'
 import { createStoreRegistry } from '../storeRegistry'
-import type { StoreFrame } from '../storeFrames'
-import { isRustOwnedStoreName, type StoreMode } from '../storeOwnership'
+import { isRustOwnedStoreName, type StoreFrame } from '../storeFrames'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 
 const TRACER_KEY = 'store_cache/wikigameinfo'
@@ -41,23 +36,16 @@ afterEach(() => {
 })
 
 /** A root, its registered store-layer listeners and every renderer push it made. */
-function layer(storeMode: StoreMode, frames: StoreFrame[] = []) {
-  const root = createTestStoreRoot(userData, {
-    storeMode,
-    recordFrames: frames
-  })
+function layer(frames: StoreFrame[] = []) {
+  const root = createTestStoreRoot(userData, { recordFrames: frames })
   const listeners = new Map<string, (...args: unknown[]) => unknown>()
   const pushes: [string, unknown][] = []
   registerStoreWriteHandlers({
     ipc: {
       on: (channel: string, listener: (...args: unknown[]) => unknown) => {
         listeners.set(channel, listener)
-      },
-      handle: (channel: string, listener: (...args: unknown[]) => unknown) => {
-        listeners.set(channel, listener)
       }
     } as never,
-    registry: createStoreRegistry(),
     root,
     pushFrontendMessage: (channel: string, payload: unknown) => {
       pushes.push([channel, payload])
@@ -87,7 +75,7 @@ function deliver(
 
 describe('a renderer write Rust applied reaches TS readers as a changed event', () => {
   it('a changed set moves a Rust-owned store so GameLibStore.get returns the renderer value', () => {
-    const { root, listeners } = layer('rust')
+    const { root, listeners } = layer()
     const store = tracerStore(root)
     store.set('480', { title: 'Half-Life' })
     expect(store.get('480')).toEqual({ title: 'Half-Life' })
@@ -107,7 +95,7 @@ describe('a renderer write Rust applied reaches TS readers as a changed event', 
   })
 
   it('a changed delete, replace and clear each assign state; a stale rev is dropped', () => {
-    const { root, listeners } = layer('rust')
+    const { root, listeners } = layer()
     const store = tracerStore(root)
     store.set('a', 1)
     store.set('b', 2)
@@ -144,7 +132,6 @@ describe('a renderer write Rust applied reaches TS readers as a changed event', 
     // over it.
     const frames: StoreFrame[] = []
     const root = createTestStoreRoot(userData, {
-      storeMode: 'rust',
       // The suite answers the frames itself, in the shell's order.
       frameSink: { send: (frame) => frames.push(frame) }
     })
@@ -153,10 +140,8 @@ describe('a renderer write Rust applied reaches TS readers as a changed event', 
       ipc: {
         on: (channel: string, listener: (...args: unknown[]) => unknown) => {
           listeners.set(channel, listener)
-        },
-        handle: () => undefined
+        }
       } as never,
-      registry: createStoreRegistry(),
       root,
       pushFrontendMessage: () => undefined
     })
@@ -215,38 +200,23 @@ describe('a renderer write Rust applied reaches TS readers as a changed event', 
     }
   })
 
-  it('the old write handlers answer only under their shell-only names', () => {
-    const { listeners } = layer('rust')
-    for (const renderer of [
-      'storeSet',
-      'storeDelete',
-      'storeNew',
-      'sidecar:store-set-checked'
-    ]) {
-      expect(listeners.has(renderer)).toBe(false)
-    }
-    for (const shellOnly of [
-      STORE_TS_SET_CHANNEL,
-      STORE_TS_DELETE_CHANNEL,
-      STORE_TS_NEW_CHANNEL,
-      STORE_TS_SET_CHECKED_CHANNEL
-    ]) {
-      expect(listeners.has(shellOnly)).toBe(true)
-    }
+  it('the sidecar registers no store write handler: only the shell answer listener (85-21)', () => {
+    const { listeners } = layer()
+    expect([...listeners.keys()]).toEqual([STORE_MIRROR_EVENT_CHANNEL])
   })
 })
 
 /**
- * One push source per store (85-17): under `rust` the shell announces every change of a store it
- * owns, so the sidecar's own writes on such a store push nothing; under `ts` (D-01) the sidecar is
- * still the renderer's only pusher, exactly as before.
+ * One push source per store (85-17): the shell announces every change of a store it owns, so the
+ * sidecar's own writes on such a store push nothing. Since 85-21 the shell owns every store a
+ * renderer name resolves to.
  */
 describe('the sidecar pushes storeChanged only for stores Rust does not own', () => {
   const changedPushes = (pushes: [string, unknown][]) =>
     pushes.filter(([channel]) => channel === STORE_CHANGED_CHANNEL)
 
-  it('under rust a typed store and a cache store Rust owns push nothing from TS', () => {
-    const { root, pushes } = layer('rust')
+  it('a typed store and a cache store Rust owns push nothing from TS', () => {
+    const { root, pushes } = layer()
     const { tsStore } = createKvsStores({
       registry: createStoreRegistry(),
       root
@@ -262,32 +232,12 @@ describe('the sidecar pushes storeChanged only for stores Rust does not own', ()
     expect(changedPushes(pushes)).toEqual([])
   })
 
-  it('under ts the same writes push from TS as before', () => {
-    const { root, pushes } = layer('ts')
-    const { tsStore } = createKvsStores({
-      registry: createStoreRegistry(),
-      root
-    })
-    tsStore.set('480', { firstPlayed: 'x', lastPlayed: 'x', totalPlayed: 1 })
-    const cache = new CacheStore<unknown>('wikigameinfo', null, {
-      root,
-      kind: 'cache'
-    })
-    cache.set('Game', { a: 1 })
-    const stores = changedPushes(pushes).map(
-      ([, payload]) => (payload as { store: string }).store
-    )
-    expect(stores).toContain('timestampStore')
-    expect(stores).toContain('wikigameinfo')
-  })
-
   it('only a store TS still owns keeps its TS push', () => {
-    expect(isRustOwnedStoreName('timestampStore', 'rust')).toBe(true)
-    expect(isRustOwnedStoreName('steamBottleConfigStore', 'rust')).toBe(true)
-    expect(isRustOwnedStoreName('wikigameinfo', 'rust')).toBe(true)
-    expect(isRustOwnedStoreName('timestampStore', 'ts')).toBe(false)
+    expect(isRustOwnedStoreName('timestampStore')).toBe(true)
+    expect(isRustOwnedStoreName('steamBottleConfigStore')).toBe(true)
+    expect(isRustOwnedStoreName('wikigameinfo')).toBe(true)
     // An unknown or unrecognised name is never Rust's.
-    expect(isRustOwnedStoreName('brand_new_cache', 'rust')).toBe(false)
-    expect(isRustOwnedStoreName('__proto__', 'rust')).toBe(false)
+    expect(isRustOwnedStoreName('brand_new_cache')).toBe(false)
+    expect(isRustOwnedStoreName('__proto__')).toBe(false)
   })
 })

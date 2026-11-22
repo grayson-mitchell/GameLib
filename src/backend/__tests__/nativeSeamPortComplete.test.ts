@@ -11,7 +11,7 @@
  *   - no `GAMELIB_<SLICE>` text survives in src/, meta/ or src-tauri/src, matched as a whole word.
  *     D-05: no rollback flag exists for these channels, and none is built. A later slice that
  *     needs one records a named window in its plan and adds an explicit exemption here
- *     (`FLAG_EXEMPTIONS`; today only the store slice, Phase 85 D-01, until plan 85-21).
+ *     (`FLAG_EXEMPTIONS`; empty since plan 85-21 deleted the store slice's Phase 85 D-01 flag).
  * The intended survivors still exist, the walk reads at least a floor of files, and self-tests
  * prove the scan can fail.
  *
@@ -51,17 +51,15 @@ const flagFor = (slice: string): string =>
 
 /**
  * Slices whose rollback flag may survive, each with its named window. EXACT: a self-test below
- * fails on any other entry. Phase 85 D-01 keeps `GAMELIB_STORE=rust|ts` until the phase's live
- * gate passes; plan 85-21 deletes the flag and this entry with it.
+ * fails on any other entry. Empty: the one window (the store slice, Phase 85 D-01) closed when plan
+ * 85-21 deleted its flag after the phase's live gate.
  */
-const FLAG_EXEMPTIONS: Record<string, string> = {
-  store: 'Phase 85 D-01 rollback window; deleted by plan 85-21'
-}
+const FLAG_EXEMPTIONS: Record<string, string> = {}
 
 /**
- * True when `src` names `flag` as a whole word. `GAMELIB_STORE` is a prefix of two names that
- * legitimately stay (`GAMELIB_STORE_BOOT`, 85-09, and the `[GAMELIB_STORE_LAZY_MISS]` marker), so
- * a substring match would report them; `_` is a word character, so `\b` does not split them.
+ * True when `src` names `flag` as a whole word. The store slice's flag is a prefix of two names that
+ * legitimately stay (`<flag>_BOOT`, 85-09, and the `[<flag>_LAZY_MISS]` marker), so a substring
+ * match would report them; `_` is a word character, so `\b` does not split them.
  */
 const namesFlag = (src: string, flag: string): boolean =>
   new RegExp(`\\b${flag}\\b`).test(src)
@@ -181,24 +179,22 @@ describe('native seam port complete (Phase 83 D-05)', () => {
     }
   )
 
-  it('the flag exemptions name only the store slice, with its window, and that slice exists', () => {
-    expect(Object.keys(FLAG_EXEMPTIONS)).toEqual(['store'])
-    expect(FLAG_EXEMPTIONS['store']).toBe(
-      'Phase 85 D-01 rollback window; deleted by plan 85-21'
-    )
+  it('no slice has a flag exemption, and the store slice is scanned like every other', () => {
+    expect(FLAG_EXEMPTIONS).toEqual({})
     expect(slices).toContain('store')
   })
 
   it('the flag scan matches the flag as a whole word only', () => {
     const flag = flagFor('store')
-    expect(flag).toBe('GAMELIB_STORE')
-    expect(namesFlag('std::env::var("GAMELIB_STORE_BOOT")', flag)).toBe(false)
+    // Built from parts so this file does not name the deleted flag itself.
+    expect(flag).toBe(['GAMELIB', 'STORE'].join('_'))
+    expect(namesFlag(`std::env::var("${flag}_BOOT")`, flag)).toBe(false)
     expect(
-      namesFlag("export const M = '[GAMELIB_STORE_LAZY_MISS]' as const", flag)
+      namesFlag(`export const M = '[${flag}_LAZY_MISS]' as const`, flag)
     ).toBe(false)
-    expect(namesFlag('GAMELIB_STORE=ts pnpm tauri:dev', flag)).toBe(true)
-    expect(namesFlag('env::var("GAMELIB_STORE")', flag)).toBe(true)
-    expect(namesFlag('MY_GAMELIB_STORE', flag)).toBe(false)
+    expect(namesFlag(`${flag}=ts pnpm tauri:dev`, flag)).toBe(true)
+    expect(namesFlag(`env::var("${flag}")`, flag)).toBe(true)
+    expect(namesFlag(`MY_${flag}`, flag)).toBe(false)
   })
 
   it.each(KEPT)('%s is kept', (p) => {

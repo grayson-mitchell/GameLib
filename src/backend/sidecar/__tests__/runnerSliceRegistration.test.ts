@@ -859,7 +859,6 @@ describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 0
     restoreCanonicalRegistrations()
     registerAppShellFlows({
       readOnly: services.storeRoot.readOnly,
-      storeMode: services.storeRoot.storeMode,
       storeMirrors: services.storeRoot.mirrors,
       requestRustInvoke: jest.fn(),
       sendFrontendMessage: jest.fn(),

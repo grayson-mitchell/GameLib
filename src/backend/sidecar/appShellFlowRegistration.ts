@@ -185,12 +185,8 @@ import { assertOpenableExternalUrl } from './openPolicy'
 import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { GlobalConfigSlice } from '../config'
 import { logInfo, LogPrefix } from '../logger'
-import {
-  pushReadOnlyStoresNotice,
-  raiseReadOnlyStoresNoticeInRust
-} from './readOnlyStoresNotice'
+import { raiseReadOnlyStoresNoticeInRust } from './readOnlyStoresNotice'
 import type { ReadOnlyStores } from '../storeVersioning/readOnlyStores'
-import type { StoreMode } from '../stores/storeOwnership'
 import type { MirrorRegistry } from '../stores/mirrorCell'
 // Phase 35 plan 11: boot-time download-queue auto-resume, ported from
 // `main.ts:613` before that file is deleted at plan 35-14. See the
@@ -342,11 +338,6 @@ export interface AppShellFlowDeps
   dialogs: Pick<Dialogs, 'showErrorBox' | 'showMessageBox' | 'displayAcks'>
   /** The boot's read-only store tracker, flushed to the renderer once per launch (66.4-18). */
   readOnly: Pick<ReadOnlyStores, 'flush' | 'list'>
-  /**
-   * Who owns the stores this boot (`GAMELIB_STORE`). Under `rust` the read-only notice is raised by
-   * Rust with TS's entries merged in (85-16, D-12); under `ts` TS raises it itself.
-   */
-  storeMode: StoreMode
   /** The boot's store mirrors: `quit` waits for the shell to have applied their writes (85-11). */
   storeMirrors: Pick<MirrorRegistry, 'flushStores'>
   /** The boot-owned abort registry the `abort` channel signals (66.4-13). */
@@ -720,19 +711,15 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
         // replay, so a push at detection time would be dropped. WHY ONE-SHOT: this block
         // runs once per process, giving one notice per launch. Creates no timer or handle
         // (sidecar exit contract); own try/catch so it can never skip the work above.
-        // Phase 85 (85-16, D-12): under GAMELIB_STORE=rust Rust raises the notice, merging the
-        // entries TS still reports (stores TS owns, such as store/migrations) with its own.
+        // Phase 85 (85-16, D-12): Rust raises the notice, merging the entries TS still reports with
+        // its own (no TS-raised notice since 85-21, D-03).
         try {
-          if (deps.storeMode === 'rust') {
-            raiseReadOnlyStoresNoticeInRust(
-              deps.readOnly,
-              deps.requestRustInvoke
-            ).catch((error: unknown) =>
-              logSendFailure('frontendReady -> readOnlyStoresNotice', error)
-            )
-          } else {
-            pushReadOnlyStoresNotice(deps.readOnly, deps.sendFrontendMessage)
-          }
+          raiseReadOnlyStoresNoticeInRust(
+            deps.readOnly,
+            deps.requestRustInvoke
+          ).catch((error: unknown) =>
+            logSendFailure('frontendReady -> readOnlyStoresNotice', error)
+          )
         } catch (error) {
           logSendFailure('frontendReady -> readOnlyStoresNotice', error)
         }

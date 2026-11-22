@@ -2,10 +2,9 @@
  * The token-bearing and account family moves to the Rust owner (Phase 85 plan 14, FND-06, D-01 third
  * family).
  *
- * `storeOwnership.json` sets `families.account`, so under `GAMELIB_STORE=rust` (the default) the five
- * account configs (`steam_store`, `humble_store`, `gog_store`, `nile_store`, `legendary_store`) are
- * windows onto mirror cells and each write is a frame for the shell's single writer; under
- * `GAMELIB_STORE=ts` they are conf-backed exactly as before. `steamConfigStore` and
+ * The five account configs (`steam_store`, `humble_store`, `gog_store`, `nile_store`,
+ * `legendary_store`) are windows onto mirror cells and each write is a frame for the shell's single
+ * writer (no flag and no conf owner since 85-21, D-03). `steamConfigStore` and
  * `steamBottleConfigStore` share `steam_store/config.json` and so share one cell (D-11, 85-SPIKES S1
  * rule 5). The secrets themselves never live here: they are in the shell's keyring_dispatch (D-14),
  * and what these files may still hold from older profiles (`steam:v1:` / `humble:v1:` ciphertext,
@@ -17,13 +16,11 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import ownershipFile from 'common/types/ipc/storeOwnership.json'
 import tableFile from 'common/types/ipc/storeTable.json'
 import { createStores } from '../createStores'
 import { createStoreRegistry } from '../storeRegistry'
 import type { StoreFrame, StoreFrameSink } from '../storeFrames'
-import { isRustOwned } from '../storeOwnership'
-import type { StoreMode } from '../storeOwnership'
+import { isRustOwnedStoreKey } from '../storeFrames'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 
 const ACCOUNT_ROWS = tableFile.rows.filter(
@@ -60,14 +57,13 @@ function storesOfRow(
 
 function build(
   userData: string,
-  mode: StoreMode,
   frames: StoreFrame[],
   frameSink?: StoreFrameSink
 ) {
-  const root = createTestStoreRoot(userData, {
-    storeMode: mode,
-    ...(frameSink ? { frameSink } : { recordFrames: frames })
-  })
+  const root = createTestStoreRoot(
+    userData,
+    frameSink ? { frameSink } : { recordFrames: frames }
+  )
   const stores = createStores({ registry: createStoreRegistry(), root })
   return { root, stores }
 }
@@ -81,14 +77,6 @@ afterEach(() => {
 })
 
 describe(`the account family (${ACCOUNT_ROWS.length} account rows)`, () => {
-  it('is flipped by the family flag alone, after cache and user-state, before settings (85-15)', () => {
-    expect(ownershipFile.families.account).toBe(true)
-    expect(ownershipFile.families.cache).toBe(true)
-    expect(ownershipFile.families['user-state']).toBe(true)
-    expect(ownershipFile.families.settings).toBe(true)
-    expect(Object.keys(ownershipFile.stores)).toEqual([])
-  })
-
   it('names exactly the five account configs, two of them token-bearing (D-01)', () => {
     expect(ACCOUNT_ROWS.map((row) => row.key).sort()).toEqual([
       'gog_store/config',
@@ -109,10 +97,9 @@ describe(`the account family (${ACCOUNT_ROWS.length} account rows)`, () => {
     ])
   })
 
-  it('is Rust-owned under rust and TS-owned under ts', () => {
+  it('is Rust-owned', () => {
     for (const row of ACCOUNT_ROWS) {
-      expect(isRustOwned(row.key, 'rust')).toBe(true)
-      expect(isRustOwned(row.key, 'ts')).toBe(false)
+      expect(isRustOwnedStoreKey(row.key)).toBe(true)
     }
   })
 
@@ -120,7 +107,7 @@ describe(`the account family (${ACCOUNT_ROWS.length} account rows)`, () => {
     '%s',
     (_key, row) => {
       it('builds one TS store per name the table lists for the file', () => {
-        const { stores } = build(userData, 'rust', [])
+        const { stores } = build(userData, [])
         expect(storesOfRow(userData, row.key, stores)).toHaveLength(
           row.tsNames.length
         )
@@ -130,7 +117,7 @@ describe(`the account family (${ACCOUNT_ROWS.length} account rows)`, () => {
         'is mirror-backed under rust through %s: a write is a frame for this store',
         (_name, index) => {
           const frames: StoreFrame[] = []
-          const { stores } = build(userData, 'rust', frames)
+          const { stores } = build(userData, frames)
           storesOfRow(userData, row.key, stores)[index]?.set(
             'accountFamilyProbe',
             { n: 1 }
@@ -147,18 +134,6 @@ describe(`the account family (${ACCOUNT_ROWS.length} account rows)`, () => {
           ).toContain('accountFamilyProbe')
         }
       )
-
-      it('is conf-backed under GAMELIB_STORE=ts: a write sends no frame and conf writes the file', () => {
-        const frames: StoreFrame[] = []
-        const { stores } = build(userData, 'ts', frames)
-        for (const store of storesOfRow(userData, row.key, stores)) {
-          store.set('accountFamilyProbe', { n: 1 })
-        }
-        expect(frames).toEqual([])
-        expect(
-          readFileSync(join(userData, `${row.key}.json`), 'utf8')
-        ).toContain('accountFamilyProbe')
-      })
     }
   )
 })
@@ -190,7 +165,7 @@ describe('steam_store/config: steamConfigStore and steamBottleConfigStore are on
   ]
 
   it('both names resolve to the same file path', () => {
-    const { stores } = build(userData, 'rust', [])
+    const { stores } = build(userData, [])
     const paths = storesOfRow(userData, 'steam_store/config', stores).map(
       (store) => (store as unknown as { store: { path: string } }).store.path
     )
@@ -209,7 +184,7 @@ describe('steam_store/config: steamConfigStore and steamBottleConfigStore are on
         sent.push(frame)
       }
     }
-    const { stores } = build(userData, 'rust', [], silent)
+    const { stores } = build(userData, [], silent)
     const { config, bottle } = steamPair(stores)
     config.set('isLoggedIn', true)
     expect(bottle.get('isLoggedIn')).toBe(true)
@@ -229,7 +204,7 @@ describe('steam_store/config: steamConfigStore and steamBottleConfigStore are on
 
   it('interleaved writes are frames in call order, all naming the one store', () => {
     const frames: StoreFrame[] = []
-    const { stores } = build(userData, 'rust', frames)
+    const { stores } = build(userData, frames)
     interleave(stores)
     expect(
       frames.map((frame) => [frame.store, frame.op, frame.key, frame.valueJson])
@@ -243,44 +218,34 @@ describe('steam_store/config: steamConfigStore and steamBottleConfigStore are on
     )
   })
 
-  it('leaves one file whose bytes are the stamped view serialised with tabs, equal to conf’s for the same writes', () => {
-    const tsDir = mkdtempSync(join(tmpdir(), 'gamelib-account-family-ts-'))
-    try {
-      const rust = build(userData, 'rust', [])
-      interleave(rust.stores)
-      const ts = build(tsDir, 'ts', [])
-      interleave(ts.stores)
+  it('leaves one file whose bytes are the stamped view serialised with tabs', () => {
+    const rust = build(userData, [])
+    interleave(rust.stores)
 
-      const file = join(userData, 'steam_store', 'config.json')
-      const text = readFileSync(file, 'utf8')
-      const onDisk = JSON.parse(text) as Record<string, unknown>
-      const { __internal__: envelope, ...data } = onDisk
-      expect(envelope).toEqual({
-        gamelib: {
-          schemaVersion:
-            rust.root.versioning.currentVersionOf('steam_store/config')
-        }
-      })
-      expect(data).toEqual({
-        isLoggedIn: true,
-        bottleName: 'placeholder-bottle-2',
-        userData: { username: 'placeholder-user', steamId: 'placeholder-id' },
-        provisioned: true
-      })
-      expect(text).toBe(JSON.stringify(onDisk, undefined, '\t'))
-      expect(text).toBe(
-        readFileSync(join(tsDir, 'steam_store', 'config.json'), 'utf8')
-      )
-      // Both names read the final state back.
-      const { config, bottle } = steamPair(rust.stores)
-      expect(config.get('bottleName')).toBe('placeholder-bottle-2')
-      expect(bottle.get('userData')).toEqual({
-        username: 'placeholder-user',
-        steamId: 'placeholder-id'
-      })
-    } finally {
-      rmSync(tsDir, { recursive: true, force: true })
-    }
+    const file = join(userData, 'steam_store', 'config.json')
+    const text = readFileSync(file, 'utf8')
+    const onDisk = JSON.parse(text) as Record<string, unknown>
+    const { __internal__: envelope, ...data } = onDisk
+    expect(envelope).toEqual({
+      gamelib: {
+        schemaVersion:
+          rust.root.versioning.currentVersionOf('steam_store/config')
+      }
+    })
+    expect(data).toEqual({
+      isLoggedIn: true,
+      bottleName: 'placeholder-bottle-2',
+      userData: { username: 'placeholder-user', steamId: 'placeholder-id' },
+      provisioned: true
+    })
+    expect(text).toBe(JSON.stringify(onDisk, undefined, '\t'))
+    // Both names read the final state back.
+    const { config, bottle } = steamPair(rust.stores)
+    expect(config.get('bottleName')).toBe('placeholder-bottle-2')
+    expect(bottle.get('userData')).toEqual({
+      username: 'placeholder-user',
+      steamId: 'placeholder-id'
+    })
   })
 })
 
@@ -311,7 +276,7 @@ describe('older profiles: ciphertext and unknown keys survive a re-save untouche
       writeFileSync(file, text)
 
       const frames: StoreFrame[] = []
-      const { stores } = build(userData, 'rust', frames)
+      const { stores } = build(userData, frames)
       const [store] = storesOfRow(userData, rowKey, stores)
       // Reads see the older keys as they are.
       expect(store?.get('aFieldFromALaterVersion')).toEqual(

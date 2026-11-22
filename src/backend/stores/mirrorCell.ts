@@ -44,7 +44,7 @@ import {
   type StoreFrame,
   type StoreFrameSink
 } from './storeFrames'
-import type { StoreBootEnv } from './storeOwnership'
+import type { StoreBootEnv } from './storeRoot'
 
 const RESERVED_KEY = '__internal__'
 

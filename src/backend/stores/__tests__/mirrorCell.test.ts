@@ -51,7 +51,7 @@ function recording() {
 }
 
 const rustRoot = (sink: StoreFrameSink, boot?: StoreRoot['boot']) =>
-  createTestStoreRoot(userData, { storeMode: 'rust', frameSink: sink, boot })
+  createTestStoreRoot(userData, { frameSink: sink, boot })
 
 const tracerStore = (root: StoreRoot) =>
   new GameLibStore({
@@ -532,7 +532,6 @@ class Interleaving {
   ) {
     this.dir = mkdtempSync(join(tmpdir(), 'gamelib-interleave-'))
     this.root = createTestStoreRoot(this.dir, {
-      storeMode: 'rust',
       frameSink: { send: (frame) => void this.frameQ.push(frame) }
     })
   }

@@ -1,289 +1,59 @@
 /**
- * Sidecar store WRITE handlers (Phase 29 Plan 06, D-05/D-06).
+ * Sidecar store layer registrations (Phase 29 Plan 06, D-05/D-06; Phase 85 plans 10, 17 and 21).
  *
- * Before this file existed, `tauriTransport.ts`'s `snapshotSet()`/`snapshotDelete()`
- * emitted `send`-kind `storeSet`/`storeDelete` frames that `dispatchSend()`
- * (`sidecarRpc.ts`) looked up in the listener registry, found an empty array for, and
- * iterated zero times. No error, no log, no rejected promise — the write vanished with
- * ZERO observable signal (29-RESEARCH Pitfall 1), worse than every other unported
- * channel (which at least rejects with `UNPORTED_CHANNEL_MARKER`). Meanwhile the
- * renderer's own optimistic snapshot update made the UI look like the write worked
- * until the next restart. This file closes that hole: a real, guarded choke point that
- * persists the write through the registry and announces it back to the renderer.
+ * The renderer's store writes (`storeSet`, `storeDelete`, `storeNew`, the confirmed
+ * `sidecar:store-set-checked`) are native channels the Rust shell owns (85-17): Rust checks each
+ * against the shared policy (`storeChannels.json`) and applies it to its `StoreHost`, the one disk
+ * writer. Since 85-21 (D-03) the sidecar keeps no fallback write handler. What is left here:
  *
- * `applyStoreWrite()` is THE single write choke point (D-06). Any future sidecar-side
- * write that bypasses this function will make the renderer's snapshot silently diverge
- * from what is actually on disk — do not add a second frontend-push call site for the
- * `STORE_CHANGED_CHANNEL` event anywhere else.
+ * - the single push site for `STORE_CHANGED_CHANNEL` (D-06): do not add a second
+ *   frontend-push call site for that event anywhere else;
+ * - the store root's `changes` channel bound to that site;
+ * - the `storeMirrorEvent` registration that routes the shell's answers to the mirror cells.
  *
  * No import of the real `electron` module — uses `./platformApi`'s `ipcMain`, same as
  * every other file under this directory.
  */
 
-import Store from '../store_backend'
-
 import type { IpcRegistry } from './ipcRegistry'
-// Namespace import (not a named import) so this module's frontend-push call site is
-// the ONLY line in the file naming that function — see the header comment and the D-06
-// single-choke-point note above `applyStoreWrite`.
 import type { HostServices } from '../host'
-import type { StoreRegistry } from '../stores/storeRegistry'
 import type { StoreRoot } from '../stores/storeRoot'
-import { TOKEN_STORE_KEY } from '../storeManagers/steam/constants'
+import { isAllowedStoreField } from 'common/types/storePolicy'
 import {
-  CACHE_STORE_NAME_PATTERN,
-  DENIED_CACHE_STORES,
-  isAllowedStoreField,
-  isSafeKeyPath,
-  isWritableStoreField,
-  RECOGNIZED_CACHE_STORE_NAMES,
-  STORE_UNIVERSE
-} from 'common/types/storePolicy'
-import {
-  STORE_TS_SET_CHANNEL,
-  STORE_TS_DELETE_CHANNEL,
-  STORE_TS_NEW_CHANNEL,
-  STORE_TS_SET_CHECKED_CHANNEL,
   STORE_CHANGED_CHANNEL,
   STORE_MIRROR_EVENT_CHANNEL,
   type StoreChangedPayload
 } from 'common/types/sidecarTransport'
 import { isStoreMirrorEvent } from '../stores/mirrorCell'
-import { isRustOwnedStoreName, type StoreMode } from '../stores/storeOwnership'
-
-/** Minimal shape both a registered typed store and a raw cache-backed `Store` satisfy. */
-interface WritableStoreBackend {
-  set: (key: string, value: unknown) => void
-  delete: (key: string) => void
-  readonly readOnly?: boolean
-}
-
-/**
- * Resolves the WRITE target for a store name — the write-path mirror of `handlers.ts`'s
- * `resolveRawStore()`, but returns the live backend (so a write actually persists)
- * rather than a raw snapshot object. Callers MUST have already validated `storeName`
- * (guard (a) in `applyStoreWrite` below) — this function never reconstructs a path from
- * the name by hand (29-RESEARCH Pitfall 4) and never accepts `cwd`/`name` from the RPC
- * frame; the cache-store branch below is the ONLY construction shape it will ever use.
- */
-function resolveWritableStore(
-  registry: StoreRegistry,
-  root: StoreRoot,
-  storeName: string
-): WritableStoreBackend | undefined {
-  // WR-09: the deny list is load-bearing on the write path too — a denied cache store
-  // has no resolvable write target, independently of guard (c).
-  if (DENIED_CACHE_STORES.includes(storeName)) {
-    return undefined
-  }
-
-  const registered = registry.get(storeName)
-  if (registered) {
-    // TypeCheckedStoreBackend's generic `set<KeyType>`/`delete<KeyType>` signatures are
-    // only meaningfully typed against a literal `Name`/`KeyType` pair — this dispatch is
-    // deliberately name-generic (a `ValidStoreName` arriving as a runtime string), the
-    // same class of cast `typed_store.ts`'s own registry already uses
-    // (`instance: this as unknown as TypeCheckedStoreBackend<ValidStoreName>`).
-    return registered as unknown as WritableStoreBackend
-  }
-
-  // WR-01/WR-02: recognized cache-store names ONLY, and still syntactically validated
-  // — `storeName` reaches `Store`'s `name` option and therefore `resolveStorePath()`.
-  if (
-    RECOGNIZED_CACHE_STORE_NAMES.includes(storeName) &&
-    CACHE_STORE_NAME_PATTERN.test(storeName)
-  ) {
-    return new Store({
-      root,
-      cwd: 'store_cache',
-      name: storeName,
-      clearInvalidConfig: true
-    }) as unknown as WritableStoreBackend
-  }
-
-  return undefined
-}
+import { isRustOwnedStoreName } from '../stores/storeFrames'
 
 type PushFrontendMessage = HostServices['pushFrontendMessage']
-
-interface StoreLayer {
-  registry: StoreRegistry
-  root: StoreRoot
-  push: PushFrontendMessage
-}
-
-/**
- * THE single write choke point (D-06). Guards run in this fixed order; each rejection
- * logs exactly one stderr line naming the store and key — NEVER the value (T-28-04
- * convention) — and returns false without writing or emitting a change event. Returns true
- * only after the write persisted and the change was pushed (the confirmed-write channel
- * reports this to the renderer; the send-kind listeners ignore it).
- */
-export function applyStoreWrite(
-  registry: StoreRegistry,
-  root: StoreRoot,
-  push: PushFrontendMessage,
-  op: 'set' | 'delete',
-  storeName: string,
-  key: string,
-  value?: unknown
-): boolean {
-  // Guard (a): storeName must be a declared store (STORE_UNIVERSE) or a RECOGNIZED
-  // dynamic cache-store name.
-  //
-  // WR-01 (Phase 29 code review): this guard used to test the store name against
-  // `CACHE_STORE_NAME_PATTERN` (`/^[A-Za-z0-9_-]{1,64}$/`), which matches EVERY member
-  // of STORE_UNIVERSE and every other plausible name — it could only ever fire for a
-  // name containing `.`, `/`, a space, or >64 chars, while its comment claimed it was
-  // "the same acceptance test the read side applies", implying an allow-list check that
-  // did not exist. The real gate was guard (c) alone. Testing against
-  // `RECOGNIZED_CACHE_STORE_NAMES` makes the guard mean what it says. The four D-13
-  // names plus `humble_library` are the ONLY dynamic cache stores the frontend ever
-  // constructs (`new CacheStore(...)`, src/frontend/helpers/stores.ts).
-  const isUniverseMember = STORE_UNIVERSE.includes(storeName)
-  const isRecognizedCacheName = RECOGNIZED_CACHE_STORE_NAMES.includes(storeName)
-  if (!isUniverseMember && !isRecognizedCacheName) {
-    process.stderr.write(
-      `[storeWriteHandlers] rejected write — unrecognized store name '${storeName}' key '${key}'\n`
-    )
-    return false
-  }
-
-  // Guard (b): PHASE 28 D-04 / REQ-28-02 — the Steam refresh token lives in the OS
-  // Keychain via `SidecarKeyringTokenStore`, never in `steamConfigStore`'s plaintext
-  // electron-store file. A plaintext write here would be Keychain-decrypt-failed by
-  // Electron and would silently sign the real user out of the shipped app. Unconditional
-  // — tracks the `TOKEN_STORE_KEY` constant rather than a duplicated literal, so a rename
-  // of that constant can never quietly reopen this guard.
-  if (
-    storeName === 'steamConfigStore' &&
-    key.split('.')[0] === TOKEN_STORE_KEY
-  ) {
-    process.stderr.write(
-      `[storeWriteHandlers] rejected write — steamConfigStore.${TOKEN_STORE_KEY} is Keychain-owned (D-04/REQ-28-02), key '${key}'\n`
-    )
-    return false
-  }
-
-  // Guard (c′): CR-01 defence-in-depth — refuse prototype-chain key path segments at
-  // the POLICY layer too, not only at the storage layer. The storage layer (conf's
-  // dot-prop `disallowedKeys`) rejects these itself, but the policy layer must not depend
-  // on that: any future storage backend would otherwise inherit the hole. Mirrors
-  // `dot-prop`'s `disallowedKeys`. Runs
-  // BEFORE guard (c) purely so a hostile key gets its own precise diagnostic —
-  // `isWritableStoreField` also refuses these, so the two are belt and braces.
-  if (!isSafeKeyPath(key)) {
-    process.stderr.write(
-      `[storeWriteHandlers] rejected write — disallowed key path segment, store '${storeName}'\n`
-    )
-    return false
-  }
-
-  // Guard (c): D-08 WRITE-SIDE — a field the renderer may not read, it may not write,
-  // so a newly added secret field is write-protected by DEFAULT, not just
-  // read-protected. WR-04 (Phase 29 code review): the write predicate is
-  // `isWritableStoreField`, which is STRICTLY NARROWER than the read predicate — read
-  // safety and write safety are not the same question. `configStore.settings`
-  // (AppSettings: wineVersion.bin, wrapperOptions, launcherArgs, winePrefix — executable
-  // paths and command lines consumed on the next game launch) is readable but NOT
-  // renderer-writable; the same holds for `configStore.userHome`/`userInfo` and every
-  // `*.userData`. Settings changes route through the typed requestAppSettings/setSetting
-  // IPC instead.
-  if (!isWritableStoreField(storeName, key)) {
-    process.stderr.write(
-      `[storeWriteHandlers] rejected write — field not allow-listed, store '${storeName}' key '${key}'\n`
-    )
-    return false
-  }
-
-  // Guard (d): resolve the target ONLY through the registry or the fixed cache-store
-  // construction shape — never a path reconstructed from the name.
-  const target = resolveWritableStore(registry, root, storeName)
-  if (!target) {
-    process.stderr.write(
-      `[storeWriteHandlers] rejected write — no resolvable store instance for '${storeName}' key '${key}'\n`
-    )
-    return false
-  }
-
-  // Guard (e): Phase 68 D-03 — a read-only store (newer-than-supported or failed
-  // migration) takes no renderer write, and a refused write must not be pushed (the
-  // renderer would cache a value that is not on disk). The `GameLibStore` setter is
-  // the backstop; this keeps the refusal from being announced. Reserved `__internal__`
-  // keys are refused earlier by guard (c) via `isAllowedStoreField`.
-  if (target.readOnly === true) {
-    process.stderr.write(
-      `[storeWriteHandlers] refusing write to read-only store '${storeName}' key '${key}'\n`
-    )
-    return false
-  }
-
-  try {
-    // Suppressed because THIS function pushes the change itself, a few lines down, with a
-    // richer payload than the store class can produce (an explicit `deleted` flag either
-    // way). Without this the write emits two frames — one from the class, one from here.
-    // Whoever initiates a write owns its notification; this handler initiates these.
-    //
-    // The push below is NOT redundant with the class-level one and must not be deleted in
-    // favour of it: `resolveWritableStore` can hand back a RAW `electron-store` instance
-    // for the cache-store branch, which has no notification hook at all.
-    root.changes.withSuppressed(() => {
-      if (op === 'set') {
-        target.set(key, value)
-      } else {
-        target.delete(key)
-      }
-    })
-  } catch (error) {
-    // Repudiation control (T-29-30): a write failure must never be purely silent.
-    process.stderr.write(
-      `[storeWriteHandlers] write threw for store '${storeName}' key '${key}': ${
-        error instanceof Error ? error.message : String(error)
-      }\n`
-    )
-    return false
-  }
-
-  pushStoreChanged(push, root.storeMode, {
-    store: storeName,
-    key,
-    value,
-    deleted: op === 'delete'
-  })
-  return true
-}
 
 /**
  * D-06: the ONLY frontend-push call site for this event in this file (or anywhere else) —
  * see the header comment.
  *
- * Extracted from `applyStoreWrite`'s body so a SECOND class of producer can reach it
- * without violating that single-call-site rule. `applyStoreWrite` covers writes the
- * RENDERER initiated (`storeSet`/`storeDelete` frames); the sidecar's own store managers
- * write straight through `cache.ts`/`typed_store.ts` and used to announce nothing at
- * all — the divergence this file's header warned about, live-confirmed in
- * `.planning/debug/gog-login-ui-never-updates.md` (GOG login persisted 7 games while the
- * renderer rendered none, silently, until restart). Those writers now reach this same
- * function through the store root's `changes` channel bound below.
+ * The sidecar's own store managers write straight through `cache.ts`/`typed_store.ts` and used to
+ * announce nothing at all — the divergence `.planning/debug/gog-login-ui-never-updates.md`
+ * live-confirmed (GOG login persisted 7 games while the renderer rendered none, silently, until
+ * restart). Those writers reach this function through the store root's `changes` channel bound
+ * below.
  */
 function pushStoreChanged(
   push: PushFrontendMessage,
-  storeMode: StoreMode,
   payload: StoreChangedPayload
 ): void {
-  // Phase 85 (85-17): ONE PUSH SOURCE PER STORE. Under `rust` the shell announces every change of a
-  // store it owns to the renderer itself, whoever made it (this sidecar's mirror frames included),
-  // in its rev order and through the same allow-list. A second push from here would arrive with no
-  // rev, on another route, so the renderer could apply it over a newer value. Under `ts`, and for
-  // a store TS still owns, nothing changed: this is still the one push site.
-  if (isRustOwnedStoreName(payload.store, storeMode)) return
+  // Phase 85 (85-17): ONE PUSH SOURCE PER STORE. The shell announces every change of a store it
+  // owns to the renderer itself, whoever made it (this sidecar's mirror frames included), in its rev
+  // order and through the same allow-list. A second push from here would arrive with no rev, on
+  // another route, so the renderer could apply it over a newer value. Since 85-21 the shell owns
+  // every store a renderer name resolves to, so this site pushes only for a name no Rust-owned
+  // file backs (an unrecognised runtime cache).
+  if (isRustOwnedStoreName(payload.store)) return
 
-  // SECRET-LEAK GUARD — load-bearing for the sidecar-initiated producer, redundant for
-  // `applyStoreWrite`.
+  // SECRET-LEAK GUARD.
   //
-  // `applyStoreWrite` validates every renderer-driven write against
-  // `isWritableStoreField` BEFORE it writes, so anything reaching this function from
-  // there was already allow-listed. The store classes have no such gate: they write
+  // The store classes have no write gate: they write
   // whatever the backend asks them to, including genuinely secret fields (Steam refresh
   // tokens, Humble session/CSRF values). Pushing those unfiltered would place secrets in
   // the renderer's snapshot — the exact thing `handlers.ts`'s `filterStoreSnapshot()`
@@ -293,8 +63,8 @@ function pushStoreChanged(
   // emitter), so this is the only place the check can happen.
   //
   // An `invalidated` push carries no value and no meaningful key — it only tells the
-  // renderer to re-fetch, and that re-fetch goes through `STORE_FETCH_CHANNEL`, which is
-  // already filtered sidecar-side. It is therefore safe and must NOT be gated on a key
+  // renderer to re-fetch, and that re-fetch goes through `STORE_FETCH_CHANNEL`, which the shell
+  // filters. It is therefore safe and must NOT be gated on a key
   // that does not exist.
   if (
     !payload.invalidated &&
@@ -307,155 +77,31 @@ function pushStoreChanged(
 }
 
 /**
- * Registers the three write listeners. Each listener closes over this call's own registry,
- * root and push, so two boots never resolve through one another's stores (C-WR-1). Single-run
- * is owned by the 'register-handlers' boot step (D-66.4-01), not by a module latch.
+ * Binds this boot's change channel to the push site and registers the mirror-event listener. Each
+ * closes over this call's own root and push, so two boots never route through one another's stores
+ * (C-WR-1). Single-run is owned by the 'register-handlers' boot step (D-66.4-01), not by a module
+ * latch.
  */
 export function registerStoreWriteHandlers(deps: {
-  ipc: Pick<IpcRegistry, 'on' | 'handle'>
-  registry: StoreRegistry
+  ipc: Pick<IpcRegistry, 'on'>
   root: StoreRoot
   /** This boot's backend -> frontend push (66.4-15). */
   pushFrontendMessage: PushFrontendMessage
 }): void {
-  const layer: StoreLayer = {
-    registry: deps.registry,
-    root: deps.root,
-    push: deps.pushFrontendMessage
-  }
-
   // Point THIS boot's root at this file's single push site, so writes the SIDECAR itself
-  // performs reach the renderer's D-06 listener the same way renderer-initiated writes
-  // already do. Bound here, not in bootstrap, because this is the sidecar-only entry point
-  // that already owns this channel. Bound on every call because the channel is per root;
-  // notifications raised before this call are still dropped (the channel starts unbound).
+  // performs reach the renderer's D-06 listener. Bound here, not in bootstrap, because this is
+  // the sidecar-only entry point that already owns this channel. Bound on every call because the
+  // channel is per root; notifications raised before this call are still dropped (the channel
+  // starts unbound).
   deps.root.changes.bind((payload) =>
-    pushStoreChanged(deps.pushFrontendMessage, deps.root.storeMode, payload)
-  )
-  // `send`-kind (fire-and-forget) registrations: unlike an `invoke` channel there is no
-  // response frame and no promise to reject on the renderer side — which is exactly why
-  // the missing registration was invisible before this plan (see header comment).
-  //
-  // Phase 85 (85-17): the renderer's `storeSet` is a native Rust channel now; this is its old
-  // handler under the shell-only name `store:ts-set`, which the shell forwards to for a store TS
-  // still owns (GAMELIB_STORE=ts, or a row Rust never opens).
-  deps.ipc.on(
-    STORE_TS_SET_CHANNEL,
-    (_event: unknown, storeName: unknown, key: unknown, value: unknown) => {
-      if (typeof storeName !== 'string' || typeof key !== 'string') {
-        process.stderr.write(
-          '[storeWriteHandlers] store:ts-set rejected a non-string store name or key\n'
-        )
-        return
-      }
-      {
-        const { registry, root, push } = layer
-        applyStoreWrite(registry, root, push, 'set', storeName, key, value)
-      }
-    }
+    pushStoreChanged(deps.pushFrontendMessage, payload)
   )
 
-  // Phase 64 plan 03: the CONFIRMED write. Same choke point as `storeSet`, but an `invoke`
-  // channel, so the renderer awaits whether the write reached disk. A refusal is `false`, not a
-  // rejected promise: every guard already logged its own stderr line. 85-17: like the three sends
-  // below, the renderer's channel is native now and this is its shell-only `store:ts-*` name.
-  deps.ipc.handle(
-    STORE_TS_SET_CHECKED_CHANNEL,
-    (
-      _event: unknown,
-      storeName: unknown,
-      key: unknown,
-      value: unknown
-    ): Promise<boolean> => {
-      if (typeof storeName !== 'string' || typeof key !== 'string') {
-        process.stderr.write(
-          '[storeWriteHandlers] store:ts-set-checked rejected a non-string store name or key\n'
-        )
-        return Promise.resolve(false)
-      }
-      const { registry, root, push } = layer
-      return Promise.resolve(
-        applyStoreWrite(registry, root, push, 'set', storeName, key, value)
-      )
-    }
-  )
-
-  deps.ipc.on(
-    STORE_TS_DELETE_CHANNEL,
-    (_event: unknown, storeName: unknown, key: unknown) => {
-      if (typeof storeName !== 'string' || typeof key !== 'string') {
-        process.stderr.write(
-          '[storeWriteHandlers] store:ts-delete rejected a non-string store name or key\n'
-        )
-        return
-      }
-      {
-        const { registry, root, push } = layer
-        applyStoreWrite(registry, root, push, 'delete', storeName, key)
-      }
-    }
-  )
-
-  // T-27-03 continuation: `resolveStorePath()` is only safe as long as `cwd`/`name`
-  // never originate in an RPC frame. `storeNew` therefore NEVER constructs a store from
-  // the renderer-supplied `options` argument — it only no-ops for an already-registered
-  // typed store, or constructs a permitted dynamic cache store using the hardcoded shape
-  // below, ignoring `options` except to log a mismatch diagnostic.
-  deps.ipc.on(
-    STORE_TS_NEW_CHANNEL,
-    (_event: unknown, storeName: unknown, options: unknown) => {
-      if (typeof storeName !== 'string') {
-        process.stderr.write(
-          '[storeWriteHandlers] storeNew rejected a non-string store name\n'
-        )
-        return
-      }
-
-      const { registry, root } = layer
-
-      if (registry.get(storeName)) {
-        // The typed stores are constructed by `createStores`, not by the
-        // renderer — a `storeNew` for one of them is a legitimate no-op.
-        return
-      }
-
-      // WR-02 (Phase 29 code review): this branch used to construct a real `Store` for
-      // ANY name matching `CACHE_STORE_NAME_PATTERN` — with no allow-list check, unlike
-      // the write path. A renderer script could therefore create unbounded
-      // `${userData}/store_cache/<name>.json` files, every one of which guard (c) then
-      // made permanently unwritable: a pure junk-file/DoS vector with no legitimate
-      // consumer. Restricted to the recognized cache-store names. The syntactic pattern
-      // is still checked FIRST so a traversal-shaped name is reported as such.
-      if (
-        !CACHE_STORE_NAME_PATTERN.test(storeName) ||
-        !RECOGNIZED_CACHE_STORE_NAMES.includes(storeName)
-      ) {
-        process.stderr.write(
-          `[storeWriteHandlers] storeNew rejected an unrecognized store name: '${storeName}'\n`
-        )
-        return
-      }
-
-      if (options !== undefined) {
-        process.stderr.write(
-          `[storeWriteHandlers] storeNew ignored renderer-supplied options for '${storeName}' — using the hardcoded cache-store shape\n`
-        )
-      }
-
-      new Store({
-        root,
-        cwd: 'store_cache',
-        name: storeName,
-        clearInvalidConfig: true
-      })
-    }
-  )
-
-  // Phase 85 (FND-06): the shell's answer to a store frame a Rust-owned store's mirror sent
-  // (`store_dispatch.rs`). One registration site for the store layer: the same function that binds
-  // the root's change channel above routes the answers to the root's mirror cells. The channel's
-  // schema (`sidecarInternal.ts`) already ran; a payload that still is not an event is dropped
-  // with one line naming nothing but the fact.
+  // Phase 85 (FND-06): the shell's answer to a store frame a mirror sent (`store_dispatch.rs`). One
+  // registration site for the store layer: the same function that binds the root's change channel
+  // above routes the answers to the root's mirror cells. The channel's schema
+  // (`sidecarInternal.ts`) already ran; a payload that still is not an event is dropped with one
+  // line naming nothing but the fact.
   deps.ipc.on(
     STORE_MIRROR_EVENT_CHANNEL,
     (_event: unknown, payload: unknown) => {
@@ -465,7 +111,7 @@ export function registerStoreWriteHandlers(deps: {
         )
         return
       }
-      layer.root.mirrors.applyEvent(payload)
+      deps.root.mirrors.applyEvent(payload)
     }
   )
 }

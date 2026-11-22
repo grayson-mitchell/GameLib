@@ -3,7 +3,7 @@ import { dirname, resolve } from 'path'
 import { deletePath, setPath } from '../stores/dotPath'
 import type { MirrorRegistry } from '../stores/mirrorCell'
 import type { StoreFrame, StoreFrameSink } from '../stores/storeFrames'
-import { dotPathsFor } from '../stores/storeOwnership'
+import { dotPathsFor } from '../stores/storeFrames'
 import type { StoreVersioning } from '../storeVersioning/engine'
 
 /**

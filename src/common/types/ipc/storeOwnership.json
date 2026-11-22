@@ -1,9 +1,0 @@
-{
-  "families": {
-    "cache": true,
-    "user-state": true,
-    "account": true,
-    "settings": true
-  },
-  "stores": {}
-}

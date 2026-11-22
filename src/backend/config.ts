@@ -102,7 +102,7 @@ abstract class GlobalConfig {
   protected readonly docs: SettingsDocRoot
 
   constructor(protected readonly deps: GlobalConfigDeps) {
-    this.docs = deps.root ?? { storeMode: 'ts', versioning: deps.versioning }
+    this.docs = deps.root ?? { versioning: deps.versioning }
   }
 
   protected config: AppSettings | undefined
@@ -434,7 +434,7 @@ export function createGlobalConfig(deps: GlobalConfigDeps): GlobalConfig {
   // TS-owned only: when the shell owns config.json it migrated it at boot, before this process
   // started (store_boot, 85-15), so nothing runs here.
   prepareSettingsDoc(
-    deps.root ?? { storeMode: 'ts', versioning: deps.versioning },
+    deps.root ?? { versioning: deps.versioning },
     deps.paths.configPath,
     'settings/global'
   )

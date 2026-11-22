@@ -32,14 +32,9 @@
  * `humble/ipc_handler.ts`, which also registers the channels Phase 34.4.1
  * owns), the curated in-app store-embed channels (`registerStoreEmbedFlows()`,
  * `storeEmbedFlowRegistration.ts` -- Phase 40 Plan 05, REQ-40-02/REQ-40-05, which also installs
- * the `rustInvoke`-backed `StoreEmbedSeam` implementation via `storeEmbed.set()`), and the
- * two store-layer read handlers (D-03): the eager
- * `store:ts-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
- * through the single D-08 allow-list) and the lazy `store:ts-fetch`
- * (single-store on-demand hydrate for everything else in `STORE_UNIVERSE`,
- * filtered identically). Since Phase 85 (85-16) both are shell-only: the
- * renderer's channels are answered by the Rust shell, which forwards here only
- * for a store TS still answers.
+ * the `rustInvoke`-backed `StoreEmbedSeam` implementation via `storeEmbed.set()`). The renderer's
+ * store reads (the boot snapshot and the lazy fetch) are answered by the Rust shell from its
+ * `StoreHost` (85-16); since 85-21 (D-03) the sidecar keeps no fallback read handler.
  *
  * Registration runs inside `registerHandlers()` (the 'register-handlers' boot step, D-08),
  * not at import time. `registerStoreWriteHandlers()` runs there, after the flow
@@ -72,7 +67,6 @@
  * which `backend/ipc.ts` itself does.
  */
 
-import Store from '../store_backend'
 import type { LogSink } from '../process/types'
 import type { BootServices, ShellState } from '../services/types'
 
@@ -102,23 +96,6 @@ import { registerDepotHostFlows } from './depotHostRegistration'
 import { registerSteamPollEventFlows } from './steamPollEventRegistration'
 import { managerDepsFromServices } from '../services/managerDeps'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
-import type { StoreRegistry } from '../stores/storeRegistry'
-import type { StoreRoot } from '../stores/storeRoot'
-import {
-  BOOT_SET_STORES,
-  // WR-10: T-29-13's dynamic-store-name pattern is single-sourced in storePolicy.ts.
-  // It used to be declared once here and once in storeWriteHandlers.ts; since it is the
-  // only thing keeping an RPC-supplied name from reaching `resolveStorePath()`, the two
-  // copies drifting apart would be a path-traversal risk.
-  CACHE_STORE_NAME_PATTERN,
-  DENIED_CACHE_STORES,
-  STORE_UNIVERSE,
-  filterStoreSnapshot
-} from 'common/types/storePolicy'
-import {
-  STORE_SNAPSHOT_CHANNEL,
-  STORE_TS_FETCH_CHANNEL
-} from 'common/types/sidecarTransport'
 
 /**
  * Registers every handler and flow channel. Called once by the `register-handlers`
@@ -242,7 +219,6 @@ export function registerHandlers(deps: {
   registerAppShellFlows({
     ipc,
     readOnly: deps.services.storeRoot.readOnly,
-    storeMode: deps.services.storeRoot.storeMode,
     storeMirrors: deps.services.storeRoot.mirrors,
     appRuntime: deps.services.appRuntime,
     aborts: deps.services.aborts,
@@ -469,167 +445,12 @@ export function registerHandlers(deps: {
     ipc,
     manager: () => managerDepsFromServices(deps.services)
   })
-  // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
-  // every store instance exists, or a legitimate write would be rejected as an unknown
-  // store — hence AFTER registerStoreWriteHandlers(). These are `send`-kind (fire-and-forget)
-  // registrations, so unlike an `invoke` channel there is no response frame and no promise
-  // to reject, which is exactly why the missing registration was invisible before this phase.
+  // The store layer last: the root's change channel bound to the one renderer push site and the
+  // shell's mirror-event answers routed to the root's cells (85-21: the renderer's writes are
+  // native Rust channels, so no write handler is registered here).
   registerStoreWriteHandlers({
     ipc,
-    registry: deps.services.storeRegistry,
     root: deps.services.storeRoot,
     pushFrontendMessage: deps.services.host.pushFrontendMessage
   })
-
-  // D-03: the eager payload is EXACTLY the declared boot set — not the
-  // unbounded lazy tier (T-29-16, index.tsx's hydration timeout). D-08: this
-  // generalizes the old per-store hand-strip that used to live here (T-27-09)
-  // — that defense-in-depth property is PRESERVED, and now enforced by
-  // `filterStoreSnapshot` for every store in the walk, not one field of one
-  // store (single-sourcing).
-  ipc.handle(STORE_SNAPSHOT_CHANNEL, async () => {
-    const snapshot: Record<string, unknown> = {}
-    for (const name of BOOT_SET_STORES) {
-      snapshot[name] = filterStoreSnapshot(
-        name,
-        resolveRawStore(
-          deps.services.storeRegistry,
-          deps.services.storeRoot,
-          name
-        )
-      )
-    }
-    return snapshot
-  })
-
-  // D-03: lazy per-store hydrate for the tier that isn't part of the eager
-  // snapshot. Applies the IDENTICAL filter as the eager path above (T-29-14 —
-  // "enforced eagerly but forgotten in the lazy fetch" is exactly the gap
-  // this closes). Phase 85 (85-16): the renderer's `sidecar:store-fetch` is a
-  // native channel the Rust shell owns; this is its shell-only fallback
-  // (`store:ts-fetch`), forwarded under GAMELIB_STORE=ts and for a store whose
-  // row Rust never opens.
-  ipc.handle(
-    STORE_TS_FETCH_CHANNEL,
-    async (_event: unknown, storeName: unknown) => {
-      if (typeof storeName !== 'string') {
-        process.stderr.write(
-          '[sidecar/handlers] store:ts-fetch rejected a non-string store name\n'
-        )
-        return {}
-      }
-
-      const isUniverseMember = STORE_UNIVERSE.includes(storeName)
-      const isSyntacticallyValidName = CACHE_STORE_NAME_PATTERN.test(storeName)
-
-      if (!isUniverseMember && !isSyntacticallyValidName) {
-        // T-29-13: rejected BEFORE any resolution attempt — this never
-        // reaches `getRegisteredStore()` or the cache-store construction
-        // branch, so `store_backend.ts`'s own path-containment guard is never even
-        // exercised by a malicious name arriving here. The diagnostic below
-        // names the rejected string only — never a store value (T-29-18).
-        process.stderr.write(
-          `[sidecar/handlers] store:ts-fetch rejected an invalid store name: '${storeName}'\n`
-        )
-        return {}
-      }
-
-      return filterStoreSnapshot(
-        storeName,
-        resolveRawStore(
-          deps.services.storeRegistry,
-          deps.services.storeRoot,
-          storeName
-        )
-      )
-    }
-  )
-}
-
-// ---- Store layer read path (Plan 04, D-02 / D-03 / D-08) -------------------
-
-/**
- * D-13's five dynamically-named `CacheStore` names carried inside
- * `BOOT_SET_STORES`/`STORE_UNIVERSE` that are NOT `ValidStoreName`s —
- * mirrors `storePolicy.ts`'s own (unexported) boot-set cache-store name
- * list. Declared here rather than exported from `storePolicy.ts`, to avoid
- * widening that module's export surface for this single internal consumer;
- * both lists are short, stable, and greppable (D-13's own
- * declared-not-derived rationale).
- *
- * PLUS `wikigameinfo` — discovered by this plan's own coverage test (Task
- * 3), not anticipated by 29-RESEARCH: `wikigameinfo` IS declared as a
- * `ValidStoreName` in `StoreStructure` (typed_store.ts), but
- * `wiki_game_info/stores.ts` constructs it as a `CacheStore`, not a
- * `TypeCheckedStoreBackend` — so it never self-registers into
- * `typed_store.ts`'s typed registry (plan 29-02) despite its type
- * declaration. It resolves through the exact same cache-shaped
- * construction as the D-13 four; the only difference is it sits in
- * `LAZY_STORES`, not `BOOT_SET_STORES`, so it is reachable only through the
- * lazy fetch handler below, never the eager snapshot.
- */
-const CACHE_BACKED_STORE_NAMES: readonly string[] = [
-  'legendary_library',
-  'gog_library',
-  'nile_library',
-  'steam_library',
-  'wikigameinfo'
-]
-
-/**
- * Resolves the raw (unfiltered) snapshot object for a store name. Callers
- * are responsible for validating `name` BEFORE calling this function
- * (T-29-13) — it never reconstructs a path by hand and never throws.
- *
- *   - A `ValidStoreName` resolves through the registry (plan 29-02) — the
- *     live instance's `raw_store`.
- *   - A name in `CACHE_BACKED_STORE_NAMES` resolves through the EXACT
- *     construction shape `backend/cache.ts` uses for every dynamically-named
- *     `CacheStore` (`{ cwd: 'store_cache', name, clearInvalidConfig: true }`).
- *     A store built here and the real `CacheStore` instance constructed by the
- *     corresponding store-declaration module resolve to the same file, and conf
- *     re-reads that file on every access, so this always reads the identical
- *     on-disk data rather than a fresh, unrelated read.
- *   - Anything else (a registration gap, or a name a caller's own
- *     validation let through that isn't actually served here) yields `{}`
- *     plus a stderr diagnostic naming the store — NEVER a throw (SEAM
- *     Invariant B), and the diagnostic NEVER carries a value (T-29-18).
- */
-function resolveRawStore(
-  registry: StoreRegistry,
-  root: StoreRoot,
-  name: string
-): Record<string, unknown> {
-  // WR-09 (Phase 29 code review): the deny list is consulted HERE, not only inside
-  // `filterStoreSnapshot`. `humble_library` is absent from both
-  // `CACHE_BACKED_STORE_NAMES` and `STORE_UNIVERSE`, so this function already returned
-  // `{}` for it and the deny check read as live while being unreachable — it would have
-  // silently stopped being decoration the day someone added the name to a handler list.
-  // Checking first makes the control load-bearing regardless of those lists.
-  if (DENIED_CACHE_STORES.includes(name)) {
-    process.stderr.write(
-      `[sidecar/handlers] refusing to snapshot denied cache store '${name}' — returning {}\n`
-    )
-    return {}
-  }
-
-  const registered = registry.get(name)
-  if (registered) {
-    return registered.raw_store as Record<string, unknown>
-  }
-
-  if (CACHE_BACKED_STORE_NAMES.includes(name)) {
-    const cacheBackedStore = new Store({
-      root,
-      cwd: 'store_cache',
-      name,
-      clearInvalidConfig: true
-    })
-    return cacheBackedStore.store
-  }
-
-  process.stderr.write(
-    `[sidecar/handlers] no live store instance for '${name}' — returning {}\n`
-  )
-  return {}
 }

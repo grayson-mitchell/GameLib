@@ -5,24 +5,21 @@
  *   - `round-trip` (REQ-29-01 / D-02 / D-13): every `ValidStoreName` (minus the
  *     one documented dead entry) plus the four D-13 cache-store names
  *     construct in the sidecar process and round-trip a probe value.
- *   - `allow-list` (REQ-29-04 / D-08): the fail-closed allow-list is enforced
- *     identically on the eager snapshot path AND the lazy fetch path, by
- *     field name, for real secret fields.
- *   - `boot set` (D-03): the eager snapshot's key set is exactly
- *     `BOOT_SET_STORES` — no unbounded lazy-tier store leaks into it.
  *   - `round-trip` also carries a Phase 31 Plan 01 case (REQ-31-02/REQ-31-06):
- *     proves the settings WRITE path's global branch (`GlobalConfig.setSetting`/
- *     `writeConfig`'s `configStore.set('settings', ...)` call) persists
- *     end-to-end through this SAME real store layer, using the pre-existing
- *     `STORE_ALLOWLIST.configStore` entry for `'settings'` — no new allow-list
- *     entry needed. The per-game branch is documented (not exercised here,
- *     `settingsFlows.test.ts` already covers it against a mock) as bypassing
- *     the store layer entirely — a raw `graceful-fs` write, never a
- *     `registry.get()` target.
+ *     the settings WRITE path's global branch (`configStore.set('settings', ...)`)
+ *     round-trips through the real configStore, on the pre-existing
+ *     `STORE_ALLOWLIST.configStore` entry for `'settings'`.
+ *   - `WR-08`: first registration wins.
+ *
+ * The renderer's store reads and writes (the eager snapshot, the lazy fetch, the
+ * confirmed write) were the sidecar's until Phase 85: since 85-16/85-17 they are
+ * native Rust channels answered from the StoreHost, and since 85-21 (D-03) the
+ * sidecar keeps no fallback handler. Their allow-list, boot-set and write-guard
+ * cases are `cargo test --bin gamelib-shell store_native` and `store_policy`.
  *
  * TOKEN-WIPE SAFETY (non-negotiable): this suite drives REAL store
- * construction through the real `store_backend.ts` (the conf-backed
- * production store), so it MUST open with the mock block below — before ANY other import. A previous suite
+ * construction through the real `store_backend.ts` (each store a mirror whose
+ * frames the in-process disk sink writes), so it MUST open with the mock block below — before ANY other import. A previous suite
  * wiped the developer's live Steam refresh token from the real
  * `~/Library/Application Support/GameLib` (fixed in commit 92c29a5e), and an
  * `afterAll` restore is not a safety net because Jest force-exits workers.
@@ -76,22 +73,14 @@ import { TypeCheckedStoreBackend } from '../../typed_store'
 import { createStores } from '../../stores/createStores'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { createStoreRegistry } from '../../stores/storeRegistry'
-import { createIpcRegistry, type IpcRegistry } from '../ipcRegistry'
 import CacheStore from '../../cache'
-import { BOOT_SET_STORES, STORE_ALLOWLIST } from 'common/types/storePolicy'
-import {
-  STORE_SNAPSHOT_CHANNEL,
-  STORE_TS_FETCH_CHANNEL,
-  STORE_TS_SET_CHANNEL,
-  STORE_TS_SET_CHECKED_CHANNEL
-} from 'common/types/sidecarTransport'
+import { STORE_ALLOWLIST } from 'common/types/storePolicy'
 
 // `registerHandlers()` registers every invoke handler (including the
 // store-layer ones under test) onto platformApi's `handlerRegistry`; the
 // stores built above are the ones its handlers resolve through — the same
 // real, unmodified code path production runs (the 'register-handlers' boot step).
 import { registerHandlers } from '../handlers'
-import { defined } from '../../testUtils/indexed'
 import { createTestServices } from '../../testUtils/testServices'
 import { createCaptureLog } from '../../testUtils/captureLog'
 
@@ -99,8 +88,6 @@ import { createCaptureLog } from '../../testUtils/captureLog'
 const registry = createStoreRegistry()
 const root = createTestStoreRoot()
 const stores = createStores({ registry, root })
-const steamConfigStore = stores.steam.configStore
-const humbleConfigStore = stores.humble.configStore
 
 // The snapshot/fetch handlers are written into this boot's own registry (66.3-09); the store write
 // listeners still reach the platform shim's.
@@ -133,47 +120,6 @@ interface ProbeableStore {
 
 function asProbeable(instance: unknown): ProbeableStore {
   return instance as ProbeableStore
-}
-
-/** Invokes the real registered `store:ts-snapshot` handler directly off the recorder. */
-async function invokeStoreSnapshot(
-  ipc: Pick<IpcRegistry, 'getHandler'> = bootServices.host.ipc
-): Promise<Record<string, unknown>> {
-  const handler = ipc.getHandler(STORE_SNAPSHOT_CHANNEL)
-  if (!handler) {
-    throw new Error(
-      `${STORE_SNAPSHOT_CHANNEL} handler was not registered by ../handlers`
-    )
-  }
-  return (await handler(undefined)) as Record<string, unknown>
-}
-
-/** Invokes the real registered `store:ts-fetch` handler directly off the recorder (85-16: the shell forwards the renderer's fetch here). */
-async function invokeStoreFetch(
-  storeName: string
-): Promise<Record<string, unknown>> {
-  const handler = bootServices.host.ipc.getHandler(STORE_TS_FETCH_CHANNEL)
-  if (!handler) {
-    throw new Error(
-      `${STORE_TS_FETCH_CHANNEL} handler was not registered by ../handlers`
-    )
-  }
-  return (await handler(undefined, storeName)) as Record<string, unknown>
-}
-
-/** Invokes the real registered `sidecar:store-set-checked` handler directly off the recorder. */
-async function invokeStoreSetChecked(
-  storeName: string,
-  key: string,
-  value: unknown
-): Promise<boolean> {
-  const handler = bootServices.host.ipc.getHandler(STORE_TS_SET_CHECKED_CHANNEL)
-  if (!handler) {
-    throw new Error(
-      `${STORE_TS_SET_CHECKED_CHANNEL} handler was not registered by ../handlers`
-    )
-  }
-  return (await handler(undefined, storeName, key, value)) as boolean
 }
 
 describe('round-trip', () => {
@@ -276,7 +222,7 @@ describe('round-trip', () => {
   // `'settings'` field name round-trips through the fetch/snapshot read
   // paths (the same paths `requestAppSettings`'s underlying store-backed
   // reads would use), using the real, pre-existing `STORE_ALLOWLIST` entry.
-  it("the settings write path's global branch ('settings' field) round-trips through the real configStore allow-list — no new allow-list entry needed", async () => {
+  it("the settings write path's global branch ('settings' field) round-trips through the real configStore allow-list — no new allow-list entry needed", () => {
     // Checklist step 4 confirmed a no-op this phase (31-PATTERNS.md item 5):
     // 'settings' is ALREADY in STORE_ALLOWLIST.configStore — this suite does
     // NOT add a new entry, it only asserts the pre-existing one still covers
@@ -291,11 +237,8 @@ describe('round-trip', () => {
     configStoreInstance.set('settings', probeSettings)
 
     try {
-      const fetched = await invokeStoreFetch('configStore')
-      expect(fetched.settings).toEqual(probeSettings)
-
-      const snapshot = await invokeStoreSnapshot()
-      expect(snapshot.configStore).toMatchObject({ settings: probeSettings })
+      expect(configStoreInstance.get('settings')).toEqual(probeSettings)
+      expect(configStoreInstance.raw_store.settings).toEqual(probeSettings)
     } finally {
       configStoreInstance.delete('settings')
     }
@@ -313,158 +256,6 @@ describe('round-trip', () => {
   // per-game branch too, rather than a silently-skipped step.
   it('the per-game write path never routes through registry.get() — it was never part of the store-layer abstraction', () => {
     expect(registry.get('some-arbitrary-appName-999001')).toBeUndefined()
-  })
-})
-
-describe('allow-list', () => {
-  const probeSteamConfig = asProbeable(steamConfigStore)
-  const probeHumbleConfig = asProbeable(humbleConfigStore)
-
-  beforeEach(() => {
-    probeSteamConfig.set(
-      'refreshToken',
-      'super-secret-should-never-leave-the-sidecar'
-    )
-    probeSteamConfig.set('userData', {
-      username: 'gsd-tester',
-      steamId: 'STEAMID_GSD'
-    })
-    probeHumbleConfig.set('csrfToken', 'csrf-secret-should-never-leave')
-    probeHumbleConfig.set('sessionCookie', 'session-secret-should-never-leave')
-    probeHumbleConfig.set('isLoggedIn', true)
-  })
-
-  afterEach(() => {
-    probeSteamConfig.delete('refreshToken')
-    probeSteamConfig.delete('userData')
-    probeHumbleConfig.delete('csrfToken')
-    probeHumbleConfig.delete('sessionCookie')
-    probeHumbleConfig.delete('isLoggedIn')
-  })
-
-  it('excludes steamConfigStore.refreshToken from the eager snapshot while userData passes through', async () => {
-    const snapshot = await invokeStoreSnapshot()
-
-    expect(snapshot.steamConfigStore).toMatchObject({
-      userData: { username: 'gsd-tester', steamId: 'STEAMID_GSD' }
-    })
-    expect(snapshot.steamConfigStore).not.toHaveProperty('refreshToken')
-  })
-
-  it('excludes humbleConfigStore.csrfToken and sessionCookie from the eager snapshot while isLoggedIn passes through', async () => {
-    const snapshot = await invokeStoreSnapshot()
-
-    expect(snapshot.humbleConfigStore).toMatchObject({ isLoggedIn: true })
-    expect(snapshot.humbleConfigStore).not.toHaveProperty('csrfToken')
-    expect(snapshot.humbleConfigStore).not.toHaveProperty('sessionCookie')
-
-    // Assert NONE of the three secret fields leak into ANY store's payload
-    // in the eager snapshot, by name — not merely for the two stores above.
-    for (const payload of Object.values(snapshot)) {
-      expect(payload).not.toHaveProperty('refreshToken')
-      expect(payload).not.toHaveProperty('csrfToken')
-      expect(payload).not.toHaveProperty('sessionCookie')
-    }
-  })
-
-  it('excludes csrfToken from the lazy fetch path identically to the eager path', async () => {
-    const fetched = await invokeStoreFetch('humbleConfigStore')
-
-    expect(fetched).toMatchObject({ isLoggedIn: true })
-    expect(fetched).not.toHaveProperty('csrfToken')
-    expect(fetched).not.toHaveProperty('sessionCookie')
-  })
-
-  it('excludes refreshToken from the lazy fetch path identically to the eager path', async () => {
-    const fetched = await invokeStoreFetch('steamConfigStore')
-
-    expect(fetched).toMatchObject({
-      userData: { username: 'gsd-tester', steamId: 'STEAMID_GSD' }
-    })
-    expect(fetched).not.toHaveProperty('refreshToken')
-  })
-
-  it('never PUSHES a secret field to the renderer when the sidecar itself writes one', async () => {
-    // The snapshot/fetch paths above are filtered by `filterStoreSnapshot()`. The
-    // store-change PUSH path is a third way into the renderer's snapshot, and it was
-    // opened by the sidecar-write notification fix
-    // (.planning/debug/gog-login-ui-never-updates.md).
-    //
-    // `applyStoreWrite` validates renderer-driven writes against `isWritableStoreField`
-    // BEFORE writing, so its pushes were already safe. The store classes have no such
-    // gate — they write whatever the backend hands them, secrets included. Without the
-    // allow-list check in `pushStoreChanged`, every `steamConfigStore.set('refreshToken',
-    // …)` in the real app would have shipped that token straight into the renderer's
-    // in-memory snapshot, defeating `filterStoreSnapshot()` through a side door.
-    //
-    // This suite's own `beforeEach` writes three real secret fields through the real
-    // store layer, so simply installing the real notifier and watching the wire is a
-    // faithful end-to-end exercise of that path.
-    const { registerStoreWriteHandlers } = await import('../storeWriteHandlers')
-
-    const pushSpy = jest.fn<void, [string, ...unknown[]]>()
-
-    try {
-      // Idempotent; installs the real `pushStoreChanged` as the store-change notifier.
-      registerStoreWriteHandlers({
-        pushFrontendMessage: pushSpy,
-        ipc: createIpcRegistry(),
-        registry,
-        root
-      })
-
-      probeSteamConfig.set('refreshToken', 'leak-canary-refresh-token')
-      probeHumbleConfig.set('csrfToken', 'leak-canary-csrf')
-      probeHumbleConfig.set('sessionCookie', 'leak-canary-session')
-      // A non-secret write on the same stores, to prove the guard is discriminating
-      // rather than simply muting the channel.
-      probeHumbleConfig.set('isLoggedIn', true)
-
-      const storeChangedPayloads = pushSpy.mock.calls
-        .filter(([channel]) => channel === 'storeChanged')
-        .map(([, payload]) => payload as { key: string; value?: unknown })
-
-      const pushedKeys = storeChangedPayloads.map((p) => p.key)
-      expect(pushedKeys).not.toContain('refreshToken')
-      expect(pushedKeys).not.toContain('csrfToken')
-      expect(pushedKeys).not.toContain('sessionCookie')
-
-      // By value too — a secret must not ride along inside some other field's payload.
-      const serialized = JSON.stringify(storeChangedPayloads)
-      expect(serialized).not.toContain('leak-canary-refresh-token')
-      expect(serialized).not.toContain('leak-canary-csrf')
-      expect(serialized).not.toContain('leak-canary-session')
-
-      // The allow-listed field DID go out — otherwise this test would pass just as well
-      // against a completely broken channel.
-      expect(pushedKeys).toContain('isLoggedIn')
-    } finally {
-      pushSpy.mockReset()
-    }
-  })
-
-  it('rejects a path-traversal store name without throwing, returning {}', async () => {
-    const result = await invokeStoreFetch('../../etc/passwd')
-    expect(result).toEqual({})
-  })
-
-  it('rejects an unrecognized store name without throwing, returning {}', async () => {
-    const result = await invokeStoreFetch('not_a_real_store')
-    expect(result).toEqual({})
-  })
-})
-
-describe('boot set', () => {
-  it('the eager snapshot key set equals BOOT_SET_STORES exactly', async () => {
-    const snapshot = await invokeStoreSnapshot()
-    expect(Object.keys(snapshot).sort()).toEqual([...BOOT_SET_STORES].sort())
-  })
-
-  it('excludes the unbounded lazy-tier stores from the eager snapshot', async () => {
-    const snapshot = await invokeStoreSnapshot()
-    expect(snapshot).not.toHaveProperty('wikigameinfo')
-    expect(snapshot).not.toHaveProperty('timestampStore')
-    expect(snapshot).not.toHaveProperty('downloadManager')
   })
 })
 
@@ -505,125 +296,5 @@ describe('WR-08: duplicate store registration', () => {
         line.includes("duplicate registration for 'configStore'")
       )
     ).toBe(true)
-  })
-})
-
-/**
- * C-WR-1 REGRESSION: a module-level first-call-wins guard pinned the FIRST boot's registry in
- * the write listeners, so a later boot in the same module registry had its snapshot handler
- * read one registry while renderer writes landed in another.
- */
-describe('C-WR-1: two boots in one module registry', () => {
-  it('writes and snapshots both use the second boot registry', async () => {
-    const registry2 = createStoreRegistry()
-    const root2 = createTestStoreRoot()
-    const stores2 = createStores({ registry: registry2, root: root2 })
-    const services2 = createTestServices({
-      stores: stores2,
-      storeRegistry: registry2,
-      storeRoot: root2
-    })
-    registerHandlers({
-      log: createCaptureLog(),
-      services: services2,
-      shellState: createTestShellState(services2)
-    })
-
-    // Each registration installs its own listener closed over its own registry (D-66.4-01):
-    // the first boot's listener is [0], the second boot's is the last one.
-    const listeners =
-      services2.host.ipc.listenerMap().get(STORE_TS_SET_CHANNEL) ?? []
-    expect(listeners).toHaveLength(1)
-    const overrides = { 'c-wr-1': { title: 'second boot' } }
-    // Both boots' stores share one on-disk file, so observe WHICH instance took the write.
-    const firstSet = jest.spyOn(
-      registry.get('gameOverridesStore') as unknown as ProbeableStore,
-      'set'
-    )
-    const secondSet = jest.spyOn(
-      registry2.get('gameOverridesStore') as unknown as ProbeableStore,
-      'set'
-    )
-    defined(listeners[0], 'storeSet listener')(
-      undefined,
-      'gameOverridesStore',
-      'overrides',
-      overrides
-    )
-
-    expect(secondSet).toHaveBeenCalledWith('overrides', overrides)
-    expect(firstSet).not.toHaveBeenCalled()
-
-    const snapshot = await invokeStoreSnapshot(services2.host.ipc)
-    expect(snapshot.gameOverridesStore).toMatchObject({ overrides })
-  })
-})
-
-/**
- * Phase 64 plan 03: the confirmed write. `sidecar:store-set-checked` resolves true only after the
- * write persisted, and false (writing nothing) for every shape a write guard refuses, so a renderer
- * Save can tell a persisted theme from a refused one.
- */
-describe('sidecar:store-set-checked (confirmed write)', () => {
-  it('resolves true and persists an allow-listed configStore key', async () => {
-    await expect(
-      invokeStoreSetChecked('configStore', 'theme', 'dracula')
-    ).resolves.toBe(true)
-    expect(
-      asProbeable(registry.get('configStore')).get_nodefault('theme')
-    ).toBe('dracula')
-  })
-
-  it('persists a customThemes array and reads it back equal', async () => {
-    const customThemes = [
-      {
-        id: '0123456789abcdef',
-        name: 'Mine',
-        base: 'nord-light',
-        tokens: { '--accent': '#112233' }
-      }
-    ]
-    await expect(
-      invokeStoreSetChecked('configStore', 'customThemes', customThemes)
-    ).resolves.toBe(true)
-    expect(
-      asProbeable(registry.get('configStore')).get_nodefault('customThemes')
-    ).toEqual(customThemes)
-  })
-
-  it('resolves false and writes nothing for the Keychain-owned Steam token', async () => {
-    await expect(
-      invokeStoreSetChecked('steamConfigStore', 'refreshToken', 'x')
-    ).resolves.toBe(false)
-    expect(
-      asProbeable(steamConfigStore).get_nodefault('refreshToken')
-    ).toBeUndefined()
-  })
-
-  it('resolves false for a prototype-chain key path', async () => {
-    await expect(
-      invokeStoreSetChecked('configStore', 'games.__proto__.x', 1)
-    ).resolves.toBe(false)
-    expect(({} as Record<string, unknown>).x).toBeUndefined()
-  })
-
-  it('resolves false for a store name that is not recognized', async () => {
-    await expect(invokeStoreSetChecked('notARealStore', 'k', 1)).resolves.toBe(
-      false
-    )
-  })
-
-  it('resolves false for a field that is not allow-listed', async () => {
-    await expect(
-      invokeStoreSetChecked('configStore', 'userHome', '/tmp/x')
-    ).resolves.toBe(false)
-  })
-
-  it('resolves false for non-string arguments', async () => {
-    const handler = defined(
-      bootServices.host.ipc.getHandler(STORE_TS_SET_CHECKED_CHANNEL),
-      'checked handler'
-    )
-    await expect(handler(undefined, 1, 'theme', 'x')).resolves.toBe(false)
   })
 })

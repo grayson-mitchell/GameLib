@@ -4,7 +4,9 @@
  *
  * Uses the REAL store stack (no `store_backend` mock). The backend jest project redirects
  * HOME/APPDATA/XDG_* to a disposable root, so the userData dir never touches the
- * real profile.
+ * real profile. Since 85-21 (D-03) every store is a mirror: a store is read-only because the
+ * shell said so at boot (`GAMELIB_STORE_BOOT`, the root's `boot`), and the renderer's writes are
+ * checked in Rust (`store_native.rs`), so the old TS write choke point's cases are the shell's.
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
@@ -14,8 +16,6 @@ import {
   createTestStoreRoot,
   testUserDataDir
 } from '../testUtils/testStoreRoot'
-import { createStoreRegistry } from '../stores/storeRegistry'
-import { applyStoreWrite } from '../sidecar/storeWriteHandlers'
 import type { StoreChangedPayload } from 'common/types/sidecarTransport'
 
 // A fresh root per test (engine, tracker and cells included): its userData is the jest-contained
@@ -33,6 +33,17 @@ const v = (data: Record<string, unknown>, n: number) => ({
   ...data,
   __internal__: { gamelib: { schemaVersion: n } }
 })
+/** A root on which the shell reported `storeKeys` read-only (newer) at boot. */
+const readOnlyRoot = (...storeKeys: string[]) => {
+  const r = createTestStoreRoot(undefined, {
+    boot: {
+      readOnly: new Map(storeKeys.map((k) => [k, 'newer' as const])),
+      startEmpty: new Set()
+    }
+  })
+  r.changes.bind((p) => pushed.push(p))
+  return r
+}
 const typed = (name: string, extra: Record<string, unknown> = {}) =>
   new TypeCheckedStoreBackend(
     'timestampStore',
@@ -62,6 +73,7 @@ describe('read-only typed store', () => {
   test('set, delete, clear change nothing and notify nothing', () => {
     const p = fixture('sr_typed1', v({ k: 1 }, 99))
     const before = readFileSync(p)
+    root = readOnlyRoot('store_cache/sr_typed1')
     const s = typed('sr_typed1')
     expect(s.readOnly).toBe(true)
     s.set('k', 2 as never)
@@ -100,6 +112,7 @@ describe('read-only CacheStore', () => {
   test('set, delete, clear and in-memory commit write and notify nothing', () => {
     const p = fixture('sr_cache1', v({ a: 1 }, 99))
     const before = readFileSync(p)
+    root = readOnlyRoot('store_cache/sr_cache1')
     const c = new CacheStore<number>('sr_cache1', null, {
       root,
       kind: 'user-state'
@@ -130,77 +143,5 @@ describe('read-only CacheStore', () => {
     c.use_in_memory()
     expect(c.entries().map(([k]) => k)).toEqual(['a'])
     c.commit()
-  })
-})
-
-describe('applyStoreWrite', () => {
-  const registry = createStoreRegistry()
-
-  test('refuses a write to a read-only store: file untouched, no push, no value logged', () => {
-    const p = fixture('steam_library', v({ games: ['old'] }, 99))
-    const before = readFileSync(p)
-    // The engine state is path-keyed; constructing the declared store registers it.
-    new CacheStore('steam_library', null, { root, kind: 'user-state' })
-    applyStoreWrite(
-      registry,
-      root,
-      frontendPush,
-      'set',
-      'steam_library',
-      'games',
-      ['SECRET-VALUE']
-    )
-    expect(readFileSync(p).equals(before)).toBe(true)
-    expect(frontendPush).not.toHaveBeenCalled()
-    const refused = lines().filter((l) => l.includes('read-only store'))
-    expect(refused).toHaveLength(1)
-    expect(refused[0]).toContain('steam_library')
-    expect(refused[0]).toContain('games')
-    expect(lines().join('')).not.toContain('SECRET-VALUE')
-  })
-
-  test('refuses a reserved __internal__ key on a writable store', () => {
-    const p = fixture('steam_library', v({ games: [] }, 3))
-    const before = readFileSync(p)
-    new CacheStore('steam_library', null, { root, kind: 'user-state' })
-    applyStoreWrite(
-      registry,
-      root,
-      frontendPush,
-      'set',
-      'steam_library',
-      '__internal__',
-      {
-        gamelib: { schemaVersion: 0 }
-      }
-    )
-    applyStoreWrite(
-      registry,
-      root,
-      frontendPush,
-      'delete',
-      'steam_library',
-      '__internal__.gamelib'
-    )
-    expect(readFileSync(p).equals(before)).toBe(true)
-    expect(frontendPush).not.toHaveBeenCalled()
-  })
-
-  test('a normal renderer write to a writable store persists and pushes', () => {
-    const p = fixture('steam_library', v({ games: [] }, 3))
-    new CacheStore('steam_library', null, { root, kind: 'user-state' })
-    applyStoreWrite(
-      registry,
-      root,
-      frontendPush,
-      'set',
-      'steam_library',
-      'games',
-      ['a']
-    )
-    const disk = JSON.parse(readFileSync(p, 'utf8'))
-    expect(disk.games).toEqual(['a'])
-    expect(disk.__internal__.gamelib.schemaVersion).toBe(3)
-    expect(frontendPush).toHaveBeenCalledTimes(1)
   })
 })

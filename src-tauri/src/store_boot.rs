@@ -1,12 +1,10 @@
 //! The shell's store boot (Phase 85, FND-06): which stores Rust owns, opening them once at start
 //! within a bound, telling the sidecar what is read-only, and the exit drain.
 //!
-//! `GAMELIB_STORE=rust|ts` is read once at boot (D-01): unset is `rust`; anything else that is not
-//! `ts` is `ts` with one warning naming it. `src/common/types/ipc/storeOwnership.json` holds the
-//! per-family flags and per-store overrides, both read by Rust here and by the TS side; every flag
-//! is `false` until the plan that moves that family flips it. Rust opens at boot only the rows it
-//! owns: `native` always, `excluded` (`store/migrations`, D-07) never, the rest only when the mode
-//! is `rust` and the store's own flag, or failing that its family's, is set.
+//! Rust owns every row of the store table it can open (D-03, 85-21): the phase's rollback flag and
+//! its per-family ownership file are deleted, and the TS store classes are only mirrors. The one row
+//! it never opens is `excluded` (`store/migrations`, D-07): the file stays on disk and nothing
+//! reads or writes it.
 //!
 //! Boot opening is bounded (Rust shutdown contract: bound boot work): it stops at
 //! [`BOOT_SWEEP_MAX_FILES`] files or [`BOOT_SWEEP_MAX_MS`] milliseconds or when the shutdown token
@@ -17,7 +15,6 @@
 //! The summary line, the `GAMELIB_STORE_BOOT` value and the read-only entries carry store keys, reason words
 //! and counts, never a value: these files hold tokens and `gamelib.log` is the file users upload.
 
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
@@ -26,7 +23,6 @@ use std::time::{Duration, Instant};
 use gamelib_store::engine::{OpenOutcome, ReadOnlyReason};
 use gamelib_store::host::StoreHost;
 use gamelib_store::table::{row_for_path, table, Family, TableRow};
-use serde::Deserialize;
 
 /// How many files boot opens before it stops and leaves the rest to open on first use. From
 /// 85-SPIKES.md "Constants" (S3): 106 files measured on the operator's profile; 20 x 106 = 2,120,
@@ -38,91 +34,10 @@ pub(crate) const BOOT_SWEEP_MAX_FILES: usize = 10_000;
 /// extrapolates to about 0.65 s warm, inside the cap.
 pub(crate) const BOOT_SWEEP_MAX_MS: u64 = 2_000;
 
-/// The longest `GAMELIB_STORE` value echoed into the warning.
-const MODE_ECHO_MAX: usize = 32;
-
-/// `GAMELIB_STORE`: who owns the stores the family flags have moved.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum StoreMode {
-    Rust,
-    Ts,
-}
-
-/// `GAMELIB_STORE`'s value to a mode. Unset or `rust` is Rust, `ts` is TS; any other value is TS
-/// (the safe side: the stack that has always run) and one warning names it, sanitised and cut.
-pub(crate) fn store_mode_from_env(v: Option<&str>) -> StoreMode {
-    match v {
-        None | Some("rust") => StoreMode::Rust,
-        Some("ts") => StoreMode::Ts,
-        Some(other) => {
-            crate::shell_log(&unrecognised_mode_warning(other));
-            StoreMode::Ts
-        }
-    }
-}
-
-fn unrecognised_mode_warning(value: &str) -> String {
-    let echoed: String = crate::relay_commands::echo_channel(value)
-        .chars()
-        .take(MODE_ECHO_MAX)
-        .collect();
-    format!("WARN: GAMELIB_STORE={echoed} not recognised; using ts")
-}
-
-/// `storeOwnership.json`: `families` flags and per-store overrides, keyed by the store table key.
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct Ownership {
-    #[serde(default)]
-    families: HashMap<String, bool>,
-    #[serde(default)]
-    stores: HashMap<String, bool>,
-}
-
-const OWNERSHIP_JSON: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../src/common/types/ipc/storeOwnership.json"
-));
-
-impl Ownership {
-    pub(crate) fn parse(json: &str) -> Result<Ownership, serde_json::Error> {
-        serde_json::from_str(json)
-    }
-
-    /// The file compiled into the shell. A file that does not parse is a build defect.
-    pub(crate) fn embedded() -> &'static Ownership {
-        static OWNERSHIP: OnceLock<Ownership> = OnceLock::new();
-        OWNERSHIP.get_or_init(|| {
-            Ownership::parse(OWNERSHIP_JSON)
-                .unwrap_or_else(|e| panic!("storeOwnership.json does not parse: {e}"))
-        })
-    }
-
-    /// A store's own flag wins when it has one (so a store can be moved ahead of, or held behind,
-    /// its family); otherwise its family's.
-    fn flag(&self, row: &TableRow) -> bool {
-        if let Some(on) = self.stores.get(&row.key) {
-            return *on;
-        }
-        let family = match row.family {
-            Family::Cache => "cache",
-            Family::UserState => "user-state",
-            Family::Account => "account",
-            Family::Settings => "settings",
-            Family::Native | Family::Excluded => return false,
-        };
-        self.families.get(family).copied().unwrap_or(false)
-    }
-}
-
-/// Whether Rust opens this row at boot: `native` always, `excluded` never (D-07), the rest only in
-/// `rust` mode and when the ownership file has moved them.
-pub(crate) fn is_rust_owned(row: &TableRow, mode: StoreMode, ownership: &Ownership) -> bool {
-    match row.family {
-        Family::Native => true,
-        Family::Excluded => false,
-        _ => mode == StoreMode::Rust && ownership.flag(row),
-    }
+/// Whether Rust opens this row: every row but `excluded` (`store/migrations`, D-07). `native` rows
+/// (the logger's `uploadedLogs`) open here too.
+pub(crate) fn is_rust_owned(row: &TableRow) -> bool {
+    row.family != Family::Excluded
 }
 
 /// What boot did, in counts and keys.
@@ -203,8 +118,6 @@ fn settings_doc_key(row: &TableRow, path: &Path) -> Option<String> {
 /// Writes the one summary line.
 pub(crate) fn open_all_with(
     host: &StoreHost,
-    mode: StoreMode,
-    ownership: &Ownership,
     user_data: &Path,
     max_files: usize,
     max_ms: u64,
@@ -212,7 +125,7 @@ pub(crate) fn open_all_with(
 ) -> BootReport {
     let start = Instant::now();
     let budget = Duration::from_millis(max_ms);
-    let files = candidates(user_data, &|row| is_rust_owned(row, mode, ownership));
+    let files = candidates(user_data, &is_rust_owned);
     let total = files.len();
     let mut report = BootReport::default();
     for (i, (row, path)) in files.into_iter().enumerate() {
@@ -254,16 +167,12 @@ pub(crate) fn open_all_with(
 /// [`open_all_with`] bounded by the app-wide shutdown token.
 pub(crate) fn open_all(
     host: &StoreHost,
-    mode: StoreMode,
-    ownership: &Ownership,
     user_data: &Path,
     max_files: usize,
     max_ms: u64,
 ) -> BootReport {
     let token = gamelib_core::shutdown::global().token();
-    open_all_with(host, mode, ownership, user_data, max_files, max_ms, &|| {
-        token.is_cancelled()
-    })
+    open_all_with(host, user_data, max_files, max_ms, &|| token.is_cancelled())
 }
 
 fn note_read_only(report: &mut BootReport, key: &str, reason: ReadOnlyReason) {
@@ -354,122 +263,33 @@ mod tests {
     use gamelib_testutil::FakeHome;
     use std::fs;
 
-    fn ownership(families: &[&str], stores: &[(&str, bool)]) -> Ownership {
-        Ownership {
-            families: families.iter().map(|f| ((*f).to_string(), true)).collect(),
-            stores: stores.iter().map(|(k, v)| ((*k).to_string(), *v)).collect(),
-        }
-    }
-
-    const ALL: [&str; 4] = ["cache", "user-state", "account", "settings"];
-
     fn row(key: &str) -> &'static TableRow {
         row_for_key(key).unwrap_or_else(|| panic!("no row {key}"))
     }
 
     #[test]
-    fn the_mode_reads_unset_and_rust_as_rust_ts_as_ts_and_anything_else_as_ts() {
-        assert_eq!(store_mode_from_env(None), StoreMode::Rust);
-        assert_eq!(store_mode_from_env(Some("rust")), StoreMode::Rust);
-        assert_eq!(store_mode_from_env(Some("ts")), StoreMode::Ts);
-        assert_eq!(store_mode_from_env(Some("RUST")), StoreMode::Ts);
-        assert_eq!(store_mode_from_env(Some("")), StoreMode::Ts);
-    }
-
-    #[test]
-    fn the_warning_names_a_cut_and_sanitised_value() {
-        let warning = unrecognised_mode_warning(
-            "tauri\nFAKE LOG LINE and a very long tail past thirty-two chars",
-        );
-        assert!(!warning.contains('\n'), "{warning}");
-        assert!(
-            warning.starts_with("WARN: GAMELIB_STORE=tauri?FAKE LOG LINE"),
-            "{warning}"
-        );
-        assert!(warning.ends_with(" not recognised; using ts"), "{warning}");
-        let echoed = warning
-            .trim_start_matches("WARN: GAMELIB_STORE=")
-            .trim_end_matches(" not recognised; using ts");
-        assert_eq!(echoed.chars().count(), 32);
-        assert_eq!(
-            crate::shell_log_level(&warning),
-            gamelib_log::Level::Warning
-        );
-    }
-
-    #[test]
-    fn the_embedded_ownership_file_parses_and_flips_every_family() {
-        let own = Ownership::embedded();
-        assert_eq!(own.families.len(), 4);
-        let mut on: Vec<&str> = own
-            .families
-            .iter()
-            .filter(|(_, on)| **on)
-            .map(|(name, _)| name.as_str())
-            .collect();
-        on.sort_unstable();
-        assert_eq!(
-            on,
-            vec!["account", "cache", "settings", "user-state"],
-            "the cache (85-12), user-state (85-13), account (85-14) and settings (85-15) families are flipped"
-        );
-        assert!(
-            own.stores.is_empty(),
-            "no per-store override: the 85-10 tracer's is gone, the family covers it"
-        );
+    fn every_row_but_the_excluded_one_is_rust_owned() {
         for row in table() {
-            let rust = is_rust_owned(row, StoreMode::Rust, own);
-            let expected = matches!(
-                row.family,
-                Family::Native
-                    | Family::Cache
-                    | Family::UserState
-                    | Family::Account
-                    | Family::Settings
+            assert_eq!(
+                is_rust_owned(row),
+                row.family != Family::Excluded,
+                "{}",
+                row.key
             );
-            assert_eq!(rust, expected, "{}", row.key);
         }
-    }
-
-    #[test]
-    fn native_is_always_owned_and_excluded_never() {
-        let none = Ownership::default();
-        let all = ownership(
-            &ALL,
-            &[("store/migrations", true), ("store/uploadedLogs", false)],
+        assert!(is_rust_owned(row("store/uploadedLogs")));
+        assert!(is_rust_owned(row("store_cache/steam_metadata")));
+        assert!(is_rust_owned(row("steam_store/config")));
+        assert!(is_rust_owned(row("settings/global")));
+        assert!(!is_rust_owned(row("store/migrations")));
+        assert_eq!(
+            table()
+                .iter()
+                .filter(|r| r.family == Family::Excluded)
+                .count(),
+            1,
+            "store/migrations is the one row neither side opens (D-07)"
         );
-        for mode in [StoreMode::Rust, StoreMode::Ts] {
-            for own in [&none, &all] {
-                assert!(is_rust_owned(row("store/uploadedLogs"), mode, own));
-                assert!(!is_rust_owned(row("store/migrations"), mode, own));
-            }
-        }
-    }
-
-    #[test]
-    fn a_cache_row_is_owned_only_in_rust_mode_with_its_family_or_its_own_flag_set() {
-        let cache = row("store_cache/steam_metadata");
-        let off = Ownership::default();
-        let family = ownership(&["cache"], &[]);
-        assert!(!is_rust_owned(cache, StoreMode::Rust, &off));
-        assert!(is_rust_owned(cache, StoreMode::Rust, &family));
-        assert!(!is_rust_owned(cache, StoreMode::Ts, &family));
-        // A store's own flag moves it ahead of its family, or holds it behind.
-        let ahead = ownership(&[], &[("store_cache/steam_metadata", true)]);
-        assert!(is_rust_owned(cache, StoreMode::Rust, &ahead));
-        let behind = ownership(&["cache"], &[("store_cache/steam_metadata", false)]);
-        assert!(!is_rust_owned(cache, StoreMode::Rust, &behind));
-        assert!(is_rust_owned(
-            row("store_cache/steam_sync"),
-            StoreMode::Rust,
-            &behind
-        ));
-        // A family flag does not reach another family.
-        assert!(!is_rust_owned(
-            row("steam_store/config"),
-            StoreMode::Rust,
-            &family
-        ));
     }
 
     #[test]
@@ -522,13 +342,13 @@ mod tests {
 
     /// Writes `{"a":1}` (a baseline file, adopted without a write) for the first `n` Rust-owned
     /// stores with a plain `<dir>/<name>.json` path.
-    fn plant(home: &FakeHome, n: usize, own: &Ownership) -> usize {
+    fn plant(home: &FakeHome, n: usize) -> usize {
         let mut planted = 0;
         for row in table() {
             if planted == n {
                 break;
             }
-            let (Some(name), true) = (&row.name, is_rust_owned(row, StoreMode::Rust, own)) else {
+            let (Some(name), true) = (&row.name, is_rust_owned(row)) else {
                 continue;
             };
             if row.key.starts_with("settings/") {
@@ -542,31 +362,17 @@ mod tests {
         planted
     }
 
-    fn open(
-        home: &FakeHome,
-        own: &Ownership,
-        max_files: usize,
-        max_ms: u64,
-    ) -> (StoreHost, BootReport) {
+    fn open(home: &FakeHome, max_files: usize, max_ms: u64) -> (StoreHost, BootReport) {
         let host = StoreHost::new();
-        let report = open_all_with(
-            &host,
-            StoreMode::Rust,
-            own,
-            home.root(),
-            max_files,
-            max_ms,
-            &|| false,
-        );
+        let report = open_all_with(&host, home.root(), max_files, max_ms, &|| false);
         (host, report)
     }
 
     #[test]
     fn open_all_stops_at_the_file_cap_and_counts_the_rest_as_deferred() {
         let home = FakeHome::new("gamelib-store-boot-");
-        let own = ownership(&ALL, &[]);
-        assert_eq!(plant(&home, 30, &own), 30);
-        let (_host, report) = open(&home, &own, 10, 60_000);
+        assert_eq!(plant(&home, 30), 30);
+        let (_host, report) = open(&home, 10, 60_000);
         assert_eq!(report.opened, 10);
         assert_eq!(report.deferred, 20);
         // Some of the 30 have a migration chain, so they are migrated or discarded, not adopted.
@@ -579,56 +385,24 @@ mod tests {
         );
         assert!(summary_line(&report).contains(", 20 deferred in "));
         // No cap reached: everything opens.
-        let (_host, report) = open(&home, &own, 10_000, 60_000);
+        let (_host, report) = open(&home, 10_000, 60_000);
         assert_eq!((report.opened, report.deferred), (30, 0));
     }
 
     #[test]
     fn open_all_stops_at_the_time_cap_and_when_shutdown_is_cancelled() {
         let home = FakeHome::new("gamelib-store-boot-");
-        let own = ownership(&ALL, &[]);
-        plant(&home, 12, &own);
-        let (_host, report) = open(&home, &own, 10_000, 0);
+        plant(&home, 12);
+        let (_host, report) = open(&home, 10_000, 0);
         assert_eq!((report.opened, report.deferred), (0, 12));
         let host = StoreHost::new();
-        let report = open_all_with(
-            &host,
-            StoreMode::Rust,
-            &own,
-            home.root(),
-            10_000,
-            60_000,
-            &|| true,
-        );
+        let report = open_all_with(&host, home.root(), 10_000, 60_000, &|| true);
         assert_eq!((report.opened, report.deferred), (0, 12));
-    }
-
-    #[test]
-    fn open_all_in_ts_mode_opens_only_the_native_store() {
-        let home = FakeHome::new("gamelib-store-boot-");
-        let own = ownership(&ALL, &[]);
-        plant(&home, 8, &own);
-        let dir = home.root().join("store");
-        fs::create_dir_all(&dir).unwrap();
-        fs::write(dir.join("uploadedLogs.json"), "{}").unwrap();
-        let host = StoreHost::new();
-        let report = open_all_with(
-            &host,
-            StoreMode::Ts,
-            &own,
-            home.root(),
-            10_000,
-            60_000,
-            &|| false,
-        );
-        assert_eq!(report.opened, 1);
-        assert_eq!(report.deferred, 0);
     }
 
     #[test]
     fn open_all_reports_a_newer_store_read_only_and_a_corrupt_cache_start_empty() {
         let home = FakeHome::new("gamelib-store-boot-");
-        let own = ownership(&ALL, &[]);
         let newer = "{\n\t\"a\": 1,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 9\n\t\t}\n\t}\n}";
         let store = home.root().join("store");
         let cache = home.root().join("store_cache");
@@ -636,7 +410,7 @@ mod tests {
         fs::create_dir_all(&cache).unwrap();
         fs::write(store.join("config.json"), newer).unwrap();
         fs::write(cache.join("steam_metadata.json"), "{ not json").unwrap();
-        let (host, report) = open(&home, &own, 10_000, 60_000);
+        let (host, report) = open(&home, 10_000, 60_000);
         assert_eq!(
             report.read_only,
             vec![("store/config".to_string(), ReadOnlyReason::Newer)]
@@ -667,7 +441,7 @@ mod tests {
     }
 
     #[test]
-    fn open_all_walks_games_config_when_the_settings_family_is_owned_and_skips_side_files() {
+    fn open_all_walks_games_config_and_skips_side_files() {
         let home = FakeHome::new("gamelib-store-boot-");
         let games = home.root().join("GamesConfig");
         fs::create_dir_all(&games).unwrap();
@@ -681,12 +455,8 @@ mod tests {
             fs::write(games.join(name), "{\"version\":\"v2\"}").unwrap();
         }
         fs::write(home.root().join("config.json"), "{\"version\":\"v2\"}").unwrap();
-        let on = ownership(&["settings"], &[]);
-        let (_host, report) = open(&home, &on, 10_000, 60_000);
+        let (_host, report) = open(&home, 10_000, 60_000);
         assert_eq!(report.opened, 3, "config.json and the two game files");
-        let off = ownership(&["cache"], &[]);
-        let (_host, report) = open(&home, &off, 10_000, 60_000);
-        assert_eq!(report.opened, 0);
     }
 
     #[test]
@@ -697,9 +467,8 @@ mod tests {
         let file = dir.join("migrations.json");
         fs::write(&file, "{\"ran\":[\"a\"]}").unwrap();
         let before = fs::metadata(&file).unwrap().modified().unwrap();
-        // Every family and an explicit per-store flag on: the excluded row still never opens.
-        let own = ownership(&ALL, &[("store/migrations", true)]);
-        let (host, report) = open(&home, &own, 10_000, 60_000);
+        // Every other row is Rust's (85-21): the excluded row still never opens (D-07).
+        let (host, report) = open(&home, 10_000, 60_000);
         assert_eq!((report.opened, report.deferred), (0, 0));
         assert_eq!(fs::read_to_string(&file).unwrap(), "{\"ran\":[\"a\"]}");
         assert_eq!(fs::metadata(&file).unwrap().modified().unwrap(), before);
@@ -755,8 +524,7 @@ mod tests {
     }
 
     #[test]
-    fn open_all_opens_every_cache_row_under_the_cache_family_and_leaves_every_other_family() {
-        let own = ownership(&["cache"], &[]);
+    fn open_all_opens_every_cache_row() {
         let home = FakeHome::new("gamelib-store-boot-");
         let corpus = corpus_cache_files();
         let cache_rows: Vec<&TableRow> = table()
@@ -782,15 +550,11 @@ mod tests {
             from_corpus >= 10,
             "{from_corpus} cache rows held a corpus file"
         );
-        // A user-state file sits in the same directory: the cache family does not reach it.
-        let lib = home.root().join("store_cache").join("gog_library.json");
-        fs::write(&lib, "{ not json").unwrap();
-        let (host, report) = open(&home, &own, 10_000, 60_000);
+        let (host, report) = open(&home, 10_000, 60_000);
         assert_eq!(report.opened, cache_rows.len());
         assert_eq!(report.deferred, 0);
         assert!(report.read_only.is_empty(), "{:?}", report.read_only);
         assert!(report.start_empty.is_empty(), "{:?}", report.start_empty);
-        assert_eq!(fs::read_to_string(&lib).unwrap(), "{ not json");
         assert!(host.read_only_entries().is_empty());
         eprintln!(
             "cache family: {} cache rows opened, {} from the corpus",
@@ -801,7 +565,6 @@ mod tests {
 
     #[test]
     fn open_all_copies_a_corrupt_cache_aside_lists_it_start_empty_and_keeps_the_original() {
-        let own = ownership(&["cache"], &[]);
         let home = FakeHome::new("gamelib-store-boot-");
         let corrupt = fs::read(format!(
             "{CORPUS_DIR}/edge/store_cache/edge_corrupt_cache.json"
@@ -812,7 +575,7 @@ mod tests {
         fs::create_dir_all(&dir).unwrap();
         fs::write(dir.join("wikigameinfo.json"), &corrupt).unwrap();
         fs::write(dir.join("umu.json"), "{\"a\":1}").unwrap();
-        let (_host, report) = open(&home, &own, 10_000, 60_000);
+        let (_host, report) = open(&home, 10_000, 60_000);
         assert_eq!(report.opened, 2);
         assert_eq!(
             report.start_empty,
@@ -843,7 +606,7 @@ mod tests {
         assert_eq!(env["readOnly"], serde_json::json!([]));
         // Boot again over the same files (a second launch with the file still unreadable): the
         // cache still starts empty, and the copies stay bounded by the engine's own rotation.
-        let (_again, second) = open(&home, &own, 10_000, 60_000);
+        let (_again, second) = open(&home, 10_000, 60_000);
         assert_eq!(
             second.start_empty,
             vec!["store_cache/wikigameinfo".to_string()]
@@ -920,10 +683,10 @@ mod tests {
         found
     }
 
-    /// D-12 at boot: the shipped ownership file (user-state flipped) makes `open_all` migrate an
-    /// older-version library before `spawn_sidecar_state` (which runs after it in `run_setup`), so
-    /// the sidecar's mirror only ever loads current-version data. The pre-migration backup holds
-    /// the stored bytes and the migrated bytes equal what the real TS chains produced.
+    /// D-12 at boot: `open_all` migrates an older-version library before `spawn_sidecar_state`
+    /// (which runs after it in `run_setup`), so the sidecar's mirror only ever loads current-version
+    /// data. The pre-migration backup holds the stored bytes and the migrated bytes equal what the
+    /// real TS chains produced.
     #[test]
     fn store_boot_migrates_older_library_before_spawn() {
         let older = older_user_state_files()
@@ -935,7 +698,7 @@ mod tests {
         assert_ne!(older.stored, older.expected, "the corpus file is older");
         let home = FakeHome::new("gamelib-store-boot-");
         let path = plant_older(&home, &older);
-        let (host, report) = open(&home, Ownership::embedded(), 10_000, 60_000);
+        let (host, report) = open(&home, 10_000, 60_000);
         assert_eq!(
             (
                 report.opened,
@@ -995,7 +758,7 @@ mod tests {
         for older in &all {
             let home = FakeHome::new("gamelib-store-boot-");
             let path = plant_older(&home, older);
-            let (_host, report) = open(&home, Ownership::embedded(), 10_000, 60_000);
+            let (_host, report) = open(&home, 10_000, 60_000);
             assert_eq!(
                 (report.opened, report.migrated),
                 (1, 1),
@@ -1013,94 +776,6 @@ mod tests {
                 older.file
             );
         }
-    }
-
-    /// `GAMELIB_STORE=ts` keeps the shipped ownership file but opens nothing it does not own: no
-    /// user-state row is opened, migrated or backed up, and the older bytes stay as the TS engine
-    /// will find them.
-    #[test]
-    fn store_boot_ts_mode_opens_no_user_state() {
-        let own = Ownership::embedded();
-        assert!(own.families.get("user-state").copied().unwrap_or(false));
-        let home = FakeHome::new("gamelib-store-boot-");
-        let mut planted: Vec<(PathBuf, Vec<u8>)> = Vec::new();
-        // An older-version file for each row that has one, a baseline file for the other
-        // user-state rows.
-        let older = older_user_state_files();
-        for row in table()
-            .iter()
-            .filter(|r| r.family == Family::UserState && r.name.is_some())
-        {
-            let path = match older.iter().find(|o| o.row.key == row.key) {
-                Some(o) => plant_older(&home, o),
-                None => {
-                    let dir = home.root().join(&row.dir);
-                    fs::create_dir_all(&dir).unwrap();
-                    let path = dir.join(format!("{}.json", row.name.as_deref().unwrap()));
-                    fs::write(&path, "{\"a\":1}").unwrap();
-                    path
-                }
-            };
-            planted.push((path.clone(), fs::read(&path).unwrap()));
-        }
-        assert!(planted.len() >= 26, "{} user-state files", planted.len());
-        let before = home_tree(home.root());
-        let host = StoreHost::new();
-        let report = open_all_with(
-            &host,
-            StoreMode::Ts,
-            own,
-            home.root(),
-            10_000,
-            60_000,
-            &|| false,
-        );
-        assert_eq!(
-            (
-                report.opened,
-                report.migrated,
-                report.adopted,
-                report.deferred
-            ),
-            (0, 0, 0, 0)
-        );
-        for (path, bytes) in &planted {
-            assert_eq!(&fs::read(path).unwrap(), bytes, "{}", path.display());
-        }
-        assert_eq!(
-            home_tree(home.root()),
-            before,
-            "no backup or side file appeared"
-        );
-        assert!(host.read_only_entries().is_empty());
-        // The same profile in rust mode does open (and migrate) them: the mode alone is the gate.
-        let (_host, rust) = open(&home, own, 10_000, 60_000);
-        assert!(rust.opened >= 26, "{} opened under rust", rust.opened);
-        assert!(rust.migrated >= 7, "{} migrated under rust", rust.migrated);
-    }
-
-    /// Every file under `root`, relative, with its length: a cheap whole-tree comparison.
-    fn home_tree(root: &Path) -> Vec<(String, u64)> {
-        fn walk(dir: &Path, root: &Path, into: &mut Vec<(String, u64)>) {
-            for entry in fs::read_dir(dir).unwrap().flatten() {
-                let path = entry.path();
-                if path.is_dir() {
-                    walk(&path, root, into);
-                } else {
-                    into.push((
-                        path.strip_prefix(root)
-                            .unwrap()
-                            .to_string_lossy()
-                            .into_owned(),
-                        entry.metadata().unwrap().len(),
-                    ));
-                }
-            }
-        }
-        let mut found = Vec::new();
-        walk(root, root, &mut found);
-        found.sort();
-        found
     }
 
     // ---- 85-15: the settings family at boot -------------------------------------------------
@@ -1152,10 +827,10 @@ mod tests {
         found
     }
 
-    /// Research A4 / D-12 at boot: with the shipped ownership file (settings flipped), `open_all`
-    /// migrates every older config.json and GamesConfig document before `spawn_sidecar_state`, each
-    /// behind one backup holding the stored bytes, and the migrated bytes equal the TS oracle's, so
-    /// GameConfig's synchronous reads never see an unmigrated document.
+    /// Research A4 / D-12 at boot: `open_all` migrates every older config.json and GamesConfig
+    /// document before `spawn_sidecar_state`, each behind one backup holding the stored bytes, and
+    /// the migrated bytes equal the TS oracle's, so GameConfig's synchronous reads never see an
+    /// unmigrated document.
     #[test]
     fn store_boot_migrates_every_older_settings_document_before_spawn() {
         let older = older_settings_documents();
@@ -1165,7 +840,6 @@ mod tests {
         );
         assert!(globals >= 3, "only {globals} older config.json files");
         assert!(games >= 40, "only {games} older GamesConfig documents");
-        let own = Ownership::embedded();
         for doc in &older {
             let home = FakeHome::new("gamelib-store-boot-settings-");
             let path = if doc.global {
@@ -1176,7 +850,7 @@ mod tests {
             fs::create_dir_all(path.parent().unwrap()).unwrap();
             fs::write(&path, &doc.stored).unwrap();
 
-            let (host, report) = open(&home, own, BOOT_SWEEP_MAX_FILES, BOOT_SWEEP_MAX_MS);
+            let (host, report) = open(&home, BOOT_SWEEP_MAX_FILES, BOOT_SWEEP_MAX_MS);
             assert_eq!(
                 (report.opened, report.migrated, report.deferred),
                 (1, 1, 0),
@@ -1212,7 +886,7 @@ mod tests {
     }
 
     #[test]
-    fn store_boot_reports_a_settings_document_by_its_document_key_and_ts_mode_opens_none() {
+    fn store_boot_reports_a_settings_document_by_its_document_key() {
         let home = FakeHome::new("gamelib-store-boot-settings-");
         let games = home.root().join("GamesConfig");
         fs::create_dir_all(&games).unwrap();
@@ -1221,17 +895,8 @@ mod tests {
         // A stem no frame could carry is not Rust's: never opened, never reported.
         fs::write(games.join("a..b.json"), "{\"version\":\"v2\"}").unwrap();
         fs::write(home.root().join("config.json"), "{\"version\":\"v2\"}").unwrap();
-        let before = home_tree(home.root());
 
-        let (_host, ts) = open_all_mode(&home, StoreMode::Ts);
-        assert_eq!(ts.opened, 0, "ts mode opens no settings document");
-        assert_eq!(
-            home_tree(home.root()),
-            before,
-            "ts mode touches no settings document"
-        );
-
-        let (host, report) = open_all_mode(&home, StoreMode::Rust);
+        let (host, report) = open(&home, BOOT_SWEEP_MAX_FILES, 60_000);
         assert_eq!(report.opened, 3, "config.json, 480 and 620");
         assert_eq!(
             report.read_only,
@@ -1267,24 +932,9 @@ mod tests {
             )
             .unwrap();
         }
-        let own = ownership(&["settings"], &[]);
-        let (_host, report) = open(&home, &own, 2, 60_000);
+        let (_host, report) = open(&home, 2, 60_000);
         assert_eq!((report.opened, report.deferred), (2, 4));
-        let (_host, report) = open(&home, &own, 10_000, 0);
+        let (_host, report) = open(&home, 10_000, 0);
         assert_eq!((report.opened, report.deferred), (0, 6));
-    }
-
-    fn open_all_mode(home: &FakeHome, mode: StoreMode) -> (StoreHost, BootReport) {
-        let host = StoreHost::new();
-        let report = open_all_with(
-            &host,
-            mode,
-            Ownership::embedded(),
-            home.root(),
-            BOOT_SWEEP_MAX_FILES,
-            60_000,
-            &|| false,
-        );
-        (host, report)
     }
 }

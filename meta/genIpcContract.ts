@@ -37,8 +37,7 @@ import {
   RUST_INVOKE_KIND,
   SHELL_WINDOW_FOCUSED,
   STORE_FRAME_KIND,
-  STORE_MIRROR_EVENT_CHANNEL,
-  STORE_SNAPSHOT_CHANNEL
+  STORE_MIRROR_EVENT_CHANNEL
 } from '../src/common/types/sidecarTransport'
 import { rustInvokeArgs } from '../src/common/types/ipc/rustInvoke'
 import {
@@ -863,7 +862,6 @@ function buildContract(): string {
       SHELL_WINDOW_FOCUSED,
       STORE_FRAME_KIND,
       STORE_MIRROR_EVENT_CHANNEL,
-      STORE_SNAPSHOT_CHANNEL,
       RUST_INVOKE_KIND,
       IPC_INVALID_CHANNEL_MARKER,
       IPC_INVALID_ARGS_MARKER,

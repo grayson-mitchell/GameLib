@@ -69,8 +69,8 @@ pub(crate) struct NativeCtx {
     pub(crate) paste: Arc<dyn PasteClient>,
     /// The app version, for the upload's User-Agent.
     pub(crate) app_version: String,
-    /// The renderer's store reads (85-16): the boot's store mode, user data and ownership, and the
-    /// proxy to the sidecar (the `SidecarState` `store_dispatch` holds) for a store TS answers.
+    /// The renderer's store reads and writes (85-16, 85-17): the user-data directory the boot opened
+    /// its stores under.
     pub(crate) store_reads: store_native::StoreReads,
 }
 
@@ -83,16 +83,6 @@ impl NativeCtx {
         impl FrontendEmitter for NullEmitter {
             fn emit(&self, _channel: &str, _args: Vec<Value>) {}
         }
-        struct NoSidecar;
-        impl store_native::SidecarProxy for NoSidecar {
-            fn invoke(&self, _channel: &str, _args: Vec<Value>) -> Result<Value, String> {
-                Err("no sidecar in this test".to_string())
-            }
-
-            fn send(&self, _channel: &str, _args: Vec<Value>) -> Result<(), String> {
-                Err("no sidecar in this test".to_string())
-            }
-        }
         NativeCtx {
             host,
             log_paths,
@@ -100,10 +90,7 @@ impl NativeCtx {
             emitter: Arc::new(NullEmitter),
             paste: Arc::new(log_upload::OfflinePaste),
             app_version: "0.0.0-test".to_string(),
-            store_reads: store_native::StoreReads {
-                config: None,
-                sidecar: Arc::new(NoSidecar),
-            },
+            store_reads: store_native::StoreReads { config: None },
         }
     }
 }

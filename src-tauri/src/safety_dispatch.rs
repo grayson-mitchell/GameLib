@@ -54,7 +54,6 @@ fn removed_app_data_targets(args: &[Value], reply: &Value) -> Vec<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::store_boot::{Ownership, StoreMode};
     use crate::store_dispatch::{Config, Dispatcher, EventSink, LogSink};
     use gamelib_core::shutdown::Shutdown;
     use gamelib_store::host::{Origin, StoreHost};
@@ -96,7 +95,7 @@ mod tests {
         assert!(removed_app_data_targets(&[], &json!({ "outcome": "removed" })).is_empty());
     }
 
-    /// A dispatcher over `home` with the settings family owned, and the events it answered.
+    /// A dispatcher over `home` (every family is Rust's, 85-21), and the events it answered.
     fn rig(home: &FakeHome, host: &Arc<StoreHost>) -> (Arc<Dispatcher>, Arc<Mutex<Vec<Value>>>) {
         let events = Arc::new(Mutex::new(Vec::new()));
         let e = Arc::clone(&events);
@@ -106,9 +105,6 @@ mod tests {
             Arc::clone(host),
             Config {
                 user_data: home.root().to_path_buf(),
-                mode: StoreMode::Rust,
-                ownership: Ownership::parse(r#"{"families":{"settings":true},"stores":{}}"#)
-                    .unwrap(),
             },
             Shutdown::new(),
             sink,

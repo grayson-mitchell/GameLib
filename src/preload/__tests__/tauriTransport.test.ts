@@ -628,7 +628,7 @@ describe('change events', () => {
     expect(snapshotGet('timestampStore', 'k')).toBe('after-gap-12')
   })
 
-  it('85-17: a push without rev (GAMELIB_STORE=ts) is handled as today, including replay over a fetch', async () => {
+  it('85-17: a push without rev (a store no Rust-owned file backs) is handled as today, including replay over a fetch', async () => {
     const fetch = deferredFetchWithRev()
     push({ store: 'gogSyncStore', key: '', invalidated: true })
     push({ store: 'gogSyncStore', key: 'k', value: 'newer-no-rev' })

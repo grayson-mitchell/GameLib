@@ -1863,13 +1863,9 @@ fn run_setup(
     // stores came up read-only. Bounded by BOOT_SWEEP_MAX_FILES / BOOT_SWEEP_MAX_MS and the
     // shutdown token; what it does not reach opens on first use.
     let log_paths = native_log_paths();
-    let store_mode =
-        store_boot::store_mode_from_env(std::env::var("GAMELIB_STORE").ok().as_deref());
     let store_report = match log_paths.as_ref() {
         Some(paths) => store_boot::open_all(
             store_boot::host(),
-            store_mode,
-            store_boot::Ownership::embedded(),
             std::path::Path::new(&paths.user_data),
             store_boot::BOOT_SWEEP_MAX_FILES,
             store_boot::BOOT_SWEEP_MAX_MS,
@@ -1877,9 +1873,9 @@ fn run_setup(
         None => store_boot::BootReport::default(),
     };
     let store_boot_env = store_boot::boot_env_value(&store_report);
-    // Where the sidecar's store frames are resolved, under the mode this boot used.
+    // Where the sidecar's store frames are resolved: the directory this boot opened.
     if let Some(paths) = log_paths.as_ref() {
-        store_dispatch::configure(std::path::PathBuf::from(&paths.user_data), store_mode);
+        store_dispatch::configure(std::path::PathBuf::from(&paths.user_data));
     }
     // 85-17: every change of a store the renderer reads reaches it from Rust, in rev order, whoever
     // made it (the sidecar's mirror, a native renderer write, a Rust module).
@@ -1901,14 +1897,9 @@ fn run_setup(
         )),
         paste: Arc::new(log_upload::ReqwestPaste::new()),
         app_version: native_handlers::app_version().to_string(),
-        // 85-16: renderer store reads use the mode and ownership this boot opened with.
+        // 85-16: renderer store reads and writes use the directory this boot opened.
         store_reads: store_native::StoreReads {
-            config: log_paths_user_data.map(|user_data| store_native::ReadConfig {
-                user_data,
-                mode: store_mode,
-                ownership: store_boot::Ownership::embedded().clone(),
-            }),
-            sidecar: Arc::new(store_native::DispatcherSidecar),
+            config: log_paths_user_data.map(|user_data| store_native::ReadConfig { user_data }),
         },
     })));
     let state = spawn_sidecar_state(app, store_boot_env.as_deref())?;

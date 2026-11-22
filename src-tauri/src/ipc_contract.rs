@@ -16,7 +16,6 @@ pub(crate) const FRONTEND_MESSAGE_EVENT: &str = "frontend_message";
 pub(crate) const SHELL_WINDOW_FOCUSED: &str = "shellWindowFocused";
 pub(crate) const STORE_FRAME_KIND: &str = "store";
 pub(crate) const STORE_MIRROR_EVENT_CHANNEL: &str = "storeMirrorEvent";
-pub(crate) const STORE_SNAPSHOT_CHANNEL: &str = "store:ts-snapshot";
 pub(crate) const RUST_INVOKE_KIND: &str = "rustInvoke";
 pub(crate) const IPC_INVALID_CHANNEL_MARKER: &str = "[GAMELIB_IPC_INVALID_CHANNEL]";
 pub(crate) const IPC_INVALID_ARGS_MARKER: &str = "[GAMELIB_IPC_INVALID_ARGS]";

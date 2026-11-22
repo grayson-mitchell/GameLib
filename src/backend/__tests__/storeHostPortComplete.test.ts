@@ -47,7 +47,16 @@ const DELETED = [
   'src/backend/migration/index.ts',
   'src/backend/migration/stores.ts',
   'src/backend/migration/migrations/legendary.ts',
-  'src/backend/sidecar/__tests__/migrationsWiring.test.ts'
+  'src/backend/sidecar/__tests__/migrationsWiring.test.ts',
+  // 85-21 Task 2: the store flag, the ownership file and the TS owner path (D-03). The oracle's
+  // goldens and vectors stay (KEPT); the conf-backed store's versioning cases are the Rust
+  // engine_golden and corpus tests (85-07).
+  'src/backend/stores/storeOwnership.ts',
+  'src/common/types/ipc/storeOwnership.json',
+  'src/backend/stores/__tests__/storeOracle.test.ts',
+  'src/backend/stores/__tests__/storeOwnership.test.ts',
+  'src/backend/stores/__tests__/storeFallback.test.ts',
+  'src/backend/__tests__/storeBackendVersioning.test.ts'
 ]
 
 /** What the mirror and the Rust tests still need; deleting one of these is a regression. */
@@ -74,8 +83,21 @@ const FORBIDDEN_IDENTIFIERS = [
   'createMigrationStores',
   'migrationsStore',
   'legendary-move-global-config-folder',
-  'applyMigrations'
+  'applyMigrations',
+  // 85-21 Task 2: the TS mode resolution and the `store:ts-*` internal channels Rust forwarded to.
+  'resolveStoreMode',
+  'store:ts-'
 ]
+
+/**
+ * The rollback flag Phase 85 carried through its live gate (D-01), named as a whole word: the
+ * shell's boot report (`<flag>_BOOT`) and the lazy-miss marker share its prefix and stay. Built from
+ * parts so this file does not name it either. Scanned over RAW text, comments and tests included.
+ */
+const FLAG = ['GAMELIB', 'STORE'].join('_')
+
+/** The `conf` package, gone with the TS owner path: no source may import it. */
+const CONF_IMPORT_RE = /from\s+['"]conf['"]|require\(\s*['"]conf['"]\s*\)/
 
 /**
  * Floors (82 D-05). Measured 2026-11-22 (85-21): non-test src/ and meta/ hold well over 1000
@@ -86,13 +108,31 @@ const TS_FILES_FLOOR = 500
 const SHELL_FILES_FLOOR = 40
 const CRATE_FILES_FLOOR = 100
 
-function walk(dir: string, out: string[], ext: RegExp): void {
+function walk(
+  dir: string,
+  out: string[],
+  ext: RegExp,
+  withTests = false
+): void {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
-    if (e.name === 'node_modules' || e.name === '__tests__') continue
+    if (e.name === 'node_modules') continue
+    if (e.name === '__tests__' && !withTests) continue
     const full = join(dir, e.name)
-    if (e.isDirectory()) walk(full, out, ext)
+    if (e.isDirectory()) walk(full, out, ext, withTests)
     else if (ext.test(e.name)) out.push(full)
   }
+}
+
+/** True when `src` names `flag` as a whole word (`_` is a word character, so `<flag>_BOOT` is not it). */
+function namesFlag(src: string, flag: string): boolean {
+  return new RegExp(`(^|[^A-Za-z0-9_])${flag}($|[^A-Za-z0-9_])`).test(src)
+}
+
+/** Paths whose comment-stripped code imports `conf`. */
+function confImportHits(files: readonly Loaded[]): string[] {
+  return files
+    .filter((f) => CONF_IMPORT_RE.test(stripSourceComments(f.src)))
+    .map((f) => f.path)
 }
 
 /** Every `src-tauri/crates/<crate>/src` tree (the crates' tests/ and fixtures are not scanned). */
@@ -147,6 +187,11 @@ describe('store host port complete (Phase 85)', () => {
     src: readFileSync(f, 'utf8')
   })
   const loaded = [...tsFiles, ...shellFiles, ...crateFiles].map(load)
+  // The flag scan reads tests too, the way `grep -rnw` over src, meta and src-tauri/src does.
+  const flagFiles: string[] = []
+  walk(join(ROOT, 'src'), flagFiles, /\.(ts|tsx|cjs|js|json|md)$/, true)
+  walk(join(ROOT, 'meta'), flagFiles, /\.(ts|tsx|cjs|js|json|md)$/, true)
+  walk(join(ROOT, 'src-tauri', 'src'), flagFiles, /\.rs$/, true)
 
   it.each(DELETED)('%s is deleted', (p) => {
     expect(existsSync(join(ROOT, p))).toBe(false)
@@ -162,6 +207,17 @@ describe('store host port complete (Phase 85)', () => {
       expect(identifierHits(loaded, [id])).toEqual([])
     }
   )
+
+  it('the store rollback flag is not named anywhere in src/, meta/ or src-tauri/src, tests included', () => {
+    const hits = flagFiles
+      .filter((f) => namesFlag(readFileSync(f, 'utf8'), FLAG))
+      .map((f) => relative(ROOT, f))
+    expect(hits).toEqual([])
+  })
+
+  it('no non-test source imports conf', () => {
+    expect(confImportHits(loaded)).toEqual([])
+  })
 
   it('anti-vacuity: every walk scanned a real tree', () => {
     assertAtOrAboveFloor(
@@ -179,6 +235,36 @@ describe('store host port complete (Phase 85)', () => {
       crateFiles.length,
       CRATE_FILES_FLOOR
     )
+    assertAtOrAboveFloor(
+      'storeHostPortComplete flag-scan files (tests included)',
+      flagFiles.length,
+      TS_FILES_FLOOR
+    )
+  })
+
+  it('self-test: the flag scan matches the flag as a whole word only', () => {
+    expect(namesFlag(`${FLAG}=ts pnpm tauri:dev`, FLAG)).toBe(true)
+    expect(namesFlag(`env::var("${FLAG}")`, FLAG)).toBe(true)
+    expect(namesFlag(`// under ${FLAG}, every read`, FLAG)).toBe(true)
+    expect(namesFlag(`${FLAG}_BOOT`, FLAG)).toBe(false)
+    expect(namesFlag(`X${FLAG}`, FLAG)).toBe(false)
+  })
+
+  it('self-test: a conf import in code is caught, in a comment it is not', () => {
+    expect(
+      confImportHits([{ path: 'a.ts', src: "import Conf from 'conf'" }])
+    ).toEqual(['a.ts'])
+    expect(
+      confImportHits([
+        { path: 'b.ts', src: 'import type { Options } from "conf"' }
+      ])
+    ).toEqual(['b.ts'])
+    expect(
+      confImportHits([
+        { path: 'c.ts', src: "// import Conf from 'conf'\nconst x = 1" },
+        { path: 'd.ts', src: "import x from 'config'" }
+      ])
+    ).toEqual([])
   })
 
   it('self-test: a deleted identifier in TS code is caught, the same text in a comment is not', () => {

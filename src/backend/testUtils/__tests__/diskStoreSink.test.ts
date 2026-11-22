@@ -34,7 +34,7 @@ const tracer = (root: ReturnType<typeof createTestStoreRoot>) =>
 
 describe('createTestStoreRoot with its default disk sink', () => {
   it('writes the golden bytes for the golden ops and leaves nothing pending', () => {
-    const root = createTestStoreRoot(userData, { storeMode: 'rust' })
+    const root = createTestStoreRoot(userData)
     const store = tracer(root)
     store.set('480', {
       title: 'Half-Life',
@@ -55,10 +55,10 @@ describe('createTestStoreRoot with its default disk sink', () => {
   })
 
   it('serves a second store over the file and a second root from the bytes it wrote', () => {
-    const root = createTestStoreRoot(userData, { storeMode: 'rust' })
+    const root = createTestStoreRoot(userData)
     tracer(root).set('k', { a: 1 })
     expect(tracer(root).get('k')).toEqual({ a: 1 })
-    const later = tracer(createTestStoreRoot(userData, { storeMode: 'rust' }))
+    const later = tracer(createTestStoreRoot(userData))
     expect(later.get('k')).toEqual({ a: 1 })
     later.clear()
     expect(JSON.parse(readFileSync(later.path, 'utf8'))).toEqual({
@@ -71,7 +71,6 @@ describe('createTestStoreRoot with its default disk sink', () => {
   it('records every frame in order when asked, and still applies them', () => {
     const frames: StoreFrame[] = []
     const root = createTestStoreRoot(userData, {
-      storeMode: 'rust',
       recordFrames: frames
     })
     const store = tracer(root)
@@ -85,7 +84,7 @@ describe('createTestStoreRoot with its default disk sink', () => {
   })
 
   it('answers a flush frame, so the quit barrier resolves under jest', async () => {
-    const root = createTestStoreRoot(userData, { storeMode: 'rust' })
+    const root = createTestStoreRoot(userData)
     tracer(root).set('a', 1)
     await expect(root.mirrors.flushStores(1000)).resolves.toBeUndefined()
     const store = tracer(root)
@@ -102,7 +101,6 @@ describe('createTestStoreRoot with its default disk sink', () => {
   it('an explicit frame sink replaces the disk sink, and the suite owns the answers', () => {
     const frames: StoreFrame[] = []
     const root = createTestStoreRoot(userData, {
-      storeMode: 'rust',
       frameSink: { send: (f) => void frames.push(f) }
     })
     const store = tracer(root)

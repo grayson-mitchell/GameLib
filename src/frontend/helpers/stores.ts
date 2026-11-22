@@ -27,7 +27,6 @@ class TypeCheckedStoreFrontend<
 
   constructor(name: Name, options: StoreOptions<StoreStructure[Name]>) {
     this.storeName = name
-    // @ts-expect-error This looks like a bug in electron-store's type definitions
     window.api.storeNew(name, options)
   }
 

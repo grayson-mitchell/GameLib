@@ -1,7 +1,7 @@
 /**
  * The sidecar's write path to the Rust store owner (Phase 85 plan 10, FND-06), TS half.
  *
- * `store_cache/wikigameinfo` is the tracer store: `storeOwnership.json` moves it to Rust, so a
+ * `store_cache/wikigameinfo` is the tracer store: like every store since 85-21 (D-03), a
  * `GameLibStore` over it is a window onto the root's `MirrorCell`. A recording fake stands in for
  * the shell: it captures the frames the store sends (order and shape), answers each with the
  * `storeMirrorEvent` the shell would, and the cell's pending list and reads are checked
@@ -20,7 +20,6 @@ import {
   STORE_MIRROR_EVENT_CHANNEL
 } from 'common/types/sidecarTransport'
 import { registerStoreWriteHandlers } from '../../sidecar/storeWriteHandlers'
-import { createStoreRegistry } from '../storeRegistry'
 import { MirrorCell, type StoreMirrorEvent } from '../mirrorCell'
 import type { StoreFrame, StoreFrameSink } from '../storeFrames'
 import { STORE_FRAME_MAX_BYTES, validateStoreFrame } from '../storeFrames'
@@ -60,7 +59,7 @@ describe('the sidecar write path to a Rust-owned store', () => {
   })
 
   const rustRoot = (sink: StoreFrameSink, boot?: StoreRoot['boot']) =>
-    createTestStoreRoot(userData, { storeMode: 'rust', frameSink: sink, boot })
+    createTestStoreRoot(userData, { frameSink: sink, boot })
 
   const tracerStore = (root: StoreRoot) =>
     new GameLibStore({
@@ -255,28 +254,18 @@ describe('the sidecar write path to a Rust-owned store', () => {
     expect(first.has('k')).toBe(false)
   })
 
-  it('keeps every other store on conf, and every store on conf in ts mode', () => {
+  it('refuses a store over store/migrations, the one row neither side opens (D-07), sending nothing', () => {
     const { frames, sink } = recordingSink()
     const root = rustRoot(sink)
-    // Since 85-15 every family is Rust's; store/migrations is the one store Rust never opens (D-07).
-    const config = new GameLibStore({
-      root,
-      cwd: 'store',
-      name: 'migrations',
-      declaration: { kind: 'user-state' }
-    })
-    config.set('k', 1)
-    expect(JSON.parse(readFileSync(config.path, 'utf8')).k).toBe(1)
-
-    const tsRoot = createTestStoreRoot(userData)
-    const traced = new GameLibStore({
-      root: tsRoot,
-      cwd: 'store_cache',
-      name: 'wikigameinfo',
-      declaration: { kind: 'cache' }
-    })
-    traced.set('k', 1)
-    expect(JSON.parse(readFileSync(traced.path, 'utf8')).k).toBe(1)
+    expect(
+      () =>
+        new GameLibStore({
+          root,
+          cwd: 'store',
+          name: 'migrations',
+          declaration: { kind: 'user-state' }
+        })
+    ).toThrow(/not a store the shell owns/)
     expect(frames).toEqual([])
   })
 
@@ -627,7 +616,6 @@ describe('the storeMirrorEvent registration', () => {
     try {
       const frames: StoreFrame[] = []
       const root = createTestStoreRoot(userData, {
-        storeMode: 'rust',
         frameSink: { send: (f) => void frames.push(f) }
       })
       const listeners = new Map<string, (...args: unknown[]) => void>()
@@ -635,10 +623,8 @@ describe('the storeMirrorEvent registration', () => {
         ipc: {
           on: (channel: string, listener: (...args: unknown[]) => void) => {
             listeners.set(channel, listener)
-          },
-          handle: () => undefined
+          }
         } as never,
-        registry: createStoreRegistry(),
         root,
         pushFrontendMessage: () => undefined
       })

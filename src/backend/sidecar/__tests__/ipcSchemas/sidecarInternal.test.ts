@@ -24,21 +24,6 @@ const invokeTable: FixtureTable<typeof sidecarInternalInvokeArgs> = {
     valid: [['Fortnite']],
     invalid: [[], [''], [1], ['a', 'b']]
   },
-  // relay_commands.rs: vec![]
-  'store:ts-snapshot': noArgs,
-  // 85-16: store_native.rs forwards vec![Value::String(store_name)]
-  'store:ts-fetch': {
-    valid: [['gogLibraryStore'], ['timestampStore']],
-    invalid: [[], [''], [1], ['x'.repeat(129)]]
-  },
-  // Phase 64 plan 03 / 85-17: the confirmed write store_native.rs forwards [store, key, json value]
-  'store:ts-set-checked': {
-    valid: [
-      ['configStore', 'theme', 'dracula'],
-      ['configStore', 'customThemes', []]
-    ],
-    invalid: [[], ['configStore'], ['', 'theme', 1], [1, 'theme', 1]]
-  },
   // main.rs / single_instance.rs: [Value::String(url)]
   handleProtocolUrl: {
     valid: [['gamelib://launch/steam/220']],
@@ -114,36 +99,6 @@ const invokeTable: FixtureTable<typeof sidecarInternalInvokeArgs> = {
 const sendTable: FixtureTable<typeof sidecarInternalSendArgs> = {
   // main.rs SHELL_WINDOW_FOCUSED: empty args
   shellWindowFocused: noArgs,
-  // 85-17: store_native.rs forwards the renderer's storeSet args unchanged ([storeName, key, value])
-  'store:ts-set': {
-    valid: [
-      ['configStore', 'defaultSettings.theme', 'dark'],
-      ['configStore', 'a.b', { nested: [1, 2, null] }],
-      // a positional undefined value arrives as null
-      ['configStore', 'a', undefined]
-    ],
-    invalid: [
-      [],
-      ['configStore'],
-      ['configStore', 'a'],
-      [1, 'a', 1],
-      ['s', '', 1]
-    ]
-  },
-  // 85-17: store_native.rs forwards the renderer's storeDelete args unchanged
-  'store:ts-delete': {
-    valid: [['configStore', 'defaultSettings.theme']],
-    invalid: [[], ['configStore'], ['configStore', ''], ['configStore', 1]]
-  },
-  // 85-17: store_native.rs forwards [storeName] or [storeName, options]
-  'store:ts-new': {
-    valid: [
-      ['timestampStore', { cwd: 'store_cache', name: 'x' }],
-      ['timestampStore', undefined],
-      ['timestampStore']
-    ],
-    invalid: [[], [''], [1, {}], ['s', 'not-an-object']]
-  },
   // 73-11: Rust depot job events (flattened kind tag)
   depotJobEvent: {
     valid: [
@@ -263,18 +218,10 @@ describe('sidecarInternal schemas', () => {
   runFixtureTable(sidecarInternalInvokeArgs, invokeTable)
   runFixtureTable(sidecarInternalSendArgs, sendTable)
 
-  it('registers the sixteen channels with the right kind and caller', () => {
+  it('registers the ten channels with the right kind and caller', () => {
     const shell = [
       'health',
       'trayResolveRunner',
-      'store:ts-snapshot',
-      // 85-16: the renamed fetch the shell forwards to; the renderer's name is native now.
-      'store:ts-fetch',
-      // 85-17: the renamed writes the shell forwards to; the renderer's channels are native now.
-      'store:ts-set',
-      'store:ts-set-checked',
-      'store:ts-delete',
-      'store:ts-new',
       'handleProtocolUrl',
       'shellWindowFocused',
       'depotCdnToken',
@@ -298,6 +245,6 @@ describe('sidecarInternal schemas', () => {
     expect(
       Object.keys(sidecarInternalInvokeArgs).length +
         Object.keys(sidecarInternalSendArgs).length
-    ).toBe(16)
+    ).toBe(10)
   })
 })

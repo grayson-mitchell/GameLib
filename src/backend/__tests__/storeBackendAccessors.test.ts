@@ -4,22 +4,40 @@ import { join } from 'path'
 import GameLibStore from '../store_backend'
 import { createTestStoreRoot } from '../testUtils/testStoreRoot'
 
-const root = createTestStoreRoot()
-
 type Data = Record<string, unknown>
-const dir = () => mkdtempSync(join(tmpdir(), 'gl68-acc-'))
-const disk = (p: string) => JSON.parse(readFileSync(p, 'utf-8'))
+
+/**
+ * The facade's accessors over its mirror cell (A6; every store is a mirror since 85-21, D-03). Each
+ * case gets a fresh user-data directory and a test root whose in-process disk sink stands in for
+ * the shell, so what reaches disk is what the shell would write. The shell's version envelope
+ * (`__internal__`) is not a store value and is left out of the comparisons.
+ */
+function freshStore(): GameLibStore<Data> {
+  const root = createTestStoreRoot(mkdtempSync(join(tmpdir(), 'gl68-acc-')))
+  return new GameLibStore<Data>({
+    root,
+    cwd: 'store',
+    name: 'download-manager'
+  })
+}
+
+function disk(path: string): Data {
+  const { __internal__: _envelope, ...rest } = JSON.parse(
+    readFileSync(path, 'utf-8')
+  ) as Data
+  return rest
+}
 
 describe('GameLibStore accessor overrides (A6)', () => {
   test('set persists and get reads', () => {
-    const s = new GameLibStore<Data>({ root, cwd: dir(), name: 'a6probe' })
+    const s = freshStore()
     s.set('k', 1)
     expect(disk(s.path).k).toBe(1)
     expect(s.get('k')).toBe(1)
   })
 
   test('delete, clear and store replacement persist', () => {
-    const s = new GameLibStore<Data>({ root, cwd: dir(), name: 'a6probe' })
+    const s = freshStore()
     s.set('k', 1)
     s.set('j', 2)
     s.delete('k')
@@ -30,11 +48,7 @@ describe('GameLibStore accessor overrides (A6)', () => {
     expect(disk(s.path)).toEqual({ a: 1 })
   })
 
-  test('a subclass setter observes a store replacement, and constructor-time defaults still reach disk', () => {
-    // Phase 85 made GameLibStore a facade over its owner, so conf's constructor-time defaults
-    // merge runs inside the conf-backed owner (its read-only guard being live during that merge is
-    // storeBackendVersioning's case). What a subclass of the facade can observe is its own
-    // replacement of the store.
+  test('a subclass setter observes a store replacement', () => {
     let calls = 0
     class Probe extends GameLibStore<Data> {
       get store(): Data {
@@ -45,20 +59,15 @@ describe('GameLibStore accessor overrides (A6)', () => {
         super.store = v
       }
     }
-    const p = new Probe({
-      root,
-      cwd: dir(),
-      name: 'a6probe',
-      defaults: { seeded: true }
-    })
-    expect(disk(p.path).seeded).toBe(true)
+    const root = createTestStoreRoot(mkdtempSync(join(tmpdir(), 'gl68-acc-')))
+    const p = new Probe({ root, cwd: 'store', name: 'download-manager' })
     p.store = { a: 1 }
     expect(calls).toBe(1)
     expect(disk(p.path)).toEqual({ a: 1 })
   })
 
   test('Symbol.iterator yields persisted entries', () => {
-    const s = new GameLibStore<Data>({ root, cwd: dir(), name: 'a6probe' })
+    const s = freshStore()
     s.set('k', 1)
     expect(new Map(s)).toEqual(new Map([['k', 1]]))
   })

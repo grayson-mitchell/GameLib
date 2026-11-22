@@ -13,10 +13,128 @@
  * the shell's `parse_store_frame`, checked in the same order, so a frame one side accepts the other
  * does. It never carries a key or a value in its result.
  *
+ * The store keys a frame may name come from the store table (`storeTable.json`, the same file the
+ * shell reads): `isStoreKey` is the TS half of the shell's key check, and `isRustOwnedStoreKey`
+ * says which keys the shell writes. Since 85-21 (D-03) there is no rollback flag and no ownership
+ * file: every row the shell opens is Rust's (`native` rows and every family the phase moved), and
+ * only an `excluded` row (`store/migrations`, D-07) is opened by neither side. A runtime
+ * `store_cache/<name>` key the table does not list is a cache-family store (the stores `storeNew`
+ * builds), Rust's only when `RECOGNIZED_CACHE_STORE_NAMES` names it (85-12, T-85-30): the shell
+ * refuses every other runtime name `not-owned` and creates no file.
+ *
  * Pure: no logger and no IPC. The output stream is injected (`createStdoutStoreFrameSink`).
  */
+import tableFile from 'common/types/ipc/storeTable.json'
 import { STORE_FRAME_KIND } from 'common/types/sidecarTransport'
-import { isStoreKey } from './storeOwnership'
+import {
+  CACHE_STORE_NAME_PATTERN,
+  RECOGNIZED_CACHE_STORE_NAMES
+} from 'common/types/storePolicy'
+
+interface TableRowShape {
+  key: string
+  dir: string
+  name: string | null
+  family: string
+  dotPaths: boolean
+  tsNames?: readonly string[]
+}
+
+const ROWS: readonly TableRowShape[] = tableFile.rows
+const rowByKey = (key: string): TableRowShape | undefined =>
+  ROWS.find((row) => row.key === key)
+const GAMES_CONFIG_PREFIX = 'GamesConfig/'
+const CACHE_PREFIX = 'store_cache/'
+
+/** A cache store the table does not list: `store_cache/<plain name>`. */
+const RUNTIME_CACHE_ROW: Omit<TableRowShape, 'key' | 'name'> = {
+  dir: 'store_cache',
+  family: 'cache',
+  dotPaths: true
+}
+
+/** What `GamesConfig/<app>` names: one plain file name, never a path. */
+function isPlainAppName(name: string): boolean {
+  return (
+    name.length > 0 &&
+    name.length <= 255 &&
+    name !== '.' &&
+    name !== '..' &&
+    !/[/\\\0]/.test(name) &&
+    !name.includes('..')
+  )
+}
+
+/**
+ * The table row a store key names. A listed row with a file name, the `settings/global` document,
+ * `GamesConfig/<app>` (the `settings/game` pattern row) and a runtime `store_cache/<name>` resolve;
+ * anything else (an unknown directory, a path escape, the pattern row's own key) is `undefined`.
+ */
+function rowForStoreKey(storeKey: string): TableRowShape | undefined {
+  if (storeKey.startsWith(GAMES_CONFIG_PREFIX)) {
+    const app = storeKey.slice(GAMES_CONFIG_PREFIX.length)
+    const pattern = rowByKey('settings/game')
+    return pattern && isPlainAppName(app) ? pattern : undefined
+  }
+  const row = rowByKey(storeKey)
+  if (row) return row.name === null ? undefined : row
+  if (storeKey.startsWith(CACHE_PREFIX)) {
+    const name = storeKey.slice(CACHE_PREFIX.length)
+    return CACHE_STORE_NAME_PATTERN.test(name)
+      ? { ...RUNTIME_CACHE_ROW, key: storeKey, name }
+      : undefined
+  }
+  return undefined
+}
+
+/** Whether a store key is one the shell would accept in a `store` frame. */
+export function isStoreKey(storeKey: string): boolean {
+  return rowForStoreKey(storeKey) !== undefined
+}
+
+/** Whether a store's keys are dot paths (every row but `store/uploadedLogs`). */
+export function dotPathsFor(storeKey: string): boolean {
+  return rowForStoreKey(storeKey)?.dotPaths ?? true
+}
+
+/**
+ * Whether a TS mirror may be built over `storeKey`: every resolvable key but the `excluded` row
+ * (`store/migrations`, D-07). A runtime cache outside the recognised list resolves too: production
+ * builds none (createStores builds table caches only and the shell refuses an unrecognised
+ * `storeNew`), and if one were built the shell would refuse its frames `not-owned`.
+ */
+export function isMirrorStoreKey(storeKey: string): boolean {
+  const row = rowForStoreKey(storeKey)
+  return row !== undefined && row.family !== 'excluded'
+}
+
+/**
+ * Whether the shell owns the file behind `storeKey`: every resolvable row but an `excluded` one,
+ * and a runtime cache only when `recognizedRuntimeCaches` names it (a seam for tests).
+ */
+export function isRustOwnedStoreKey(
+  storeKey: string,
+  recognizedRuntimeCaches: readonly string[] = RECOGNIZED_CACHE_STORE_NAMES
+): boolean {
+  const row = rowForStoreKey(storeKey)
+  if (row === undefined || row.family === 'excluded') return false
+  return (
+    !storeKey.startsWith(CACHE_PREFIX) ||
+    rowByKey(storeKey) !== undefined ||
+    recognizedRuntimeCaches.includes(storeKey.slice(CACHE_PREFIX.length))
+  )
+}
+
+/**
+ * Whether the shell owns the file a TS store NAME writes (85-17): a typed store's name or a cache
+ * store's file name, resolved through the table's `tsNames`, else as a runtime `store_cache/<name>`.
+ * The shell announces every change of such a store to the renderer itself (one push source per
+ * store), so the sidecar must not push it too.
+ */
+export function isRustOwnedStoreName(storeName: string): boolean {
+  const row = ROWS.find((r) => r.tsNames?.includes(storeName) === true)
+  return isRustOwnedStoreKey(row?.key ?? `${CACHE_PREFIX}${storeName}`)
+}
 
 type StoreFrameOp = 'set' | 'delete' | 'clear' | 'replace' | 'flush'
 

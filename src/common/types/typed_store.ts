@@ -1,4 +1,3 @@
-import type { Options as ConfOptions } from 'conf'
 import type { RunsForMeState } from 'common/runsForMe'
 import { Get } from 'type-fest'
 
@@ -174,23 +173,18 @@ export interface StoreStructure {
   }
 }
 
-// Phase 35 Plan 05 (D-04): declared first-party rather than re-exported from
-// the storage library, because `conf`'s own option shape is NOT the one this
-// codebase passes. `conf` has no `name` option — it reads `configName`
-// (conf/dist/source/index.js:130). `electron-store` translated `name` ->
-// `configName` for us; `backend/store_backend.ts` now owns that translation.
-// This alias therefore mirrors `electron-store`'s OWN type definition
-// (electron-store/index.d.ts:7) exactly, so every existing call site keeps
-// type-checking against the option names it actually passes.
-//
-// Deliberately a TYPE-ONLY import of `conf` — erased at compile time, so
-// `src/frontend/helpers/stores.ts` (which imports from this module)
-// never pulls a Node-only, fs-backed package into the renderer bundle.
-export type StoreOptions<T extends Record<string, unknown>> = Omit<
-  ConfOptions<T>,
-  'configName' | 'projectName' | 'projectVersion' | 'projectSuffix'
-> & {
+// The options a store construction passes (Phase 35 Plan 05, D-04, narrowed in Phase 85 plan 21
+// when `conf` was removed): `name` and `cwd` decide the file (`backend/store_backend.ts` translates
+// them and checks containment), and `clearInvalidConfig` is recorded with the registration
+// (`registeredStores.json`). The shell (gamelib-store) owns everything else about the file. `T`, the
+// store's shape, stays in the signature so every call site keeps naming the store it builds.
+export type StoreOptions<T extends Record<string, unknown>> = {
   readonly name?: string
+  readonly cwd?: string
+  readonly fileExtension?: string
+  readonly clearInvalidConfig?: boolean
+  /** Never set by a construction site; typed against the store's shape for the registry record. */
+  readonly schema?: { readonly [K in keyof T]?: unknown }
 }
 export type ValidStoreName = keyof StoreStructure
 

@@ -46,45 +46,28 @@
  * project name (index.js:85-92), which would fail inside the bundled SEA
  * sidecar where there is no resolvable `package.json`.
  *
- * Verified intact on `conf@10.2.0`, so no call site changed: `.get(key,
- * defaultValue)`, `.set`, `.has`, `.delete`, `.clear`, `.store`,
- * `Symbol.iterator`, dot-notation key paths, `clearInvalidConfig`, `defaults`
- * and `accessPropertiesByDotNotation`.
- *
- * Pinned to `conf@^10.2.0` deliberately, NOT latest: `conf@11+` are
- * `type: module` (ESM-only) and `conf@15` additionally requires Node >=20,
- * either of which would drag an unrelated ESM migration into this change.
- * 10.2.0 is also the exact version already resolved and integrity-pinned in
- * `pnpm-lock.yaml` as `electron-store@8.2.0`'s own dependency, so the
- * supply-chain delta of this swap is zero.
- *
- * Phase 85 (FND-06): `GameLibStore` is now a facade over one of two owners of the file. A store
- * the ownership file (`storeOwnership.json`, `GAMELIB_STORE`) has moved to Rust is backed by the
- * boot's `MirrorCell` for its path (`stores/mirrorCell.ts`): it reads from memory, applies a write
- * to its own view and sends one ordered frame to the shell's single writer. Every other store is
- * the conf owner exactly as before. The class name, the constructor and the members consumers use
- * (`get set has delete clear store size path readOnly`) are the same for both.
- *
- * Phase 68: store versioning, the read-only refusal and the D-13 file modes
- * live here because this is the one class every production store passes
- * through. (The Phase 27 sidecar file store, which never ran in production, was deleted in
- * quick 261121-pwt, so WR-11's containment below lives only here.)
+ * Phase 85 (FND-06, D-03): `conf` is gone. The Rust `StoreHost` is the one disk writer for every
+ * store, so `GameLibStore` is only a facade over the boot's `MirrorCell` for its path
+ * (`stores/mirrorCell.ts`): it reads from memory, applies a write to its own view and sends one
+ * ordered frame to the shell. The class name, the constructor and the members consumers use
+ * (`get set has delete clear store size path readOnly`) are unchanged, and the option translation
+ * above still decides the path: the shell writes `<userData>/<store key>.json`, so a store must
+ * resolve there. The versioning, read-only refusal and file modes the conf owner applied are the
+ * shell's (gamelib-store), and a corrupt or newer file is reported read-only at boot
+ * (`GAMELIB_STORE_BOOT`).
  */
 
-import Conf from 'conf'
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
+import { isAbsolute, join, relative, resolve } from 'path'
 import type { StoreOptions } from 'common/types/typed_store'
-import { chmodSync, existsSync, mkdirSync, statSync } from 'fs'
 import type { MirrorCell } from './stores/mirrorCell'
-import { dotPathsFor, isRustOwned } from './stores/storeOwnership'
+import { dotPathsFor, isMirrorStoreKey } from './stores/storeFrames'
 import type { StoreRoot } from './stores/storeRoot'
-import { storeKeyOf, type StoreVersioning } from './storeVersioning/engine'
-import { storeVersionCodec } from './storeMigrations'
+import { storeKeyOf } from './storeVersioning/engine'
 import type { StoreDeclaration } from './storeVersioning/types'
 
 /**
- * `conf`'s own option shape, after this module has translated `name` ->
- * `configName` and made `cwd` absolute.
+ * The store options after this module has translated `name` -> `configName` and made `cwd`
+ * absolute (the shape `conf` took, kept because the file name rules are the same).
  */
 type TranslatedOptions<T extends Record<string, unknown>> = Omit<
   StoreOptions<T>,
@@ -179,28 +162,6 @@ export function translateStoreOptions<T extends Record<string, unknown>>(
   return { ...rest, configName, cwd: resolvedCwd }
 }
 
-/** D-13: tighten an existing group/other-accessible token file and directory. */
-function tightenTokenPaths(filePath: string): void {
-  if (process.platform === 'win32') return
-  const dir = dirname(filePath)
-  const targets: [string, number][] = [
-    [filePath, 0o600],
-    [dir, 0o700]
-  ]
-  for (const [target, mode] of targets) {
-    try {
-      if (!existsSync(target)) continue
-      if ((statSync(target).mode & 0o077) !== 0) chmodSync(target, mode)
-    } catch (err) {
-      process.stderr.write(
-        `[storeVersion] could not tighten permissions on ${basename(target)}: ${
-          err instanceof Error ? err.message : String(err)
-        }\n`
-      )
-    }
-  }
-}
-
 type GameLibStoreOptions<T extends Record<string, unknown>> =
   StoreOptions<T> & {
     declaration?: StoreDeclaration
@@ -233,68 +194,7 @@ function resolveStore<T extends Record<string, unknown>>(
   return { declaration, root, translated, filePath }
 }
 
-function prepareConf<T extends Record<string, unknown>>(
-  resolved: ResolvedStore<T>
-): TranslatedOptions<T> & { configFileMode: number } {
-  const { declaration, root, translated, filePath } = resolved
-  const dir = dirname(filePath)
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 })
-  if (declaration?.tokenBearing) tightenTokenPaths(filePath)
-  root.versioning.prepareStoreFile(
-    filePath,
-    storeKeyOf(filePath),
-    declaration,
-    storeVersionCodec
-  )
-  // The versioning engine has to be reachable from the accessors below DURING conf's constructor
-  // (its defaults merge writes through `this.store`), before any field of ours can be assigned.
-  // conf stores `serialize` on the instance before it first reads, so the root's engine rides on
-  // that function: per instance, no module state.
-  const serialize = Object.assign(
-    (value: unknown): string => JSON.stringify(value, undefined, '\t'),
-    { versioning: root.versioning }
-  )
-  return { ...translated, serialize, configFileMode: 0o600 }
-}
-
-type VersioningCarrier = { _serialize: { versioning: StoreVersioning } }
-
-/** The conf-backed owner: today's store, unchanged. */
-class ConfBackedStore<
-  T extends Record<string, unknown> = Record<string, unknown>
-> extends Conf<T> {
-  constructor(options: TranslatedOptions<T> & { configFileMode: number }) {
-    super(options)
-  }
-
-  private get versioning(): StoreVersioning {
-    return (this as unknown as VersioningCarrier)._serialize.versioning
-  }
-
-  get readOnly(): boolean {
-    return this.versioning.isReadOnlyPath(this.path)
-  }
-
-  // The single read and write choke point every conf write funnels through
-  // (`set`, `delete`, `clear`, `reset`, `x.store = obj` and conf's
-  // constructor-time defaults merge all end in `this.store = ...`). Both
-  // accessors must be declared: declaring only one shadows the other. `this.path`
-  // is set by conf before its first `this.store` access, so the guard is live
-  // during `super()` (it stops conf's constructor defaults merge on a newer file).
-  get store(): T {
-    return this.versioning.viewOf(this.path, super.store)
-  }
-
-  set store(value: T) {
-    if (this.versioning.isReadOnlyPath(this.path)) {
-      this.versioning.noteRefusedWrite(this.path)
-      return
-    }
-    super.store = this.versioning.stampForWrite(this.path, value)
-  }
-}
-
-/** What both owners offer: the members consumers use, loosely typed (the facade restores the types). */
+/** The members consumers use, loosely typed (the facade restores the types). */
 interface StoreBackend {
   readonly path: string
   readonly readOnly: boolean
@@ -309,7 +209,7 @@ interface StoreBackend {
   [Symbol.iterator](): IterableIterator<[string, unknown]>
 }
 
-/** The Rust-owned owner: a window onto the boot's mirror cell for this file path. */
+/** A window onto the boot's mirror cell for this file path. */
 class MirrorBackedStore implements StoreBackend {
   constructor(private readonly cell: MirrorCell) {}
 
@@ -358,8 +258,8 @@ class MirrorBackedStore implements StoreBackend {
     this.cell.clear()
   }
 
-  // conf's `reset` restores the constructor's `defaults`. A Rust-owned store is constructed
-  // without any (the family plans move stores that seed none), so there is nothing to restore.
+  // conf's `reset` restored the constructor's `defaults`. No store is constructed with any (the
+  // family plans moved stores that seed none), so there is nothing to restore.
   reset(): void {}
 
   [Symbol.iterator](): IterableIterator<[string, unknown]> {
@@ -368,15 +268,22 @@ class MirrorBackedStore implements StoreBackend {
 }
 
 /**
- * The mirror cell for a Rust-owned store. The shell writes the file at the store table's own path
- * under ITS user-data directory, so a store whose resolved path is anywhere else would read a
- * different file than the one Rust writes: refused at construction instead of diverging silently.
+ * The mirror cell for a store. The shell writes the file at the store table's own path under ITS
+ * user-data directory, so a store whose resolved path is anywhere else would read a different file
+ * than the one Rust writes, and a key that names no store (no table row, or the `excluded`
+ * `store/migrations`) is a file nobody writes: both are refused at construction instead of
+ * diverging silently.
  */
 function mirrorCellFor<T extends Record<string, unknown>>(
   resolved: ResolvedStore<T>,
   storeKey: string
 ): MirrorCell {
   const { root, filePath } = resolved
+  if (!isMirrorStoreKey(storeKey)) {
+    throw new Error(
+      `[backend/store_backend] ${storeKey} is not a store the shell owns`
+    )
+  }
   const expected = resolve(root.userData, `${storeKey}.json`)
   if (filePath !== expected) {
     throw new Error(
@@ -400,14 +307,15 @@ export default class GameLibStore<
 > {
   private readonly backend: StoreBackend
 
+  /** What the store was declared as at its construction site (Phase 68 D-01 kind, token-bearing). */
+  readonly declaration: StoreDeclaration | undefined
+
   constructor(options?: GameLibStoreOptions<T>) {
     const resolved = resolveStore(options)
-    const storeKey = storeKeyOf(resolved.filePath)
-    this.backend = isRustOwned(storeKey, resolved.root.storeMode)
-      ? new MirrorBackedStore(mirrorCellFor(resolved, storeKey))
-      : (new ConfBackedStore<T>(
-          prepareConf(resolved)
-        ) as unknown as StoreBackend)
+    this.declaration = resolved.declaration
+    this.backend = new MirrorBackedStore(
+      mirrorCellFor(resolved, storeKeyOf(resolved.filePath))
+    )
   }
 
   /** The store file's absolute path. */

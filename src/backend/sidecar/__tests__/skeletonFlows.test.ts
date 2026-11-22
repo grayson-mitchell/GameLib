@@ -55,10 +55,7 @@
  * / SidecarNotification / the openExternal SidecarRpcRequest) — never on
  * internals — per the plan's own acceptance criteria.
  */
-import {
-  createTestStoreRoot,
-  testUserDataDir
-} from '../../testUtils/testStoreRoot'
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 
 // Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
 // and the boot's own stores share one file-cell table, as the old module-level registry did.
@@ -147,16 +144,12 @@ jest.mock('../../storeManagers/steam/user', () => ({
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { defined } from 'backend/testUtils/indexed'
-import { existsSync, readdirSync } from 'fs'
-import { join } from 'path'
 import {
   answerPollStatus,
   bootFresh,
-  writeInvoke,
-  writeSend
+  writeInvoke
 } from './helpers/sidecarHarness'
 import { createTestAnonymousClient } from 'backend/testUtils/testAnonymousClient'
-import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
 // handles the cases configure or inspect are rebound from that registry in
@@ -164,12 +157,6 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 // boot() then boots without a second reset.
 let mockLeaseOk: typeof import('../../storeManagers/steam/__tests__/depotLeaseMocks').mockLeaseOk
 let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
-let steamConfigStore: ReturnType<
-  typeof import('../../storeManagers/steam/stores').createSteamStores
->['configStore']
-let configStore: ReturnType<
-  typeof import('backend/constants/key_value_stores').createKvsStores
->['configStore']
 
 function freshRegistry(): void {
   jest.resetModules()
@@ -180,16 +167,6 @@ function freshRegistry(): void {
     mockLeaseOk
   } = require('../../storeManagers/steam/__tests__/depotLeaseMocks'))
   ;({ getSteamLibraries } = require('backend/utils'))
-  ;({ configStore: steamConfigStore } =
-    require('../../storeManagers/steam/stores').createSteamStores({
-      registry: createStoreRegistry(),
-      root: testRoot
-    }))
-  ;({ configStore } =
-    require('backend/constants/key_value_stores').createKvsStores({
-      registry: createStoreRegistry(),
-      root: testRoot
-    }))
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
@@ -203,19 +180,6 @@ const boot = () =>
       anonymousClient: createTestAnonymousClient()
     }
   })
-
-/**
- * One boot, then drop the frames the boot itself emitted. A fresh boot runs
- * the one-shot migrations and legacy-key cleanups, which announce their own
- * storeChanged frames; the store-write cases below assert on the frames their
- * OWN frames cause, so those boot-time announcements are discarded first.
- */
-async function bootQuiet(): Promise<ReturnType<typeof boot>> {
-  const sidecar = boot()
-  await flush()
-  sidecar.frames.length = 0
-  return sidecar
-}
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
@@ -414,410 +378,12 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     })
   })
 
-  // Test 4 (snapshot): the SIDECAR_STORE_SNAPSHOT response includes
-  // steamConfigStore.userData but never refreshToken.
-  it('Test 4 (snapshot): store:ts-snapshot includes steamConfigStore.userData but never refreshToken', async () => {
-    // Real (unmocked) electron-store-backed steamConfigStore — write test
-    // fixture data through the SAME module instance the handler reads. Safe:
-    // the `jest.mock('os', ...)` above redirects this module's on-disk
-    // location to a disposable per-process tmp directory, never the
-    // developer's real config directory.
-    steamConfigStore.set('userData', {
-      username: 'skeleton-tester',
-      steamId: 'STEAMID_TEST'
-    })
-    steamConfigStore.set(
-      'refreshToken',
-      'super-secret-should-never-leave-the-sidecar'
-    )
-
-    try {
-      const { input, frames } = boot()
-      writeInvoke(input, 'snapshot-1', 'store:ts-snapshot', [])
-      await flush()
-
-      const response = frames.find((frame) => frame.id === 'snapshot-1') as
-        | {
-            ok: boolean
-            result: { steamConfigStore?: Record<string, unknown> }
-          }
-        | undefined
-
-      expect(response?.ok).toBe(true)
-      expect(response?.result.steamConfigStore?.userData).toEqual({
-        username: 'skeleton-tester',
-        steamId: 'STEAMID_TEST'
-      })
-      expect(response?.result.steamConfigStore).not.toHaveProperty(
-        'refreshToken'
-      )
-    } finally {
-      // Isolated per-process tmp config dir (see jest.mock('os', ...) above)
-      // — clear() here only ever touches that disposable directory, never
-      // real user data. Clean up so the fixture data doesn't leak into
-      // another test in this same file.
-      steamConfigStore.clear()
-    }
-  })
-
-  // Phase 29 Plan 06 (D-05/D-06/D-08): the real storeSet/storeDelete/storeNew write
-  // path. Every write in this describe block goes through the REAL RPC server against
-  // the SAME real (unmocked) configStore/steamConfigStore instances Test 4 above uses —
-  // safe for the identical reason: the `os` module override at the top of this file
-  // (see this file's header docstring) redirects their on-disk location to a disposable
-  // per-process tmp directory, never the developer's real config directory.
-  //
-  // Phase 85 (85-17): the renderer's storeSet is a native Rust channel; these drive the sidecar's
-  // old handler under its shell-only name `store:ts-set`, which the shell forwards to for a store
-  // TS owns (GAMELIB_STORE=ts, or a row Rust never opens). The Rust choke point's own cases are
+  // Test 4 (snapshot) and the Phase 29 Plan 06 storeSet/storeDelete/storeNew cases drove the
+  // sidecar's store read and write handlers. Since 85-16/85-17 the renderer's store channels are
+  // native Rust channels and since 85-21 (D-03) the sidecar keeps no fallback handler; the snapshot
+  // filter (no refreshToken), the write guards, the cache-store writes and the storeNew refusals are
   // `cargo test --bin gamelib-shell store_native`.
-  describe('storeSet', () => {
-    afterEach(() => {
-      // Isolated per-process tmp config dir (see the `os` module override at the top of
-      // this file) — clear() here only ever touches that disposable directory. Clears
-      // both stores touched anywhere in this describe block so no fixture leaks between
-      // tests.
-      configStore.clear()
-      steamConfigStore.clear()
-    })
 
-    // A renderer storeSet write persists through the registry and is visible in a
-    // FRESH snapshot fetch — not merely the renderer's own optimistic local value,
-    // which is exactly the gap this plan closes (29-RESEARCH Pitfall 1). The same write
-    // also announces itself as a storeChanged frontendMessage frame (D-06).
-    it('a storeSet write persists and is visible in a fresh snapshot fetch, and announces a storeChanged event', async () => {
-      const { input, frames } = await bootQuiet()
-      writeSend(input, 'set-1', 'store:ts-set', [
-        'configStore',
-        'theme',
-        'gsd-probe'
-      ])
-      await flush()
-
-      // FRESH snapshot fetch — a new invoke round-trip, not a read of any local state.
-      writeInvoke(input, 'snapshot-set-1', 'store:ts-snapshot', [])
-      await flush()
-
-      const response = frames.find((frame) => frame.id === 'snapshot-set-1') as
-        | { ok: boolean; result: { configStore?: Record<string, unknown> } }
-        | undefined
-      expect(response?.ok).toBe(true)
-      expect(response?.result.configStore?.theme).toBe('gsd-probe')
-
-      const changed = frames.find(
-        (frame) =>
-          frame.kind === 'frontendMessage' && frame.channel === 'storeChanged'
-      )
-      expect(changed).toBeDefined()
-      expect((changed?.args as unknown[])[0]).toEqual({
-        store: 'configStore',
-        key: 'theme',
-        value: 'gsd-probe',
-        deleted: false
-      })
-    })
-
-    // A storeDelete for the same key removes it from a subsequent snapshot and emits a
-    // storeChanged frame with deleted: true.
-    it('a storeDelete removes the key from a subsequent snapshot and emits a change event with deleted: true', async () => {
-      const { input, frames } = await bootQuiet()
-      writeSend(input, 'set-2', 'store:ts-set', [
-        'configStore',
-        'theme',
-        'gsd-probe-2'
-      ])
-      await flush()
-      writeSend(input, 'del-1', 'store:ts-delete', ['configStore', 'theme'])
-      await flush()
-
-      writeInvoke(input, 'snapshot-del-1', 'store:ts-snapshot', [])
-      await flush()
-
-      const response = frames.find((frame) => frame.id === 'snapshot-del-1') as
-        | { ok: boolean; result: { configStore?: Record<string, unknown> } }
-        | undefined
-      expect(response?.ok).toBe(true)
-      expect(response?.result.configStore).not.toHaveProperty('theme')
-
-      const deleteEvent = frames.find(
-        (frame) =>
-          frame.kind === 'frontendMessage' &&
-          frame.channel === 'storeChanged' &&
-          ((frame.args as unknown[])[0] as { deleted?: boolean })?.deleted ===
-            true
-      )
-      expect(deleteEvent).toBeDefined()
-      expect((deleteEvent?.args as unknown[])[0]).toEqual({
-        store: 'configStore',
-        key: 'theme',
-        deleted: true
-      })
-    })
-
-    // PHASE 28 D-04 REGRESSION: a storeSet targeting steamConfigStore.refreshToken must
-    // be rejected — the real, on-disk token must stay byte-identical, and no
-    // storeChanged frame may be emitted for it. A plaintext write here would be
-    // Keychain-decrypt-failed by Electron and would silently sign the real user out.
-    //
-    // Seed AFTER `boot()`, not before (debug/steam-token-survives-keychain): `init()`
-    // now runs `clearOrphanedElectronToken()` unconditionally and SYNCHRONOUSLY (`init()` is
-    // not `async`) as part of booting, deleting whatever legacy value sits in this exact key
-    // at boot time — by design, that cleanup is what this fix authorizes. Seeding before
-    // `boot()` would have the boot-time cleanup (not the attacker's `storeSet`) remove
-    // the value, which would still make `after` undefined and pass, but for the wrong reason —
-    // it would stop distinguishing "the guard rejected the attacker" from "cleanup already
-    // deleted it before the attacker's frame ever arrived". Seeding after boot places a value
-    // in the key the SAME way a real credential would exist post-cleanup (nothing currently
-    // writes it, but the guard must hold regardless of how a value got there), isolating this
-    // test back to the one thing it exists to prove: `storeWriteHandlers.ts`'s guard, not the
-    // cleanup, rejects the attacker's write.
-    it('PHASE 28 D-04 regression: a storeSet into steamConfigStore.refreshToken is rejected and leaves the real token byte-identical', async () => {
-      const { input, frames } = await bootQuiet()
-      steamConfigStore.set('refreshToken', 'REAL-TOKEN-DO-NOT-OVERWRITE')
-      const before = steamConfigStore.get_nodefault('refreshToken')
-
-      writeSend(input, 'set-attacker-1', 'store:ts-set', [
-        'steamConfigStore',
-        'refreshToken',
-        'ATTACKER'
-      ])
-      await flush()
-
-      const after = steamConfigStore.get_nodefault('refreshToken')
-      expect(after).toBe(before)
-      expect(after).toBe('REAL-TOKEN-DO-NOT-OVERWRITE')
-
-      const changed = frames.find(
-        (frame) =>
-          frame.kind === 'frontendMessage' &&
-          frame.channel === 'storeChanged' &&
-          ((frame.args as unknown[])[0] as { store?: string })?.store ===
-            'steamConfigStore'
-      )
-      expect(changed).toBeUndefined()
-    })
-
-    // CR-01 REGRESSION (Phase 29 code review): the review verified this exact frame
-    // end-to-end — `storeSet('timestampStore', '__proto__.polluted', 'PWNED')` passed
-    // guards (a)/(b)/(c) (timestampStore's policy is '*') and reached
-    // the Phase 27 sidecar file store's `set()` (deleted in quick 261121-pwt), whose unguarded
-    // dot-notation walk landed the cursor on Object.prototype. Two independent guards now stop it
-    // on the production store: guard (c′) in `applyStoreWrite` and dot-prop's `disallowedKeys`
-    // inside conf 10.2.0.
-    it('CR-01 regression: a `__proto__`/`constructor`/`prototype` key path is rejected and cannot pollute Object.prototype', async () => {
-      const { input, frames } = await bootQuiet()
-      writeSend(input, 'set-proto-1', 'store:ts-set', [
-        'timestampStore',
-        '__proto__.polluted',
-        'PWNED'
-      ])
-      writeSend(input, 'set-proto-2', 'store:ts-set', [
-        'configStore',
-        'settings.__proto__.polluted',
-        'PWNED'
-      ])
-      writeSend(input, 'set-proto-3', 'store:ts-set', [
-        'legendary_library',
-        'constructor.prototype.polluted',
-        'PWNED'
-      ])
-      await flush()
-
-      expect(({} as Record<string, unknown>)['polluted']).toBeUndefined()
-      expect(Object.prototype).not.toHaveProperty('polluted')
-
-      // No change event may be announced for a rejected write, otherwise the
-      // renderer would treat the hostile key as persisted.
-      const changed = frames.filter(
-        (frame) =>
-          frame.kind === 'frontendMessage' && frame.channel === 'storeChanged'
-      )
-      expect(changed.length).toBe(0)
-
-      // The RPC loop keeps serving after the rejections.
-      writeInvoke(input, 'health-after-proto', 'health', [])
-      await flush()
-      expect(
-        frames.find((frame) => frame.id === 'health-after-proto')
-      ).toMatchObject({ ok: true, result: 'ok' })
-    })
-
-    // WR-12 (Phase 29 code review): guard (c) — the very control this phase claims to
-    // have added — had NO test coverage at all. The write suite covered guard (b)
-    // (refreshToken) and malformed store names only.
-    it('WR-12: guard (c) rejects a non-allow-listed field and emits no change event', async () => {
-      const { input, frames } = await bootQuiet()
-      writeSend(input, 'set-secret-1', 'store:ts-set', [
-        'humbleConfigStore',
-        'csrfToken',
-        'ATTACKER'
-      ])
-      writeSend(input, 'set-secret-2', 'store:ts-set', [
-        'gogConfigStore',
-        'credentials',
-        { access_token: 'ATTACKER' }
-      ])
-      // WR-04: readable but NOT writable — executable paths consumed on next launch.
-      writeSend(input, 'set-settings-1', 'store:ts-set', [
-        'configStore',
-        'settings.wineVersion.bin',
-        '/tmp/evil.sh'
-      ])
-      await flush()
-
-      const changed = frames.filter(
-        (frame) =>
-          frame.kind === 'frontendMessage' && frame.channel === 'storeChanged'
-      )
-      expect(changed.length).toBe(0)
-
-      // Nothing landed in a fresh snapshot either.
-      writeInvoke(input, 'snapshot-secret-1', 'store:ts-snapshot', [])
-      await flush()
-      const response = frames.find(
-        (frame) => frame.id === 'snapshot-secret-1'
-      ) as
-        | {
-            ok: boolean
-            result: Record<string, Record<string, unknown> | undefined>
-          }
-        | undefined
-      expect(response?.ok).toBe(true)
-      expect(response?.result.humbleConfigStore).not.toHaveProperty('csrfToken')
-      expect(response?.result.gogConfigStore).not.toHaveProperty('credentials')
-      // Boot resyncs the settings mirror from config.json (quick 261114-l1j), so `settings` now
-      // exists; the rejected write must simply not have landed in it.
-      expect(
-        (
-          response?.result.configStore?.settings as
-            | { wineVersion?: { bin?: string } }
-            | undefined
-        )?.wineVersion?.bin
-      ).not.toBe('/tmp/evil.sh')
-    })
-
-    // WR-12: a LEGITIMATE dynamic cache-store write must still persist — the guards
-    // above must not have made the recognized cache stores collateral damage.
-    it('WR-12: a legendary_library cache-store write persists and announces a change event', async () => {
-      const { input, frames } = await bootQuiet()
-      writeSend(input, 'set-cache-1', 'store:ts-set', [
-        'legendary_library',
-        'library',
-        [{ app_name: 'probe' }]
-      ])
-      // The frontend CacheStore always follows a set with a dot-keyed timestamp write.
-      writeSend(input, 'set-cache-2', 'store:ts-set', [
-        'legendary_library',
-        '__timestamp.library',
-        'Tue Jul 22 2026'
-      ])
-      await flush()
-
-      writeInvoke(input, 'snapshot-cache-1', 'store:ts-snapshot', [])
-      await flush()
-      const response = frames.find(
-        (frame) => frame.id === 'snapshot-cache-1'
-      ) as
-        | {
-            ok: boolean
-            result: { legendary_library?: Record<string, unknown> }
-          }
-        | undefined
-      expect(response?.ok).toBe(true)
-      expect(response?.result.legendary_library?.library).toEqual([
-        { app_name: 'probe' }
-      ])
-      expect(response?.result.legendary_library?.__timestamp).toEqual({
-        library: 'Tue Jul 22 2026'
-      })
-
-      const changed = frames.filter(
-        (frame) =>
-          frame.kind === 'frontendMessage' &&
-          frame.channel === 'storeChanged' &&
-          ((frame.args as unknown[])[0] as { store?: string })?.store ===
-            'legendary_library'
-      )
-      expect(changed.length).toBe(2)
-    })
-
-    // WR-02 REGRESSION (Phase 29 code review): `storeNew` used to construct a real
-    // `Store` for ANY name matching `/^[A-Za-z0-9_-]{1,64}$/`, so a renderer script
-    // could create unbounded `${userData}/store_cache/<name>.json` junk files that
-    // guard (c) then made permanently unwritable. Only the recognized cache-store
-    // names may be constructed.
-    it('WR-02: storeNew for an unrecognized name creates no file under store_cache', async () => {
-      const cacheDir = join(testUserDataDir(), 'store_cache')
-      const before = existsSync(cacheDir) ? readdirSync(cacheDir) : []
-
-      const { input } = boot()
-      writeSend(input, 'new-junk-1', 'store:ts-new', [
-        'attacker_junk_store',
-        undefined
-      ])
-      writeSend(input, 'new-junk-2', 'store:ts-new', [
-        'aaaaaaaaaaaaaaaaaaaaaaaa',
-        undefined
-      ])
-      await flush()
-
-      const after = existsSync(cacheDir) ? readdirSync(cacheDir) : []
-      expect(after.filter((f) => f.startsWith('attacker_junk_store'))).toEqual(
-        []
-      )
-      expect(after.filter((f) => f.startsWith('aaaaaaaa'))).toEqual([])
-      expect(after.length).toBe(before.length)
-    })
-
-    // Malformed store names (an unrecognized name and a traversal-shaped name) are
-    // inert: no change event, no write outside the temp home (guard (a) now rejects an
-    // unrecognized name outright — WR-01 — before any store resolution is attempted),
-    // and the RPC loop keeps serving — a subsequent health invoke still responds
-    // ok: true.
-    it('rejects an unknown store name and a traversal-shaped name — no change event, no crash, health still responds', async () => {
-      const { input, frames } = await bootQuiet()
-      writeSend(input, 'set-bad-1', 'store:ts-set', [
-        'not_a_store',
-        'theme',
-        'x'
-      ])
-      writeSend(input, 'set-bad-2', 'store:ts-set', [
-        '../../evil',
-        'theme',
-        'x'
-      ])
-      await flush()
-
-      const changed = frames.filter(
-        (frame) =>
-          frame.kind === 'frontendMessage' && frame.channel === 'storeChanged'
-      )
-      expect(changed.length).toBe(0)
-
-      writeInvoke(input, 'health-after-bad', 'health', [])
-      await flush()
-      const healthResponse = frames.find(
-        (frame) => frame.id === 'health-after-bad'
-      )
-      expect(healthResponse).toMatchObject({
-        id: 'health-after-bad',
-        ok: true,
-        result: 'ok'
-      })
-    })
-  })
-
-  // GAP CYCLE 4 (34.5-33, Routing item 1): the runner-aware refreshLibrary
-  // dispatch. These tests assert on which manager MOCK had `refresh()`
-  // called — never on the handler's resolved value alone, which is
-  // `undefined` in every passing case and therefore proves nothing about
-  // which manager actually ran (the exact blind spot the old stub hid
-  // behind for two live-gate failures).
-  //
-  // Per the plan's own objective: a passing suite here proves DISPATCH
-  // only. Item 1 ("GOG library never lands after successful auth") stays
-  // OPEN until a live `pnpm tauri:dev` session shows a populated GOG
-  // library following a real login — see 34.5-33-SUMMARY.md.
   describe('refreshLibrary runner dispatch (gap cycle 4)', () => {
     afterEach(() => {
       jest.restoreAllMocks()

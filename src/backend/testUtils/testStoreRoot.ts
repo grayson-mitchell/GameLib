@@ -35,7 +35,7 @@ export function createTestStoreRoot(
   userData?: string,
   options: Pick<
     Parameters<typeof createStoreRoot>[0],
-    'readOnlySinks' | 'migrationOverrides' | 'storeMode' | 'boot' | 'frameSink'
+    'readOnlySinks' | 'migrationOverrides' | 'boot' | 'frameSink'
   > & { recordFrames?: StoreFrame[] } = {}
 ): StoreRoot {
   const { recordFrames, frameSink, ...rest } = options

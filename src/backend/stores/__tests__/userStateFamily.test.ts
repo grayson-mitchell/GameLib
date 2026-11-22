@@ -1,23 +1,20 @@
 /**
  * The user-state family moves to the Rust owner (Phase 85 plan 13, FND-06, D-01 second family).
  *
- * `storeOwnership.json` sets `families.user-state`, so under `GAMELIB_STORE=rust` (the default)
- * every `family: user-state` row of `storeTable.json` is a window onto a mirror cell and each write
- * is a frame for the shell's single writer; under `GAMELIB_STORE=ts` the same stores are conf-backed
- * exactly as before. `store/migrations` lost its TS store in plan 21 (D-06); its row stays
- * `excluded` (D-07), so neither side opens it. The Rust half of these cases is
- * `cargo test --bin gamelib-shell store_boot` and `store_frame`.
+ * Every `family: user-state` row of `storeTable.json` is a window onto a mirror cell and each write
+ * is a frame for the shell's single writer (no flag and no conf owner since 85-21, D-03).
+ * `store/migrations` lost its TS store in plan 21 (D-06); its row stays `excluded` (D-07), so
+ * neither side opens it. The Rust half of these cases is `cargo test --bin gamelib-shell
+ * store_boot` and `store_frame`.
  */
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import ownershipFile from 'common/types/ipc/storeOwnership.json'
 import tableFile from 'common/types/ipc/storeTable.json'
 import { createStores } from '../createStores'
 import { createStoreRegistry } from '../storeRegistry'
 import type { StoreFrame } from '../storeFrames'
-import { isRustOwned } from '../storeOwnership'
-import type { StoreMode } from '../storeOwnership'
+import { isRustOwnedStoreKey } from '../storeFrames'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 
 const USER_STATE_ROWS = tableFile.rows.filter(
@@ -47,11 +44,8 @@ function storeOfRow(
   throw new Error(`createStores built no store for ${rowKey}`)
 }
 
-function build(userData: string, mode: StoreMode, frames: StoreFrame[]) {
-  const root = createTestStoreRoot(userData, {
-    storeMode: mode,
-    recordFrames: frames
-  })
+function build(userData: string, frames: StoreFrame[]) {
+  const root = createTestStoreRoot(userData, { recordFrames: frames })
   const stores = createStores({ registry: createStoreRegistry(), root })
   return { root, stores }
 }
@@ -65,15 +59,6 @@ afterEach(() => {
 })
 
 describe(`the user-state family (${USER_STATE_ROWS.length} user-state rows)`, () => {
-  it('is flipped by the family flag alone, next to the cache family', () => {
-    expect(ownershipFile.families['user-state']).toBe(true)
-    expect(ownershipFile.families.cache).toBe(true)
-    // 85-14 flipped the account family after this one and 85-15 settings, last.
-    expect(ownershipFile.families.account).toBe(true)
-    expect(ownershipFile.families.settings).toBe(true)
-    expect(Object.keys(ownershipFile.stores)).toEqual([])
-  })
-
   it('names every store the plan moves (D-11)', () => {
     const keys = USER_STATE_ROWS.map((row) => row.key)
     expect(keys.length).toBeGreaterThanOrEqual(26)
@@ -103,43 +88,32 @@ describe(`the user-state family (${USER_STATE_ROWS.length} user-state rows)`, ()
     expect(keys).not.toContain('store/migrations')
   })
 
-  it('owns the cache, user-state, account, settings and native rows under rust and only the native ones under ts', () => {
+  it('owns every row but the excluded store/migrations (D-07)', () => {
     for (const row of tableFile.rows) {
       if (row.name === null) continue
-      const rust = isRustOwned(row.key, 'rust')
-      const ts = isRustOwned(row.key, 'ts')
-      expect(rust).toBe(
-        row.family === 'cache' ||
-          row.family === 'user-state' ||
-          row.family === 'account' ||
-          row.family === 'settings' ||
-          row.family === 'native'
-      )
-      expect(ts).toBe(row.family === 'native')
+      expect([row.key, isRustOwnedStoreKey(row.key)]).toEqual([
+        row.key,
+        row.family !== 'excluded'
+      ])
     }
-  })
-
-  it('never owns store/migrations: its family is excluded (D-07), in either mode', () => {
     const row = tableFile.rows.find((r) => r.key === 'store/migrations')
     expect(row?.family).toBe('excluded')
-    expect(isRustOwned('store/migrations', 'rust')).toBe(false)
-    expect(isRustOwned('store/migrations', 'ts')).toBe(false)
   })
 
   describe.each(USER_STATE_ROWS.map((row) => [row.key, row] as const))(
     '%s',
     (_key, row) => {
-      const write = (mode: StoreMode) => {
+      const write = () => {
         const frames: StoreFrame[] = []
-        const { stores } = build(userData, mode, frames)
+        const { stores } = build(userData, frames)
         storeOfRow(userData, row.key, stores).set('userStateFamilyProbe', {
           n: 1
         })
         return frames
       }
 
-      it('is mirror-backed under rust: a write is a frame for this store', () => {
-        const frames = write('rust')
+      it('is mirror-backed: a write is a frame for this store', () => {
+        const frames = write()
         expect(frames.length).toBeGreaterThanOrEqual(1)
         for (const frame of frames) expect(frame.store).toBe(row.key)
         expect(frames[0]).toMatchObject({
@@ -153,46 +127,34 @@ describe(`the user-state family (${USER_STATE_ROWS.length} user-state rows)`, ()
           readFileSync(join(userData, `${row.key}.json`), 'utf8')
         ).toContain('userStateFamilyProbe')
       })
-
-      it('is conf-backed under GAMELIB_STORE=ts: a write sends no frame and conf writes the file', () => {
-        expect(write('ts')).toEqual([])
-        expect(
-          readFileSync(join(userData, `${row.key}.json`), 'utf8')
-        ).toContain('userStateFamilyProbe')
-      })
     }
   )
 })
 
 describe('store/migrations has no TS store (85-21, D-06) and stays on disk (D-07)', () => {
-  it.each<StoreMode>(['rust', 'ts'])(
-    'createStores builds no store over it and leaves the file alone, under %s',
-    (mode) => {
-      const file = join(userData, 'store', 'migrations.json')
-      mkdirSync(join(userData, 'store'), { recursive: true })
-      writeFileSync(file, '{"appliedMigrations":["x"]}')
-      const frames: StoreFrame[] = []
-      const { stores } = build(userData, mode, frames)
-      expect(() => storeOfRow(userData, 'store/migrations', stores)).toThrow(
-        /built no store/
-      )
-      expect(frames).toEqual([])
-      expect(readFileSync(file, 'utf8')).toBe('{"appliedMigrations":["x"]}')
-    }
-  )
+  it('createStores builds no store over it and leaves the file alone', () => {
+    const file = join(userData, 'store', 'migrations.json')
+    mkdirSync(join(userData, 'store'), { recursive: true })
+    writeFileSync(file, '{"appliedMigrations":["x"]}')
+    const frames: StoreFrame[] = []
+    const { stores } = build(userData, frames)
+    expect(() => storeOfRow(userData, 'store/migrations', stores)).toThrow(
+      /built no store/
+    )
+    expect(frames).toEqual([])
+    expect(readFileSync(file, 'utf8')).toBe('{"appliedMigrations":["x"]}')
+  })
 })
 
 describe('stores with an absolute `<userData>/store` cwd resolve to the same file', () => {
   it.each(['game-overrides', 'mac-arch', 'runs-for-me'])(
-    'store/%s resolves to <userData>/store/<name>.json under rust and under ts',
+    'store/%s resolves to <userData>/store/<name>.json',
     (name) => {
-      for (const mode of ['rust', 'ts'] as const) {
-        const { stores } = build(userData, mode, [])
-        const store = storeOfRow(userData, `store/${name}`, stores)
-        expect(
-          (store as unknown as { store: { path: string } }).store.path
-        ).toBe(join(userData, 'store', `${name}.json`))
-      }
+      const { stores } = build(userData, [])
+      const store = storeOfRow(userData, `store/${name}`, stores)
+      expect((store as unknown as { store: { path: string } }).store.path).toBe(
+        join(userData, 'store', `${name}.json`)
+      )
     }
   )
 })
@@ -206,8 +168,8 @@ describe('store/timestamp end to end: TS set -> frame -> bytes', () => {
     ['7', 1_700_000_003]
   ]
 
-  function run(mode: StoreMode, dir: string, frames: StoreFrame[]) {
-    const { root, stores } = build(dir, mode, frames)
+  function run(dir: string, frames: StoreFrame[]) {
+    const { root, stores } = build(dir, frames)
     const store = storeOfRow(dir, 'store/timestamp', stores)
     for (const [key, value] of edits) store.set(key, value)
     return { root, path: join(dir, 'store', 'timestamp.json') }
@@ -215,7 +177,7 @@ describe('store/timestamp end to end: TS set -> frame -> bytes', () => {
 
   it('sends one set frame per write, naming the store and the app key', () => {
     const frames: StoreFrame[] = []
-    run('rust', userData, frames)
+    run(userData, frames)
     expect(frames.map((frame) => [frame.store, frame.op, frame.key])).toEqual(
       edits.map(([key]) => ['store/timestamp', 'set', key])
     )
@@ -224,34 +186,21 @@ describe('store/timestamp end to end: TS set -> frame -> bytes', () => {
     }
   })
 
-  it('leaves bytes equal to JSON.stringify(stampedView, undefined, tab), integer keys first, equal to conf’s', () => {
-    const tsDir = mkdtempSync(join(tmpdir(), 'gamelib-user-state-family-ts-'))
-    try {
-      const rust = run('rust', userData, [])
-      const ts = run('ts', tsDir, [])
-      const text = readFileSync(rust.path, 'utf8')
-      const onDisk = JSON.parse(text) as Record<string, unknown>
-      const { __internal__: envelope, ...data } = onDisk
-      expect(envelope).toEqual({
-        gamelib: {
-          schemaVersion:
-            rust.root.versioning.currentVersionOf('store/timestamp')
-        }
-      })
-      expect(Object.keys(data)).toEqual([
-        '7',
-        '1245620',
-        'zeta-app',
-        'alpha-app'
-      ])
-      // The stamped view is the document the writer serialised: JS orders its integer keys first
-      // and leaves the rest (the envelope included) where they were inserted.
-      expect(text).toBe(JSON.stringify(onDisk, undefined, '\t'))
-      expect(text.startsWith('{\n\t"7": 1700000003,\n\t"1245620": ')).toBe(true)
-      expect(text).toBe(readFileSync(ts.path, 'utf8'))
-    } finally {
-      rmSync(tsDir, { recursive: true, force: true })
-    }
+  it('leaves bytes equal to JSON.stringify(stampedView, undefined, tab), integer keys first', () => {
+    const rust = run(userData, [])
+    const text = readFileSync(rust.path, 'utf8')
+    const onDisk = JSON.parse(text) as Record<string, unknown>
+    const { __internal__: envelope, ...data } = onDisk
+    expect(envelope).toEqual({
+      gamelib: {
+        schemaVersion: rust.root.versioning.currentVersionOf('store/timestamp')
+      }
+    })
+    expect(Object.keys(data)).toEqual(['7', '1245620', 'zeta-app', 'alpha-app'])
+    // The stamped view is the document the writer serialised: JS orders its integer keys first
+    // and leaves the rest (the envelope included) where they were inserted.
+    expect(text).toBe(JSON.stringify(onDisk, undefined, '\t'))
+    expect(text.startsWith('{\n\t"7": 1700000003,\n\t"1245620": ')).toBe(true)
   })
 })
 
@@ -263,7 +212,7 @@ describe('queue state survives a restart', () => {
 
   it('download-manager’s queue written through frames is loaded by a fresh StoreRoot over the same dir', () => {
     const frames: StoreFrame[] = []
-    const first = build(userData, 'rust', frames)
+    const first = build(userData, frames)
     const store = storeOfRow(userData, 'store/download-manager', first.stores)
     store.set('queue', queue)
     store.set('finished', [])
@@ -273,7 +222,7 @@ describe('queue state survives a restart', () => {
     ])
 
     // A restart: nothing of the first root is kept, only the directory.
-    const second = build(userData, 'rust', [])
+    const second = build(userData, [])
     const reopened = storeOfRow(
       userData,
       'store/download-manager',

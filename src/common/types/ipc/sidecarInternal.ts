@@ -2,19 +2,19 @@
  * Schemas for channels no `<Domain>` file declares (Phase 67, plan 18; RESEARCH open question 2).
  *
  * These are shell-originated (`health`, `trayResolveRunner`, `shellWindowFocused`,
- * `handleProtocolUrl`, `store:ts-snapshot`), the renderer-driven store channels, and the
+ * `handleProtocolUrl`, the depot and steam-poll callbacks, `storeMirrorEvent`), and the
  * DEV-ONLY `devSweepEpicCookieDomain` (deliberately not on the preload surface; see
  * devEpicCookieSweepRegistration.ts). They are NOT part of the `ipc/index.ts` umbrella types, so
  * they never appear on `window.api`. The map names carry no Sync/Async suffix so the census
  * parser (`ipcDomainParse`) does not treat them as a declared domain part.
  *
  * Envelope checks only (D-05, D-07): the `gamelib://` prefix check stays in bootstrap.ts, the
- * Epic-domain gate stays in the Rust arm, and store field policy stays in
- * `common/types/storePolicy.ts` and `storeWriteHandlers.ts`.
+ * Epic-domain gate stays in the Rust arm, and store field policy is the shell's
+ * (`storeChannels.json`, `store_policy.rs`).
  */
 import { z } from 'zod'
 
-import { nonEmptyString, optionalArg } from './schemaTypes'
+import { nonEmptyString } from './schemaTypes'
 
 // Phase 73 (73-11): the Rust depot job calls back into Node. Every id is a decimal string
 // (64-bit ids never cross as JS numbers); every payload is a single strict object.
@@ -186,22 +186,11 @@ const storeMirrorEvent = z.discriminatedUnion('op', [
 
 const noArgs = z.tuple([])
 
-// Store name and dot-notation key path, as the preload sends them (strings, never arrays).
-const storeName = nonEmptyString(128)
-const keyPath = nonEmptyString(512)
-
 export const sidecarInternalInvokeArgs = {
   health: noArgs,
   // DEV-ONLY (unpackaged sidecars); driven from DevTools with ['fortnite.com'].
   devSweepEpicCookieDomain: z.tuple([nonEmptyString(253)]),
   trayResolveRunner: z.tuple([nonEmptyString(256)]),
-  'store:ts-snapshot': noArgs,
-  // 85-16: the old renderer fetch, renamed: the shell forwards `sidecar:store-fetch` here for a
-  // store TS still answers (GAMELIB_STORE=ts, or a row Rust never opens).
-  'store:ts-fetch': z.tuple([storeName]),
-  // Phase 64 plan 03: a confirmed write; resolves true only once persisted. 85-17: renamed from the
-  // renderer's `sidecar:store-set-checked` (native now); the shell forwards to it for a store TS owns.
-  'store:ts-set-checked': z.tuple([storeName, keyPath, z.json()]),
   // The `gamelib://` prefix check stays in bootstrap.ts (D-05).
   handleProtocolUrl: z.tuple([nonEmptyString(8192)]),
   // Shell-originated: the Rust depot job asks Node for a CDN token / manifest request code.
@@ -213,17 +202,6 @@ export const sidecarInternalInvokeArgs = {
 
 export const sidecarInternalSendArgs = {
   shellWindowFocused: noArgs,
-  // 85-17: the old renderer `storeSet`, renamed: the shell forwards the native `storeSet` here for a
-  // store TS still owns (GAMELIB_STORE=ts, or a row Rust never opens). The value is any JSON value;
-  // `storePolicy.ts` `isWritableStoreField` / `isSafeKeyPath` own the field policy, not this schema.
-  'store:ts-set': z.tuple([storeName, keyPath, z.json()]),
-  // 85-17: renamed from the renderer's `storeDelete` and `storeNew` (native now); the shell forwards
-  // to them for a store TS owns. The `storeNew` handler ignores `options` (T-27-03) beyond a log.
-  'store:ts-delete': z.tuple([storeName, keyPath]),
-  'store:ts-new': z.tuple([
-    storeName,
-    optionalArg(z.record(z.string(), z.json()))
-  ]),
   // Shell-originated: Rust depot job progress events.
   depotJobEvent: z.tuple([depotJobEvent]),
   // Shell-originated: the answer to one sidecar store frame (Phase 85).
@@ -234,12 +212,6 @@ export const sidecarInternalSendArgs = {
 export const sidecarInternalCallers = {
   health: 'shell',
   trayResolveRunner: 'shell',
-  'store:ts-snapshot': 'shell',
-  'store:ts-fetch': 'shell',
-  'store:ts-set': 'shell',
-  'store:ts-set-checked': 'shell',
-  'store:ts-delete': 'shell',
-  'store:ts-new': 'shell',
   handleProtocolUrl: 'shell',
   shellWindowFocused: 'shell',
   depotCdnToken: 'shell',

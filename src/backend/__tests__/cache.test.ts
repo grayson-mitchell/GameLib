@@ -3,7 +3,7 @@ import CacheStore from '../cache'
 import { createTestStoreRoot } from '../testUtils/testStoreRoot'
 import { mkdirSync, writeFileSync, readFileSync, mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
-import { join as joinPath } from 'path'
+import { join as joinPath, resolve as resolvePath } from 'path'
 
 jest.mock('backend/store_backend')
 
@@ -14,7 +14,9 @@ describe('backend/cache.ts', () => {
     root,
     kind: 'cache'
   })
+  // The same root as the cache store, so both read the root's one mirror cell for the file.
   const internalStore = new Store({
+    root,
     cwd: 'store_cache',
     name: 'test_store'
   })
@@ -131,8 +133,14 @@ describe('store path parity (Phase 35 D-04)', () => {
   const { testUserDataDir } = jest.requireActual('../testUtils/testStoreRoot')
   const getUserData = (): string => testUserDataDir()
 
-  const RawConf =
-    jest.requireActual('conf').default ?? jest.requireActual('conf')
+  /**
+   * `conf@10.2.0`'s own path rule (conf/dist/source/index.js:129-130), restated: `path.resolve(cwd,
+   * `${configName ?? 'config'}.json`)`, with no `name` option. The package left with the TS owner
+   * path in 85-21; the rule stays here so the non-vacuity case below can still show the damage a
+   * naive `{ cwd, name }` passthrough did.
+   */
+  const naiveConfPath = (options: { cwd: string; configName?: string }) =>
+    resolvePath(options.cwd, `${options.configName ?? 'config'}.json`)
 
   const derivedPath = (name?: string, cwd = 'store_cache') => {
     const t = translateStoreOptions(
@@ -203,11 +211,7 @@ describe('store path parity (Phase 35 D-04)', () => {
   // exactly the damage described: 24 distinct stores collapse onto ONE path,
   // and that path is not under userData at all.
   test('NON-VACUITY: the naive {cwd, name} passthrough collapses all 24 onto one file', () => {
-    // `conf` mkdirs its `cwd` during construction, and with a RELATIVE cwd that
-    // lands in `process.cwd()` — the repo working directory under jest. That is
-    // precisely the defect being demonstrated, so run it from a disposable cwd
-    // rather than leaving a stray `store_cache/` in the repo (measured: it does
-    // create the directory, even though it writes no file).
+    // A RELATIVE cwd resolves against `process.cwd()`, so run from a disposable cwd.
     const scratch = mkdtempSync(joinPath(tmpdir(), 'gamelib-nonvacuity-'))
     const previousCwd = process.cwd()
     try {
@@ -215,15 +219,15 @@ describe('store path parity (Phase 35 D-04)', () => {
       // macOS: tmpdir() yields /var/... while process.cwd() resolves the
       // /private/var symlink, so compare against the post-chdir real path.
       const scratchReal = process.cwd()
-      const naive = REAL_CACHE_STORE_NAMES.map(
-        (name) =>
-          new RawConf({ cwd: 'store_cache', name, clearInvalidConfig: true })
-            .path
+      // `name` is not a conf option, so it never reaches `configName`.
+      const naive = REAL_CACHE_STORE_NAMES.map(() =>
+        naiveConfPath({ cwd: 'store_cache' })
       )
       expect(new Set(naive).size).toBe(1)
-      expect(naive[0].endsWith('/config.json')).toBe(true)
-      expect(naive[0].startsWith(getUserData())).toBe(false)
-      expect(naive[0].startsWith(scratchReal)).toBe(true)
+      const [collapsed = ''] = naive
+      expect(collapsed.endsWith('/config.json')).toBe(true)
+      expect(collapsed.startsWith(getUserData())).toBe(false)
+      expect(collapsed.startsWith(scratchReal)).toBe(true)
     } finally {
       process.chdir(previousCwd)
       rmSync(scratch, { recursive: true, force: true })
@@ -236,7 +240,9 @@ describe('store path parity (Phase 35 D-04)', () => {
   // matching depends on dot-notation still resolving (threat T-35-17), so that
   // assertion is required, not optional.
   test('reads a pre-existing store file written in the OLD backend layout', () => {
-    const cwd = 'phase35_roundtrip'
+    // A store table row (the settings mirror, `store/config`): since 85-21 every store is a mirror
+    // over the file the shell writes at its table path, so the layout is checked on a real row.
+    const cwd = 'store'
     const dir = joinPath(getUserData(), cwd)
     mkdirSync(dir, { recursive: true })
     writeFileSync(

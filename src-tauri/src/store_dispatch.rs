@@ -2,8 +2,8 @@
 //! frame arm of the stdout reader, the one worker that applies the frames, and every
 //! `storeMirrorEvent` the shell sends the sidecar.
 //!
-//! A store the ownership file moved to Rust is mirrored in the sidecar (`mirrorCell.ts`), which
-//! sends one ordered frame per write. They travel on stdout, read by the shell's single in-order
+//! Every store Rust owns (every table row but the `excluded` one, D-03) is mirrored in the sidecar
+//! (`mirrorCell.ts`), which sends one ordered frame per write. They travel on stdout, read by the shell's single in-order
 //! reader, because `rustInvoke` runs one worker thread per call with no order (Pitfall 7). The
 //! reader arm only validates and enqueues: it never blocks and never writes a file (the 2026-10-05
 //! send-queue freeze). One `store-frames` worker applies the frames in arrival order through
@@ -51,7 +51,7 @@ use gamelib_store::table::{row_for_key, Family, TableRow};
 use serde_json::{json, Value};
 
 use crate::shell_state::SidecarState;
-use crate::store_boot::{self, Ownership, StoreMode};
+use crate::store_boot;
 use crate::SidecarRpcRequest;
 
 pub(crate) use crate::ipc_contract::{STORE_FRAME_KIND, STORE_MIRROR_EVENT_CHANNEL};
@@ -184,19 +184,14 @@ fn runtime_cache_recognised(key: &str, recognised: &[&str]) -> bool {
     row_for_key(key).is_some() || recognised.contains(&name)
 }
 
-/// The row of a store this shell owns under `mode` and `ownership`, or `None`: the key names no
-/// store, the store cannot be opened (`native` and `excluded` rows), the ownership file has not
-/// moved it, or it is a runtime cache name outside `recognised`.
-fn owned_row(
-    key: &str,
-    mode: StoreMode,
-    ownership: &Ownership,
-    recognised: &[&str],
-) -> Option<TableRow> {
+/// The row of a store this shell owns, or `None`: the key names no store, the store cannot be
+/// opened by a frame (`native` and `excluded` rows), or it is a runtime cache name outside
+/// `recognised`.
+fn owned_row(key: &str, recognised: &[&str]) -> Option<TableRow> {
     let row = row_for_store_key(key)?;
     (row.store_kind().is_some()
         && runtime_cache_recognised(key, recognised)
-        && store_boot::is_rust_owned(&row, mode, ownership))
+        && store_boot::is_rust_owned(&row))
     .then_some(row)
 }
 
@@ -378,8 +373,6 @@ pub(crate) type LogSink = Arc<dyn Fn(&str) + Send + Sync>;
 #[derive(Clone)]
 pub(crate) struct Config {
     pub(crate) user_data: PathBuf,
-    pub(crate) mode: StoreMode,
-    pub(crate) ownership: Ownership,
 }
 
 struct Queue {
@@ -545,12 +538,7 @@ impl Dispatcher {
             self.reply(&store, 0, "refused", seq, Some("evicted"));
             return;
         }
-        let target = owned_row(
-            &store,
-            self.config.mode,
-            &self.config.ownership,
-            &RUNTIME_CACHE_NAMES,
-        );
+        let target = owned_row(&store, &RUNTIME_CACHE_NAMES);
         let Some(row) = target else {
             self.reply(&store, 0, "refused", seq, Some("not-owned"));
             return;
@@ -694,14 +682,10 @@ static CONFIG: OnceLock<Config> = OnceLock::new();
 static SIDECAR: OnceLock<Arc<SidecarState>> = OnceLock::new();
 static GLOBAL: OnceLock<Arc<Dispatcher>> = OnceLock::new();
 
-/// Tells the dispatcher where the stores live and who owns them. Called once from `run_setup`, with
-/// the values the boot open used. First call wins.
-pub(crate) fn configure(user_data: PathBuf, mode: StoreMode) {
-    let _ = CONFIG.set(Config {
-        user_data,
-        mode,
-        ownership: Ownership::embedded().clone(),
-    });
+/// Tells the dispatcher where the stores live. Called once from `run_setup`, with the directory the
+/// boot open used. First call wins.
+pub(crate) fn configure(user_data: PathBuf) {
+    let _ = CONFIG.set(Config { user_data });
     // Built now rather than on the first frame: its host listener must hear a renderer write that
     // comes before any sidecar frame (85-17). It spawns no worker until a frame is queued.
     let _ = global();
@@ -711,12 +695,6 @@ pub(crate) fn configure(user_data: PathBuf, mode: StoreMode) {
 /// reader starts, so no frame can arrive before there is somewhere to answer.
 pub(crate) fn install_sidecar(state: &Arc<SidecarState>) {
     let _ = SIDECAR.set(Arc::clone(state));
-}
-
-/// The sidecar's state, once [`install_sidecar`] has run: the native store reads forward to it for
-/// a store TS still owns (85-16). `None` before the sidecar is spawned.
-pub(crate) fn sidecar_state() -> Option<Arc<SidecarState>> {
-    SIDECAR.get().cloned()
 }
 
 fn global() -> Option<&'static Arc<Dispatcher>> {
@@ -805,15 +783,7 @@ mod tests {
 
     const TRACER: &str = "store_cache/wikigameinfo";
 
-    fn tracer_ownership() -> Ownership {
-        Ownership::parse(r#"{"families":{},"stores":{"store_cache/wikigameinfo":true}}"#).unwrap()
-    }
-
-    fn rig_with(ownership: Ownership, mode: StoreMode) -> Rig {
-        rig_over(Arc::new(StoreHost::new()), ownership, mode)
-    }
-
-    fn rig_over(host: Arc<StoreHost>, ownership: Ownership, mode: StoreMode) -> Rig {
+    fn rig_over(host: Arc<StoreHost>) -> Rig {
         let home = FakeHome::new("store-dispatch-");
         let shutdown = Shutdown::new();
         let events = Arc::new(Mutex::new(Vec::new()));
@@ -823,8 +793,6 @@ mod tests {
             Arc::clone(&host),
             Config {
                 user_data: home.root().to_path_buf(),
-                mode,
-                ownership,
             },
             shutdown.clone(),
             Arc::new(move |event| lock(&e).push(event)),
@@ -899,7 +867,7 @@ mod tests {
     }
 
     fn rig() -> Rig {
-        rig_with(tracer_ownership(), StoreMode::Rust)
+        rig_over(Arc::new(StoreHost::new()))
     }
 
     fn frame(
@@ -1017,43 +985,31 @@ mod tests {
 
     #[test]
     fn store_frame_for_a_store_rust_does_not_own_is_refused_not_owned_and_writes_nothing() {
-        // `store/config` is not flipped; the whole mode off refuses even the tracer.
+        // Every table row but the native and excluded ones is Rust's (85-21): an unrecognised
+        // runtime cache, the logger's native store and store/migrations (D-07) are not.
         let rig = rig();
-        send(&rig, frame(1, "store/config", "set", Some("k"), Some("1")));
-        let ts_mode = rig_with(tracer_ownership(), StoreMode::Ts);
-        send(&ts_mode, frame(1, TRACER, "set", Some("k"), Some("1")));
-        settle(&rig);
-        settle(&ts_mode);
-        for r in [&rig, &ts_mode] {
-            let events = lock(&r.events);
-            assert_eq!(events.len(), 1);
-            assert_eq!(events[0]["op"], "refused");
-            assert_eq!(events[0]["reason"], "not-owned");
-            assert_eq!(events[0]["originSeq"], 1);
-            assert!(!r.home.root().join("store").exists());
-            assert!(!r.home.root().join("store_cache").exists());
-        }
-    }
-
-    #[test]
-    fn store_frame_for_the_native_and_excluded_stores_is_never_owned() {
-        let all = Ownership::parse(
-            r#"{"families":{"cache":true,"user-state":true,"account":true,"settings":true},"stores":{"store/migrations":true}}"#,
-        )
-        .unwrap();
-        let rig = rig_with(all, StoreMode::Rust);
         send(
             &rig,
-            frame(1, "store/uploadedLogs", "set", Some("k"), Some("1")),
+            frame(1, "store_cache/custom_cache", "set", Some("k"), Some("1")),
         );
         send(
             &rig,
-            frame(2, "store/migrations", "set", Some("k"), Some("1")),
+            frame(2, "store/uploadedLogs", "set", Some("k"), Some("1")),
+        );
+        send(
+            &rig,
+            frame(3, "store/migrations", "set", Some("k"), Some("1")),
         );
         settle(&rig);
         let events = lock(&rig.events);
-        assert_eq!(events.len(), 2);
-        assert!(events.iter().all(|e| e["reason"] == "not-owned"));
+        assert_eq!(events.len(), 3);
+        for (i, event) in events.iter().enumerate() {
+            assert_eq!(event["op"], "refused");
+            assert_eq!(event["reason"], "not-owned");
+            assert_eq!(event["originSeq"], i as u64 + 1);
+        }
+        assert!(!rig.home.root().join("store").exists());
+        assert!(!rig.home.root().join("store_cache").exists());
     }
 
     #[test]
@@ -1317,11 +1273,7 @@ mod tests {
     #[test]
     fn store_frame_the_queue_flush_is_answered_only_after_every_earlier_frame_is_applied() {
         let gate = Gate::new(false);
-        let rig = rig_over(
-            gated_host(&gate, false),
-            tracer_ownership(),
-            StoreMode::Rust,
-        );
+        let rig = rig_over(gated_host(&gate, false));
         for (i, key) in ["a", "b", "c"].iter().enumerate() {
             send(
                 &rig,
@@ -1355,7 +1307,7 @@ mod tests {
     #[test]
     fn store_frame_a_failed_persist_is_refused_io_consumes_no_rev_and_leaves_no_file() {
         let gate = Gate::new(true);
-        let rig = rig_over(gated_host(&gate, true), tracer_ownership(), StoreMode::Rust);
+        let rig = rig_over(gated_host(&gate, true));
         send(&rig, frame(1, TRACER, "set", Some("a"), Some("1")));
         send(&rig, frame(2, TRACER, "set", Some("b"), Some("2")));
         settle(&rig);
@@ -1376,11 +1328,7 @@ mod tests {
     fn store_frame_worker_holds_a_store_registrant_while_frames_are_queued_and_releases_it_when_empty(
     ) {
         let gate = Gate::new(false);
-        let rig = rig_over(
-            gated_host(&gate, false),
-            tracer_ownership(),
-            StoreMode::Rust,
-        );
+        let rig = rig_over(gated_host(&gate, false));
         send(&rig, frame(1, TRACER, "set", Some("a"), Some("1")));
         send(&rig, frame(2, TRACER, "set", Some("b"), Some("2")));
         gate.wait_entered(1);
@@ -1401,11 +1349,7 @@ mod tests {
     #[test]
     fn store_frame_queue_high_water_is_logged_once_per_crossing_and_never_drops_a_frame() {
         let gate = Gate::new(false);
-        let rig = rig_over(
-            gated_host(&gate, false),
-            tracer_ownership(),
-            StoreMode::Rust,
-        );
+        let rig = rig_over(gated_host(&gate, false));
         // The first frame is taken by the worker and held at the gate; the rest queue behind it.
         send(&rig, frame(1, TRACER, "set", Some("k0"), Some("0")));
         gate.wait_entered(1);
@@ -1442,10 +1386,6 @@ mod tests {
         assert_eq!(seqs, (1..=total as u64 + 1).collect::<Vec<_>>());
     }
 
-    fn cache_ownership() -> Ownership {
-        Ownership::parse(r#"{"families":{"cache":true},"stores":{}}"#).unwrap()
-    }
-
     #[test]
     fn store_frame_runtime_cache_names_equal_the_recognised_names_of_the_policy_file() {
         // 85-16: storePolicy.ts reads its lists from storeChannels.json, which store_policy.rs
@@ -1464,34 +1404,28 @@ mod tests {
     }
 
     #[test]
-    fn store_frame_owned_row_follows_the_cache_family_and_refuses_unrecognised_runtime_names() {
-        let own = cache_ownership();
+    fn store_frame_owned_row_takes_every_openable_row_and_refuses_unrecognised_runtime_names() {
         let recognised = ["fresh_runtime_cache"];
-        let owned =
-            |key: &str, mode: StoreMode, own: &Ownership| owned_row(key, mode, own, &recognised);
-        // A table row follows its family, whatever the recognised list says.
-        assert!(owned("store_cache/steam_metadata", StoreMode::Rust, &own).is_some());
-        assert!(owned("store/wine-downloader-info", StoreMode::Rust, &own).is_some());
-        assert!(owned("store_cache/steam_metadata", StoreMode::Ts, &own).is_none());
-        assert!(owned(
+        let owned = |key: &str| owned_row(key, &recognised);
+        // A table row is Rust's whatever the recognised list says, in every family (85-21).
+        for key in [
             "store_cache/steam_metadata",
-            StoreMode::Rust,
-            &Ownership::default()
-        )
-        .is_none());
-        // The library caches are user-state rows: not moved yet.
-        assert!(owned("store_cache/gog_library", StoreMode::Rust, &own).is_none());
+            "store/wine-downloader-info",
+            "store_cache/gog_library",
+            "steam_store/config",
+            "store/config",
+            "settings/global",
+            "GamesConfig/480",
+        ] {
+            assert!(owned(key).is_some(), "{key}");
+        }
         // A recognised runtime name is a cache-family store and opens as a cache.
-        let row = owned("store_cache/fresh_runtime_cache", StoreMode::Rust, &own).unwrap();
+        let row = owned("store_cache/fresh_runtime_cache").unwrap();
         assert_eq!(row.family, gamelib_store::table::Family::Cache);
         assert_eq!(row.dir, "store_cache");
-        assert!(owned("store_cache/fresh_runtime_cache", StoreMode::Ts, &own).is_none());
-        assert!(owned(
-            "store_cache/fresh_runtime_cache",
-            StoreMode::Rust,
-            &Ownership::default()
-        )
-        .is_none());
+        // The native and excluded rows open by no frame.
+        assert!(owned("store/uploadedLogs").is_none());
+        assert!(owned("store/migrations").is_none());
         // An unrecognised name, or one that fails the pattern, is not owned.
         for key in [
             "store_cache/brand_new_cache",
@@ -1501,7 +1435,7 @@ mod tests {
             "store_cache/a/b",
             "elsewhere/fresh_runtime_cache",
         ] {
-            assert!(owned(key, StoreMode::Rust, &own).is_none(), "{key}");
+            assert!(owned(key).is_none(), "{key}");
         }
         // The shipped list admits exactly the recognised names that are not table rows.
         for name in RUNTIME_CACHE_NAMES {
@@ -1523,8 +1457,8 @@ mod tests {
     }
 
     #[test]
-    fn store_frame_under_the_cache_family_applies_to_a_cache_and_refuses_the_rest_not_owned() {
-        let rig = rig_with(cache_ownership(), StoreMode::Rust);
+    fn store_frame_applies_to_every_family_and_refuses_an_unrecognised_runtime_cache() {
+        let rig = rig();
         send(
             &rig,
             frame(1, "store_cache/steam_metadata", "set", Some("a"), Some("1")),
@@ -1539,7 +1473,7 @@ mod tests {
             &rig,
             frame(3, "store_cache/custom_cache", "set", Some("c"), Some("3")),
         );
-        // A library cache is a user-state row: the cache family does not reach it.
+        // A library cache (user-state) and the settings mirror store are Rust's too (85-21).
         send(
             &rig,
             frame(4, "store_cache/gog_library", "set", Some("d"), Some("4")),
@@ -1557,16 +1491,16 @@ mod tests {
                 ("applied", None),
                 ("applied", None),
                 ("refused", Some("not-owned")),
-                ("refused", Some("not-owned")),
-                ("refused", Some("not-owned")),
+                ("applied", None),
+                ("applied", None),
             ]
         );
         let root = rig.home.root();
         assert!(root.join("store_cache/steam_metadata.json").is_file());
         assert!(root.join("store/wine-downloader-info.json").is_file());
         assert!(!root.join("store_cache/custom_cache.json").exists());
-        assert!(!root.join("store_cache/gog_library.json").exists());
-        assert!(!root.join("store/config.json").exists());
+        assert!(root.join("store_cache/gog_library.json").is_file());
+        assert!(root.join("store/config.json").is_file());
     }
 
     #[test]
@@ -1583,7 +1517,7 @@ mod tests {
                 gamelib_store::atomic::write_atomic(path, bytes, durability)
             },
         )));
-        let rig = rig_over(host, cache_ownership(), StoreMode::Rust);
+        let rig = rig_over(host);
         let dir = rig.home.root().join("store_cache");
         fs::create_dir_all(&dir).unwrap();
         let corrupt = b"{ not json, a cache the sidecar cannot read";
@@ -1626,13 +1560,9 @@ mod tests {
 
     // ---- 85-15: settings documents --------------------------------------------------------
 
-    fn settings_ownership() -> Ownership {
-        Ownership::parse(r#"{"families":{"settings":true},"stores":{}}"#).unwrap()
-    }
-
     #[test]
     fn store_frame_a_settings_document_replace_writes_the_two_space_document_and_is_applied() {
-        let rig = rig_with(settings_ownership(), StoreMode::Rust);
+        let rig = rig();
         let doc = r#"{"1245620":{"maxSharpness":3,"enviromentOptions":[]},"version":"v0","explicit":true}"#;
         send(
             &rig,
@@ -1673,7 +1603,7 @@ mod tests {
 
     #[test]
     fn store_frame_a_set_on_a_settings_document_is_refused_rejected_and_writes_nothing() {
-        let rig = rig_with(settings_ownership(), StoreMode::Rust);
+        let rig = rig();
         send(
             &rig,
             frame(1, "GamesConfig/app", "set", Some("app.x"), Some("1")),
@@ -1692,7 +1622,7 @@ mod tests {
 
     #[test]
     fn store_frame_a_games_config_name_that_is_a_path_is_rejected_store_key_and_writes_nothing() {
-        let rig = rig_with(settings_ownership(), StoreMode::Rust);
+        let rig = rig();
         for (seq, store) in [
             (1, "GamesConfig/../config"),
             (2, "GamesConfig/a/b"),
@@ -1721,29 +1651,5 @@ mod tests {
             .all(|l| !l.contains("config") && !l.contains("..")));
         // Nothing outside the user-data tree, nor in it, was created.
         assert!(fs::read_dir(rig.home.root()).unwrap().next().is_none());
-    }
-
-    #[test]
-    fn store_frame_a_settings_document_is_not_owned_under_ts_mode_or_before_the_flip() {
-        for (ownership, mode) in [
-            (settings_ownership(), StoreMode::Ts),
-            (cache_ownership(), StoreMode::Rust),
-        ] {
-            let rig = rig_with(ownership, mode);
-            send(
-                &rig,
-                frame(
-                    1,
-                    "GamesConfig/app",
-                    "replace",
-                    None,
-                    Some(r#"{"version":"v2"}"#),
-                ),
-            );
-            settle(&rig);
-            let events = lock(&rig.events);
-            assert_eq!(events[0]["reason"], "not-owned");
-            assert!(!rig.home.root().join("GamesConfig/app.json").exists());
-        }
     }
 }

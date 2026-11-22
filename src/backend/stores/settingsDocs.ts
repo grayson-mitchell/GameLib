@@ -7,19 +7,20 @@
  * `readFileSync`. Once the settings family is Rust-owned, a read straight from disk can miss a write
  * the shell has not applied yet, so every one of them reads through `readSettingsDoc`:
  *
- * - **Rust-owned** (`GAMELIB_STORE=rust`, the `settings` family flipped in `storeOwnership.json`,
- *   and the path is the document's table path under `root.userData`): the document is a
+ * - **Rust-owned** (the boot's root, and the path is the document's table path under
+ *   `root.userData`; since 85-21 there is no flag, D-03): the document is a
  *   `MirrorCell` of the root's registry, one per file, keyed `settings/global` or
  *   `GamesConfig/<app>`. A read is the cell's view (pending writes included); a cell is created on
  *   the first read of a file that exists, or on the first write. A write is ONE `replace` frame:
  *   the shell owns the bytes (2-space, the chain's `version: 'vN'`, `sync_all`). The shell migrated
  *   every document at boot before this process started (store_boot), so no TS migration runs.
- * - **TS-owned** (`GAMELIB_STORE=ts`, the family not flipped, or a path that is not the table path):
- *   exactly what the callers did before: `readFileSync` + `JSON.parse` (a corrupt file throws, as
- *   it did), `ensureSettingsMigrated` before a read, `writeSettingsFile` for a write.
+ * - **TS-read** (a caller with no root, only the versioning engine or nothing, or a path that is not
+ *   the table path): exactly what the callers did before: `readFileSync` + `JSON.parse` (a corrupt
+ *   file throws, as it did), `ensureSettingsMigrated` before a read, `writeSettingsFile` for a
+ *   write. Production always passes the root; 85-23 and 85-24 delete this path with the engine.
  *
  * A `GamesConfig` document name must be one plain path segment (the `isContainedGameConfig` rule);
- * `storeOwnership.isStoreKey` refuses anything else, so such a path never becomes a frame (T-85-37).
+ * `storeFrames.isStoreKey` refuses anything else, so such a path never becomes a frame (T-85-37).
  *
  * Pure: no logger (config.ts and game_config.ts import this module and the logger imports them),
  * no timer, no handle (sidecar exit contract).
@@ -30,16 +31,17 @@ import {
   ensureSettingsMigrated,
   writeSettingsFile
 } from '../storeVersioning/settingsFiles'
-import { isRustOwned, isStoreKey } from './storeOwnership'
+import { isRustOwnedStoreKey, isStoreKey } from './storeFrames'
 import type { StoreRoot } from './storeRoot'
 
 /**
  * What the helpers need of the boot's `StoreRoot`. Production passes the root itself. A caller with
- * only the versioning engine (or nothing, for a read-only caller) passes `{ storeMode: 'ts', ... }`
- * and gets the TS-owned path: the Rust-owned path needs the root's `userData` and `mirrors`.
+ * only the versioning engine (or nothing, for a read-only caller) passes `{ versioning }` or `{}`
+ * and gets the TS-read path: the Rust-owned path needs the root's `userData` and `mirrors`.
  */
-export type SettingsDocRoot = Pick<StoreRoot, 'storeMode'> &
-  Partial<Pick<StoreRoot, 'userData' | 'mirrors' | 'versioning'>>
+export type SettingsDocRoot = Partial<
+  Pick<StoreRoot, 'userData' | 'mirrors' | 'versioning'>
+>
 
 type SettingsChain = 'settings/global' | 'settings/game'
 
@@ -59,11 +61,9 @@ function docKeyOf(userData: string, path: string): string | undefined {
 
 /** The document's store key when the shell owns it under this root, else `undefined` (TS-owned). */
 function rustDocKey(root: SettingsDocRoot, path: string): string | undefined {
-  if (root.storeMode !== 'rust' || !root.userData || !root.mirrors) {
-    return undefined
-  }
+  if (!root.userData || !root.mirrors) return undefined
   const key = docKeyOf(root.userData, path)
-  return key !== undefined && isRustOwned(key, root.storeMode) ? key : undefined
+  return key !== undefined && isRustOwnedStoreKey(key) ? key : undefined
 }
 
 function cellFor(root: SettingsDocRoot, path: string, storeKey: string) {

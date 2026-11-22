@@ -47,7 +47,8 @@ describe('createTestStores', () => {
   it('does not resolve a family until it is read', () => {
     const stores = createTestStores()
     // 19 -> 18 at Phase 84 plan 84-06 (2026-11-21): the `logger` family was deleted.
-    expect(Object.keys(stores)).toHaveLength(18)
+    // 18 -> 17 at Phase 85 plan 85-21 (2026-11-22): the `migration` family was deleted (D-06).
+    expect(Object.keys(stores)).toHaveLength(17)
     const desc = Object.getOwnPropertyDescriptor(stores, 'steam')
     expect(typeof desc?.get).toBe('function')
   })

@@ -31,7 +31,7 @@ export function readStoredTitleConfig(
   if (!/^[0-9]{1,10}$/.test(appId)) return undefined
   const path = join(deps.paths.gamesConfigPath, `${appId}.json`)
   try {
-    const raw = readSettingsDoc(deps.storeRoot ?? { storeMode: 'ts' }, path)
+    const raw = readSettingsDoc(deps.storeRoot ?? {}, path)
     if (raw === undefined) return undefined
     const entry = raw[appId]
     if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {

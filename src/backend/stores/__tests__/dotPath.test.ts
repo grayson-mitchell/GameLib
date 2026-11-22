@@ -207,7 +207,6 @@ describe('keyorder.json', () => {
       const frames: StoreFrame[] = []
       const store = new GameLibStore({
         root: createTestStoreRoot(userData, {
-          storeMode: 'rust',
           frameSink: { send: (f) => void frames.push(f) }
         }),
         cwd: 'store_cache',

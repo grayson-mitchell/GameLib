@@ -1,12 +1,11 @@
 /**
  * The settings family moves to the Rust owner, last (Phase 85 plan 15, FND-06, D-01).
  *
- * `storeOwnership.json` sets `families.settings`, so under `GAMELIB_STORE=rust` (the default) the
- * three settings stores are mirror-backed and every write is a frame for the shell's single writer:
- * the renderer's settings mirror `store/config.json` (configStore, a conf store: `set` frames), the
- * global document `config.json` and every per-game `GamesConfig/<app>.json` (whole-document
- * `replace` frames, settingsDocs.ts). Under `GAMELIB_STORE=ts` all three are TS-owned exactly as
- * before. This suite covers GlobalConfig on the seam, the D-22 first boot, the D-15/D-20 resync
+ * The three settings stores are mirror-backed and every write is a frame for the shell's single
+ * writer (no flag and no conf owner since 85-21, D-03): the renderer's settings mirror
+ * `store/config.json` (configStore, a store-flavour file: `set` frames), the global document
+ * `config.json` and every per-game `GamesConfig/<app>.json` (whole-document `replace` frames,
+ * settingsDocs.ts). This suite covers GlobalConfig on the seam, the D-22 first boot, the D-15/D-20 resync
  * through the configStore mirror, and the two direct per-game readers (engine, Steam title). The
  * Rust half (boot migration of older documents with backups, the boot bound, the document keys) is
  * `cargo test --bin gamelib-shell store_boot`.
@@ -21,7 +20,6 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import ownershipFile from 'common/types/ipc/storeOwnership.json'
 import tableFile from 'common/types/ipc/storeTable.json'
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { createGlobalConfig } from '../../config'
@@ -31,8 +29,11 @@ import { readStoredTitleConfig } from '../../storeManagers/steam/titleSettings'
 import { createStores } from '../createStores'
 import { writeSettingsDoc } from '../settingsDocs'
 import { createStoreRegistry } from '../storeRegistry'
-import type { StoreFrame, StoreFrameSink } from '../storeFrames'
-import { isRustOwned, type StoreMode } from '../storeOwnership'
+import {
+  isRustOwnedStoreKey,
+  type StoreFrame,
+  type StoreFrameSink
+} from '../storeFrames'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 
 const SETTINGS_ROWS = tableFile.rows.filter((row) => row.family === 'settings')
@@ -63,14 +64,12 @@ function paths() {
 }
 
 /** The boot's wiring over one root: the stores, the global config built on the root, the frames. */
-function build(mode: StoreMode, opts: { silent?: boolean } = {}) {
+function build(opts: { silent?: boolean } = {}) {
   const frames: StoreFrame[] = []
-  const root = createTestStoreRoot(userData, {
-    storeMode: mode,
-    ...(opts.silent
-      ? { frameSink: silentSink(frames) }
-      : { recordFrames: frames })
-  })
+  const root = createTestStoreRoot(
+    userData,
+    opts.silent ? { frameSink: silentSink(frames) } : { recordFrames: frames }
+  )
   const stores = createStores({ registry: createStoreRegistry(), root })
   const config = () =>
     createGlobalConfig({
@@ -90,14 +89,7 @@ function seedGlobal(defaultSettings: Record<string, unknown>) {
 }
 
 describe(`the settings family (${SETTINGS_ROWS.length} settings rows)`, () => {
-  it('is the last family flipped (D-01): every family is Rust’s, no per-store override', () => {
-    expect(ownershipFile.families).toEqual({
-      cache: true,
-      'user-state': true,
-      account: true,
-      settings: true
-    })
-    expect(Object.keys(ownershipFile.stores)).toEqual([])
+  it('names the three settings rows', () => {
     expect(SETTINGS_ROWS.map((row) => row.key).sort()).toEqual([
       'settings/game',
       'settings/global',
@@ -105,15 +97,14 @@ describe(`the settings family (${SETTINGS_ROWS.length} settings rows)`, () => {
     ])
   })
 
-  it('owns configStore, config.json and GamesConfig/<app> under rust and none of them under ts', () => {
+  it('owns configStore, config.json and GamesConfig/<app>', () => {
     for (const key of ['store/config', 'settings/global', 'GamesConfig/480']) {
-      expect(isRustOwned(key, 'rust')).toBe(true)
-      expect(isRustOwned(key, 'ts')).toBe(false)
+      expect(isRustOwnedStoreKey(key)).toBe(true)
     }
   })
 
-  it('configStore is mirror-backed under rust (a set frame) and conf-backed under ts (no frame)', () => {
-    const rust = build('rust')
+  it('configStore is mirror-backed (a set frame)', () => {
+    const rust = build()
     rust.stores.kvs.configStore.set('settings', { language: 'de' } as never)
     expect(rust.frames.map((f) => [f.store, f.op, f.key])).toEqual([
       ['store/config', 'set', 'settings']
@@ -122,21 +113,12 @@ describe(`the settings family (${SETTINGS_ROWS.length} settings rows)`, () => {
     const text = readFileSync(join(userData, 'store', 'config.json'), 'utf8')
     expect(text).toContain('\t"settings": {\n\t\t"language": "de"\n\t}')
     expect(text).toContain('"__internal__"')
-
-    rmSync(join(userData, 'store'), { recursive: true, force: true })
-    const ts = build('ts')
-    ts.stores.kvs.configStore.set('settings', { language: 'fr' } as never)
-    expect(ts.frames).toEqual([])
-    expect(
-      JSON.parse(readFileSync(join(userData, 'store', 'config.json'), 'utf8'))
-        .settings
-    ).toEqual({ language: 'fr' })
   })
 })
 
 describe('GlobalConfig on the settings-document seam', () => {
   it('D-22: a fresh profile sends one replace frame for settings/global and getSettings is served from memory before any ack', () => {
-    const { frames, config } = build('rust', { silent: true })
+    const { frames, config } = build({ silent: true })
     expect(existsSync(configPath())).toBe(false)
 
     const global = config()
@@ -161,13 +143,13 @@ describe('GlobalConfig on the settings-document seam', () => {
   })
 
   it('D-22: the first-boot write lands as the shell writes it, and a second boot reads it back', () => {
-    const first = build('rust')
+    const first = build()
     first.config()
     const text = readFileSync(configPath(), 'utf8')
     expect(text.startsWith('{\n  "defaultSettings": {\n')).toBe(true)
     expect(text.endsWith('\n')).toBe(false)
 
-    const second = build('rust', { silent: true })
+    const second = build({ silent: true })
     const settings = second.config().getSettings()
     expect(settings.language).toBe('en')
     expect(second.frames).toEqual([])
@@ -175,7 +157,7 @@ describe('GlobalConfig on the settings-document seam', () => {
 
   it('an existing config.json is read through readSettingsDoc; a setSetting flush is one replace with the whole document', () => {
     seedGlobal({ language: 'de', maxWorkers: 3 })
-    const { frames, config, stores } = build('rust', { silent: true })
+    const { frames, config, stores } = build({ silent: true })
     const global = config()
     expect(frames).toEqual([])
     expect(global.getSettings().language).toBe('de')
@@ -199,16 +181,6 @@ describe('GlobalConfig on the settings-document seam', () => {
     ).toEqual({ language: 'de', maxWorkers: 3 })
     expect(global.getSettings().maxWorkers).toBe(8)
   })
-
-  it('under GAMELIB_STORE=ts GlobalConfig is TS-owned: no frame, writeSettingsFile writes config.json', () => {
-    const { frames, config } = build('ts')
-    config()
-    expect(frames).toEqual([])
-    const doc = JSON.parse(readFileSync(configPath(), 'utf8')) as {
-      version: string
-    }
-    expect(doc.version).toBe('v2')
-  })
 })
 
 describe('D-15 / D-20: the config.json-wins resync runs in TS through the configStore mirror', () => {
@@ -226,7 +198,7 @@ describe('D-15 / D-20: the config.json-wins resync runs in TS through the config
         '\t'
       )
     )
-    const { frames, config, stores } = build('rust')
+    const { frames, config, stores } = build()
     const global = config()
     resyncSettingsMirror({
       config: global,
@@ -264,7 +236,7 @@ describe('the direct per-game readers see a document written a moment earlier', 
   })
 
   it('engineConfig.readStoredGameConfig and steam readStoredTitleConfig read through the cell before any ack', () => {
-    const { root, frames } = build('rust', { silent: true })
+    const { root, frames } = build({ silent: true })
     const path = join(gamesConfig(), `${APP}.json`)
     writeSettingsDoc(root, path, gameDoc('automatic'))
     expect(frames.map((f) => [f.store, f.op])).toEqual([
@@ -296,13 +268,13 @@ describe('the direct per-game readers see a document written a moment earlier', 
     ).toBe('crossover')
   })
 
-  it('without the root (a TS-owned read) they read the file, as before', () => {
+  it('without the root (a test caller) they read the file, as before', () => {
     mkdirSync(gamesConfig(), { recursive: true })
     writeFileSync(
       join(gamesConfig(), `${APP}.json`),
       JSON.stringify(gameDoc('automatic'), null, 2)
     )
-    const { root } = build('ts')
+    const { root } = build()
     expect(
       readStoredGameConfig(APP, {
         gamesConfigPath: gamesConfig(),

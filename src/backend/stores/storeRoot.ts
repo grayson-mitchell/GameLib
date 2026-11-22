@@ -8,8 +8,8 @@
  * path at import.
  *
  * Import budget: the pure versioning layer (storeVersioning/engine, readOnlyStores,
- * storeMigrations: no logger, no IPC), the pure mirror layer (mirrorCell, storeFrames,
- * storeOwnership: no logger, no IPC, the output stream injected) and type-only imports. Stores import this module; it must
+ * storeMigrations: no logger, no IPC), the pure mirror layer (mirrorCell, storeFrames: no logger,
+ * no IPC, the output stream injected) and type-only imports. Stores import this module; it must
  * never reach the IPC layer (see the changes-channel note below) or construct a store.
  *
  * Plan 18 adds `versioning` (the per-file version engine, former module state in
@@ -26,6 +26,10 @@
  * `registerStoreWriteHandlers()`. Until then `notify` is a no-op, exactly as the null
  * notifier was. `storeWriteHandlers.ts` forbids a second `pushFrontendMessage(STORE_CHANGED_CHANNEL)`
  * call site: this channel holds a function reference that points at that one site.
+ *
+ * Phase 85 (D-03, 85-21): every store of a root is a mirror over the shell's `StoreHost`, the one
+ * disk writer. There is no rollback flag and no TS owner: the root carries the frame sink a mirror
+ * writes through and what the shell reported about the stores it opened (`GAMELIB_STORE_BOOT`).
  */
 import { basename } from 'path'
 import type { StoreChangedPayload } from 'common/types/sidecarTransport'
@@ -41,7 +45,6 @@ import {
 } from '../storeVersioning/readOnlyStores'
 import { MirrorRegistry } from './mirrorCell'
 import type { StoreFrameSink } from './storeFrames'
-import type { StoreBootEnv, StoreMode } from './storeOwnership'
 import type { StoreRegistry } from './storeRegistry'
 
 type StorePush = (payload: StoreChangedPayload) => void
@@ -73,13 +76,12 @@ export interface StoreRoot {
   readonly changes: StoreChangeChannel
   readonly versioning: StoreVersioning
   readonly readOnly: ReadOnlyStores
-  readonly storeMode: StoreMode
   readonly boot: StoreBootEnv
   readonly frameSink: StoreFrameSink
   readonly mirrors: MirrorRegistry
 }
 
-/** What a root built in `ts` mode with no sink is given: it must never be asked to carry a frame. */
+/** What a root built with no sink is given (a test that writes no store): it never carries a frame. */
 const NO_FRAME_SINK: StoreFrameSink = {
   send() {
     throw new Error(
@@ -88,7 +90,65 @@ const NO_FRAME_SINK: StoreFrameSink = {
   }
 }
 
+type BootReadOnlyReason = 'newer' | 'failed'
+
+/** What the shell told the sidecar about the stores it opened (`GAMELIB_STORE_BOOT`). */
+export interface StoreBootEnv {
+  /** Stores that refuse writes, by store key. */
+  readonly readOnly: ReadonlyMap<string, BootReadOnlyReason>
+  /** Caches that could not be read and continue empty. */
+  readonly startEmpty: ReadonlySet<string>
+}
+
 const NO_BOOT: StoreBootEnv = { readOnly: new Map(), startEmpty: new Set() }
+
+/**
+ * Parses `GAMELIB_STORE_BOOT` (`{"readOnly":[{"store","reason"}],"startEmpty":["<key>"]}`, written
+ * by `store_boot::boot_env_value`) defensively: a missing value is the empty result, and so is one
+ * that is not that shape, with one stderr line. Entries of the wrong shape are skipped.
+ */
+export function readStoreBootEnv(
+  env: Readonly<Record<string, string | undefined>> = process.env
+): StoreBootEnv {
+  const text = env.GAMELIB_STORE_BOOT
+  if (text === undefined || text === '') return NO_BOOT
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    process.stderr.write(
+      '[storeRoot] GAMELIB_STORE_BOOT is not JSON; ignoring it\n'
+    )
+    return NO_BOOT
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    process.stderr.write(
+      '[storeRoot] GAMELIB_STORE_BOOT is not an object; ignoring it\n'
+    )
+    return NO_BOOT
+  }
+  const { readOnly, startEmpty } = parsed as Record<string, unknown>
+  const readOnlyMap = new Map<string, BootReadOnlyReason>()
+  if (Array.isArray(readOnly)) {
+    for (const entry of readOnly as unknown[]) {
+      if (typeof entry !== 'object' || entry === null) continue
+      const { store, reason } = entry as Record<string, unknown>
+      if (
+        typeof store === 'string' &&
+        (reason === 'newer' || reason === 'failed')
+      ) {
+        readOnlyMap.set(store, reason)
+      }
+    }
+  }
+  const startEmptySet = new Set<string>()
+  if (Array.isArray(startEmpty)) {
+    for (const key of startEmpty as unknown[]) {
+      if (typeof key === 'string') startEmptySet.add(key)
+    }
+  }
+  return { readOnly: readOnlyMap, startEmpty: startEmptySet }
+}
 
 /**
  * The stores the shell found read-only at boot (`GAMELIB_STORE_BOOT`), entered into the root's
@@ -151,17 +211,11 @@ export function createStoreRoot(deps: {
   readOnlySinks?: ReadOnlySinks
   /** Test seam: replacement migration chains for this root's versioning engine. */
   migrationOverrides?: MigrationOverrides
-  /** `GAMELIB_STORE`, resolved (`resolveStoreMode`). Default `ts`: this root owns every store. */
-  storeMode?: StoreMode
   /** `GAMELIB_STORE_BOOT`, parsed (`readStoreBootEnv`). */
   boot?: StoreBootEnv
-  /** Where a mirror's frames go. Required in `rust` mode. */
+  /** Where a mirror's frames go. Absent, a store write on this root throws. */
   frameSink?: StoreFrameSink
 }): StoreRoot {
-  const storeMode = deps.storeMode ?? 'ts'
-  if (storeMode === 'rust' && !deps.frameSink) {
-    throw new Error('[storeRoot] a root in rust mode needs a frame sink')
-  }
   const frameSink = deps.frameSink ?? NO_FRAME_SINK
   const boot = deps.boot ?? NO_BOOT
   const readOnly = createReadOnlyStores({ sinks: deps.readOnlySinks })
@@ -175,7 +229,6 @@ export function createStoreRoot(deps: {
     changes: createStoreChangeChannel(),
     versioning,
     readOnly,
-    storeMode,
     boot,
     frameSink,
     mirrors: new MirrorRegistry({ sink: frameSink, boot })

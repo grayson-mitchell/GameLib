@@ -1,7 +1,7 @@
 import { GameConfigVersion, GameSettings } from 'common/types'
 import type { GlobalConfigSlice } from './config'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { isStoreKey } from './stores/storeOwnership'
+import { isStoreKey } from './stores/storeFrames'
 import {
   prepareSettingsDoc,
   readSettingsDoc,
@@ -86,7 +86,7 @@ abstract class GameConfig {
    */
   protected writeToFile(config: Record<string, unknown>) {
     if (
-      this.docs.storeMode === 'rust' &&
+      this.docs.mirrors !== undefined &&
       !isStoreKey(`GamesConfig/${this.appName}`)
     ) {
       logWarning(
@@ -355,12 +355,12 @@ export interface GameConfigs {
  * Builds the per-game config registry. Called once by the boot's 'config' step; the per-game
  * cache lives in this closure, so two registries never share an instance.
  *
- * Who migrates a game's file depends on its owner (85-15, research A4). When the shell owns the
- * settings family (`GAMELIB_STORE=rust`), its boot sweep migrates every `GamesConfig/*.json` before
- * this process is spawned, inside the store boot bound, so a synchronous read here never sees an
- * unmigrated document and nothing is migrated from TS. When TS owns it, a game's file is migrated
- * lazily on its first `get` (memoised per file); TS itself never sweeps GamesConfig/ at boot (the
- * sidecar exit contract).
+ * Who migrates a game's file (85-15, research A4): the shell, which owns the settings family (no
+ * flag since 85-21, D-03). Its boot sweep migrates every `GamesConfig/*.json` before this process is
+ * spawned, inside the store boot bound, so a synchronous read here never sees an unmigrated
+ * document and nothing is migrated from TS. Only a caller with no root (a test) reads the file
+ * directly, migrating it lazily on its first `get` (memoised per file); TS never sweeps
+ * GamesConfig/ at boot (the sidecar exit contract).
  */
 export function createGameConfigs(deps: {
   config: Pick<GlobalConfigSlice, 'getSettings'>
@@ -375,10 +375,7 @@ export function createGameConfigs(deps: {
   paths: GameConfigPaths
 }): GameConfigs {
   const instances = new Map<string, GameConfigSlice>()
-  const docs: SettingsDocRoot = deps.root ?? {
-    storeMode: 'ts',
-    versioning: deps.versioning
-  }
+  const docs: SettingsDocRoot = deps.root ?? { versioning: deps.versioning }
   return {
     get: (appName) => {
       let instance = instances.get(appName)

@@ -359,11 +359,7 @@ const directListeners = () => ({
     directIpc?.listenerMap().get(channel) as unknown as [() => void]
 })
 
-function directDeps(
-  stores: unknown = {},
-  sendFrontendMessage = jest.fn(),
-  storeMode: 'rust' | 'ts' = 'ts'
-) {
+function directDeps(stores: unknown = {}, sendFrontendMessage = jest.fn()) {
   /* eslint-disable @typescript-eslint/no-require-imports */
   // Required at call time so a fresh-registry scope hands the registration ITS registry and its
   // mocked GlobalConfig, not the shared ones.
@@ -398,8 +394,6 @@ function directDeps(
     appShell: createAppShellState({ clock: createClock() }),
     // The boot's read-only tracker (66.4-18): a fresh one per direct registration.
     readOnly: createReadOnlyStores(),
-    // 85-16: who raises the read-only notice (ts: this registration; rust: the shell).
-    storeMode,
     // The boot's store mirrors (85-11): nothing waiting, so the quit flush resolves at once.
     storeMirrors: { flushStores: jest.fn().mockResolvedValue(undefined) },
     appRuntime
@@ -419,8 +413,8 @@ function boot() {
       // 85-15: the settings family is Rust's, so the 'config' step's mirror resync writes
       // store/config as a frame. There is no shell in this suite to answer it, and quit waits for
       // the store flush (2 s budget) before handleExit, so the boot's stores sit on a root whose
-      // in-process disk sink answers every frame at once (the shell's role), in rust mode.
-      storeRoot: createTestStoreRoot(undefined, { storeMode: 'rust' }),
+      // in-process disk sink answers every frame at once (the shell's role).
+      storeRoot: createTestStoreRoot(),
       downloadQueue: downloadQueueStub as never,
       // Delegates every call to whatever the global config returns NOW, so `mockAppSettings`
       // after boot (the tray tests) is what the registrations read, as with the static getter.
@@ -1244,73 +1238,11 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       }
     })
 
-    // Phase 68 D-05: the read-only stores notice is sent once per launch from the one-shot
-    // boot block, ids only; nothing is sent when no store is read-only. ISOLATED like the
-    // CR-02 tests above so the module-scoped one-shot flag starts unflipped.
-    it('Phase 68 D-05: frontendReady x2 sends readOnlyStoresNotice exactly once (ids only); none when nothing is read-only', async () => {
-      const deliver = async (withEntry: boolean): Promise<jest.Mock> => {
-        const sendMock = jest.fn()
-        let frontendReadyListener!: () => void
-        inFreshRegistry(() => {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          require('backend/config').createGlobalConfig.mockReturnValue({
-            getSettings: () => ({ language: 'en' }),
-            setSetting: jest.fn(),
-            set: jest.fn(),
-            flush: jest.fn()
-          })
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          require('../sidecarRpc').requestRustInvoke.mockResolvedValue(
-            undefined
-          )
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          require('../../logger').initHeadless()
-          const deps = directDeps({}, sendMock)
-          if (withEntry) {
-            deps.readOnly.record({
-              storeKey: 'store_cache/steam_library',
-              file: 'steam_library.json',
-              reason: 'newer',
-              detail: 'v9 > v1'
-            })
-          }
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          require('../appShellFlowRegistration').registerAppShellFlows(deps)
-          ;[frontendReadyListener] = directListeners().get('frontendReady')
-        })
-        jest.useFakeTimers({ doNotFake: ['setImmediate'] })
-        try {
-          frontendReadyListener()
-          await flush()
-          frontendReadyListener()
-          await flush()
-        } finally {
-          jest.useRealTimers()
-        }
-        return sendMock
-      }
-
-      const withEntry = await deliver(true)
-      const notices = withEntry.mock.calls.filter(
-        ([channel]) => channel === 'readOnlyStoresNotice'
-      )
-      expect(notices).toHaveLength(1)
-      expect(notices[0]?.[1]).toEqual({
-        entries: [{ area: 'steam-library', reason: 'newer' }]
-      })
-
-      const without = await deliver(false)
-      expect(
-        without.mock.calls.filter(
-          ([channel]) => channel === 'readOnlyStoresNotice'
-        )
-      ).toHaveLength(0)
-    })
-
-    // Phase 85 (85-16, D-12): under GAMELIB_STORE=rust the notice is raised by Rust. The
-    // registration hands TS's entries (store keys and reasons only) to `store_read_only_notice`
-    // once per launch and pushes nothing itself; under ts the push above is unchanged.
-    it('85-16: under rust mode frontendReady x2 hands the TS entries to store_read_only_notice once and pushes no notice itself', async () => {
+    // Phase 68 D-05, Phase 85 (85-16, D-12): the notice is raised by Rust (the only path since
+    // 85-21). The registration hands TS's entries (store keys and reasons only) to
+    // `store_read_only_notice` once per launch and pushes nothing itself. ISOLATED like the CR-02
+    // tests above so the module-scoped one-shot flag starts unflipped.
+    it('85-16: frontendReady x2 hands the TS entries to store_read_only_notice once and pushes no notice itself', async () => {
       const sendMock = jest.fn()
       let rustInvoke!: jest.Mock
       let frontendReadyListener!: () => void
@@ -1327,10 +1259,10 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         rustInvoke.mockResolvedValue(1)
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('../../logger').initHeadless()
-        const deps = directDeps({}, sendMock, 'rust')
+        const deps = directDeps({}, sendMock)
         deps.readOnly.record({
-          storeKey: 'store/migrations',
-          file: 'migrations.json',
+          storeKey: 'store_cache/steam_library',
+          file: 'steam_library.json',
           reason: 'newer',
           detail: 'v9 > v1'
         })
@@ -1353,7 +1285,13 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       expect(noticeCalls).toEqual([
         [
           RUST_STORE_READ_ONLY_NOTICE,
-          [{ tsEntries: [{ storeKey: 'store/migrations', reason: 'newer' }] }]
+          [
+            {
+              tsEntries: [
+                { storeKey: 'store_cache/steam_library', reason: 'newer' }
+              ]
+            }
+          ]
         ]
       ])
       expect(

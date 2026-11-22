@@ -52,9 +52,9 @@ describe('misc.ts store bridge delegation (D-01/D-02/D-04 convergence)', () => {
   })
 
   it('storeNew delegates unconditionally to registerStore, with no electron-store fallback', () => {
-    storeNew('configStore', { defaults: {} })
+    storeNew('configStore', { cwd: 'store' })
 
-    expect(mockedRegisterStore).toHaveBeenCalledWith('configStore', { defaults: {} })
+    expect(mockedRegisterStore).toHaveBeenCalledWith('configStore', { cwd: 'store' })
   })
 
   it('storeSet delegates unconditionally to snapshotSet', () => {
