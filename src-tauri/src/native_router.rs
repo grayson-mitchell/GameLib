@@ -88,6 +88,10 @@ impl NativeCtx {
             fn invoke(&self, _channel: &str, _args: Vec<Value>) -> Result<Value, String> {
                 Err("no sidecar in this test".to_string())
             }
+
+            fn send(&self, _channel: &str, _args: Vec<Value>) -> Result<(), String> {
+                Err("no sidecar in this test".to_string())
+            }
         }
         NativeCtx {
             host,
@@ -124,6 +128,9 @@ pub(crate) enum SendPayload {
     },
     /// `showLogFileInFolder`: a typed log destination, never a path.
     Reveal(LogTarget),
+    /// `storeSet` (85-17): a renderer store write, its shape checked; the policy runs on the slice
+    /// worker.
+    StoreWrite(store_native::RendererWrite),
 }
 
 /// A native send validator: positional args in, the validated payload or a fixed category literal
@@ -258,6 +265,10 @@ const APP_SHELL_SLICE: &str = "app-shell";
 /// so renderer log lines reach the log in send order and never run on the main thread.
 const LOGGER_SLICE: &str = "logger";
 
+/// The slice that owns the store channels in `nativeChannels.json` (Phase 85): the renderer's store
+/// writes are applied in send order, one at a time, off the main thread (a write is a persist).
+const STORE_SLICE: &str = "store";
+
 /// Run one queued send on its slice worker: the channel picks the handler.
 fn run_send_job(ctx: &Arc<NativeCtx>, job: NativeSendJob) -> Result<(), String> {
     match (job.channel, job.payload) {
@@ -270,6 +281,10 @@ fn run_send_job(ctx: &Arc<NativeCtx>, job: NativeSendJob) -> Result<(), String> 
         }
         ("showLogFileInFolder", SendPayload::Reveal(target)) => {
             log_dispatch::show_log_file(ctx, &target);
+            Ok(())
+        }
+        (channel @ store_native::STORE_SET_CHANNEL, SendPayload::StoreWrite(write)) => {
+            store_native::run_send_write(ctx, channel, &write);
             Ok(())
         }
         (other, _) => Err(format!(
@@ -331,8 +346,16 @@ impl NativeRouter {
         );
         // Phase 85 (85-16): the renderer's lazy store fetch, answered from StoreHost (slice `store`).
         invoke.insert(store_native::STORE_FETCH_CHANNEL, store_native::store_fetch);
+        // Phase 85 (85-17): the renderer's store writes, applied by Rust through StoreHost.
+        send.insert(
+            store_native::STORE_SET_CHANNEL,
+            SendRoute {
+                slice: STORE_SLICE,
+                validate: |args| store_native::parse_store_set(args).map(SendPayload::StoreWrite),
+            },
+        );
         let mut queues: HashMap<&'static str, SliceQueue> = HashMap::new();
-        for slice in [APP_SHELL_SLICE, LOGGER_SLICE] {
+        for slice in [APP_SHELL_SLICE, LOGGER_SLICE, STORE_SLICE] {
             let worker_ctx = Arc::clone(&ctx);
             queues.insert(
                 slice,

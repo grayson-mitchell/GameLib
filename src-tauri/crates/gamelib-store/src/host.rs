@@ -72,13 +72,38 @@ impl OpSummary {
 
 /// A change that is on disk. `rev` counts a store's changes from 1 and is strictly increasing in
 /// delivery order.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq)]
 pub struct StoreChange {
     /// The store table key.
     pub store: String,
     pub rev: u64,
     pub op: OpSummary,
     pub origin: Origin,
+    /// What the change wrote: the value of a set, the whole document of a replace, `None` for a
+    /// delete or a clear. It is what the shell forwards to the renderer and to the sidecar's mirror
+    /// (85-17), read here because a later write may already have moved the store when a listener
+    /// runs. It can be a token, so `Debug` never prints it.
+    pub value: Option<Arc<Json>>,
+}
+
+impl std::fmt::Debug for StoreChange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StoreChange")
+            .field("store", &self.store)
+            .field("rev", &self.rev)
+            .field("op", &self.op)
+            .field("origin", &self.origin)
+            .field("value", &self.value.as_ref().map(|_| "<value>"))
+            .finish()
+    }
+}
+
+fn written_value(op: &Op) -> Option<Arc<Json>> {
+    match op {
+        Op::Set { value, .. } => Some(Arc::new(value.clone())),
+        Op::Replace(obj) => Some(Arc::new(Json::Obj(obj.clone()))),
+        Op::Delete { .. } | Op::Clear => None,
+    }
 }
 
 /// Why an [`Store::apply`] did not change the store. None of these wrote a byte or fired an event.
@@ -122,10 +147,14 @@ fn default_writer() -> Writer {
     Arc::new(write_atomic)
 }
 
-/// A queued change and the store it came from (listeners can be bound to one store).
-struct Queued {
-    store_id: u64,
-    change: StoreChange,
+/// Work run on the dispatcher thread in queue order ([`StoreHost::post`]).
+type Posted = Box<dyn FnOnce() + Send>;
+
+/// One item of the host's event queue: a change and the store it came from (listeners can be bound
+/// to one store), or posted work that must run after every change queued before it.
+enum Queued {
+    Change { store_id: u64, change: StoreChange },
+    Post(Posted),
 }
 
 /// Which stores a listener hears: one, or every store of the host.
@@ -153,18 +182,26 @@ impl Dispatch {
             .name("store-events".to_string())
             .spawn(move || {
                 while let Ok(queued) = receiver.recv() {
+                    let (store_id, change) = match queued {
+                        Queued::Change { store_id, change } => (store_id, change),
+                        Queued::Post(work) => {
+                            // A post that panics must not end delivery either.
+                            let _ = catch_unwind(AssertUnwindSafe(work));
+                            continue;
+                        }
+                    };
                     // Cloned out of the lock: a listener may register another, or write.
                     let heard: Vec<Listener> = lock(&listeners)
                         .iter()
                         .filter(|(only, _)| match only {
                             None => true,
-                            Some(id) => *id == queued.store_id,
+                            Some(id) => *id == store_id,
                         })
                         .map(|(_, l)| Arc::clone(l))
                         .collect();
                     for listener in heard {
                         // A listener that panics must not end delivery for every store.
-                        let _ = catch_unwind(AssertUnwindSafe(|| listener(&queued.change)));
+                        let _ = catch_unwind(AssertUnwindSafe(|| listener(&change)));
                     }
                 }
             });
@@ -173,10 +210,27 @@ impl Dispatch {
         }
     }
 
+    /// Whether anything listens: a change is only built (its value cloned) when it is.
+    fn listening(&self) -> bool {
+        lock(&self.tx).is_some()
+    }
+
     /// Called with the store's lock held, which is what orders delivery by `rev`.
     fn enqueue(&self, store_id: u64, change: StoreChange) {
         if let Some(tx) = lock(&self.tx).as_ref() {
-            let _ = tx.send(Queued { store_id, change });
+            let _ = tx.send(Queued::Change { store_id, change });
+        }
+    }
+
+    /// Runs `work` after every change already queued, on the dispatcher thread; at once when there
+    /// is no dispatcher (nothing was queued, so nothing can be overtaken).
+    fn post(&self, work: Posted) {
+        let rejected = match lock(&self.tx).as_ref() {
+            Some(tx) => tx.send(Queued::Post(work)).err().map(|e| e.0),
+            None => Some(Queued::Post(work)),
+        };
+        if let Some(Queued::Post(work)) = rejected {
+            work();
         }
     }
 }
@@ -288,6 +342,14 @@ impl Store {
         self.apply_inner(op, origin).map(|(rev, _)| rev)
     }
 
+    /// [`Store::apply`], also saying whether the op changed the store: `(rev, true)` when it was
+    /// persisted and a [`StoreChange`] was queued, `(rev, false)` for a no-op (nothing written,
+    /// nothing queued). The sidecar's frame worker needs the difference: a change is acked by the
+    /// listener in `rev` order, a no-op by the worker itself (85-17).
+    pub fn apply_reporting(&self, op: Op, origin: Origin) -> Result<(u64, bool), ApplyError> {
+        self.apply_inner(op, origin)
+    }
+
     fn apply_inner(&self, op: Op, origin: Origin) -> Result<(u64, bool), ApplyError> {
         let _flight = InFlight::enter(&self.idle);
         let mut st = lock(&self.state);
@@ -319,15 +381,18 @@ impl Store {
         st.rev += 1;
         let rev = st.rev;
         // Still under the store's lock: the next writer cannot get a rev, or queue, before this.
-        self.dispatch.enqueue(
-            self.id,
-            StoreChange {
-                store: self.key.clone(),
-                rev,
-                op: OpSummary::of(&op),
-                origin,
-            },
-        );
+        if self.dispatch.listening() {
+            self.dispatch.enqueue(
+                self.id,
+                StoreChange {
+                    store: self.key.clone(),
+                    rev,
+                    op: OpSummary::of(&op),
+                    origin,
+                    value: written_value(&op),
+                },
+            );
+        }
         Ok((rev, true))
     }
 
@@ -534,6 +599,14 @@ impl StoreHost {
     /// opened later are heard too.
     pub fn on_any_change(&self, f: Box<dyn Fn(&StoreChange) + Send + Sync>) {
         self.dispatch.add(None, Arc::from(f));
+    }
+
+    /// Runs `work` on the dispatcher thread after every change already queued by any store of this
+    /// host, so whatever it emits leaves after those changes' events (85-17: the sidecar frame
+    /// worker's answers that consume no rev). With no listener nothing is queued, and `work` runs at
+    /// once on the caller's thread.
+    pub fn post(&self, work: Box<dyn FnOnce() + Send>) {
+        self.dispatch.post(work);
     }
 
     /// How many applies are running right now.
@@ -1030,6 +1103,7 @@ mod tests {
         let change = |rev: u64, op: OpSummary| StoreChange {
             store: "store/uploadedLogs".to_string(),
             rev,
+            value: matches!(op, OpSummary::Set { .. }).then(|| Arc::new(num(1))),
             op,
             origin: Origin::Rust,
         };
@@ -1207,6 +1281,96 @@ mod tests {
         assert_eq!(seen[1].op, OpSummary::Clear);
         assert!(!format!("{seen:?}").contains("secret-token-value"));
         assert_eq!(seen.len(), 2);
+        // The value rides the change (for the shell's forwarders), and only its own.
+        assert_eq!(
+            seen[0].value.as_deref(),
+            Some(&Json::Str("secret-token-value".into()))
+        );
+        assert_eq!(seen[1].value, None);
+    }
+
+    #[test]
+    fn a_change_carries_what_it_wrote_even_when_a_later_write_moved_the_store() {
+        let home = FakeHome::new("gamelib-store-host-");
+        let store = open(&home);
+        let seen = Arc::new(Mutex::new(Vec::<StoreChange>::new()));
+        let sink = Arc::clone(&seen);
+        store.on_change(Box::new(move |c| sink.lock().unwrap().push(c.clone())));
+        store.apply(set_op("k", num(1)), Origin::Renderer).unwrap();
+        store.apply(set_op("k", num(2)), Origin::Rust).unwrap();
+        let mut doc = Obj::new();
+        doc.insert_js("z", num(3));
+        store.apply(Op::Replace(doc.clone()), Origin::Rust).unwrap();
+        store
+            .apply(
+                Op::Delete {
+                    key: "z".to_string(),
+                },
+                Origin::Rust,
+            )
+            .unwrap();
+        wait_until("four events", || seen.lock().unwrap().len() >= 4);
+        let values: Vec<Option<Json>> = seen
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|c| c.value.as_deref().cloned())
+            .collect();
+        assert_eq!(
+            values,
+            vec![Some(num(1)), Some(num(2)), Some(Json::Obj(doc)), None]
+        );
+    }
+
+    #[test]
+    fn apply_reporting_tells_a_change_from_a_no_op() {
+        let home = FakeHome::new("gamelib-store-host-");
+        let store = open(&home);
+        assert_eq!(
+            store.apply_reporting(set_op("k", num(1)), Origin::Sidecar { seq: 1 }),
+            Ok((1, true))
+        );
+        assert_eq!(
+            store.apply_reporting(set_op("k", num(1)), Origin::Sidecar { seq: 2 }),
+            Ok((1, false))
+        );
+    }
+
+    #[test]
+    fn post_runs_after_every_change_queued_before_it_and_inline_without_a_listener() {
+        let home = FakeHome::new("gamelib-store-host-");
+        let host = StoreHost::new();
+        // No listener: nothing is queued, so the work runs at once on this thread.
+        let ran = Arc::new(AtomicUsize::new(0));
+        let r = Arc::clone(&ran);
+        host.post(Box::new(move || {
+            r.fetch_add(1, Ordering::SeqCst);
+        }));
+        assert_eq!(ran.load(Ordering::SeqCst), 1);
+
+        let order = Arc::new(Mutex::new(Vec::<String>::new()));
+        let sink = Arc::clone(&order);
+        host.on_any_change(Box::new(move |c| {
+            // A slow listener: a post queued behind it must still wait for it.
+            std::thread::sleep(Duration::from_millis(5));
+            sink.lock().unwrap().push(format!("change {}", c.rev));
+        }));
+        let store = host
+            .open_row(
+                row_for_key("store/uploadedLogs").unwrap(),
+                home.root().join("store/uploadedLogs.json"),
+            )
+            .unwrap();
+        for i in 0..5 {
+            store.apply(set_op("k", num(i)), Origin::Rust).unwrap();
+        }
+        let sink = Arc::clone(&order);
+        host.post(Box::new(move || sink.lock().unwrap().push("post".into())));
+        wait_until("the post", || order.lock().unwrap().len() >= 6);
+        assert_eq!(
+            order.lock().unwrap().clone(),
+            vec!["change 1", "change 2", "change 3", "change 4", "change 5", "post"]
+        );
     }
 
     #[test]

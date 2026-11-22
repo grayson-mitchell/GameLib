@@ -1466,11 +1466,18 @@ export const FRONTEND_MESSAGE_EVENT = 'frontend_message' as const
  * `send`-kind (fire-and-forget) channel name for a single-key store write. ALREADY emitted
  * by `tauriTransport.ts`'s `snapshotSet()` (`send('storeSet', [storeName, key, value])`) —
  * this constant must match that literal exactly, or the renderer's existing writes silently
- * orphan. Until plan 29-05 registers a sidecar-side listener for this channel, these frames
- * vanish into an empty listener array with ZERO signal (29-RESEARCH Pitfall 1) — worse than
- * an unported `invoke`, which at least rejects with `UNPORTED_CHANNEL_MARKER`.
+ * orphan. Since Phase 85 (85-17) it is a NATIVE channel (`nativeChannels.json`, slice `store`):
+ * the Rust shell checks the policy and applies it through `StoreHost`. The sidecar's own handler
+ * is `STORE_TS_SET_CHANNEL`, which only the shell can reach.
  */
 export const STORE_SET_CHANNEL = 'storeSet' as const
+
+/**
+ * The sidecar's `storeSet` handler, renamed in Phase 85 (85-17) so `STORE_SET_CHANNEL` has one
+ * owner (the Rust native router). Shell-only: the native handler forwards to it, unchanged, under
+ * `GAMELIB_STORE=ts` and for a store whose row Rust never opens.
+ */
+export const STORE_TS_SET_CHANNEL = 'store:ts-set' as const
 
 /**
  * `send`-kind (fire-and-forget) channel name for a single-key store delete. ALREADY emitted

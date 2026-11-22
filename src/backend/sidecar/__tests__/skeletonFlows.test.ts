@@ -466,6 +466,11 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
   // safe for the identical reason: the `os` module override at the top of this file
   // (see this file's header docstring) redirects their on-disk location to a disposable
   // per-process tmp directory, never the developer's real config directory.
+  //
+  // Phase 85 (85-17): the renderer's storeSet is a native Rust channel; these drive the sidecar's
+  // old handler under its shell-only name `store:ts-set`, which the shell forwards to for a store
+  // TS owns (GAMELIB_STORE=ts, or a row Rust never opens). The Rust choke point's own cases are
+  // `cargo test --bin gamelib-shell store_native`.
   describe('storeSet', () => {
     afterEach(() => {
       // Isolated per-process tmp config dir (see the `os` module override at the top of
@@ -482,7 +487,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // also announces itself as a storeChanged frontendMessage frame (D-06).
     it('a storeSet write persists and is visible in a fresh snapshot fetch, and announces a storeChanged event', async () => {
       const { input, frames } = await bootQuiet()
-      writeSend(input, 'set-1', 'storeSet', [
+      writeSend(input, 'set-1', 'store:ts-set', [
         'configStore',
         'theme',
         'gsd-probe'
@@ -516,7 +521,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // storeChanged frame with deleted: true.
     it('a storeDelete removes the key from a subsequent snapshot and emits a change event with deleted: true', async () => {
       const { input, frames } = await bootQuiet()
-      writeSend(input, 'set-2', 'storeSet', [
+      writeSend(input, 'set-2', 'store:ts-set', [
         'configStore',
         'theme',
         'gsd-probe-2'
@@ -571,7 +576,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       steamConfigStore.set('refreshToken', 'REAL-TOKEN-DO-NOT-OVERWRITE')
       const before = steamConfigStore.get_nodefault('refreshToken')
 
-      writeSend(input, 'set-attacker-1', 'storeSet', [
+      writeSend(input, 'set-attacker-1', 'store:ts-set', [
         'steamConfigStore',
         'refreshToken',
         'ATTACKER'
@@ -601,17 +606,17 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // inside conf 10.2.0.
     it('CR-01 regression: a `__proto__`/`constructor`/`prototype` key path is rejected and cannot pollute Object.prototype', async () => {
       const { input, frames } = await bootQuiet()
-      writeSend(input, 'set-proto-1', 'storeSet', [
+      writeSend(input, 'set-proto-1', 'store:ts-set', [
         'timestampStore',
         '__proto__.polluted',
         'PWNED'
       ])
-      writeSend(input, 'set-proto-2', 'storeSet', [
+      writeSend(input, 'set-proto-2', 'store:ts-set', [
         'configStore',
         'settings.__proto__.polluted',
         'PWNED'
       ])
-      writeSend(input, 'set-proto-3', 'storeSet', [
+      writeSend(input, 'set-proto-3', 'store:ts-set', [
         'legendary_library',
         'constructor.prototype.polluted',
         'PWNED'
@@ -642,18 +647,18 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // (refreshToken) and malformed store names only.
     it('WR-12: guard (c) rejects a non-allow-listed field and emits no change event', async () => {
       const { input, frames } = await bootQuiet()
-      writeSend(input, 'set-secret-1', 'storeSet', [
+      writeSend(input, 'set-secret-1', 'store:ts-set', [
         'humbleConfigStore',
         'csrfToken',
         'ATTACKER'
       ])
-      writeSend(input, 'set-secret-2', 'storeSet', [
+      writeSend(input, 'set-secret-2', 'store:ts-set', [
         'gogConfigStore',
         'credentials',
         { access_token: 'ATTACKER' }
       ])
       // WR-04: readable but NOT writable — executable paths consumed on next launch.
-      writeSend(input, 'set-settings-1', 'storeSet', [
+      writeSend(input, 'set-settings-1', 'store:ts-set', [
         'configStore',
         'settings.wineVersion.bin',
         '/tmp/evil.sh'
@@ -695,13 +700,13 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // above must not have made the recognized cache stores collateral damage.
     it('WR-12: a legendary_library cache-store write persists and announces a change event', async () => {
       const { input, frames } = await bootQuiet()
-      writeSend(input, 'set-cache-1', 'storeSet', [
+      writeSend(input, 'set-cache-1', 'store:ts-set', [
         'legendary_library',
         'library',
         [{ app_name: 'probe' }]
       ])
       // The frontend CacheStore always follows a set with a dot-keyed timestamp write.
-      writeSend(input, 'set-cache-2', 'storeSet', [
+      writeSend(input, 'set-cache-2', 'store:ts-set', [
         'legendary_library',
         '__timestamp.library',
         'Tue Jul 22 2026'
@@ -771,8 +776,16 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // ok: true.
     it('rejects an unknown store name and a traversal-shaped name — no change event, no crash, health still responds', async () => {
       const { input, frames } = await bootQuiet()
-      writeSend(input, 'set-bad-1', 'storeSet', ['not_a_store', 'theme', 'x'])
-      writeSend(input, 'set-bad-2', 'storeSet', ['../../evil', 'theme', 'x'])
+      writeSend(input, 'set-bad-1', 'store:ts-set', [
+        'not_a_store',
+        'theme',
+        'x'
+      ])
+      writeSend(input, 'set-bad-2', 'store:ts-set', [
+        '../../evil',
+        'theme',
+        'x'
+      ])
       await flush()
 
       const changed = frames.filter(

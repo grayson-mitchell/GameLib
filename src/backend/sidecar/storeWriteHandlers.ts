@@ -40,7 +40,7 @@ import {
   STORE_UNIVERSE
 } from 'common/types/storePolicy'
 import {
-  STORE_SET_CHANNEL,
+  STORE_TS_SET_CHANNEL,
   STORE_DELETE_CHANNEL,
   STORE_NEW_CHANNEL,
   STORE_SET_CHECKED_CHANNEL,
@@ -326,12 +326,16 @@ export function registerStoreWriteHandlers(deps: {
   // `send`-kind (fire-and-forget) registrations: unlike an `invoke` channel there is no
   // response frame and no promise to reject on the renderer side — which is exactly why
   // the missing registration was invisible before this plan (see header comment).
+  //
+  // Phase 85 (85-17): the renderer's `storeSet` is a native Rust channel now; this is its old
+  // handler under the shell-only name `store:ts-set`, which the shell forwards to for a store TS
+  // still owns (GAMELIB_STORE=ts, or a row Rust never opens).
   deps.ipc.on(
-    STORE_SET_CHANNEL,
+    STORE_TS_SET_CHANNEL,
     (_event: unknown, storeName: unknown, key: unknown, value: unknown) => {
       if (typeof storeName !== 'string' || typeof key !== 'string') {
         process.stderr.write(
-          '[storeWriteHandlers] storeSet rejected a non-string store name or key\n'
+          '[storeWriteHandlers] store:ts-set rejected a non-string store name or key\n'
         )
         return
       }

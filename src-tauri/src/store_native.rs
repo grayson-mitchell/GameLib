@@ -34,13 +34,16 @@
 //! does not open is taken from the sidecar's `store:ts-snapshot`. Under `ts` the sidecar's snapshot
 //! is returned unchanged.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use gamelib_core::emitter::FrontendEmitter;
 use gamelib_store::engine::ReadOnlyReason;
-use gamelib_store::host::StoreHost;
+use gamelib_store::host::{ApplyError, OpSummary, Origin, StoreChange, StoreHost};
+use gamelib_store::json::Json;
+use gamelib_store::ops::Op;
 use gamelib_store::table::{row_for_key, table, TableRow};
 use serde_json::{json, Map, Value};
 
@@ -51,7 +54,8 @@ use crate::native_router::{invalid_args, NativeCtx, NativeFuture};
 use crate::relay_commands::echo_channel;
 use crate::store_boot::{is_rust_owned, Ownership, StoreMode};
 use crate::store_policy::{
-    area_for_store_key, filter_store_snapshot, is_plausible_cache_name, policy,
+    area_for_store_key, filter_store_snapshot, is_allowed_store_field, is_plausible_cache_name,
+    is_safe_key_path, is_writable_store_field, policy,
 };
 
 /// The renderer's lazy per-store fetch (native, slice `store`).
@@ -104,6 +108,8 @@ pub(crate) fn resolve_renderer_store(name: &str) -> Option<ResolvedStore> {
 /// a recording fake and no child process.
 pub(crate) trait SidecarProxy: Send + Sync + 'static {
     fn invoke(&self, channel: &str, args: Vec<Value>) -> Result<Value, String>;
+    /// A fire-and-forget frame (85-17: a renderer write forwarded to a store TS owns).
+    fn send(&self, channel: &str, args: Vec<Value>) -> Result<(), String>;
 }
 
 /// The real proxy: the sidecar state `store_dispatch` holds (installed when the sidecar spawns).
@@ -114,6 +120,17 @@ impl SidecarProxy for DispatcherSidecar {
         let state = crate::store_dispatch::sidecar_state()
             .ok_or_else(|| "the sidecar is not running".to_string())?;
         state.invoke(channel.to_string(), args)
+    }
+
+    fn send(&self, channel: &str, args: Vec<Value>) -> Result<(), String> {
+        let state = crate::store_dispatch::sidecar_state()
+            .ok_or_else(|| "the sidecar is not running".to_string())?;
+        state.write_frame(&crate::SidecarRpcRequest {
+            id: state.next_id(),
+            kind: "send",
+            channel: channel.to_string(),
+            args,
+        })
     }
 }
 
@@ -279,6 +296,287 @@ pub(crate) fn snapshot_blocking(host: &StoreHost, reads: &StoreReads) -> Result<
     Ok(Value::Object(stores))
 }
 
+// ---- renderer writes (85-17) ------------------------------------------------------------------
+
+/// The renderer's fire-and-forget store write (native send, slice `store`).
+pub(crate) const STORE_SET_CHANNEL: &str = "storeSet";
+
+/// The sidecar's `storeSet` handler, renamed so only the shell can reach it (85-17).
+pub(crate) const STORE_TS_SET_CHANNEL: &str = "store:ts-set";
+
+/// The renderer push that patches its snapshot (`STORE_CHANGED_CHANNEL`).
+pub(crate) const STORE_CHANGED_CHANNEL: &str = "storeChanged";
+
+/// The longest key path accepted, in UTF-16 code units (the old zod `nonEmptyString(512)`).
+const KEY_PATH_MAX: usize = 512;
+
+/// One renderer write, its shape already checked (`parse_*` below); the policy runs when it is
+/// applied.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum RendererWrite {
+    Set {
+        store: String,
+        key: String,
+        value: Value,
+    },
+}
+
+impl RendererWrite {
+    fn store(&self) -> &str {
+        match self {
+            RendererWrite::Set { store, .. } => store,
+        }
+    }
+
+    fn key(&self) -> &str {
+        match self {
+            RendererWrite::Set { key, .. } => key,
+        }
+    }
+
+    /// The args the renamed TS handler takes, which are the renderer's own.
+    fn ts_args(&self) -> Vec<Value> {
+        match self {
+            RendererWrite::Set { store, key, value } => {
+                vec![json!(store), json!(key), value.clone()]
+            }
+        }
+    }
+
+    /// The sidecar channel this write is forwarded to when TS owns the store.
+    fn ts_send_channel(&self) -> &'static str {
+        match self {
+            RendererWrite::Set { .. } => STORE_TS_SET_CHANNEL,
+        }
+    }
+
+    fn op(&self) -> Op {
+        match self {
+            // Renderer values arrive as `serde_json::Value`, whose objects this build sorts: a nested
+            // object is stored in that order. It is the renderer's input order as the shell received
+            // it, which is accepted as the order of a renderer-written value (85-17).
+            RendererWrite::Set { key, value, .. } => Op::Set {
+                key: key.clone(),
+                value: Json::from(value.clone()),
+            },
+        }
+    }
+}
+
+/// A string argument of 1 to `max` UTF-16 units.
+fn bounded_string(v: &Value, max: usize) -> Option<String> {
+    let s = v.as_str()?;
+    (1..=max)
+        .contains(&s.encode_utf16().count())
+        .then(|| s.to_string())
+}
+
+/// `storeSet`'s args: `[storeName, keyPath, value]`, value any JSON (a renderer `undefined` crosses as
+/// `null`). Shape only, as the old zod tuple; the policy runs on the slice worker.
+pub(crate) fn parse_store_set(args: &[Value]) -> Result<RendererWrite, &'static str> {
+    let [name, key, value] = args else {
+        return Err("store-set-args");
+    };
+    let store = bounded_string(name, STORE_NAME_MAX).ok_or("store-set-args")?;
+    let key = bounded_string(key, KEY_PATH_MAX).ok_or("store-set-args")?;
+    Ok(RendererWrite::Set {
+        store,
+        key,
+        value: value.clone(),
+    })
+}
+
+/// Why Rust refused a renderer write. The words are the log categories; none carries a name or a
+/// key, which go to stderr only.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum WriteRefusal {
+    UnknownStore,
+    NoStoreBacksIt,
+    ReservedKey,
+    KeyPath,
+    NotWritable,
+    ReadOnly,
+    Evicted,
+    Rejected,
+    Io,
+}
+
+impl WriteRefusal {
+    fn as_str(self) -> &'static str {
+        match self {
+            WriteRefusal::UnknownStore => "unrecognised store",
+            WriteRefusal::NoStoreBacksIt => "no store backs it",
+            WriteRefusal::ReservedKey => "reserved key",
+            WriteRefusal::KeyPath => "disallowed key path",
+            WriteRefusal::NotWritable => "field not writable",
+            WriteRefusal::ReadOnly => "read-only store",
+            WriteRefusal::Evicted => "evicted store",
+            WriteRefusal::Rejected => "rejected op",
+            WriteRefusal::Io => "write failed",
+        }
+    }
+}
+
+/// What became of a renderer write.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum WriteOutcome {
+    /// On disk (or already held: a no-op is a success, as conf's was).
+    Persisted,
+    Refused(WriteRefusal),
+    /// TS owns the store; the write went to its renamed handler.
+    Forwarded,
+}
+
+/// The policy a renderer write passes before anything is opened (T-85-43): the `__internal__`
+/// namespace, a prototype segment, then the write predicate, which also refuses
+/// `steamConfigStore.refreshToken`.
+fn check_write_policy(store: &str, key: &str) -> Result<(), WriteRefusal> {
+    if key.split('.').next() == Some(gamelib_store::envelope::RESERVED_KEY) {
+        return Err(WriteRefusal::ReservedKey);
+    }
+    if !is_safe_key_path(key) {
+        return Err(WriteRefusal::KeyPath);
+    }
+    if !is_writable_store_field(store, key) {
+        return Err(WriteRefusal::NotWritable);
+    }
+    Ok(())
+}
+
+/// Applies one renderer write on the caller's (blocking) thread. Under `GAMELIB_STORE=ts` (or with
+/// no home directory) every write is forwarded through `forward`, unchanged and unchecked, exactly
+/// as the renderer sent it before (D-01); under `rust` an unknown store is refused, a row TS still
+/// owns is forwarded, and a Rust-owned store is checked and applied with `Origin::Renderer`, whose
+/// change the host's listeners then announce.
+pub(crate) fn apply_renderer_write(
+    host: &StoreHost,
+    reads: &StoreReads,
+    write: &RendererWrite,
+    forward: &dyn Fn(&RendererWrite) -> Result<(), String>,
+) -> Result<WriteOutcome, String> {
+    let rust_mode = reads
+        .config
+        .as_ref()
+        .is_some_and(|c| c.mode == StoreMode::Rust);
+    if !rust_mode {
+        forward(write)?;
+        return Ok(WriteOutcome::Forwarded);
+    }
+    let Some(store) = resolve_renderer_store(write.store()) else {
+        return Ok(WriteOutcome::Refused(WriteRefusal::UnknownStore));
+    };
+    let Some(config) = reads.owner_of(&store) else {
+        forward(write)?;
+        return Ok(WriteOutcome::Forwarded);
+    };
+    if let Err(refusal) = check_write_policy(&store.name, write.key()) {
+        return Ok(WriteOutcome::Refused(refusal));
+    }
+    let Some(row) = store.row else {
+        return Ok(WriteOutcome::Refused(WriteRefusal::NoStoreBacksIt));
+    };
+    let name = row.name.as_deref().unwrap_or_default();
+    let path = config.user_data.join(&row.dir).join(format!("{name}.json"));
+    let Ok(opened) = host.open_row(row, path) else {
+        return Ok(WriteOutcome::Refused(WriteRefusal::Io));
+    };
+    Ok(match opened.apply_reporting(write.op(), Origin::Renderer) {
+        Ok(_) => WriteOutcome::Persisted,
+        Err(ApplyError::ReadOnly(_)) => WriteOutcome::Refused(WriteRefusal::ReadOnly),
+        Err(ApplyError::Evicted) => WriteOutcome::Refused(WriteRefusal::Evicted),
+        Err(ApplyError::Rejected(_)) => WriteOutcome::Refused(WriteRefusal::Rejected),
+        Err(ApplyError::Io(_)) => WriteOutcome::Refused(WriteRefusal::Io),
+    })
+}
+
+/// Logs a refused renderer write: the category into the shell log, the renderer's store name (cut
+/// and sanitised) to stderr only, never the key's value or the value (T-28-04, T-29-18).
+fn log_refusal(channel: &str, store: &str, refusal: WriteRefusal) {
+    let kind = refusal.as_str();
+    crate::shell_log_detail(
+        &format!("WARN: native {channel} refused a store write: {kind}"),
+        &echo_channel(store),
+    );
+}
+
+/// The `storeSet` / `storeDelete` slice job: applies the write; a refusal is logged and dropped, as
+/// the sidecar dropped one (a send has no answer).
+pub(crate) fn run_send_write(ctx: &NativeCtx, channel: &str, write: &RendererWrite) {
+    let sidecar = &ctx.store_reads.sidecar;
+    let forward = |w: &RendererWrite| -> Result<(), String> {
+        sidecar.send(w.ts_send_channel(), w.ts_args())
+    };
+    match apply_renderer_write(&ctx.store_host, &ctx.store_reads, write, &forward) {
+        Ok(WriteOutcome::Refused(refusal)) => log_refusal(channel, write.store(), refusal),
+        Ok(WriteOutcome::Persisted | WriteOutcome::Forwarded) => {}
+        Err(forward_error) => crate::shell_log_detail(
+            &format!("WARN: native {channel} could not forward a store write"),
+            &forward_error,
+        ),
+    }
+}
+
+/// The renderer names whose snapshot a store table key feeds: every store the renderer may read
+/// (the boot and lazy tiers and the recognised caches), grouped by the row it resolves to. Two names
+/// over one file (`steamConfigStore`, `steamBottleConfigStore`) both hear its changes.
+fn renderer_names_for(store_key: &str) -> &'static [String] {
+    static BY_KEY: OnceLock<HashMap<String, Vec<String>>> = OnceLock::new();
+    let map = BY_KEY.get_or_init(|| {
+        let p = policy();
+        let mut map: HashMap<String, Vec<String>> = HashMap::new();
+        let names = p
+            .boot_set_stores()
+            .iter()
+            .chain(p.lazy_stores())
+            .chain(p.recognized_cache_store_names());
+        for name in names {
+            let Some(row) = resolve_renderer_store(name).and_then(|s| s.row) else {
+                continue;
+            };
+            let entry = map.entry(row.key.clone()).or_default();
+            if !entry.contains(name) {
+                entry.push(name.clone());
+            }
+        }
+        map
+    });
+    map.get(store_key).map(Vec::as_slice).unwrap_or(&[])
+}
+
+/// The `storeChanged` pushes one change makes, one per renderer name over its file, in that name's
+/// policy: a set or delete only for a field the renderer may read (the secret-leak guard that lived
+/// in TS `pushStoreChanged`, T-85-44), a clear or replace as an `invalidated` push that carries no
+/// value. Every push carries the change's `rev` (Pitfall 8).
+pub(crate) fn renderer_pushes(change: &StoreChange) -> Vec<Value> {
+    let rev = change.rev;
+    renderer_names_for(&change.store)
+        .iter()
+        .filter_map(|name| match &change.op {
+            OpSummary::Set { key } => is_allowed_store_field(name, key).then(|| {
+                let value = change.value.as_deref().map_or(Value::Null, Json::to_value);
+                json!({ "store": name, "key": key, "value": value, "rev": rev })
+            }),
+            OpSummary::Delete { key } => is_allowed_store_field(name, key)
+                .then(|| json!({ "store": name, "key": key, "deleted": true, "rev": rev })),
+            OpSummary::Clear | OpSummary::Replace => {
+                Some(json!({ "store": name, "key": "", "invalidated": true, "rev": rev }))
+            }
+        })
+        .collect()
+}
+
+/// Registers the renderer push on `host`, once at boot: every change of a store the renderer reads,
+/// whoever made it (the sidecar's mirror, the renderer, a Rust module), reaches the renderer from
+/// here, in the host's `rev` order. The host's dispatcher thread runs it; it holds no lock and no
+/// shutdown registrant (a parked thread is idle, not in-flight work).
+pub(crate) fn install_renderer_push(host: &StoreHost, emitter: Arc<dyn FrontendEmitter>) {
+    host.on_any_change(Box::new(move |change| {
+        for push in renderer_pushes(change) {
+            emitter.emit(STORE_CHANGED_CHANNEL, vec![push]);
+        }
+    }));
+}
+
 /// The renderer push the read-only notice rides (`frontendMessage` channel).
 const READ_ONLY_NOTICE_CHANNEL: &str = "readOnlyStoresNotice";
 
@@ -394,9 +692,6 @@ pub(crate) fn store_fetch(ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture
 pub(crate) mod tests {
     use super::*;
     use crate::ipc_contract::IPC_INVALID_ARGS_MARKER;
-    use gamelib_store::host::Origin;
-    use gamelib_store::json::Json;
-    use gamelib_store::ops::Op;
     use gamelib_testutil::FakeHome;
     use std::fs;
     use std::sync::Mutex;
@@ -420,6 +715,11 @@ pub(crate) mod tests {
         fn invoke(&self, channel: &str, args: Vec<Value>) -> Result<Value, String> {
             self.calls.lock().unwrap().push((channel.to_string(), args));
             Ok(self.answer.clone())
+        }
+
+        fn send(&self, channel: &str, args: Vec<Value>) -> Result<(), String> {
+            self.calls.lock().unwrap().push((channel.to_string(), args));
+            Ok(())
         }
     }
 
@@ -829,6 +1129,307 @@ pub(crate) mod tests {
         }
         assert!(!sent.load(Ordering::SeqCst));
         assert!(emitter.0.lock().unwrap().is_empty());
+    }
+
+    // ---- renderer writes (85-17) ----------------------------------------------------------------
+
+    /// Waits until the host's event queue has run everything queued so far.
+    fn delivered(host: &StoreHost) {
+        let (tx, rx) = std::sync::mpsc::channel();
+        host.post(Box::new(move || {
+            let _ = tx.send(());
+        }));
+        rx.recv_timeout(std::time::Duration::from_secs(10))
+            .expect("the host's event queue drained");
+    }
+
+    /// A host with both of the shell's listeners: the renderer push into an emitter and the sidecar
+    /// mirror events into a list, as `run_setup` and `store_dispatch::configure` register them.
+    struct WriteRig {
+        home: FakeHome,
+        host: Arc<StoreHost>,
+        pushes: Arc<RecordingEmitter>,
+        events: Arc<Mutex<Vec<Value>>>,
+        _dispatcher: Arc<crate::store_dispatch::Dispatcher>,
+    }
+
+    fn write_rig(prefix: &str) -> WriteRig {
+        let home = FakeHome::new(prefix);
+        let host = Arc::new(StoreHost::new());
+        let pushes = Arc::new(RecordingEmitter(Mutex::new(Vec::new())));
+        install_renderer_push(&host, Arc::clone(&pushes) as Arc<dyn FrontendEmitter>);
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let sink = Arc::clone(&events);
+        let dispatcher = crate::store_dispatch::Dispatcher::new(
+            Arc::clone(&host),
+            crate::store_dispatch::Config {
+                user_data: home.root().to_path_buf(),
+                mode: StoreMode::Rust,
+                ownership: Ownership::embedded().clone(),
+            },
+            gamelib_core::shutdown::Shutdown::new(),
+            Arc::new(move |e| sink.lock().unwrap().push(e)),
+            Arc::new(|_| {}),
+        );
+        WriteRig {
+            home,
+            host,
+            pushes,
+            events,
+            _dispatcher: dispatcher,
+        }
+    }
+
+    fn set(store: &str, key: &str, value: Value) -> RendererWrite {
+        RendererWrite::Set {
+            store: store.to_string(),
+            key: key.to_string(),
+            value,
+        }
+    }
+
+    fn no_forward(_: &RendererWrite) -> Result<(), String> {
+        panic!("a Rust-owned store is never forwarded")
+    }
+
+    #[test]
+    fn store_native_tracer_a_renderer_set_is_persisted_and_announced_once_to_each_side() {
+        let rig = write_rig("gamelib-store-native-write-");
+        write(
+            &rig.home,
+            "store/config.json",
+            "{\n\t\"theme\": \"dark\"\n}",
+        );
+        let reads = reads(&rig.home, StoreMode::Rust, RecordingProxy::new(json!({})));
+        let out = apply_renderer_write(
+            &rig.host,
+            &reads,
+            &set("configStore", "theme", json!("light")),
+            &no_forward,
+        )
+        .unwrap();
+        assert_eq!(out, WriteOutcome::Persisted);
+        delivered(&rig.host);
+
+        // On disk, in the TS byte layout.
+        let text = fs::read_to_string(rig.home.root().join("store/config.json")).unwrap();
+        assert!(text.contains("\"theme\": \"light\""), "{text}");
+
+        // Exactly one renderer push, with the rev.
+        let pushes = rig.pushes.0.lock().unwrap().clone();
+        assert_eq!(
+            pushes,
+            vec![(
+                STORE_CHANGED_CHANNEL.to_string(),
+                vec![json!({"store": "configStore", "key": "theme", "value": "light", "rev": 1})]
+            )]
+        );
+        // Exactly one sidecar event: a renderer write is `changed`, never an ack.
+        let events = rig.events.lock().unwrap().clone();
+        assert_eq!(
+            events,
+            vec![json!({
+                "store": "store/config",
+                "rev": 1,
+                "op": "changed",
+                "key": "theme",
+                "valueJson": "\"light\""
+            })]
+        );
+    }
+
+    #[test]
+    fn store_native_a_renderer_write_the_policy_refuses_writes_nothing_and_announces_nothing() {
+        let rig = write_rig("gamelib-store-native-refuse-");
+        write(
+            &rig.home,
+            "steam_store/config.json",
+            "{\n\t\"isLoggedIn\": true,\n\t\"refreshToken\": \"steam:v1:secret\"\n}",
+        );
+        let before = fs::read(rig.home.root().join("steam_store/config.json")).unwrap();
+        let reads = reads(&rig.home, StoreMode::Rust, RecordingProxy::new(json!({})));
+        let cases = [
+            (
+                set("steamConfigStore", "refreshToken", json!("attacker")),
+                WriteRefusal::NotWritable,
+            ),
+            (
+                set("steamConfigStore", "refreshToken.inner", json!(1)),
+                WriteRefusal::NotWritable,
+            ),
+            (
+                set("timestampStore", "__proto__.polluted", json!(1)),
+                WriteRefusal::KeyPath,
+            ),
+            (
+                set("timestampStore", "a.constructor", json!(1)),
+                WriteRefusal::KeyPath,
+            ),
+            (
+                set("configStore", "__internal__.migrations", json!(1)),
+                WriteRefusal::ReservedKey,
+            ),
+            (
+                set("configStore", "settings", json!({})),
+                WriteRefusal::NotWritable,
+            ),
+            (
+                set("humble_library", "k", json!(1)),
+                WriteRefusal::UnknownStore,
+            ),
+            (set("notAStore", "k", json!(1)), WriteRefusal::UnknownStore),
+            (set("fontsStore", "k", json!(1)), WriteRefusal::NotWritable),
+        ];
+        for (write, want) in cases {
+            let out = apply_renderer_write(&rig.host, &reads, &write, &no_forward).unwrap();
+            assert_eq!(out, WriteOutcome::Refused(want), "{write:?}");
+        }
+        delivered(&rig.host);
+        assert_eq!(
+            fs::read(rig.home.root().join("steam_store/config.json")).unwrap(),
+            before
+        );
+        assert!(rig.pushes.0.lock().unwrap().is_empty());
+        assert!(rig.events.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn store_native_ts_mode_forwards_a_renderer_write_unchanged_and_rust_announces_nothing() {
+        let rig = write_rig("gamelib-store-native-write-ts-");
+        let reads = reads(&rig.home, StoreMode::Ts, RecordingProxy::new(json!({})));
+        let forwarded = Mutex::new(Vec::new());
+        let forward = |w: &RendererWrite| -> Result<(), String> {
+            forwarded
+                .lock()
+                .unwrap()
+                .push((w.ts_send_channel(), w.ts_args()));
+            Ok(())
+        };
+        // Unchecked under ts: TS's own guards decide, exactly as before this plan.
+        let write = set("steamConfigStore", "refreshToken", json!("x"));
+        let out = apply_renderer_write(&rig.host, &reads, &write, &forward).unwrap();
+        assert_eq!(out, WriteOutcome::Forwarded);
+        assert_eq!(
+            forwarded.lock().unwrap().as_slice(),
+            &[(
+                STORE_TS_SET_CHANNEL,
+                vec![json!("steamConfigStore"), json!("refreshToken"), json!("x")]
+            )]
+        );
+        delivered(&rig.host);
+        assert!(rig.pushes.0.lock().unwrap().is_empty());
+        assert!(rig.events.lock().unwrap().is_empty());
+        assert_eq!(rig.host.in_flight(), 0);
+        assert!(!rig.home.root().join("steam_store").exists());
+    }
+
+    #[test]
+    fn store_native_a_row_ts_owns_under_rust_mode_is_forwarded() {
+        let home = FakeHome::new("gamelib-store-native-write-mixed-");
+        let ownership: Ownership = serde_json::from_str(
+            r#"{"families":{"cache":true,"user-state":true,"account":true,"settings":true},"stores":{"store/config":false}}"#,
+        )
+        .unwrap();
+        let reads = StoreReads {
+            config: Some(ReadConfig {
+                user_data: home.root().to_path_buf(),
+                mode: StoreMode::Rust,
+                ownership,
+            }),
+            sidecar: RecordingProxy::new(json!({})),
+        };
+        let calls = Mutex::new(0);
+        let forward = |_: &RendererWrite| -> Result<(), String> {
+            *calls.lock().unwrap() += 1;
+            Ok(())
+        };
+        let out = apply_renderer_write(
+            &StoreHost::new(),
+            &reads,
+            &set("configStore", "theme", json!("x")),
+            &forward,
+        )
+        .unwrap();
+        assert_eq!(out, WriteOutcome::Forwarded);
+        assert_eq!(*calls.lock().unwrap(), 1);
+    }
+
+    #[test]
+    fn store_native_pushes_follow_each_renderer_name_policy_and_bulk_changes_invalidate() {
+        let change = |op: OpSummary, value: Option<Json>| StoreChange {
+            store: "steam_store/config".to_string(),
+            rev: 4,
+            op,
+            origin: Origin::Sidecar { seq: 1 },
+            value: value.map(Arc::new),
+        };
+        // A secret field: no renderer name may read it, so nothing is pushed.
+        let token = change(
+            OpSummary::Set {
+                key: "refreshToken".into(),
+            },
+            Some(Json::Str("steam:v1:secret".into())),
+        );
+        assert!(renderer_pushes(&token).is_empty());
+        // An allow-listed field reaches the name that may read it, with the rev.
+        let pushed = renderer_pushes(&change(
+            OpSummary::Set {
+                key: "isLoggedIn".into(),
+            },
+            Some(Json::Bool(true)),
+        ));
+        assert!(pushed.contains(
+            &json!({"store": "steamConfigStore", "key": "isLoggedIn", "value": true, "rev": 4})
+        ));
+        assert!(pushed.iter().all(|p| p["key"] == "isLoggedIn"));
+        let deleted = renderer_pushes(&change(
+            OpSummary::Delete {
+                key: "isLoggedIn".into(),
+            },
+            None,
+        ));
+        assert!(deleted.contains(
+            &json!({"store": "steamConfigStore", "key": "isLoggedIn", "deleted": true, "rev": 4})
+        ));
+        // A clear or replace has no key: every name over the file re-fetches; no value leaves.
+        for op in [OpSummary::Clear, OpSummary::Replace] {
+            let pushed = renderer_pushes(&change(op, Some(Json::Str("secret".into()))));
+            assert!(pushed.contains(
+                &json!({"store": "steamConfigStore", "key": "", "invalidated": true, "rev": 4})
+            ));
+            assert!(!Value::Array(pushed).to_string().contains("secret"));
+        }
+        // A store the renderer never reads gets no push at all.
+        let native = StoreChange {
+            store: "store/uploadedLogs".to_string(),
+            rev: 1,
+            op: OpSummary::Set { key: "k".into() },
+            origin: Origin::Rust,
+            value: Some(Arc::new(Json::Bool(true))),
+        };
+        assert!(renderer_pushes(&native).is_empty());
+    }
+
+    #[test]
+    fn store_native_store_set_args_are_shape_checked() {
+        assert_eq!(
+            parse_store_set(&[json!("configStore"), json!("a.b"), json!({"x": [1, null]})]),
+            Ok(set("configStore", "a.b", json!({"x": [1, null]})))
+        );
+        assert!(parse_store_set(&[json!("configStore"), json!("a"), Value::Null]).is_ok());
+        let long_key = "k".repeat(KEY_PATH_MAX + 1);
+        for args in [
+            vec![],
+            vec![json!("configStore")],
+            vec![json!("configStore"), json!("a")],
+            vec![json!(1), json!("a"), json!(1)],
+            vec![json!("s"), json!(""), json!(1)],
+            vec![json!(""), json!("a"), json!(1)],
+            vec![json!("s"), json!(long_key), json!(1)],
+            vec![json!("s"), json!("a"), json!(1), json!("extra")],
+        ] {
+            assert!(parse_store_set(&args).is_err(), "{args:?}");
+        }
     }
 
     struct NullHost;

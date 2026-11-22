@@ -114,8 +114,8 @@ const invokeTable: FixtureTable<typeof sidecarInternalInvokeArgs> = {
 const sendTable: FixtureTable<typeof sidecarInternalSendArgs> = {
   // main.rs SHELL_WINDOW_FOCUSED: empty args
   shellWindowFocused: noArgs,
-  // tauriTransport.ts: send('storeSet', [storeName, key, value])
-  storeSet: {
+  // 85-17: store_native.rs forwards the renderer's storeSet args unchanged ([storeName, key, value])
+  'store:ts-set': {
     valid: [
       ['configStore', 'defaultSettings.theme', 'dark'],
       ['configStore', 'a.b', { nested: [1, 2, null] }],
@@ -222,7 +222,20 @@ const sendTable: FixtureTable<typeof sidecarInternalSendArgs> = {
           originSeq: 1,
           reason: 'not-owned'
         }
-      ]
+      ],
+      // 85-17: a write from another origin, named the way a frame names one
+      [
+        {
+          store: 'store/config',
+          rev: 4,
+          op: 'changed',
+          key: 'theme',
+          valueJson: '"dark"'
+        }
+      ],
+      [{ store: 'store/config', rev: 5, op: 'changed', key: 'theme' }],
+      [{ store: 'store/config', rev: 6, op: 'changed', valueJson: '{}' }],
+      [{ store: 'store/config', rev: 7, op: 'changed' }]
     ],
     invalid: [
       [],
@@ -233,7 +246,12 @@ const sendTable: FixtureTable<typeof sidecarInternalSendArgs> = {
       [{ store: 's', rev: 1, op: 'nack', originSeq: 1 }],
       [{ store: 's', rev: 1, op: 'refused', originSeq: 1, reason: 'why' }],
       [{ store: 's', rev: 1, op: 'applied', originSeq: 1, extra: 1 }],
-      [{ store: 's', rev: 1, op: 'applied' }]
+      [{ store: 's', rev: 1, op: 'applied' }],
+      [{ store: 's', rev: 0, op: 'changed' }],
+      [{ store: 's', rev: 1, op: 'changed', originSeq: 1 }],
+      [{ store: 's', rev: 1, op: 'changed', key: '' }],
+      [{ store: 's', rev: 1, op: 'changed', valueJson: 1 }],
+      [{ store: 's', rev: 1, op: 'applied', originSeq: 1, key: 'k' }]
     ]
   }
 }
@@ -251,6 +269,8 @@ describe('sidecarInternal schemas', () => {
       'store:ts-snapshot',
       // 85-16: the renamed fetch the shell forwards to; the renderer's name is native now.
       'store:ts-fetch',
+      // 85-17: the renamed write the shell forwards to; the renderer's storeSet is native now.
+      'store:ts-set',
       'handleProtocolUrl',
       'shellWindowFocused',
       'depotCdnToken',

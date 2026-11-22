@@ -799,6 +799,7 @@ pub(crate) const NATIVE_SEND_CHANNELS: &[&str] = &[
     "logInfo",
     "openExternalUrl",
     "showLogFileInFolder",
+    "storeSet",
 ];
 
 pub(crate) fn is_native_invoke_channel(name: &str) -> bool {

@@ -1,5 +1,6 @@
 //! The shell's side of the sidecar's store writes (Phase 85 plan 10, FND-06): the `kind:"store"`
-//! frame arm of the stdout reader, and the one worker that applies the frames.
+//! frame arm of the stdout reader, the one worker that applies the frames, and every
+//! `storeMirrorEvent` the shell sends the sidecar.
 //!
 //! A store the ownership file moved to Rust is mirrored in the sidecar (`mirrorCell.ts`), which
 //! sends one ordered frame per write. They travel on stdout, read by the shell's single in-order
@@ -9,6 +10,16 @@
 //! [`StoreHost::apply`] with `Origin::Sidecar { seq }`, then answers each with a `storeMirrorEvent`
 //! (`applied`, `refused` or `flushed`) written to the sidecar in the same order (85-SPIKES.md S1
 //! rules 1, 3, 6 and 7: persist before emit, one FIFO, `originSeq` acks, a nack on a failed persist).
+//!
+//! One ordered event stream (85-17, S1 rules 2, 3 and 8). Every event the sidecar's mirror receives
+//! leaves from the host's one dispatcher thread, in the order the host queued it under each store's
+//! lock: a change the sidecar made is acked `applied` by a host listener this dispatcher registers,
+//! with the change's own `rev`, and a change another origin made (the renderer through a native
+//! handler, a Rust module) is sent as `changed {store, rev, key?, valueJson?}`, so TS readers see
+//! renderer writes. The worker's own answers, which consume no rev (`refused`, `flushed`, a no-op
+//! `applied`), are posted to the same queue ([`StoreHost::post`]), so none overtakes an earlier
+//! change. Without that, an `applied` written by the worker could reach the mirror after a later
+//! renderer `changed` and fold an older value over a newer one.
 //!
 //! Values cross as `valueJson` TEXT and are parsed only by `gamelib_store::json`, the ordered
 //! parser, so a nested object keeps the key order the sidecar held and the bytes written equal what
@@ -31,10 +42,12 @@ use std::sync::{Arc, Condvar, Mutex, MutexGuard, OnceLock};
 use std::time::{Duration, Instant};
 
 use gamelib_core::shutdown::{Registrant, Shutdown};
-use gamelib_store::host::{runtime_cache_row, ApplyError, Origin, StoreHost};
+use gamelib_store::host::{
+    runtime_cache_row, ApplyError, OpSummary, Origin, StoreChange, StoreHost,
+};
 use gamelib_store::json::{self, Json, Obj};
 use gamelib_store::ops::{Op, OpReject};
-use gamelib_store::table::{row_for_key, TableRow};
+use gamelib_store::table::{row_for_key, Family, TableRow};
 use serde_json::{json, Value};
 
 use crate::shell_state::SidecarState;
@@ -322,6 +335,39 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(|e| e.into_inner())
 }
 
+/// The `storeMirrorEvent` a host change becomes, if the sidecar's mirror needs one: `applied` for a
+/// change the sidecar's own frame made (its `originSeq` and the change's `rev`), `changed` for a
+/// change from the renderer or a Rust module to a store the mirror can hold. A `native` row (Rust
+/// writes it and the sidecar never mirrors it) gets nothing. The value crosses as compact JSON text,
+/// which the mirror parses the way it parses its own frames.
+pub(crate) fn mirror_event_for(change: &StoreChange) -> Option<Value> {
+    if let Origin::Sidecar { seq } = change.origin {
+        return Some(json!({
+            "store": change.store,
+            "rev": change.rev,
+            "op": "applied",
+            "originSeq": seq,
+        }));
+    }
+    let row = row_for_store_key(&change.store)?;
+    if row.family == Family::Native {
+        return None;
+    }
+    let mut event = json!({ "store": change.store, "rev": change.rev, "op": "changed" });
+    let map = event.as_object_mut()?;
+    if let OpSummary::Set { key } | OpSummary::Delete { key } = &change.op {
+        map.insert("key".to_string(), Value::String(key.clone()));
+    }
+    if matches!(change.op, OpSummary::Set { .. } | OpSummary::Replace) {
+        let text = change.value.as_deref().map_or_else(
+            || "null".to_string(),
+            |v| String::from_utf8_lossy(&json::to_compact_bytes(v)).into_owned(),
+        );
+        map.insert("valueJson".to_string(), Value::String(text));
+    }
+    Some(event)
+}
+
 /// Where the shell writes a `storeMirrorEvent` payload: the sidecar's stdin as a `send` frame.
 pub(crate) type EventSink = Arc<dyn Fn(Value) + Send + Sync>;
 
@@ -376,6 +422,15 @@ impl Dispatcher {
         events: EventSink,
         log: LogSink,
     ) -> Arc<Dispatcher> {
+        // The ordered half of the stream: every change of this host, in its `rev` order, on the host's
+        // dispatcher thread. Registered once per dispatcher (one per process in production, built at
+        // `configure`, so a renderer write before the first frame is still announced).
+        let sink = Arc::clone(&events);
+        host.on_any_change(Box::new(move |change| {
+            if let Some(event) = mirror_event_for(change) {
+                sink(event);
+            }
+        }));
         Arc::new(Dispatcher {
             host,
             config,
@@ -525,8 +580,11 @@ impl Dispatcher {
             FrameOp::Replace(obj) => Op::Replace(obj),
             FrameOp::Flush => return,
         };
-        match opened.apply(op, Origin::Sidecar { seq }) {
-            Ok(rev) => self.reply(&store, rev, "applied", seq, None),
+        match opened.apply_reporting(op, Origin::Sidecar { seq }) {
+            // A change is acked by the host listener, in `rev` order with every other change.
+            Ok((_, true)) => {}
+            // A no-op consumed no rev and queued no change: the worker acks it itself.
+            Ok((rev, false)) => self.reply(&store, rev, "applied", seq, None),
             Err(refusal) => {
                 let reason = match refusal {
                     ApplyError::ReadOnly(_) => "read-only",
@@ -541,14 +599,16 @@ impl Dispatcher {
         }
     }
 
-    /// Writes one `storeMirrorEvent` to the sidecar. The worker is the only caller, so events leave
-    /// in the order the frames were applied.
+    /// Sends one `storeMirrorEvent` that consumes no rev (`refused`, `flushed`, a no-op `applied`).
+    /// It is posted to the host's event queue, so it leaves after every change queued before it: a
+    /// `flushed` after the `applied` of each earlier frame, a no-op ack after any change it raced.
     fn reply(&self, store: &str, rev: u64, op: &str, seq: u64, reason: Option<&str>) {
         let mut event = json!({ "store": store, "rev": rev, "op": op, "originSeq": seq });
         if let (Some(reason), Some(map)) = (reason, event.as_object_mut()) {
             map.insert("reason".to_string(), Value::String(reason.to_string()));
         }
-        (self.events)(event);
+        let events = Arc::clone(&self.events);
+        self.host.post(Box::new(move || events(event)));
     }
 
     /// Stops the worker taking frames until the guard is dropped, after waiting up to `bound` for
@@ -642,6 +702,9 @@ pub(crate) fn configure(user_data: PathBuf, mode: StoreMode) {
         mode,
         ownership: Ownership::embedded().clone(),
     });
+    // Built now rather than on the first frame: its host listener must hear a renderer write that
+    // comes before any sidecar frame (85-17). It spawns no worker until a frame is queued.
+    let _ = global();
 }
 
 /// Hands the dispatcher the sidecar's state, so it can answer frames. Installed before the stdout
@@ -859,6 +922,18 @@ mod tests {
 
     fn settle(rig: &Rig) {
         assert!(rig.dispatcher.wait_idle(Duration::from_secs(10)));
+        delivered(&rig.host);
+    }
+
+    /// Waits until the host's event queue has run everything queued so far (events leave from the
+    /// host's dispatcher thread, 85-17): a post runs after every earlier change and post.
+    fn delivered(host: &StoreHost) {
+        let (tx, rx) = std::sync::mpsc::channel();
+        host.post(Box::new(move || {
+            let _ = tx.send(());
+        }));
+        rx.recv_timeout(Duration::from_secs(10))
+            .expect("the host's event queue drained");
     }
 
     #[test]
@@ -990,6 +1065,7 @@ mod tests {
                 Some(r#""SECRET-TOKEN""#),
             ),
         );
+        delivered(&rig.host);
         let logs = lock(&rig.logs);
         assert_eq!(logs.len(), 1);
         assert_eq!(logs[0], "WARN: store frame rejected: reserved-key");
@@ -1014,6 +1090,7 @@ mod tests {
             &rig,
             json!({ "kind": "store", "seq": 0, "store": TRACER, "op": "clear" }),
         );
+        delivered(&rig.host);
         assert_eq!(lock(&rig.logs).len(), 2);
         assert!(lock(&rig.events).is_empty());
     }
@@ -1042,6 +1119,109 @@ mod tests {
         // Everything applied: the registrant is released, so a drain returns at once.
         assert!(rig.shutdown.drain(Duration::from_millis(500)).is_empty());
         let _ = &rig.host;
+    }
+
+    /// The tracer store, opened on the rig's host as a native handler or a Rust module would.
+    fn tracer_store(rig: &Rig) -> Arc<gamelib_store::host::Store> {
+        let row = row_for_store_key(TRACER).unwrap();
+        rig.host
+            .open_row(&row, path_for(rig.home.root(), TRACER, &row))
+            .unwrap()
+    }
+
+    fn parse_value(text: &str) -> Json {
+        json::parse(text.as_bytes()).unwrap()
+    }
+
+    #[test]
+    fn store_frame_a_change_from_another_origin_reaches_the_sidecar_as_changed() {
+        let rig = rig();
+        let store = tracer_store(&rig);
+        store
+            .apply(
+                Op::Set {
+                    key: "480.title".to_string(),
+                    value: parse_value(r#"{"b":1,"a":[true,null]}"#),
+                },
+                Origin::Renderer,
+            )
+            .unwrap();
+        store
+            .apply(
+                Op::Delete {
+                    key: "480.title".to_string(),
+                },
+                Origin::Rust,
+            )
+            .unwrap();
+        let Json::Obj(doc) = parse_value(r#"{"z":2}"#) else {
+            unreachable!()
+        };
+        store.apply(Op::Replace(doc), Origin::Renderer).unwrap();
+        store.apply(Op::Clear, Origin::Rust).unwrap();
+        delivered(&rig.host);
+        let events = lock(&rig.events).clone();
+        assert_eq!(
+            events,
+            vec![
+                // The value as compact text in the order it was written (not serde's sorted order).
+                json!({"store": TRACER, "rev": 1, "op": "changed", "key": "480.title", "valueJson": r#"{"b":1,"a":[true,null]}"#}),
+                json!({"store": TRACER, "rev": 2, "op": "changed", "key": "480.title"}),
+                json!({"store": TRACER, "rev": 3, "op": "changed", "valueJson": r#"{"z":2}"#}),
+                json!({"store": TRACER, "rev": 4, "op": "changed"}),
+            ]
+        );
+    }
+
+    #[test]
+    fn store_frame_acks_and_changes_leave_in_rev_order_and_a_no_op_ack_after_the_change_it_raced() {
+        let rig = rig();
+        // A renderer write, then a sidecar frame that writes the value already held (a no-op), then
+        // a sidecar frame that changes it.
+        tracer_store(&rig)
+            .apply(
+                Op::Set {
+                    key: "k".to_string(),
+                    value: parse_value("2"),
+                },
+                Origin::Renderer,
+            )
+            .unwrap();
+        send(&rig, frame(1, TRACER, "set", Some("k"), Some("2")));
+        send(&rig, frame(2, TRACER, "set", Some("k"), Some("3")));
+        settle(&rig);
+        let order: Vec<(String, u64, Option<u64>)> = lock(&rig.events)
+            .iter()
+            .map(|e| {
+                (
+                    e["op"].as_str().unwrap().to_string(),
+                    e["rev"].as_u64().unwrap(),
+                    e["originSeq"].as_u64(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            order,
+            vec![
+                ("changed".to_string(), 1, None),
+                // The no-op consumed no rev: acked with the rev it saw, after the change before it.
+                ("applied".to_string(), 1, Some(1)),
+                ("applied".to_string(), 2, Some(2)),
+            ]
+        );
+    }
+
+    #[test]
+    fn store_frame_a_change_to_a_native_store_is_not_sent_to_the_sidecar() {
+        let rig = rig();
+        let row = row_for_key("store/uploadedLogs").unwrap();
+        rig.host
+            .open_row(row, rig.home.root().join("store/uploadedLogs.json"))
+            .unwrap()
+            .set("https://dpaste.com/x", parse_value("1"))
+            .unwrap();
+        delivered(&rig.host);
+        assert!(lock(&rig.events).is_empty());
     }
 
     const VECTORS: &str = include_str!("../../src/common/__fixtures__/storeFrameVectors.json");

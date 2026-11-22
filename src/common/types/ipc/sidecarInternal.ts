@@ -155,11 +155,15 @@ const steamPollStateEvent = z.discriminatedUnion('kind', [
   })
 ])
 
-// Phase 85 (FND-06): the shell's answer to one sidecar store frame (`kind:"store"`), in apply order.
-// Keep in lockstep with `store_dispatch.rs`'s `send_mirror_event`. `originSeq` is the frame's `seq`
-// (a JS-safe positive integer); `rev` is the store's change count after the apply (0 when the store
-// was never opened); `reason` rides only a `refused`.
-const storeMirrorEvent = z.strictObject({
+// Phase 85 (FND-06): what the shell tells the sidecar's mirror about a Rust-owned store, in the
+// host's rev order. Keep in lockstep with `store_dispatch.rs` (`reply`, `mirror_event_for`).
+// An answer to one sidecar store frame (`kind:"store"`) names the frame's `seq` as `originSeq` (a
+// JS-safe positive integer); `rev` is the store's change count (0 when the store was never opened);
+// `reason` rides only a `refused`. A `changed` event (85-17) reports a write from another origin (the
+// renderer, a Rust module) the way a frame names one: `key` and `valueJson` a set, `key` alone a
+// delete, `valueJson` alone a replace, neither a clear. `valueJson` is unbounded here, as a frame's is
+// bounded only by the frame size the shell accepts.
+const storeMirrorAck = z.strictObject({
   store: nonEmptyString(128),
   rev: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
   op: z.enum(['applied', 'refused', 'flushed']),
@@ -168,6 +172,17 @@ const storeMirrorEvent = z.strictObject({
     .enum(['read-only', 'evicted', 'rejected', 'io', 'not-owned'])
     .optional()
 })
+const storeMirrorChanged = z.strictObject({
+  store: nonEmptyString(128),
+  rev: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  op: z.literal('changed'),
+  key: nonEmptyString(65536).optional(),
+  valueJson: z.string().optional()
+})
+const storeMirrorEvent = z.discriminatedUnion('op', [
+  storeMirrorAck,
+  storeMirrorChanged
+])
 
 const noArgs = z.tuple([])
 
@@ -197,9 +212,10 @@ export const sidecarInternalInvokeArgs = {
 
 export const sidecarInternalSendArgs = {
   shellWindowFocused: noArgs,
-  // The value is any JSON value (it crosses the wire as JSON). `storePolicy.ts`
-  // `isWritableStoreField` / `isSafeKeyPath` own the field policy, not this schema.
-  storeSet: z.tuple([storeName, keyPath, z.json()]),
+  // 85-17: the old renderer `storeSet`, renamed: the shell forwards the native `storeSet` here for a
+  // store TS still owns (GAMELIB_STORE=ts, or a row Rust never opens). The value is any JSON value;
+  // `storePolicy.ts` `isWritableStoreField` / `isSafeKeyPath` own the field policy, not this schema.
+  'store:ts-set': z.tuple([storeName, keyPath, z.json()]),
   storeDelete: z.tuple([storeName, keyPath]),
   // The handler ignores `options` (T-27-03) beyond a mismatch log.
   storeNew: z.tuple([storeName, optionalArg(z.record(z.string(), z.json()))]),
@@ -215,6 +231,7 @@ export const sidecarInternalCallers = {
   trayResolveRunner: 'shell',
   'store:ts-snapshot': 'shell',
   'store:ts-fetch': 'shell',
+  'store:ts-set': 'shell',
   handleProtocolUrl: 'shell',
   shellWindowFocused: 'shell',
   depotCdnToken: 'shell',

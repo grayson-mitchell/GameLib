@@ -41,4 +41,7 @@ export interface NativeSync {
   logInfo: (message: LogMessage) => void
   showLogFileInFolder: (args: GetLogFileArgs) => void
   openExternalUrl: (url: string) => void
+  // Phase 85 (85-17): the renderer's store write, applied by Rust through the StoreHost (a store TS
+  // still owns is forwarded to the sidecar's shell-only `store:ts-set`).
+  storeSet: (storeName: string, keyPath: string, value: unknown) => void
 }

@@ -22,7 +22,7 @@ import ownershipFile from 'common/types/ipc/storeOwnership.json'
 import tableFile from 'common/types/ipc/storeTable.json'
 import {
   STORE_NEW_CHANNEL,
-  STORE_SET_CHANNEL
+  STORE_TS_SET_CHANNEL
 } from 'common/types/sidecarTransport'
 import CacheStore from '../../cache'
 import { registerStoreWriteHandlers } from '../../sidecar/storeWriteHandlers'
@@ -349,7 +349,7 @@ describe('runtime cache stores built by storeNew', () => {
     expect(existsSync(libraryPath())).toBe(false)
     expect(frames).toEqual([])
     // A write through the handler is a frame on that same cell.
-    listeners.get(STORE_SET_CHANNEL)?.(undefined, 'steam_library', 'k', 1)
+    listeners.get(STORE_TS_SET_CHANNEL)?.(undefined, 'steam_library', 'k', 1)
     expect(frames.map((frame) => [frame.store, frame.op])).toEqual([
       ['store_cache/steam_library', 'set']
     ])
@@ -371,7 +371,7 @@ describe('runtime cache stores built by storeNew', () => {
     const frames: StoreFrame[] = []
     const { listeners } = layer(frames)
     listeners.get(STORE_NEW_CHANNEL)?.(undefined, 'steam_library')
-    listeners.get(STORE_SET_CHANNEL)?.(undefined, 'steam_library', 'k', 1)
+    listeners.get(STORE_TS_SET_CHANNEL)?.(undefined, 'steam_library', 'k', 1)
     expect(frames).toEqual([])
     expect(JSON.parse(readFileSync(libraryPath(), 'utf8'))).toMatchObject({
       k: 1
@@ -386,7 +386,7 @@ describe('runtime cache stores built by storeNew', () => {
     const frames: StoreFrame[] = []
     const { listeners } = layer(frames)
     listeners.get(STORE_NEW_CHANNEL)?.(undefined, 'brand_new_cache')
-    listeners.get(STORE_SET_CHANNEL)?.(undefined, 'brand_new_cache', 'k', 1)
+    listeners.get(STORE_TS_SET_CHANNEL)?.(undefined, 'brand_new_cache', 'k', 1)
     expect(frames).toEqual([])
     expect(
       existsSync(join(userData, 'store_cache', 'brand_new_cache.json'))

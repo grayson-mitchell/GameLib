@@ -1881,6 +1881,14 @@ fn run_setup(
     if let Some(paths) = log_paths.as_ref() {
         store_dispatch::configure(std::path::PathBuf::from(&paths.user_data), store_mode);
     }
+    // 85-17: every change of a store the renderer reads reaches it from Rust, in rev order, whoever
+    // made it (the sidecar's mirror, a native renderer write, a Rust module).
+    store_native::install_renderer_push(
+        store_boot::host(),
+        Arc::new(steampoll_dispatch::TauriFrontendEmitter(
+            app.handle().clone(),
+        )),
+    );
     let log_paths_user_data = log_paths
         .as_ref()
         .map(|paths| std::path::PathBuf::from(&paths.user_data));

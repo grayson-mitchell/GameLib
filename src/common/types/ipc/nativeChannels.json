@@ -183,6 +183,40 @@
         ["configStore", "extra"]
       ]
     },
+    "storeSet": {
+      "kind": "send",
+      "slice": "store",
+      "args": [
+        {
+          "name": "storeName",
+          "type": "string",
+          "maxLength": 128,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "keyPath",
+          "type": "string",
+          "maxLength": 512,
+          "maxLengthUnit": "utf16"
+        },
+        { "name": "value", "type": "JSON" }
+      ],
+      "returns": "void",
+      "valid": [
+        ["configStore", "defaultSettings.theme", "dark"],
+        ["configStore", "a.b", { "nested": [1, 2, null] }],
+        ["configStore", "a", null]
+      ],
+      "invalid": [
+        [],
+        ["configStore"],
+        ["configStore", "a"],
+        [1, "a", 1],
+        ["s", "", 1],
+        ["", "a", 1],
+        ["s", "a", 1, "extra"]
+      ]
+    },
     "getHeroicVersion": {
       "kind": "invoke",
       "slice": "app-shell",

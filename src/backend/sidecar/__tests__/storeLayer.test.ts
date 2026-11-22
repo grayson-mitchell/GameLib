@@ -82,7 +82,7 @@ import { BOOT_SET_STORES, STORE_ALLOWLIST } from 'common/types/storePolicy'
 import {
   STORE_SNAPSHOT_CHANNEL,
   STORE_TS_FETCH_CHANNEL,
-  STORE_SET_CHANNEL,
+  STORE_TS_SET_CHANNEL,
   STORE_SET_CHECKED_CHANNEL
 } from 'common/types/sidecarTransport'
 
@@ -533,7 +533,7 @@ describe('C-WR-1: two boots in one module registry', () => {
     // Each registration installs its own listener closed over its own registry (D-66.4-01):
     // the first boot's listener is [0], the second boot's is the last one.
     const listeners =
-      services2.host.ipc.listenerMap().get(STORE_SET_CHANNEL) ?? []
+      services2.host.ipc.listenerMap().get(STORE_TS_SET_CHANNEL) ?? []
     expect(listeners).toHaveLength(1)
     const overrides = { 'c-wr-1': { title: 'second boot' } }
     // Both boots' stores share one on-disk file, so observe WHICH instance took the write.

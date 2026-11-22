@@ -19,9 +19,10 @@
  *      and the view reverts to base plus what is still pending.
  *   8. `rev` only ever rises: `baseRev` is the highest rev seen. A `changed` event (another origin,
  *      emitted by the shell from 85-17) is applied to base when its rev is above `baseRev` and
- *      dropped otherwise. A cell created late starts at rev 0 and loads whatever the file shows;
- *      because ops assign state, an event the file already reflects converges when it is applied
- *      once more. The load-time rev handshake that skips those repeats belongs to 85-17.
+ *      dropped otherwise; so is an `applied` ack (a no-op the shell acks with the rev it saw is
+ *      already in base). The shell sends every event from one ordered queue, so revs arrive in
+ *      order. A cell created late starts at rev 0 and loads whatever the file shows; because ops
+ *      assign state, an event the file already reflects converges when it is applied once more.
  *
  * A write refused by this cell itself (a read-only store, the reserved `__internal__` namespace, a
  * frame the shell would reject) changes nothing and sends nothing, as the conf store did.
@@ -350,9 +351,18 @@ export class MirrorCell {
       // The shell answers in apply order, so the op it names is the oldest pending one and moving
       // it onto base leaves base plus the rest exactly what the view already was. Anything else
       // (an answer out of order) rebuilds the view rather than trust that.
-      applyOp(this.base, settled.op, this.dotPaths)
-      this.baseRevValue = Math.max(this.baseRevValue, event.rev)
-      if (this.pending.length === 0 || index !== 0) this.viewDoc = null
+      //
+      // 85-17: only an ack whose rev is above `baseRev` moved the store. The shell acks a no-op
+      // (the store already held the value, so no rev was consumed) with the rev it saw, after any
+      // change that raced it: that rev is at or below `baseRev`, base already reflects the op, and
+      // folding it again would put an older value over a newer change from another origin.
+      if (event.rev > this.baseRevValue) {
+        applyOp(this.base, settled.op, this.dotPaths)
+        this.baseRevValue = event.rev
+        if (this.pending.length === 0 || index !== 0) this.viewDoc = null
+      } else {
+        this.viewDoc = null
+      }
       return
     }
     // refused: the view reverts to base plus what is still pending.
