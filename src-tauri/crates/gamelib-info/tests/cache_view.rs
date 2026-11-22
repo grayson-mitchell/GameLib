@@ -105,12 +105,16 @@ fn js_date_string_is_the_utc_form_node_prints() {
         "Thu Jan 01 1970 00:00:00 GMT+0000 (Coordinated Universal Time)"
     );
     assert_eq!(
+        js_date_string(1_709_164_799_000),
+        "Wed Feb 28 2024 23:59:59 GMT+0000 (Coordinated Universal Time)"
+    );
+    assert_eq!(
         js_date_string(1_709_209_199_000),
-        "Wed Feb 28 2024 11:59:59 GMT+0000 (Coordinated Universal Time)"
+        "Thu Feb 29 2024 12:19:59 GMT+0000 (Coordinated Universal Time)"
     );
     assert_eq!(
         js_date_string(1_709_251_200_000),
-        "Thu Feb 29 2024 12:00:00 GMT+0000 (Coordinated Universal Time)"
+        "Fri Mar 01 2024 00:00:00 GMT+0000 (Coordinated Universal Time)"
     );
 }
 
@@ -418,5 +422,7 @@ fn a_read_only_store_refuses_writes_silently_as_ts_does() {
     view.delete("a").unwrap();
     view.clear().unwrap();
     assert_eq!(std::fs::read(fx.file("wikigameinfo")).unwrap(), before);
-    assert!(view.has("a"));
+    // A cache serves an empty view over a newer file, and the file stays as the newer build wrote it.
+    assert!(!view.has("a"));
+    assert!(!view.has("foo"));
 }

@@ -17,8 +17,9 @@ use std::path::Path;
 use std::sync::Arc;
 
 use gamelib_core::clock::Clock;
-use gamelib_store::host::{Store, StoreHost};
+use gamelib_store::host::{Origin, Store, StoreHost};
 use gamelib_store::json::{Json, Num};
+use gamelib_store::ops::Op;
 
 /// The store's `invalidateCheck`, which decides whether an expired entry is deleted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -165,35 +166,55 @@ impl CacheView {
         self.get_opt(key).unwrap_or(fallback)
     }
 
-    /// `CacheStore.set(key, value)`.
-    pub fn set(&self, _key: &str, _value: Json) -> io::Result<()> {
+    /// `CacheStore.set(key, value)`: the value at `key`, then the `Date()` text at
+    /// `__timestamp.<key>`, as two dot-path writes. A read-only store refuses silently (TS
+    /// `refusesDiskWrite`).
+    pub fn set(&self, key: &str, value: Json) -> io::Result<()> {
+        if self.store.read_only().is_some() {
+            return Ok(());
+        }
+        let stamp = Json::Str(js_date_string(self.clock.now_ms() as i64));
+        self.store.set(key, value)?;
+        self.store.set(&timestamp_key(key), stamp)
+    }
+
+    /// `CacheStore.delete(key)`: removes the value and its timestamp. An absent key is not an
+    /// error.
+    pub fn delete(&self, key: &str) -> io::Result<()> {
+        if self.store.read_only().is_some() {
+            return Ok(());
+        }
+        self.store.remove(key)?;
+        self.store.remove(&timestamp_key(key))?;
         Ok(())
     }
 
-    /// `CacheStore.delete(key)`.
-    pub fn delete(&self, _key: &str) -> io::Result<()> {
-        Ok(())
-    }
-
-    /// `CacheStore.clear()`.
+    /// `CacheStore.clear()`: the store becomes `{}` (the version envelope is stamped back on write).
     pub fn clear(&self) -> io::Result<()> {
-        Ok(())
+        if self.store.read_only().is_some() {
+            return Ok(());
+        }
+        self.store
+            .apply(Op::Clear, Origin::Rust)
+            .map(|_| ())
+            .map_err(io::Error::from)
     }
 
-    /// `CacheStore.has(key)`.
-    pub fn has(&self, _key: &str) -> bool {
-        false
+    /// `CacheStore.has(key)`: the key exists, whatever its age.
+    pub fn has(&self, key: &str) -> bool {
+        self.store.get(key).is_some()
     }
 
-    /// `CacheStore.entries()`.
+    /// `CacheStore.entries()`: every top-level entry in file order, without the version envelope
+    /// and without the timestamp bookkeeping (the nested `__timestamp` object a dot-path write
+    /// produces, and any literal `__timestamp.*` key).
     pub fn entries(&self) -> Vec<(String, Json)> {
-        Vec::new()
+        self.store
+            .snapshot()
+            .into_iter()
+            .filter(|(k, _)| k != "__timestamp" && !k.starts_with("__timestamp."))
+            .collect()
     }
-}
-
-/// JS `Date()` as Node prints it under `TZ=UTC`.
-pub fn js_date_string(_ms: i64) -> String {
-    String::new()
 }
 
 enum Stamp {
@@ -209,6 +230,35 @@ fn num_ms(n: &Num) -> Option<i64> {
         Num::F(f) if f.is_finite() => Some(f.trunc() as i64),
         Num::F(_) => None,
     }
+}
+
+const WEEKDAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/// JS `Date()` as Node prints it under `TZ=UTC`: `Sat Nov 21 2026 18:07:08 GMT+0000 (Coordinated
+/// Universal Time)`. TS wrote the local-time form of the same instant; Rust has no long zone names,
+/// so it writes the UTC one. Both parse to the same instant (a quirk todo records the difference).
+/// A millisecond count outside JS's date range is `Invalid Date`, as in JS.
+pub fn js_date_string(ms: i64) -> String {
+    let Ok(stamp) = jiff::Timestamp::from_millisecond(ms) else {
+        return "Invalid Date".to_string();
+    };
+    let dt = jiff::tz::Offset::UTC.to_datetime(stamp);
+    let weekday = WEEKDAYS
+        .get(usize::from(dt.weekday().to_sunday_zero_offset() as u8))
+        .copied()
+        .unwrap_or("Sun");
+    let month = MONTHS
+        .get(usize::from((dt.month() - 1) as u8))
+        .copied()
+        .unwrap_or("Jan");
+    format!(
+        "{weekday} {month} {:02} {:04} {:02}:{:02}:{:02} GMT+0000 (Coordinated Universal Time)",
+        dt.day(),
+        dt.year(),
+        dt.hour(),
+        dt.minute(),
+        dt.second()
+    )
 }
 
 const MONTHS: [&str; 12] = [
