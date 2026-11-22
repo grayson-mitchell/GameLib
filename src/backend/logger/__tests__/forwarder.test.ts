@@ -351,6 +351,21 @@ describe('LogForwarder', () => {
       ).toEqual(['g1', 'game1', 'g2'])
     })
 
+    it('an empty first line that makes no entry passes its rotate claim on (IN-06)', () => {
+      const fw = new LogForwarder()
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      // A prefix-only line makes no entry, so the rotation it claimed must not be spent on nothing.
+      fw.logLine(GAME, true, 'INFO', 'Backend', '')
+      fw.logLine(GAME, false, 'INFO', 'Backend', 'first real line')
+      jest.advanceTimersByTime(50)
+      expect(
+        transport.frames.flatMap((f) =>
+          f.batch.map((b) => [b.rotate, b.entries.length])
+        )
+      ).toEqual([[true, 1]])
+    })
+
     it('reports a refused target once per kind and reason, naming no target text (IN-05)', () => {
       const fw = new LogForwarder()
       const transport = new FakeTransport()

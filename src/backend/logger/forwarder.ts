@@ -294,8 +294,12 @@ export class LogForwarder {
       const ts = Date.now()
       const tz = -new Date(ts).getTimezoneOffset()
       const emit = (msg: string): void => {
-        // Prefixes alone make no line (the old formatter's empty-body rule).
-        if (msg.length === 0) return
+        // Prefixes alone make no line (the old formatter's empty-body rule). A rotation the call
+        // claimed is not spent on that nothing: the next entry for the target carries it (IN-06).
+        if (msg.length === 0) {
+          if (rotate) this.oweRotation(target)
+          return
+        }
         this.enqueue(target, rotate, { line: { ts, tz, level, prefix, msg } })
       }
       const body = stringifyLogValue(message)
