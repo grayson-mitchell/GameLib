@@ -18,6 +18,15 @@ use crate::json::{Json, Obj};
 /// conf's own key, reserved for the version envelope.
 const INTERNAL_KEY: &str = "__internal__";
 
+/// The deepest path `set` will build. The parse limit is 128, and `clone`, `PartialEq` and `Drop` of
+/// a document recurse, so a key with tens of thousands of segments must not make one (A-WR-04).
+pub const MAX_SET_DEPTH: usize = 64;
+
+/// The most `null` holes `set` will pad an array with to reach an index. JS leaves a sparse array
+/// and `JSON.stringify` then prints the holes, so a huge index is a hostile or buggy key, and
+/// materialising it would try to allocate gigabytes and abort the process (A-WR-04).
+pub const MAX_SET_HOLE: usize = 1024;
+
 /// A path segment dot-prop refuses, because it would reach the prototype chain in JS.
 fn is_disallowed(segment: &str) -> bool {
     matches!(segment, "__proto__" | "prototype" | "constructor")
@@ -102,13 +111,15 @@ pub fn has(root: &Json, path: &str, dot_paths: bool) -> bool {
     get(root, path, dot_paths).is_some()
 }
 
-/// Sets `path` to `value`. Returns false, and changes nothing, when the path is refused or the
-/// root is not a container.
+/// Sets `path` to `value`. Returns false when the path is refused (a disallowed segment, more than
+/// [`MAX_SET_DEPTH`] segments, an array index more than [`MAX_SET_HOLE`] past the array's end) or the
+/// root is not a container. A refusal found mid-walk can follow the creation of the objects above it,
+/// so a caller that must not change anything on a refusal works on a copy, as the host does.
 pub fn set(root: &mut Json, path: &str, value: Json, dot_paths: bool) -> bool {
     let Some(segs) = plan(path, dot_paths) else {
         return false;
     };
-    if segs.is_empty() || !is_container(root) {
+    if segs.is_empty() || segs.len() > MAX_SET_DEPTH || !is_container(root) {
         return false;
     }
     let mut value = Some(value);
@@ -129,6 +140,9 @@ pub fn set(root: &mut Json, path: &str, value: Json, dot_paths: bool) -> bool {
                     // A named property on an array never reaches `JSON.stringify`.
                     return false;
                 };
+                if idx > a.len().saturating_add(MAX_SET_HOLE) {
+                    return false;
+                }
                 while a.len() <= idx {
                     a.push(Json::Null);
                 }
@@ -250,6 +264,23 @@ mod tests {
         let mut d = doc(r#"{"list":[1]}"#);
         set(&mut d, "list.3", Json::Bool(true), true);
         assert_eq!(compact(&d), r#"{"list":[1,null,null,true]}"#);
+    }
+
+    #[test]
+    fn a_huge_array_index_or_a_very_deep_path_is_refused_not_allocated() {
+        let one = || Json::Num(crate::json::Num::U(1));
+        let mut d = doc(r#"{"list":[1,2]}"#);
+        assert!(!set(&mut d, "list.4294967290", one(), true));
+        assert_eq!(compact(&d), r#"{"list":[1,2]}"#);
+        // A modest gap is still padded with holes.
+        assert!(set(&mut d, "list.10", one(), true));
+
+        let deep = vec!["a"; 100_000].join(".");
+        let mut d = doc("{}");
+        assert!(!set(&mut d, &deep, one(), true));
+        assert_eq!(compact(&d), "{}");
+        let at_limit = vec!["a"; MAX_SET_DEPTH].join(".");
+        assert!(set(&mut d, &at_limit, one(), true));
     }
 
     #[test]
