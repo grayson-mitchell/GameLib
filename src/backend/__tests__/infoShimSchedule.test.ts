@@ -189,6 +189,21 @@ const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_INFO_CROSSOVER_RATING_MAP',
     callers: ['src/backend/sidecar/enrichmentFlowRegistration.ts'],
     deletedBy: 92
+  },
+  // 86-23, the umu id lookup: a one-call shim over `gamelib-info` `wiki::umu`. The GOG, Epic and
+  // Amazon store managers' Linux launch paths call it for the GAMEID env var. They are all phase 92
+  // (the last library managers to port), which also deletes the shim.
+  {
+    name: 'getUmuId',
+    file: 'src/backend/info/wiki.ts',
+    shape: 'shim',
+    channel: 'RUST_INFO_UMU_GET',
+    callers: [
+      'src/backend/storeManagers/gog/games.ts',
+      'src/backend/storeManagers/legendary/games.ts',
+      'src/backend/storeManagers/nile/games.ts'
+    ],
+    deletedBy: 92
   }
 ]
 

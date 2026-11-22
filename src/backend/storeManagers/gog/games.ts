@@ -79,7 +79,7 @@ import axios, { AxiosError, AxiosResponse } from 'axios'
 import { readdir, readFile } from 'fs/promises'
 import ini from 'ini'
 import { getRequiredRedistList, updateRedist } from './redist'
-import { getUmuId } from 'backend/wiki_game_info/umu/utils'
+import { getUmuId } from 'backend/info/wiki'
 import { deriveGogPaths } from './constants'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import { checkInstalledMacArch } from 'backend/macArch/recovery'
@@ -744,11 +744,11 @@ export default class GOGGame implements Game {
       }
 
       if (await isUmuSupported(this.deps, gameSettings)) {
-        const umuId = await getUmuId(
+        const umuId = (await getUmuId(
           this.deps,
           gameInfo.app_name,
           gameInfo.runner
-        )
+        )) as string | null
         if (umuId) {
           commandEnv['GAMEID'] = umuId
         }

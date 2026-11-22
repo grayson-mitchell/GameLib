@@ -116,7 +116,11 @@ const DEFAULT_RUST_ANSWERS: Record<string, (args: unknown[]) => unknown> = {
   // 86-13: the anti-cheat data is up to date, nothing is downloaded and no game has an entry.
   info_anticheat_status: () => ({ needed: false }),
   info_anticheat_download: () => ({ written: false }),
-  info_anticheat_info: () => null
+  info_anticheat_info: () => null,
+  // 86-23: no umu id for any game, no wiki entry for any game, and the wiki cache clear answers null.
+  info_umu_get: () => null,
+  info_wiki_get: () => null,
+  info_wiki_cache_clear: () => null
 }
 
 export interface FreshSidecar {
