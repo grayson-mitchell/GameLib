@@ -6,10 +6,10 @@ current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
 stopped_at: Completed 86-24-PLAN.md
-last_updated: "2026-11-22T17:44:29.458Z"
-last_activity: 2026-11-22
+last_updated: "2026-11-22T17:45:17.789Z"
+last_activity: 2026-11-23
 last_activity_desc: Phase 86 execution started
-state_head: 51971c470581602c59d136c37f0d7417646d085b
+state_head: fde29c5601b7e1b48efd3ad0eca8cf085d343be8
 progress:
   total_phases: 20
   completed_phases: 23
@@ -887,6 +887,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261122-rz8 | Make Nord Light bluer: Frost navbar, Frost primary buttons, Snow Storm panels | 2026-11-22 | 7c58276b2 | — | [261122-rz8-make-nord-light-bluer-with-frost-navbar-](./quick/261122-rz8-make-nord-light-bluer-with-frost-navbar-/) |
 | 261122-rgi | Opt-in DLC enable path in the install dialog and Install tab (follow-up to quick 261120-tbr) | 2026-11-22 | 93e6d145e | — | [261122-rgi-opt-in-dlc-enable-path-in-the-install-di](./quick/261122-rgi-opt-in-dlc-enable-path-in-the-install-di/) |
 | 261123-928 | Anticheat lookup: skip malformed entries and lower-case the argument (todo 2026-11-22) | 2026-11-23 | 51971c470 | — | [261123-928-anticheat-lookup-skip-malformed-entries-](./quick/261123-928-anticheat-lookup-skip-malformed-entries-/) |
+| 30 | safety_dispatch tests: delivered(&host) barrier before reading events (fde29c560) | 2026-11-23 | fde29c560 | — | — |
 
 ## Deferred Items
 
