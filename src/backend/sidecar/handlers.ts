@@ -281,6 +281,7 @@ export function registerHandlers(deps: {
   // `registerStoreWriteHandlers()`.
   registerShellFilesFlows({
     ipc,
+    storeRoot: deps.services.storeRoot,
     managers: deps.services.managers,
     stores: deps.services.stores,
     runner: deps.services.runner,

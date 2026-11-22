@@ -149,6 +149,11 @@ export function registerShellFilesFlows(deps: {
   pushFrontendMessage: HostServices['pushFrontendMessage']
   sendFrontendMessage: HostServices['sendFrontendMessage']
   /**
+   * The boot's store root: a removed reset drops the settings documents' mirror cells through it
+   * (C-WR-01).
+   */
+  storeRoot: Pick<BootServices['storeRoot'], 'userData' | 'mirrors'>
+  /**
    * The boot's paths (66.4-16): the config file and the per-game config folder, plus the app folder
    * and the roots the safety guard protects (82-07, D-11).
    */
@@ -304,6 +309,7 @@ export function registerShellFilesFlows(deps: {
       paths: deps.paths,
       config: deps.config,
       libraryManagers: deps.managers.library,
+      storeRoot: deps.storeRoot,
       requestRustInvoke: deps.requestRustInvoke,
       sendFrontendMessage: deps.sendFrontendMessage
     }).catch((error) => logSendFailure('resetHeroic', error))
