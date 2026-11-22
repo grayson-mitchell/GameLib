@@ -6,10 +6,10 @@ current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
 stopped_at: Completed 86-24-PLAN.md
-last_updated: "2026-11-22T17:55:17.816Z"
+last_updated: "2026-11-22T18:05:15.164Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 86 execution started
-state_head: d64116d1f871f1fafa6fd2003be78db8570153e3
+state_head: 2f0a7808fd6d30a68175a1163c99ecdabbab0965
 progress:
   total_phases: 20
   completed_phases: 23
@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 Phase: 86 (Pure leaf services) — EXECUTING
 Plan: 24 of 26
 Status: Ready to execute
-Last activity: 2026-11-23 - Completed quick task 261123-928: Anticheat lookup: skip malformed entries and lower-case the argument
+Last activity: 2026-11-23 - Completed quick task 261123-9i7: CrossOver index: keep a validated fresh payload when the cache write fails
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -890,6 +890,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 30 | safety_dispatch tests: delivered(&host) barrier before reading events (fde29c560) | 2026-11-23 | fde29c560 | — | — |
 | 31 | Close the Rust cache timestamp form todo as wontfix: nothing reads the __timestamp string as text | 2026-11-23 | a9d2cc19b | — | — |
 | 32 | HLTB title matching: stop folding a trailing "constructor" to JS function text (Rust; TS copy already deleted) | 2026-11-23 | d64116d1f | — | — |
+| 261123-9i7 | CrossOver index: keep a validated fresh payload when the cache write fails | 2026-11-23 | 3a4d64220 | — | [261123-9i7-crossover-index-keep-a-validated-fresh-p](./quick/261123-9i7-crossover-index-keep-a-validated-fresh-p/) |
 
 ## Deferred Items
 
