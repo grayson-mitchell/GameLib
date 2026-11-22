@@ -562,7 +562,7 @@ Plans:
   3. Recorded fixtures exist for each previously untested directory before it is ported
   4. Each ported slice's TypeScript and sidecar registrations are deleted in this phase (the delete gate per slice passes)
 
-**Plans:** 25/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
+**Plans:** 26/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
 
 Plans:
 **Wave 1**
@@ -631,7 +631,7 @@ Plans:
 - [x] 86-25-PLAN.md — Clean-worktree proof, SC4 sweep, drift run, push and signed Phase 86 build checkpoint, three-OS CI
 
 **Wave 21** *(blocked on Wave 20 completion)*
-- [ ] 86-26-PLAN.md — Run the live macOS gate (signed Phase 85 -> signed Phase 86, D-14/D-15)
+- [x] 86-26-PLAN.md — Run the live macOS gate (signed Phase 85 -> signed Phase 86, D-14/D-15)
 
 **Cross-cutting constraints:** <!-- gsd:generated -->
 - Memory-note shape: any offline step turns the network off only for the action (off, act, on, report)

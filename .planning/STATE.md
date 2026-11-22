@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 86-25-PLAN.md
-last_updated: "2026-11-22T19:26:36.020Z"
+stopped_at: Completed 86-26-PLAN.md
+last_updated: "2026-11-22T19:40:55.212Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 86 execution started
-state_head: 17cf992c2e9e836f38c5a66162e56319c407fe52
+state_head: afa1dc33b1c68658d31f5601bd107fcd92bb3a6d
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 86 (Pure leaf services) — EXECUTING
-Plan: 25 of 26
+Plan: 26 of 26
 Status: Ready to execute
 Last activity: 2026-11-23 - Completed quick task 261123-bbi: Refresh buttons spin at least 1 s per click via useMinimumSpin
 Progress: [██████████] 100%
@@ -409,6 +409,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 86 P23 | 1h30m | 2 tasks | 21 files |
 | Phase 86 P24 | 1h | 3 tasks | 60 files |
 | Phase 86 P25 | 2h30m | 3 tasks | 9 files |
+| Phase 86 P26 | 36min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -818,6 +819,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 86]: 86-24: infoCaches and appRuntime stay inert optional members on the enrichment and shortcuts deps (foreign-dirty handlers.ts still passes them); INERT_DEPS_EXEMPT pins the files
 - [Phase 86]: 86-25: Gate item 4 blocked: the authorised release run 45051040572 was a dry run and uploads no artifact; a dry_run=false run is owed (main is 0.11.0, so it would overwrite the Phase 85 v0.11.0 draft assets unless the version is bumped first)
 - [Phase 86]: 86-25: R4 fixed by DI seams instead of jest.mock (no baseline); R5 stale i18nForkTouchedFiles.json deferred by the operator
+- [Phase 86]: 86-26: Phase 86 live macOS gate scored on signed v0.12.0 over v0.11.0: items 2-4 pass (no Keychain prompt, recent and overrides byte-equal); item 1 issue = pre-existing PCGamingWiki cargoquery refusal on GOG pages (own todo), as-before behaviour
+- [Phase 86]: 86-26: SVC-01 live half proven on macOS and marked complete; Windows/Linux live check rides with Phase 99 (D-16)
 
 ### Pending Todos
 
@@ -1096,8 +1099,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T18:32:35.206Z
-Stopped at: Completed 86-25-PLAN.md
+Last session: 2026-11-22T19:40:53.394Z
+Stopped at: Completed 86-26-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
