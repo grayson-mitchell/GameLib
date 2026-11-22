@@ -38,3 +38,11 @@ sink straight after `wait_idle` and fix them the same way.
 To verify, build the test binary once (`cargo test -p gamelib-shell --no-run` from `src-tauri/`). Then run
 15 rounds, each starting 24 copies of that one test in parallel as separate processes. The fix holds when
 there are zero failures. `--test-threads` will not do this, because it runs one copy of a filtered test.
+
+## Resolution
+
+Closed by `/gsd-fast` (2026-11-23), `fde29c560`. Nothing pushed.
+
+- The three-line `delivered(&host)` barrier is inlined in `safety_dispatch::tests` (the `store_native` and `store_dispatch` test modules each keep their own copy). It now runs before `events` is read in `safety_a_removed_app_data_target_evicts_open_and_queued_stores_and_nothing_is_recreated`, and in `safety_a_refused_removal_evicts_nothing`, which read `events.last()` straight after `wait_idle` and had the same race.
+- Sweep for other tests that read an events sink after `wait_idle`: `wait_idle` is called only in `safety_dispatch.rs`, `store_dispatch.rs`, `store_boot.rs` and `gamelib-store/src/host.rs`. Every `store_dispatch` test read goes through `settle` (`wait_idle` + `delivered`) or `delivered`; `store_boot.rs:292` is the production drain, not a test read. No other site needed the fix.
+- Verification, as specified above (test binary built once, 15 rounds of 24 parallel processes of the one test): **0 / 360 failures** with the fix. Control run with the evict test's barrier removed, same load: **1 / 360** failures, so the harness still detects the race (the original measurement was 4 / 360).
