@@ -1,0 +1,13 @@
+{
+	"theme": "dracula",
+	"zoomPercent": 100,
+	"hideTitles": false,
+	"games": {
+		"favourites": [
+			{
+				"appName": "fav1",
+				"title": "Favourite One"
+			}
+		]
+	}
+}

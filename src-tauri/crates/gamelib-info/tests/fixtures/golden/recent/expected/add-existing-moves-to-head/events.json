@@ -1,0 +1,24 @@
+[
+  {
+    "channel": "recentGamesChanged",
+    "args": [
+      [
+        {
+          "appName": "app4",
+          "title": "Game 4 (renamed)",
+          "runner": "legendary"
+        },
+        {
+          "appName": "app2",
+          "title": "Game 2",
+          "runner": "gog"
+        },
+        {
+          "appName": "app3",
+          "title": "Game 3",
+          "runner": "nile"
+        }
+      ]
+    ]
+  }
+]

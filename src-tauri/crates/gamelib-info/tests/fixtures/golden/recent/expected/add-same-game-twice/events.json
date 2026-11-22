@@ -1,0 +1,36 @@
+[
+  {
+    "channel": "recentGamesChanged",
+    "args": [
+      [
+        {
+          "appName": "app1",
+          "title": "Game 1",
+          "runner": "gog"
+        },
+        {
+          "appName": "app2",
+          "title": "Game 2",
+          "runner": "gog"
+        }
+      ]
+    ]
+  },
+  {
+    "channel": "recentGamesChanged",
+    "args": [
+      [
+        {
+          "appName": "app1",
+          "title": "Game 1",
+          "runner": "gog"
+        },
+        {
+          "appName": "app2",
+          "title": "Game 2",
+          "runner": "gog"
+        }
+      ]
+    ]
+  }
+]

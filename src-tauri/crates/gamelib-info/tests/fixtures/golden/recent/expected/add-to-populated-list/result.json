@@ -1,0 +1,20 @@
+{
+  "recent": [
+    {
+      "appName": "app1",
+      "title": "Game 1",
+      "runner": "steam"
+    },
+    {
+      "appName": "app2",
+      "title": "Game 2",
+      "runner": "gog"
+    },
+    {
+      "appName": "app3",
+      "title": "Game 3",
+      "runner": "nile"
+    }
+  ],
+  "writes": 1
+}

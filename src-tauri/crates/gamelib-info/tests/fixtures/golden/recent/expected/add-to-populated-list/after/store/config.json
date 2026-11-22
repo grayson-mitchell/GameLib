@@ -1,0 +1,35 @@
+{
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"theme": "dracula",
+	"zoomPercent": 100,
+	"hideTitles": false,
+	"games": {
+		"favourites": [
+			{
+				"appName": "fav1",
+				"title": "Favourite One"
+			}
+		],
+		"recent": [
+			{
+				"appName": "app1",
+				"title": "Game 1",
+				"runner": "steam"
+			},
+			{
+				"appName": "app2",
+				"title": "Game 2",
+				"runner": "gog"
+			},
+			{
+				"appName": "app3",
+				"title": "Game 3",
+				"runner": "nile"
+			}
+		]
+	}
+}

@@ -1,0 +1,30 @@
+{
+	"theme": "dracula",
+	"zoomPercent": 100,
+	"hideTitles": false,
+	"games": {
+		"favourites": [
+			{
+				"appName": "fav1",
+				"title": "Favourite One"
+			}
+		],
+		"recent": [
+			{
+				"appName": "app1",
+				"title": "Game 1",
+				"runner": "gog"
+			},
+			{
+				"appName": "app2",
+				"title": "Game 2",
+				"runner": "gog"
+			}
+		]
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	}
+}

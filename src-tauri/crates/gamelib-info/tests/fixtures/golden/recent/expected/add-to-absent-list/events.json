@@ -1,0 +1,14 @@
+[
+  {
+    "channel": "recentGamesChanged",
+    "args": [
+      [
+        {
+          "appName": "app1",
+          "title": "Game 1",
+          "runner": "legendary"
+        }
+      ]
+    ]
+  }
+]

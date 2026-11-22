@@ -1,0 +1,148 @@
+[
+  {
+    "id": "add-to-absent-list",
+    "note": "the config has no games.recent key at all",
+    "ops": [
+      {
+        "op": "add",
+        "game": {
+          "app_name": "app1",
+          "title": "Game 1",
+          "runner": "legendary"
+        }
+      }
+    ]
+  },
+  {
+    "id": "add-to-populated-list",
+    "note": "a new game goes to the head",
+    "ops": [
+      {
+        "op": "add",
+        "game": {
+          "app_name": "app1",
+          "title": "Game 1",
+          "runner": "steam"
+        }
+      }
+    ]
+  },
+  {
+    "id": "add-existing-moves-to-head",
+    "note": "the stored entry is replaced by the new one: title and runner follow the argument",
+    "ops": [
+      {
+        "op": "add",
+        "game": {
+          "app_name": "app4",
+          "title": "Game 4 (renamed)",
+          "runner": "legendary"
+        }
+      }
+    ]
+  },
+  {
+    "id": "add-same-game-twice",
+    "note": "SVC-01 idempotency edge: one entry, at the head, and two change events",
+    "ops": [
+      {
+        "op": "add",
+        "game": {
+          "app_name": "app1",
+          "title": "Game 1",
+          "runner": "gog"
+        }
+      },
+      {
+        "op": "add",
+        "game": {
+          "app_name": "app1",
+          "title": "Game 1",
+          "runner": "gog"
+        }
+      }
+    ]
+  },
+  {
+    "id": "add-over-empty-appname-entry",
+    "note": "TS quirk: the filter drops an entry whose appName is empty",
+    "ops": [
+      {
+        "op": "add",
+        "game": {
+          "app_name": "app1",
+          "title": "Game 1",
+          "runner": "gog"
+        }
+      }
+    ]
+  },
+  {
+    "id": "add-keeps-legacy-entry-without-runner",
+    "note": "an entry written before Phase 35 has no runner and is carried through unchanged",
+    "ops": [
+      {
+        "op": "add",
+        "game": {
+          "app_name": "app1",
+          "title": "Game 1",
+          "runner": "nile"
+        }
+      }
+    ]
+  },
+  {
+    "id": "remove-present-game",
+    "note": "the entry is removed and the order of the rest is kept",
+    "ops": [
+      {
+        "op": "remove",
+        "appName": "app3"
+      }
+    ]
+  },
+  {
+    "id": "remove-absent-game",
+    "note": "removing a game not in the list still rewrites the (unchanged) list and emits",
+    "ops": [
+      {
+        "op": "remove",
+        "appName": "nope"
+      }
+    ]
+  },
+  {
+    "id": "remove-on-empty-list",
+    "note": "an empty list is not written and nothing is emitted",
+    "ops": [
+      {
+        "op": "remove",
+        "appName": "app1"
+      }
+    ]
+  },
+  {
+    "id": "remove-drops-empty-appname-entry",
+    "note": "TS quirk: remove also drops an entry whose appName is empty",
+    "ops": [
+      {
+        "op": "remove",
+        "appName": "app3"
+      }
+    ]
+  },
+  {
+    "id": "sixty-entry-list",
+    "note": "the stored list is unbounded: 60 entries become 61",
+    "ops": [
+      {
+        "op": "add",
+        "game": {
+          "app_name": "app1",
+          "title": "Game 1",
+          "runner": "sideload"
+        }
+      }
+    ]
+  }
+]
