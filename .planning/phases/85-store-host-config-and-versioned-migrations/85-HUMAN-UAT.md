@@ -4,7 +4,7 @@ phase: 85-store-host-config-and-versioned-migrations
 source: [85-CONTEXT.md D-02 D-04 D-08 D-12 D-16 D-18 D-21, 85-RESEARCH.md Open Questions Q1]
 authored_by: 85-03
 run_by: 85-20
-started:
+started: 2026-11-22
 updated: 2026-11-22
 ---
 
@@ -52,8 +52,10 @@ secret, a token, or a full `args` line.
 
 - **P1** session directory, created once: `S=/tmp/gamelib-gate-$(date -u +%Y-%m-%dT%H:%M:%SZ); mkdir -p "$S"`. Everything this
   contract copies or captures goes under `$S`. Captures stay under `/tmp` and are never committed.
-- **P2** zero GameLib instances, before EVERY launch (baseline launches included): `pgrep -fl GameLib` prints nothing and
-  `pgrep -f -- '--gamelib-reaper'` prints nothing. A leftover process is quit or killed by pid and the check is re-run.
+- **P2** zero GameLib instances, before EVERY launch (baseline launches included):
+  `pgrep -fl 'gamelib-shell|GameLib\.app|build/main/sidecar\.js'` prints nothing and `pgrep -f -- '--gamelib-reaper'` prints
+  nothing. A leftover process is quit or killed by pid and the check is re-run. (Amended by the orchestrator at 85-20, A3: the
+  authored `pgrep -fl GameLib` also matched any process whose command line held the repo path `~/Projects/GameLib`.)
 - **P3** the profile copy, before anything else is touched, with the app closed (P2 first):
   `ditto "$HOME/Library/Application Support/gamelib" "$S/profile-before/"`. This is the restore path for every item. Also record
   `ls "$S/profile-before/store_cache/" | grep 'steam_library\.v1\..*\.bak\.json'`; item 7 needs one such file and is scored
@@ -120,7 +122,7 @@ the authoring-time verdicts are kept in git history (`85-03`).
 |---|---|---|---|
 | `store boot: ` summary line | `src-tauri/src/store_boot.rs:283` (`summary_line`), logged at `:250` by `crate::shell_log`; `open_all` called on every boot, `main.rs:1872-1879` | `gamelib.log` as `[Shell]` | REACHABLE: wording `store boot: <n> opened, <a> adopted, <m> migrated, <r> read-only, <e> start-empty, <d> deferred in <ms> ms` |
 | `store frame rejected` (must be ABSENT) | `src-tauri/src/store_dispatch.rs:460` (`WARN: store frame rejected: <reason>`), through `self.log`, which production builds as `Arc::new(crate::shell_log)` at `:740` | `gamelib.log` as `[Shell]` | REACHABLE: a rejected frame would log this line (Test 4 holds), and the `store boot: ` line on the same launch proves the `[Shell]` sink is live |
-| `store write failed` (must be ABSENT) | none: 0 hits over `src-tauri/src`, `src-tauri/crates/*/src` and `src/backend` | none | **IMPOSSIBLE**: no code emits this literal, so its absence cannot fail (Test 4). A failed renderer write logs `WARN: native <channel> refused a store write: write failed` (`store_native.rs:567`, word at `:479`, `shell_log_detail`, `[Shell]`); a failed sidecar frame persist answers `refused` with reason `io` (`store_dispatch.rs:572`, `:595-597`) and Rust logs nothing; the mirror cell's line is stderr only (`mirrorCell.ts:369-370`), which a signed build discards (`sidecar.rs:360-367`, `shell_eprintln!`). Amendment proposed in `## Pre-run re-check`, not applied |
+| `refused a store write: write failed` (must be ABSENT) | `src-tauri/src/store_native.rs:567` (`WARN: native <channel> refused a store write: <kind>`, `shell_log_detail`), kind word `write failed` at `:479` for `WriteRefusal::Io`, reached from `ApplyError::Io` at `:558` | `gamelib.log` as `[Shell]` | REACHABLE, for renderer writes only. Amended by the orchestrator at 85-20 (A1): replaces the authored `store write failed`, which no code emits (IMPOSSIBLE, Test 4). **Boundary:** a failed sidecar frame write leaves no trace in `gamelib.log` (it is answered `refused` with reason `io`, `store_dispatch.rs:572`, `:595-597`, and the mirror cell's line is stderr only, `mirrorCell.ts:369-370`, which a signed build discards, `sidecar.rs:360-367`); for those writes the evidence is items 4-8's byte, `cmp` and persisted-value checks, not a log absence |
 | `exit finished in ` | `src-tauri/src/main.rs:988` (`shell_log`; was `:892` at authoring) | `gamelib.log` as `[Shell]` | REACHABLE: written on every graceful exit, before the final writer flush (`:996`) |
 | `still running at exit deadline:` (must not name `store`) | `src-tauri/src/main.rs:991`, only when a drain overran (was `:895`); the store drain registers as `store` (`store_dispatch.rs:473`) | `gamelib.log` as `[Shell]` | REACHABLE: absence is meaningful because `exit finished in ` (`:988`) is the positive line on the same path, and a store overrun would print the name `store` |
 | ` is read-only: ` notice log line | `src/backend/storeVersioning/readOnlyStores.ts:100` (`[storeVersion] <storeKey> (<file>) is read-only: <reason> - <detail>`), flushed under `GAMELIB_STORE=rust` by `raiseReadOnlyStoresNoticeInRust` with `logWarning(…, LogPrefix.Backend)` (`src/backend/sidecar/readOnlyStoresNotice.ts:34-36`, called at `appShellFlowRegistration.ts:727`). Rust's read-only stores reach it through `GAMELIB_STORE_BOOT` (`store_boot.rs:303`, `main.rs:1879`, `sidecar.rs:264-265`), parsed at `bootstrap.ts:1730` and recorded by `seedBootReadOnly` (`storeRoot.ts:99-107`, `:168`) with detail `reported by the Rust store host` | `gamelib.log` as `[Backend]` | REACHABLE: for item 6 the line reads `[storeVersion] store/download-manager (download-manager.json) is read-only: newer - reported by the Rust store host`. Rust adds a counts-only `[Shell]` line, `store read-only notice: <n> entries` (`store_native.rs:867`) |
@@ -131,9 +133,10 @@ Plan 85-20 Task 1, 2026-11-22 (UTC 03:36-03:45), on the operator's macOS machine
 `7d4365cb200871ce3fd53d5d2123810e0178ab04` (main). Source greps cover `src-tauri/src`, `src-tauri/crates/*/src` and
 `src/backend`, test files excluded.
 
-**Verdict: the run is stopped before Task 2.** One Required literals row is IMPOSSIBLE (`store write failed`), and the plan
-stops on any IMPOSSIBLE row. No item's `expected:` cites that literal, so no item is unscorable because of it; the stop is for
-the operator to accept an amendment (below), after which Task 2 can start with the preflight as recorded here.
+**Verdict: the run was stopped before Task 2, then resumed after amendment.** One Required literals row was IMPOSSIBLE
+(`store write failed`), and the plan stops on any IMPOSSIBLE row. No item's `expected:` cites that literal, so no item was
+unscorable because of it. The orchestrator applied A1 and A3 (below); with them every Required literals row is REACHABLE and
+Task 2 started.
 
 **Literal table** (full emitter and sink detail in `## Required literals`):
 
@@ -142,6 +145,7 @@ the operator to accept an amendment (below), after which Task 2 can start with t
 | `store boot: ` | REACHABLE | `store_boot.rs:283`, logged at `:250` | `[Shell]` |
 | `store frame rejected` (ABSENT) | REACHABLE | `store_dispatch.rs:460`, sink `:740` | `[Shell]` |
 | `store write failed` (ABSENT) | IMPOSSIBLE | none (0 hits) | none |
+| `refused a store write: write failed` (ABSENT, A1) | REACHABLE (renderer writes only) | `store_native.rs:567`, word `:479` | `[Shell]` |
 | `exit finished in ` | REACHABLE | `main.rs:988` (was `:892`) | `[Shell]` |
 | `still running at exit deadline:` (not `store`) | REACHABLE | `main.rs:991` (was `:895`), drain name `store` at `store_dispatch.rs:473` | `[Shell]` |
 | ` is read-only: ` | REACHABLE | `readOnlyStores.ts:100` via `readOnlyStoresNotice.ts:34-36`, Rust entries seeded at `storeRoot.ts:99-107` | `[Backend]` |
@@ -150,7 +154,10 @@ Also re-grepped for item 2: `Humble sync finished:` at `src/backend/humble/libra
 `gamelib.log`: REACHABLE. Store mode: unset `GAMELIB_STORE` is `rust` on both sides (`store_boot.rs:55`,
 `storeOwnership.ts:40`), and `storeOwnership.json` has all four families `true`, so a signed launch runs Rust-owned stores.
 
-**Proposed amendments (not applied; the operator chooses):**
+**Orchestrator amendments, applied 2026-11-22 (UTC 04:05): A1 and A3.** The orchestrator chose A1 and A3 and the operator
+confirmed GameLib quit. A1 replaced the `store write failed` row in `## Required literals` with
+`refused a store write: write failed` (must be ABSENT, REACHABLE for renderer writes) plus the sidecar-frame boundary note;
+A3 replaced P2's pattern in `## Preflight`. A2 was not taken. The options as proposed:
 
 - A1, recommended: replace the `store write failed` row with `refused a store write: write failed` (must be ABSENT), emitted
   by `store_native.rs:567` for a renderer write whose persist fails, `[Shell]`. Its absence is observable for renderer writes
@@ -177,14 +184,29 @@ at this re-check: `v0.10.0` draft, target `10c85ed72`, assets `GameLib_0.10.0_aa
 - P2: **not clean.** A `pnpm tauri:dev` run is live against the same profile (`target/debug/gamelib-shell`, its
   `--gamelib-reaper`, and the sidecar `node build/main/sidecar.js`; started 16:19 local). Not killed: it is not this
   executor's process. P2 must be re-run, clean, before P3 and before every launch.
-- P3: **deferred** until P2 is clean (the profile must be copied with the app closed). Size to expect: 5.6G, 32487 files
-  (`tools` 3.4G, `steam-bridge` 1.9G, `steam_store` 267M); `/private/tmp` has 1.1Ti free. Item 7's precondition is met in the
-  live profile: `store_cache/steam_library.v1.20261114T043721665Z.bak.json` (one file); P3 re-records it from the copy.
-- `/Applications/GameLib.app` is absent, so installing the baseline at P5 replaces nothing.
+  **Re-run 2026-11-22 (UTC ~04:03) after the operator quit GameLib: clean.** The A3 pattern and the reaper check both exited 1
+  (nothing found).
+- P3: deferred at first, then **taken** right after the clean P2: `ditto` into `profile-before/`, exit 0 in 6 s, 5.6G. Regular
+  files: source 32487, copy 32484; symlinks: 1607 both. The 3-file delta is AppleDouble `._*.dll` files under
+  `nile_config/nile/SDK/App/Amazon Games Services/` (two) and `.../Legacy/` (one), which `ditto` folds into extended
+  attributes; none is a store or settings file. Item 7's source is in the copy:
+  `store_cache/steam_library.v1.20261114T043721665Z.bak.json`.
+- `/Applications/GameLib.app` was absent, so installing the baseline at P5 replaced nothing.
+- P4, before P5 (UTC 04:06): `steam-refresh-token` found; `humble-session`, `humble-csrf`, `steamgrid-api-key` and
+  `itad-api-key` absent. Attributes only, no `-w` or `-g`. P4 is taken again after P5, and item 2 compares against that
+  second inventory.
+- P5 install: `GameLib_0.10.0_aarch64.app.tar.gz` downloaded with `gh release download v0.10.0` into the session directory.
+  Its sha256 `028566815d75ffc35d3e92935ec38ddc069c62e6944821a17b177c13a02500ea` equals 85-05's record. The archive holds only
+  `GameLib.app/`, extracted into `/Applications`. The installed copy: version 0.10.0; `Identifier=com.gamelib.shell`;
+  `Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)`; `TeamIdentifier=S7U223QWXJ`;
+  `CDHash=67b2149aafcae158b769a49ddc7927487c7dd44f` (equal to 85-05's); designated requirement equal to the recorded string;
+  `codesign --verify --deep --strict` ok; `spctl` accepted, Notarized Developer ID; stapled. No quarantine attribute. The
+  existing `gamelib.log` and `.old` were copied as `preexisting-gamelib.log(.old)`, and a `keychain-p5.log` stream runs across
+  P5 (evidence only, not scored).
 
 ## Current Test
 
-[blocked — store write failed: Required literals row IMPOSSIBLE (no emitter); amendment A1 or A2 awaits the operator, see Pre-run re-check]
+[pending — P5: signed v0.10.0 installed in /Applications; operator sign-ins in the baseline next (A1 and A3 applied)]
 
 ## Tests
 
@@ -303,7 +325,7 @@ applied (`.claude/skills/spike-findings-gamelib/references/live-gate-contract-au
 | Item 8: toggle and Cmd+Q within 2 s | a settings toggle; the app menu or Cmd+Q | the exit line within budget | REACHABLE. T3 SINK: `exit finished in ` and `still running at exit deadline:` are `[Shell]` lines in `gamelib.log` after Phase 84; T4: presence is observable (the line is written on every graceful exit) | `src-tauri/src/main.rs:892`, `:895` |
 | Item 8: persisted value in launch 8 | the same toggle | the toggled value shown | REACHABLE. T4: a lost write shows the old value, so the check can fail | UI state |
 | P1 session directory | `/tmp/gamelib-gate-<UTC>/` | one directory | REACHABLE | `mkdir -p` |
-| P2 zero instances | process table | two empty `pgrep` results before every launch | REACHABLE. T5 and T6: a stale instance is the F-34.4.2-15 and F-34.4.2-18 shape, checked before every launch including baseline ones | `pgrep -fl GameLib`; `src-tauri/src/main.rs:1849` (reaper is the same executable) |
+| P2 zero instances | process table | two empty `pgrep` results before every launch | REACHABLE. T5 and T6: a stale instance is the F-34.4.2-15 and F-34.4.2-18 shape, checked before every launch including baseline ones | `pgrep -fl 'gamelib-shell\|GameLib\.app\|build/main/sidecar\.js'` (A3; authored as `pgrep -fl GameLib`); `src-tauri/src/main.rs:1849` (reaper is the same executable) |
 | P3 profile copy | `~/Library/Application Support/gamelib` | a `ditto` copy with the app closed | REACHABLE. T5: runs before any edit and after P2 (pair F10) | `ditto` |
 | P4 Keychain inventory | `security find-generic-password` without `-w` | found or absent per account | REACHABLE. T6: names the Keychain as external state; no secret is read | `src-tauri/src/main.rs:428-470` |
 | P5 baseline sign-ins | the signed v0.10 app | Steam, Humble, Epic signed in, then a profile copy | CONDITIONAL: needs the 85-05 artifact and the operator's accounts. T6: positive observables are the rendered signed-in tiles | `85-VALIDATION.md` `## Signed baseline (D-16)` |
