@@ -691,10 +691,7 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     'src/backend/storeManagers/steam/platformCapture.ts',
     'src/backend/storeManagers/steam/tokenStore.ts',
     'src/backend/storeManagers/steam/userTypes.ts',
-    'src/backend/storeMigrations/index.ts',
     'src/backend/storeSearch/itad.ts',
-    'src/backend/storeVersioning/engine.ts',
-    'src/backend/storeVersioning/readOnlyStores.ts',
     'src/backend/tools/index.ts',
     'src/backend/tools/winetricksEnvironment.ts',
     'src/backend/utils.ts',
@@ -750,7 +747,9 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     // with the deliberate deletion; the floor stays equal to the list length, so a parse miss still turns it red.
     // Phase 82 Plan 15 deleted legendary/e2eMock.ts and nile/e2eMock.ts (D-19): 79 -> 77.
     // Quick 261121-pwt deleted sidecar/fileStore.ts (the Phase 82 criterion 5 file-store clause): 77 -> 76.
-    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 76)
+    // Phase 85 Plan 24 deleted storeMigrations/index.ts, storeVersioning/engine.ts and
+    // storeVersioning/readOnlyStores.ts (D-03, SC5): 76 -> 73.
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 73)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {

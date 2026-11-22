@@ -57,13 +57,21 @@
  * (`GAMELIB_STORE_BOOT`).
  */
 
-import { isAbsolute, join, relative, resolve } from 'path'
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import type { StoreOptions } from 'common/types/typed_store'
 import type { MirrorCell } from './stores/mirrorCell'
 import { dotPathsFor, isMirrorStoreKey } from './stores/storeFrames'
 import type { StoreRoot } from './stores/storeRoot'
-import { storeKeyOf } from './storeVersioning/engine'
-import type { StoreDeclaration } from './storeVersioning/types'
+import type { StoreDeclaration } from './stores/types'
+
+/**
+ * The chain key the shell's table names a store file by: `<directory basename>/<file name without
+ * .json>` (`store/config`, `store_cache/steam_library`). Moved here from the deleted TS versioning
+ * engine (85-24); this is its only caller.
+ */
+function storeKeyOf(filePath: string): string {
+  return `${basename(dirname(filePath))}/${basename(filePath, '.json')}`
+}
 
 /**
  * The store options after this module has translated `name` -> `configName` and made `cwd`

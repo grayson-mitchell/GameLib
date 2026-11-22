@@ -56,9 +56,10 @@ impl Step {
     }
 }
 
-/// The chain keys `storeMigrations/index.ts` (`STORE_MIGRATIONS`) names. The two engine files
+/// The chain keys the TS registry (`STORE_MIGRATIONS`, deleted in 85-24) named. The two engine files
 /// (`steam_bridge/shared-redists`, `engine/gamelib-engine-marker`) have no steps: they sit at the
-/// baseline v1 and keep their own codecs.
+/// baseline v1 and keep their own codecs. The store table's `chainVersions` (written by
+/// `meta/genStoreTable.ts`) is held equal to these chains by `table::tests`.
 const TS_CHAIN_KEYS: [&str; 11] = [
     "settings/global",
     "settings/game",

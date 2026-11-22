@@ -2,7 +2,7 @@
  * The generated schema descriptor (Phase 85, FND-06) cannot drift from the zod schemas.
  *
  * `src-tauri/crates/gamelib-store/src/schemas.json` is what the Rust strip reads in place of the zod
- * schemas `storeMigrations/schemaStrip.ts` reads at call time. This suite regenerates it in memory and
+ * schemas `utils/schemaStrip.ts` reads at call time. This suite regenerates it in memory and
  * fails on any difference, and proves the walker refuses a construct it cannot describe instead of
  * describing it wrongly.
  */

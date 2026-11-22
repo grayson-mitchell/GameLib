@@ -1,5 +1,16 @@
 {
   "generatedBy": "meta/genStoreTable.ts",
+  "chainVersions": {
+    "gog_store/installed": 3,
+    "settings/game": 2,
+    "settings/global": 2,
+    "sideload_apps/library": 3,
+    "store/download-manager": 3,
+    "store_cache/gog_library": 3,
+    "store_cache/legendary_library": 3,
+    "store_cache/nile_library": 3,
+    "store_cache/steam_library": 3
+  },
   "rows": [
     {
       "key": "gog_store/config",

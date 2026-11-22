@@ -1,5 +1,0 @@
-{
-  "jestMock": {
-    "src/backend/storeVersioning/__tests__/atomicWriteFailure.test.ts": 1
-  }
-}

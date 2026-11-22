@@ -1,9 +1,9 @@
 /**
  * Store schema descriptor generator (Phase 85, FND-06, D-12).
  *
- * The TS migration chains strip a store file against zod schemas read at call time
- * (`storeMigrations/schemaStrip.ts`), so a hand-copied key list in Rust would drift the day a setting is
- * added. This walks the very schemas the chains read and writes them as a JSON descriptor the Rust
+ * The migration chains (TS until 85-24, now the Rust `gamelib-store` ones) strip a store file against
+ * zod schemas, read at call time by `utils/schemaStrip.ts`, so a hand-copied key list in Rust would
+ * drift the day a setting is added. This walks those schemas and writes them as a JSON descriptor the Rust
  * `gamelib-store` crate loads (`include_str!`): `src-tauri/crates/gamelib-store/src/schemas.json`.
  *
  * What it describes is exactly the grammar the strip and `safeParse` need and nothing else. Anything it

@@ -4,7 +4,8 @@
  * the dual path the phase carried through its live gate is deleted. Fails if a deleted path, a
  * deleted identifier or the TS owner path comes back, or if a module the mirror still needs is
  * gone. 85-21 writes the gate (the migration system, then the flag and the TS owner path); 85-23
- * and 85-24 extend the same lists as they delete storeVersioning/* and storeMigrations/*.
+ * and 85-24 extend the same lists as they delete storeVersioning/* and storeMigrations/* (85-24
+ * also forbids either directory as a module specifier).
  *
  * SC4, recorded before the migration system was deleted (D-06, research finding 3). The TS
  * migration system had one migration, `legendary.ts` (it copied a system-wide legendary config
@@ -40,6 +41,47 @@ const ROOT = join(__dirname, '..', '..', '..')
 
 const STORE_FIXTURES = 'src-tauri/crates/gamelib-store/tests/fixtures'
 
+/** Every file 85-24 deleted under src/backend/storeVersioning, the directory first. */
+const STORE_VERSIONING_FILES = [
+  'src/backend/storeVersioning',
+  ...[
+    'backup.ts',
+    'engine.ts',
+    'engineMarkerFile.ts',
+    'readOnlyStores.ts',
+    'settingsFiles.ts',
+    'sharedRedistLedgerFile.ts',
+    'types.ts',
+    '__tests__/atomicWriteFailure.test.ts',
+    '__tests__/backup.test.ts',
+    '__tests__/engine.test.ts',
+    '__tests__/engineMarkerFile.test.ts',
+    '__tests__/gameInfoLibrariesEngine.test.ts',
+    '__tests__/readOnlyStores.test.ts',
+    '__tests__/settingsFiles.test.ts',
+    '__tests__/sharedRedistLedgerFile.test.ts',
+    '__tests__/versioningHarness.ts'
+  ].map((f) => `src/backend/storeVersioning/${f}`)
+]
+
+/** Every file 85-24 deleted under src/backend/storeMigrations, the directory first. */
+const STORE_MIGRATIONS_FILES = [
+  'src/backend/storeMigrations',
+  ...[
+    'gameInfoLibraries.ts',
+    'index.ts',
+    'schemaStrip.ts',
+    'settingsGame.ts',
+    'settingsGlobal.ts',
+    'settingsStrip.ts',
+    '__tests__/fixtures',
+    '__tests__/gameInfoLibraries.test.ts',
+    '__tests__/schemaStrip.test.ts',
+    '__tests__/settingsGame.test.ts',
+    '__tests__/settingsGlobal.test.ts'
+  ].map((f) => `src/backend/storeMigrations/${f}`)
+]
+
 /** Paths deleted by the phase; none may come back. */
 const DELETED = [
   // 85-21 Task 1: the TS migration system and the migrationsStore mirror (D-06).
@@ -59,7 +101,13 @@ const DELETED = [
   'src/backend/__tests__/storeBackendVersioning.test.ts',
   // 85-24 Task 1: the TS read-only notice path. The frontendReady flow sends only Rust's notice
   // (85-16); the shell's own read-only stores are the whole notice.
-  'src/backend/sidecar/readOnlyStoresNotice.ts'
+  'src/backend/sidecar/readOnlyStoresNotice.ts',
+  // 85-24 Task 2: the TS versioning engine and the TS migration chains, with their tests and
+  // fixtures (D-03, SC5). The Rust `gamelib-store` engine and its migrate/ chains replace them; the
+  // two survivors moved (KEPT below). Every file is listed so a partial restore also fails.
+  ...STORE_VERSIONING_FILES,
+  ...STORE_MIGRATIONS_FILES,
+  'meta/backendDiCeilings/storeVersioning.json'
 ]
 
 /** What the mirror and the Rust tests still need; deleting one of these is a regression. */
@@ -72,7 +120,12 @@ const KEPT = [
   'src/backend/stores/dotPath.ts',
   'src/backend/stores/storeFrames.ts',
   'src/backend/stores/settingsDocs.ts',
-  'src/backend/stores/bottleVersionGate.ts'
+  'src/backend/stores/bottleVersionGate.ts',
+  // 85-24 Task 2: the two survivors of storeVersioning/* and storeMigrations/*. rustRefresh.ts
+  // strips the Steam library to its schema (until Phase 89); the store classes declare their kind.
+  'src/backend/utils/schemaStrip.ts',
+  'src/backend/utils/__tests__/schemaStrip.test.ts',
+  'src/backend/stores/types.ts'
 ]
 
 /**
@@ -96,8 +149,27 @@ const FORBIDDEN_IDENTIFIERS = [
   // 85-24 Task 1: the TS notice push helper (and its pre-85-16 name), gone with the TS read-only
   // notice path. Built from parts so this file does not name them either.
   ['raiseReadOnlyStoresNotice', 'InRust'].join(''),
-  ['pushReadOnly', 'StoresNotice'].join('')
+  ['pushReadOnly', 'StoresNotice'].join(''),
+  // 85-24 Task 2: the TS versioning interface (its factory contains the name), and the TS
+  // read-only aggregate factory. Built from parts so this file does not name them either.
+  ['Store', 'Versioning'].join(''),
+  ['createReadOnly', 'Stores'].join('')
 ]
+
+/**
+ * 85-24 Task 2: a module specifier naming either deleted directory, as an import, re-export,
+ * dynamic import, require or jest.mock target. A pattern on the specifier only, so a path string
+ * that merely names the directory (steamCmPortComplete's DELETED list) stays legal. Scanned over
+ * comment-stripped text, tests included (jest.mock lives in tests).
+ */
+const DELETED_DIR_SPECIFIER_RE = new RegExp(
+  String.raw`(?:\bfrom\s+|\bimport\s*\(\s*|\brequire\(\s*|\bjest\.mock\(\s*|^\s*import\s+)['"][^'"]*\b(?:${[
+    'store',
+    'Versioning|store',
+    'Migrations'
+  ].join('')})(?:/[^'"]*)?['"]`,
+  'm'
+)
 
 /**
  * The rollback flag Phase 85 carried through its live gate (D-01), named as a whole word: the
@@ -136,6 +208,13 @@ function walk(
 /** True when `src` names `flag` as a whole word (`_` is a word character, so `<flag>_BOOT` is not it). */
 function namesFlag(src: string, flag: string): boolean {
   return new RegExp(`(^|[^A-Za-z0-9_])${flag}($|[^A-Za-z0-9_])`).test(src)
+}
+
+/** Paths whose comment-stripped code names a deleted directory as a module specifier. */
+function deletedDirSpecifierHits(files: readonly Loaded[]): string[] {
+  return files
+    .filter((f) => DELETED_DIR_SPECIFIER_RE.test(stripSourceComments(f.src)))
+    .map((f) => f.path)
 }
 
 /** Paths whose comment-stripped code imports `conf`. */
@@ -202,6 +281,10 @@ describe('store host port complete (Phase 85)', () => {
   walk(join(ROOT, 'src'), flagFiles, /\.(ts|tsx|cjs|js|json|md)$/, true)
   walk(join(ROOT, 'meta'), flagFiles, /\.(ts|tsx|cjs|js|json|md)$/, true)
   walk(join(ROOT, 'src-tauri', 'src'), flagFiles, /\.rs$/, true)
+  // The specifier scan reads TS and JS tests too (jest.mock targets live there).
+  const specifierFiles: string[] = []
+  walk(join(ROOT, 'src'), specifierFiles, /\.(ts|tsx|cjs|js|mjs)$/, true)
+  walk(join(ROOT, 'meta'), specifierFiles, /\.(ts|tsx|cjs|js|mjs)$/, true)
 
   it.each(DELETED)('%s is deleted', (p) => {
     expect(existsSync(join(ROOT, p))).toBe(false)
@@ -223,6 +306,10 @@ describe('store host port complete (Phase 85)', () => {
       .filter((f) => namesFlag(readFileSync(f, 'utf8'), FLAG))
       .map((f) => relative(ROOT, f))
     expect(hits).toEqual([])
+  })
+
+  it('no source or test under src/ or meta/ imports, requires or mocks storeVersioning or storeMigrations', () => {
+    expect(deletedDirSpecifierHits(specifierFiles.map(load))).toEqual([])
   })
 
   it('no non-test source imports conf', () => {
@@ -250,6 +337,11 @@ describe('store host port complete (Phase 85)', () => {
       flagFiles.length,
       TS_FILES_FLOOR
     )
+    assertAtOrAboveFloor(
+      'storeHostPortComplete specifier-scan files (tests included)',
+      specifierFiles.length,
+      TS_FILES_FLOOR
+    )
   })
 
   it('self-test: the flag scan matches the flag as a whole word only', () => {
@@ -273,6 +365,36 @@ describe('store host port complete (Phase 85)', () => {
       confImportHits([
         { path: 'c.ts', src: "// import Conf from 'conf'\nconst x = 1" },
         { path: 'd.ts', src: "import x from 'config'" }
+      ])
+    ).toEqual([])
+  })
+
+  it('self-test: a deleted directory as a module specifier is caught, as a path string or in a comment it is not', () => {
+    const dirV = ['store', 'Versioning'].join('')
+    const dirM = ['store', 'Migrations'].join('')
+    const caught = [
+      `import { a } from '../${dirV}/engine'`,
+      `import type { B } from "backend/${dirM}"`,
+      `export { c } from './${dirM}/index'`,
+      `const d = require('../../${dirV}/types')`,
+      `jest.mock('backend/${dirM}/schemaStrip', () => ({}))`,
+      `const e = await import('../${dirV}/readOnlyStores')`,
+      `import '../${dirV}/types'`
+    ]
+    expect(
+      deletedDirSpecifierHits(
+        caught.map((src, i) => ({ path: `${i}.ts`, src }))
+      )
+    ).toEqual(caught.map((_, i) => `${i}.ts`))
+    expect(
+      deletedDirSpecifierHits([
+        { path: 'a.ts', src: `const p = \`\${STEAM}/${dirV}/owed.ts\`` },
+        {
+          path: 'b.ts',
+          src: `// import x from '../${dirV}/engine'\nconst q = 1`
+        },
+        { path: 'c.ts', src: `import { x } from '../stores/types'` },
+        { path: 'd.ts', src: `import { y } from 'backend/utils/schemaStrip'` }
       ])
     ).toEqual([])
   })

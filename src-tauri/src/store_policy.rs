@@ -3,12 +3,12 @@
 //! recognised, the eager/lazy store tiers and the read-only notice areas.
 //!
 //! One source for both sides (T-85-42): the data is `src/common/types/ipc/storeChannels.json`,
-//! compiled in here with `include_str!` and read by `src/common/types/storePolicy.ts` and
-//! `src/backend/storeVersioning/readOnlyStores.ts` on the TS side. The functions are ports of the
-//! TS ones (`isSafeKeyPath`, `isAllowedStoreField`, `isWritableStoreField`,
-//! `filterStoreSnapshot`, `areaForStoreKey`), and both run every row of
+//! compiled in here with `include_str!` and read by `src/common/types/storePolicy.ts` on the TS
+//! side. The functions are ports of the TS ones (`isSafeKeyPath`, `isAllowedStoreField`,
+//! `isWritableStoreField`, `filterStoreSnapshot`), and both run those rows of
 //! `src/common/__fixtures__/storePolicyVectors.json` (the tests below here, the jest suite
-//! `storePolicyVectors.test.ts` there).
+//! `storePolicyVectors.test.ts` there). `area_for_store_key` has had no TS counterpart since the
+//! TS read-only aggregate was deleted (85-24): its `area` rows are asserted here only.
 //!
 //! Every lookup is an own-key lookup in a `HashMap`, so a store name such as `constructor` or
 //! `__proto__` is simply absent (the CR-02 fail-closed property the TS gets from `hasOwnProperty`).

@@ -1,5 +1,5 @@
 import Store from './store_backend'
-import type { StoreKind } from './storeVersioning/types'
+import type { StoreKind } from './stores/types'
 
 import type { StoreRoot } from './stores/storeRoot'
 

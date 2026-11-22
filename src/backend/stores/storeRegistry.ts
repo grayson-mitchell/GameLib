@@ -19,7 +19,7 @@ import type {
   StoreStructure,
   ValidStoreName
 } from 'common/types/typed_store'
-import type { StoreDeclaration } from '../storeVersioning/types'
+import type { StoreDeclaration } from './types'
 import type { TypeCheckedStoreBackend } from '../typed_store'
 
 type RegisteredInstance = TypeCheckedStoreBackend<ValidStoreName>

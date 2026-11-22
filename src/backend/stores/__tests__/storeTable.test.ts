@@ -2,8 +2,11 @@
  * The generated store table (Phase 85, D-11) cannot drift from the TS registry.
  *
  * `src/common/types/ipc/storeTable.json` is what the Rust store reads. This suite regenerates it in memory
- * and fails on any difference, and ties it to `EXPECTED_KINDS` (the kind decision per TS store) and to
- * `STORE_MIGRATIONS` (the chains), so adding a store or a chain on one side without the other fails here.
+ * and fails on any difference, and ties it to `EXPECTED_KINDS` (the kind decision per TS store), so
+ * adding a store on one side without the other fails here. The chains are the shell's: the table's
+ * `chainVersions` is held equal to `Chains::baseline` by cargo (`table_chain_versions_equal_the_shell_
+ * chains`), and here every row's chain and the test sink's stamped versions (`storeSchemaVersions.ts`)
+ * are held equal to `chainVersions` (85-24, after the TS migration registry was deleted).
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -14,7 +17,7 @@ import {
   type Row,
   type StoreTable
 } from '../../../../meta/genStoreTable'
-import { STORE_MIGRATIONS } from '../../storeMigrations'
+import { storeSchemaVersionOf } from '../../testUtils/storeSchemaVersions'
 
 const root = join(__dirname, '..', '..', '..', '..')
 
@@ -39,12 +42,6 @@ function expectedKinds(): Record<string, string> {
   }
   return out
 }
-
-/** Chains the engine keeps for files that are not conf stores, so they have no table row. */
-const CHAINS_WITHOUT_ROWS = [
-  'engine/gamelib-engine-marker',
-  'steam_bridge/shared-redists'
-]
 
 describe('storeTable.json', () => {
   it('equals what the generator produces now', () => {
@@ -144,18 +141,34 @@ describe('storeTable.json', () => {
       ])
   })
 
-  it('carries a chain exactly where STORE_MIGRATIONS has one', () => {
-    const chainKeys = Object.keys(STORE_MIGRATIONS)
-    const rows = committed().rows
+  it('carries a chain exactly where chainVersions has one, and every chain names a row', () => {
+    const { chainVersions, rows } = committed()
+    const chainKeys = Object.keys(chainVersions)
+    // Not vacuous: the two settings chains and the seven library chains.
+    expect(chainKeys).toHaveLength(9)
     for (const r of rows)
       expect([r.key, r.chain]).toEqual([
         r.key,
         chainKeys.includes(r.key) ? r.key : null
       ])
     const rowKeys = new Set(rows.map((r) => r.key))
-    const orphans = chainKeys.filter(
-      (k) => !rowKeys.has(k) && !CHAINS_WITHOUT_ROWS.includes(k)
-    )
-    expect(orphans).toEqual([])
+    expect(chainKeys.filter((k) => !rowKeys.has(k))).toEqual([])
+  })
+
+  // Orchestrator amendment (85-24): the test sink stamps a store with storeSchemaVersions.ts (85-23),
+  // a hand-written mirror of the shell's chains. Held equal to chainVersions here (and chainVersions
+  // to the shell by cargo), so it cannot drift.
+  it('storeSchemaVersions.ts stamps every row at the version chainVersions gives it', () => {
+    const { chainVersions, rows } = committed()
+    const off: string[] = []
+    for (const r of rows) {
+      const want = chainVersions[r.key] ?? 1
+      const got = storeSchemaVersionOf(r.key)
+      if (got !== want) off.push(`${r.key}: ${got} != ${want}`)
+    }
+    expect(off).toEqual([])
+    // Every chain is a row (above), so this also covers every chain key.
+    for (const [k, v] of Object.entries(chainVersions))
+      expect([k, storeSchemaVersionOf(k)]).toEqual([k, v])
   })
 })

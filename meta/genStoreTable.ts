@@ -7,6 +7,12 @@
  * current) plus the rows no TS construction reaches, so a store added on either side without the other
  * fails a test instead of silently missing its migration or its read-only handling.
  *
+ * The file is `{ generatedBy, chainVersions, rows }`. `chainVersions` maps every chain key that moves a
+ * store past the baseline to the version a store at rest has (`CHAIN_VERSIONS` below); a cargo test in
+ * `gamelib-store` (`table.rs`) holds it equal to the shell's `Chains::baseline`, and the TS tables that
+ * need a stamped version (`testUtils/storeSchemaVersions.ts`, the corpus harvester's `CHAIN_CURRENT`)
+ * are held equal to it in jest, so none of them can drift from the shell.
+ *
  * Each row: `{ key, dir, name, tsNames, kind, family, tokenBearing, dotPaths, flavour, chain }`.
  *   key      `<dir>/<name>` (the chain key the engine uses), or `settings/global` / `settings/game`
  *   dir      the directory under the user-data (store) root; `""` for the app-folder `config.json`
@@ -14,7 +20,7 @@
  *   tsNames  the TS store names registered for the file (a file can have several: steam's config)
  *   kind     `cache` (can be rebuilt) or `user-state`, as `declaration.kind` says
  *   family   how the Rust host treats it: cache, user-state, account, settings, native, excluded
- *   chain    the key when `STORE_MIGRATIONS` has a chain for it, else null (baseline v1)
+ *   chain    the key when `CHAIN_VERSIONS` has a chain for it, else null (baseline v1)
  *
  * Run `node meta/runTs.cjs --bundle --platform=node --target=node22 meta/genStoreTable.ts` to write the
  * file, add `--check` to fail on any difference (the jest drift test compares the same data).
@@ -23,7 +29,6 @@
 import { readFileSync, writeFileSync } from 'fs'
 import { createRequire } from 'module'
 import { join } from 'path'
-import { STORE_MIGRATIONS } from '../src/backend/storeMigrations'
 
 export const TABLE_REL = 'src/common/types/ipc/storeTable.json'
 const REGISTERED_REL =
@@ -57,7 +62,28 @@ export interface Row {
 
 export interface StoreTable {
   generatedBy: string
+  chainVersions: Record<string, number>
   rows: Row[]
+}
+
+/**
+ * The migration chains the shell runs (`gamelib-store` `Chains::baseline`), by chain key, with the
+ * version each brings a store to: settings global and game at v2, the seven library chains at v3.
+ * Every other store sits at the baseline v1 (D-04). The TS migration registry this replaced was
+ * deleted in 85-24 (D-03); the cargo test `table_chain_versions_equal_the_shell_chains` fails when
+ * this and the shell disagree. The shell's two step-less engine-file chains (the shared-redist
+ * ledger and the engine marker) are at v1 and have no row, so they are not listed.
+ */
+const CHAIN_VERSIONS: Readonly<Record<string, number>> = {
+  'settings/global': 2,
+  'settings/game': 2,
+  'store_cache/steam_library': 3,
+  'store_cache/gog_library': 3,
+  'gog_store/installed': 3,
+  'store_cache/legendary_library': 3,
+  'store_cache/nile_library': 3,
+  'sideload_apps/library': 3,
+  'store/download-manager': 3
 }
 
 interface Registration {
@@ -200,7 +226,7 @@ export function buildStoreTable(): StoreTable {
       ...r,
       tsNames: [...r.tsNames].sort(),
       family: familyOf(r),
-      chain: Object.prototype.hasOwnProperty.call(STORE_MIGRATIONS, r.key)
+      chain: Object.prototype.hasOwnProperty.call(CHAIN_VERSIONS, r.key)
         ? r.key
         : null
     })
@@ -211,7 +237,12 @@ export function buildStoreTable(): StoreTable {
     seen.add(r.key)
   }
   rows.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
-  return { generatedBy: GENERATOR, rows }
+  const chainVersions = Object.fromEntries(
+    Object.entries(CHAIN_VERSIONS).sort(([a], [b]) =>
+      a < b ? -1 : a > b ? 1 : 0
+    )
+  )
+  return { generatedBy: GENERATOR, chainVersions, rows }
 }
 
 /** The committed bytes: the table through prettier's JSON parser, so `prettier --check` passes. */

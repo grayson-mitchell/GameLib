@@ -11,10 +11,7 @@ import type { ExecResult } from 'common/types'
 import type { SteamGameInfo } from 'common/types/steam'
 import { steamGameInfoSchema } from 'common/types/ipc/gameInfoSchema'
 import { RUST_STEAMCM_REFRESH } from 'common/types/sidecarTransport'
-import {
-  invalidPaths,
-  stripToSchema
-} from 'backend/storeMigrations/schemaStrip'
+import { invalidPaths, stripToSchema } from 'backend/utils/schemaStrip'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { getFileSize } from 'backend/utils'

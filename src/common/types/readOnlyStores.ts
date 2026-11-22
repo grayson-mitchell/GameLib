@@ -1,6 +1,7 @@
 /**
- * Phase 68 (D-05/D-07): closed sets for the read-only stores notice. Shared by the
- * backend aggregate, the IPC schema and the renderer. Ids only, never store contents.
+ * Phase 68 (D-05/D-07): closed sets for the read-only stores notice. Shared by the IPC
+ * schema and the renderer; the shell raises the notice (85-16) from `storeChannels.json`'s
+ * area table. Ids only, never store contents.
  */
 export const READ_ONLY_AREAS = [
   'settings',
@@ -21,7 +22,7 @@ export const READ_ONLY_AREAS = [
   'app-data'
 ] as const
 
-export type ReadOnlyArea = (typeof READ_ONLY_AREAS)[number]
+type ReadOnlyArea = (typeof READ_ONLY_AREAS)[number]
 
 export const READ_ONLY_REASONS = ['newer', 'failed'] as const
 

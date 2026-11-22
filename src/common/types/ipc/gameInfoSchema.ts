@@ -1,7 +1,8 @@
 /**
  * Phase 70 (D-09, D-10): the strict per-runner GameInfo schemas that guard every IPC channel
- * carrying a renderer-built GameInfo (install, updateGame, addNewApp), and that the D-12
- * library migration (storeMigrations/gameInfoLibraries.ts) reads. Backend/sidecar only: the
+ * carrying a renderer-built GameInfo (install, updateGame, addNewApp). The D-12 library
+ * migration that once read them in TS is the shell's now (gamelib-store `migrate/libraries.rs`,
+ * which strips to `schemas.json`, generated from these schemas). Backend/sidecar only: the
  * renderer never value-imports zod.
  *
  * The interfaces in common/types.ts and common/types/<store>.ts stay hand-written; the

@@ -13,10 +13,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
 import { userInfo } from 'os'
 import { join, relative, sep } from 'path'
 
-import {
-  createMigrations,
-  STORE_MIGRATIONS
-} from '../../src/backend/storeMigrations'
+import { buildStoreTable } from '../genStoreTable'
 import {
   CHAIN_CURRENT,
   CORPUS_DIR,
@@ -330,18 +327,22 @@ describe('store corpus manifest', () => {
 })
 
 describe('store corpus chain table', () => {
-  it('agrees with the TS migration registry', () => {
-    const runner = createMigrations()
+  // 85-24: the TS migration registry this was checked against is deleted. The store table's
+  // `chainVersions` (meta/genStoreTable.ts, compared with the committed storeTable.json by
+  // storeTable.test.ts) is held equal to the shell's `Chains::baseline` by cargo
+  // (`table_chain_versions_equal_the_shell_chains`), so CHAIN_CURRENT is checked against that.
+  it('agrees with the store table chain versions (the shell chains)', () => {
+    const { chainVersions } = buildStoreTable()
+    // Not vacuous: the two settings chains and the seven library chains.
+    expect(Object.keys(chainVersions)).toHaveLength(9)
     const keys = new Set([
-      ...Object.keys(STORE_MIGRATIONS),
+      ...Object.keys(chainVersions),
       ...Object.keys(CHAIN_CURRENT)
     ])
-    const rows: Record<string, number> = {}
-    for (const k of keys) rows[k] = runner.currentVersionOf(k)
-    for (const [k, v] of Object.entries(rows)) {
+    for (const k of keys) {
       expect({ key: k, version: CHAIN_CURRENT[k] ?? 1 }).toEqual({
         key: k,
-        version: v
+        version: chainVersions[k] ?? 1
       })
     }
   })

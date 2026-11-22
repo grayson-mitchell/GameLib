@@ -56,7 +56,9 @@ pub struct TableRow {
     pub token_bearing: bool,
     pub dot_paths: bool,
     pub flavour: Flavour,
-    /// The migration chain key, when the TS registry has one; `None` is the baseline v1.
+    /// The migration chain key, when the generator's `CHAIN_VERSIONS` names one (it mirrors
+    /// `Chains::baseline`, held equal by `table_chain_versions_equal_the_shell_chains`); `None` is
+    /// the baseline v1.
     pub chain: Option<String>,
 }
 
@@ -161,6 +163,42 @@ mod tests {
             Family::Cache
         } else {
             Family::UserState
+        }
+    }
+
+    /// The file's `chainVersions` map (chain key to the version a store at rest has) is what the TS
+    /// side reads for a stamped version since the TS migration registry was deleted (85-24): the
+    /// generator, the test disk sink's `storeSchemaVersions.ts` and the corpus harvester's
+    /// `CHAIN_CURRENT` are held equal to it in jest. This holds it, and every row's chain, equal to
+    /// the chains the shell actually runs, in both directions.
+    #[test]
+    fn table_chain_versions_equal_the_shell_chains() {
+        let file: serde_json::Value =
+            serde_json::from_str(TABLE_JSON).expect("storeTable.json parses");
+        let versions = file
+            .get("chainVersions")
+            .and_then(serde_json::Value::as_object)
+            .expect("storeTable.json has a chainVersions object");
+        assert!(!versions.is_empty(), "chainVersions is empty");
+        let chains = crate::migrate::Chains::baseline();
+        for (key, v) in versions {
+            let v = v.as_u64().expect("a chain version is an integer");
+            assert_eq!(
+                u64::from(chains.current_version_of(key)),
+                v,
+                "chainVersions[{key}]"
+            );
+            assert!(v > 1, "chainVersions[{key}] lists a baseline store");
+        }
+        for r in table() {
+            let listed = versions.get(&r.key).and_then(serde_json::Value::as_u64);
+            assert_eq!(
+                u64::from(chains.current_version_of(r.chain_key())),
+                listed.unwrap_or(1),
+                "{}",
+                r.key
+            );
+            assert_eq!(r.chain.is_some(), listed.is_some(), "{}", r.key);
         }
     }
 

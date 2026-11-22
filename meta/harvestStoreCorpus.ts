@@ -75,9 +75,10 @@ export interface Manifest {
 }
 
 /**
- * Current version of every chain the TS engine declares (`STORE_MIGRATIONS`), keyed by chain key. A chain key
- * absent here sits at the baseline version 1. `storeCorpus.test.ts` checks this table against the real registry, so it
- * cannot drift.
+ * Current version of every chain the shell runs (`gamelib-store` `Chains::baseline`), keyed by chain key. A chain key
+ * absent here sits at the baseline version 1. `storeCorpus.test.ts` checks this table against the store table's
+ * `chainVersions`, which cargo holds equal to the shell's chains, so it cannot drift (85-24; it was checked against
+ * the TS migration registry until that was deleted).
  */
 export const CHAIN_CURRENT: Readonly<Record<string, number>> = {
   'settings/global': 2,

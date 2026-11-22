@@ -14,7 +14,7 @@
 // `store_backend.ts`'s header for the measurements, and
 // `__tests__/cache.test.ts`'s "store path parity" block for the gate.
 import Store from './store_backend'
-import type { StoreDeclaration } from './storeVersioning/types'
+import type { StoreDeclaration } from './stores/types'
 import type { StoreRegistry } from './stores/storeRegistry'
 
 import {
