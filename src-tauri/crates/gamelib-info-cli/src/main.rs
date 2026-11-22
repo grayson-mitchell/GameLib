@@ -18,8 +18,8 @@
 //!     An op error prints on stderr and exits 2.
 //! `drift [--slice <name>] [--list]`
 //!     the D-12 live drift check, run by hand and by nobody else: never from `cargo test`, never from
-//!     CI. It hits the live endpoints for a fixed table of cases (anticheat, SteamGridDB, IsThereAnyDeal
-//!     and GOG discounts now; later slices add theirs), over a fresh temp profile that is removed afterwards, with the environment
+//!     CI. It hits the live endpoints for a fixed table of cases (anticheat, SteamGridDB, IsThereAnyDeal,
+//!     GOG discounts and the CrossOver index now; later slices add theirs), over a fresh temp profile that is removed afterwards, with the environment
 //!     key source only (never the Keychain), and prints one `PASS <case>` or `FAIL <case>: <reason>`
 //!     line per case. A case that needs a key (SteamGridDB: `GAMELIB_INFO_SGDB_KEY`; IsThereAnyDeal: `GAMELIB_INFO_ITAD_KEY`) prints
 //!     `SKIP <case>: <variable> is not set` without it, and a skip is not a failure. A case passes when the live result has the shape the TS golden has: every key path

@@ -42,6 +42,10 @@ enum Mode {
     /// The live result is ONE entry of the list the golden holds: every key path of the entry is in
     /// the golden's entries (merged), because one entry rarely carries every optional key.
     EntryOfList,
+    /// The live result is a document whose key set depends on what was asked (a rating map keyed by the
+    /// games sent): every key path of the live result is in the golden with an overlapping type, and the
+    /// golden may carry more.
+    Subset,
 }
 
 /// One live case. `golden` is a path under the crate's `tests/fixtures/golden`, and `pointer` a JSON
@@ -220,7 +224,44 @@ const CASES: &[Case] = &[
         mode: Mode::Whole,
         needs_env: None,
     },
+    // The CrossOver index (86-19, D-12): the live release asset, fetched the way the app fetches it (the
+    // rating map for three fixed games on macOS makes the one request). The first case holds the cache
+    // file the op wrote (the validated, stored index) against the golden of the live fetch, so a field the
+    // service dropped from the entries, such as `steamid`, is a missing key path; the second holds the
+    // rating map itself against the golden's, where each game's value must keep its type (a rated game
+    // that stops being rated is `null` where the golden has a number). The games are Elden Ring and The
+    // Witcher 3 (Steam ids that join exactly) and one title that is nowhere in the index.
+    Case {
+        id: "crossover-index-fetch",
+        slice: "crossover",
+        platform: Platform::Mac,
+        setup: &[],
+        op: "info_crossover_rating_map",
+        args: THREE_GAMES,
+        read: Read::File("store_cache/crossover_index.json"),
+        golden: "crossover/expected/live-fresh-fetch-mac/after/store_cache/crossover_index.json",
+        pointer: "",
+        mode: Mode::Whole,
+        needs_env: None,
+    },
+    Case {
+        id: "crossover-rating-map",
+        slice: "crossover",
+        platform: Platform::Mac,
+        setup: &[],
+        op: "info_crossover_rating_map",
+        args: THREE_GAMES,
+        read: Read::Answer,
+        golden: "crossover/expected/live-fresh-fetch-mac/result.json",
+        pointer: "/ops/13/result",
+        mode: Mode::Subset,
+        needs_env: None,
+    },
 ];
+
+/// The fixed library of the CrossOver cases: two Steam games the index rates by Steam id and one title it
+/// does not have (the 86-06 live case's own games, so the golden holds a value for each).
+const THREE_GAMES: &str = r#"[{"games":[{"appName":"1245620","title":"Elden Ring","runner":"steam"},{"appName":"292030","title":"The Witcher 3: Wild Hunt","runner":"steam"},{"appName":"9999992","title":"No Such Game Anywhere","runner":"steam"}]}]"#;
 
 /// The golden folder, baked in at build time: drift is a developer tool run from this checkout.
 fn golden_root() -> PathBuf {
@@ -295,6 +336,7 @@ fn shape_diff(golden: &Value, live: &Value, mode: Mode) -> Result<usize, String>
             golden = entry_paths(golden);
             (&live, &golden, "golden entries")
         }
+        Mode::Subset => (&live, &golden, "golden"),
     };
     let problems: Vec<String> = needed
         .iter()
@@ -302,10 +344,10 @@ fn shape_diff(golden: &Value, live: &Value, mode: Mode) -> Result<usize, String>
             None => Some(format!(
                 "{} {}",
                 shown(path),
-                if mode == Mode::Whole {
-                    "is missing from the live result"
-                } else {
-                    "is in the live entry but not in the golden entries"
+                match mode {
+                    Mode::Whole => "is missing from the live result",
+                    Mode::EntryOfList => "is in the live entry but not in the golden entries",
+                    Mode::Subset => "is in the live result but not in the golden",
                 }
             )),
             Some(seen) if seen.is_disjoint(types) => Some(format!(
@@ -322,7 +364,7 @@ fn shape_diff(golden: &Value, live: &Value, mode: Mode) -> Result<usize, String>
         // carry fewer keys than the entries the golden merges.
         Ok(match mode {
             Mode::Whole => live.keys().filter(|p| !golden.contains_key(*p)).count(),
-            Mode::EntryOfList => 0,
+            Mode::EntryOfList | Mode::Subset => 0,
         })
     } else {
         let more = problems.len().saturating_sub(3);
@@ -845,6 +887,83 @@ mod tests {
         let err = run_case(case, replay, no_keys(), "0.11.0", &golden_root()).unwrap_err();
         assert!(
             err.contains("[] is string where the golden have object"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn the_crossover_cases_are_in_the_table_and_need_no_key() {
+        let cases: Vec<&Case> = CASES.iter().filter(|c| c.slice == "crossover").collect();
+        assert!(cases.len() >= 2, "an index fetch and a rating map");
+        assert!(cases.iter().all(|c| c.needs_env.is_none()));
+        assert!(cases.iter().all(|c| c.platform == Platform::Mac));
+        assert!(cases.iter().all(|c| c.op == "info_crossover_rating_map"));
+        for case in cases {
+            assert_eq!(skip_reason(case, |_| None), None, "{}", case.id);
+        }
+    }
+
+    #[test]
+    fn a_recorded_index_that_matches_the_golden_passes_both_crossover_cases() {
+        for case_id in ["crossover-index-fetch", "crossover-rating-map"] {
+            let case = CASES.iter().find(|c| c.id == case_id).unwrap();
+            // The recorded live fetch is the one request the op makes: pinned to what the app sends.
+            let replay = recorded("crossover", "live-fresh-fetch-mac");
+            let outcome = run_case(case, replay.clone(), no_keys(), "0.11.0", &golden_root());
+            assert_eq!(outcome, Ok(String::new()), "{case_id}");
+            replay.finish().expect(case_id);
+        }
+    }
+
+    #[test]
+    fn an_index_the_service_stops_serving_fails_both_crossover_cases_with_the_path() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("body.txt"), "{}").unwrap();
+        std::fs::write(
+            dir.path().join("exchanges.json"),
+            r#"[{"id":"e","request":{"method":"GET","url":"https://github.com/grayson-mitchell/GameLib/releases/download/crossover-index/crossover-index.json.gz","headers":{"user-agent":"GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"}},"response":{"status":500,"headers":{},"bodyFile":"body.txt"}}]"#,
+        )
+        .unwrap();
+
+        // No index was stored, so the op wrote no cache file.
+        let case = CASES
+            .iter()
+            .find(|c| c.id == "crossover-index-fetch")
+            .unwrap();
+        let replay = Arc::new(Replay::from_case(dir.path()).unwrap());
+        let err = run_case(case, replay, no_keys(), "0.11.0", &golden_root()).unwrap_err();
+        assert!(
+            err.contains("the op wrote no store_cache/crossover_index.json"),
+            "{err}"
+        );
+
+        // The rating map answers null for a game the golden has rated: the type moved.
+        let case = CASES
+            .iter()
+            .find(|c| c.id == "crossover-rating-map")
+            .unwrap();
+        let replay = Arc::new(Replay::from_case(dir.path()).unwrap());
+        let err = run_case(case, replay, no_keys(), "0.11.0", &golden_root()).unwrap_err();
+        assert!(
+            err.contains(".1245620 is null where the golden have number"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn a_subset_result_may_have_fewer_keys_than_the_golden_but_never_a_new_one() {
+        let subset = Mode::Subset;
+        let golden = json!({ "a": 5, "b": null, "c": 3 });
+        assert_eq!(shape_diff(&golden, &json!({ "a": 1 }), subset), Ok(0));
+        assert_eq!(shape_diff(&golden, &json!({}), subset), Ok(0));
+        let err = shape_diff(&golden, &json!({ "z": 1 }), subset).unwrap_err();
+        assert!(
+            err.contains(".z is in the live result but not in the golden"),
+            "{err}"
+        );
+        let err = shape_diff(&golden, &json!({ "a": null }), subset).unwrap_err();
+        assert!(
+            err.contains(".a is null where the golden have number"),
             "{err}"
         );
     }
