@@ -2954,13 +2954,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // `info_anticheat_status` first and only when the file is stale waits for the network
         // (`onlineMonitor.runOnceWhenOnline`) and sends `info_anticheat_download`. Rust has no
         // online logic, so the wait stays here until Phase 88 ports `online_monitor`.
-        // `anticheat/ipc_handler.ts` itself cannot be side-effect-imported from
-        // `src/backend/sidecar/`: its module scope calls `addHandler` from `backend/ipc`, which
-        // imports the real `electron` (D-04's curated-import discipline, carried from Phase 30
-        // D-08 / 34.1 D-09) — so this listener has no other home under the sidecar, and without it
-        // the data file would never be refreshed. Electron keeps using `anticheat/ipc_handler.ts`'s
-        // own copy via `main.ts`'s `import './anticheat/ipc_handler'` — this is an addition for the
-        // sidecar only, never a second registration in the same process (T-86-26).
+        // This listener is the only `releasesInfoReady` anticheat listener of the process: a second
+        // registration would double-fire the download (T-86-26; the single-listener assertion is in
+        // bootstrapWirings.test.ts).
         //
         // Must be registered before Block B's fetch, below, so the listener exists before the
         // event it responds to can possibly fire.

@@ -54,6 +54,16 @@ const OVERRIDES_CALLERS = [
   'src/backend/gamedetails/overrides.ts'
 ] as const
 
+/**
+ * `anticheat.ts` is imported by the sidecar boot (the `releasesInfoReady` listener calls the status
+ * and download shims) and by the launcher (the launch-time lookup). `callers` is per FILE, so all
+ * three rows list both importers.
+ */
+const ANTICHEAT_CALLERS = [
+  'src/backend/launcher.ts',
+  'src/backend/sidecar/bootstrap.ts'
+] as const
+
 const SCHEDULE: readonly ScheduleRow[] = [
   // 86-09, recent games: both bodies are one typed call into `gamelib-info`. `callers` is checked
   // per FILE (every importer of `recentGames.ts`), so both rows list all three importers: the
@@ -120,6 +130,35 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_INFO_OVERRIDES_ATTACH',
     callers: OVERRIDES_CALLERS,
+    deletedBy: 88
+  },
+  // 86-13, anti-cheat: three one-call shims over `gamelib-info` `anticheat`. The sidecar boot's
+  // `releasesInfoReady` listener keeps TS's check-then-wait order: it calls `anticheatStatus`, and
+  // only when the file is stale waits for the network and calls `anticheatDownload`. That online
+  // wait is TS until phase 88 ports `online_monitor`, which deletes both; the launcher's launch-time
+  // lookup (`gameAnticheatInfo`) goes with phase 88's launch rewrite.
+  {
+    name: 'anticheatStatus',
+    file: 'src/backend/info/anticheat.ts',
+    shape: 'shim',
+    channel: 'RUST_INFO_ANTICHEAT_STATUS',
+    callers: ANTICHEAT_CALLERS,
+    deletedBy: 88
+  },
+  {
+    name: 'anticheatDownload',
+    file: 'src/backend/info/anticheat.ts',
+    shape: 'shim',
+    channel: 'RUST_INFO_ANTICHEAT_DOWNLOAD',
+    callers: ANTICHEAT_CALLERS,
+    deletedBy: 88
+  },
+  {
+    name: 'gameAnticheatInfo',
+    file: 'src/backend/info/anticheat.ts',
+    shape: 'shim',
+    channel: 'RUST_INFO_ANTICHEAT_INFO',
+    callers: ANTICHEAT_CALLERS,
     deletedBy: 88
   }
 ]

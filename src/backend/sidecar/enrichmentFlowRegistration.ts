@@ -89,7 +89,7 @@
  * `sidecar/__tests__/electronReachLedger.test.ts` for the measured, enforced
  * set of electron-importing modules actually reachable from this slice's
  * four gated entry points. Every import below reaches an
- * UNDERLYING module (`anticheat/utils`, `../knownFixes`,
+ * UNDERLYING module (`../knownFixes`,
  * `../crossover_index/crossoverRatingMap`, `../storeSearch/handlers`,
  * `../wiki_game_info/wiki_game_info`,
  * `../utils`) — NEVER a feature module's `ipc_handler.ts` and NEVER

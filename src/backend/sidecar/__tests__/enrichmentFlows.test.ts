@@ -65,7 +65,7 @@
  *
  * Deliberately NOT mocked (the bodies actually under test — mocking them
  * would prove only that a jest.fn() was called, per this plan's own
- * instruction): `storeSearch/itad`, `anticheat/utils`,
+ * instruction): `storeSearch/itad`,
  * `crossover_index/crossoverRatingMap`, `knownFixes`.
  */
 

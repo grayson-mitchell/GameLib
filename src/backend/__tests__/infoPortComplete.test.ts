@@ -250,6 +250,41 @@ describe('gameOverridesPortComplete', () => {
   })
 })
 
+/**
+ * 86-13, SC4, D-13 and D-28: anti-cheat is Rust's. The TS slice and its oracle are deleted; the
+ * golden and recorded fixtures stay for the Rust goldens (86-12). TS keeps the `releasesInfoReady`
+ * listener (it owns the online wait until phase 88) and three scheduled shims in
+ * `info/anticheat.ts`. `getAnticheatInfo` is a native `info` channel with no sidecar registration,
+ * and no non-test TS file reads the data file itself any more: only the crate names it.
+ */
+const ANTICHEAT: SliceSpec = {
+  deleted: [
+    'src/backend/anticheat/utils.ts',
+    'src/backend/info/__tests__/oracle/anticheat.oracle.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-info/tests/fixtures/golden/anticheat',
+    'src-tauri/crates/gamelib-info/tests/fixtures/recorded/anticheat'
+  ],
+  forbiddenIdentifiers: ['downloadAntiCheatData', 'createMD5'],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_ANTICHEAT'
+}
+
+describe('anticheatPortComplete', () => {
+  runSlice(ANTICHEAT)
+
+  it('getAnticheatInfo has no sidecar ipc.on or ipc.handle (it is a native info channel)', () => {
+    expect(findTsRegistrations(tsWalk.files, ['getAnticheatInfo'])).toEqual([])
+  })
+
+  it('no non-test TS file names areweanticheatyet.json (the crate owns the data file)', () => {
+    expect(findIdentifiers(tsWalk.files, ['areweanticheatyet.json'])).toEqual(
+      []
+    )
+  })
+})
+
 describe('infoPortComplete scans', () => {
   it('anti-vacuity: the walks read real trees', () => {
     assertAtOrAboveFloor(
