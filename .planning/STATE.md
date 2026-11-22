@@ -6,10 +6,10 @@ current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
 stopped_at: Completed 86-24-PLAN.md
-last_updated: "2026-11-22T15:49:47.774Z"
+last_updated: "2026-11-22T17:44:29.458Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 86 execution started
-state_head: 81fd93a07169bcc9de5b6851d27fabba726af90b
+state_head: 51971c470581602c59d136c37f0d7417646d085b
 progress:
   total_phases: 20
   completed_phases: 23
@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 Phase: 86 (Pure leaf services) — EXECUTING
 Plan: 24 of 26
 Status: Ready to execute
-Last activity: 2026-11-22 — Phase 86 execution started
+Last activity: 2026-11-23 - Completed quick task 261123-928: Anticheat lookup: skip malformed entries and lower-case the argument
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -886,6 +886,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261122-qwk | Copy nord-light as new GameLib Light theme, then rework nord-light to the official Nord palette | 2026-11-22 | 126567da4 | — | [261122-qwk-copy-nord-light-as-new-gamelib-light-the](./quick/261122-qwk-copy-nord-light-as-new-gamelib-light-the/) |
 | 261122-rz8 | Make Nord Light bluer: Frost navbar, Frost primary buttons, Snow Storm panels | 2026-11-22 | 7c58276b2 | — | [261122-rz8-make-nord-light-bluer-with-frost-navbar-](./quick/261122-rz8-make-nord-light-bluer-with-frost-navbar-/) |
 | 261122-rgi | Opt-in DLC enable path in the install dialog and Install tab (follow-up to quick 261120-tbr) | 2026-11-22 | 93e6d145e | — | [261122-rgi-opt-in-dlc-enable-path-in-the-install-di](./quick/261122-rgi-opt-in-dlc-enable-path-in-the-install-di/) |
+| 261123-928 | Anticheat lookup: skip malformed entries and lower-case the argument (todo 2026-11-22) | 2026-11-23 | 51971c470 | — | [261123-928-anticheat-lookup-skip-malformed-entries-](./quick/261123-928-anticheat-lookup-skip-malformed-entries-/) |
 
 ## Deferred Items
 
