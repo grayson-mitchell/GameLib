@@ -1,6 +1,7 @@
 //! The wiki game info sources (Phase 86, SVC-01), ported from `src/backend/wiki_game_info/`:
 //! [`pcgw`] (PCGamingWiki), [`agw`] (AppleGamingWiki), [`protondb`], [`deck`] (Steam Deck
-//! compatibility) and [`codeweavers`] (the slug), plus [`gamesdb`] and [`gog_ctx`] (the two unauthenticated GOG GETs D-23 moved into Rust, 86-21). The
+//! compatibility) and [`codeweavers`] (the slug), plus [`hltb`] (HowLongToBeat, with [`title_match`]),
+//! [`gamesdb`] and [`gog_ctx`] (the two unauthenticated GOG GETs D-23 moved into Rust, 86-21). The
 //! aggregator that calls them, the cache and the stale rules are 86-22.
 //!
 //! Every source asks through `ctx.http`, with the 10 s timeout of the TS `axiosClient`, the response read
@@ -24,9 +25,11 @@ pub mod codeweavers;
 pub mod deck;
 pub mod gamesdb;
 pub mod gog_ctx;
+pub mod hltb;
 pub mod pcgw;
 pub mod protondb;
 pub mod regexes;
+pub mod title_match;
 
 /// The TS `axiosClient`'s `timeout: 10 * 1000`.
 pub const TIMEOUT: Duration = Duration::from_secs(10);

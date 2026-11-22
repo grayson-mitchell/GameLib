@@ -18,10 +18,11 @@ mod wiki_golden;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
+use gamelib_info::crossover::GameRef;
 use gamelib_info::http::{Http, Replay};
 use gamelib_info::js::remove_special_characters;
 use gamelib_info::runner_caps;
-use gamelib_info::wiki::{agw, deck, gamesdb, pcgw, protondb};
+use gamelib_info::wiki::{agw, deck, gamesdb, hltb, pcgw, protondb};
 use gamelib_testutil::FakeHome;
 use serde_json::Value;
 use url::Url;
@@ -296,6 +297,9 @@ async fn protondb_and_the_steam_deck_match_every_ts_golden_that_asked_them() {
 // ---- 86-21: GamesDB, HowLongToBeat and the GOG context ----
 
 const GAMESDB_HOST: &str = "gamesdb.gog.com";
+const HLTB_HOST: &str = "howlongtobeat.com";
+const GOG_API_HOST: &str = "api.gog.com";
+const GOG_STORE_HOST: &str = "af.gog.com";
 
 fn str_of<'a>(value: &'a Value, key: &str) -> &'a str {
     value[key].as_str().unwrap()
@@ -384,4 +388,104 @@ async fn a_gog_game_resolves_its_steam_id_through_the_d23_get_without_touching_g
         );
         h.assert_no_store_writes(run);
     }
+}
+
+/// What a Rust source asked of `hosts`: the recording's exchanges without the `tsOnly` ones (D-23), in
+/// order, as `<METHOD> <url>`; and whether a `rustOnly` exchange is among them (its place in the file is
+/// where the recorder appended it, not where the flow makes it, so the lists are then compared sorted).
+fn rust_requests(run: &Run, hosts: &[&str]) -> (Vec<String>, bool) {
+    let id = run.case["id"].as_str().unwrap();
+    let list = read_json(
+        &fixtures()
+            .join("recorded/wiki")
+            .join(id)
+            .join("exchanges.json"),
+    );
+    let mut requests = Vec::new();
+    let mut rust_only = false;
+    for exchange in list.as_array().unwrap() {
+        if exchange["tsOnly"].as_bool().unwrap_or(false) {
+            continue;
+        }
+        let request = &exchange["request"];
+        let line = format!(
+            "{} {}",
+            request["method"].as_str().unwrap().to_ascii_uppercase(),
+            request["url"].as_str().unwrap()
+        );
+        if hosts.contains(&host_of(&line).as_str()) {
+            rust_only |= exchange["rustOnly"].as_bool().unwrap_or(false);
+            requests.push(line);
+        }
+    }
+    (requests, rust_only)
+}
+
+#[tokio::test]
+async fn howlongtobeat_matches_every_ts_golden_by_id_by_title_and_through_gog() {
+    let hosts = [HLTB_HOST, GOG_API_HOST, GOG_STORE_HOST];
+    let runs = runs_for(&hosts);
+    assert!(runs.len() >= 20, "{} howlongtobeat runs", runs.len());
+    // by id, by title (handshake, search and the one retry), a lookup that finds nothing, and GOG.
+    let (mut by_id, mut by_title, mut nothing, mut gog) = (0, 0, 0, 0);
+    for run in &runs {
+        let id = run.case["id"].as_str().unwrap();
+        let h = harness(run, &hosts);
+        let game = GameRef {
+            runner: str_of(&run.game, "runner"),
+            app_name: str_of(&run.game, "app_name"),
+            // The raw title (the TS looks up the game's own title; only PCGamingWiki and the wiki
+            // cache use the cleaned one).
+            title: str_of(&run.game, "title"),
+        };
+        let hltb_id = run.result["pcgamingwiki"]["howLongToBeatID"].as_str();
+        let got = hltb::get(&h.ctx, &game, hltb_id)
+            .await
+            .unwrap_or_else(|e| panic!("{id}: {e:?}"));
+
+        let (expected, rust_only) = rust_requests(run, &hosts);
+        let mut asked = h.tap.urls();
+        let mut wanted = expected.clone();
+        if rust_only {
+            asked.sort();
+            wanted.sort();
+        }
+        assert_eq!(asked, wanted, "{id}: requests");
+        h.replay.finish().unwrap_or_else(|e| panic!("{id}: {e}"));
+        h.assert_no_store_writes(run);
+        // Pitfall 3: the browser headers go out without an `Accept-Encoding`.
+        for names in h.tap.header_names.lock().unwrap().iter() {
+            assert!(
+                !names
+                    .iter()
+                    .any(|n| n.eq_ignore_ascii_case("accept-encoding")),
+                "{id}: Accept-Encoding was sent"
+            );
+        }
+        assert_eq!(
+            got.as_ref().map_or(Value::Null, |entry| entry.to_value()),
+            run.result["howlongtobeat"],
+            "{id}: howlongtobeat"
+        );
+
+        let all = h.tap.urls();
+        if game.runner == "gog" {
+            gog += 1;
+            assert!(
+                all.iter().any(|u| u.contains("api.gog.com/v2/games/")),
+                "{id}"
+            );
+            assert!(all.iter().any(|u| u.contains("af.gog.com/")), "{id}");
+        } else if got.is_some() && all.iter().any(|u| u.contains("/api/search/site")) {
+            by_title += 1;
+        } else if got.is_some() {
+            by_id += 1;
+        } else {
+            nothing += 1;
+        }
+    }
+    assert!(
+        by_id > 0 && by_title > 0 && nothing > 0 && gog > 0,
+        "{by_id} {by_title} {nothing} {gog}"
+    );
 }

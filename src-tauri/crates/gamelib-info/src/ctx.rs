@@ -13,6 +13,7 @@ use crate::http::Http;
 use crate::itad::gate::ItadGate;
 use crate::recent::RecentSink;
 use crate::secrets::{ItadKey, SecretSource, SgdbKey, Slot};
+use crate::wiki::hltb::HltbState;
 
 /// The platform the app runs on, as the shell reports it (the crate never asks the OS).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -75,6 +76,9 @@ pub struct InfoCtx {
     pub log: Option<Arc<dyn InfoLog>>,
     /// The CrossOver index's in-memory state: the failure back-off and the memoized lookup maps (86-19).
     pub crossover: CrossoverState,
+    /// The HowLongToBeat search credentials (86-21): fetched on first use, held in memory only, never
+    /// persisted (the TS kept them in a boot-owned `info-caches:hltb` scratch state).
+    pub hltb: HltbState,
 }
 
 impl InfoCtx {
@@ -104,6 +108,7 @@ impl InfoCtx {
             itad_gate: ItadGate::new(),
             log: None,
             crossover: CrossoverState::new(),
+            hltb: HltbState::new(),
         }
     }
 
