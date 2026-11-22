@@ -357,4 +357,97 @@ describe('Nord Light is Frost-forward (261122-rz8)', () => {
         .map(([name]) => name)
     ).toEqual([])
   })
+
+  it('Frost primary: nord8 fill, nord0 label', () => {
+    expect({
+      primary: token('--primary'),
+      installButton: token('--install-button'),
+      primaryHover: token('--primary-hover'),
+      textTertiary: token('--text-tertiary')
+    }).toEqual({
+      primary: '#88c0d0',
+      installButton: '#88c0d0',
+      primaryHover: '#81a1c1',
+      // still nord6: it labels the dark accent and success badges
+      textTertiary: '#eceff4'
+    })
+    const label = token('--text-default')
+    expect(contrastRatio(label, token('--primary'))).toBeGreaterThanOrEqual(4.5)
+    expect(
+      contrastRatio(label, token('--primary-hover'))
+    ).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('Snow Storm layering: nord6 page, nord5 raised surfaces, nord4 controls', () => {
+    expect({
+      body: token('--body-background'),
+      background: token('--background'),
+      modal: token('--modal-background'),
+      input: token('--input-background'),
+      modalBorder: token('--modal-border'),
+      osk: token('--osk-background')
+    }).toEqual({
+      body: '#eceff4',
+      background: '#e5e9f0',
+      modal: '#e5e9f0',
+      input: '#d8dee9',
+      modalBorder: '#d8dee9',
+      osk: '#e5e9f0'
+    })
+    const modal = token('--modal-background')
+    expect(
+      contrastRatio(token('--text-default'), modal)
+    ).toBeGreaterThanOrEqual(4.5)
+    expect(
+      contrastRatio(token('--text-secondary'), modal)
+    ).toBeGreaterThanOrEqual(4.5)
+    expect(
+      contrastRatio(token('--border-color'), modal)
+    ).toBeGreaterThanOrEqual(3)
+  })
+
+  it('the thumbnail draws the Frost primary and the nord5 tile', () => {
+    const palette = thumbnailPalette(seed, 'nord-light')
+    expect({
+      primary: palette.primary,
+      primaryLabel: palette.primaryLabel,
+      tile: palette.tile
+    }).toEqual({
+      primary: '#88c0d0',
+      primaryLabel: '#2e3440',
+      tile: '#e5e9f0'
+    })
+  })
+
+  it('the plain .button label rule is specificity-neutral and skips danger', () => {
+    const buttons = readStripped(join(FRONTEND_ROOT, 'styles/_buttons.scss'))
+    const flat = collapse(themesBlock())
+    const checks: Record<string, boolean> = {
+      whereSelectorCount:
+        buttons.split(':where(body.nord-light)').length - 1 === 1,
+      whereRuleInBaseButton:
+        /:where\(body\.nord-light\) &:where\(:not\(\.is-danger\)\) \{ color: var\(--text-default\); \}/.test(
+          collapse(cssBlock(buttons, '.button'))
+        ),
+      alphabetActive:
+        /\.alphabet-filter-button--active \{ color: var\(--text-default\); \}/.test(
+          flat
+        ),
+      diskLabelAndDlcAction:
+        /\.diskLabel, \.dlcItem \.action \{ color: var\(--accent\); \}/.test(
+          flat
+        ),
+      dialogPaper:
+        /\.MuiDialog-paper \{ background-color: var\(--modal-background\);/.test(
+          flat
+        ),
+      logAndErrorBoxes:
+        /\.errorDialog\.error-box \{ background-color: #d8dee9; \}/.test(flat)
+    }
+    expect(
+      Object.entries(checks)
+        .filter(([, ok]) => !ok)
+        .map(([name]) => name)
+    ).toEqual([])
+  })
 })
