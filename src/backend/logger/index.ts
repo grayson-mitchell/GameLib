@@ -55,6 +55,14 @@ const logError = (message: unknown, options?: LogOptions): void => {
  * never be failed or hung by a log write. The old rejection path (a general writer failing on
  * ENOTDIR) no longer exists: the native writer owns the file.
  *
+ * It settles through the shared `flush`, so it also waits (inside the same bound) for every
+ * Promise-valued message any target writer holds, and the writes queued behind each (IN-11, via
+ * `trackLogSettle`). That is deliberate: its one production caller is the fatal
+ * `uncaughtException` sink, the exit path WR-09 exists for, and a settle that skipped those links
+ * would lose a game or runner writer's held lines on a fatal exit. The cost is latency: while
+ * any writer holds a Promise message that never settles, every call takes the full
+ * `LOG_FLUSH_TIMEOUT_MS` (2 s), whatever its own entry is.
+ *
  * Deliberately NOT applied to `logDebug`/`logWarning`/`logError` above: widening the shared
  * wrappers to return a promise would add roughly 309 floating-promise warnings at the
  * statement-position call sites with no runtime change (the 34.2-26 audit).
@@ -69,7 +77,9 @@ const logErrorSettled = (
 
 /**
  * `logInfoSettled` (Phase 34.3 plan 04, REQ-34.3-09): the `logInfo` sibling of `logErrorSettled`,
- * for the `logInfo` send listener's call-site guard.
+ * for the `logInfo` send listener's call-site guard. It shares `flush`, so it carries the same
+ * coupling to the target writers' held Promise messages (IN-11, see `logErrorSettled`): up to the
+ * full `LOG_FLUSH_TIMEOUT_MS` while any writer holds one that has not settled.
  */
 const logInfoSettled = (
   message: unknown,
@@ -103,6 +113,8 @@ function oweLogRotation(target: LogFrameTarget): void {
 /**
  * Registers a pending link of a target writer's own chain with the forwarder, so `flush` (the fatal
  * exit guard, `releaseOnStdinEof`) waits for a Promise-valued message the writer holds (WR-09).
+ * Every `flush` caller waits on it, including `logErrorSettled` and `logInfoSettled` (IN-11): a
+ * link that never settles costs each of them the full `LOG_FLUSH_TIMEOUT_MS` until it does.
  * Bound at call time like `enqueueLogEntry`.
  */
 function trackLogSettle(link: Promise<unknown>): void {
