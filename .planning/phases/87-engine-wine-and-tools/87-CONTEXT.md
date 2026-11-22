@@ -165,6 +165,30 @@ compatibility index and the umu lookup already ported in 86.
   porting, and the phase's last plan leaves no TS or registrations for any ported module except
   scheduled shims and resolvers.
 
+### Post-research scope rulings (2026-11-23, answered after 87-RESEARCH.md)
+- **D-22:** **The wine command core and macOS wine discovery port in 87, into `gamelib-wine`.** The
+  env builders (`setupEnvVars` / `setupWineEnvVars`), `validWine` and `runWineCommand` (the
+  `commandRunner` wine path), plus `utils/compatibility_layers.ts` discovery (`getCrossover`,
+  `getAlternativeWine`, default wine), get a Rust owner here. Phase 88 extends them for argv/env
+  building and `launcher.ts`, and does not re-port them. TS callers that 87 does not delete reach
+  them through scheduled shims (D-15). — **Reversibility:** costly — moves the 87/88 boundary.
+- **D-23:** **Scheduled resolver registrations are allowed, and SC4 is amended as 86 D-24 was.**
+  Rust has no `GameSettings` default merge until 98, so one slim `engineWineResolvers.ts` keeps
+  thin resolvers for `getEngineState`, `winetricksApply/Available/Installed`,
+  `toggleDXVK/NVAPI/VKD3D`, `runWineCommand`, `runWineCommandForGame` and `callTool`. Each one is a
+  schedule-test row with deleting phase 98. Every other engine/wine/tools registration, zod entry
+  and TS module is deleted in 87. Amend ROADMAP SC4 to read "…deleted in this phase, except
+  scheduled resolvers listed in the schedule test".
+- **D-24:** **The sync pure-helper twin and `engineSelectionView` are approved scheduled survivors,
+  deleted in 96.** The bridge's sync `bottlePrimitives` helpers (`getBottleDir`,
+  `sanitizeBottleName`, `isBottleProvisioned`, `buildFallbackGameSettings`, …) stay as a TS pure
+  twin, and the sync engine-selection read becomes a write-through `engineSelectionView`. Both are
+  schedule-test rows (phase 96) and are pinned to Rust by shared cross-language test vectors so the
+  twin cannot drift. This extends D-21's survivor list.
+- **D-25:** **Technical defaults accepted:** (a) `gamelib-engine` owns a `DxvkInstaller` trait that
+  `gamelib-wine` implements, keeping D-04's one-way dependency; (b) Rust computes the default wine
+  from `PATH`; (c) `callTool` and `runWineCommandForGame` spawn as `SpawnClass::Helper`.
+
 ### Claude's Discretion
 - The order sub-slices port within the phase (research may suggest bottles + ledger first, since
   the decision and the bridge shims depend on them).
