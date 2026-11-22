@@ -14,8 +14,6 @@ import type { AppPaths } from '../process/context'
 import { createStoreRegistry } from '../stores/storeRegistry'
 import { createKvsStores } from '../constants/key_value_stores'
 import { createCrossoverIndexStores } from '../crossover_index/stores'
-import { createStoreSearchStores } from '../storeSearch/stores'
-import { createItadSecrets } from '../storeSearch/itadSecrets'
 import { createDownloadManagerStores } from '../downloadmanager/stores'
 import { createHumbleStores } from '../humble/stores'
 import { createMacArchStores } from '../macArch/stores'
@@ -146,7 +144,6 @@ export function createTestManagers(
 const STORE_KEYS = [
   'kvs',
   'crossoverIndex',
-  'storeSearch',
   'downloadManager',
   'humble',
   'macArch',
@@ -169,7 +166,7 @@ type FamilyBuilders = {
 
 /**
  * The factories are imported eagerly (importing a stores module has no side effect: the
- * 15 modules only declare factories, and diPhaseGates pins that none constructs at import).
+ * stores modules only declare factories, and diPhaseGates pins that none constructs at import).
  * What stays lazy is the factory CALL, in the getters of createTestStores, so a family a suite
  * never reads never touches the real store backend.
  */
@@ -177,7 +174,6 @@ function familyBuilders(): FamilyBuilders {
   return {
     kvs: (deps) => createKvsStores(deps),
     crossoverIndex: (deps) => createCrossoverIndexStores(deps),
-    storeSearch: (deps) => createStoreSearchStores(deps),
     downloadManager: (deps) => createDownloadManagerStores(deps),
     humble: (deps) => createHumbleStores(deps),
     macArch: (deps) => createMacArchStores(deps),
@@ -294,7 +290,6 @@ export function createTestServices(
     steamBottle:
       overrides.steamBottle ?? createTestSteamBottle({ stores, config }),
     steamUser,
-    itadSecrets: overrides.itadSecrets ?? createTestItadSecrets(),
     humble:
       overrides.humble ??
       createTestHumbleServices({
@@ -303,22 +298,6 @@ export function createTestServices(
         signInOutcomes: signInProbe.outcomes
       })
   }
-}
-
-/** An in-memory ITAD user-key owner: no keyring, no logger output. */
-function createTestItadSecrets(): BootServices['itadSecrets'] {
-  let key: string | undefined
-  return createItadSecrets({
-    store: {
-      getApiKey: async () => key,
-      setApiKey: async (value) => {
-        key = value
-      },
-      clearApiKey: async () => {
-        key = undefined
-      }
-    }
-  })
 }
 
 /** Placeholder paths nothing reads from or creates: a suite that needs real dirs uses createTestContext. */

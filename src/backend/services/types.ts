@@ -57,7 +57,6 @@ import type {
 } from 'backend/storeManagers/steam/bridge/helperRegistry'
 import type { AnonymousClient } from 'backend/storeManagers/steam/anonymousClient'
 import type { SteamUser } from 'backend/storeManagers/steam/user'
-import type { ItadSecrets } from 'backend/storeSearch/itadSecrets'
 import type { HumbleServices } from 'backend/humble'
 import type { LoginWindowSeamSlot } from 'backend/humble/loginWindowSeam'
 import type { SteamBottle } from 'backend/storeManagers/steam/bottle'
@@ -80,9 +79,6 @@ export interface Stores {
   >
   crossoverIndex: ReturnType<
     typeof import('backend/crossover_index/stores').createCrossoverIndexStores
-  >
-  storeSearch: ReturnType<
-    typeof import('backend/storeSearch/stores').createStoreSearchStores
   >
   downloadManager: ReturnType<
     typeof import('backend/downloadmanager/stores').createDownloadManagerStores
@@ -396,8 +392,13 @@ export interface BootServices {
    * line and the matching member of `EnrichmentFlowDeps`.
    */
   steamGridSecrets?: undefined
-  /** Built by the 'itad-secrets' boot step, before 'register-handlers' (Phase 47 D-05): the optional user ITAD key owner. */
-  itadSecrets: ItadSecrets
+  /**
+   * Always `undefined`. The ITAD key owner is Rust's now (Phase 86 Plans 14 and 17, D-19); this inert
+   * member stays only because `sidecar/handlers.ts` still passes it on (a file another session had
+   * uncommitted edits in when Plan 17 ran, so it was not touched). OWED: delete it together with that
+   * one line, `steamGridSecrets` above and the matching members of `EnrichmentFlowDeps`.
+   */
+  itadSecrets?: undefined
   /**
    * Built by the 'humble-services' boot step, after 'steam-user' and before 'store-managers'
    * (D-66.3-17): the Humble user/library/fence/login-window seam of this boot.

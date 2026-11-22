@@ -133,7 +133,6 @@ describe('sidecar bootstrap (headless boot)', () => {
         'host',
         'humble',
         'infoCaches',
-        'itadSecrets',
         'launcher',
         'legendaryRuntime',
         'managers',

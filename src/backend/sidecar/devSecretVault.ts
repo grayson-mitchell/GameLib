@@ -60,7 +60,6 @@ import type {
   HumbleSecretStore,
   HumbleSecretKey
 } from 'backend/humble/secretStore'
-import type { ItadKeyStore } from 'backend/storeSearch/itadSecrets'
 
 /** The exact-match env var this vault gates on. Read ONLY inside `createDevSecretVault()` —
  * grepped at plan-verify time (`grep -rn "GAMELIB_DEV_SECRET_VAULT" src/`) to confirm this is
@@ -77,15 +76,11 @@ const VAULT_FILE_NAME = 'gamelib-dev-secret-vault.json'
 /** The slot/key identifiers this vault ever logs or stores under. A closed set, not a free
  * string, mirroring `HumbleSecretKey`'s own closed-union reasoning one layer up — nothing else
  * may ever appear in a `[dev-secret-vault]` log line. The SteamGridDB key slot left this set in
- * Phase 86 Plan 15 (D-19): Rust owns that key now (`info_secrets.rs`'s `DevVaultSecretSource`). */
-type VaultSlot =
-  | 'steam-refresh-token'
-  | 'sessionCookie'
-  | 'csrfToken'
-  | 'itadApiKey'
+ * Phase 86 Plan 15 and the ITAD key slot in Plan 17 (D-19, D-26): Rust owns both keys now
+ * (`info_secrets.rs`'s `DevVaultSecretSource`), so the TS vault keeps only the Steam and Humble slots. */
+type VaultSlot = 'steam-refresh-token' | 'sessionCookie' | 'csrfToken'
 
 const STEAM_SLOT: VaultSlot = 'steam-refresh-token'
-const ITAD_SLOT: VaultSlot = 'itadApiKey'
 
 /** The write direction logged alongside a slot identifier (guardrail (b)/T-fz5-02). A closed
  * two-member set, never a free string — mirrors `VaultSlot`'s own closed-union discipline one
@@ -234,37 +229,16 @@ class DevVaultHumbleSecretStore implements HumbleSecretStore {
   }
 }
 
-/** The ITAD user-key half of the vault (Phase 47 D-05), bound to the fixed `itadApiKey` slot.
- * Total-method contract, same as the real `SidecarItadKeyStore` it stands in for. Dev-only
- * plaintext, behind `GAMELIB_DEV_SECRET_VAULT` (T-47-40). */
-class DevVaultItadKeyStore implements ItadKeyStore {
-  constructor(private readonly path: string) {}
-
-  async getApiKey(): Promise<string | undefined> {
-    const value = readSlot(this.path, ITAD_SLOT)
-    return value ? value : undefined
-  }
-
-  async setApiKey(value: string): Promise<void> {
-    writeSlot(this.path, ITAD_SLOT, value, 'store')
-  }
-
-  async clearApiKey(): Promise<void> {
-    clearSlot(this.path, ITAD_SLOT)
-  }
-}
-
-/** The three stores the vault stands in for, built by `createDevSecretVault()` (D-66.3-01: the
+/** The two stores the vault stands in for, built by `createDevSecretVault()` (D-66.3-01: the
  * boot selects and injects them; nothing is swapped into a module-level registry here). */
 export interface DevSecretVault {
   tokenStore: TokenStore
   humbleSecretStore: HumbleSecretStore
-  itadKeyStore: ItadKeyStore
 }
 
 /**
- * Builds the dev-only plaintext secret vault as the Steam `TokenStore`, the Humble
- * `HumbleSecretStore` and the ITAD key store, if and only if every guardrail passes:
+ * Builds the dev-only plaintext secret vault as the Steam `TokenStore` and the Humble
+ * `HumbleSecretStore`, if and only if every guardrail passes:
  *
  *   1. `process.env.GAMELIB_DEV_SECRET_VAULT === '1'` (exact match — guardrail (a)). Anything
  *      else, including unset/`'0'`/`'false'`, returns `null` and builds nothing.
@@ -328,7 +302,6 @@ export function createDevSecretVault(
 
   return {
     tokenStore: new DevVaultTokenStore(path),
-    humbleSecretStore: new DevVaultHumbleSecretStore(path),
-    itadKeyStore: new DevVaultItadKeyStore(path)
+    humbleSecretStore: new DevVaultHumbleSecretStore(path)
   }
 }

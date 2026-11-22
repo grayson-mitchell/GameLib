@@ -11,6 +11,8 @@ import {
   resolveRunner
 } from 'common/discounts/storeMapping'
 import {
+  ITAD_FALLBACK_COUNTRY,
+  ITAD_PRICED_COUNTRIES,
   ITAD_SHOP_ID_EPIC,
   ITAD_SHOP_ID_GOG,
   ITAD_SHOP_ID_STEAM
@@ -31,6 +33,16 @@ describe('ITAD_SHOP_TO_RUNNER', () => {
     expect(Object.keys(ITAD_SHOP_TO_RUNNER).sort()).toEqual(
       [ITAD_SHOP_ID_STEAM, ITAD_SHOP_ID_GOG, ITAD_SHOP_ID_EPIC].sort()
     )
+  })
+})
+
+describe('ITAD coverage (src/common/itadCoverage.json, shared with the Rust crate)', () => {
+  it('prices the fallback country itself and lists each country once', () => {
+    expect(ITAD_PRICED_COUNTRIES).toContain(ITAD_FALLBACK_COUNTRY)
+    expect(new Set(ITAD_PRICED_COUNTRIES).size).toBe(
+      ITAD_PRICED_COUNTRIES.length
+    )
+    expect(ITAD_PRICED_COUNTRIES).toHaveLength(32)
   })
 })
 

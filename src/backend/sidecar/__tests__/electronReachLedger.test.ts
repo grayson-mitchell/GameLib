@@ -588,7 +588,7 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
       'src/backend/dialog/dialog.ts',
       'src/backend/ipc.ts',
       'src/backend/launcher.ts',
-      'src/backend/storeSearch/itad.ts',
+      // `src/backend/storeSearch/itad.ts` left this list in Phase 86 Plan 17: the TS store search is deleted.
       'src/backend/process/appPaths.ts',
       'src/backend/utils.ts',
       'src/common/types.ts',

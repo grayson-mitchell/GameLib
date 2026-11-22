@@ -384,7 +384,6 @@ describe('steamgridPortComplete', () => {
     )
     expect(vault).toBeDefined()
     expect(vault?.code).not.toContain('steamGridDbApiKey')
-    expect(vault?.code).toContain("'itadApiKey'")
   })
 
   it('the migration is wired in Rust at boot and the TS one is gone', () => {
@@ -395,6 +394,127 @@ describe('steamgridPortComplete', () => {
     expect(findIdentifiers(tsWalk.files, ['migrateSteamGridDbApiKey'])).toEqual(
       []
     )
+  })
+})
+
+/**
+ * 86-17 (SC4, D-12, D-13, D-18, D-19, D-25, D-26, D-29 row 5): the ITAD store search is Rust. The five
+ * renderer channels are native `info` channels (86-16), the key owner lives in `gamelib-info`, and the TS
+ * slice (`src/backend/storeSearch`), its secret store, the `itadGate` slot of `miscRuntime`, the
+ * `storeSearch` store family, the 'itad-secrets' boot step, the dev vault's `itadApiKey` slot, the
+ * sidecar's `__ITAD_API_KEY__` define and the oracle test are deleted. The two cache rows move into
+ * `genStoreTable` EXTRA_ROWS, the goldens and recorded exchanges stay for `golden_storeSearch`, and the
+ * measured ITAD response samples moved under the gamelib-info fixtures. The priced-country list is one
+ * file both sides read (`src/common/itadCoverage.json`).
+ */
+const STORE_SEARCH: SliceSpec = {
+  deleted: [
+    'src/backend/storeSearch/itad.ts',
+    'src/backend/storeSearch/itadCache.ts',
+    'src/backend/storeSearch/itadCoverage.ts',
+    'src/backend/storeSearch/itadKey.ts',
+    'src/backend/storeSearch/itadSecrets.ts',
+    'src/backend/storeSearch/handlers.ts',
+    'src/backend/storeSearch/stores.ts',
+    'src/backend/storeSearch',
+    'src/backend/sidecar/itadSecretStore.ts',
+    'src/backend/info/__tests__/oracle/storeSearch.oracle.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-info/tests/fixtures/golden/storeSearch',
+    'src-tauri/crates/gamelib-info/tests/fixtures/recorded/storeSearch',
+    'src-tauri/crates/gamelib-info/tests/fixtures/state/storeSearch/itad-samples',
+    'src/common/itadCoverage.json'
+  ],
+  forbiddenIdentifiers: [
+    'ItadSecrets',
+    'createItadGate',
+    'handleSearchStores',
+    'searchGames',
+    'createStoreSearchStores'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_STORE_SEARCH',
+  storeRowKeys: ['store_cache/itad_prices', 'store_cache/itad_steam_gids']
+}
+
+const STORE_SEARCH_CHANNELS = [
+  'searchStores',
+  'getStoreSearchDeals',
+  'getItadSteamGids',
+  'itad.getKeyStatus',
+  'itad.setApiKey'
+]
+
+/**
+ * `itadSecrets` is gone from every owner and consumer. Three files still name an inert
+ * `itadSecrets?: undefined` member, because `sidecar/handlers.ts` (a file another session had uncommitted
+ * edits in when 86-17 ran) still passes it on. The exception is exactly those three paths and can only
+ * shrink: delete the member, the handlers.ts line and the enrichment deps member, then empty this list
+ * (together with `STEAMGRID_SECRETS_EXEMPT`; OWED once handlers.ts is clean).
+ */
+const ITAD_SECRETS_EXEMPT = [
+  'src/backend/services/types.ts',
+  'src/backend/sidecar/enrichmentFlowRegistration.ts',
+  'src/backend/sidecar/handlers.ts'
+]
+
+describe('storeSearchPortComplete', () => {
+  runSlice(STORE_SEARCH)
+
+  it('the five ITAD channels are native info channels', () => {
+    const native = new Set(channelsOf('info'))
+    expect(STORE_SEARCH_CHANNELS.filter((c) => !native.has(c))).toEqual([])
+  })
+
+  it.each(STORE_SEARCH_CHANNELS)(
+    '%s has no sidecar ipc.on or ipc.handle',
+    (channel) => {
+      expect(findTsRegistrations(tsWalk.files, [channel])).toEqual([])
+    }
+  )
+
+  it('itadSecrets is named only in the three files that still carry the inert member', () => {
+    const hits = findIdentifiers(
+      tsWalk.files.filter((f) => f.path.startsWith('src/backend/')),
+      ['itadSecrets']
+    ).map((h) => h.slice(0, h.indexOf(': ')))
+    expect(hits.filter((p) => !ITAD_SECRETS_EXEMPT.includes(p))).toEqual([])
+  })
+
+  it("the dev vault's TS slot set no longer holds itadApiKey (Rust owns that slot)", () => {
+    const vault = tsWalk.files.find(
+      (f) => f.path === 'src/backend/sidecar/devSecretVault.ts'
+    )
+    expect(vault).toBeDefined()
+    expect(vault?.code).not.toContain('itadApiKey')
+  })
+
+  it('the two cache rows keep their cache kind and renderer names after the TS stores went (EXTRA_ROWS)', () => {
+    for (const name of ['itad_prices', 'itad_steam_gids']) {
+      const row = storeTable.rows.find((r) => r.key === `store_cache/${name}`)
+      expect(row).toMatchObject({ kind: 'cache', tsNames: [name] })
+    }
+    const generator = tsWalk.files.find(
+      (f) => f.path === 'meta/genStoreTable.ts'
+    )
+    expect(generator?.code).toContain('itad_steam_gids')
+  })
+
+  it('the Rust shell reads the shared coverage file (one source for both sides)', () => {
+    const coverage = readFileSync(
+      join(
+        REPO_ROOT,
+        'src-tauri',
+        'crates',
+        'gamelib-info',
+        'src',
+        'itad',
+        'coverage.rs'
+      ),
+      'utf8'
+    )
+    expect(coverage).toContain('itadCoverage.json')
   })
 })
 

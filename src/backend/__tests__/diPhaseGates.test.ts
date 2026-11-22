@@ -165,8 +165,10 @@ describe('66.1 end state: stores modules', () => {
   // migration system (D-06).
   // 15 -> 14 at Phase 86 plan 86-11 (2026-11-23): game_overrides/stores.ts was deleted (per-game
   // overrides are Rust's).
-  it('finds the 14 stores modules', () => {
-    expect(STORES_MODULES).toHaveLength(14)
+  // 14 -> 13 at Phase 86 plan 86-17 (2026-11-23): storeSearch/stores.ts was deleted (the ITAD store
+  // search and its two caches are Rust's).
+  it('finds the 13 stores modules', () => {
+    expect(STORES_MODULES).toHaveLength(13)
     for (const m of STORES_MODULES) {
       expect(existsSync(join(BACKEND, m))).toBe(true)
     }
@@ -238,7 +240,9 @@ describe('66.1 end state: stores modules', () => {
     const files = ['storeManagers/index.ts', ...STORES_MODULES]
     // 16 -> 15 at Phase 86 plan 86-11 (2026-11-23): index.ts plus 14 stores modules now, after
     // game_overrides/stores.ts was deleted with the slice. The deletion is the only change.
-    assertAtOrAboveFloor('66.1 stores modules', files.length, 15)
+    // 15 -> 14 at Phase 86 plan 86-17 (2026-11-23): index.ts plus 13 stores modules now, after
+    // storeSearch/stores.ts was deleted with the slice.
+    assertAtOrAboveFloor('66.1 stores modules', files.length, 14)
     const offenders: string[] = []
     for (const f of files) {
       const text = source(join(BACKEND, f))
@@ -695,7 +699,6 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     'src/backend/storeManagers/steam/platformCapture.ts',
     'src/backend/storeManagers/steam/tokenStore.ts',
     'src/backend/storeManagers/steam/userTypes.ts',
-    'src/backend/storeSearch/itad.ts',
     'src/backend/tools/index.ts',
     'src/backend/tools/winetricksEnvironment.ts',
     'src/backend/utils.ts',
@@ -754,7 +757,8 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     // Phase 85 Plan 24 deleted storeMigrations/index.ts, storeVersioning/engine.ts and
     // storeVersioning/readOnlyStores.ts (D-03, SC5): 76 -> 73.
     // Phase 86 Plan 05 deleted images_cache.ts (D-22, a deliberate deletion, not a lowered floor): 73 -> 72.
-    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 72)
+    // Phase 86 Plan 17 deleted storeSearch/itad.ts with the TS store-search slice (D-13): 72 -> 71.
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 71)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {

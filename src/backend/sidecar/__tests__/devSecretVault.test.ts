@@ -194,7 +194,7 @@ describe('devSecretVault', () => {
 
   // ── Guardrail (b): loud, value-free logging + successful install ──────────────────────────
 
-  it("'1' in a dev build: builds all three stores once, logs INSTALLED + PLAINTEXT", () => {
+  it("'1' in a dev build: builds both stores once, logs INSTALLED + PLAINTEXT", () => {
     process.env[ENV_VAR] = '1'
     mockIsPackagedSidecar.mockReturnValue(false)
 
@@ -202,7 +202,7 @@ describe('devSecretVault', () => {
     if (!vault) throw new Error('expected the dev vault to be built')
     expect(vault.tokenStore).toBeDefined()
     expect(vault.humbleSecretStore).toBeDefined()
-    expect(vault.itadKeyStore).toBeDefined()
+    expect('itadKeyStore' in vault).toBe(false)
 
     const installedLine = mockLogWarning.mock.calls
       .map(([message]) => String(message))
@@ -358,32 +358,6 @@ describe('devSecretVault', () => {
     expect(onDisk['csrfToken']).toBe('')
   })
 
-  it('the ITAD user key round-trips through its own slot and clearing emits a value-free wipe line', async () => {
-    process.env[ENV_VAR] = '1'
-    mockIsPackagedSidecar.mockReturnValue(false)
-    const vault = createDevSecretVault({ temp: vaultDir })
-    if (!vault) throw new Error('expected the dev vault to be built')
-
-    const itadStore = vault.itadKeyStore
-    await expect(itadStore.getApiKey()).resolves.toBeUndefined()
-    await itadStore.setApiKey('qZ7mN3xW9cL4vB8hT2jD')
-    await expect(itadStore.getApiKey()).resolves.toBe('qZ7mN3xW9cL4vB8hT2jD')
-
-    await itadStore.clearApiKey()
-    await expect(itadStore.getApiKey()).resolves.toBeUndefined()
-    expect(
-      mockLogWarning.mock.calls.some(
-        ([message]) =>
-          message === '[dev-secret-vault] write key=itadApiKey op=wipe'
-      )
-    ).toBe(true)
-    expect(
-      mockLogWarning.mock.calls.some(([message]) =>
-        String(message).includes('qZ7mN3xW9cL4vB8hT2jD')
-      )
-    ).toBe(false)
-  })
-
   // ── Import-time discipline: no file I/O before createDevSecretVault() is called ──────────
 
   it('performs no file I/O at module import — no vault file exists until createDevSecretVault() is called', () => {
@@ -484,11 +458,6 @@ describe('devSecretVault', () => {
           getSecret: async () => '',
           setSecret: async () => undefined,
           clearSecrets: async () => undefined
-        },
-        itadKeyStore: {
-          getApiKey: async () => undefined,
-          setApiKey: async () => undefined,
-          clearApiKey: async () => undefined
         }
       }
       const createDevSecretVaultSpy = jest

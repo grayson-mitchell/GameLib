@@ -25,6 +25,16 @@ const CACHE_ROWS = tableFile.rows.filter(
   (row) => row.family === 'cache' && row.name !== null
 )
 
+/**
+ * Rows whose TS store a Phase 86 plan deleted: the row stays (D-29 row 5) so the shell still opens the
+ * cache file, but `createStores` builds nothing over it, so there is no mirror to probe (86-17: the
+ * two ITAD caches, owned by `gamelib-info`).
+ */
+const NO_TS_STORE: readonly string[] = [
+  'store_cache/itad_prices',
+  'store_cache/itad_steam_gids'
+]
+
 interface Probe {
   set(key: string, value: unknown): void
 }
@@ -71,31 +81,45 @@ describe(`the cache family (${CACHE_ROWS.length} cache rows)`, () => {
       expect(isRustOwnedStoreKey(row.key)).toBe(true)
   })
 
-  describe.each(CACHE_ROWS.map((row) => [row.key, row] as const))(
-    '%s',
-    (_key, row) => {
-      const write = () => {
-        const frames: StoreFrame[] = []
-        const root = createTestStoreRoot(undefined, { recordFrames: frames })
-        const stores = createStores({
-          registry: createStoreRegistry(),
-          root
-        })
-        storeOfRow(row, stores).set('cacheFamilyProbe', { n: 1 })
-        return frames
-      }
-
-      it('is mirror-backed: a write is a frame for this store', () => {
-        const frames = write()
-        expect(frames.length).toBeGreaterThanOrEqual(1)
-        for (const frame of frames) expect(frame.store).toBe(row.key)
-        expect(frames[0]).toMatchObject({
-          op: 'set',
-          key: expect.stringMatching(/cacheFamilyProbe/) as unknown as string
-        })
-      })
+  it('keeps the rows of the deleted TS stores as cache rows with no TS store built over them', () => {
+    const stores = createStores({
+      registry: createStoreRegistry(),
+      root: createTestStoreRoot()
+    })
+    for (const key of NO_TS_STORE) {
+      expect(CACHE_ROWS.map((row) => row.key)).toContain(key)
+      const row = CACHE_ROWS.find((r) => r.key === key)
+      if (!row) throw new Error(`no row ${key}`)
+      expect(() => storeOfRow(row, stores)).toThrow(/built no store/)
     }
-  )
+  })
+
+  describe.each(
+    CACHE_ROWS.filter((row) => !NO_TS_STORE.includes(row.key)).map(
+      (row) => [row.key, row] as const
+    )
+  )('%s', (_key, row) => {
+    const write = () => {
+      const frames: StoreFrame[] = []
+      const root = createTestStoreRoot(undefined, { recordFrames: frames })
+      const stores = createStores({
+        registry: createStoreRegistry(),
+        root
+      })
+      storeOfRow(row, stores).set('cacheFamilyProbe', { n: 1 })
+      return frames
+    }
+
+    it('is mirror-backed: a write is a frame for this store', () => {
+      const frames = write()
+      expect(frames.length).toBeGreaterThanOrEqual(1)
+      for (const frame of frames) expect(frame.store).toBe(row.key)
+      expect(frames[0]).toMatchObject({
+        op: 'set',
+        key: expect.stringMatching(/cacheFamilyProbe/) as unknown as string
+      })
+    })
+  })
 })
 
 describe('CacheStore.commit() on a Rust-owned cache', () => {

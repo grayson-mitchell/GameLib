@@ -112,7 +112,9 @@ const ACCOUNT_CONFIG_DIRS = new Set([
  * settings rows are the documents `config.json` and `GamesConfig/<app>.json`. `store/game-overrides` lost
  * its TS store in Phase 86 (86-11, D-29 row 5): per-game overrides are Rust's (`gamelib-info`), the
  * `StoreHost` keeps opening the file as user-state, and `gameOverridesStore` stays in `tsNames` so the
- * renderer's own store resolves to this row. Each later 86 delete (86-17, 86-24) adds its store here.
+ * renderer's own store resolves to this row. `store_cache/itad_prices` and `store_cache/itad_steam_gids`
+ * lost their TS stores in 86-17 the same way (the ITAD store search is Rust's: `gamelib-info` `itad`); both
+ * stay cache rows and keep their `tsNames`. Each later 86 delete (86-24) adds its store here.
  */
 const EXTRA_ROWS: Omit<Row, 'family' | 'chain'>[] = [
   ...['steam_update_prompt_ack', 'steam_engine_notices'].map((name) => ({
@@ -145,6 +147,16 @@ const EXTRA_ROWS: Omit<Row, 'family' | 'chain'>[] = [
     dotPaths: true,
     flavour: 'store'
   },
+  ...['itad_prices', 'itad_steam_gids'].map((name) => ({
+    key: `store_cache/${name}`,
+    dir: 'store_cache',
+    name,
+    tsNames: [name],
+    kind: 'cache' as const,
+    tokenBearing: false,
+    dotPaths: true,
+    flavour: 'store' as const
+  })),
   {
     key: 'store/uploadedLogs',
     dir: 'store',

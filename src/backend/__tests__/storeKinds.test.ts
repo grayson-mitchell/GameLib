@@ -54,7 +54,10 @@ const EXEMPT_NAMES: readonly { name: string; reason: string }[] = [
   }
 ]
 
-const MIN_CONSTRUCTIONS = 51
+// 51 -> 50 at Phase 86 plan 86-17 (2026-11-23): the walk found 52 constructions at the start of the
+// plan; deleting storeSearch/stores.ts removed exactly two (itad_prices, itad_steam_gids), leaving 50.
+// The floor tracks the construction list that plan shrank; it is not lowered to turn a run green.
+const MIN_CONSTRUCTIONS = 50
 const MIN_FILES_WITH_CONSTRUCTION = 15
 const MIN_MIRRORS = 10
 
@@ -113,8 +116,6 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   humble_settle_declined: 'user-state',
   humble_steam_appid: 'cache',
   crossover_index: 'cache',
-  itad_prices: 'cache',
-  itad_steam_gids: 'cache',
   pci_ids_device: 'cache',
   pci_ids_vendor: 'cache',
   wikigameinfo: 'cache',

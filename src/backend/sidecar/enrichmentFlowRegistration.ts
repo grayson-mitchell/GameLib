@@ -28,14 +28,9 @@
  *     - `getCrossoverIndex` -> `crossover_index/crossoverRatingMap.ts`'s
  *       `buildCrossoverRatingMap()` (Plan 34.2-03 extraction; registered at
  *       `crossover_index/ipc_handler.ts:47` today)
- *     - `searchStores` / `getStoreSearchDeals` / `getItadSteamGids` ->
- *       `storeSearch/handlers.ts`'s `handleSearchStores(query, country)` /
- *       `handleGetStoreSearchDeals(gameId, country)` /
- *       `handleGetItadSteamGids(appIds)`
- *       (Plan 34.2-13 extraction; imported the same way by
- *       `storeSearch/index.ts` on the Electron side)
+ *     - `searchStores` / `getStoreSearchDeals` / `getItadSteamGids`
  *       Phase 86 (86-16, D-17): these three are native `info` channels served by Rust now and are
- *       no longer registered here; the TS bodies are deleted in 86-17.
+ *       no longer registered here; the TS bodies (`backend/storeSearch`) were deleted in 86-17.
  *
  * A `send` channel registered with `ipcMain.handle` (or the reverse) fails
  * 100% SILENTLY at runtime (Phase 31 Pitfall 2) — all seven registrations
@@ -84,28 +79,20 @@
  * `electron` module, and no file under `src/backend/sidecar/` may import
  * `electron`, `backend/ipc`, `../ipc`, `../launcher`, or `main_window`
  * DIRECTLY (enforced by `gameDetailsImportGate.test.ts`'s comment-stripped
- * gates). Transitive reach to `electron` DOES exist here and is EXPECTED --
- * this file's own `import { ... } from '../storeSearch/handlers'` below
- * reaches `handlers.ts`'s own import of `cheapshark.ts`, which itself
- * `import { app } from 'electron'`. See
- * `sidecar/__tests__/electronReachLedger.test.ts` for the measured, enforced
+ * gates). Transitive reach to `electron` is accounted for in
+ * `sidecar/__tests__/electronReachLedger.test.ts`, the measured, enforced
  * set of electron-importing modules actually reachable from this slice's
  * four gated entry points. Every import below reaches an
  * UNDERLYING module (`../knownFixes`,
- * `../crossover_index/crossoverRatingMap`, `../storeSearch/handlers`,
+ * `../crossover_index/crossoverRatingMap`,
  * `../wiki_game_info/wiki_game_info`,
- * `../utils`) — NEVER a feature module's `ipc_handler.ts` and NEVER
- * `storeSearch/index.ts` (which itself calls `addHandler`).
- * `storeSearch/handlers.ts` is the correct import target precisely because
- * it contains no `addHandler` call of its own — the same
- * underlying-module-not-`ipc_handler` rule D-04 already states, applied to
- * the last duplicated surface (Phase 34.2 Plan 13, WR-09).
+ * `../utils`) — NEVER a feature module's `ipc_handler.ts`.
  *
  * `wiki_game_info/stores` is already registered by
  * `createStores` (Phase 29) — this module needs no new store
  * plumbing for the `getWikiGameInfo` cache self-heal path.
  *
- * Deliberately does NOT wrap the non-storeSearch invoke bodies in
+ * Deliberately does NOT wrap the invoke bodies in
  * try/catch: an invoke rejection travels back to the renderer as a
  * rejected promise, which is the existing Electron contract for every one
  * of these five channels.
@@ -135,7 +122,6 @@
  * is INVOKE.
  */
 
-import type { MiscRuntimeSlice } from '../miscRuntime'
 import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { FrontendMessageDeps } from '../host/frontendMessage'
 import type { AppInfo } from '../process/context'
@@ -144,7 +130,6 @@ import { getWikiGameInfo } from '../wiki_game_info/wiki_game_info'
 import { readGamelibFixStatus, readKnownFixes } from '../knownFixes'
 import { buildCrossoverRatingMap } from '../crossover_index/crossoverRatingMap'
 import { getRunsForMeMap, setRunsForMeByUser } from '../runsForMe'
-import type { ItadSecrets } from '../storeSearch/itadSecrets'
 import { getGogDiscounts } from '../discounts/fetchDiscounts'
 import { logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
@@ -152,21 +137,13 @@ import type { ManagerDeps, StoreManagers, Stores } from 'backend/services/types'
 
 /** Narrow slice (66.1 D-01): library managers for game lookup. */
 export interface EnrichmentFlowDeps
-  extends
-    FrontendMessageDeps,
-    AppRuntimeSlice<'events' | 'crossoverIndex'>,
-    MiscRuntimeSlice<'itadGate'> {
+  extends FrontendMessageDeps, AppRuntimeSlice<'events' | 'crossoverIndex'> {
   ipc: Pick<IpcRegistry, 'handle'>
   appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<
     Stores,
-    | 'kvs'
-    | 'runsForMe'
-    | 'wikiGameInfo'
-    | 'crossoverIndex'
-    | 'gog'
-    | 'storeSearch'
+    'kvs' | 'runsForMe' | 'wikiGameInfo' | 'crossoverIndex' | 'gog'
   >
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   /** The boot-owned HowLongToBeat credentials cache (66.4-12). */
@@ -182,8 +159,14 @@ export interface EnrichmentFlowDeps
     | 'bundledFixesPath'
     | 'localFixesPath'
   >
-  /** The optional ITAD user-key owner (Phase 47 D-05); the key never leaves the sidecar. */
-  itadSecrets: ItadSecrets
+  /**
+   * Always `undefined`: see `BootServices['itadSecrets']` (Phase 86 Plan 17). Inert; the foreign-dirty
+   * `sidecar/handlers.ts` still passes it. OWED: delete with `miscRuntime` below and
+   * `steamGridSecrets` once `handlers.ts` is clean.
+   */
+  itadSecrets?: undefined
+  /** Inert: `handlers.ts` still passes the boot's misc runtime; nothing here reads it any more (86-17). */
+  miscRuntime?: unknown
   /** Always `undefined`: see `BootServices['steamGridSecrets']` (Phase 86 Plan 15). */
   steamGridSecrets?: undefined
 }
@@ -315,6 +298,6 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
 
   // Phase 86 (86-16, D-17): `itad.getKeyStatus` and `itad.setApiKey` are native `info` channels served
   // by Rust over the Keychain owner (`info_itad_key_status`, `info_itad_set_key`), so they are no
-  // longer registered here. `deps.itadSecrets` is left on `EnrichmentFlowDeps` only because the
-  // foreign-dirty `handlers.ts` still passes it; nothing in this file reads it (86-17 removes it).
+  // longer registered here. `deps.itadSecrets` and `deps.miscRuntime` are left on `EnrichmentFlowDeps` as
+  // inert optionals only because the foreign-dirty `handlers.ts` still passes them (owed cleanup).
 }

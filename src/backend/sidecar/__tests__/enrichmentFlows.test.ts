@@ -34,8 +34,7 @@
  * force-exit.
  *
  * Mocked only at the boundaries this plan's own module docstring names:
- *   - `axios` — scriptable per-URL (ITAD's search/prices/lookup endpoints), so
- *     the storeSearch trio's real `itad.ts` bodies run against
+ *   - `axios` — scriptable per-URL, so the GOG discounts body runs against
  *     controlled fixture data/failures instead of a real network call.
  *   - `backend/storeManagers` (`libraryManagerMap`) — scriptable managers,
  *     the boundary `buildCrossoverRatingMap`'s enumeration walks and
@@ -65,8 +64,7 @@
  *
  * Deliberately NOT mocked (the bodies actually under test — mocking them
  * would prove only that a jest.fn() was called, per this plan's own
- * instruction): `storeSearch/itad`,
- * `crossover_index/crossoverRatingMap`, `knownFixes`.
+ * instruction): `crossover_index/crossoverRatingMap`, `knownFixes`.
  */
 
 // ── os — GAP FIX precedent: redirect homedir() to a disposable per-process
@@ -88,7 +86,7 @@ jest.mock('os', () => {
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
 // ── axios — scriptable per-URL. `mockAxiosGet` / `mockAxiosPost` drive the
-// storeSearch trio's real itad.ts bodies (top-level `axios.get` / `axios.post`);
+// GOG discounts body (top-level `axios.get` / `axios.post`);
 // `create()` still exists so bootstrap.ts's real `fetchLastestReleases()`
 // (`axiosClient = axios.create(...)`) does not crash at startup ──────────────
 const mockAxiosGet = jest.fn()
@@ -254,7 +252,6 @@ import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { GameInfo } from 'common/types'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
-import { createItadSecrets } from 'backend/storeSearch/itadSecrets'
 
 // ── CR-03 / WR-01 containment guard — MUST run before the first
 // beforeEach's destructive rmSync/configStore.set calls (jest runs
@@ -332,27 +329,7 @@ function freshRegistry(): void {
 
 // The monitor the boot hands out: the two members this suite drives are the jest.fns above, read
 // at call time so a per-test re-arm is honoured.
-/**
- * A real ITAD user-key owner over an in-memory store. The boot's own owner reads the OS keyring
- * through a Rust peer this suite does not have, which would hang every search; every boot here
- * hands it this one instead.
- */
-function inMemoryItadSecrets() {
-  let stored: string | undefined
-  return createItadSecrets({
-    store: {
-      getApiKey: async () => stored,
-      setApiKey: async (value) => {
-        stored = value
-      },
-      clearApiKey: async () => {
-        stored = undefined
-      }
-    }
-  })
-}
-
-const boot = (itadSecrets = inMemoryItadSecrets()) =>
+const boot = () =>
   bootFresh({
     reuseRegistry: true,
     // The anticheat data path is ctx.paths.appFolder (66.4-14): the shimmed app folder. The known-fix
@@ -363,7 +340,6 @@ const boot = (itadSecrets = inMemoryItadSecrets()) =>
     },
     services: {
       storeRoot: testRoot,
-      itadSecrets,
       onlineMonitor: {
         ...createTestOnlineMonitor(),
         isOnline: () => mockedIsOnline() as boolean,
