@@ -32,15 +32,18 @@ pub fn store_version(data: &Json) -> u32 {
 }
 
 /// A JS `Number.isInteger(raw) && raw >= 0` check, narrowed to what a `u32` version can hold. A
-/// version that large is nonsense, and nonsense reads as 0 exactly like any other invalid value.
+/// version beyond `u32` is clamped to `u32::MAX`, which is newer than any chain and so refused, the
+/// same as `version_gate`'s codec and the TS codec (A-WR-02). Any other invalid value reads as 0.
 fn num_to_version(n: &crate::json::Num) -> u32 {
     use crate::json::Num;
     match n {
-        Num::U(u) => u32::try_from(*u).unwrap_or(0),
-        Num::I(i) => u32::try_from(*i).unwrap_or(0),
+        Num::U(u) => u32::try_from(*u).unwrap_or(u32::MAX),
+        Num::I(i) if *i >= 0 => u32::try_from(*i).unwrap_or(u32::MAX),
+        Num::I(_) => 0,
         Num::F(f) => {
-            if f.is_finite() && f.fract() == 0.0 && *f >= 0.0 && *f <= f64::from(u32::MAX) {
-                *f as u32
+            if f.is_finite() && f.fract() == 0.0 && *f >= 0.0 {
+                // `as` saturates, and the `min` pins the clamp to `u32::MAX` explicitly.
+                (*f).min(f64::from(u32::MAX)) as u32
             } else {
                 0
             }
@@ -101,7 +104,10 @@ pub fn settings_version(data: &Json) -> u32 {
     if !digits(major) || minor.is_some_and(|m| !digits(m)) {
         return 0;
     }
-    major.parse::<u32>().unwrap_or(0)
+    // A major beyond `u32` is clamped: newer than any chain, so refused (A-WR-02).
+    major
+        .parse::<u64>()
+        .map_or(u32::MAX, |n| u32::try_from(n).unwrap_or(u32::MAX))
 }
 
 /// `settingsVersionCodec.write`: sets the top-level `version` to `vN`, keeping an existing key's
@@ -149,11 +155,29 @@ mod tests {
             r#"{"__internal__":{"gamelib":{"schemaVersion":-1}}}"#,
             r#"{"__internal__":{"gamelib":{"schemaVersion":1.5}}}"#,
             r#"{"__internal__":{"gamelib":{"schemaVersion":null}}}"#,
-            r#"{"__internal__":{"gamelib":{"schemaVersion":99999999999}}}"#,
             r#"{"__internal__":7}"#,
         ] {
             assert_eq!(store_version(&doc(text)), 0, "{text}");
         }
+    }
+
+    #[test]
+    fn a_version_beyond_u32_clamps_so_it_reads_as_newer() {
+        for text in [
+            r#"{"__internal__":{"gamelib":{"schemaVersion":99999999999}}}"#,
+            r#"{"__internal__":{"gamelib":{"schemaVersion":1e20}}}"#,
+        ] {
+            assert_eq!(store_version(&doc(text)), u32::MAX, "{text}");
+        }
+        assert_eq!(
+            settings_version(&doc(r#"{"version":"v99999999999"}"#)),
+            u32::MAX
+        );
+        // A digit run beyond u64 is still just "huge", not unstamped.
+        assert_eq!(
+            settings_version(&doc(r#"{"version":"v99999999999999999999999"}"#)),
+            u32::MAX
+        );
     }
 
     #[test]
