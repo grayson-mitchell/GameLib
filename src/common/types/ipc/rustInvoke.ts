@@ -70,6 +70,8 @@ import {
   RUST_INFO_RECENT_ADD,
   RUST_INFO_RECENT_REMOVE,
   RUST_INFO_UMU_GET,
+  RUST_INFO_WIKI_CACHE_CLEAR,
+  RUST_INFO_WIKI_GET,
   RUST_STEAMCM_ANON_CLOSE,
   RUST_STEAMCM_ANON_PRODUCT_INFO,
   RUST_STEAMCM_CONFIGURE,
@@ -778,6 +780,20 @@ export const rustInvokeArgs = {
       })
       .strict()
   ]),
+  // Phase 86 (SVC-01, 86-22, D-23): the wiki game info lookup. The crate re-validates (deny_unknown_fields,
+  // the runner table; the title is at most 1024 and the app name 1 to 256 UTF-16 units). `forceRefresh`
+  // is optional (TS's `forceRefresh = false`).
+  [RUST_INFO_WIKI_GET]: z.tuple([
+    z
+      .object({
+        title: z.string(),
+        appName: z.string(),
+        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
+        forceRefresh: z.boolean().optional()
+      })
+      .strict()
+  ]),
+  [RUST_INFO_WIKI_CACHE_CLEAR]: z.tuple([z.object({}).strict()]),
   [RUST_STEAM_API_PIN_RESOLVE]: empty
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 

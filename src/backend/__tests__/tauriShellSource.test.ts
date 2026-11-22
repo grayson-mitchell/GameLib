@@ -481,7 +481,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 135 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 137 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
     // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
@@ -490,7 +490,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 86 plan 18: 132 -> 133, info_gog_discounts.
     // Phase 86 plan 19: 133 -> 134, info_crossover_rating_map.
     // Phase 86 plan 20: 134 -> 135, info_umu_get.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(135)
+    // Phase 86 plan 22: 135 -> 137, info_wiki_get and info_wiki_cache_clear.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(137)
     expect(router).not.toContain('_ =>')
   })
 
@@ -888,7 +889,16 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // null re-fetched, the expired truthy id kept, no store catalog, the 500 and the transport failure
       // writing nothing) request for request and cache byte for byte, and `info_dispatch::tests` drives
       // the arm's validation. The callers are the store managers' shims (86-23).
-      'info_umu_get'
+      'info_umu_get',
+
+      // Phase 86 plan 22 -- the wiki game info lookup and the wiki cache clear, two pass-through arms into
+      // `gamelib-info`. PROVEN: `golden_wiki.rs` replays all 31 wiki 86-06 TS goldens through
+      // `info_wiki_get` (results, requests, cache bytes, the stale rules, the dotted title, the GOG
+      // `tsOnly` requests) and proves the clear empties the wiki cache and leaves umu untouched, twice
+      // over; `info_dispatch::tests` drives both arms' validation. The callers are the non-Steam shortcut
+      // resolver's and `clearCache`'s shims (86-23).
+      'info_wiki_get',
+      'info_wiki_cache_clear'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

@@ -1031,6 +1031,23 @@ export const RUST_INFO_CROSSOVER_RATING_MAP =
 export const RUST_INFO_UMU_GET = 'info_umu_get' as const
 
 /**
+ * Phase 86 (SVC-01, 86-22, D-23): the wiki game info lookup, served by `gamelib-info` `wiki`. Args
+ * `{ title, appName, runner, forceRefresh? }` with `runner` one of the five runner names. Resolves the
+ * wiki object (`pcgamingwiki`, `applegamingwiki`, `codeweavers`, `howlongtobeat`, `gamesdb`, `steamInfo`,
+ * `umuId`, `fetchStatus`) from the 30 day `wikigameinfo` cache, or `null` when the lookup failed (a
+ * failure is logged, never thrown). The title is the caller's own. The one caller is the non-Steam
+ * shortcut resolver (`nonesteamgame.ts`), whose shim 86-23 writes.
+ */
+export const RUST_INFO_WIKI_GET = 'info_wiki_get' as const
+
+/**
+ * Phase 86 (SVC-01, 86-22): empties the `wikigameinfo` cache (values and `__timestamp` keys together);
+ * the umu cache is another store and is untouched. Args `{}`; resolves `null`. The one caller is
+ * `clearCache` in `backend/utils.ts`, whose shim 86-23 writes.
+ */
+export const RUST_INFO_WIKI_CACHE_CLEAR = 'info_wiki_cache_clear' as const
+
+/**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
  * the macOS bridge helper loads: the GameLib cache, else a snapshot of the Steam client's own copy
  * when it already hashes to the pin, else a fetch from Valve's client-update CDN (sha2vz, VZ decode,
@@ -1362,7 +1379,9 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_INFO_ANTICHEAT_DOWNLOAD,
   RUST_INFO_GOG_DISCOUNTS,
   RUST_INFO_CROSSOVER_RATING_MAP,
-  RUST_INFO_UMU_GET
+  RUST_INFO_UMU_GET,
+  RUST_INFO_WIKI_GET,
+  RUST_INFO_WIKI_CACHE_CLEAR
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
@@ -1490,7 +1509,9 @@ export const RUST_INFO_CHANNELS = [
   RUST_INFO_ANTICHEAT_DOWNLOAD,
   RUST_INFO_GOG_DISCOUNTS,
   RUST_INFO_CROSSOVER_RATING_MAP,
-  RUST_INFO_UMU_GET
+  RUST_INFO_UMU_GET,
+  RUST_INFO_WIKI_GET,
+  RUST_INFO_WIKI_CACHE_CLEAR
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */

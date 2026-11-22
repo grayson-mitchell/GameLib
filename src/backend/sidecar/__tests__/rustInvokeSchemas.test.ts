@@ -8,7 +8,11 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { z } from 'zod'
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
-import { RUST_INVOKE_CHANNELS } from 'common/types/sidecarTransport'
+import {
+  RUST_INFO_WIKI_CACHE_CLEAR,
+  RUST_INFO_WIKI_GET,
+  RUST_INVOKE_CHANNELS
+} from 'common/types/sidecarTransport'
 
 const fixture = (name: string): Record<string, unknown> =>
   JSON.parse(
@@ -31,7 +35,8 @@ describe('rustInvokeArgs', () => {
     // Phase 86 plan 18: 132 -> 133, info_gog_discounts.
     // Phase 86 plan 19: 133 -> 134, info_crossover_rating_map.
     // Phase 86 plan 20: 134 -> 135, info_umu_get.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(135)
+    // Phase 86 plan 22: 135 -> 137, info_wiki_get and info_wiki_cache_clear.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(137)
   })
 
   it('parses the store-embed wire fixtures', () => {
@@ -53,6 +58,26 @@ describe('rustInvokeArgs', () => {
     for (const payload of Object.values(wire)) {
       expect(rustInvokeArgs.tray_set_icon.safeParse(payload).success).toBe(true)
     }
+  })
+
+  it('accepts the wiki lookup args and the empty clear arg, and rejects drift (Phase 86 plan 22)', () => {
+    const get = rustInvokeArgs[RUST_INFO_WIKI_GET]
+    const game = { title: 'Portal 2', appName: '620', runner: 'steam' }
+    expect(get.safeParse([game]).success).toBe(true)
+    expect(get.safeParse([{ ...game, forceRefresh: true }]).success).toBe(true)
+    for (const bad of [
+      [],
+      [{ ...game, runner: 'epic' }],
+      [{ ...game, forceRefresh: 'yes' }],
+      [{ ...game, extra: 1 }],
+      [{ title: 'Portal 2', appName: '620' }]
+    ]) {
+      expect(get.safeParse(bad).success).toBe(false)
+    }
+    const clear = rustInvokeArgs[RUST_INFO_WIKI_CACHE_CLEAR]
+    expect(clear.safeParse([{}]).success).toBe(true)
+    expect(clear.safeParse([]).success).toBe(false)
+    expect(clear.safeParse([{ x: 1 }]).success).toBe(false)
   })
 
   it('rejects a payload that omits a required field', () => {

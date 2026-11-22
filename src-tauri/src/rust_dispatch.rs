@@ -179,6 +179,8 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::InfoGogDiscounts => rpc_info_gog_discounts(args),
         RustInvokeChannel::InfoCrossoverRatingMap => rpc_info_crossover_rating_map(args),
         RustInvokeChannel::InfoUmuGet => rpc_info_umu_get(args),
+        RustInvokeChannel::InfoWikiGet => rpc_info_wiki_get(args),
+        RustInvokeChannel::InfoWikiCacheClear => rpc_info_wiki_cache_clear(args),
         RustInvokeChannel::SteamApiPinResolve => rpc_steam_api_pin_resolve(args),
         RustInvokeChannel::DepotFinalize => rpc_depot_finalize(args, app),
         RustInvokeChannel::DepotJobCancel => rpc_depot_job_cancel(args),

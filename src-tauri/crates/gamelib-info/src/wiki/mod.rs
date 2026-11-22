@@ -391,9 +391,14 @@ async fn lookup(
     Ok(result.to_value())
 }
 
+/// `{}`: the clear takes nothing. Unknown fields are rejected.
+#[derive(Debug, Clone, Default, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct ClearArgs {}
+
 /// `wikiGameInfoStore.clear()` (the wiki half of `clearCache` in `backend/utils.ts`): the wiki cache
 /// becomes empty, values and timestamps together. The umu cache is another store and is not touched.
-pub fn clear_cache(ctx: &InfoCtx) -> Result<(), String> {
+pub fn clear_cache(ctx: &InfoCtx, _args: ClearArgs) -> Result<(), String> {
     let view = CacheView::open(
         &ctx.host,
         &ctx.paths.user_data,

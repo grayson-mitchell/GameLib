@@ -371,7 +371,7 @@ async fn the_cache_clear_op_empties_the_wiki_cache_and_leaves_umu_alone() {
     let before = std::fs::read_to_string(&wiki_file).unwrap();
     assert!(before.contains("Zzqx Qvbnm") && before.contains("__timestamp"));
 
-    let result = dispatch("info_wiki_cache_clear", &[], &ctx).await;
+    let result = dispatch("info_wiki_cache_clear", &[json!({})], &ctx).await;
     assert_eq!(result, Ok(Value::Null));
     let after = std::fs::read_to_string(&wiki_file).unwrap();
     let parsed: Value = serde_json::from_str(&after).unwrap();
@@ -387,7 +387,7 @@ async fn the_cache_clear_op_empties_the_wiki_cache_and_leaves_umu_alone() {
 
     // Clearing again is a no-op: the file is byte for byte what the first clear left.
     assert_eq!(
-        dispatch("info_wiki_cache_clear", &[], &ctx).await,
+        dispatch("info_wiki_cache_clear", &[json!({})], &ctx).await,
         Ok(Value::Null)
     );
     assert_eq!(std::fs::read_to_string(&wiki_file).unwrap(), after);
@@ -395,16 +395,24 @@ async fn the_cache_clear_op_empties_the_wiki_cache_and_leaves_umu_alone() {
 }
 
 #[tokio::test]
-async fn the_cache_clear_op_takes_no_argument_and_clears_a_profile_with_no_cache() {
+async fn the_cache_clear_op_takes_exactly_an_empty_object_and_clears_a_profile_with_no_cache() {
     let (_home, ctx, _) = profile_with_both_caches();
-    assert_eq!(
-        dispatch("info_wiki_cache_clear", &[json!({})], &ctx).await,
-        Err("info_wiki_cache_clear:bad-args".to_string())
-    );
+    for bad in [
+        vec![],
+        vec![json!({ "x": 1 })],
+        vec![json!(null)],
+        vec![json!({}), json!({})],
+    ] {
+        assert_eq!(
+            dispatch("info_wiki_cache_clear", &bad, &ctx).await,
+            Err("info_wiki_cache_clear:bad-args".to_string()),
+            "{bad:?}"
+        );
+    }
     let home = FakeHome::new("info-wiki-clear-empty-");
     let (ctx, _) = canned_ctx("empty", "windows", &home, Arc::new(Canned(404)));
     assert_eq!(
-        dispatch("info_wiki_cache_clear", &[], &ctx).await,
+        dispatch("info_wiki_cache_clear", &[json!({})], &ctx).await,
         Ok(Value::Null)
     );
 }
@@ -418,7 +426,9 @@ async fn a_lookup_after_a_clear_fetches_again() {
         .await
         .unwrap();
     assert_eq!(served["fetchStatus"]["pcgamingwiki"], "notfound");
-    dispatch("info_wiki_cache_clear", &[], &ctx).await.unwrap();
+    dispatch("info_wiki_cache_clear", &[json!({})], &ctx)
+        .await
+        .unwrap();
     // The stub answers every request 404, so a fetch gives an `error` PCGamingWiki outcome; the served
     // entry said `notfound`.
     let fetched = dispatch("info_wiki_get", &[wiki_args("Zzqx Qvbnm")], &ctx)

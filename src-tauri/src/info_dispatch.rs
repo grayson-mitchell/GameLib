@@ -360,6 +360,29 @@ pub(crate) fn rpc_info_umu_get(args: &[Value]) -> Result<Value, String> {
     umu_get_with(installed("info_umu_get")?, args)
 }
 
+/// `info_wiki_get`: validated by the generated args struct (the runner is one of the five names), then
+/// the crate (which validates again with its own `deny_unknown_fields` struct and the runner table). The
+/// caller is the non-Steam shortcut resolver's shim (86-23, D-23). The native `getWikiGameInfo` channel
+/// runs the same op.
+fn wiki_get_with(ctx: &InfoCtx, args: &[Value]) -> Result<Value, String> {
+    InfoWikiGetArgs::from_args(args)?;
+    gamelib_info::dispatch_sync("info_wiki_get", args, ctx)
+}
+
+pub(crate) fn rpc_info_wiki_get(args: &[Value]) -> Result<Value, String> {
+    wiki_get_with(installed("info_wiki_get")?, args)
+}
+
+/// `info_wiki_cache_clear`: the one arg is `{}`. The caller is `clearCache`'s shim (86-23).
+fn wiki_cache_clear_with(ctx: &InfoCtx, args: &[Value]) -> Result<Value, String> {
+    InfoWikiCacheClearArgs::from_args(args)?;
+    gamelib_info::dispatch_sync("info_wiki_cache_clear", args, ctx)
+}
+
+pub(crate) fn rpc_info_wiki_cache_clear(args: &[Value]) -> Result<Value, String> {
+    wiki_cache_clear_with(installed("info_wiki_cache_clear")?, args)
+}
+
 /// What a rejected `removeRecent` argument looks like: the JSON path and the zod-vocabulary code.
 /// Fixed literals only, never the renderer's value (T-86-15).
 type Rejection = (&'static str, &'static str);
@@ -2324,6 +2347,62 @@ mod tests {
         assert!(
             !canned.0.lock().unwrap().is_empty(),
             "forceRefresh reaches the sources"
+        );
+    }
+
+    #[test]
+    fn the_wiki_rpc_ops_validate_first_and_run_the_crate() {
+        let home = FakeHome::new("info-dispatch-");
+        let canned = Arc::new(Canned(Mutex::new(Vec::new())));
+        let ctx = wiki_ctx(&home, canned.clone());
+        for bad in [
+            vec![],
+            vec![json!({})],
+            vec![json!({ "title": "t", "appName": "a" })],
+            vec![json!({ "title": "t", "appName": "a", "runner": "humble" })],
+            vec![json!({ "title": "t", "appName": "a", "runner": "gog", "forceRefresh": "yes" })],
+            vec![json!({ "title": "t", "appName": "a", "runner": "gog", "extra": true })],
+        ] {
+            assert_eq!(
+                wiki_get_with(&ctx, &bad),
+                Err("info_wiki_get:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+        // A fresh entry is served with no request.
+        let served = wiki_get_with(
+            &ctx,
+            &[json!({ "title": "Zzqx Qvbnm", "appName": "app", "runner": "legendary" })],
+        )
+        .unwrap();
+        assert_eq!(served["fetchStatus"]["pcgamingwiki"], "notfound");
+        assert!(canned.0.lock().unwrap().is_empty());
+
+        for bad in [vec![], vec![json!({ "x": 1 })], vec![json!(null)]] {
+            assert_eq!(
+                wiki_cache_clear_with(&ctx, &bad),
+                Err("info_wiki_cache_clear:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+        let cache = ctx.paths.user_data.join("store_cache/wikigameinfo.json");
+        assert!(std::fs::read_to_string(&cache)
+            .unwrap()
+            .contains("Zzqx Qvbnm"));
+        assert_eq!(wiki_cache_clear_with(&ctx, &[json!({})]), Ok(Value::Null));
+        assert!(!std::fs::read_to_string(&cache)
+            .unwrap()
+            .contains("Zzqx Qvbnm"));
+
+        // No test installs the global context, so these are the pre-install answers.
+        assert!(info_ctx().is_none());
+        assert_eq!(
+            rpc_info_wiki_get(&[json!({ "title": "t", "appName": "a", "runner": "gog" })]),
+            Err("info_wiki_get:not-ready".to_string())
+        );
+        assert_eq!(
+            rpc_info_wiki_cache_clear(&[json!({})]),
+            Err("info_wiki_cache_clear:not-ready".to_string())
         );
     }
 

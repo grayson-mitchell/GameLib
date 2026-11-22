@@ -158,6 +158,8 @@ pub(crate) enum RustInvokeChannel {
     InfoGogDiscounts,
     InfoCrossoverRatingMap,
     InfoUmuGet,
+    InfoWikiGet,
+    InfoWikiCacheClear,
 }
 
 impl RustInvokeChannel {
@@ -297,6 +299,8 @@ impl RustInvokeChannel {
         RustInvokeChannel::InfoGogDiscounts,
         RustInvokeChannel::InfoCrossoverRatingMap,
         RustInvokeChannel::InfoUmuGet,
+        RustInvokeChannel::InfoWikiGet,
+        RustInvokeChannel::InfoWikiCacheClear,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -436,6 +440,8 @@ impl RustInvokeChannel {
             "info_gog_discounts" => Some(RustInvokeChannel::InfoGogDiscounts),
             "info_crossover_rating_map" => Some(RustInvokeChannel::InfoCrossoverRatingMap),
             "info_umu_get" => Some(RustInvokeChannel::InfoUmuGet),
+            "info_wiki_get" => Some(RustInvokeChannel::InfoWikiGet),
+            "info_wiki_cache_clear" => Some(RustInvokeChannel::InfoWikiCacheClear),
             _ => None,
         }
     }
@@ -577,6 +583,8 @@ impl RustInvokeChannel {
             RustInvokeChannel::InfoGogDiscounts => "info_gog_discounts",
             RustInvokeChannel::InfoCrossoverRatingMap => "info_crossover_rating_map",
             RustInvokeChannel::InfoUmuGet => "info_umu_get",
+            RustInvokeChannel::InfoWikiGet => "info_wiki_get",
+            RustInvokeChannel::InfoWikiCacheClear => "info_wiki_cache_clear",
         }
     }
 }
@@ -3036,5 +3044,47 @@ impl InfoUmuGetArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "info_umu_get:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "info_umu_get:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoWikiGetArgs {
+    pub(crate) title: String,
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) runner: InfoWikiGetArgsRunner,
+    #[serde(rename = "forceRefresh")]
+    #[serde(default)]
+    pub(crate) force_refresh: Option<bool>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum InfoWikiGetArgsRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+impl InfoWikiGetArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "info_wiki_get:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "info_wiki_get:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoWikiCacheClearArgs {}
+
+impl InfoWikiCacheClearArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "info_wiki_cache_clear:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "info_wiki_cache_clear:bad-args".to_string())
     }
 }
