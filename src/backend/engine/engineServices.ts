@@ -3,7 +3,6 @@
  * Type-only imports: the engine never value-imports tools or the services layer.
  */
 import type { Dialogs } from 'backend/host/dialogs'
-import type { StoreVersioning } from 'backend/storeVersioning/engine'
 import type { SettingsDocRoot } from 'backend/stores/settingsDocs'
 import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { OnlineMonitor } from 'backend/online_monitor'
@@ -34,8 +33,6 @@ export interface EngineServices {
   >
   /** The boot-owned engine runtime: ledger, registry, deadlines, single-flight maps (66.4-05). */
   engineRuntime: EngineRuntime
-  /** The boot's store-versioning engine (`StoreRoot.versioning`): game configs and bottle markers migrate through it. */
-  versioning: StoreVersioning
   /**
    * The boot's store root (85-15): the stored game config is read through its mirror when the shell
    * owns the settings family. Absent (a test), the config is read from disk.

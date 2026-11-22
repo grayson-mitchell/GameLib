@@ -49,8 +49,6 @@ export interface EngineFlowDeps {
   engineState: EngineServices['engineState']
   /** The boot-owned engine runtime and path roots (66.4-05). */
   engineRuntime: EngineServices['engineRuntime']
-  /** The boot's store-versioning engine (66.4-18). */
-  versioning: EngineServices['versioning']
   /** The boot's store root: the stored game config is read through it (85-15). */
   storeRoot?: EngineServices['storeRoot']
   paths: EngineServices['paths']
@@ -70,7 +68,6 @@ function engineServicesOf(
     | 'globalSettings'
     | 'engineState'
     | 'engineRuntime'
-    | 'versioning'
     | 'storeRoot'
     | 'paths'
   > {
@@ -78,7 +75,6 @@ function engineServicesOf(
     spawnAsync: deps.spawnAsync,
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
-    versioning: deps.versioning,
     storeRoot: deps.storeRoot,
     paths: deps.paths,
     runner: deps.runner,

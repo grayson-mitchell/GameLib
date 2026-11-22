@@ -2176,8 +2176,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         state.services.bridgeRuntime =
           prebuilt.bridgeRuntime ??
           createBridgeRuntime({
-            aborts: requireAborts(state),
-            versioning: requireStoreRoot(state).versioning
+            aborts: requireAborts(state)
           })
       }
     },

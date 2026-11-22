@@ -121,7 +121,6 @@ export interface WineToolsFlowDeps
   engineState: EngineStateService
   /** The boot-owned engine runtime and path roots (66.4-05). */
   engineRuntime: ToolsDeps['engineRuntime']
-  versioning: ToolsDeps['versioning']
   /** The boot's store root: the stored game config is read through it (85-15). */
   storeRoot?: ToolsDeps['storeRoot']
   paths: ToolsDeps['paths']

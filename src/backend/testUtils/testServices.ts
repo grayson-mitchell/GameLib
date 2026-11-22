@@ -478,7 +478,6 @@ export function createTestEngineServices(
     onlineMonitor: createTestOnlineMonitor(),
     engineState: createTestEngineState(),
     engineRuntime: createTestEngineRuntime(),
-    versioning: createTestVersioning(),
     paths: createTestPaths(),
     ...overrides
   }
@@ -506,7 +505,6 @@ export function createTestToolsSlices(
     onlineMonitor: createTestOnlineMonitor(),
     engineState: createTestEngineState(),
     engineRuntime: createTestEngineRuntime(),
-    versioning: createTestVersioning(),
     steamLaunchRuntime: createTestSteamLaunchRuntime(),
     bridgeRuntime: createTestBridgeRuntime(),
     steamInstallRuntime: createTestSteamInstallRuntime(),

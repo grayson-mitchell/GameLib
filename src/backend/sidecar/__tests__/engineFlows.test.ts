@@ -84,7 +84,6 @@ describe('engine flows', () => {
       config,
       engineState,
       engineRuntime: engineServices.engineRuntime,
-      versioning: engineServices.versioning,
       paths: engineServices.paths,
       steamBottle,
       steamLaunchRuntime
@@ -123,7 +122,6 @@ describe('engine flows', () => {
         config,
         engineState,
         engineRuntime: engineServices.engineRuntime,
-        versioning: engineServices.versioning,
         paths: engineServices.paths,
         steamBottle,
         steamLaunchRuntime
@@ -149,7 +147,6 @@ describe('engine flows', () => {
         globalSettings: expect.any(Function),
         engineState,
         engineRuntime: engineServices.engineRuntime,
-        versioning: engineServices.versioning,
         paths: engineServices.paths
       },
       arg
@@ -201,7 +198,6 @@ describe('engine flows', () => {
         globalSettings: expect.any(Function),
         engineState,
         engineRuntime: engineServices.engineRuntime,
-        versioning: engineServices.versioning,
         paths: engineServices.paths
       },
       arg

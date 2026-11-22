@@ -9,7 +9,6 @@
  * Construction only allocates empty maps and counters: no I/O, no timer, no handle (sidecar exit
  * contract).
  */
-import type { StoreVersioning } from 'backend/storeVersioning/engine'
 import { createRunnerCloneFlights } from './drm/runnerClone'
 import type { RunnerCloneFlights } from './drm/runnerClone'
 import { createRunnerEntitlementSigner } from './drm/runnerEntitlements'
@@ -30,8 +29,6 @@ export interface BridgeRuntime {
 export function createBridgeRuntime(deps: {
   /** The boot-owned abort registry the runner clones register in (66.4-13). */
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
-  /** Not read here since Phase 85 plan 18 (the ledger's version gate is Rust's); removed with the versioning engine in 85-22. */
-  versioning: StoreVersioning
 }): BridgeRuntime {
   const signer = createRunnerEntitlementSigner()
   return {

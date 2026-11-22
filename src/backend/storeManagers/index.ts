@@ -221,7 +221,6 @@ export function createStoreManagers(
   const launcher = createLauncher({
     libraryManagers: library,
     launchHooks,
-    versioning: deps.versioning,
     storeRoot: deps.storeRoot,
     commandRunner: deps.commandRunner,
     runner: deps.runner,

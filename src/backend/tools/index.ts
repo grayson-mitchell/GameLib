@@ -248,7 +248,6 @@ export interface ToolsDeps
   engineState: EngineServices['engineState']
   /** The boot-owned engine runtime and the path roots the engine reads (66.4-05). */
   engineRuntime: EngineServices['engineRuntime']
-  versioning: EngineServices['versioning']
   /** The boot's store root: the stored game config is read through it (85-15). */
   storeRoot?: EngineServices['storeRoot']
   paths: EngineServices['paths'] &
@@ -267,7 +266,6 @@ function engineServicesFor(deps: ToolsDeps): EngineServices {
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
-    versioning: deps.versioning,
     storeRoot: deps.storeRoot,
     paths: deps.paths,
     installRemove: (...a) => createDxvk(deps).installRemove(...a),

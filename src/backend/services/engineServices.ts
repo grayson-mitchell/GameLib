@@ -34,8 +34,6 @@ export type EngineServicesSource = Pick<
     engineState: EngineServices['engineState']
     /** The boot-owned engine runtime (66.4-05). */
     engineRuntime: EngineServices['engineRuntime']
-    /** The boot's store-versioning engine (66.4-18). */
-    versioning: EngineServices['versioning']
     /** The boot's store root: the stored game config is read through it (85-15). */
     storeRoot?: EngineServices['storeRoot']
     /** The path roots the engine reads (66.4-05). */
@@ -70,7 +68,6 @@ export function toolsFrom(deps: EngineServicesSource): Tools {
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
-    versioning: deps.versioning,
     storeRoot: deps.storeRoot,
     appRuntime: deps.appRuntime,
     paths: deps.paths
@@ -84,7 +81,6 @@ export function engineServicesFrom(deps: EngineServicesSource): EngineServices {
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
-    versioning: deps.versioning,
     storeRoot: deps.storeRoot,
     paths: deps.paths,
     installRemove: (...a) => toolsFrom(deps).DXVK.installRemove(...a),
