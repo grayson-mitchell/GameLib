@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 86-08-PLAN.md
-last_updated: "2026-11-22T10:34:53.895Z"
+stopped_at: Completed 86-07-PLAN.md
+last_updated: "2026-11-22T10:38:16.915Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 86 execution started
-state_head: b7dd418c6954274ec0bf0316a7daaf27faa64238
+state_head: 3c5a1f6e144141a417dce62d619eb023997a1dc4
 progress:
   total_phases: 20
   completed_phases: 23
@@ -391,6 +391,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 86 P05 | 45min | 2 tasks | 8 files |
 | Phase 86 P06 | 90min | 3 tasks | 9 files |
 | Phase 86 P08 | 95min | 3 tasks | 21 files |
+| Phase 86 P07 | n/a | 3 tasks | 55 files |
 
 ## Accumulated Context
 
@@ -1042,8 +1043,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T10:34:52.158Z
-Stopped at: Completed 86-08-PLAN.md
+Last session: 2026-11-22T10:38:15.107Z
+Stopped at: Completed 86-07-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
