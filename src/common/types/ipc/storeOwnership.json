@@ -2,7 +2,7 @@
   "families": {
     "cache": true,
     "user-state": true,
-    "account": false,
+    "account": true,
     "settings": false
   },
   "stores": {}

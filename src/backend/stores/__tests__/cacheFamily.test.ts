@@ -83,7 +83,7 @@ describe(`the cache family (${CACHE_ROWS.length} cache rows)`, () => {
     )
   })
 
-  it('owns the cache rows (with the native one and, since 85-13, the user-state ones) under rust, none of the cache rows under ts', () => {
+  it('owns the cache rows (with the native one and, since 85-13 and 85-14, the user-state and account ones) under rust, none of the cache rows under ts', () => {
     for (const row of tableFile.rows) {
       if (row.name === null) continue
       const rust = isRustOwned(row.key, 'rust')
@@ -91,6 +91,7 @@ describe(`the cache family (${CACHE_ROWS.length} cache rows)`, () => {
       expect(rust).toBe(
         row.family === 'cache' ||
           row.family === 'user-state' ||
+          row.family === 'account' ||
           row.family === 'native'
       )
       expect(ts).toBe(row.family === 'native')

@@ -372,7 +372,7 @@ mod tests {
     }
 
     #[test]
-    fn the_embedded_ownership_file_parses_and_flips_only_the_cache_and_user_state_families() {
+    fn the_embedded_ownership_file_parses_and_flips_the_cache_user_state_and_account_families() {
         let own = Ownership::embedded();
         assert_eq!(own.families.len(), 4);
         let mut on: Vec<&str> = own
@@ -384,8 +384,8 @@ mod tests {
         on.sort_unstable();
         assert_eq!(
             on,
-            vec!["cache", "user-state"],
-            "only the cache (85-12) and user-state (85-13) families are flipped"
+            vec!["account", "cache", "user-state"],
+            "the cache (85-12), user-state (85-13) and account (85-14) families are flipped; settings is not"
         );
         assert!(
             own.stores.is_empty(),
@@ -395,7 +395,7 @@ mod tests {
             let rust = is_rust_owned(row, StoreMode::Rust, own);
             let expected = matches!(
                 row.family,
-                Family::Native | Family::Cache | Family::UserState
+                Family::Native | Family::Cache | Family::UserState | Family::Account
             );
             assert_eq!(rust, expected, "{}", row.key);
         }

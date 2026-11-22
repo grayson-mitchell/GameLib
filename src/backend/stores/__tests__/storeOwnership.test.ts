@@ -161,16 +161,15 @@ describe('isRustOwned', () => {
     expect(isRustOwned('store_cache/umu', 'rust', hostile)).toBe(false)
   })
 
-  it('reads the committed ownership file: the cache (85-12) and user-state (85-13) families are Rust’s and no other family has moved yet', () => {
+  it('reads the committed ownership file: the cache (85-12), user-state (85-13) and account (85-14) families are Rust’s and settings has not moved yet', () => {
     expect(isRustOwned('store_cache/wikigameinfo', 'rust')).toBe(true)
     expect(isRustOwned('store_cache/wikigameinfo', 'ts')).toBe(false)
     expect(ownershipFile.families.cache).toBe(true)
     // The 85-10 tracer's own override is gone: the family covers that store now.
     expect(Object.keys(ownershipFile.stores)).toEqual([])
     expect(ownershipFile.families['user-state']).toBe(true)
-    for (const family of ['account', 'settings'] as const) {
-      expect(ownershipFile.families[family]).toBe(false)
-    }
+    expect(ownershipFile.families.account).toBe(true)
+    expect(ownershipFile.families.settings).toBe(false)
     // Every flag in the file names a family or a store that exists in the table.
     const families = new Set(tableFile.rows.map((r) => r.family))
     for (const family of Object.keys(ownershipFile.families)) {

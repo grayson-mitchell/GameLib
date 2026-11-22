@@ -416,6 +416,38 @@ pub fn runtime_cache_row(key: String, dir: &str, name: &str) -> TableRow {
     }
 }
 
+/// D-13 / T-85-34: the port of `store_backend.ts`'s `tightenTokenPaths`. A token-bearing store's
+/// existing file becomes 0600 and its directory 0700, each only when it carries group or other
+/// bits. Runs on open, before the file is read, and only on unix (Windows has no such modes; its
+/// files are left untouched). A missing file or directory is skipped. A failure is logged with the
+/// store key and the error kind, never a path's contents or a value, and the open goes on.
+fn tighten_token_paths(key: &str, path: &Path) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = path.parent();
+        let targets = [(Some(path), 0o600), (dir, 0o700)];
+        for (target, mode) in targets {
+            let Some(target) = target else { continue };
+            let result = match std::fs::metadata(target) {
+                Ok(meta) if meta.permissions().mode() & 0o077 != 0 => {
+                    std::fs::set_permissions(target, std::fs::Permissions::from_mode(mode))
+                }
+                Ok(_) => Ok(()),
+                Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+                Err(e) => Err(e),
+            };
+            if let Err(e) = result {
+                eprintln!("store tighten failed: {key} {:?}", e.kind());
+            }
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (key, path);
+    }
+}
+
 /// A file that is not a readable store: a cache that starts empty over it, or any store that opens
 /// read-only because it could not be read, copied aside or migrated. (A `Newer` file is readable.)
 fn unreadable(outcome: &OpenOutcome) -> bool {
@@ -588,6 +620,9 @@ impl StoreHost {
                 ));
             }
             return Ok(Arc::clone(store));
+        }
+        if row.token_bearing {
+            tighten_token_paths(&row.key, &path);
         }
         let opened = open_file(
             &path,
@@ -1306,5 +1341,118 @@ mod tests {
             .expect("strict entry refuses what the sweep found unreadable");
         assert_eq!(err.kind(), io::ErrorKind::InvalidData);
         assert_eq!(fs::read_to_string(&file).unwrap(), "{not json");
+    }
+}
+
+/// `host::tighten_*`: the token-path tightening on open (T-85-34) and what a token-bearing account
+/// file keeps across a Rust re-save (T-85-36). Every value is synthetic.
+#[cfg(test)]
+mod tighten_tests {
+    use super::*;
+    use crate::json::Num;
+    use gamelib_testutil::FakeHome;
+    use std::fs;
+
+    /// A v0.10-shaped `steam_store/config.json` with ciphertext-looking values and an unknown key.
+    const STEAM_CONFIG: &str = "{\n\t\"refreshToken\": \"steam:v1:REDACTED\",\n\t\"isLoggedIn\": false,\n\t\"userData\": {\n\t\t\"username\": \"placeholder-user\"\n\t},\n\t\"aFieldFromALaterVersion\": {\n\t\t\"nested\": [\n\t\t\t1,\n\t\t\t\"humble:v1:REDACTED\"\n\t\t]\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}";
+
+    /// Plants `text` at the row's own `<dir>/<name>.json` under `home`.
+    fn plant(home: &FakeHome, key: &str, text: &str) -> (&'static TableRow, PathBuf) {
+        let row = row_for_key(key).unwrap_or_else(|| panic!("no row {key}"));
+        let dir = home.root().join(&row.dir);
+        fs::create_dir_all(&dir).unwrap();
+        let file = dir.join(format!("{}.json", row.name.as_deref().unwrap()));
+        fs::write(&file, text).unwrap();
+        (row, file)
+    }
+
+    #[cfg(unix)]
+    fn set_mode(p: &Path, mode: u32) {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(p, fs::Permissions::from_mode(mode)).unwrap();
+    }
+
+    #[cfg(unix)]
+    fn mode(p: &Path) -> u32 {
+        use std::os::unix::fs::PermissionsExt;
+        fs::metadata(p).unwrap().permissions().mode() & 0o777
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn tighten_a_0644_token_file_in_a_0755_dir_becomes_0600_in_0700_on_open() {
+        let home = FakeHome::new("gamelib-store-tighten-");
+        for key in ["steam_store/config", "humble_store/config"] {
+            let (row, file) = plant(&home, key, STEAM_CONFIG);
+            let dir = file.parent().unwrap().to_path_buf();
+            set_mode(&file, 0o644);
+            set_mode(&dir, 0o755);
+            let store = StoreHost::new().open_row(row, file.clone()).unwrap();
+            assert_eq!(mode(&file), 0o600, "{key} file");
+            assert_eq!(mode(&dir), 0o700, "{key} dir");
+            // Tightening changes modes only: the open read the file as it was.
+            assert_eq!(fs::read_to_string(&file).unwrap(), STEAM_CONFIG);
+            assert_eq!(store.get("isLoggedIn"), Some(Json::Bool(false)));
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn tighten_leaves_a_file_and_dir_with_no_group_or_other_bits_alone() {
+        let home = FakeHome::new("gamelib-store-tighten-");
+        let (row, file) = plant(&home, "steam_store/config", STEAM_CONFIG);
+        let dir = file.parent().unwrap().to_path_buf();
+        // Owner-only modes that are not 0600/0700 are not "fixed" to them: only group/other bits trigger.
+        set_mode(&file, 0o400);
+        set_mode(&dir, 0o700);
+        StoreHost::new().open_row(row, file.clone()).unwrap();
+        assert_eq!(mode(&file), 0o400);
+        assert_eq!(mode(&dir), 0o700);
+        set_mode(&file, 0o600);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn tighten_skips_a_row_that_is_not_token_bearing_and_a_missing_file() {
+        let home = FakeHome::new("gamelib-store-tighten-");
+        let (row, file) = plant(&home, "gog_store/config", "{}");
+        assert!(!row.token_bearing);
+        let dir = file.parent().unwrap().to_path_buf();
+        set_mode(&file, 0o644);
+        set_mode(&dir, 0o755);
+        StoreHost::new().open_row(row, file.clone()).unwrap();
+        assert_eq!(mode(&file), 0o644, "gog_store/config is not token-bearing");
+        assert_eq!(mode(&dir), 0o755);
+
+        // A token-bearing row whose file does not exist yet: the existing directory is tightened,
+        // no file is created, and nothing is written until the first change.
+        let row = row_for_key("steam_store/config").unwrap();
+        let dir = home.root().join(&row.dir);
+        fs::create_dir_all(&dir).unwrap();
+        set_mode(&dir, 0o755);
+        let file = dir.join("config.json");
+        StoreHost::new().open_row(row, file.clone()).unwrap();
+        assert!(!file.exists());
+        assert_eq!(mode(&dir), 0o700);
+    }
+
+    /// Runs on every OS (Windows included, where tightening is a no-op): the shared Steam file keeps
+    /// its ciphertext and unknown keys byte-identical across a Rust write of another key.
+    #[test]
+    fn tighten_open_then_a_write_keeps_ciphertext_and_unknown_keys_byte_identical() {
+        let home = FakeHome::new("gamelib-store-tighten-");
+        let (row, file) = plant(&home, "steam_store/config", STEAM_CONFIG);
+        let store = StoreHost::new().open_row(row, file.clone()).unwrap();
+        store.set("isLoggedIn", Json::Bool(true)).unwrap();
+        assert_eq!(
+            fs::read_to_string(&file).unwrap(),
+            STEAM_CONFIG.replace("\"isLoggedIn\": false", "\"isLoggedIn\": true")
+        );
+        // A key appended by the write lands after the existing ones, before nothing it displaced.
+        store.set("provisioned", Json::Num(Num::U(1))).unwrap();
+        let text = fs::read_to_string(&file).unwrap();
+        assert!(text.contains("\"refreshToken\": \"steam:v1:REDACTED\""));
+        assert!(text.contains("\t\t\t\"humble:v1:REDACTED\"\n"));
+        assert_eq!(store.get("provisioned"), Some(Json::Num(Num::U(1))));
     }
 }
