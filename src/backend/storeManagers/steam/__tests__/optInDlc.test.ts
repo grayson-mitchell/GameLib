@@ -1,31 +1,8 @@
-import { getSteamOptInDlc } from '../optInDlc'
-import { findBridgeInstallBottle } from '../bridgeBottle'
-import { resolveBridgeUpdateContext } from '../depotRust/updateEstimate'
-import { readAcfInstalledDepots } from '../acfInstalledDepots'
-import { getOwnedSets } from '../depot/plan'
-import SteamGame from '../games'
+import { getSteamOptInDlc, type OptInDlcSeams } from '../optInDlc'
+import type SteamGame from '../games'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-
-jest.mock('backend/logger', () => ({
-  logInfo: jest.fn(),
-  logError: jest.fn(),
-  logWarning: jest.fn(),
-  LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
-}))
-jest.mock('../bridgeBottle', () => ({ findBridgeInstallBottle: jest.fn() }))
-jest.mock('../depotRust/updateEstimate', () => ({
-  resolveBridgeUpdateContext: jest.fn()
-}))
-jest.mock('../acfInstalledDepots', () => ({
-  readAcfInstalledDepots: jest.fn()
-}))
-jest.mock('../depot/plan', () => ({ getOwnedSets: jest.fn() }))
-jest.mock('../games', () => ({
-  __esModule: true,
-  default: jest.fn()
-}))
 
 const APP = '570'
 const DOTA = {
@@ -70,19 +47,40 @@ function makeDeps(opts: {
 let gameInfo: unknown
 let isNative = true
 
+type MockedSeams = {
+  [K in keyof OptInDlcSeams]: jest.MockedFunction<OptInDlcSeams[K]>
+}
+
+/** The copy and licence collaborators, injected through the seams argument. */
+function makeSeams(): MockedSeams {
+  return {
+    makeGame: jest.fn<SteamGame, Parameters<OptInDlcSeams['makeGame']>>(
+      () =>
+        ({
+          findGameInfo: () => gameInfo,
+          isNative: () => isNative
+        }) as unknown as SteamGame
+    ),
+    findBridgeInstallBottle: jest.fn<
+      string | null,
+      Parameters<OptInDlcSeams['findBridgeInstallBottle']>
+    >(() => null),
+    resolveBridgeUpdateContext: jest.fn(),
+    readAcfInstalledDepots: jest.fn(),
+    getOwnedSets: jest.fn()
+  }
+}
+
+let seams: MockedSeams
+
 beforeEach(() => {
-  jest.clearAllMocks()
   gameInfo = undefined
   isNative = true
-  jest.mocked(findBridgeInstallBottle).mockReturnValue(null)
-  ;(SteamGame as unknown as jest.Mock).mockImplementation(() => ({
-    findGameInfo: () => gameInfo,
-    isNative: () => isNative
-  }))
+  seams = makeSeams()
 })
 
 const run = (deps: ReturnType<typeof makeDeps>, id = APP, o = {}) =>
-  getSteamOptInDlc(deps as never, id, o)
+  getSteamOptInDlc(deps as never, id, o, seams)
 
 describe('getSteamOptInDlc (quick 261122-rgi)', () => {
   it('261122-rgi: a non-numeric appId answers null', async () => {
@@ -109,9 +107,10 @@ describe('getSteamOptInDlc (quick 261122-rgi)', () => {
 
   it('261122-rgi: an open session gives owned true/false from the licence-derived sets and is released', async () => {
     const release = jest.fn()
-    jest
-      .mocked(getOwnedSets)
-      .mockResolvedValueOnce({ apps: new Set([313250]), depots: new Set() })
+    seams.getOwnedSets.mockResolvedValueOnce({
+      apps: new Set([313250]),
+      depots: new Set()
+    })
     const deps = makeDeps({
       anon: reader(),
       lease: { client: {}, release }
@@ -120,9 +119,10 @@ describe('getSteamOptInDlc (quick 261122-rgi)', () => {
     expect(res?.entries[0]?.owned).toBe(true)
     expect(release).toHaveBeenCalledTimes(1)
 
-    jest
-      .mocked(getOwnedSets)
-      .mockResolvedValueOnce({ apps: new Set(), depots: new Set() })
+    seams.getOwnedSets.mockResolvedValueOnce({
+      apps: new Set(),
+      depots: new Set()
+    })
     const res2 = await run(
       makeDeps({ anon: reader(), lease: { client: {}, release } }),
       APP,
@@ -132,7 +132,7 @@ describe('getSteamOptInDlc (quick 261122-rgi)', () => {
   })
 
   it('261122-rgi: an unreadable licence list leaves owned null, not an error', async () => {
-    jest.mocked(getOwnedSets).mockRejectedValueOnce(new Error('no licences'))
+    seams.getOwnedSets.mockRejectedValueOnce(new Error('no licences'))
     const res = await run(
       makeDeps({
         anon: reader(),
@@ -160,9 +160,10 @@ describe('getSteamOptInDlc (quick 261122-rgi)', () => {
       }))
     }
     const client = reader()
-    jest
-      .mocked(getOwnedSets)
-      .mockResolvedValueOnce({ apps: new Set([313250]), depots: new Set() })
+    seams.getOwnedSets.mockResolvedValueOnce({
+      apps: new Set([313250]),
+      depots: new Set()
+    })
     const res = await run(
       makeDeps({ anon, lease: { client, release: jest.fn() } }),
       APP,
@@ -177,10 +178,8 @@ describe('getSteamOptInDlc (quick 261122-rgi)', () => {
   })
 
   it('261122-rgi: a bridge copy is managed by GameLib and reads installed from the ACF depots', async () => {
-    jest
-      .mocked(findBridgeInstallBottle)
-      .mockReturnValue('GameLibSteamBridge-570')
-    jest.mocked(resolveBridgeUpdateContext).mockResolvedValue({
+    seams.findBridgeInstallBottle.mockReturnValue('GameLibSteamBridge-570')
+    seams.resolveBridgeUpdateContext.mockResolvedValue({
       bridgeBottleName: 'b',
       steamappsDir: '/s',
       installdir: 'dota',
@@ -198,14 +197,14 @@ describe('getSteamOptInDlc (quick 261122-rgi)', () => {
       install: { install_path: '/lib/steamapps/common/dota 2 beta' }
     }
     isNative = false
-    jest.mocked(readAcfInstalledDepots).mockResolvedValue({
+    seams.readAcfInstalledDepots.mockResolvedValue({
       buildid: '1',
       installedDepots: [{ depotId: '381450', manifest: '1', size: '1' }]
     })
     const res = await run(makeDeps({ anon: reader() }))
     expect(res?.manage).toBe('steam')
     expect(res?.entries[0]?.installed).toBe(true)
-    expect(jest.mocked(readAcfInstalledDepots).mock.calls[0]?.[1]).toBe(
+    expect(seams.readAcfInstalledDepots.mock.calls[0]?.[1]).toBe(
       '/lib/steamapps'
     )
   })

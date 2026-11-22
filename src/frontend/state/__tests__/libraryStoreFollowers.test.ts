@@ -10,48 +10,16 @@
  * commits the pre-refresh list, and nothing re-read it when the push landed: the new game stayed
  * invisible until a slower full refresh happened to run after the push.
  *
- * These tests drive the REAL transport (`tauriTransport` over a mocked `@tauri-apps/api`), the REAL
- * frontend stores and the REAL libraryState. The mocked shell answers the `refreshLibrary` RPC at
- * once and delivers the push afterwards, the order the live log showed. The library state must
- * follow the snapshot, whichever of the two arrives first.
+ * These tests drive the REAL transport (`tauriTransport` over the real `@tauri-apps/api`, whose
+ * `__TAURI_INTERNALS__` the `tauriIpcRoute` test helper routes), the REAL frontend stores and the
+ * REAL libraryState. The test's shell answers the `refreshLibrary` RPC at once and delivers the push
+ * afterwards, the order the live log showed. The library state must follow the snapshot, whichever
+ * of the two arrives first.
  */
-jest.mock('@tauri-apps/api/core', () => {
-  const route = {
-    handler: (() => Promise.resolve(undefined)) as (
-      cmd: string,
-      payload?: unknown
-    ) => Promise<unknown>
-  }
-  // A plain function, not jest.fn(): the stores call it at import time, before any test body, and
-  // `resetMocks` would otherwise strip its implementation.
-  return {
-    // The rest of the module stays real: `@tauri-apps/api/window` (pulled in by the preload) extends
-    // its `Resource` class at import time.
-    ...jest.requireActual('@tauri-apps/api/core'),
-    invoke: (cmd: string, payload?: unknown) => route.handler(cmd, payload),
-    __route: route
-  }
-})
-jest.mock('@tauri-apps/api/event', () => {
-  type Handler = (event: { payload: unknown }) => void
-  const handlers: Handler[] = []
-  return {
-    ...jest.requireActual('@tauri-apps/api/event'),
-    listen: (_event: string, handler: Handler) => {
-      handlers.push(handler)
-      return Promise.resolve(() => undefined)
-    },
-    __emit: (payload: unknown) => {
-      for (const handler of handlers) handler({ payload })
-    }
-  }
-})
-
-import '../../testUtils/tauriWindow'
-import * as tauriCore from '@tauri-apps/api/core'
-import * as tauriEvent from '@tauri-apps/api/event'
+import { tauriRoute, emitTauriEvent } from '../../testUtils/tauriIpcRoute'
 import type { GameInfo } from 'common/types'
 import {
+  FRONTEND_MESSAGE_EVENT,
   SIDECAR_INVOKE,
   SIDECAR_STORE_SNAPSHOT,
   STORE_CHANGED_CHANNEL,
@@ -64,11 +32,10 @@ import useLibraryState, {
   registerLibraryStoreFollowers
 } from '../libraryState'
 
-type Route = (cmd: string, payload?: unknown) => Promise<unknown>
-const route = (tauriCore as unknown as { __route: { handler: Route } }).__route
-const emitToRenderer = (
-  tauriEvent as unknown as { __emit: (payload: unknown) => void }
-).__emit
+const route = tauriRoute
+/** The shell re-emits every sidecar push as one FRONTEND_MESSAGE_EVENT carrying `{channel, args}`. */
+const emitToRenderer = (payload: unknown) =>
+  emitTauriEvent(FRONTEND_MESSAGE_EVENT, payload)
 
 const game = (name: string, runner: GameInfo['runner']) =>
   ({ app_name: name, runner, title: name }) as GameInfo

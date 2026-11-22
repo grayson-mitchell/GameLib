@@ -40,14 +40,32 @@ interface PicsReader {
   ): Promise<{ apps?: Record<number, unknown> }>
 }
 
+/** The collaborators `getSteamOptInDlc` reads the game's copy and the licence list through. */
+export interface OptInDlcSeams {
+  makeGame(appId: string, deps: ManagerDeps): SteamGame
+  findBridgeInstallBottle: typeof findBridgeInstallBottle
+  resolveBridgeUpdateContext: typeof resolveBridgeUpdateContext
+  readAcfInstalledDepots: typeof readAcfInstalledDepots
+  getOwnedSets: typeof getOwnedSets
+}
+
+const DEFAULT_OPT_IN_DLC_SEAMS: OptInDlcSeams = {
+  makeGame: (appId, deps) => new SteamGame(appId, deps),
+  findBridgeInstallBottle,
+  resolveBridgeUpdateContext,
+  readAcfInstalledDepots,
+  getOwnedSets
+}
+
 export async function getSteamOptInDlc(
   deps: ManagerDeps,
   appId: string,
-  opts: { windowsBuild?: boolean } = {}
+  opts: { windowsBuild?: boolean } = {},
+  seams: OptInDlcSeams = DEFAULT_OPT_IN_DLC_SEAMS
 ): Promise<SteamOptInDlcInfo | null> {
   if (typeof appId !== 'string' || !NUMERIC_APP_ID.test(appId)) return null
   try {
-    const copy = await resolveCopy(deps, appId, opts)
+    const copy = await resolveCopy(deps, appId, opts, seams)
     const numericAppId = Number(appId)
 
     const anonymous = await withTimeout(
@@ -107,7 +125,7 @@ export async function getSteamOptInDlc(
 
       let owned: { apps: Set<number>; depots: Set<number> } | null = null
       if (lease) {
-        owned = await getOwnedSets(lease.client).catch((err: unknown) => {
+        owned = await seams.getOwnedSets(lease.client).catch((err: unknown) => {
           logWarning(
             `getSteamOptInDlc: licence list unavailable for appId ${appId}: ${String(err)}`,
             LogPrefix.Steam
@@ -162,11 +180,12 @@ interface Copy {
 async function resolveCopy(
   deps: ManagerDeps,
   appId: string,
-  opts: { windowsBuild?: boolean }
+  opts: { windowsBuild?: boolean },
+  seams: OptInDlcSeams
 ): Promise<Copy> {
-  const game = new SteamGame(appId, deps)
-  if (findBridgeInstallBottle(deps.paths, appId)) {
-    const ctx = await resolveBridgeUpdateContext(game)
+  const game = seams.makeGame(appId, deps)
+  if (seams.findBridgeInstallBottle(deps.paths, appId)) {
+    const ctx = await seams.resolveBridgeUpdateContext(game)
     return {
       manage: 'gamelib',
       os: 'windows',
@@ -179,7 +198,7 @@ async function resolveCopy(
     ? info.install?.install_path
     : undefined
   if (installPath) {
-    const acf = await readAcfInstalledDepots(
+    const acf = await seams.readAcfInstalledDepots(
       deps,
       dirname(dirname(installPath)),
       appId
