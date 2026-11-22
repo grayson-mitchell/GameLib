@@ -345,6 +345,11 @@ struct Queue {
     /// The depth has crossed [`STORE_QUEUE_HIGH_WATER`] and not yet fallen back: one warning per
     /// crossing.
     above_high_water: bool,
+    /// How many [`PauseGuard`]s are held: while any is, the worker takes no frame.
+    paused: usize,
+    /// The `seq`s of queued frames whose file was deleted under them (85-15 eviction): each is
+    /// answered `refused` (`evicted`) when the worker reaches it, and never applied.
+    doomed: Vec<u64>,
 }
 
 /// The queue, its worker and what the worker needs. One per process in production ([`global`]);
@@ -382,6 +387,8 @@ impl Dispatcher {
                 registrant: None,
                 worker_started: false,
                 above_high_water: false,
+                paused: 0,
+                doomed: Vec::new(),
             }),
             work: Condvar::new(),
             idle: Condvar::new(),
@@ -442,16 +449,22 @@ impl Dispatcher {
             let frame = {
                 let mut q = lock(&self.queue);
                 loop {
-                    if let Some(frame) = q.items.pop_front() {
-                        q.busy = true;
-                        if q.above_high_water && q.items.len() <= STORE_QUEUE_HIGH_WATER / 2 {
-                            q.above_high_water = false;
+                    if q.paused == 0 {
+                        if let Some(frame) = q.items.pop_front() {
+                            q.busy = true;
+                            if q.above_high_water && q.items.len() <= STORE_QUEUE_HIGH_WATER / 2 {
+                                q.above_high_water = false;
+                            }
+                            break frame;
                         }
-                        break frame;
                     }
-                    // Empty and nothing in flight: the exit drain has nothing left to wait for.
+                    // Empty (or paused) and nothing in flight. Empty: the exit drain has nothing
+                    // left to wait for. Paused with frames queued: the registrant stays held, so
+                    // exit still waits for them.
                     q.busy = false;
-                    q.registrant = None;
+                    if q.items.is_empty() {
+                        q.registrant = None;
+                    }
                     self.idle.notify_all();
                     q = self.work.wait(q).unwrap_or_else(|e| e.into_inner());
                 }
@@ -466,6 +479,16 @@ impl Dispatcher {
     /// Applies one frame and answers it.
     fn handle(&self, frame: StoreFrame) {
         let StoreFrame { seq, store, op } = frame;
+        let doomed = {
+            let mut q = lock(&self.queue);
+            let at = q.doomed.iter().position(|d| *d == seq);
+            at.map(|i| q.doomed.swap_remove(i)).is_some()
+        };
+        if doomed {
+            // Its file was deleted after it was queued (a reset or an uninstall): never recreated.
+            self.reply(&store, 0, "refused", seq, Some("evicted"));
+            return;
+        }
         let target = owned_row(
             &store,
             self.config.mode,
@@ -527,6 +550,49 @@ impl Dispatcher {
         (self.events)(event);
     }
 
+    /// Stops the worker taking frames until the guard is dropped, after waiting up to `bound` for
+    /// the frame being applied to finish. Frames keep queuing meanwhile. The safety removal holds
+    /// it across the delete and the eviction, so no queued write lands between the two (85-15).
+    pub(crate) fn pause(&self, bound: Duration) -> PauseGuard<'_> {
+        let deadline = Instant::now() + bound;
+        let mut q = lock(&self.queue);
+        q.paused += 1;
+        while q.busy {
+            let left = deadline.saturating_duration_since(Instant::now());
+            if left.is_zero() {
+                (self.log)("WARN: store frame worker still busy at the removal pause deadline");
+                break;
+            }
+            q = self
+                .idle
+                .wait_timeout(q, left)
+                .unwrap_or_else(|e| e.into_inner())
+                .0;
+        }
+        PauseGuard { dispatcher: self }
+    }
+
+    /// Marks every queued frame whose store file is at or under `removed` doomed: the worker
+    /// answers each `refused` (`evicted`) and writes nothing, so a write queued before a reset or an
+    /// uninstall never recreates the deleted file, the exit drain included. A frame queued after
+    /// this call is applied as usual (a new write over a now-missing file). Returns how many.
+    pub(crate) fn evict_queued(&self, removed: &Path) -> usize {
+        let mut q = lock(&self.queue);
+        let doomed: Vec<u64> = q
+            .items
+            .iter()
+            .filter(|f| {
+                row_for_store_key(&f.store).is_some_and(|row| {
+                    path_for(&self.config.user_data, &f.store, &row).starts_with(removed)
+                })
+            })
+            .map(|f| f.seq)
+            .collect();
+        let n = doomed.len();
+        q.doomed.extend(doomed);
+        n
+    }
+
     /// Waits up to `bound` for the queue to empty and the frame being applied to finish. `true`
     /// when nothing is left, `false` when frames remain at the deadline.
     pub(crate) fn wait_idle(&self, bound: Duration) -> bool {
@@ -544,6 +610,20 @@ impl Dispatcher {
                 .0;
         }
         true
+    }
+}
+
+/// Held while the worker must take no frame ([`Dispatcher::pause`]); dropping it lets it resume.
+pub(crate) struct PauseGuard<'a> {
+    dispatcher: &'a Dispatcher,
+}
+
+impl Drop for PauseGuard<'_> {
+    fn drop(&mut self) {
+        let mut q = lock(&self.dispatcher.queue);
+        q.paused = q.paused.saturating_sub(1);
+        drop(q);
+        self.dispatcher.work.notify_one();
     }
 }
 
@@ -608,6 +688,22 @@ pub(crate) fn enqueue(line_len: usize, value: Value) {
             crate::shell_log("WARN: store frame dropped: the store dispatcher is not configured")
         }
     }
+}
+
+/// The longest a safety removal waits for the frame being applied before it deletes anything.
+/// One store write (a `sync_all`ed file of at most [`MAX_FRAME_BYTES`]) is far inside it; it is the
+/// exit budget's total so a stuck write cannot hold an uninstall longer than an exit would wait.
+pub(crate) const REMOVAL_PAUSE_MAX: Duration = Duration::from_secs(5);
+
+/// Pauses the process-wide frame worker for a safety removal ([`Dispatcher::pause`]); `None` when
+/// the dispatcher is not configured (no home directory, or a unit test of another module).
+pub(crate) fn pause_for_removal() -> Option<PauseGuard<'static>> {
+    global().map(|d| d.pause(REMOVAL_PAUSE_MAX))
+}
+
+/// [`Dispatcher::evict_queued`] on the process-wide dispatcher; 0 when it is not configured.
+pub(crate) fn evict_queued(removed: &Path) -> usize {
+    global().map_or(0, |d| d.evict_queued(removed))
 }
 
 /// `true` when no frame is queued or being applied (and when no frame ever arrived).

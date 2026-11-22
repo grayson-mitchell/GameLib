@@ -3,7 +3,6 @@
  * D-03 a known fix can turn it off and the user wins both ways, D-10 the
  * abnormal-exit predicate. No global switch.
  */
-import type { AppPaths } from 'backend/process/context'
 import { readStoredTitleConfig } from '../../titleSettings'
 
 export type OverlayOverride = 'automatic' | 'on' | 'off'

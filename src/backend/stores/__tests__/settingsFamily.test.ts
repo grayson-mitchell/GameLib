@@ -35,17 +35,6 @@ import type { StoreFrame, StoreFrameSink } from '../storeFrames'
 import { isRustOwned, type StoreMode } from '../storeOwnership'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 
-jest.mock('../../utils/compatibility_layers', () => ({
-  getDefaultWineBinary: () => ({ name: 'x', bin: '', type: 'wine' })
-}))
-jest.mock('../../logger', () => ({
-  logError: jest.fn(),
-  logInfo: jest.fn(),
-  logWarning: jest.fn(),
-  logDebug: jest.fn(),
-  LogPrefix: new Proxy({}, { get: (_t, k) => String(k) })
-}))
-
 const SETTINGS_ROWS = tableFile.rows.filter((row) => row.family === 'settings')
 
 /** A sink that records every frame and never answers: every write stays pending. */

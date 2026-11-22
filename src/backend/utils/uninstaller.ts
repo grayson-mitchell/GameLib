@@ -22,6 +22,7 @@ import {
 import { protectedRootsFor } from 'backend/safety/protectedRoots'
 import { pushRemovalRefusal } from 'backend/safety/refusal'
 import type { SafetyRequest } from 'common/types/safety'
+import { dropSettingsDoc, settingsDocExists } from 'backend/stores/settingsDocs'
 import { existsSync } from 'graceful-fs'
 import i18next from 'i18next'
 import { join } from 'path'
@@ -34,6 +35,7 @@ export type UninstallerDeps = Pick<
   | 'paths'
   | 'sendFrontendMessage'
   | 'requestRustInvoke'
+  | 'storeRoot'
 > & {
   config: Pick<GlobalConfigSlice, 'getSettings'>
 } & AppRuntimeSlice<'events'>
@@ -98,7 +100,7 @@ const removePrefix = async (
 /** What the app-data file deletes need: the guard's transport, the known installs and the roots. */
 type AppDataRemovalDeps = Pick<
   UninstallerDeps,
-  'paths' | 'requestRustInvoke' | 'libraryManagers' | 'config'
+  'paths' | 'requestRustInvoke' | 'libraryManagers' | 'config' | 'storeRoot'
 >
 
 /**
@@ -119,7 +121,11 @@ async function removeAppDataFiles(
   trustRoot: string,
   candidates: { id: string; path: string }[]
 ): Promise<GuardedRemoval | undefined> {
-  const existing = candidates.filter(({ path }) => existsSync(path))
+  // A settings document written but not yet applied by the shell counts as present (85-15): sent,
+  // the shell finds nothing to delete, reports `removed`, and refuses the queued write.
+  const present = (path: string) =>
+    deps.storeRoot ? settingsDocExists(deps.storeRoot, path) : existsSync(path)
+  const existing = candidates.filter(({ path }) => present(path))
   if (existing.length === 0) return undefined
   const removed = await guardedRemoveTree(deps, {
     targets: existing.map(({ id, path }) => ({
@@ -159,7 +165,16 @@ export const removeFixFile = async (
   ])
 }
 
-const removeSettingsAndLogs = (deps: AppDataRemovalDeps, appName: string) => {
+/**
+ * Deletes the game's settings document and logs. When the removal reports `removed`, the settings
+ * document's mirror cell is dropped too (85-15, T-85-38): the shell has already evicted the store
+ * and refused any write queued for it, and without the drop this process would keep serving the
+ * deleted settings and a later read would not go to disk.
+ */
+const removeSettingsAndLogs = async (
+  deps: AppDataRemovalDeps,
+  appName: string
+) => {
   const { gamesConfigPath } = deps.paths
   const files: [string, string][] = [
     ['settings', appName.concat('.json')],
@@ -169,7 +184,8 @@ const removeSettingsAndLogs = (deps: AppDataRemovalDeps, appName: string) => {
   for (const [, filename] of files) {
     logInfo(`Removing ${filename}`, LogPrefix.Backend)
   }
-  return removeAppDataFiles(
+  const settingsPath = join(gamesConfigPath, appName.concat('.json'))
+  const removed = await removeAppDataFiles(
     deps,
     'remove-settings',
     gamesConfigPath,
@@ -178,6 +194,10 @@ const removeSettingsAndLogs = (deps: AppDataRemovalDeps, appName: string) => {
       path: join(gamesConfigPath, filename)
     }))
   )
+  if (removed?.outcome === 'removed' && deps.storeRoot) {
+    dropSettingsDoc(deps.storeRoot, settingsPath)
+  }
+  return removed
 }
 
 /** The other game's display title for a nested/inside refusal, as an optional payload field. */

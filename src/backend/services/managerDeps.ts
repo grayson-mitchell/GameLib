@@ -54,6 +54,7 @@ export function managerDepsFromServices(
     libraryManagers: source.managers.library,
     stores: source.stores,
     versioning: source.storeRoot.versioning,
+    storeRoot: source.storeRoot,
     commandRunner: source.commandRunner,
     launcher: source.launcher,
     spawnAsync: source.spawnAsync,

@@ -30,12 +30,12 @@ import {
 import type { StoreFrame, StoreFrameSink } from '../storeFrames'
 import type { StoreBootEnv, StoreMode } from '../storeOwnership'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
-
-jest.mock('../../logger', () => ({
-  logInfo: jest.fn(),
-  logWarning: jest.fn(),
-  LogPrefix: { Backend: 'Backend' }
-}))
+import { createTestAppPaths } from '../../testUtils/testAppPaths'
+import { createTestAppRuntime } from '../../testUtils/testAppRuntime'
+import { fakeSafetyRustInvoke } from '../../testUtils/fakeSafetyRust'
+import { uninstallGameCallback } from '../../utils/uninstaller'
+import type { RequestRustInvoke } from '../../host'
+import { RUST_SAFETY_REMOVE_TREE } from 'common/types/sidecarTransport'
 
 const APP = '1245620'
 
@@ -271,5 +271,113 @@ describe('readSettingsDoc / writeSettingsDoc / dropSettingsDoc', () => {
     writeFileSync(gamePath(), '{not json')
     expect(() => readSettingsDoc(root, gamePath())).toThrow()
     expect(dropSettingsDoc(root, gamePath())).toBe(false)
+  })
+})
+
+/**
+ * T-85-38, the TS half: an uninstall whose settings removal reports `removed` drops the document's
+ * cell, so this process stops serving the deleted settings and the next read goes to disk. The
+ * Rust half (eviction of open and queued stores, nothing recreated, the drain included) is `cargo
+ * test --bin gamelib-shell safety`.
+ */
+describe('uninstall drops the settings cell when the removal reports removed (T-85-38)', () => {
+  function uninstallDeps(
+    root: ReturnType<typeof build>['root'],
+    requestRustInvoke: RequestRustInvoke
+  ) {
+    const game = {
+      uninstall: async () => ({}),
+      getSettings: async () => ({ winePrefix: '' }),
+      getGameInfo: () => ({ title: 'Game' })
+    }
+    return {
+      libraryManagers: {
+        sideload: {
+          getGame: () => game,
+          getListOfGames: () => []
+        }
+      },
+      paths: createTestAppPaths(userData, {
+        configPath: configPath(),
+        gamesConfigPath: gamesConfig()
+      }),
+      sendFrontendMessage: jest.fn(),
+      notifications: { show: jest.fn() },
+      config: {
+        getSettings: () => ({ defaultInstallPath: '', sharedWinePrefix: '' })
+      },
+      requestRustInvoke,
+      appRuntime: createTestAppRuntime(),
+      storeRoot: root
+    } as unknown as Parameters<typeof uninstallGameCallback>[0]
+  }
+
+  it('a removed settings document reads absent afterwards; the cell is gone', async () => {
+    seedGlobal()
+    const { root, gameConfigs } = build('rust')
+    gameConfigs.get(APP).setSetting('maxSharpness', 3)
+    expect(existsSync(gamePath())).toBe(true)
+    expect(root.mirrors.peek(gamePath())).toBeDefined()
+
+    const { requestRustInvoke, calls } = fakeSafetyRustInvoke()
+    await uninstallGameCallback(
+      uninstallDeps(root, requestRustInvoke),
+      undefined,
+      APP,
+      'sideload',
+      false,
+      true
+    )
+
+    const removal = calls.find((c) => c.channel === RUST_SAFETY_REMOVE_TREE)
+    expect(JSON.stringify(removal?.args)).toContain(`${APP}.json`)
+    expect(existsSync(gamePath())).toBe(false)
+    expect(root.mirrors.peek(gamePath())).toBeUndefined()
+    expect(readSettingsDoc(root, gamePath())).toBeUndefined()
+  })
+
+  it('a written-but-unapplied document is sent for removal and its cell dropped too', async () => {
+    seedGlobal()
+    const { root, frames, gameConfigs } = build('rust', { silent: true })
+    gameConfigs.get(APP).setSetting('maxSharpness', 3)
+    expect(frames).toHaveLength(1)
+    expect(existsSync(gamePath())).toBe(false)
+
+    const { requestRustInvoke, calls } = fakeSafetyRustInvoke()
+    await uninstallGameCallback(
+      uninstallDeps(root, requestRustInvoke),
+      undefined,
+      APP,
+      'sideload',
+      false,
+      true
+    )
+    const removal = calls.find((c) => c.channel === RUST_SAFETY_REMOVE_TREE)
+    expect(JSON.stringify(removal?.args)).toContain(`${APP}.json`)
+    expect(readSettingsDoc(root, gamePath())).toBeUndefined()
+  })
+
+  it('a refused removal keeps the cell and the settings', async () => {
+    seedGlobal()
+    const { root, gameConfigs } = build('rust')
+    gameConfigs.get(APP).setSetting('maxSharpness', 3)
+    const { requestRustInvoke } = fakeSafetyRustInvoke({
+      checkVerdict: 'no',
+      reason: 'nested-known-install'
+    })
+    await uninstallGameCallback(
+      uninstallDeps(root, requestRustInvoke),
+      undefined,
+      APP,
+      'sideload',
+      false,
+      true
+    )
+    expect(existsSync(gamePath())).toBe(true)
+    expect(root.mirrors.peek(gamePath())).toBeDefined()
+    expect(
+      (readSettingsDoc(root, gamePath())?.[APP] as Record<string, unknown>)
+        .maxSharpness
+    ).toBe(3)
   })
 })

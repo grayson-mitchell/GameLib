@@ -284,7 +284,9 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         paths: deps.paths,
         sendFrontendMessage: deps.host.sendFrontendMessage,
         requestRustInvoke: deps.host.requestRustInvoke,
-        appRuntime: deps.appRuntime
+        appRuntime: deps.appRuntime,
+        // 85-15: a removed settings document's mirror cell is dropped (dropSettingsDoc).
+        storeRoot: deps.storeRoot
       },
       event,
       args[0] as string,
