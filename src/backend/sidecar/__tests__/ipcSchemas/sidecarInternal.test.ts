@@ -25,7 +25,7 @@ const invokeTable: FixtureTable<typeof sidecarInternalInvokeArgs> = {
     invalid: [[], [''], [1], ['a', 'b']]
   },
   // relay_commands.rs: vec![]
-  'sidecar:store-snapshot': noArgs,
+  'store:ts-snapshot': noArgs,
   // 85-16: store_native.rs forwards vec![Value::String(store_name)]
   'store:ts-fetch': {
     valid: [['gogLibraryStore'], ['timestampStore']],
@@ -248,7 +248,7 @@ describe('sidecarInternal schemas', () => {
     const shell = [
       'health',
       'trayResolveRunner',
-      'sidecar:store-snapshot',
+      'store:ts-snapshot',
       // 85-16: the renamed fetch the shell forwards to; the renderer's name is native now.
       'store:ts-fetch',
       'handleProtocolUrl',

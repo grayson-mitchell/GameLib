@@ -416,7 +416,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
 
   // Test 4 (snapshot): the SIDECAR_STORE_SNAPSHOT response includes
   // steamConfigStore.userData but never refreshToken.
-  it('Test 4 (snapshot): sidecar:store-snapshot includes steamConfigStore.userData but never refreshToken', async () => {
+  it('Test 4 (snapshot): store:ts-snapshot includes steamConfigStore.userData but never refreshToken', async () => {
     // Real (unmocked) electron-store-backed steamConfigStore — write test
     // fixture data through the SAME module instance the handler reads. Safe:
     // the `jest.mock('os', ...)` above redirects this module's on-disk
@@ -433,7 +433,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
 
     try {
       const { input, frames } = boot()
-      writeInvoke(input, 'snapshot-1', 'sidecar:store-snapshot', [])
+      writeInvoke(input, 'snapshot-1', 'store:ts-snapshot', [])
       await flush()
 
       const response = frames.find((frame) => frame.id === 'snapshot-1') as
@@ -490,7 +490,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       await flush()
 
       // FRESH snapshot fetch — a new invoke round-trip, not a read of any local state.
-      writeInvoke(input, 'snapshot-set-1', 'sidecar:store-snapshot', [])
+      writeInvoke(input, 'snapshot-set-1', 'store:ts-snapshot', [])
       await flush()
 
       const response = frames.find((frame) => frame.id === 'snapshot-set-1') as
@@ -525,7 +525,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       writeSend(input, 'del-1', 'storeDelete', ['configStore', 'theme'])
       await flush()
 
-      writeInvoke(input, 'snapshot-del-1', 'sidecar:store-snapshot', [])
+      writeInvoke(input, 'snapshot-del-1', 'store:ts-snapshot', [])
       await flush()
 
       const response = frames.find((frame) => frame.id === 'snapshot-del-1') as
@@ -667,7 +667,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       expect(changed.length).toBe(0)
 
       // Nothing landed in a fresh snapshot either.
-      writeInvoke(input, 'snapshot-secret-1', 'sidecar:store-snapshot', [])
+      writeInvoke(input, 'snapshot-secret-1', 'store:ts-snapshot', [])
       await flush()
       const response = frames.find(
         (frame) => frame.id === 'snapshot-secret-1'
@@ -708,7 +708,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       ])
       await flush()
 
-      writeInvoke(input, 'snapshot-cache-1', 'sidecar:store-snapshot', [])
+      writeInvoke(input, 'snapshot-cache-1', 'store:ts-snapshot', [])
       await flush()
       const response = frames.find(
         (frame) => frame.id === 'snapshot-cache-1'

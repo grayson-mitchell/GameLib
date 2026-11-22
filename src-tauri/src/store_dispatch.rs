@@ -146,8 +146,9 @@ fn row_for_store_key(key: &str) -> Option<TableRow> {
 /// The runtime `store_cache/<name>` names the shell will own: `RECOGNIZED_CACHE_STORE_NAMES` of
 /// `storePolicy.ts` (the boot-set library caches, then the denied one). A runtime cache name is
 /// only ever one the sidecar's `storeNew` would construct, so a frame for any other name is refused
-/// `not-owned` and never creates a file (T-85-30). A test reads `storePolicy.ts` and asserts this
-/// list equals its arrays, so the two cannot drift.
+/// `not-owned` and never creates a file (T-85-30). A test asserts this list equals
+/// `recognizedCacheStoreNames` in `storeChannels.json` (the one policy file `storePolicy.ts` and
+/// `store_policy.rs` read, 85-16), so the two cannot drift.
 ///
 /// Every name here is also a table row (`user-state`), and a listed row follows its own family, so
 /// today the runtime branch owns nothing the table does not already name: the list is the gate a
@@ -1261,50 +1262,21 @@ mod tests {
         Ownership::parse(r#"{"families":{"cache":true},"stores":{}}"#).unwrap()
     }
 
-    const STORE_POLICY_TS: &str = include_str!("../../src/common/types/storePolicy.ts");
-
-    /// The quoted strings of `const <name>: readonly string[] = [ ... ]` in `storePolicy.ts`.
-    fn ts_string_array(src: &str, name: &str) -> Vec<String> {
-        let at = src
-            .find(&format!("{name}: readonly string[] = ["))
-            .unwrap_or_else(|| panic!("storePolicy.ts has no `{name}` array"));
-        let rest = &src[at..];
-        let start = rest.find("= [").expect("array open") + 3;
-        let end = start + rest[start..].find(']').expect("array close");
-        rest[start..end]
-            .split('\'')
-            .skip(1)
-            .step_by(2)
-            .map(str::to_string)
-            .collect()
-    }
-
     #[test]
-    fn store_frame_runtime_cache_names_equal_the_recognised_names_of_store_policy_ts() {
-        let boot = ts_string_array(STORE_POLICY_TS, "BOOT_SET_CACHE_STORE_NAMES");
-        let denied = ts_string_array(STORE_POLICY_TS, "DENIED_CACHE_STORES");
-        assert!(!boot.is_empty() && !denied.is_empty());
-        let expected: Vec<String> = boot.into_iter().chain(denied).collect();
+    fn store_frame_runtime_cache_names_equal_the_recognised_names_of_the_policy_file() {
+        // 85-16: storePolicy.ts reads its lists from storeChannels.json, which store_policy.rs
+        // parses; the shell's runtime list must be that list, in its order.
+        let recognised = crate::store_policy::policy().recognized_cache_store_names();
+        assert!(!recognised.is_empty());
         assert_eq!(
             RUNTIME_CACHE_NAMES.map(str::to_string).to_vec(),
-            expected,
-            "RUNTIME_CACHE_NAMES drifted from storePolicy.ts"
-        );
-        // RECOGNIZED_CACHE_STORE_NAMES is still those two arrays and nothing else.
-        let at = STORE_POLICY_TS
-            .find("RECOGNIZED_CACHE_STORE_NAMES: readonly string[] = [")
-            .expect("RECOGNIZED_CACHE_STORE_NAMES");
-        let recognised = &STORE_POLICY_TS[at..];
-        let open = recognised.find("= [").unwrap() + 3;
-        let recognised = &recognised[open..open + recognised[open..].find(']').unwrap()];
-        assert!(
-            recognised.contains("...BOOT_SET_CACHE_STORE_NAMES")
-                && recognised.contains("...DENIED_CACHE_STORES")
-                && recognised.matches("...").count() == 2,
-            "{recognised}"
+            recognised.to_vec(),
+            "RUNTIME_CACHE_NAMES drifted from storeChannels.json"
         );
         // The name pattern this shell checks is the one the sidecar checks.
-        assert!(STORE_POLICY_TS.contains("CACHE_STORE_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/"));
+        for name in RUNTIME_CACHE_NAMES {
+            assert!(crate::store_policy::is_plausible_cache_name(name), "{name}");
+        }
     }
 
     #[test]

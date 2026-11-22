@@ -261,14 +261,17 @@ pub(crate) fn open_external(url: String, app: AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-/// Requests the sidecar's minimal store snapshot for the renderer's synchronous store bridge.
+/// The boot store snapshot for the renderer's synchronous store bridge (every `bootSetStores`
+/// store). Phase 85 (85-16): built from the Rust `StoreHost` under `GAMELIB_STORE=rust`, each store
+/// filtered with its rev; under `ts` the sidecar's `store:ts-snapshot` result unchanged
+/// (`store_native::snapshot_blocking`).
 #[tauri::command]
 pub(crate) async fn sidecar_store_snapshot(
-    state: State<'_, Arc<SidecarState>>,
+    router: State<'_, NativeRouter>,
 ) -> Result<Value, String> {
-    let state = state.inner().clone();
+    let ctx = router.ctx();
     tauri::async_runtime::spawn_blocking(move || {
-        state.invoke(STORE_SNAPSHOT_CHANNEL.to_string(), vec![])
+        crate::store_native::snapshot_blocking(&ctx.store_host, &ctx.store_reads)
     })
     .await
     .map_err(|e| e.to_string())?

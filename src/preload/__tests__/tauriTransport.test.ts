@@ -164,7 +164,9 @@ describe('Tauri renderer bridge contract (spike 012 parity)', () => {
       if (cmd === 'sidecar_store_snapshot') {
         return {
           configStore: { language: 'en' },
-          steamConfigStore: { refreshToken: 'super-secret-token' }
+          steamConfigStore: { refreshToken: 'super-secret-token' },
+          // 85-16: the Rust snapshot's revs ride beside the stores and are not a store.
+          '@rev': { configStore: 2, steamConfigStore: 0 }
         }
       }
       throw new Error(`unmocked command: ${cmd}`)

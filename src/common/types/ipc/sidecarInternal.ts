@@ -2,7 +2,7 @@
  * Schemas for channels no `<Domain>` file declares (Phase 67, plan 18; RESEARCH open question 2).
  *
  * These are shell-originated (`health`, `trayResolveRunner`, `shellWindowFocused`,
- * `handleProtocolUrl`, `sidecar:store-snapshot`), the renderer-driven store channels, and the
+ * `handleProtocolUrl`, `store:ts-snapshot`), the renderer-driven store channels, and the
  * DEV-ONLY `devSweepEpicCookieDomain` (deliberately not on the preload surface; see
  * devEpicCookieSweepRegistration.ts). They are NOT part of the `ipc/index.ts` umbrella types, so
  * they never appear on `window.api`. The map names carry no Sync/Async suffix so the census
@@ -180,7 +180,7 @@ export const sidecarInternalInvokeArgs = {
   // DEV-ONLY (unpackaged sidecars); driven from DevTools with ['fortnite.com'].
   devSweepEpicCookieDomain: z.tuple([nonEmptyString(253)]),
   trayResolveRunner: z.tuple([nonEmptyString(256)]),
-  'sidecar:store-snapshot': noArgs,
+  'store:ts-snapshot': noArgs,
   // 85-16: the old renderer fetch, renamed: the shell forwards `sidecar:store-fetch` here for a
   // store TS still answers (GAMELIB_STORE=ts, or a row Rust never opens).
   'store:ts-fetch': z.tuple([storeName]),
@@ -213,7 +213,7 @@ export const sidecarInternalSendArgs = {
 export const sidecarInternalCallers = {
   health: 'shell',
   trayResolveRunner: 'shell',
-  'sidecar:store-snapshot': 'shell',
+  'store:ts-snapshot': 'shell',
   'store:ts-fetch': 'shell',
   handleProtocolUrl: 'shell',
   shellWindowFocused: 'shell',

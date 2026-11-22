@@ -21,6 +21,12 @@
 //! The fetch result is `{ "values": {...}, "rev": <n> }`: `rev` is the store's change count when
 //! Rust read it, absent when the sidecar answered. The values are wrapped rather than given a `rev`
 //! sibling because a `"*"` store's top-level keys are arbitrary strings.
+//!
+//! The boot snapshot (`sidecar_store_snapshot`, every `bootSetStores` store) is built the same way
+//! under `rust`: each store read from `StoreHost` and filtered, plus one extra key, [`STORE_REV_KEY`]
+//! (`"@rev"`, which no store name can be), mapping each Rust-read store to its rev. A boot store Rust
+//! does not open is taken from the sidecar's `store:ts-snapshot`. Under `ts` the sidecar's snapshot
+//! is returned unchanged.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -29,6 +35,7 @@ use gamelib_store::host::StoreHost;
 use gamelib_store::table::{row_for_key, table, TableRow};
 use serde_json::{json, Map, Value};
 
+use crate::ipc_contract::STORE_SNAPSHOT_CHANNEL;
 use crate::native_router::{invalid_args, NativeCtx, NativeFuture};
 use crate::relay_commands::echo_channel;
 use crate::store_boot::{is_rust_owned, Ownership, StoreMode};
@@ -39,6 +46,10 @@ pub(crate) const STORE_FETCH_CHANNEL: &str = "sidecar:store-fetch";
 
 /// The sidecar's fetch handler, renamed so only the shell can reach it (85-16).
 pub(crate) const STORE_TS_FETCH_CHANNEL: &str = "store:ts-fetch";
+
+/// The key beside the store names in the Rust snapshot that maps each Rust-read store to its rev
+/// (TS `STORE_REV_KEY`). Store names are `[A-Za-z0-9_-]`, so it never collides with one.
+pub(crate) const STORE_REV_KEY: &str = "@rev";
 
 /// The longest store name accepted, in UTF-16 code units (the old zod `nonEmptyString(128)`).
 const STORE_NAME_MAX: usize = 128;
@@ -159,11 +170,11 @@ fn parse_store_name(args: &[Value]) -> Result<ResolvedStore, String> {
         return Err(reject("0", "too_big"));
     }
     resolve_renderer_store(name).ok_or_else(|| {
-        // The name only, sanitised and cut, never a store value (T-29-18).
-        crate::shell_log(&format!(
-            "native {STORE_FETCH_CHANNEL} refused store '{}'",
-            echo_channel(name)
-        ));
+        // The name is renderer text: sanitised and cut, and on stderr only (T-29-18).
+        crate::shell_log_detail(
+            "native sidecar:store-fetch refused a store name",
+            &echo_channel(name),
+        );
         reject("0", "custom")
     })
 }
@@ -193,6 +204,66 @@ pub(crate) fn fetch_blocking(
         }
         None => forwarded(reads, store),
     }
+}
+
+/// The boot snapshot for `sidecar_store_snapshot`, on the caller's (blocking) thread.
+pub(crate) fn snapshot_blocking(host: &StoreHost, reads: &StoreReads) -> Result<Value, String> {
+    let rust_mode = reads
+        .config
+        .as_ref()
+        .is_some_and(|c| c.mode == StoreMode::Rust);
+    if !rust_mode {
+        // GAMELIB_STORE=ts (or no home directory): the sidecar's snapshot, unchanged.
+        return reads.sidecar.invoke(STORE_SNAPSHOT_CHANNEL, vec![]);
+    }
+    let mut stores = Map::new();
+    let mut revs = Map::new();
+    let mut from_ts: Vec<String> = Vec::new();
+    for name in policy().boot_set_stores() {
+        let Some(store) = resolve_renderer_store(name) else {
+            continue;
+        };
+        let Some(config) = reads.owner_of(&store) else {
+            from_ts.push(name.clone());
+            continue;
+        };
+        match read_owned(host, config, &store) {
+            Ok((values, rev)) => {
+                stores.insert(name.clone(), Value::Object(values));
+                revs.insert(name.clone(), json!(rev));
+            }
+            Err(e) => {
+                // The store name from the policy file and the error kind (stderr only): the
+                // stores hold tokens.
+                crate::shell_log_detail(
+                    &format!("WARN: store snapshot could not read {name}; it boots empty"),
+                    &e,
+                );
+                stores.insert(name.clone(), Value::Object(Map::new()));
+            }
+        }
+    }
+    if !from_ts.is_empty() {
+        let ts = match reads.sidecar.invoke(STORE_SNAPSHOT_CHANNEL, vec![]) {
+            Ok(Value::Object(ts)) => ts,
+            _ => {
+                crate::shell_log(&format!(
+                    "WARN: store snapshot: the sidecar did not answer for {} store(s); they boot empty",
+                    from_ts.len()
+                ));
+                Map::new()
+            }
+        };
+        for name in from_ts {
+            let values = match ts.get(&name) {
+                Some(Value::Object(o)) => Value::Object(o.clone()),
+                _ => Value::Object(Map::new()),
+            };
+            stores.insert(name, values);
+        }
+    }
+    stores.insert(STORE_REV_KEY.to_string(), Value::Object(revs));
+    Ok(Value::Object(stores))
 }
 
 /// The `sidecar:store-fetch` invoke handler.
@@ -441,6 +512,114 @@ pub(crate) mod tests {
         let err = tauri::async_runtime::block_on(store_fetch(ctx, vec![json!("humble_library")]))
             .unwrap_err();
         assert!(err.starts_with(IPC_INVALID_ARGS_MARKER));
+    }
+
+    #[test]
+    fn store_native_snapshot_reads_every_boot_store_filtered_with_its_rev() {
+        let home = FakeHome::new("gamelib-store-native-snapshot-");
+        write(
+            &home,
+            "steam_store/config.json",
+            "{\n\t\"isLoggedIn\": true,\n\t\"refreshToken\": \"steam:v1:secret\",\n\t\"__internal__\": {}\n}",
+        );
+        write(
+            &home,
+            "store_cache/steam_library.json",
+            "{\n\t\"games\": [{\"app_name\": \"480\"}]\n}",
+        );
+        write(&home, "store/config.json", "{\n\t\"theme\": \"dark\"\n}");
+        let host = StoreHost::new();
+        let proxy = RecordingProxy::new(json!({"configStore": {"theme": "from-ts"}}));
+        let reads = reads(&home, StoreMode::Rust, Arc::clone(&proxy));
+        // One change, so a rev other than 0 is visible.
+        let row = resolved("configStore").row.unwrap();
+        host.open_row(row, home.root().join("store/config.json"))
+            .unwrap()
+            .apply(
+                Op::Set {
+                    key: "theme".to_string(),
+                    value: Json::from(json!("light")),
+                },
+                Origin::Rust,
+            )
+            .unwrap();
+        let out = snapshot_blocking(&host, &reads).unwrap();
+        let obj = out.as_object().unwrap();
+        let mut expected: Vec<&str> = policy()
+            .boot_set_stores()
+            .iter()
+            .map(String::as_str)
+            .collect();
+        expected.push(STORE_REV_KEY);
+        let mut keys: Vec<&str> = obj.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        expected.sort_unstable();
+        assert_eq!(keys, expected);
+        assert_eq!(obj["steamConfigStore"], json!({"isLoggedIn": true}));
+        assert_eq!(
+            obj["steam_library"],
+            json!({"games": [{"app_name": "480"}]})
+        );
+        assert_eq!(obj["configStore"], json!({"theme": "light"}));
+        assert_eq!(obj["humbleConfigStore"], json!({}));
+        let revs = obj[STORE_REV_KEY].as_object().unwrap();
+        assert_eq!(revs["configStore"], json!(1));
+        assert_eq!(revs["steamConfigStore"], json!(0));
+        assert_eq!(revs.len(), policy().boot_set_stores().len());
+        assert!(proxy.calls.lock().unwrap().is_empty(), "nothing forwarded");
+        assert!(!out.to_string().contains("refreshToken"));
+        assert!(!out.to_string().contains("__internal__"));
+    }
+
+    #[test]
+    fn store_native_snapshot_under_ts_mode_is_the_sidecar_result_unchanged() {
+        let home = FakeHome::new("gamelib-store-native-snapshot-ts-");
+        let ts = json!({"configStore": {"theme": "ts"}, "steamConfigStore": {}});
+        let proxy = RecordingProxy::new(ts.clone());
+        let host = StoreHost::new();
+        let out =
+            snapshot_blocking(&host, &reads(&home, StoreMode::Ts, Arc::clone(&proxy))).unwrap();
+        assert_eq!(out, ts);
+        assert_eq!(
+            proxy.calls.lock().unwrap().as_slice(),
+            &[(STORE_SNAPSHOT_CHANNEL.to_string(), vec![])]
+        );
+        assert_eq!(STORE_SNAPSHOT_CHANNEL, "store:ts-snapshot");
+        assert_eq!(host.in_flight(), 0);
+    }
+
+    #[test]
+    fn store_native_snapshot_takes_a_boot_store_rust_does_not_open_from_the_sidecar() {
+        let home = FakeHome::new("gamelib-store-native-snapshot-mixed-");
+        write(&home, "store/config.json", "{\n\t\"theme\": \"dark\"\n}");
+        let proxy = RecordingProxy::new(json!({
+            "steamConfigStore": {"isLoggedIn": false},
+            "configStore": {"theme": "ts-should-not-win"}
+        }));
+        // The account family held back by a per-store override: steam_store/config is TS's.
+        let ownership: Ownership =
+            serde_json::from_str(r#"{"families":{"cache":true,"user-state":true,"account":true,"settings":true},"stores":{"steam_store/config":false}}"#)
+                .unwrap();
+        let reads = StoreReads {
+            config: Some(ReadConfig {
+                user_data: home.root().to_path_buf(),
+                mode: StoreMode::Rust,
+                ownership,
+            }),
+            sidecar: proxy.clone(),
+        };
+        let out = snapshot_blocking(&StoreHost::new(), &reads).unwrap();
+        assert_eq!(out["steamConfigStore"], json!({"isLoggedIn": false}));
+        assert_eq!(out["configStore"], json!({"theme": "dark"}));
+        assert!(out[STORE_REV_KEY].get("steamConfigStore").is_none());
+        assert_eq!(proxy.calls.lock().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn store_native_the_rev_key_matches_the_ts_constant() {
+        const TS_TRANSPORT: &str = include_str!("../../src/common/types/sidecarTransport.ts");
+        assert!(TS_TRANSPORT.contains("export const STORE_REV_KEY = '@rev' as const"));
+        assert!(!is_plausible_cache_name(STORE_REV_KEY));
     }
 
     struct NullHost;

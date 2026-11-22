@@ -29,6 +29,7 @@ const STORE_CHANNELS_JSON: &str = include_str!(concat!(
 const RESERVED_KEY: &str = "__internal__";
 
 /// Key path segments that may never appear in a store key (CR-01, `dot-prop`'s disallowed keys).
+#[cfg_attr(not(test), allow(dead_code))] // the write choke point (85-17) is its first caller
 const DISALLOWED_KEY_PATH_SEGMENTS: [&str; 3] = ["__proto__", "prototype", "constructor"];
 
 /// The pattern `storeChannels.json` names for a dynamic store name. The Rust check is written out
@@ -83,6 +84,7 @@ struct ReadOnlyAreas {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct StorePolicy {
     store_allowlist: HashMap<String, FieldPolicy>,
+    #[cfg_attr(not(test), allow(dead_code))] // read by the write choke point (85-17)
     write_denied_fields: HashMap<String, Vec<String>>,
     denied_cache_stores: Vec<String>,
     recognized_cache_store_names: Vec<String>,
@@ -107,6 +109,7 @@ fn first_segment(key: &str) -> &str {
 }
 
 /// `true` iff no dot-segment of `key` is `__proto__`, `prototype` or `constructor`.
+#[cfg_attr(not(test), allow(dead_code))] // the write choke point (85-17) is its first caller
 pub(crate) fn is_safe_key_path(key: &str) -> bool {
     !key.split('.')
         .any(|segment| DISALLOWED_KEY_PATH_SEGMENTS.contains(&segment))
@@ -138,6 +141,12 @@ impl StorePolicy {
             return false;
         }
         self.store_allowlist.contains_key(store) || self.is_recognized_cache(store)
+    }
+
+    /// The recognised cache store names, in declared order.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn recognized_cache_store_names(&self) -> &[String] {
+        &self.recognized_cache_store_names
     }
 
     /// The eager tier, in declared order.
@@ -174,6 +183,7 @@ pub(crate) fn is_allowed_store_field(store: &str, key: &str) -> bool {
 }
 
 /// `isWritableStoreField`: readable, a safe key path, and not write-denied.
+#[cfg_attr(not(test), allow(dead_code))] // the write choke point (85-17) is its first caller
 pub(crate) fn is_writable_store_field(store: &str, key: &str) -> bool {
     if !is_allowed_store_field(store, key) || !is_safe_key_path(key) {
         return false;

@@ -34,7 +34,7 @@
  * `storeEmbedFlowRegistration.ts` -- Phase 40 Plan 05, REQ-40-02/REQ-40-05, which also installs
  * the `rustInvoke`-backed `StoreEmbedSeam` implementation via `storeEmbed.set()`), and the
  * two store-layer read handlers (D-03): the eager
- * `sidecar:store-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
+ * `store:ts-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
  * through the single D-08 allow-list) and the lazy `store:ts-fetch`
  * (single-store on-demand hydrate for everything else in `STORE_UNIVERSE`,
  * filtered identically). Since Phase 85 (85-16) both are shell-only: the

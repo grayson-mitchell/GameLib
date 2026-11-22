@@ -1504,13 +1504,20 @@ export const STORE_TS_FETCH_CHANNEL = 'store:ts-fetch' as const
 export const STORE_SET_CHECKED_CHANNEL = 'sidecar:store-set-checked' as const
 
 /**
- * Mirrors `src-tauri/src/main.rs`'s own snapshot-channel constant. DISTINCT from
- * `SIDECAR_STORE_SNAPSHOT` (the renderer-facing Tauri COMMAND name the renderer invokes to
- * request the snapshot) — this is the internal sidecar-side channel identifier for the same
- * concept. Do not change either value; they are two different layers of the same feature,
- * not synonyms of one another.
+ * The sidecar's boot-snapshot handler, shell-only. DISTINCT from `SIDECAR_STORE_SNAPSHOT` (the
+ * renderer-facing Tauri COMMAND). Phase 85 (85-16) renamed it from `sidecar:store-snapshot`: the
+ * command now builds the snapshot from the Rust `StoreHost` and asks this channel only under
+ * `GAMELIB_STORE=ts` (its result is then returned unchanged) or for a boot store Rust does not
+ * open. Under `rust` the command's result carries one extra key, `STORE_REV_KEY`, mapping each
+ * Rust-read store to its rev.
  */
-export const STORE_SNAPSHOT_CHANNEL = 'sidecar:store-snapshot' as const
+export const STORE_SNAPSHOT_CHANNEL = 'store:ts-snapshot' as const
+
+/**
+ * The key beside the store names in the Rust snapshot under which each store's rev rides
+ * (`{ [store]: rev }`). It can never be a store name: store names are `[A-Za-z0-9_-]` (85-16).
+ */
+export const STORE_REV_KEY = '@rev' as const
 
 /**
  * `frontendMessage` push channel (D-06) carrying a single `StoreChangedPayload` argument,

@@ -31,7 +31,31 @@
  *     `STORE_UNIVERSE` below for why);
  *   - has zero imports of Electron, `fs`, or `path`;
  *   - has zero side effects — every export below is pure data or a pure function.
+ *
+ * Phase 85 (85-16, T-85-42): the policy DATA lives in `./ipc/storeChannels.json`, read here and
+ * by the Rust shell (`src-tauri/src/store_policy.rs`, which ports the functions below). The two
+ * sides cannot drift: both run every row of `common/__fixtures__/storePolicyVectors.json`. The
+ * comments below still describe each list; edit the JSON to change one.
  */
+
+import storeChannels from './ipc/storeChannels.json'
+
+/** A store's read policy: every top-level key (`'*'`) or the listed keys. */
+type FieldPolicy = readonly string[] | '*'
+
+/**
+ * The JSON's allow-list with its `'*'` entries narrowed. A string that is not `'*'` cannot come
+ * through as a wildcard: it fails closed (an empty list), and the Rust side refuses to parse it.
+ */
+function narrowAllowlist(
+  raw: Record<string, readonly string[] | string>
+): Record<string, FieldPolicy> {
+  const out: Record<string, FieldPolicy> = {}
+  for (const [store, policy] of Object.entries(raw)) {
+    out[store] = policy === '*' ? '*' : Array.isArray(policy) ? policy : []
+  }
+  return out
+}
 
 /**
  * CR-01 (Phase 29 code review): key path segments that may NEVER appear in a store
@@ -85,76 +109,18 @@ export function isSafeKeyPath(key: string): boolean {
  *     — never included in any sendFrontendMessage payload or HumbleAuthState." This is
  *     the exact field whose triple-duplicated deny-list omission motivated this module.
  *   - gogConfigStore.credentials      — `GOGLoginData` (access/refresh tokens).
+ *
+ * Notes the JSON cannot carry, per entry:
+ *   - `'*'` stores (`timestampStore`, `gogSyncStore`, `gogPrivateBranches`, `wikigameinfo`) are
+ *     open index signatures with no secret fields on their shapes.
+ *   - `expired` (gog, nile, humble, and legendary since Phase 49 D-05) and
+ *     `steamConfigStore.credentialsMissing` are non-secret boolean verdicts the sign-in probe
+ *     proved; the Manage Accounts tile and the Library sign-in notice read them.
+ *   - `steamBottleConfigStore` (SteamBottleConfig, src/common/types/steam.ts) carries no secret
+ *     fields: bottle auth is opaque (D-04 / WR-02, 17-17).
  */
-export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
-  configStore: [
-    'userHome',
-    'userInfo',
-    'games',
-    'theme',
-    'zoomPercent',
-    'contentFontFamily',
-    'actionsFontFamily',
-    'allTilesInColor',
-    'titlesAlwaysVisible',
-    'hideTitles',
-    'cleanTiles',
-    'disableDialogBackdropClose',
-    'disableAnimations',
-    'language',
-    'general-logs',
-    'window-props',
-    'settings',
-    'skipVcRuntime',
-    'showSnapWarning',
-    'customThemes'
-  ],
-  wineDownloaderInfoStore: ['wine-releases'],
-  gogInstalledGamesStore: ['installed'],
-  // Open index signature ({ [K: string]: { firstPlayed, lastPlayed, totalPlayed } }) —
-  // no secret fields exist on this shape.
-  timestampStore: '*',
-  fontsStore: ['fonts'],
-  // `credentials` (GOGLoginData) omitted — see header comment.
-  // `expired` is a non-secret boolean verdict (the sign-in probe proved the
-  // stored credential rejected) — the same shape as steamConfigStore.credentialsMissing.
-  gogConfigStore: ['userData', 'isLoggedIn', 'expired'],
-  // `refreshToken` omitted — safeStorage-encrypted Steam session token, see header comment.
-  // `credentialsMissing` is a non-secret boolean verdict (the stored credential
-  // was proven absent) — the Manage Accounts tile reads it to stop claiming a
-  // clean signed-in state, exactly as it reads humbleConfigStore.expired below.
-  steamConfigStore: ['isLoggedIn', 'userData', 'credentialsMissing'],
-  // SteamBottleConfig (src/common/types/steam.ts:39) carries no secret fields — bottle
-  // auth is opaque (D-04 / WR-02, 17-17), so there is nothing to redeem here.
-  steamBottleConfigStore: [
-    'bottleName',
-    'wineVersion',
-    'wineCrossoverBottle',
-    'provisioned'
-  ],
-  // `expired`: non-secret boolean verdict, like steamConfigStore.credentialsMissing.
-  nileConfigStore: ['userData', 'expired'],
-  // Phase 49 D-05: `expired` is a non-secret boolean verdict (legendary's own
-  // "Stored credentials are no longer valid" proven by the sign-in probe).
-  legendaryConfigStore: ['expired'],
-  // `sessionCookie` (safeStorage-encrypted 'humble:v1:' ciphertext) and `csrfToken`
-  // (StoreStructure: "Main-process-only — never included in any sendFrontendMessage
-  // payload or HumbleAuthState") are both omitted — see header comment.
-  humbleConfigStore: [
-    'isLoggedIn',
-    'userData',
-    'encryptionDegraded',
-    'expired'
-  ],
-  sideloadedStore: ['games', 'installed'],
-  downloadManager: ['queue', 'finished'],
-  // Open index signatures — no secret fields exist on any of these shapes.
-  gogSyncStore: '*',
-  gogPrivateBranches: '*',
-  wikigameinfo: '*',
-  migrationsStore: ['appliedMigrations'],
-  gameOverridesStore: ['overrides']
-}
+export const STORE_ALLOWLIST: Readonly<Record<string, FieldPolicy>> =
+  narrowAllowlist(storeChannels.storeAllowlist)
 
 /**
  * `CacheStore`s (src/backend/cache.ts, src/frontend/helpers/stores.ts) are NOT
@@ -189,21 +155,12 @@ export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
  * store yields an EMPTY object `{}` from `filterStoreSnapshot()` — the same behavior it
  * has under Tauri today (no store-fetch path exists for it yet).
  */
-export const DENIED_CACHE_STORES: readonly string[] = ['humble_library']
+export const DENIED_CACHE_STORES: readonly string[] =
+  storeChannels.deniedCacheStores
 
 /**
- * D-13: the five dynamically-named `CacheStore`s that are part of the synchronous boot
- * read path even though they are not `ValidStoreName`s. See `BOOT_SET_STORES` below.
- */
-const BOOT_SET_CACHE_STORE_NAMES: readonly string[] = [
-  'legendary_library',
-  'gog_library',
-  'nile_library',
-  'steam_library'
-]
-
-/**
- * Recognized cache-store names — the boot-set four plus the denied one.
+ * Recognized cache-store names — the boot-set four (`legendary_library`, `gog_library`,
+ * `nile_library`, `steam_library`, D-13) plus the denied one.
  *
  * WR-02 (Phase 29 code review): exported so the WRITE path (`storeWriteHandlers.ts`)
  * can gate `storeNew` on it. Before that, `storeNew` constructed a real `Store` for ANY
@@ -211,10 +168,8 @@ const BOOT_SET_CACHE_STORE_NAMES: readonly string[] = [
  * `${userData}/store_cache/<name>.json` junk files that guard (c) then made permanently
  * unwritable — a pure DoS vector with no legitimate consumer.
  */
-export const RECOGNIZED_CACHE_STORE_NAMES: readonly string[] = [
-  ...BOOT_SET_CACHE_STORE_NAMES,
-  ...DENIED_CACHE_STORES
-]
+export const RECOGNIZED_CACHE_STORE_NAMES: readonly string[] =
+  storeChannels.recognizedCacheStoreNames
 
 /**
  * A syntactically plausible dynamic (cache-)store name: letters, digits, `_`, `-`,
@@ -228,7 +183,9 @@ export const RECOGNIZED_CACHE_STORE_NAMES: readonly string[] = [
  * import this module, so there is no cost to sharing it. No `g` flag — a shared regex
  * with `lastIndex` state would be its own hazard.
  */
-export const CACHE_STORE_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
+export const CACHE_STORE_NAME_PATTERN = new RegExp(
+  storeChannels.cacheStoreNamePattern
+)
 
 /**
  * `isAllowedStoreField(storeName, key)` — FAIL CLOSED.
@@ -318,13 +275,8 @@ export function isAllowedStoreField(storeName: string, key: string): boolean {
 // Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
 // flagged the previously-exported form as a used-in-module finding -- no
 // external consumer references it).
-const WRITE_DENIED_FIELDS: Record<string, readonly string[]> = {
-  configStore: ['settings', 'userHome', 'userInfo'],
-  gogConfigStore: ['userData'],
-  steamConfigStore: ['userData'],
-  nileConfigStore: ['userData'],
-  humbleConfigStore: ['userData']
-}
+const WRITE_DENIED_FIELDS: Readonly<Record<string, readonly string[]>> =
+  storeChannels.writeDeniedFields
 
 /**
  * `isWritableStoreField(storeName, key)` — the WRITE-side predicate. FAIL CLOSED, and
@@ -384,34 +336,13 @@ export function filterStoreSnapshot(
  * (run by `initStateSubscriptions`) and the store modules' import-time mirror reads read SYNCHRONOUSLY, BEFORE React mounts
  * (29-RESEARCH.md Finding 1), plus the four cache-store names that are also read
  * synchronously at that same boot point even though they are not `ValidStoreName`s.
+ * Phase 49: `legendaryConfigStore` is in the boot set because the Library sign-in notice reads
+ * `expired` SYNCHRONOUSLY at render.
  */
-export const BOOT_SET_STORES: readonly string[] = [
-  'configStore',
-  'gogConfigStore',
-  'gogInstalledGamesStore',
-  'nileConfigStore',
-  // Phase 49: the Library sign-in notice reads `expired` SYNCHRONOUSLY at render,
-  // so it must be hydrated at boot rather than returning undefined until a lazy fetch.
-  'legendaryConfigStore',
-  'steamConfigStore',
-  'humbleConfigStore',
-  'wineDownloaderInfoStore',
-  'sideloadedStore',
-  'gameOverridesStore',
-  ...BOOT_SET_CACHE_STORE_NAMES
-]
+export const BOOT_SET_STORES: readonly string[] = storeChannels.bootSetStores
 
 /** Every `ValidStoreName` not in `BOOT_SET_STORES` — hydrated lazily, on first fetch. */
-export const LAZY_STORES: readonly string[] = [
-  'steamBottleConfigStore',
-  'timestampStore',
-  'fontsStore',
-  'downloadManager',
-  'gogSyncStore',
-  'gogPrivateBranches',
-  'wikigameinfo',
-  'migrationsStore'
-]
+export const LAZY_STORES: readonly string[] = storeChannels.lazyStores
 
 /** `BOOT_SET_STORES` ∪ `LAZY_STORES` — the full store universe this policy covers. */
 export const STORE_UNIVERSE: readonly string[] = [

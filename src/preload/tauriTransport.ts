@@ -35,6 +35,7 @@ import {
   STORE_NEW_CHANNEL,
   STORE_CHANGED_CHANNEL,
   STORE_LAZY_MISS_MARKER,
+  STORE_REV_KEY,
   type StoreChangedPayload
 } from 'common/types/sidecarTransport'
 import { isAllowedStoreField, isSafeKeyPath, isWritableStoreField } from 'common/types/storePolicy'
@@ -318,6 +319,9 @@ export function registerStore(storeName: string, options?: Record<string, unknow
 export async function hydrateStoreSnapshot(): Promise<void> {
   const result = await tauriInvoke<StoreSnapshot>(SIDECAR_STORE_SNAPSHOT)
   for (const [storeName, values] of Object.entries(result ?? {})) {
+    // Phase 85 (85-16): the Rust snapshot carries each store's rev under STORE_REV_KEY, which can
+    // never be a store name; the stale-push guard reads it (85-17).
+    if (storeName === STORE_REV_KEY) continue
     // WR-07: REPLACE, do not merge. See `hydrateStore` below for the rationale.
     snapshot[storeName] = { ...values }
     hydrated.add(storeName)

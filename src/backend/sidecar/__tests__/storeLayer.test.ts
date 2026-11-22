@@ -135,7 +135,7 @@ function asProbeable(instance: unknown): ProbeableStore {
   return instance as ProbeableStore
 }
 
-/** Invokes the real registered `sidecar:store-snapshot` handler directly off the recorder. */
+/** Invokes the real registered `store:ts-snapshot` handler directly off the recorder. */
 async function invokeStoreSnapshot(
   ipc: Pick<IpcRegistry, 'getHandler'> = bootServices.host.ipc
 ): Promise<Record<string, unknown>> {

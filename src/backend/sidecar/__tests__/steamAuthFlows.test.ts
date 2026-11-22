@@ -293,7 +293,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   // written through tokenStore.current().setToken() exactly as SteamUser's real
   // 'authenticated' handler does (user.ts) — round-trips over the real
   // rustInvoke wire protocol (never a direct configStore write), and no
-  // snapshot served by sidecar:store-snapshot ever surfaces a refreshToken
+  // snapshot served by store:ts-snapshot ever surfaces a refreshToken
   // field for steamConfigStore.
   it('Test 4 (token seam): a successful QR poll writes the token through the TokenStore seam via rustInvoke, and it never surfaces in a store snapshot', async () => {
     jest
@@ -354,7 +354,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       'refreshToken',
       'super-secret-should-never-leave-the-sidecar'
     )
-    writeInvoke(input, 'snapshot-1', 'sidecar:store-snapshot', [])
+    writeInvoke(input, 'snapshot-1', 'store:ts-snapshot', [])
     await flush()
     const snapshotResponse = frames.find(
       (frame) => frame.id === 'snapshot-1'

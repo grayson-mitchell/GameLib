@@ -124,7 +124,7 @@ describe('renderer channel allow-list', () => {
       'trayResolveRunner',
       'shellWindowFocused',
       'handleProtocolUrl',
-      'sidecar:store-snapshot',
+      'store:ts-snapshot',
       'minimizeWindow'
     ]) {
       expect(l.has(n)).toBe(false)
