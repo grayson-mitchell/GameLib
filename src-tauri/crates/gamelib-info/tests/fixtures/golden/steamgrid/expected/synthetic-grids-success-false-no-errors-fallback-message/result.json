@@ -1,0 +1,14 @@
+{
+  "ops": [
+    {
+      "error": "Failed to get grids"
+    },
+    {
+      "error": "Failed to get heroes"
+    }
+  ],
+  "requests": [
+    "GET https://www.steamgriddb.com/api/v2/grids/game/77",
+    "GET https://www.steamgriddb.com/api/v2/heroes/game/77"
+  ]
+}

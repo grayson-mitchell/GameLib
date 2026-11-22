@@ -1,0 +1,10 @@
+{
+  "ops": [
+    {
+      "error": "first problem, second problem"
+    }
+  ],
+  "requests": [
+    "GET https://www.steamgriddb.com/api/v2/search/autocomplete/Celeste"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "ops": [
+    {
+      "ok": []
+    }
+  ],
+  "requests": [
+    "GET https://www.steamgriddb.com/api/v2/heroes/game/9"
+  ]
+}

@@ -33,7 +33,12 @@ import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import { createTestStoreRoot } from 'backend/testUtils/testStoreRoot'
 import type { StoreRoot } from 'backend/stores/storeRoot'
 import * as environment from 'backend/constants/environment'
-import { FIXTURES_ROOT, oracleMode } from './recorder'
+import {
+  FIXTURES_ROOT,
+  oracleMode,
+  recordedCaseDir,
+  type OracleMode
+} from './recorder'
 
 export type OraclePlatform = 'mac' | 'linux' | 'windows'
 
@@ -271,4 +276,21 @@ export function assertManifest(
 /** Test-only: an empty case list must fail the manifest guard. Each oracle test calls it. */
 export function expectEmptyCasesToFail(slice: string, minFloor: number): void {
   expect(() => assertManifest(slice, [], minFloor)).toThrow(/below the floor/)
+}
+
+/**
+ * A case flagged `"live": true` is recorded once by the operator from the real keyed service
+ * (86-07, D-09). In compare and write modes a live case with no recording is a failure, never a
+ * skip: a silent skip would let the golden suite go green over cases that were never recorded
+ * (T-86-14). Record mode needs no recording (it is making one).
+ */
+export function assertLiveRecorded(
+  slice: string,
+  c: { id: string; live?: boolean },
+  mode: OracleMode = oracleMode()
+): void {
+  if (!c.live || mode === 'record') return
+  if (!existsSync(join(recordedCaseDir(slice, c.id), 'exchanges.json'))) {
+    throw new Error(`live case not recorded: ${c.id}`)
+  }
 }

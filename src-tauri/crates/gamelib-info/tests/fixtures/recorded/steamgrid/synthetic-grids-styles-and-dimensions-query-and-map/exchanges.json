@@ -1,0 +1,22 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://www.steamgriddb.com/api/v2/grids/game/5254315?dimensions=460x215,920x430&styles=alternate,material",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "authorization": "REDACTED",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyFile": "body-1.json"
+    },
+    "synthetic": true
+  }
+]

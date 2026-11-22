@@ -1,0 +1,22 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://www.steamgriddb.com/api/v2/search/autocomplete/Celeste",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "authorization": "REDACTED",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 401,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyFile": "body-1.json"
+    },
+    "synthetic": true
+  }
+]

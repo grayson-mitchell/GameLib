@@ -1,0 +1,16 @@
+{
+  "ops": [
+    {
+      "ok": [
+        {
+          "id": 1,
+          "url": "https://cdn2.steamgriddb.com/grid/a.png",
+          "thumb": "https://cdn2.steamgriddb.com/thumb/a.jpg"
+        }
+      ]
+    }
+  ],
+  "requests": [
+    "GET https://www.steamgriddb.com/api/v2/grids/game/5254315?dimensions=460x215,920x430&styles=alternate,material"
+  ]
+}

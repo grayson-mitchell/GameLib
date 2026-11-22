@@ -1,0 +1,19 @@
+{
+  "ops": [
+    {
+      "ok": [
+        {
+          "id": 5254315,
+          "name": "Dead Cells"
+        },
+        {
+          "id": 42,
+          "name": "Dead Cells: Bad Seed"
+        }
+      ]
+    }
+  ],
+  "requests": [
+    "GET https://www.steamgriddb.com/api/v2/search/autocomplete/Dead%20Cells"
+  ]
+}

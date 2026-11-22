@@ -1,0 +1,168 @@
+[
+  {
+    "id": "synthetic-no-key-empty-no-request",
+    "note": "no key: all three handlers answer [] and the TS makes no request",
+    "key": "none",
+    "ops": [
+      { "op": "search", "query": "Celeste" },
+      { "op": "grids", "gameId": 1 },
+      { "op": "heroes", "gameId": 1 }
+    ]
+  },
+  {
+    "id": "synthetic-search-401-rethrows",
+    "note": "a 401 from the service rethrows with axios's status message (the renderer shows the provider failed)",
+    "key": "set",
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/api/v2/search/autocomplete/Celeste",
+        "status": 401,
+        "headers": { "content-type": "application/json" },
+        "body": "{\"success\":false,\"errors\":[\"Unauthorized\"]}"
+      }
+    ],
+    "ops": [{ "op": "search", "query": "Celeste" }]
+  },
+  {
+    "id": "synthetic-search-maps-id-and-name-only",
+    "note": "the handler keeps {id, name} and drops every other field; the query is path-encoded",
+    "key": "set",
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/api/v2/search/autocomplete/Dead%20Cells",
+        "status": 200,
+        "headers": { "content-type": "application/json" },
+        "body": "{\"success\":true,\"data\":[{\"id\":5254315,\"name\":\"Dead Cells\",\"types\":[\"steam\",\"gog\"],\"verified\":true,\"release_date\":1535500800},{\"id\":42,\"name\":\"Dead Cells: Bad Seed\",\"types\":[],\"verified\":false}]}"
+      }
+    ],
+    "ops": [{ "op": "search", "query": "Dead Cells" }]
+  },
+  {
+    "id": "synthetic-search-success-false-joins-errors",
+    "note": "HTTP 200 with success:false throws the errors joined with ', '",
+    "key": "set",
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/api/v2/search/autocomplete/Celeste",
+        "status": 200,
+        "headers": { "content-type": "application/json" },
+        "body": "{\"success\":false,\"errors\":[\"first problem\",\"second problem\"]}"
+      }
+    ],
+    "ops": [{ "op": "search", "query": "Celeste" }]
+  },
+  {
+    "id": "synthetic-grids-success-false-no-errors-fallback-message",
+    "note": "success:false with no errors list throws the fixed fallback message per endpoint",
+    "key": "set",
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/api/v2/grids/game/77",
+        "status": 200,
+        "headers": { "content-type": "application/json" },
+        "body": "{\"success\":false}"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v2/heroes/game/77",
+        "status": 200,
+        "headers": { "content-type": "application/json" },
+        "body": "{\"success\":false,\"errors\":[]}"
+      }
+    ],
+    "ops": [
+      { "op": "grids", "gameId": 77 },
+      { "op": "heroes", "gameId": 77 }
+    ]
+  },
+  {
+    "id": "synthetic-grids-styles-and-dimensions-query-and-map",
+    "note": "pins the decoded query (comma-joined dimensions and styles, not percent-escaped) and the {id,url,thumb} map",
+    "key": "set",
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/api/v2/grids/game/5254315",
+        "status": 200,
+        "headers": { "content-type": "application/json" },
+        "body": "{\"success\":true,\"data\":[{\"id\":1,\"score\":0,\"style\":\"alternate\",\"width\":920,\"height\":430,\"url\":\"https://cdn2.steamgriddb.com/grid/a.png\",\"thumb\":\"https://cdn2.steamgriddb.com/thumb/a.jpg\",\"author\":{\"name\":\"x\"}}]}"
+      }
+    ],
+    "ops": [
+      {
+        "op": "grids",
+        "gameId": 5254315,
+        "styles": ["alternate", "material"],
+        "dimensions": ["460x215", "920x430"]
+      }
+    ]
+  },
+  {
+    "id": "synthetic-heroes-empty-arrays-send-no-params",
+    "note": "empty styles and dimensions arrays add no query parameters",
+    "key": "set",
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/api/v2/heroes/game/9",
+        "status": 200,
+        "headers": { "content-type": "application/json" },
+        "body": "{\"success\":true,\"data\":[]}"
+      }
+    ],
+    "ops": [{ "op": "heroes", "gameId": 9, "styles": [], "dimensions": [] }]
+  },
+  {
+    "id": "live-search-celeste",
+    "note": "recorded live from SteamGridDB",
+    "live": true,
+    "key": "set",
+    "ops": [{ "op": "search", "query": "Celeste" }]
+  },
+  {
+    "id": "live-search-hollow-knight-with-space",
+    "note": "recorded live; a title with a space pins the percent-encoded path",
+    "live": true,
+    "key": "set",
+    "ops": [{ "op": "search", "query": "Hollow Knight" }]
+  },
+  {
+    "id": "live-grids-no-styles",
+    "note": "recorded live: search, then grids for the first result with no styles or dimensions",
+    "live": true,
+    "key": "set",
+    "ops": [
+      { "op": "search", "query": "Celeste" },
+      { "op": "grids", "gameIdFromSearch": true }
+    ]
+  },
+  {
+    "id": "live-grids-styles-and-dimensions",
+    "note": "recorded live: grids with styles [alternate] and dimensions [460x215, 920x430]",
+    "live": true,
+    "key": "set",
+    "ops": [
+      { "op": "search", "query": "Celeste" },
+      {
+        "op": "grids",
+        "gameIdFromSearch": true,
+        "styles": ["alternate"],
+        "dimensions": ["460x215", "920x430"]
+      }
+    ]
+  },
+  {
+    "id": "live-heroes",
+    "note": "recorded live: heroes for the first search result",
+    "live": true,
+    "key": "set",
+    "ops": [
+      { "op": "search", "query": "Celeste" },
+      { "op": "heroes", "gameIdFromSearch": true }
+    ]
+  }
+]
