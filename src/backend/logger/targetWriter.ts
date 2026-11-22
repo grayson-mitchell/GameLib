@@ -159,17 +159,20 @@ export default class LogWriter {
       (typeof options === 'string' ? options : options?.prefix) ??
       LogPrefix.General
     const rotate = this.#claimRotate()
+    // The call-time clock (D-12): a line held behind a Promise message is enqueued later, but is
+    // stamped now (WR-10).
+    const at = Date.now()
     // Convert here, synchronously, so the writer knows whether the message is asynchronous: the
     // forwarder would hold such a line in its own chain, which this writer's later writes cannot
     // see, and a later write could then overtake it (WR-08).
     const body = stringifyLogValue(message)
     if (typeof body === 'string') {
       if (this.#pending === 0) {
-        logLine(this.#target, rotate, level, prefix, body)
+        logLine(this.#target, rotate, level, prefix, body, at)
       } else {
         this.#extend(
           this.#tail.then(() => {
-            logLine(this.#target, rotate, level, prefix, body)
+            logLine(this.#target, rotate, level, prefix, body, at)
           })
         )
       }
@@ -183,7 +186,7 @@ export default class LogWriter {
           .then(() => body)
           .then(
             (text) => {
-              logLine(this.#target, rotate, level, prefix, text)
+              logLine(this.#target, rotate, level, prefix, text, at)
             },
             () => {
               if (rotate) oweLogRotation(this.#target)

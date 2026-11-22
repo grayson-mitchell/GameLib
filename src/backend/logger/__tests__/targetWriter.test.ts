@@ -365,6 +365,67 @@ describe('LogWriter facade over the forwarder', () => {
     })
   })
 
+  describe('timestamps are taken at the call, not when the chain reaches the line (WR-10, D-12)', () => {
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    it('a Promise message and a line behind it keep their call-time ts and tz', async () => {
+      jest.useFakeTimers({ now: new Date(2026, 10, 20, 13, 5, 9) })
+      const { index, LogWriter, frames } = load()
+      const w = new LogWriter(GAME, false)
+      let release: (v: string) => void = () => undefined
+      const slow = new Promise<string>((resolve) => {
+        release = resolve
+      })
+      const promiseCall = Date.now()
+      void w.logInfo(slow)
+      jest.setSystemTime(promiseCall + 10_000)
+      const behindCall = Date.now()
+      void w.logWarning('logged behind the promise')
+      jest.setSystemTime(promiseCall + 30_000)
+      release('slow line')
+      await index.flushLogForwarder()
+      const entries = batchesFor(frames, 'game').flatMap((b) => b.entries)
+      expect(entries).toHaveLength(2)
+      expect(entries[0]).toMatchObject({
+        line: {
+          ts: promiseCall,
+          tz: -new Date(promiseCall).getTimezoneOffset(),
+          msg: 'slow line'
+        }
+      })
+      expect(entries[1]).toMatchObject({
+        line: {
+          ts: behindCall,
+          tz: -new Date(behindCall).getTimezoneOffset(),
+          msg: 'logged behind the promise'
+        }
+      })
+    })
+
+    it('a Promise message that is already queued behind another keeps its own call time too', async () => {
+      jest.useFakeTimers({ now: new Date(2026, 10, 20, 13, 5, 9) })
+      const { index, LogWriter, frames } = load()
+      const w = new LogWriter(GAME, false)
+      let releaseFirst: (v: string) => void = () => undefined
+      const first = new Promise<string>((resolve) => {
+        releaseFirst = resolve
+      })
+      void w.logInfo(first)
+      jest.setSystemTime(Date.now() + 5_000)
+      const secondCall = Date.now()
+      void w.logInfo(Promise.resolve('second'))
+      jest.setSystemTime(secondCall + 20_000)
+      releaseFirst('first')
+      await index.flushLogForwarder()
+      const entries = batchesFor(frames, 'game').flatMap((b) => b.entries)
+      expect(entries[1]).toMatchObject({
+        line: { ts: secondCall, msg: 'second' }
+      })
+    })
+  })
+
   it('accepts a 255-byte appName and one with spaces', async () => {
     const { index, LogWriter, frames } = load()
     await new LogWriter(

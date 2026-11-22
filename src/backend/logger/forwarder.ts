@@ -287,17 +287,20 @@ export class LogForwarder {
   /**
    * Formats nothing: stamps the call-time clock (D-12), converts the value to text and queues one
    * line. A Promise-valued message holds the later lines of the same writer until it settles, so
-   * one writer's lines keep their call order. Never throws and never waits.
+   * one writer's lines keep their call order. Never throws and never waits. `at` is the call-time
+   * clock when the caller took it earlier than this call (a target writer queues a line behind a
+   * Promise message and reaches here later, WR-10); it defaults to now.
    */
   logLine(
     target: LogFrameTarget,
     rotate: boolean,
     level: LogLevel,
     prefix: string,
-    message: unknown
+    message: unknown,
+    at?: number
   ): void {
     try {
-      const ts = Date.now()
+      const ts = at ?? Date.now()
       const tz = -new Date(ts).getTimezoneOffset()
       const emit = (msg: string): void => {
         // Prefixes alone make no line (the old formatter's empty-body rule). A rotation the call

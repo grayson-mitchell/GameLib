@@ -109,15 +109,19 @@ function trackLogSettle(link: Promise<unknown>): void {
   logForwarder.trackSettle(link)
 }
 
-/** Queues one structured line for a typed target (the facade's `logDebug|Info|Warning|Error`). */
+/**
+ * Queues one structured line for a typed target (the facade's `logDebug|Info|Warning|Error`). `at`
+ * is the call-time clock the facade took before it held the line (WR-10, D-12).
+ */
 function logLine(
   target: LogFrameTarget,
   rotate: boolean,
   level: LogLevel,
   prefix: string,
-  message: unknown
+  message: unknown,
+  at?: number
 ): void {
-  logForwarder.logLine(target, rotate, level, prefix, message)
+  logForwarder.logLine(target, rotate, level, prefix, message, at)
 }
 
 /**
