@@ -86,6 +86,8 @@ export interface Game {
     dependencies?: string[]
     /** Auto-update: no user present; other stores ignore it. */
     unattended?: boolean
+    /** Quick 261122-rgi: the complete set of opt-in Steam DLC appIds to have enabled; other stores ignore it. */
+    steamOptInDlc?: string[]
   }) => Promise<InstallResult>
   forceUninstall: () => Promise<void>
   stop: (stopWine?: boolean) => Promise<void>

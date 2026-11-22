@@ -1154,6 +1154,14 @@ describe('updateQueueElement - 74-19: unattended flag reaches game.update', () =
     await updateQueueElement(queueDeps, makeParams())
     expect(updateMock.mock.calls[0][0].unattended).toBe(false)
   })
+
+  it('261122-rgi: forwards steamOptInDlc into update()', async () => {
+    await updateQueueElement(
+      queueDeps,
+      makeParams({ steamOptInDlc: ['313250'] })
+    )
+    expect(updateMock.mock.calls[0][0].steamOptInDlc).toEqual(['313250'])
+  })
 })
 
 describe('updateQueueElement - 74-27: Steam hand-off holds Updating (UAT 17)', () => {

@@ -299,6 +299,13 @@
             "onlineRequiredValue": "Needs a connection to start",
             "open": "Open",
             "openPrefix": "Open prefix",
+            "optInDlc": {
+                "busy": "Wait for the current download or update to finish.",
+                "failed": "Couldn't change {{name}}. Details are in the log.",
+                "note": "Turning one on downloads it. Turning it off removes its files.",
+                "steamManaged": "Steam manages this copy. Turn optional content on or off in Steam: the game's Properties → DLC.",
+                "title": "Optional content"
+            },
             "platforms": "Platforms",
             "reason": {
                 "installing": "Wait for the install to finish",
@@ -1174,6 +1181,10 @@
             "signInRequiredAction": "Sign in to Steam",
             "signInRequiredNotice": "GameLib isn't signed in to Steam, so it can't download this game. Sign in to Steam again, then install.",
             "withOptionsLabel": "Install with options…"
+        },
+        "optInDlc": {
+            "finished": "Optional content updated",
+            "steamManaged": "Steam manages this copy's optional content. Turn it on or off in Steam."
         },
         "overlay": {
             "exit": {

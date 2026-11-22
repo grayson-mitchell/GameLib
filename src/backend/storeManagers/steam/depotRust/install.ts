@@ -216,7 +216,9 @@ export async function downloadSteamDepotsRust(
         appId,
         oldGidByDepot: opts.delta.oldGidByDepot,
         refs,
-        acfDlcOwner
+        acfDlcOwner,
+        // Quick 261122-rgi (D-02): opt-in DLC the user switched off.
+        disabledOptInDepots: refs.optInRetiredDepots
       })
       for (const r of decision.retire) {
         throwIfAborted(opts.signal)

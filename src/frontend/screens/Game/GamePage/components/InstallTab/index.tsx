@@ -14,6 +14,7 @@ import DangerZone from './DangerZone'
 import EngineRow from './EngineRow'
 import IntegrationRows from './IntegrationRows'
 import NotInstalledFacts from './NotInstalledFacts'
+import OptInDlcRows from './OptInDlcRows'
 import LocationRow from './LocationRow'
 import { OnlineRequiredRow, ThirdPartyRow } from './StaticFactRows'
 import SizeRow from './SizeRow'
@@ -85,6 +86,7 @@ const InstallTab = ({ gameInfo, platform, handleUpdate, hasUpdate }: Props) => {
         <HumbleOriginInfo gameInfo={gameInfo} />
         <NativePortInfo gameInfo={gameInfo} platform={platform} />
       </div>
+      <OptInDlcRows gameInfo={gameInfo} />
       <IntegrationRows gameInfo={gameInfo} platform={platform} />
       {gameInfo.is_installed && (
         <DangerZone gameInfo={gameInfo} gates={gates} />

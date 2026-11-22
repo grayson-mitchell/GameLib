@@ -520,7 +520,9 @@ async function updateQueueElement(
       language: params.installLanguage,
       dlcs: params.installDlcs,
       dependencies: params.dependencies,
-      unattended: params.unattended === true
+      unattended: params.unattended === true,
+      // Quick 261122-rgi: same fixed-list rule as installQueueElement's literal.
+      steamOptInDlc: params.steamOptInDlc
     })
 
     const { status } = result

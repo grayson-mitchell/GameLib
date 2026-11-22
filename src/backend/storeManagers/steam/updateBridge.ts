@@ -8,6 +8,10 @@
  * `delta` -> map the outcome -> GID-keyed follow-ups on done. A committed delta counts as done
  * even if the abort signal fired or the outcome says cancelled: commit is the point of no return. No retry here (D-16): a failure
  * before commit leaves the old build launchable, and the pipeline's own retries are all there is.
+ * Quick 261122-rgi: `opts.optInDlc` (the complete set of opt-in DLC the user wants enabled) turns the
+ * same job into an add/remove of that DLC's depots: the cached estimate is skipped (it was computed
+ * without the change), the set reaches the estimate and the job as `chosenOptInDlc`, and a depot of
+ * a DLC switched off is retired.
  * Exit contract: no timers or handles are created here.
  */
 import i18next from 'i18next'
@@ -57,7 +61,7 @@ function freshCachedEstimate(steamGame: SteamGame): SteamUpdateEstimate | null {
 
 export async function updateBridgeGame(
   steamGame: SteamGame,
-  opts?: { unattended?: boolean }
+  opts?: { unattended?: boolean; optInDlc?: ReadonlySet<string> }
 ): Promise<InstallResult> {
   const { deps, appId } = steamGame
   const title = steamGame.getGameInfo().title || appId
@@ -82,7 +86,12 @@ export async function updateBridgeGame(
     await existing.promise.catch(() => undefined)
   }
 
-  const run = runBridgeUpdate(steamGame, title, opts?.unattended === true)
+  const run = runBridgeUpdate(
+    steamGame,
+    title,
+    opts?.unattended === true,
+    opts?.optInDlc
+  )
   const entry = { promise: run, aborted: false }
   nativeInstallsInFlight.set(appId, entry)
   void run.then(
@@ -100,7 +109,8 @@ export async function updateBridgeGame(
 async function runBridgeUpdate(
   steamGame: SteamGame,
   title: string,
-  unattended: boolean
+  unattended: boolean,
+  optInDlc?: ReadonlySet<string>
 ): Promise<InstallResult> {
   const { deps, appId } = steamGame
   const logUnattendedFailure = (
@@ -152,9 +162,14 @@ async function runBridgeUpdate(
       status: 'updating',
       context: STEAM_UPDATE_PLANNING_CONTEXT
     })
+    // Quick 261122-rgi: a cached estimate was computed without the opt-in change, so skip it.
     const estimate =
-      freshCachedEstimate(steamGame) ??
-      (await estimateBridgeUpdate(steamGame, { signal, unattended }))
+      (optInDlc ? null : freshCachedEstimate(steamGame)) ??
+      (await estimateBridgeUpdate(steamGame, {
+        signal,
+        unattended,
+        ...(optInDlc ? { chosenOptInDlc: optInDlc } : {})
+      }))
     if ('error' in estimate) {
       if (signal?.aborted) {
         clearStatus()
@@ -187,6 +202,12 @@ async function runBridgeUpdate(
       `updateBridgeGame: appId ${appId} starting delta (branch ${ctx.branch}, oldManifest=${estimate.oldManifestAvailable})`,
       LogPrefix.Steam
     )
+    if (optInDlc) {
+      logInfo(
+        `updateBridgeGame: appId ${appId} opt-in DLC set ${[...optInDlc].join(',') || 'none'}`,
+        LogPrefix.Steam
+      )
+    }
     const outcome = await downloadSteamDepotsRust(appId, {
       installRuntime: deps.steamInstallRuntime,
       steamUser: deps.steamUser,
@@ -197,7 +218,8 @@ async function runBridgeUpdate(
       branch: ctx.branch,
       signal,
       unattended,
-      delta: { oldGidByDepot: ctx.oldGidByDepot }
+      delta: { oldGidByDepot: ctx.oldGidByDepot },
+      ...(optInDlc ? { chosenOptInDlc: optInDlc } : {})
     })
 
     // Commit is the point of no return: a committed delta is finished work whatever the abort
@@ -237,7 +259,12 @@ async function runBridgeUpdate(
     clearStatus()
     notify(deps, {
       title,
-      body: i18next.t('gamelib:steam.update.finished', 'Update finished')
+      body: optInDlc
+        ? i18next.t(
+            'gamelib:steam.optInDlc.finished',
+            'Optional content updated'
+          )
+        : i18next.t('gamelib:steam.update.finished', 'Update finished')
     })
     return { status: 'done' }
   } finally {

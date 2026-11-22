@@ -126,7 +126,9 @@ import VersionRow from '../VersionRow'
 import LocationRow from '../LocationRow'
 import DangerZone from '../DangerZone'
 import UninstallModal from 'frontend/components/UI/UninstallModal'
-import { RowFailure } from '../SwitchRow'
+import { RowFailure, SwitchRow } from '../SwitchRow'
+import OptInDlcRows from '../OptInDlcRows'
+import type { SteamOptInDlcInfo } from 'common/types/steam'
 
 const harness = React as unknown as {
   __flushEffects: () => void
@@ -274,7 +276,9 @@ const mockApi = {
   openFolder: jest.fn(),
   steamRemoveAllCopies: jest.fn(),
   getSteamDeleteRoute: jest.fn(),
-  uninstall: jest.fn()
+  uninstall: jest.fn(),
+  getSteamOptInDlc: jest.fn(),
+  updateGame: jest.fn()
 }
 
 beforeEach(() => {
@@ -291,6 +295,7 @@ beforeEach(() => {
     gamelibDelete: true
   })
   mockApi.uninstall.mockResolvedValue(undefined)
+  mockApi.updateGame.mockResolvedValue(undefined)
   useLibraryState.setState({ refresh: jest.fn().mockResolvedValue(undefined) })
   useUiState.setState({ showDialogModal: jest.fn() })
   ;(globalThis as unknown as { window: unknown }).window = { api: mockApi }
@@ -806,5 +811,215 @@ describe('Danger zone (WR-05)', () => {
       expect(busy?.props['aria-disabled']).toBe(true)
       expect(busy?.props.title).toBeUndefined()
     })
+  })
+})
+
+describe('OptInDlcRows (quick 261122-rgi)', () => {
+  const dlc = (appId: string, installed: boolean, owned: boolean | null) => ({
+    appId,
+    name: `DLC ${appId}`,
+    bytes: 1024 ** 3,
+    owned,
+    installed
+  })
+  const answer = (
+    manage: SteamOptInDlcInfo['manage'],
+    entries: SteamOptInDlcInfo['entries']
+  ): SteamOptInDlcInfo => ({ manage, entries })
+
+  const settle = () => new Promise((resolve) => setImmediate(resolve))
+
+  function render(game: GameInfo, isOverrides: RenderOptions['is'] = {}) {
+    harness.__setContext({ is: makeIs(isOverrides), runner: game.runner })
+    harness.__beginRender()
+    return OptInDlcRows({ gameInfo: game }) as ReactElement<Props> | null
+  }
+
+  // First render queues the read; flush runs it; settle lets it resolve; render shows it.
+  async function mount(game: GameInfo, isOverrides: RenderOptions['is'] = {}) {
+    render(game, isOverrides)
+    harness.__flushEffects()
+    await settle()
+    return render(game, isOverrides)
+  }
+
+  // Renders with the given game status and lets its effects and any re-read run.
+  async function step(game: GameInfo, isOverrides: RenderOptions['is'] = {}) {
+    render(game, isOverrides)
+    harness.__flushEffects()
+    await settle()
+    return render(game, isOverrides)
+  }
+
+  const rowsOf = (tree: ReactElement<Props> | null) =>
+    tree ? walk(tree).filter((el) => el.type === SwitchRow) : []
+  // A SwitchRow carries its failure as a prop, so read it there (the row is not expanded here).
+  const failuresOf = (tree: ReactElement<Props> | null) =>
+    rowsOf(tree).flatMap((row) =>
+      row.props.failure
+        ? [{ props: row.props.failure as Record<string, unknown> }]
+        : []
+    )
+  const lastUpdate = () =>
+    mockApi.updateGame.mock.calls.at(-1)?.[0] as {
+      steamOptInDlc: string[]
+    }
+
+  it('261122-rgi: renders nothing for a non-Steam runner, a not-installed game, a null answer or no shown entries', async () => {
+    mockApi.getSteamOptInDlc.mockResolvedValue(
+      answer('gamelib', [dlc('1', false, true)])
+    )
+    expect(await mount(makeGame('gog'))).toBeNull()
+    expect(mockApi.getSteamOptInDlc).not.toHaveBeenCalled()
+
+    harness.__resetMount()
+    expect(
+      await mount(makeGame('steam', {}, { is_installed: false }))
+    ).toBeNull()
+
+    harness.__resetMount()
+    mockApi.getSteamOptInDlc.mockResolvedValue(null)
+    expect(await mount(makeGame('steam'))).toBeNull()
+
+    harness.__resetMount()
+    mockApi.getSteamOptInDlc.mockResolvedValue(
+      answer('gamelib', [dlc('1', false, false)])
+    )
+    expect(await mount(makeGame('steam'))).toBeNull()
+  })
+
+  it('261122-rgi: a rejected read logs the appName and renders nothing', async () => {
+    mockApi.getSteamOptInDlc.mockRejectedValue(new Error('ipc closed'))
+    expect(await mount(makeGame('steam'))).toBeNull()
+    expect(mockApi.logError).toHaveBeenCalledTimes(1)
+  })
+
+  it('261122-rgi: renders the Optional content group with a row per owned or unknown entry, checked = installed', async () => {
+    mockApi.getSteamOptInDlc.mockResolvedValue(
+      answer('gamelib', [
+        dlc('1', true, true),
+        dlc('2', false, null),
+        dlc('3', false, false)
+      ])
+    )
+    const tree = await mount(makeGame('steam'))
+    const rows = rowsOf(tree)
+    expect(rows.map((r) => r.props.label)).toEqual(['DLC 1', 'DLC 2'])
+    expect(rows.map((r) => r.props.checked)).toEqual([true, false])
+    expect(textOf(tree)).toContain('Optional content')
+    expect(rows[0]?.props.description).toBe('1 GiB')
+  })
+
+  it('261122-rgi: a Steam-managed copy shows disabled rows with the Steam reason and never dispatches', async () => {
+    mockApi.getSteamOptInDlc.mockResolvedValue(
+      answer('steam', [dlc('1', false, true)])
+    )
+    const row = rowsOf(await mount(makeGame('steam')))[0]
+    expect(row?.props.disabled).toBe(true)
+    expect(String(row?.props.disabledReason)).toContain('Properties')
+    ;(row?.props.onToggle as () => void)()
+    expect(mockApi.updateGame).not.toHaveBeenCalled()
+  })
+
+  it('261122-rgi: switching on sends the installed opt-in ids plus the row; switching off sends them minus the row', async () => {
+    const game = makeGame('steam')
+    mockApi.getSteamOptInDlc.mockResolvedValue(
+      answer('gamelib', [dlc('1', true, true), dlc('2', false, true)])
+    )
+    const tree = await mount(game)
+    ;(rowsOf(tree)[1]?.props.onToggle as () => void)()
+    expect(mockApi.updateGame).toHaveBeenCalledTimes(1)
+    expect(lastUpdate().steamOptInDlc).toEqual(['1', '2'])
+
+    harness.__resetMount()
+    const tree2 = await mount(game)
+    ;(rowsOf(tree2)[0]?.props.onToggle as () => void)()
+    expect(lastUpdate().steamOptInDlc).toEqual([])
+  })
+
+  it('261122-rgi: the row is busy with Adding until the game leaves its busy status, then the re-read shows it on', async () => {
+    const game = makeGame('steam')
+    mockApi.getSteamOptInDlc.mockResolvedValueOnce(
+      answer('gamelib', [dlc('1', false, true), dlc('2', false, true)])
+    )
+    const tree = await mount(game)
+    ;(rowsOf(tree)[0]?.props.onToggle as () => void)()
+
+    let after = await step(game, { queued: true })
+    const row = rowsOf(after)[0]
+    expect(row?.props.busy).toBe(true)
+    expect(row?.props.busyLabel).toBe('Adding…')
+    expect(row?.props.checked).toBe(false)
+    // the other row is held while one change runs
+    expect(rowsOf(after)[1]?.props.disabled).toBe(true)
+
+    after = await step(game, { updating: true })
+    expect(rowsOf(after)[0]?.props.busy).toBe(true)
+    expect(mockApi.getSteamOptInDlc).toHaveBeenCalledTimes(1)
+
+    mockApi.getSteamOptInDlc.mockResolvedValueOnce(
+      answer('gamelib', [dlc('1', true, true), dlc('2', false, true)])
+    )
+    after = await step(game)
+    expect(mockApi.getSteamOptInDlc).toHaveBeenCalledTimes(2)
+    expect(rowsOf(after)[0]?.props.checked).toBe(true)
+    expect(rowsOf(after)[0]?.props.busy).toBeFalsy()
+    expect(failuresOf(after)).toHaveLength(0)
+  })
+
+  it('261122-rgi: switching off reads Removing', async () => {
+    const game = makeGame('steam')
+    mockApi.getSteamOptInDlc.mockResolvedValueOnce(
+      answer('gamelib', [dlc('1', true, true)])
+    )
+    const tree = await mount(game)
+    ;(rowsOf(tree)[0]?.props.onToggle as () => void)()
+    const after = await step(game, { updating: true })
+    expect(rowsOf(after)[0]?.props.busyLabel).toBe('Removing…')
+  })
+
+  it('261122-rgi: a re-read that does not show the wanted state shows the inline failure, and Retry repeats the same change', async () => {
+    const game = makeGame('steam')
+    const same = answer('gamelib', [dlc('1', false, null)])
+    mockApi.getSteamOptInDlc.mockResolvedValue(same)
+    const tree = await mount(game)
+    ;(rowsOf(tree)[0]?.props.onToggle as () => void)()
+    await step(game, { updating: true })
+    const after = await step(game)
+
+    const failures = failuresOf(after)
+    expect(failures).toHaveLength(1)
+    expect(failures[0]?.props.message).toBe(
+      "Couldn't change DLC 1. Details are in the log."
+    )
+    expect(rowsOf(after)[0]?.props.checked).toBe(false)
+
+    mockApi.updateGame.mockClear()
+    ;(failures[0]?.props.onRetry as () => void)()
+    expect(lastUpdate().steamOptInDlc).toEqual(['1'])
+  })
+
+  it('261122-rgi: a rejected dispatch fails the row at once', async () => {
+    const game = makeGame('steam')
+    mockApi.getSteamOptInDlc.mockResolvedValue(
+      answer('gamelib', [dlc('1', false, true)])
+    )
+    mockApi.updateGame.mockRejectedValue(new Error('ipc closed'))
+    const tree = await mount(game)
+    ;(rowsOf(tree)[0]?.props.onToggle as () => void)()
+    await settle()
+    const after = render(game)
+    expect(failuresOf(after)).toHaveLength(1)
+    expect(rowsOf(after)[0]?.props.busy).toBeFalsy()
+    expect(mockApi.logError).toHaveBeenCalledTimes(1)
+  })
+
+  it('261122-rgi: every row is held while the game is busy for another reason', async () => {
+    mockApi.getSteamOptInDlc.mockResolvedValue(
+      answer('gamelib', [dlc('1', false, true)])
+    )
+    const row = rowsOf(await mount(makeGame('steam'), { updating: true }))[0]
+    expect(row?.props.disabled).toBe(true)
+    expect(String(row?.props.disabledReason)).toContain('Wait for')
   })
 })

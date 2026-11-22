@@ -418,6 +418,74 @@ describe('collectBranchDepotList (WR-01)', () => {
   })
 })
 
+describe('decideRetirement disabled opt-in DLC (quick 261122-rgi, D-02)', () => {
+  const refs = (over: Record<string, unknown> = {}) => ({
+    depots: [],
+    skippedDepots: [],
+    branchDepotIds: ['700', '800'],
+    fetchedDlcAppIds: [],
+    branchDepotListComplete: true,
+    ...over
+  })
+
+  it('261122-rgi: retires a disabled depot even though it is still on the branch, under the listed owner', async () => {
+    const { decideRetirement } = await import('../retire')
+    const r = decideRetirement({
+      appId: '10',
+      oldGidByDepot: new Map([
+        ['700', 'g7'],
+        ['800', 'g8']
+      ]),
+      refs: refs(),
+      acfDlcOwner: new Map([['700', '313250']]),
+      disabledOptInDepots: [{ depotId: '700', ownerAppId: '10' }]
+    })
+    expect(r.retire).toEqual([{ depotId: '700', gid: 'g7', ownerAppId: '10' }])
+    expect(r.kept).toEqual([{ depotId: '800', reason: 'still-on-branch' }])
+  })
+
+  it('261122-rgi: retires it even when the branch depot list is incomplete', async () => {
+    const { decideRetirement } = await import('../retire')
+    const r = decideRetirement({
+      appId: '10',
+      oldGidByDepot: new Map([['700', 'g7']]),
+      refs: refs({ branchDepotListComplete: false }),
+      acfDlcOwner: new Map(),
+      disabledOptInDepots: [{ depotId: '700', ownerAppId: '10' }]
+    })
+    expect(r.retire.map((d) => d.depotId)).toEqual(['700'])
+  })
+
+  it('261122-rgi: a selected depot is still kept selected', async () => {
+    const { decideRetirement } = await import('../retire')
+    const r = decideRetirement({
+      appId: '10',
+      oldGidByDepot: new Map([['700', 'g7']]),
+      refs: refs({
+        depots: [
+          { depotId: '700', gid: 'x', key: Buffer.alloc(0), ownerAppId: '10' }
+        ]
+      }),
+      acfDlcOwner: new Map(),
+      disabledOptInDepots: [{ depotId: '700', ownerAppId: '10' }]
+    })
+    expect(r.retire).toEqual([])
+    expect(r.kept).toEqual([{ depotId: '700', reason: 'selected' }])
+  })
+
+  it('261122-rgi: with no disabled input a still-on-branch depot stays kept', async () => {
+    const { decideRetirement } = await import('../retire')
+    const r = decideRetirement({
+      appId: '10',
+      oldGidByDepot: new Map([['700', 'g7']]),
+      refs: refs(),
+      acfDlcOwner: new Map()
+    })
+    expect(r.retire).toEqual([])
+    expect(r.kept).toEqual([{ depotId: '700', reason: 'still-on-branch' }])
+  })
+})
+
 describe('decideRetirement owner (IN-03)', () => {
   it('owns a retired depot by its DLC app, else the base app', async () => {
     const { decideRetirement } = await import('../retire')

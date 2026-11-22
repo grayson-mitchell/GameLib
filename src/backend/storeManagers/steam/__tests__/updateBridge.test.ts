@@ -398,6 +398,62 @@ describe('updateBridgeGame', () => {
     expect(lines()).toHaveLength(before)
   })
 
+  describe('opt-in DLC change (quick 261122-rgi)', () => {
+    beforeEach(() => {
+      jest.mocked(downloadSteamDepotsRust).mockResolvedValue({
+        status: 'done',
+        delta: { mode: 'chunk', changedFiles: [] }
+      } as never)
+    })
+
+    it('261122-rgi: skips a fresh cached estimate and passes chosenOptInDlc to the estimate and the job, still with delta', async () => {
+      jest.mocked(getLastKnownSteamUpdateState).mockReturnValue({
+        targetBuild: EST.targetBuild,
+        estimate: { ...EST, computedAt: Date.now() }
+      } as never)
+      const { game } = makeGame()
+      const optInDlc = new Set(['313250'])
+      expect(await updateBridgeGame(game, { optInDlc })).toEqual({
+        status: 'done'
+      })
+      expect(estimateBridgeUpdate).toHaveBeenCalledWith(
+        game,
+        expect.objectContaining({ chosenOptInDlc: optInDlc })
+      )
+      expect(downloadSteamDepotsRust).toHaveBeenCalledWith(
+        '12345',
+        expect.objectContaining({
+          chosenOptInDlc: optInDlc,
+          delta: { oldGidByDepot: expect.any(Map) }
+        })
+      )
+    })
+
+    it('261122-rgi: notifies with the optional-content copy, not the update copy', async () => {
+      const { game } = makeGame()
+      await updateBridgeGame(game, { optInDlc: new Set() })
+      expect(notify).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({ body: 'Optional content updated' })
+      )
+    })
+
+    it('261122-rgi: without optInDlc nothing changes: no chosenOptInDlc key, the update copy', async () => {
+      const { game } = makeGame()
+      await updateBridgeGame(game)
+      expect(
+        jest.mocked(downloadSteamDepotsRust).mock.calls.at(-1)?.[1]
+      ).not.toHaveProperty('chosenOptInDlc')
+      expect(
+        jest.mocked(estimateBridgeUpdate).mock.calls.at(-1)?.[1]
+      ).not.toHaveProperty('chosenOptInDlc')
+      expect(notify).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({ body: 'Update finished' })
+      )
+    })
+  })
+
   it('a concurrent update joins the in-flight run (one job)', async () => {
     let finish: (v: unknown) => void = () => undefined
     jest.mocked(downloadSteamDepotsRust).mockReturnValue(

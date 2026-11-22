@@ -665,6 +665,51 @@ describe('downloadSteamDepots retire rule and committed-wins (WR-01, WR-06)', ()
     expect(stub.jobs[0]?.retiredDepots.map((d) => d.depotId)).toEqual(['777'])
   })
 
+  it('261122-rgi: an empty chosen opt-in set retires the installed opt-in DLC depot under the base owner, fetching its key', async () => {
+    client.getProductInfo.mockImplementation(((_ids: number[]) =>
+      Promise.resolve({
+        apps: {
+          12345: {
+            appinfo: {
+              common: { name: 'Some Game' },
+              depots: {
+                branches: { public: { buildid: 321 } },
+                '500': { manifests: { public: { gid: '5' } } },
+                '700': {
+                  config: { optionaldlc: '888' },
+                  manifests: { public: { gid: '7' } }
+                }
+              },
+              extended: { listofdlc: '888' }
+            }
+          },
+          888: { appinfo: { extended: { optionaldlc: '1' } } }
+        },
+        packages: {}
+      })) as never)
+    const stub = createStubRustDepot()
+    invokeMock.mockImplementation(stub.invoke)
+    client.getDepotDecryptionKey.mockClear()
+    await downloadSteamDepots(APP_ID, {
+      ...OPTS(),
+      chosenOptInDlc: new Set(),
+      delta: {
+        oldGidByDepot: new Map([
+          ['111', G(1)],
+          ['700', G(7)]
+        ])
+      }
+    })
+    expect(stub.jobs[0]?.retiredDepots).toMatchObject([
+      { depotId: '700', ownerAppId: APP_ID }
+    ])
+    expect(client.getDepotDecryptionKey).toHaveBeenCalledWith(
+      Number(APP_ID),
+      700,
+      expect.any(Function)
+    )
+  })
+
   it('retires nothing when the branch depot list is incomplete (DLC info missing)', async () => {
     wirePics({ dlc: false })
     const stub = createStubRustDepot()

@@ -35,7 +35,7 @@ const self = {
     steamSession: { authTrigger: { noteSteamAuthTrigger: note } }
   }
 }
-const run = (o?: { unattended?: boolean }) =>
+const run = (o?: { unattended?: boolean; steamOptInDlc?: string[] }) =>
   SteamGame.prototype.update.call(self as never, o)
 
 describe('SteamGame.update dispatch', () => {
@@ -66,6 +66,30 @@ describe('SteamGame.update dispatch', () => {
   it('neither kind is a clear error', async () => {
     expect(await run()).toMatchObject({ status: 'error' })
     expect(note).toHaveBeenCalledWith('user-install')
+    expect(updateBridgeGame).not.toHaveBeenCalled()
+    expect(updateRegisteredSteamGame).not.toHaveBeenCalled()
+  })
+
+  it('261122-rgi: steamOptInDlc on a bridge install calls updateBridgeGame with the digit-only ids', async () => {
+    jest.mocked(findBridgeInstallBottle).mockReturnValue('b')
+    await run({ steamOptInDlc: ['313250', 'x1', '../2'] })
+    expect(note).toHaveBeenCalledWith('user-install')
+    expect(updateBridgeGame).toHaveBeenCalledWith(self, {
+      optInDlc: new Set(['313250'])
+    })
+  })
+
+  it('261122-rgi: an empty steamOptInDlc is still an opt-in change (switch the last DLC off)', async () => {
+    jest.mocked(findBridgeInstallBottle).mockReturnValue('b')
+    await run({ steamOptInDlc: [] })
+    expect(updateBridgeGame).toHaveBeenCalledWith(self, { optInDlc: new Set() })
+  })
+
+  it('261122-rgi: steamOptInDlc on a non-bridge install is an error and starts nothing', async () => {
+    jest.mocked(readAcfUpdateState).mockResolvedValue({ buildid: '1' } as never)
+    expect(await run({ steamOptInDlc: ['313250'] })).toMatchObject({
+      status: 'error'
+    })
     expect(updateBridgeGame).not.toHaveBeenCalled()
     expect(updateRegisteredSteamGame).not.toHaveBeenCalled()
   })

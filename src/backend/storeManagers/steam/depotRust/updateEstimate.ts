@@ -71,6 +71,8 @@ export async function estimateBridgeUpdate(
     signal?: AbortSignal
     unattended?: boolean
     timeoutMs?: number
+    /** Quick 261122-rgi: the opt-in DLC set the update will apply; forwarded to buildDepotRefs. */
+    chosenOptInDlc?: ReadonlySet<string>
   }
 ): Promise<SteamUpdateEstimate | { error: string }> {
   const { deps, appId } = steamGame
@@ -102,6 +104,7 @@ export async function estimateBridgeUpdate(
       branch: ctx.branch,
       // Not `delta`: that means "run as a chunk-level delta job", and the estimate is not one.
       installedDepotIds: new Set(ctx.oldGidByDepot.keys()),
+      ...(opts.chosenOptInDlc ? { chosenOptInDlc: opts.chosenOptInDlc } : {}),
       signal
     }
     const refs = await buildDepotRefs(appId, depotOpts)

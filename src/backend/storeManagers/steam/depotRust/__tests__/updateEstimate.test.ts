@@ -136,6 +136,22 @@ describe('estimateBridgeUpdate', () => {
     )
   })
 
+  it('261122-rgi: forwards chosenOptInDlc into buildDepotRefs, and omits it when absent', async () => {
+    jest.mocked(summarizeDepots).mockResolvedValue({
+      skippedDepots: [],
+      depots: [{ delta: delta(10 * GB, 600) }, { delta: delta(3 * GB, 300) }]
+    } as never)
+    await estimateBridgeUpdate(game, { chosenOptInDlc: new Set(['313250']) })
+    expect(buildDepotRefs).toHaveBeenLastCalledWith(
+      '12345',
+      expect.objectContaining({ chosenOptInDlc: new Set(['313250']) })
+    )
+    await estimateBridgeUpdate(game, {})
+    expect(
+      jest.mocked(buildDepotRefs).mock.calls.at(-1)?.[1]
+    ).not.toHaveProperty('chosenOptInDlc')
+  })
+
   it.each([[true], [false]])(
     'the lease opts are exactly the reason and appName (unattended=%s)',
     async (unattended) => {

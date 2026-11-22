@@ -482,7 +482,9 @@ export default class SteamGame implements Game {
     return uninstall(this, _args)
   }
 
-  async update(overwrites?: { unattended?: boolean }): Promise<InstallResult> {
+  async update(
+    overwrites?: Parameters<Game['update']>[0]
+  ): Promise<InstallResult> {
     const unattended = overwrites?.unattended === true
     // quick-260817-d61: a user-started Update is a deliberate Steam action —
     // unlock the keyring deferral gate as the first statement. An unattended
@@ -491,6 +493,23 @@ export default class SteamGame implements Game {
       this.deps.steamSession.authTrigger.noteSteamAuthTrigger('user-install')
       // CR-02: the user acting re-arms auto-update for this game.
       clearAutoUpdateAttempt(this.deps, this.appId)
+    }
+    // Quick 261122-rgi (D-01/D-04): an opt-in DLC change. GameLib applies it only to a bridge
+    // install, through the same delta job; any other copy is Steam's to change (Phase 74).
+    if (overwrites?.steamOptInDlc !== undefined) {
+      const optInDlc = new Set(
+        overwrites.steamOptInDlc.filter((id) => /^\d+$/.test(id))
+      )
+      if (bridgeBottle.findBridgeInstallBottle(this.deps.paths, this.appId)) {
+        return updateBridgeGame(this, { optInDlc })
+      }
+      return {
+        status: 'error',
+        error: i18next.t(
+          'gamelib:steam.optInDlc.steamManaged',
+          "Steam manages this copy's optional content. Turn it on or off in Steam."
+        )
+      }
     }
     // Phase 74: bridge installs get the chunk-level delta; Steam-registered
     // installs are handed to Steam; Phase 17 bottle installs are neither.
