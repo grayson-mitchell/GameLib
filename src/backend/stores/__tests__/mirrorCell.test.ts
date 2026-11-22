@@ -946,3 +946,53 @@ describe('read-only stores the shell reported at boot', () => {
     }
   })
 })
+
+describe('MirrorRegistry.dropWhere', () => {
+  it('drops every cell whose path the predicate accepts, through drop, and returns the count', () => {
+    plant('{"480":1}')
+    const { sink } = recording()
+    const root = rustRoot(sink)
+    const wikiPath = join(userData, 'store_cache', 'wikigameinfo.json')
+    const configPath = join(userData, 'config.json')
+    const gamePath = join(userData, 'GamesConfig', 'a.json')
+    root.mirrors.cellFor({
+      path: configPath,
+      storeKey: 'settings/global',
+      dotPaths: true
+    })
+    root.mirrors.cellFor({
+      path: gamePath,
+      storeKey: 'GamesConfig/a',
+      dotPaths: true
+    })
+    const wiki = root.mirrors.cellFor({
+      path: wikiPath,
+      storeKey: TRACER,
+      dotPaths: true
+    })
+
+    expect(root.mirrors.dropWhere((p) => p !== wikiPath)).toBe(2)
+
+    expect(root.mirrors.peek(configPath)).toBeUndefined()
+    expect(root.mirrors.peek(gamePath)).toBeUndefined()
+    expect(root.mirrors.peek(wikiPath)).toBe(wiki)
+    // an answer still owed to a dropped cell routes nowhere
+    expect(
+      root.mirrors.applyEvent({
+        store: 'GamesConfig/a',
+        rev: 1,
+        op: 'applied',
+        originSeq: 1
+      })
+    ).toBe(false)
+    const fresh = root.mirrors.cellFor({
+      path: gamePath,
+      storeKey: 'GamesConfig/a',
+      dotPaths: true
+    })
+    expect(fresh.baseRev).toBe(0)
+
+    expect(root.mirrors.dropWhere(() => true)).toBe(2)
+    expect(root.mirrors.dropWhere(() => true)).toBe(0)
+  })
+})

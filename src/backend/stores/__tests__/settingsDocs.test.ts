@@ -1,6 +1,7 @@
 /**
  * The settings-document seam (Phase 85 plan 15, D-01, research Pattern 3): `readSettingsDoc`,
- * `writeSettingsDoc` and `dropSettingsDoc`, and GameConfig on top of them.
+ * `writeSettingsDoc`, `dropSettingsDoc` and the reset's `dropAllSettingsDocs` (C-WR-01), and
+ * GameConfig on top of them.
  *
  * Over the boot's root a per-game document is a mirror cell keyed `GamesConfig/<app>`: a GameConfig
  * flush is ONE `replace` frame, and GameConfig.readSettings sees it at once, before the shell
@@ -22,6 +23,7 @@ import { join } from 'path'
 import type { AppSettings } from 'common/types'
 import { createGameConfigs } from '../../game_config'
 import {
+  dropAllSettingsDocs,
   dropSettingsDoc,
   readSettingsDoc,
   settingsDocExists,
@@ -34,6 +36,8 @@ import { createTestAppPaths } from '../../testUtils/testAppPaths'
 import { createTestAppRuntime } from '../../testUtils/testAppRuntime'
 import { fakeSafetyRustInvoke } from '../../testUtils/fakeSafetyRust'
 import { uninstallGameCallback } from '../../utils/uninstaller'
+import { resetHeroic } from '../../utils'
+import type { StoreMirrorEvent } from '../mirrorCell'
 import type { RequestRustInvoke } from '../../host'
 import { RUST_SAFETY_REMOVE_TREE } from 'common/types/sidecarTransport'
 
@@ -398,5 +402,183 @@ describe('uninstall drops the settings cell when the removal reports removed (T-
       (readSettingsDoc(root, gamePath())?.[APP] as Record<string, unknown>)
         .maxSharpness
     ).toBe(3)
+  })
+})
+
+/**
+ * C-WR-01, the TS half: a reset whose removal reports `removed` drops every settings cell, so this
+ * process stops serving the deleted documents and the next write, which the shell acks at rev 1
+ * after it evicted the stores, is not swallowed as a no-op. A silent sink with hand-written acks
+ * arms the bug: the disk sink keeps a rev counter that survives the deletion and would ack at N+1.
+ */
+describe('reset drops every settings cell when the removal reports removed (C-WR-01)', () => {
+  const OTHER = '2050650'
+  const WIKI = 'store_cache/wikigameinfo'
+
+  beforeEach(() => {
+    jest.useFakeTimers({
+      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask']
+    })
+  })
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  function resetDeps(
+    root: ReturnType<typeof build>['root'],
+    requestRustInvoke: RequestRustInvoke
+  ) {
+    const appState = { relaunch: jest.fn(), quit: jest.fn() }
+    const deps = {
+      appState,
+      paths: createTestAppPaths(userData, {
+        appFolder: userData,
+        configPath: configPath(),
+        gamesConfigPath: gamesConfig()
+      }),
+      config: {
+        getSettings: () => ({ defaultInstallPath: '', sharedWinePrefix: '' })
+      },
+      libraryManagers: {},
+      requestRustInvoke,
+      sendFrontendMessage: jest.fn(),
+      storeRoot: root
+    } as unknown as Parameters<typeof resetHeroic>[0]
+    return { deps, appState }
+  }
+
+  const ack = (
+    root: ReturnType<typeof build>['root'],
+    frame: StoreFrame,
+    rev: number
+  ) =>
+    root.mirrors.applyEvent({
+      store: frame.store,
+      rev,
+      op: 'applied',
+      originSeq: frame.seq
+    } as StoreMirrorEvent)
+
+  /** The global document and two game documents, written through the cells and acked at rev 3. */
+  function populate() {
+    mkdirSync(gamesConfig())
+    writeFileSync(configPath(), '{"version":"v2"}')
+    writeFileSync(gamePath(), '{}')
+    writeFileSync(gamePath(OTHER), '{}')
+    const built = build({ silent: true })
+    const { root, frames } = built
+    const docs = [configPath(), gamePath(), gamePath(OTHER)]
+    for (const path of docs) {
+      const before = frames.length
+      writeSettingsDoc(root, path, { marker: path })
+      ack(root, frames[before] as StoreFrame, 3)
+    }
+    for (const path of docs) {
+      expect(root.mirrors.peek(path)?.baseRev).toBe(3)
+      expect(readSettingsDoc(root, path)).toEqual({ marker: path })
+    }
+    return { ...built, docs }
+  }
+
+  it('drops the global and every per-game cell; a write acked at rev 1 afterwards stays visible', async () => {
+    const { root, frames, docs } = populate()
+    const { requestRustInvoke, calls } = fakeSafetyRustInvoke()
+    const { deps, appState } = resetDeps(root, requestRustInvoke)
+
+    await resetHeroic(deps)
+
+    expect(calls.some((c) => c.channel === RUST_SAFETY_REMOVE_TREE)).toBe(true)
+    expect(existsSync(configPath())).toBe(false)
+    expect(existsSync(gamesConfig())).toBe(false)
+    for (const path of docs) {
+      expect(root.mirrors.peek(path)).toBeUndefined()
+      expect(readSettingsDoc(root, path)).toBeUndefined()
+      expect(settingsDocExists(root, path)).toBe(false)
+    }
+    expect(appState.relaunch).not.toHaveBeenCalled()
+
+    jest.advanceTimersByTime(1000)
+    expect(appState.relaunch).toHaveBeenCalledTimes(1)
+    expect(appState.quit).toHaveBeenCalledTimes(1)
+
+    // The shell restarted the evicted store's revs, so the next write is acked at rev 1.
+    mkdirSync(gamesConfig())
+    const fresh = { maxSharpness: 9 }
+    writeSettingsDoc(root, gamePath(), fresh)
+    const frame = frames[frames.length - 1] as StoreFrame
+    expect(frame.store).toBe(`GamesConfig/${APP}`)
+    expect(frame.op).toBe('replace')
+    expect(ack(root, frame, 1)).toBe(true)
+    expect(readSettingsDoc(root, gamePath())).toEqual(fresh)
+    const cell = root.mirrors.peek(gamePath())
+    expect(cell?.baseRev).toBe(1)
+    expect(cell?.pendingCount).toBe(0)
+  })
+
+  it('a refused reset keeps every cell, its data and the files, and schedules no relaunch', async () => {
+    const { root, docs } = populate()
+    const cells = docs.map((path) => root.mirrors.peek(path))
+    const { requestRustInvoke } = fakeSafetyRustInvoke({
+      checkVerdict: 'no',
+      reason: 'nested-known-install'
+    })
+    const { deps, appState } = resetDeps(root, requestRustInvoke)
+
+    await resetHeroic(deps)
+
+    expect(existsSync(configPath())).toBe(true)
+    expect(existsSync(gamePath())).toBe(true)
+    docs.forEach((path, i) => {
+      expect(root.mirrors.peek(path)).toBe(cells[i])
+      expect(readSettingsDoc(root, path)).toEqual({ marker: path })
+    })
+    jest.advanceTimersByTime(1000)
+    expect(appState.relaunch).not.toHaveBeenCalled()
+    expect(appState.quit).not.toHaveBeenCalled()
+  })
+
+  it('leaves a cell docKeyOf does not recognise alone', async () => {
+    const { root } = populate()
+    const wikiPath = join(userData, 'store_cache', 'wikigameinfo.json')
+    const wiki = root.mirrors.cellFor({
+      path: wikiPath,
+      storeKey: WIKI,
+      dotPaths: true
+    })
+    const { requestRustInvoke } = fakeSafetyRustInvoke()
+    const { deps } = resetDeps(root, requestRustInvoke)
+
+    await resetHeroic(deps)
+
+    expect(root.mirrors.peek(configPath())).toBeUndefined()
+    expect(root.mirrors.peek(wikiPath)).toBe(wiki)
+  })
+
+  it('dropAllSettingsDocs: 0 for a root without userData or mirrors; counts only the settings cells', () => {
+    expect(dropAllSettingsDocs({})).toBe(0)
+    const { root } = build({ silent: true })
+    expect(dropAllSettingsDocs({ userData })).toBe(0)
+    expect(dropAllSettingsDocs({ mirrors: root.mirrors })).toBe(0)
+
+    const wikiPath = join(userData, 'store_cache', 'wikigameinfo.json')
+    root.mirrors.cellFor({
+      path: configPath(),
+      storeKey: 'settings/global',
+      dotPaths: true
+    })
+    root.mirrors.cellFor({
+      path: gamePath(),
+      storeKey: `GamesConfig/${APP}`,
+      dotPaths: true
+    })
+    const wiki = root.mirrors.cellFor({
+      path: wikiPath,
+      storeKey: WIKI,
+      dotPaths: true
+    })
+
+    expect(dropAllSettingsDocs(root)).toBe(2)
+    expect(root.mirrors.peek(wikiPath)).toBe(wiki)
+    expect(dropAllSettingsDocs(root)).toBe(0)
   })
 })

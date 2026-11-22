@@ -126,3 +126,17 @@ export function dropSettingsDoc(root: SettingsDocRoot, path: string): boolean {
   if (rustDocKey(root, path) === undefined) return false
   return root.mirrors?.drop(path) ?? false
 }
+
+/**
+ * A reset deleted `config.json` and `GamesConfig/` (its removal reported `removed`), so every
+ * settings document's cell is dropped: the cells whose path is `settings/global` or any
+ * `GamesConfig/<app>`. No read serves the deleted settings, and the next write starts a new cell at
+ * rev 0, which the shell's restarted revs (rev 1 after it evicted the stores) move forward instead
+ * of being swallowed as a no-op (C-WR-01). Returns how many cells were dropped; 0 when the root has
+ * no `userData` or `mirrors`.
+ */
+export function dropAllSettingsDocs(root: SettingsDocRoot): number {
+  const { userData, mirrors } = root
+  if (!userData || !mirrors) return 0
+  return mirrors.dropWhere((path) => docKeyOf(userData, path) !== undefined)
+}

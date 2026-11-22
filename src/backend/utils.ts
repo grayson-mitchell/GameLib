@@ -75,6 +75,10 @@ import {
   type ProtectedRootsDeps
 } from './safety/protectedRoots'
 import { pushRemovalRefusal } from './safety/refusal'
+import {
+  dropAllSettingsDocs,
+  type SettingsDocRoot
+} from './stores/settingsDocs'
 import { invokeSteamFiles } from './storeManagers/steam/localFiles/rustSteamFiles'
 
 /**
@@ -409,6 +413,8 @@ function clearAchievementCache(
  * config.json) through the Rust guard. Both targets must sit strictly inside the app folder and
  * clear the protected roots and known installs BEFORE either is deleted. A refusal tells the user
  * and returns without starting the relaunch, so a refused reset leaves the app running as it was.
+ * Once the removal reports `removed`, the settings documents' mirror cells are dropped too, so no
+ * read serves the deleted settings and the next write's rev-1 ack is not swallowed (C-WR-01).
  */
 async function resetHeroic(
   deps: {
@@ -417,6 +423,8 @@ async function resetHeroic(
       ProtectedRootsDeps['paths']
     config: ProtectedRootsDeps['config']
     libraryManagers: ManagerDeps['libraryManagers']
+    /** The boot's store root; absent in a bare test, where there are no cells to drop. */
+    storeRoot?: SettingsDocRoot
   } & RustInvokeDeps &
     Pick<ManagerDeps, 'sendFrontendMessage'>
 ): Promise<void> {
@@ -446,6 +454,9 @@ async function resetHeroic(
     })
     return
   }
+  // the shell evicted the stores; drop the cells so reads miss and the next write's rev-1 ack is
+  // not swallowed (C-WR-01)
+  if (deps.storeRoot) dropAllSettingsDocs(deps.storeRoot)
   // wait a sec to avoid racing conditions; unref'd so a pending relaunch never holds the
   // sidecar's event loop open past stdin EOF (exit contract)
   const timer = setTimeout(() => {

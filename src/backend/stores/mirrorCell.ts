@@ -529,6 +529,18 @@ export class MirrorRegistry {
     return true
   }
 
+  /**
+   * Forgets every cell whose path `match` accepts, because a reset deleted their files; see `drop`.
+   * Returns how many cells were dropped.
+   */
+  dropWhere(match: (path: string) => boolean): number {
+    let dropped = 0
+    for (const path of [...this.cells.keys()]) {
+      if (match(path) && this.drop(path)) dropped += 1
+    }
+    return dropped
+  }
+
   /** Routes a shell event to the cell of its store. `false` when no cell exists for that store. */
   applyEvent(event: StoreMirrorEvent): boolean {
     const cell = this.byStoreKey.get(event.store)
