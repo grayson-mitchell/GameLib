@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 86-19-PLAN.md
-last_updated: "2026-11-22T14:09:18.040Z"
+stopped_at: Completed 86-20-PLAN.md
+last_updated: "2026-11-22T14:34:11.575Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 86 execution started
-state_head: d04f3f78441e7ac06efda287a06e679c1edda02b
+state_head: 977e31d045ea7854c39ff1b8ffb3b2c072720b64
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 86 (Pure leaf services) — EXECUTING
-Plan: 19 of 26
+Plan: 20 of 26
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 86 execution started
 Progress: [██████████] 100%
@@ -403,6 +403,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 86 P17 | 100min | 3 tasks | 62 files |
 | Phase 86 P18 | 14min | 2 tasks | 26 files |
 | Phase 86 P19 | 25min | 3 tasks | 31 files |
+| Phase 86 P20 | 25min | 3 tasks | 30 files |
 
 ## Accumulated Context
 
@@ -800,6 +801,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 86]: 86-17: the ITAD priced-country list, fallback and shop ids are one src/common/itadCoverage.json read by the renderer and (include_str!) by Rust; the TS store-search slice, secret store, itadGate and itad-secrets boot step are deleted with the two cache rows kept in EXTRA_ROWS; the sidecar no longer bakes the ITAD key (shell build only)
 - [Phase 86]: 86-18: getGogDiscounts stays a TS-registered resolver (const token, one RUST_INFO_GOG_DISCOUNTS call, deletedBy 92); the crate gained an optional InfoLog sink; MiscRuntime carries requestRustInvoke until handlers.ts can pass it directly
 - [Phase 86]: 86-19: the CrossOver index schema bounds are ported exactly (DO NOT LOOSEN), the decompressed size is capped at 32 MiB, the rating map is a D-24 resolver over the library games, and the shell hands the crate the sidecar's own app root plus public
+- [Phase 86]: 86-20: JS \s is spelled out as the exact WhiteSpace plus LineTerminator set (BOM in, NEL out) and proved over every UTF-16 code unit; the regex crate joins gamelib-info with no Unicode table feature so a stray \s or \d fails to compile
+- [Phase 86]: 86-20: umu sends no User-Agent (the recorded TS request carries none and the endpoint answers 200 without one); a non-list umu answer rejects with info_umu_get:bad-response as the TS threw
 
 ### Pending Todos
 
@@ -1069,8 +1072,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T14:09:07.193Z
-Stopped at: Completed 86-19-PLAN.md
+Last session: 2026-11-22T14:34:09.847Z
+Stopped at: Completed 86-20-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
