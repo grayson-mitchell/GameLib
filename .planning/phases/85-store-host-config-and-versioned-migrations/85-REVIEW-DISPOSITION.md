@@ -15,7 +15,7 @@ Round 2 (review committed after the fixes; round 1 is at `5714cafea`) verified 1
 
 All 22 round-1 warnings were triaged in 85 UAT (Test 3, 2026-11-22): 19 fixed (B-WR-02, B-WR-03 and C-WR-06 completed in round 2), A-WR-03 won't fix, C-WR-01 and B-WR-10 deferred to todos. The info rows (round 1 and round 2) stay `open`; they were not part of that triage.
 
-Round 3 (`execute-phase` code-review gate, after the round-2 fixes) verified D-WR-01 and D-WR-02 and added the `E-` rows, all `open`. E-WR-01 reopens D-WR-03.
+Round 3 (`execute-phase` code-review gate, after the round-2 fixes) verified D-WR-01 and D-WR-02 and added the `E-` rows, all `open`. E-WR-01 reopens D-WR-03 and was fixed in round-3 fix iteration 3. The E-IN rows stay `open`.
 
 | ID | Severity | Finding | Disposition |
 |---|---|---|---|
@@ -69,6 +69,6 @@ Round 3 (`execute-phase` code-review gate, after the round-2 fixes) verified D-W
 | D-IN-02 | info | The Rust game-config name rule is now closed, and the TS rule is still the old deny list | open |
 | D-IN-03 | info | The temp-collision test can pass without colliding | open |
 | D-IN-04 | info | The renderer still applies an empty-segment key to its own snapshot optimistically | open |
-| E-WR-01 | warning | `settleRefetches` returns while a queued second re-fetch is still starting, so the store can still be unhydrated at mount (reopens D-WR-03) | open |
+| E-WR-01 | warning | `settleRefetches` returns while a queued second re-fetch is still starting, so the store can still be unhydrated at mount (reopens D-WR-03) | fixed (8ec57de30) |
 | E-IN-01 | info | The 5 s re-fetch bound is nested inside the caller's 8 s race, so a slow snapshot makes the bound unreachable (follows D-WR-03) | open |
 | E-IN-02 | info | `ReaderDone::mark` is not panic-safe, and a read error sets it with the pipe still open (follows D-WR-01) | open |
