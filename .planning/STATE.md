@@ -6,10 +6,10 @@ current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
 stopped_at: Completed 85-24-PLAN.md
-last_updated: "2026-11-22T06:50:31.879Z"
+last_updated: "2026-11-22T06:59:15.053Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: e23d1840379dbab131be30b6b71934fdc6809363
+state_head: 126567da4eda8dcd7575c10cebea277a400b62cf
 progress:
   total_phases: 20
   completed_phases: 23
@@ -818,6 +818,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261122-9sl | Implement Move install for Steam games (moveInstall is a stub) | 2026-11-22 | 4bbab9da4 | — | [261122-9sl-implement-move-install-for-steam-games](./quick/261122-9sl-implement-move-install-for-steam-games/) |
 | 261122-gzp | fix the hold() test race in writer.rs | 2026-11-22 | 7dc3d632b | — | [261122-gzp-fix-the-hold-test-race-in-writer-rs](./quick/261122-gzp-fix-the-hold-test-race-in-writer-rs/) |
 | 261122-n4q | Steam Move option 1: add a picked non-library folder as a Steam library, folder-gap fix, post-move verify nudge | 2026-11-22 | 1f9f0cd2c | — | [261122-n4q-steam-move-option-1-add-picked-folder-as](./quick/261122-n4q-steam-move-option-1-add-picked-folder-as/) |
+| 261122-qwk | Copy nord-light as new GameLib Light theme, then rework nord-light to the official Nord palette | 2026-11-22 | 126567da4 | — | [261122-qwk-copy-nord-light-as-new-gamelib-light-the](./quick/261122-qwk-copy-nord-light-as-new-gamelib-light-the/) |
 
 ## Deferred Items
 
