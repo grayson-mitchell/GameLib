@@ -99,8 +99,20 @@ findings:
     severity: info
     disposition: fixed
     title: "The WR-10 test's tz assertions cannot fail, because no offset change happens inside the window"
-open: 0
-total: 24
+  - id: WR-13
+    severity: warning
+    disposition: open
+    title: "No test pins the transport wait to the remainder of flush's one deadline"
+  - id: IN-13
+    severity: info
+    disposition: open
+    title: "logInfoSettled's doc names a call-site guard that has no production caller"
+  - id: IN-14
+    severity: info
+    disposition: open
+    title: "The settle-helper doc overstates the fatal path: the guard exits at its own 1,500 ms cap, not 2 s"
+open: 3
+total: 27
 recorded: 2026-11-22T00:00:00.000Z
 ---
 
@@ -132,6 +144,9 @@ recorded: 2026-11-22T00:00:00.000Z
 | WR-12 | warning | fixed | REVIEW-FIX r4: `915500558` |
 | IN-11 | info | fixed | REVIEW-FIX r4: `b60933290` (doc-only) |
 | IN-12 | info | fixed | REVIEW-FIX r4: `279f4facd` |
+| WR-13 | warning | open | REVIEW r5 |
+| IN-13 | info | open | REVIEW r5 |
+| IN-14 | info | open | REVIEW r5 |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.

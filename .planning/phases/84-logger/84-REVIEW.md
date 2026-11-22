@@ -1,148 +1,166 @@
 ---
 phase: 84-logger
-reviewed: 2026-11-22T00:00:00Z
+reviewed: 2026-11-22T04:21:59Z
 depth: standard
 files_reviewed: 4
 files_reviewed_list:
   - src/backend/logger/forwarder.ts
   - src/backend/logger/index.ts
-  - src/backend/logger/targetWriter.ts
+  - src/backend/logger/__tests__/forwarder.test.ts
   - src/backend/logger/__tests__/targetWriter.test.ts
 findings:
   critical: 0
-  warning: 2
+  warning: 1
   info: 2
-  total: 4
+  total: 3
   necessity: 0
 status: issues_found
 ---
 
-# Phase 84: Code Review Report (round 4)
+# Phase 84: Code Review Report (round 5)
 
-**Reviewed:** 2026-11-22
+**Reviewed:** 2026-11-22T04:21:59Z
 **Depth:** standard
 **Files Reviewed:** 4
 **Status:** issues_found
 
 ## Summary
 
-Round 4 reviews the two round-3 fix commits, 61cffefff (WR-09) and 349975ff0 (WR-10), as
-`git diff dc0ce5d53 349975ff0 -- src/backend/logger`. The four files have not changed since 349975ff0.
-Phase 85's files and the concurrent session's uncommitted files were left out of scope.
-Verification: `npx jest src/backend/logger/__tests__/targetWriter.test.ts src/backend/logger/__tests__/forwarder.test.ts`
-(2 suites, 55 tests pass). I also ran two throwaway probes against an esbuild bundle of `forwarder.ts` in the
-session scratchpad. No source file was touched.
+Round 5 reviews the four round-4 fix commits: 01dca3681 (WR-11), 915500558 (WR-12), b60933290 (IN-11) and
+279f4facd (IN-12). The diff is `git diff a90c128d0 279f4facd -- src/backend/logger`. The four files have no
+changes after 279f4facd. Phase 85's files and the concurrent session's uncommitted files were left out of
+scope. No source file was touched.
 
-**WR-10 is closed.** `#logBase` reads the clock once (`targetWriter.ts:164`), after the rotation claim and before
-any chaining. It passes that `at` on all three paths: direct (`:171`), queued behind a pending link (`:175`), and
-the Promise body itself (`:189`). `LogForwarder.logLine` uses `at ?? Date.now()` and derives `tz` from that same
-`ts` (`forwarder.ts:303-304`). A line that then waits in the forwarder's own `#chains` (another source holding a
-Promise on the same target key) keeps the stamp too, because `ts`/`tz` are captured before `emit` closes over
-them. I probed the tz half directly with `TZ=America/New_York`, `at` = 01:59:50 EDT and enqueue at 01:00:20 EST.
-The entry carried `tz: -240`, the call-time offset, not the settle-time `-300`. The implementation is right. The
-test does not prove the tz half (IN-12).
+**How this was verified:**
 
-**WR-09 is closed on the paths the writer actually uses.** `#extend` registers each new `#tail`
-(`targetWriter.ts:136-138`). The tail is `link.then(done, done)`, so it never rejects. `trackSettle` removes it on
-settle, and its drop handler is attached before any `Promise.all` in `#settleChains` subscribes, so a snapshot's
-links are gone from the Set before the loop re-checks `size`. Settled links do not leak. A link registered during
-a flush (including a `#chains` entry created when a writer's held line reaches `logLine` behind another source's
-chain) is picked up on the next loop pass. A never-settling link is cut off by the single deadline, as the
-fake-timer test shows. Concurrent flushes each snapshot independently and do not interfere.
+- `npx jest src/backend/logger`: 6 suites, 127 tests, all pass.
+- `eslint` on the four files: only the existing `require-await` warning at `index.ts:179`, which these
+  commits did not change.
+- `prettier --check` on the four files: clean.
+- Mutation probes on a scratch copy of `src/backend/logger`, run by a separate jest config in the session
+  scratchpad. In that harness three tests could not run because their fixture paths are relative: the
+  `paths.rs` parity test and the golden and prefix-parity suites. The golden suite's transport calls
+  `onWritten` synchronously, so it can never reach the transport wait and could not catch the WR-13 mutation
+  below.
 
-Two edges of the changed `#settleChains` are not bounded the way its doc says. I reproduced both by probe
-(WR-11, WR-12).
+**WR-11 is closed.** `#settleChains` races `Promise.allSettled` (`forwarder.ts:470-476`), so a rejecting link
+no longer ends the wait. It adds no unhandled rejections. `trackSettle` attaches `link.then(drop, drop)`
+(`:347`) before any snapshot subscribes, so a rejected link is out of the Set before the loop re-checks
+`size`. `allSettled` never rejects, and neither does `expired`. The forwarder's own `#chains` links resolve
+through `.then(emit, onRejected)`, so they never reject anyway. The transport wait still runs after the
+chain wait. Mutation `allSettled` → `all` fails the new WR-11 test. The test's own
+`failing.catch(() => undefined)` is redundant but harmless.
 
-## Round-3 fix verification
+**WR-12 is closed for the chain wait.** Both waits now measure against the one `performance.now()`
+deadline (`:431`, `:438`, `:460`). No wall-clock read is left on the wait path. The only `Date.now()` left
+in the file is the call-time stamp in `logLine` (`:303`), which is correct per D-12. Jest 29's modern fake
+timers fake `performance.now()`, and `setSystemTime` leaves it alone. The golden suites leave both
+`performance` and the timers real (`doNotFake`), so the two clocks agree in every harness. The probes
+showed:
 
-- **WR-09 (61cffefff): closed for writer-held links, with WR-11 and WR-12 as latent edges of the widened wait.**
-  The three new tests would fail without the fix. Tests 1 and 2 would see `flushing` settle within five
-  macrotask turns, and test 3 would see `flushed` true at 1,999 ms. Test 3's "other writer's line is handed to
-  the transport" is satisfied by the 50 ms tick timer during the wait, not by flush's own pump. That still
-  matches the doc's claim.
-- **WR-10 (349975ff0): closed.** Both new tests fail without the fix: `ts` would be 30 s and 20 s late.
+- Reverting to the old wall-clock code fails the WR-12 test.
+- Mixing the clocks on the transport wait (`deadline - Date.now()`) fails the WR-11 test.
+- The transport-wait half of "cannot stretch either wait" has no test (WR-13).
+
+**IN-12 is closed.** The `getTimezoneOffset` spy is created before the `try` block and restored in
+`finally` (`targetWriter.test.ts:378-412`). The describe-level `afterEach` restores real timers. Nothing
+leaks into later tests. Mutation `tz = -new Date().getTimezoneOffset()` (settle-time `tz`) fails the test.
+The settle-time sanity check (`-300`) proves the window really straddles the mocked offset change. The DST
+claim holds: 2026-11-01 is a Sunday, and 02:00 EDT = 06:00Z.
+
+**IN-11 is partly accurate.** `logErrorSettled` really does have one production caller,
+`bootstrap.ts:1543`, the fatal sink. Two statements in the new or edited doc text do not match the code
+(IN-13, IN-14).
+
+**WR-08/09/10:** these commits do not regress them. WR-09's writer-link wait is the code WR-11 changed, and
+it still waits on every link. WR-10's call-time `ts`/`tz` path (`logLine` `:303-304`) is unchanged, and the
+IN-12 test now pins it more tightly.
 
 ## Warnings
 
-### WR-11: One rejecting link makes `flush` stop waiting at once, for every other link and for the transport
+### WR-13: No test proves the transport wait gets only what is left of the one deadline, the line WR-12 rewrote
 
-**File:** `src/backend/logger/forwarder.ts:341-347` (contract), `:467-472` (wait), `:448-450` (swallow)
-**Issue:** `trackSettle` is a public method, re-exported as `index.trackLogSettle`. Its doc invites rejecting
-links: "a link that rejects is still dropped from the set". `#settleChains`, however, passes the raw links to
-`Promise.all`. When one link rejects, `Promise.all` rejects, `await Promise.race(...)` throws out of
-`#settleChains`, and `flush`'s `catch { /* Settling never rejects. */ }` returns. That skips both the wait on
-every other pending link and the whole transport wait. Probe: a 1,500 ms link plus one that rejects at 20 ms,
-then `flush()` returned after **21 ms**. Today's only caller (`#extend`) passes a tail that never rejects, so the
-bug is latent. But nothing in the API stops the next caller (a direct `trackLogSettle(somePromise)`) from
-silently reducing the fatal-exit flush to a no-op.
-**Fix:** Normalise at registration so the Set only ever holds non-rejecting promises:
+**File:** `src/backend/logger/forwarder.ts:437-445` (the transport wait), compare the doc at `:422-426`
+**Issue:** WR-12 removed the transport wait's `Math.min(this.#flushTimeoutMs, ...)` clamp. That leg is now
+bounded only by `Math.max(0, deadline - performance.now())`. The flush doc makes two claims about it:
+
+- the whole call takes at most `LOG_FLUSH_TIMEOUT_MS` ("one deadline taken at entry, WR-06");
+- a step back "cannot stretch either wait".
+
+No test exercises the transport leg's timer once the chain wait has used up part of the deadline:
+
+- The WR-12 test has no transport wait. Its `FakeTransport` calls `onWritten` itself and nothing is queued,
+  so `#isIdle()` returns at `:436`.
+- The WR-11 test releases the held write callbacks by hand at 1,550 ms, before the deadline, so the
+  transport timer never fires.
+- The CR-01 settle tests (`forwarder.test.ts:649-667`) wait on the transport only, with no chain wait first.
+
+Probe: change `:438` to `const left = this.#flushTimeoutMs`. Every runnable logger test still passes. With
+that change, a 1,500 ms writer link plus a held write callback makes `flush` take 3,500 ms, against a
+documented 2,000 ms. That breaks WR-06's single-deadline guarantee and goes past the fatal guard's own
+1,500 ms cap.
+
+**Fix:** Add a forwarder test that runs both legs in sequence and asserts the total. I ran this as a scratch
+probe: it passes on the current code and fails on the mutation.
 ```ts
-trackSettle(link: Promise<unknown>): void {
-  const settled = link.then(
-    () => undefined,
-    () => undefined
-  )
-  this.#writerLinks.add(settled)
-  void settled.then(() => {
-    this.#writerLinks.delete(settled)
+it('the transport wait gets only what is left of the one deadline (WR-06, WR-12)', async () => {
+  const fw = new LogForwarder()
+  const transport = new FakeTransport()
+  transport.autoWritten = false
+  fw.bind(transport)
+  fw.enqueue(GAME, false, { raw: 'queued' })
+  fw.trackSettle(new Promise<void>((resolve) => setTimeout(resolve, 1500)))
+  let flushed = false
+  const flushing = fw.flush().then(() => {
+    flushed = true
   })
-}
+  await jest.advanceTimersByTimeAsync(LOG_FLUSH_TIMEOUT_MS - 1)
+  expect(flushed).toBe(false)
+  await jest.advanceTimersByTimeAsync(2)
+  expect(flushed).toBe(true)
+  await flushing
+})
 ```
-Alternatively, use `Promise.allSettled([...])` in `#settleChains`. Add a forwarder test: a slow link plus a
-rejecting link, and `flush` must not resolve before the slow one.
-
-### WR-12: `#settleChains` has no clock-step-back clamp, so `flush` can wait far past `LOG_FLUSH_TIMEOUT_MS`
-
-**File:** `src/backend/logger/forwarder.ts:459-463` (compare `:433-437`)
-**Issue:** The deadline is wall-clock (`Date.now()`). The transport wait clamps itself with
-`Math.min(this.#flushTimeoutMs, ...)` and says why: "never more than a full timeout (a clock step back)".
-`#settleChains` computes `left = deadline - Date.now()` with no such clamp. If the wall clock steps back during a
-flush (an NTP correction, a manual time change, a VM resume), `left` grows by the size of the step, and the
-chain-wait timer is armed for that long. Probe: one never-settling link, `Date.now` stepped back 60 s after
-`flush` took its deadline, and `flush()` was **still pending after 5,000 ms** (the bound is 2,000). The doc says
-the fatal `uncaughtException` guard "must not hang". The function body is from round 2 (WR-06), but WR-09 makes
-this wait run whenever any writer holds a Promise message or a write queued behind one. Before, it ran only for
-the forwarder's own Promise chains.
-**Fix:** Take the deadline from a monotonic clock in both `flush` and `#settleChains` (`performance.now()`;
-jest's modern fake timers fake it too). That makes both clamps unnecessary. At minimum, mirror the transport
-wait's clamp:
-```ts
-const left = Math.min(this.#flushTimeoutMs, deadline - Date.now())
-```
-Add a test that steps the system time back mid-flush (`jest.setSystemTime`) with a never-settling link and asserts
-the flush resolves within `LOG_FLUSH_TIMEOUT_MS` of fake time.
+For the "either wait" claim, add a variant that calls `jest.setSystemTime(Date.now() - 60_000)` after
+1,500 ms, inside the transport wait, and expects the same 2,001 ms result.
 
 ## Info
 
-### IN-11: `logErrorSettled` / `logInfoSettled` now also wait on every writer's held Promise messages
+### IN-13: The `logInfoSettled` doc still names a call site that does not exist
 
-**File:** `src/backend/logger/index.ts:62-80`, `:103-110`
-**Issue:** `flush` is shared. It backs the fatal guard and `releaseOnStdinEof`, and also the two per-entry settle
-helpers, documented as resolving "once the entry has been handed to stdout". Since WR-09, each call to those
-helpers also waits, up to the full 2,000 ms, for any `LogWriter` anywhere holding a Promise message or a write
-queued behind one. That now includes `writeString(promise)`, which `flush` never waited on before. After a writer
-Promise that never settles, every later `*Settled` call costs the full 2 s for the rest of the process,
-because that link and every write behind it stay in `#writerLinks`. The bound holds, so this is not a contract
-break. But the `trackLogSettle` doc lists only the exit paths, and the latency coupling of an unrelated general
-line to a game or runner writer's Promise is undocumented. I did not check the `*Settled` call sites (out of
-scope), so the impact is unmeasured.
-**Fix:** Either give the settle helpers a queue-only settle (pump and wait for the transport, skip
-`#settleChains`), since their own entry is already queued synchronously, or document the coupling on
-`trackLogSettle` and on `logErrorSettled` / `logInfoSettled`.
+**File:** `src/backend/logger/index.ts:78-83`
+**Issue:** The doc says `logInfoSettled` is "for the `logInfo` send listener's call-site guard". The IN-11
+commit extended this comment without correcting that. A grep of `src/` and `meta/` finds no production
+caller: the only hits are tests and the name list in `meta/logSecretGate.ts:74`. The round-4 fix report
+says so itself ("`logInfoSettled` has no production caller"). The new `logErrorSettled` paragraph is
+accurate, but it now sits next to a sibling doc that implies a live caller, and the IN-11 cost note on
+`logInfoSettled` describes a cost that no running code pays.
+**Fix:** Replace the call-site claim with the fact: "No production caller today, kept as the `logInfo`
+sibling and listed in `meta/logSecretGate.ts`." Whether to remove the export is a separate scope decision.
 
-### IN-12: The WR-10 test's `tz` assertions cannot fail, because no offset change happens inside the window
+### IN-14: The IN-11 cost and rationale ignore the fatal guard's 1,500 ms cap, which is shorter than the flush deadline
 
-**File:** `src/backend/logger/__tests__/targetWriter.test.ts` (WR-10 describe, first test: the `tz:` lines of both `toMatchObject` calls)
-**Issue:** The test is titled "keep their call-time ts and tz". It runs on 2026-11-20 13:05 local time and
-advances only 30 s, so `getTimezoneOffset()` is the same at call time and at settle time in any zone. A
-regression that derived `tz` from the settle-time clock would still pass. Only the `ts` half proves anything. The
-implementation is correct, as the DST probe in the Summary shows.
-**Fix:** Pin a zone and straddle a transition. Set `process.env.TZ = 'America/New_York'` for the test (Node
-re-reads it at runtime), use `now: Date.parse('2026-11-01T05:59:50Z')`, step 30 s past 06:00Z before release, and
-assert `tz: -240`. Or drop "and tz" from the title.
+**File:** `src/backend/logger/index.ts:58-64` (verified against `src/backend/sidecar/processGuards.ts:102`,
+`:352-363`, read only)
+**Issue:** The new paragraph justifies waiting on writer links with "a settle that skipped those links would
+lose a game or runner writer's held lines on a fatal exit". It states the cost as "every call takes the full
+`LOG_FLUSH_TIMEOUT_MS` (2 s)". But the one production caller is the `uncaughtException` guard, and it races
+the sink's promise against `UNCAUGHT_FLUSH_CAP_MS = 1500` and then calls `exit(1)`. So on the path the
+paragraph defends:
+
+- the full 2 s never happens;
+- a writer's held line that settles between 1.5 s and 2 s is still lost;
+- with a link that never settles, `#settleChains` uses the guard's whole window. The fatal entry reaches the
+  transport only through the 50 ms tick, never through flush's own pump, and its write callback is never
+  awaited.
+
+The behaviour is defensible. The doc overstates both the cost and the protection.
+**Fix:** Add one sentence: "On the fatal path the guard's own 1.5 s cap (`processGuards.ts`
+`UNCAUGHT_FLUSH_CAP_MS`) ends the wait first, so held lines that settle after 1.5 s are lost there." To make
+the protection match the doc instead, align the two bounds, but that is outside these four files.
 
 ---
 
-_Reviewed: 2026-11-22_
+_Reviewed: 2026-11-22T04:21:59Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
