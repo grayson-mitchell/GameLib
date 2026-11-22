@@ -49,7 +49,7 @@ Round 3 (`execute-phase` code-review gate, after the round-2 fixes) verified D-W
 | B-IN-07 | info | The 10 MB frame cap is checked after the line is read and parsed in full | open |
 | B-IN-08 | info | The bottle-file handlers follow symlinks and read the whole file unbounded | open |
 | B-IN-09 | info | The boot candidate scan is not covered by the boot bounds | open |
-| C-WR-01 | warning | `resetHeroic` deletes the settings documents but never drops their mirror cells | deferred (`.planning/todos/pending/2026-11-22-reset-heroic-leaves-settings-mirror-cells.md`) |
+| C-WR-01 | warning | `resetHeroic` deletes the settings documents but never drops their mirror cells | fixed (31e9f7a2e, 31bd2e304; quick 261123-9x9) |
 | C-WR-02 | warning | Uninstall's "remove settings" leaves the cached `GameConfig` instance serving and re-writing the deleted settings | fixed (97aed9670) |
 | C-WR-03 | warning | `validateStoreFrame` measures frame size in UTF-16 code units, the shell in bytes | fixed (ff0988f17) |
 | C-WR-04 | warning | Corpus harvester denylist does not cover the secret key names this codebase itself documents | fixed (e3b769703) |

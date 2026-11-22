@@ -6,10 +6,10 @@ current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
 stopped_at: Completed 86-24-PLAN.md
-last_updated: "2026-11-22T18:14:25.375Z"
+last_updated: "2026-11-22T18:28:57.891Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 86 execution started
-state_head: f70409a98443586c1faebb42562ab2d836f6cd82
+state_head: 31bd2e304a4f30925b1bf548890487824caa8ef3
 progress:
   total_phases: 20
   completed_phases: 23
@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 Phase: 86 (Pure leaf services) — EXECUTING
 Plan: 24 of 26
 Status: Ready to execute
-Last activity: 2026-11-23 - Completed quick task 261123-9os: PCGamingWiki title search: URL-encode the srsearch term (#KILLALLZOMBIES golden re-recorded)
+Last activity: 2026-11-23 - Completed quick task 261123-9x9: resetHeroic deletes the settings documents but never drops their mirror cells (Phase 85 review C-WR-01)
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -892,6 +892,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 32 | HLTB title matching: stop folding a trailing "constructor" to JS function text (Rust; TS copy already deleted) | 2026-11-23 | d64116d1f | — | — |
 | 261123-9i7 | CrossOver index: keep a validated fresh payload when the cache write fails | 2026-11-23 | 3a4d64220 | — | [261123-9i7-crossover-index-keep-a-validated-fresh-p](./quick/261123-9i7-crossover-index-keep-a-validated-fresh-p/) |
 | 261123-9os | PCGamingWiki title search: URL-encode the srsearch term (#KILLALLZOMBIES golden re-recorded) | 2026-11-23 | f70409a98 | — | [261123-9os-fix-todo-2026-11-23-pcgw-search-term-not](./quick/261123-9os-fix-todo-2026-11-23-pcgw-search-term-not/) |
+| 261123-9x9 | resetHeroic deletes the settings documents but never drops their mirror cells (Phase 85 review C-WR-01) | 2026-11-23 | 31bd2e304 | — | [261123-9x9-resetheroic-deletes-the-settings-documen](./quick/261123-9x9-resetheroic-deletes-the-settings-documen/) |
 
 ## Deferred Items
 

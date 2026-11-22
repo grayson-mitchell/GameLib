@@ -44,3 +44,17 @@ cross-layer protocol change, so prefer the TS fix above.
 
 Test: a jest case that runs a reset with a populated settings cell. After the reset, `readSettingsDoc`
 must miss, and a later write must be visible.
+
+## Resolution
+
+Fixed 2026-11-23 in quick task 261123-9x9 (`31e9f7a2e`, `31bd2e304`), with the TS fix above. `MirrorRegistry.dropWhere(match)`
+drops cells by predicate. `dropAllSettingsDocs(root)` in `settingsDocs.ts` uses it with the `docKeyOf` filter, so
+`settings/global` and every `GamesConfig/*` cell go. `resetHeroic` takes an optional `storeRoot` and calls it after
+`removed.outcome === 'removed'`, before the relaunch timer. `registerShellFilesFlows` requires `storeRoot`, and
+`handlers.ts` passes `deps.services.storeRoot`. The regression test in `src/backend/stores/__tests__/settingsDocs.test.ts`
+raises three settings cells to rev 3, then resets. Afterwards `readSettingsDoc` and `settingsDocExists` miss, and a write
+acked at rev 1 can be read. It failed on the unfixed code. Two more cases show a refused reset keeps every cell and a
+cell that is not a settings document survives.
+
+Not covered: the cached `GameConfig`/`GlobalConfig` objects still hold the old settings in memory until the relaunch (the
+C-WR-02 shape, for reset instead of uninstall).
