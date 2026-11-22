@@ -1,7 +1,9 @@
 //! Anti-cheat against the TS goldens (86-04, SC1, D-10 and D-28): every case in
 //! `tests/fixtures/golden/anticheat/cases.json` runs over a copy of its before-state in a FakeHome.
 //! What each lookup returned and the bytes of the data file the case left must equal the TS
-//! oracle's golden.
+//! oracle's golden. One lookup case, `lookup-uppercase-argument-matches`, was re-expected by quick
+//! 261123-928 when the argument began to be lower-cased, so it is the one lookup golden that is not
+//! the TS recording.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -290,8 +292,10 @@ fn lookup_over(data: &str, namespace: &str) -> Value {
     .unwrap()
 }
 
+/// The lookup skips an entry it cannot read and keeps searching (quick 261123-928): a malformed entry
+/// in front of the match no longer hides it.
 #[test]
-fn a_malformed_entry_in_front_of_the_match_answers_null_as_the_ts_throw_did() {
+fn a_malformed_entry_in_front_of_the_match_is_skipped_and_the_match_found() {
     let hit = r#"{"storeIds":{"epic":{"namespace":"abc"}}}"#;
     // Control: the same file with only well-formed entries finds the match.
     assert_eq!(
@@ -308,15 +312,6 @@ fn a_malformed_entry_in_front_of_the_match_answers_null_as_the_ts_throw_did() {
         r#"{"storeIds":{"epic":{"namespace":true}}}"#,
         r#"{"storeIds":{"epic":{"namespace":7}}}"#,
         r#"{"storeIds":{"epic":{"namespace":{}}}}"#,
-    ] {
-        assert_eq!(
-            lookup_over(&format!("[{bad},{hit}]"), "abc"),
-            Value::Null,
-            "{bad}"
-        );
-    }
-    // Entries the TS skipped without throwing do not stop the search.
-    for skipped in [
         r#"{"storeIds":{}}"#,
         r#"{"storeIds":"x"}"#,
         r#"{"storeIds":[]}"#,
@@ -329,11 +324,33 @@ fn a_malformed_entry_in_front_of_the_match_answers_null_as_the_ts_throw_did() {
         r#"{"storeIds":{"epic":{"namespace":null}}}"#,
     ] {
         assert_eq!(
-            lookup_over(&format!("[{skipped},{hit}]"), "abc")["storeIds"]["epic"]["namespace"],
+            lookup_over(&format!("[{bad},{hit}]"), "abc")["storeIds"]["epic"]["namespace"],
             "abc",
-            "{skipped}"
+            "{bad}"
         );
     }
+    // A file of only malformed entries still answers null: a non-string namespace is never
+    // stringified into a match.
+    assert_eq!(
+        lookup_over(r#"[{"storeIds":{"epic":{"namespace":7}}}]"#, "7"),
+        Value::Null
+    );
+    assert_eq!(
+        lookup_over(r#"[{"storeIds":{"epic":{"namespace":true}}}]"#, "true"),
+        Value::Null
+    );
+}
+
+#[test]
+fn the_argument_is_lower_cased_too_so_an_upper_case_argument_matches() {
+    let data = r#"[{"id":"alpha","storeIds":{"epic":{"namespace":"AbCdEf0123"}}}]"#;
+    for wanted in ["ABCDEF", "AbCdEf", "abcdef", "0123"] {
+        assert_eq!(lookup_over(data, wanted)["id"], "alpha", "{wanted}");
+    }
+    assert_eq!(lookup_over(data, "ABCDEFX"), Value::Null);
+    // Unicode lower-casing, as JS `toLowerCase`, not ASCII-only.
+    let unicode = r#"[{"id":"umlaut","storeIds":{"epic":{"namespace":"ÄBC"}}}]"#;
+    assert_eq!(lookup_over(unicode, "ÄB")["id"], "umlaut");
 }
 
 #[test]
@@ -350,7 +367,9 @@ fn the_first_matching_entry_wins_and_an_empty_argument_matches_the_first_namespa
         {"id":"second","storeIds":{"epic":{"namespace":"aaa-two"}}}
     ]"#;
     assert_eq!(lookup_over(data, "aaa")["id"], "first");
+    assert_eq!(lookup_over(data, "AAA")["id"], "first");
     assert_eq!(lookup_over(data, "two")["id"], "second");
+    assert_eq!(lookup_over(data, "TWO")["id"], "second");
     assert_eq!(lookup_over(data, "")["id"], "first");
 }
 

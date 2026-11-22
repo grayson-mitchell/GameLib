@@ -5,12 +5,17 @@
 //! to "persisted state goes through the StoreHost": it is a downloaded copy of somebody else's
 //! document, not GameLib state, so it is read and written with `std::fs` on that one path.
 //!
-//! [`info`] is the renderer's lookup. Parity quirks of the TS original are copied, not fixed (D-03):
-//! - only the FILE side is lower-cased, so an upper-case argument finds nothing;
+//! [`info`] is the renderer's lookup. The parity rule of the TS original is D-03: quirks are copied,
+//! not fixed. Two TS quirks are deliberately fixed by quick 261123-928 (todo
+//! 2026-11-22-anticheat-lookup-returned-undefined-on-no-match):
+//! - the argument is lower-cased as well as the file side (TS lower-cased only the file side, so an
+//!   upper-case argument found nothing);
+//! - an entry the lookup cannot read is skipped instead of ending the lookup (TS threw inside `find`,
+//!   so one bad entry ahead of the match hid it).
+//!
+//! What stays as the TS had it:
 //! - an entry with no truthy `storeIds.epic.namespace` never matches, even on its Steam id;
-//! - a file that is not a JSON array, or a malformed entry in front of the match (not an object, or
-//!   without `storeIds`, or a truthy non-string namespace), throws inside the TS `find` and so
-//!   answers `null` for the whole lookup;
+//! - a file that is not a JSON array answers `null`;
 //! - the TS `find` answered `undefined` for no match; Rust answers `null`, which the renderer
 //!   receives identically over IPC (D-03, todo 2026-11-22-anticheat-lookup-returned-undefined).
 //!
@@ -81,8 +86,8 @@ pub fn data_path(ctx: &InfoCtx) -> PathBuf {
 /// The entry of the data file whose Epic namespace contains `args.app_namespace`, or `null`.
 ///
 /// `null` as well for: no namespace given, Windows, a missing or unreadable file, a file that does
-/// not parse, and the malformed shapes the TS threw on (see the module docs). The file is read
-/// whole on every call, as TS did.
+/// not parse, a file that is not a JSON array, and no match. A malformed entry is skipped, not an
+/// answer of its own (see the module docs). The file is read whole on every call, as TS did.
 pub fn info(ctx: &InfoCtx, args: InfoArgs) -> Result<Value, String> {
     let Some(namespace) = args.app_namespace else {
         return Ok(Value::Null);
@@ -103,48 +108,27 @@ pub fn info(ctx: &InfoCtx, args: InfoArgs) -> Result<Value, String> {
     Ok(find(&data, &namespace).unwrap_or(Value::Null))
 }
 
-/// The TS `jsonData.find(...)`: `Some(entry)` for the first match, `None` for no match and also for
-/// a callback that would have thrown.
+/// `Some(entry)` for the first entry whose Epic namespace contains `wanted` (case-insensitively), `None`
+/// for no match and for a file that is not an array. A malformed entry is skipped.
 fn find(data: &Value, wanted: &str) -> Option<Value> {
-    // `.find` is not a function on anything but an array.
-    let entries = data.as_array()?;
-    for entry in entries {
-        // `Err` is a TypeError inside the callback: the whole lookup ends in the TS `catch`.
-        match matches(entry, wanted) {
-            Ok(true) => return Some(entry.clone()),
-            Ok(false) => {}
-            Err(()) => return None,
-        }
-    }
-    None
+    let wanted = wanted.to_lowercase();
+    data.as_array()?
+        .iter()
+        .find(|entry| matches(entry, &wanted))
+        .cloned()
 }
 
-/// The TS callback: `const namespace = info.storeIds.epic?.namespace; namespace ?
-/// namespace.toLowerCase().includes(wanted) : false`.
-fn matches(entry: &Value, wanted: &str) -> Result<bool, ()> {
-    // `info.storeIds`: an array, a primitive or null entry has no `storeIds`, and reading `.epic` of
-    // `undefined` or `null` throws.
-    let store_ids = entry.as_object().ok_or(())?.get("storeIds").ok_or(())?;
-    if store_ids.is_null() {
-        return Err(());
-    }
-    // `.epic` of a primitive or an array is `undefined`; `?.` then stops without reading further.
-    let Some(epic) = store_ids.as_object().and_then(|o| o.get("epic")) else {
-        return Ok(false);
-    };
-    // `.namespace` of a primitive is `undefined`; of `null` the `?.` already stopped.
-    let Some(namespace) = epic.as_object().and_then(|o| o.get("namespace")) else {
-        return Ok(false);
-    };
-    match namespace {
-        // Falsy: undefined, null, "", 0, false.
-        Value::Null | Value::Bool(false) => Ok(false),
-        Value::String(s) if s.is_empty() => Ok(false),
-        Value::Number(n) if n.as_f64() == Some(0.0) => Ok(false),
-        Value::String(s) => Ok(s.to_lowercase().contains(wanted)),
-        // A truthy non-string has no `toLowerCase`: TypeError.
-        _ => Err(()),
-    }
+/// Whether `entry` has an object `storeIds` with an object `epic` whose `namespace` is a non-empty
+/// string that, lower-cased, contains `wanted` (already lower-cased). Every other shape is false: a
+/// non-object entry, a missing, null or non-object `storeIds` or `epic`, and a `namespace` that is
+/// absent, null, empty or not a string (a number or `true` is never stringified into a match).
+fn matches(entry: &Value, wanted: &str) -> bool {
+    entry
+        .get("storeIds")
+        .and_then(|store_ids| store_ids.get("epic"))
+        .and_then(|epic| epic.get("namespace"))
+        .and_then(Value::as_str)
+        .is_some_and(|namespace| !namespace.is_empty() && namespace.to_lowercase().contains(wanted))
 }
 
 /// Lower-case hex of the MD5 digest of `bytes` (Node's `createHash('md5').digest('hex')`). A change

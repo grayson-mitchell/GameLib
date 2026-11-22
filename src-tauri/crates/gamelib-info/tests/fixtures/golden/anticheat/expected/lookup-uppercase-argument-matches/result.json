@@ -1,0 +1,25 @@
+{
+  "ops": [
+    {
+      "status": "Working",
+      "anticheats": [
+        "Easy Anti-Cheat"
+      ],
+      "notes": [
+        "Alpha Game note"
+      ],
+      "native": false,
+      "storeIds": {
+        "epic": {
+          "namespace": "AbCdEf0123",
+          "slug": "alpha-game"
+        },
+        "steam": "111"
+      },
+      "reference": "https://example.invalid/games/alpha-game",
+      "updates": []
+    }
+  ],
+  "onlineCallbacksRegistered": 0,
+  "requests": []
+}

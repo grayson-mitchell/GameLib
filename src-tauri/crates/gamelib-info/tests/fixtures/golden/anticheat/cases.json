@@ -22,8 +22,8 @@
     ]
   },
   {
-    "id": "lookup-uppercase-argument-misses",
-    "note": "TS quirk: only the file side is lower-cased, so an upper-case argument finds nothing",
+    "id": "lookup-uppercase-argument-matches",
+    "note": "the argument is lower-cased as well as the file side, so \"ABCDEF\" finds \"AbCdEf0123\". Re-expected by quick 261123-928, which fixed the TS quirk where only the file side was lower-cased; this result is no longer the TS oracle's recording",
     "platform": "linux",
     "ops": [
       {
