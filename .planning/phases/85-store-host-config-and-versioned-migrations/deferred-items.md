@@ -19,3 +19,11 @@
   from one place instead of pinning "all false".
   **Resolved by the orchestrator after wave 8:** the pin now asserts the post-85-12 state (cache family on, no per-store
   override). 85-13 onward must move it with each flip.
+
+## From 85-16
+
+- `pnpm find-deadcode` fails on one finding 85-16 did not introduce:
+  `new knip finding: exports | meta/harvestStoreCorpus.ts | PASTE_PLACEHOLDER_PREFIX`. It comes from
+  `d029be2cf` (`fix(85-02): redact live paste links from the store corpus`, committed by another session
+  while 85-16 ran). 85-16 never touched `meta/harvestStoreCorpus.ts`. The owner of that fix should drop the
+  export or tag it `@public`.

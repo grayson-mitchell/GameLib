@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
-stopped_at: Completed 85-15-PLAN.md
-last_updated: "2026-11-22T00:52:40.803Z"
+stopped_at: Completed 85-16-PLAN.md
+last_updated: "2026-11-22T01:27:01.542Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 3eafd38136b0edfec1afe31b802a16c46b7ba89b
+state_head: 236a95a70324471ab95c48b5e43aa2f64436cbe1
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 16 of 25
+Plan: 17 of 25
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
@@ -375,6 +375,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 85 P13 | 8 min | 2 tasks | 6 files |
 | Phase 85 P14 | 10 min | 2 tasks | 10 files |
 | Phase 85 P15 | 34 min | 3 tasks | 47 files |
+| Phase 85 P16 | 31min | 3 tasks | 35 files |
 
 ## Accumulated Context
 
@@ -722,6 +723,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: 85-15: settings documents open in a replace-only StoreHost::open_doc under their own key (settings/global, GamesConfig/<app>); boot sweep, frame worker and read-only reports all use that key
 - [Phase 85]: 85-15: every settings reader goes through settingsDocs.ts (cell view incl. pending writes when Rust owns the file, old disk path otherwise); storeRoot is threaded optionally beside versioning
 - [Phase 85]: 85-15: a safety removal pauses the store frame worker and dooms frames already queued under each removed app-data target (no seq tombstone), so reset/uninstall never resurrect settings and a later write is a new document
+- [Phase 85]: 85-16: the renderer fetch reply is { values, rev? } (values wrapped because a '*' store's keys are arbitrary); the Rust snapshot adds '@rev' -> {store: rev} beside the store names; the preload unwraps/skips both, 85-17 reads rev
+- [Phase 85]: 85-16: storeChannels.json is the one renderer store policy file; storePolicy.ts, readOnlyStores.ts and store_policy.rs read it and both sides run storePolicyVectors.json
+- [Phase 85]: 85-16: native store reads decide per row: Rust-owned rows from StoreHost, rows Rust never opens (store/migrations) and every read under GAMELIB_STORE=ts forwarded to the shell-only store:ts-fetch / store:ts-snapshot
+- [Phase 85]: 85-16: the read-only notice is raised by Rust (store_read_only_notice) once per process under rust mode, TS entries merged and deduped by area+reason; TS keeps its log lines
 
 ### Pending Todos
 
@@ -987,8 +992,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T00:52:39.287Z
-Stopped at: Completed 85-15-PLAN.md
+Last session: 2026-11-22T01:26:59.616Z
+Stopped at: Completed 85-16-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
