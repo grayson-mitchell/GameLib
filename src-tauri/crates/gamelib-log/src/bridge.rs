@@ -238,21 +238,38 @@ impl log::Log for LogBridge {
     fn flush(&self) {}
 }
 
+/// Which of the two process-wide bridges [`install_bridges`] put in place (IN-08): a global the
+/// process already had (another subscriber, another `log` logger) leaves only that one missing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BridgesInstalled {
+    /// The `tracing` layer (steam-vent, gamelib-steamcm).
+    pub tracing: bool,
+    /// The `log` facade bridge (reqwest and the other `log` crates).
+    pub log: bool,
+}
+
+impl BridgesInstalled {
+    /// Both bridges are in place.
+    pub fn all(self) -> bool {
+        self.tracing && self.log
+    }
+}
+
 /// Installs both bridges process-wide: a `tracing` `Registry` carrying a [`LogLayer`], and a
-/// [`LogBridge`] as the `log` logger with `log::max_level` set to match. First call wins: returns
-/// `false` (and never panics) when either global was already set, including by a second call.
-pub fn install_bridges(level: CrateLevel) -> bool {
-    let tracing_set =
+/// [`LogBridge`] as the `log` logger with `log::max_level` set to match. First call wins: a bridge
+/// whose global was already set (including by a second call) is reported `false`; this never panics.
+pub fn install_bridges(level: CrateLevel) -> BridgesInstalled {
+    let tracing =
         tracing::subscriber::set_global_default(Registry::default().with(LogLayer::new(level)))
             .is_ok();
-    let log_set = log::set_boxed_logger(Box::new(LogBridge::new(level))).is_ok();
-    if log_set {
+    let log = log::set_boxed_logger(Box::new(LogBridge::new(level))).is_ok();
+    if log {
         log::set_max_level(match level {
             CrateLevel::Warn => log::LevelFilter::Warn,
             CrateLevel::Debug => log::LevelFilter::Debug,
         });
     }
-    tracing_set && log_set
+    BridgesInstalled { tracing, log }
 }
 
 #[cfg(test)]
@@ -552,9 +569,16 @@ mod tests {
     fn install_bridges_sets_the_log_ceiling_and_a_second_call_returns_false() {
         // The only test in this crate that touches the process-global subscriber and logger; every
         // other test scopes its subscriber with `with_default` or drives `LogBridge::log` directly.
-        assert!(install_bridges(CrateLevel::Warn));
+        assert!(install_bridges(CrateLevel::Warn).all());
         assert_eq!(log::max_level(), log::LevelFilter::Warn);
-        assert!(!install_bridges(CrateLevel::Debug));
+        // Both globals are taken now: each bridge is reported missing, by name (IN-08).
+        assert_eq!(
+            install_bridges(CrateLevel::Debug),
+            BridgesInstalled {
+                tracing: false,
+                log: false
+            }
+        );
         assert_eq!(log::max_level(), log::LevelFilter::Warn);
     }
 

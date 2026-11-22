@@ -588,7 +588,11 @@ fn shell_log_to(logger: Option<&gamelib_log::writer::Logger>, message: &str) {
     if let Some(logger) = logger {
         // `Logger::log` escapes CR and LF itself (IN-07), so a message carrying external text cannot
         // forge a second line.
-        logger.log(gamelib_log::Prefix::Shell, shell_log_level(message), message);
+        logger.log(
+            gamelib_log::Prefix::Shell,
+            shell_log_level(message),
+            message,
+        );
     }
 }
 
@@ -656,25 +660,31 @@ fn init_native_logger() {
                 std::env::var("GAMELIB_LOG_LEVEL").ok().as_deref(),
             ));
         if let Some(warning) = bridge_install_warning(bridged) {
-            shell_log(warning);
+            shell_log(&warning);
         }
     }
 }
 
-/// IN-03: the shell diagnostic for a failed `install_bridges` (`false`: a global tracing subscriber
-/// or `log` logger was already set, so steam-vent, reqwest and the other crates' diagnostics do
-/// not reach `gamelib.log`), or `None` when the bridges are in place. The `WARN` prefix is what
-/// [`shell_log_level`] reads as a warning.
-fn bridge_install_warning(installed: bool) -> Option<&'static str> {
-    if installed {
-        None
-    } else {
-        Some(
-            "WARN: crate diagnostics not bridged: a global tracing subscriber or log logger was \
-             already installed, so steam-vent, reqwest and other crate diagnostics will not reach \
-             gamelib.log",
-        )
-    }
+/// IN-03, IN-08: the shell diagnostic for a failed `install_bridges`, or `None` when both bridges
+/// are in place. It names the bridge that is missing and only that one: a `tracing` global already
+/// taken loses steam-vent and gamelib-steamcm; a `log` logger already taken loses reqwest and the
+/// other `log` crates. The `WARN` prefix is what [`shell_log_level`] reads as a warning.
+fn bridge_install_warning(installed: gamelib_log::bridge::BridgesInstalled) -> Option<String> {
+    let lost = match (installed.tracing, installed.log) {
+        (true, true) => return None,
+        (false, true) => {
+            "a global tracing subscriber was already installed, so steam-vent and gamelib-steamcm diagnostics"
+        }
+        (true, false) => {
+            "a global log logger was already installed, so reqwest and other log-crate diagnostics"
+        }
+        (false, false) => {
+            "a global tracing subscriber and a log logger were already installed, so steam-vent, gamelib-steamcm, reqwest and other crate diagnostics"
+        }
+    };
+    Some(format!(
+        "WARN: crate diagnostics not bridged: {lost} will not reach gamelib.log"
+    ))
 }
 
 /// Where this process's logs and user data live, or `None` without a home directory. The one
@@ -4655,13 +4665,61 @@ mod tests {
 
     #[test]
     fn a_failed_bridge_install_is_reported() {
-        assert_eq!(bridge_install_warning(true), None);
-        let warning = bridge_install_warning(false).expect("a failed install is reported");
-        assert!(warning.starts_with("WARN"), "not a warning: {warning}");
-        assert_eq!(shell_log_level(warning), gamelib_log::Level::Warning);
+        use gamelib_log::bridge::BridgesInstalled;
+        let both = BridgesInstalled {
+            tracing: true,
+            log: true,
+        };
+        assert_eq!(bridge_install_warning(both), None);
+        for missing in [
+            BridgesInstalled {
+                tracing: false,
+                log: true,
+            },
+            BridgesInstalled {
+                tracing: true,
+                log: false,
+            },
+            BridgesInstalled {
+                tracing: false,
+                log: false,
+            },
+        ] {
+            let warning = bridge_install_warning(missing).expect("a failed install is reported");
+            assert!(warning.starts_with("WARN"), "not a warning: {warning}");
+            assert_eq!(shell_log_level(&warning), gamelib_log::Level::Warning);
+        }
+    }
+
+    #[test]
+    fn the_bridge_warning_names_only_the_bridge_that_is_missing() {
+        use gamelib_log::bridge::BridgesInstalled;
+        let no_tracing = bridge_install_warning(BridgesInstalled {
+            tracing: false,
+            log: true,
+        })
+        .expect("reported");
         assert!(
-            warning.contains("steam-vent") && warning.contains("reqwest"),
-            "does not name what is lost: {warning}"
+            no_tracing.contains("steam-vent") && !no_tracing.contains("reqwest"),
+            "{no_tracing}"
+        );
+        let no_log = bridge_install_warning(BridgesInstalled {
+            tracing: true,
+            log: false,
+        })
+        .expect("reported");
+        assert!(
+            no_log.contains("reqwest") && !no_log.contains("steam-vent"),
+            "{no_log}"
+        );
+        let neither = bridge_install_warning(BridgesInstalled {
+            tracing: false,
+            log: false,
+        })
+        .expect("reported");
+        assert!(
+            neither.contains("steam-vent") && neither.contains("reqwest"),
+            "{neither}"
         );
     }
 
