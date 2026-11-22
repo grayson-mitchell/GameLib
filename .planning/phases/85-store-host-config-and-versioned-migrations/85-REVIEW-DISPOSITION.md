@@ -13,11 +13,13 @@ Reconciled 2026-11-22 against `85-REVIEW-FIX.md` (iteration 1, scope critical_wa
 
 Round 2 (review committed after the fixes; round 1 is at `5714cafea`) verified 16 of the 19 fixes and added seven `D-` rows, all `open`. D-WR-01, D-WR-02 and D-WR-03 reopen B-WR-02, B-WR-03 and C-WR-06; all three were fixed in round-2 fix iteration 2 (`85-REVIEW-FIX.md`). The D-IN rows stay `open`.
 
+All 22 round-1 warnings were triaged in 85 UAT (Test 3, 2026-11-22): 19 fixed (B-WR-02, B-WR-03 and C-WR-06 completed in round 2), A-WR-03 won't fix, C-WR-01 and B-WR-10 deferred to todos. The info rows (round 1 and round 2) stay `open`; they were not part of that triage.
+
 | ID | Severity | Finding | Disposition |
 |---|---|---|---|
 | A-WR-01 | warning | `Synced` writes never fsync the parent directory, so the rename can be lost after a crash | fixed (58dbcb8c5) |
 | A-WR-02 | warning | Refuse-newer fails open for absurd stamped versions in the engine, but closed in `version_gate` | fixed (fe76120d1) |
-| A-WR-03 | warning | A lone-surrogate escape in a TS-written file locks a user-state, account or settings store read-only | skipped (product decision: D-18 rejection is pinned by MANIFEST.json, the numbers vector and the engine CORRUPT test; see 85-REVIEW-FIX.md) |
+| A-WR-03 | warning | A lone-surrogate escape in a TS-written file locks a user-state, account or settings store read-only | skipped (won't fix: the D-18 rejection of lone surrogates stands, decided by the operator in 85 UAT on 2026-11-22) |
 | A-WR-04 | warning | `dotpath::set` has no bound on array index or path depth, so a hostile or buggy key aborts the process | fixed (8861f6f3d) |
 | A-WR-05 | warning | `gamelib-store-cli open --dry-run` leaves a partial copy of token stores in the system temp directory on any copy error | fixed (8805d74cd) |
 | A-WR-06 | warning | A leftover temp file (crash orphan) is never swept, and a temp-name collision fails the write instead of retrying | fixed (bfd28ae47) |
@@ -35,7 +37,7 @@ Round 2 (review committed after the fixes; round 1 is at `5714cafea`) verified 1
 | B-WR-07 | warning | `plain_name` accepts `:`, so a `GamesConfig/<app>` name can escape its directory on Windows | fixed (feae34d50) |
 | B-WR-08 | warning | Confirmed writes (`sidecar:store-set-checked`) are not ordered against fire-and-forget writes | fixed (a8fcd4a2b) |
 | B-WR-09 | warning | A panic while handling a frame leaves it unanswered forever | fixed (bc1a7ece6) |
-| B-WR-10 | warning | Runtime-cache allow-list `RUNTIME_CACHE_NAMES` owns nothing the table does not already own | open |
+| B-WR-10 | warning | Runtime-cache allow-list `RUNTIME_CACHE_NAMES` owns nothing the table does not already own | deferred (`.planning/todos/pending/2026-11-22-runtime-cache-names-allow-list-owns-nothing.md`) |
 | B-IN-01 | info | Stale `allow(dead_code)` suppressions that reference a call site that already exists | open |
 | B-IN-02 | info | Duplicated helpers across the store files | open |
 | B-IN-03 | info | `storeNew` opens the file of the denied `humble_library` cache | open |
@@ -45,7 +47,7 @@ Round 2 (review committed after the fixes; round 1 is at `5714cafea`) verified 1
 | B-IN-07 | info | The 10 MB frame cap is checked after the line is read and parsed in full | open |
 | B-IN-08 | info | The bottle-file handlers follow symlinks and read the whole file unbounded | open |
 | B-IN-09 | info | The boot candidate scan is not covered by the boot bounds | open |
-| C-WR-01 | warning | `resetHeroic` deletes the settings documents but never drops their mirror cells | skipped (fix needs shellFilesFlowRegistration.ts and handlers.ts, which carried unrelated uncommitted GOG WIP; fix described in 85-REVIEW-FIX.md) |
+| C-WR-01 | warning | `resetHeroic` deletes the settings documents but never drops their mirror cells | deferred (`.planning/todos/pending/2026-11-22-reset-heroic-leaves-settings-mirror-cells.md`) |
 | C-WR-02 | warning | Uninstall's "remove settings" leaves the cached `GameConfig` instance serving and re-writing the deleted settings | fixed (97aed9670) |
 | C-WR-03 | warning | `validateStoreFrame` measures frame size in UTF-16 code units, the shell in bytes | fixed (ff0988f17) |
 | C-WR-04 | warning | Corpus harvester denylist does not cover the secret key names this codebase itself documents | fixed (e3b769703) |
