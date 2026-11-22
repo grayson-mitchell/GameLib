@@ -1118,12 +1118,11 @@ mod tests {
         }
     }
 
+    /// Every tray list a recording sink was handed, in push order.
+    type TrayLists = Arc<Mutex<Vec<Vec<TrayRecentGame>>>>;
+
     /// A sink with no AppHandle: records the emitter pushes and the tray lists it was handed.
-    fn recording_sink() -> (
-        Arc<TrayRecentSink>,
-        Arc<RecordingEmitter>,
-        Arc<Mutex<Vec<Vec<TrayRecentGame>>>>,
-    ) {
+    fn recording_sink() -> (Arc<TrayRecentSink>, Arc<RecordingEmitter>, TrayLists) {
         let emitter = Arc::new(RecordingEmitter::default());
         let tray = Arc::new(Mutex::new(Vec::new()));
         let tray_sink = Arc::clone(&tray);
@@ -1858,7 +1857,11 @@ mod tests {
             (json!("x"), ("0", "invalid_type")),
             (json!(null), ("0", "invalid_type")),
         ] {
-            assert_eq!(parse_steamgrid_artwork(&[arg.clone()]), Err(want), "{arg}");
+            assert_eq!(
+                parse_steamgrid_artwork(std::slice::from_ref(&arg)),
+                Err(want),
+                "{arg}"
+            );
         }
         assert_eq!(
             parse_steamgrid_artwork(&[]),
@@ -2028,11 +2031,20 @@ mod tests {
     #[test]
     fn get_itad_steam_gids_accepts_up_to_5000_digit_strings_of_1_to_10_digits() {
         let ok = json!(["220", "1", "1234567890"]);
-        assert_eq!(parse_get_itad_steam_gids(&[ok.clone()]), Ok(&ok));
+        assert_eq!(
+            parse_get_itad_steam_gids(std::slice::from_ref(&ok)),
+            Ok(&ok)
+        );
         let empty = json!([]);
-        assert_eq!(parse_get_itad_steam_gids(&[empty.clone()]), Ok(&empty));
+        assert_eq!(
+            parse_get_itad_steam_gids(std::slice::from_ref(&empty)),
+            Ok(&empty)
+        );
         let full = Value::Array(vec![json!("1"); 5000]);
-        assert_eq!(parse_get_itad_steam_gids(&[full.clone()]), Ok(&full));
+        assert_eq!(
+            parse_get_itad_steam_gids(std::slice::from_ref(&full)),
+            Ok(&full)
+        );
         for (args, want) in [
             (vec![], ("(args)", "invalid_type")),
             (vec![json!([]), json!([])], ("(args)", "invalid_type")),

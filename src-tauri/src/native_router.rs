@@ -133,9 +133,11 @@ pub(crate) enum SendPayload {
 /// Where the store slice worker answers a confirmed write: a one-slot channel the invoke handler
 /// awaits.
 #[derive(Clone)]
-pub(crate) struct CheckedReply(
-    Arc<std::sync::Mutex<Option<tauri::async_runtime::Sender<Result<bool, String>>>>>,
-);
+pub(crate) struct CheckedReply(CheckedReplySlot);
+
+/// The reply slot itself: taken once by whichever side answers first.
+type CheckedReplySlot =
+    Arc<std::sync::Mutex<Option<tauri::async_runtime::Sender<Result<bool, String>>>>>;
 
 impl CheckedReply {
     pub(crate) fn new() -> (Self, tauri::async_runtime::Receiver<Result<bool, String>>) {
@@ -252,6 +254,7 @@ impl SliceQueue {
 /// run in enqueue order (D-02). While a job runs the worker holds a shutdown `Registrant` named
 /// after the slice; once the token is cancelled, queued jobs are dropped (D-14). The thread ends
 /// when every sender is dropped; a parked std thread does not hold the process open.
+#[cfg(test)]
 pub(crate) fn spawn_slice_worker<H>(
     slice: &'static str,
     shutdown: Shutdown,
