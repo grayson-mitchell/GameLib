@@ -2,7 +2,7 @@
  * Curated enrichment-channel registration (Phase 34.2 Plan 06, D-04/D-07/
  * D-10, REQ-34.2-04/REQ-34.2-11/REQ-34.2-12/REQ-34.2-14).
  *
- * Registers the 12 enrichment channels the game-details page and store
+ * Registers the 11 enrichment channels the game-details page and store
  * search container depend on, onto platformApi's own `ipcMain` recorder,
  * importing the REAL underlying bodies plans 34.2-01/34.2-03 already
  * extracted or wired unchanged (mirrors `gameDetailsFlowRegistration.ts`'s
@@ -143,7 +143,6 @@ import { getWikiGameInfo } from '../wiki_game_info/wiki_game_info'
 import { readGamelibFixStatus, readKnownFixes } from '../knownFixes'
 import { buildCrossoverRatingMap } from '../crossover_index/crossoverRatingMap'
 import {
-  handleSearchStores,
   handleGetStoreSearchDeals,
   handleGetItadSteamGids
 } from '../storeSearch/handlers'
@@ -203,7 +202,7 @@ const RUNS_FOR_ME_RUNNERS: readonly string[] = Object.freeze([
 ] as const)
 
 /**
- * Registers the 12 enrichment channels. Called once from `handlers.ts`
+ * Registers the 11 enrichment channels. Called once from `handlers.ts`
  * — this module owns no side effects at import time beyond the imports
  * above; the caller decides when registration onto the handler registry
  * happens.
@@ -295,17 +294,12 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
     })
   )
 
-  // storeSearch trio — delegates to the shared bodies in
-  // storeSearch/handlers.ts (Phase 34.2 Plan 13, closes WR-09), which carry
-  // the Phase 20 D-14 try/log/RETHROW contract. A bare pass-through would
-  // silently change the error-propagation contract the frontend depends on.
-  deps.ipc.handle('searchStores', async (_event: unknown, ...args: unknown[]) =>
-    handleSearchStores(
-      deps,
-      args[0] as string,
-      args[1] as string | null | undefined
-    )
-  )
+  // storeSearch trio — `searchStores` has moved to Rust (86-16); the other two delegate to the
+  // shared bodies in storeSearch/handlers.ts (Phase 34.2 Plan 13, closes WR-09), which carry the
+  // Phase 20 D-14 try/log/RETHROW contract. A bare pass-through would silently change the
+  // error-propagation contract the frontend depends on.
+  // Phase 86 (86-16, D-17): `searchStores` is a native `info` channel served by Rust
+  // (`info_itad_search`, `nativeChannels.json`), so it is no longer registered here.
 
   deps.ipc.handle(
     'getStoreSearchDeals',

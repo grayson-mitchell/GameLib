@@ -6503,30 +6503,24 @@
     {
       "channel": "searchStores",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "maxLength": 256
-          },
-          {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 16
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 2
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "query",
+          "type": "string",
+          "maxLength": 256,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "country",
+          "type": "string",
+          "optional": true,
+          "nullable": true,
+          "maxLength": 16,
+          "maxLengthUnit": "utf16"
+        }
+      ],
+      "returns": "StoreSearchResponse"
     },
     {
       "channel": "set-connectivity-online",

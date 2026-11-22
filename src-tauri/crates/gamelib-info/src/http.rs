@@ -347,6 +347,9 @@ mod replay {
         response_headers: Vec<(String, String)>,
         response_body: Vec<u8>,
         ts_only: bool,
+        /// The recorded call produced no response (a synthetic `networkError` exchange, status 0):
+        /// the request is matched and consumed like any other, then fails as a transport error.
+        network_error: bool,
         consumed: bool,
     }
 
@@ -416,8 +419,10 @@ mod replay {
 
     impl Replay {
         /// Reads `<dir>/exchanges.json`: an ordered list of `{id, request: {method, url, headers,
-        /// body?}, response: {status, headers, bodyFile?}, tsOnly?, rustOnly?}`, with each response
-        /// body in the named file beside it.
+        /// body?}, response: {status, headers, bodyFile?}, tsOnly?, rustOnly?, networkError?}`, with
+        /// each response body in the named file beside it. `networkError: true` makes the exchange a
+        /// transport failure: it matches and is consumed like any other, then answers
+        /// [`HttpError::Network`] instead of a response.
         pub fn from_case(dir: &Path) -> Result<Replay, String> {
             let text = std::fs::read_to_string(dir.join("exchanges.json"))
                 .map_err(|e| format!("cannot read exchanges.json: {}", e.kind()))?;
@@ -489,6 +494,10 @@ mod replay {
                         .unwrap_or_default(),
                     response_body,
                     ts_only: item.get("tsOnly").and_then(Value::as_bool).unwrap_or(false),
+                    network_error: item
+                        .get("networkError")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false),
                     consumed: false,
                     id,
                 });
@@ -553,7 +562,7 @@ mod replay {
             let index = st
                 .exchanges
                 .iter()
-                .position(|e| free(e) && pairs(&e.url) == wanted)
+                .position(|e| free(e) && query_matches(&pairs(&e.url), &wanted))
                 .or_else(|| st.exchanges.iter().position(free));
             let Some(index) = index else {
                 return fail(&mut st, format!("replay: unmatched request: {name}"));
@@ -572,6 +581,9 @@ mod replay {
                 return Err(HttpError::TooLarge);
             }
             exchange.consumed = true;
+            if exchange.network_error {
+                return Err(HttpError::Network("Network Error".to_string()));
+            }
             Ok(Response {
                 status: exchange.status,
                 headers: exchange.response_headers.clone(),
@@ -608,6 +620,24 @@ mod replay {
             .collect()
     }
 
+    /// Whether a request's decoded query pairs are the recorded ones. A key-like parameter
+    /// (`key`, `token`, ...) the recorder stored as the bare word `REDACTED` matches any non-empty
+    /// value, as a pinned secret header does: the real value is never written to a fixture.
+    fn query_matches(recorded: &[(String, String)], wanted: &[(String, String)]) -> bool {
+        recorded.len() == wanted.len()
+            && recorded.iter().zip(wanted).all(|(r, w)| pair_matches(r, w))
+    }
+
+    fn pair_matches(recorded: &(String, String), wanted: &(String, String)) -> bool {
+        recorded == wanted
+            || (recorded.0 == wanted.0
+                && recorded.1 == REDACTED
+                && !wanted.1.is_empty()
+                && HIDDEN_PARAMS
+                    .iter()
+                    .any(|h| recorded.0.eq_ignore_ascii_case(h)))
+    }
+
     fn header<'a>(headers: &'a [(String, String)], name: &str) -> Option<&'a str> {
         headers
             .iter()
@@ -630,14 +660,16 @@ mod replay {
     ) -> Vec<String> {
         let mut diffs = Vec::new();
         let recorded = pairs(&exchange.url);
-        if recorded != wanted {
+        if !query_matches(&recorded, wanted) {
             if recorded.len() != wanted.len() {
                 diffs.push(format!(
                     "query has {} pair(s), recorded {}",
                     wanted.len(),
                     recorded.len()
                 ));
-            } else if let Some(i) = (0..recorded.len()).find(|i| recorded[*i] != wanted[*i]) {
+            } else if let Some(i) =
+                (0..recorded.len()).find(|i| !pair_matches(&recorded[*i], &wanted[*i]))
+            {
                 diffs.push(format!(
                     "query pair {i}: recorded {}, got {}",
                     shown_param(&recorded[i].0, &recorded[i].1),

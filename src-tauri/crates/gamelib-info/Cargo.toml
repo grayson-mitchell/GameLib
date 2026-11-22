@@ -16,7 +16,8 @@ gamelib-core = { path = "../gamelib-core" }
 gamelib-store = { path = "../gamelib-store" }
 # `rt-multi-thread` like gamelib-steamcm's runtime: the shell calls `dispatch_sync` from several
 # plain worker threads, and concurrent `block_on` calls on a current-thread runtime stall.
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+# `sync` for the ITAD single-flight (`tokio::sync::OnceCell`).
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # The shell's pin (src-tauri/Cargo.toml): no default features, the TLS provider is installed by
@@ -28,6 +29,9 @@ url = "2"
 # The change check on the anti-cheat data file (86-12, D-28): the MD5 hex of the local copy against the
 # release feed's hash. Not a security control. RustCrypto, shares `digest` with the locked sha2.
 md-5 = "0.10"
+# The ITAD search cache key is the first 32 hex of a SHA-256 over the normalised query (86-16). Not a
+# security control. The version `gamelib-depot` already locks.
+sha2 = "0.10"
 # Fixed-offset civil time only (the cache timestamps): no tz database is read.
 jiff = { version = "0.2", default-features = false, features = ["std"] }
 

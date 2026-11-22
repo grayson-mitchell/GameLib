@@ -9,6 +9,7 @@ use gamelib_core::shutdown::Shutdown;
 use gamelib_store::host::StoreHost;
 
 use crate::http::Http;
+use crate::itad::gate::ItadGate;
 use crate::recent::RecentSink;
 use crate::secrets::{ItadKey, SecretSource, SgdbKey, Slot};
 
@@ -59,6 +60,9 @@ pub struct InfoCtx {
     /// are per context, that is per process in the shell.
     pub itad_key: ItadKey,
     pub sgdb_key: SgdbKey,
+    /// The ITAD rate-limit gate and single-flight (86-16): in-memory session state, like the key's
+    /// `rejected` flag, so a restart forgets a block.
+    pub itad_gate: ItadGate,
 }
 
 impl InfoCtx {
@@ -85,6 +89,7 @@ impl InfoCtx {
             recent_sink: None,
             itad_key: ItadKey::new(),
             sgdb_key: SgdbKey::new(),
+            itad_gate: ItadGate::new(),
         }
     }
 

@@ -829,6 +829,7 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "getLogContent",
     "getUploadedLogFiles",
     "removeRecent",
+    "searchStores",
     "sidecar:store-fetch",
     "sidecar:store-set-checked",
     "steamgriddb.getGrids",

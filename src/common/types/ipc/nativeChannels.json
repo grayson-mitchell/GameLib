@@ -611,6 +611,29 @@
           }
         ]
       ]
+    },
+    "searchStores": {
+      "kind": "invoke",
+      "slice": "info",
+      "args": [
+        {
+          "name": "query",
+          "type": "string",
+          "maxLength": 256,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "country",
+          "type": "string",
+          "optional": true,
+          "nullable": true,
+          "maxLength": 16,
+          "maxLengthUnit": "utf16"
+        }
+      ],
+      "returns": "StoreSearchResponse",
+      "valid": [["portal"], [""], ["portal", "US"], ["portal", null]],
+      "invalid": [[], [1], [null], [{}], ["a", 1], ["a", {}], ["a", "US", "x"]]
     }
   }
 }

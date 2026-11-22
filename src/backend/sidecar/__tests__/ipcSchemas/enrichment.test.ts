@@ -55,10 +55,6 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
       [locale, 'y']
     ]
   },
-  searchStores: {
-    valid: [['half-life'], [''], ['portal', 'DE'], ['portal', null]],
-    invalid: [[], [1], ['x'.repeat(300)]]
-  },
   getStoreSearchDeals: {
     valid: [
       ['018d937f-0f7e-7172-b2c5-9a6e6b4e38a1'],
@@ -78,9 +74,9 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
 }
 
 describe('enrichment channel schemas', () => {
-  it('has a fixture for every key (12 total)', () => {
+  it('has a fixture for every key (11 total)', () => {
     expectFixtureCoverage(enrichmentAsyncArgs, table)
-    expect(Object.keys(enrichmentAsyncArgs).length).toBe(12)
+    expect(Object.keys(enrichmentAsyncArgs).length).toBe(11)
   })
   runFixtureTable(enrichmentAsyncArgs, table)
 

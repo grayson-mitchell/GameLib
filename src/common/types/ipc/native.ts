@@ -7,6 +7,7 @@
  * channels in `NativeAsync`, send channels in `NativeSync`.
  */
 import type { AntiCheatInfo, UploadedLogData } from '../../types'
+import type { StoreSearchResponse } from '../storeSearch'
 import type { GetLogFileArgs } from './logger'
 import type { MetadataOverride } from './gameDetails'
 
@@ -83,6 +84,16 @@ export interface NativeAsync {
   'steamgriddb.getHeroes': (
     query: SteamGridQuery
   ) => Promise<Array<{ id: number; url: string; thumb: string }>>
+  // Phase 86 (86-16, D-17): the IsThereAnyDeal store search, run by the Rust `info` slice
+  // (`info_itad_search`) over the `itad_prices` cache. The term is 0 to 256 UTF-16 units and the
+  // country absent, null or 0 to 16 units (anything but two upper-case letters prices as US). A
+  // failure rejects with the fixed `[storeSearch:<code>] <endpoint> <status>` string the renderer
+  // turns into its provider-failed state; a 429 or a network error serves a stale row with
+  // `cachedAt` when one is cached.
+  searchStores: (
+    query: string,
+    country?: string | null
+  ) => Promise<StoreSearchResponse>
 }
 
 export interface NativeSync {

@@ -226,6 +226,72 @@ async fn replay_takes_any_value_for_a_secret_header_the_recorder_redacted() {
     assert!(r.send(matching_request()).await.is_err());
 }
 
+fn keyed_exchange(recorded_key: &str) -> Value {
+    json!([{
+        "id": "k1",
+        "request": {
+            "method": "GET",
+            "url": format!("https://example.test/games?title=portal&key={recorded_key}"),
+            "headers": {"User-Agent": "GameLib/1.0"}
+        },
+        "response": {"status": 200, "headers": {}, "bodyFile": "body-1.json"}
+    }])
+}
+
+fn keyed_request(key: &str) -> Request {
+    Request::get(
+        format!(
+            "https://example.test/games?{}",
+            axios_query(&[("title", "portal"), ("key", key)])
+        ),
+        T,
+    )
+    .header("User-Agent", "GameLib/1.0")
+}
+
+#[tokio::test]
+async fn replay_takes_any_value_for_a_query_key_the_recorder_redacted() {
+    // The recorder writes a `key=` query value as the bare word `REDACTED`, so a request carrying
+    // any non-empty key is the recorded twin.
+    let (_dir, r) = replay(keyed_exchange("REDACTED"));
+    r.send(keyed_request("some-test-key")).await.unwrap();
+    r.finish().unwrap();
+
+    // An empty key is still drift, and the message never prints the value.
+    let (_dir, r) = replay(keyed_exchange("REDACTED"));
+    let HttpError::Network(message) = r.send(keyed_request("")).await.unwrap_err() else {
+        panic!("expected a replay mismatch")
+    };
+    assert!(message.contains("key=<hidden>"), "{message}");
+
+    // The leniency is for key-like parameters only: `title=REDACTED` is compared exactly.
+    let mut other = keyed_exchange("REDACTED");
+    other[0]["request"]["url"] = json!("https://example.test/games?title=REDACTED&key=REDACTED");
+    let (_dir, r) = replay(other);
+    assert!(r.send(keyed_request("k")).await.is_err());
+
+    // A recorded key that is NOT the word REDACTED is compared exactly.
+    let (_dir, r) = replay(keyed_exchange("recorded-key"));
+    assert!(r.send(keyed_request("other-key")).await.is_err());
+}
+
+#[tokio::test]
+async fn a_network_error_exchange_matches_is_consumed_and_fails_as_a_transport_error() {
+    let mut exchanges = one_exchange();
+    exchanges[0]["response"] = json!({"status": 0, "headers": {}});
+    exchanges[0]["networkError"] = json!(true);
+    let (_dir, r) = replay(exchanges.clone());
+    let err = r.send(matching_request()).await.unwrap_err();
+    assert!(matches!(err, HttpError::Network(_)), "{err:?}");
+    // Consumed like any exchange: the replay finishes clean, and a second request has no twin.
+    r.finish().unwrap();
+    assert!(r.send(matching_request()).await.is_err());
+
+    // Left unrequested it is an unconsumed exchange, as any other.
+    let (_dir, r) = replay(exchanges);
+    assert!(r.finish().unwrap_err().contains("unconsumed"));
+}
+
 #[tokio::test]
 async fn replay_fails_on_a_body_that_differs() {
     let exchanges = json!([{
@@ -332,7 +398,9 @@ fn replay_refuses_a_case_it_cannot_read() {
 async fn replay_hides_secret_looking_query_values_in_its_messages() {
     let exchanges = json!([{
         "id": "itad",
-        "request": {"method": "GET", "url": "https://api.example.test/v1?key=REDACTED&country=NZ"},
+        // A recorded value that is not the bare word `REDACTED` is compared exactly (the word itself
+        // matches any non-empty value, see `replay_takes_any_value_for_a_query_key_the_recorder_redacted`).
+        "request": {"method": "GET", "url": "https://api.example.test/v1?key=RECORDEDSECRET&country=NZ"},
         "response": {"status": 200, "headers": {}, "bodyFile": "body-1.json"}
     }]);
     let (_dir, r) = replay(exchanges);
@@ -343,8 +411,10 @@ async fn replay_hides_secret_looking_query_values_in_its_messages() {
         ))
         .await
         .unwrap_err();
-    assert!(!err.to_string().contains("SUPERSECRET"), "{err}");
-    assert!(!r.finish().unwrap_err().contains("SUPERSECRET"));
+    for secret in ["SUPERSECRET", "RECORDEDSECRET"] {
+        assert!(!err.to_string().contains(secret), "{err}");
+        assert!(!r.finish().unwrap_err().contains(secret));
+    }
 }
 
 // ---------------------------------------------------------------------------------------------

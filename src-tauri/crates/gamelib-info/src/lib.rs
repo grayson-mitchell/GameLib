@@ -15,6 +15,7 @@ pub mod anticheat;
 pub mod cache_view;
 pub mod ctx;
 pub mod http;
+pub mod itad;
 pub mod overrides;
 pub mod recent;
 pub mod secrets;
@@ -35,6 +36,7 @@ pub const OPS: &[&str] = &[
     "info_anticheat_download",
     "info_anticheat_info",
     "info_anticheat_status",
+    "info_itad_search",
     "info_overrides_attach",
     "info_overrides_get",
     "info_overrides_get_all",
@@ -63,6 +65,7 @@ async fn route(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, String>
         "info_anticheat_download" => anticheat::download(ctx, decode(op, args)?).await,
         "info_anticheat_info" => anticheat::info(ctx, decode(op, args)?),
         "info_anticheat_status" => anticheat::status(ctx, decode(op, args)?),
+        "info_itad_search" => itad::search(ctx, decode(op, args)?).await,
         "info_overrides_attach" => overrides::attach(ctx, decode(op, args)?),
         "info_overrides_get" => Ok(overrides::get(ctx, &decode(op, args)?).to_value()),
         "info_overrides_get_all" => {

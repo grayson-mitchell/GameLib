@@ -431,10 +431,6 @@ const ITAD_BASE = 'https://api.isthereanydeal.com'
 const ITAD_GID = '018d937f-0f7e-7172-b2c5-9a6e6b4e38a1'
 const ITAD_KEY_ENV = 'GAMELIB_ITAD_API_KEY'
 
-const itadSearchFixture = [
-  { id: ITAD_GID, title: 'Team Fortress 2', assets: { banner145: 'tf2.jpg' } }
-]
-
 const itadPricesFixture = [
   {
     id: ITAD_GID,
@@ -549,22 +545,6 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       delete process.env[ITAD_KEY_ENV]
     })
 
-    it('REQ-34.2-11 searchStores (invoke): a rejecting provider surfaces an ERROR response frame carrying the [storeSearch:provider] marker, not an empty array', async () => {
-      mockAxiosGet.mockImplementation(() =>
-        Promise.reject(new Error('itad unreachable'))
-      )
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'ss-err-1', 'searchStores', ['some query'])
-      await flush()
-
-      const response = findResponse(frames, 'ss-err-1')
-      expect(response?.ok).toBe(false)
-      expect(typeof response?.error).toBe('string')
-      expect(response?.error as string).toContain('[storeSearch:provider]')
-      expect(response?.result).toBeUndefined()
-    })
-
     it('REQ-34.2-11 getStoreSearchDeals (invoke): a rejecting provider surfaces an ERROR response frame carrying the [storeSearch:provider] marker, not an empty array', async () => {
       mockAxiosPost.mockImplementation(() =>
         Promise.reject(new Error('itad unreachable'))
@@ -580,34 +560,6 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       expect(response?.error as string).toContain('[storeSearch:provider]')
       expect(response?.result).toBeUndefined()
     })
-
-    it('T-47-28b the error frame carries only the marker message: no key, no URL', async () => {
-      mockAxiosGet.mockImplementation(() =>
-        Promise.reject(new Error('https://api.isthereanydeal.com?key=test-key'))
-      )
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'ss-err-leak', 'searchStores', ['leak probe query'])
-      await flush()
-
-      const response = findResponse(frames, 'ss-err-leak')
-      expect(response?.ok).toBe(false)
-      expect(response?.error as string).not.toContain('test-key')
-      expect(response?.error as string).not.toContain('http')
-    })
-
-    it('REQ-34.2-11 searchStores (invoke): no built-in key surfaces an ERROR frame carrying [storeSearch:notConfigured]', async () => {
-      delete process.env[ITAD_KEY_ENV]
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'ss-nokey-1', 'searchStores', ['keyless query'])
-      await flush()
-
-      const response = findResponse(frames, 'ss-nokey-1')
-      expect(response?.ok).toBe(false)
-      expect(response?.error as string).toContain('[storeSearch:notConfigured]')
-      expect(mockAxiosGet).not.toHaveBeenCalled()
-    })
   })
 
   // ── REQ-34.2-11: storeSearch trio happy paths ────────────────────────────
@@ -617,39 +569,6 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     })
     afterEach(() => {
       delete process.env[ITAD_KEY_ENV]
-    })
-
-    it('REQ-34.2-11 searchStores (invoke) returns the StoreSearchResponse envelope from ITAD', async () => {
-      mockAxiosGet.mockImplementation((url: string) => {
-        if (url === `${ITAD_BASE}/games/search/v1`) {
-          return Promise.resolve({ data: itadSearchFixture })
-        }
-        return Promise.reject(new Error(`unexpected axios.get(${url})`))
-      })
-      mockAxiosPost.mockImplementation((url: string) => {
-        if (url === `${ITAD_BASE}/games/prices/v3`) {
-          return Promise.resolve({ data: itadPricesFixture })
-        }
-        return Promise.reject(new Error(`unexpected axios.post(${url})`))
-      })
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'ss-1', 'searchStores', ['team fortress', 'US'])
-      await flush()
-
-      const response = findResponse(frames, 'ss-1')
-      expect(response?.ok).toBe(true)
-      expect(response?.result).toMatchObject({
-        pricedCountry: 'US',
-        results: [
-          {
-            gameId: ITAD_GID,
-            title: 'Team Fortress 2',
-            cheapestPrice: '4.99',
-            currencyCode: 'USD'
-          }
-        ]
-      })
     })
 
     it('REQ-34.2-11 getStoreSearchDeals (invoke) returns the mapped ITAD deal breakdown', async () => {
@@ -1055,10 +974,10 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       ['getWikiGameInfo', ['t', 'app-x', 'legendary', false]],
       ['getKnownFixes', ['app-x', 'gog']],
       ['getCrossoverIndex', []],
-      ['searchStores', ['query-x']],
       ['getStoreSearchDeals', [ITAD_GID]],
       ['getItadSteamGids', [['440']]]
       // `removeRecent` left this list in Phase 86 Plan 08 (D-17): it is a native `info` channel.
+      // `searchStores` left it in Phase 86 Plan 16 (D-17), for the same reason.
     ]
 
     it.each(ALL_7_CHANNELS)(

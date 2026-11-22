@@ -634,6 +634,93 @@ pub(crate) fn steamgrid_heroes(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> Native
     )
 }
 
+/// The fixed code word of a `[storeSearch:<code>]` error, or `None` for any other text. The rest of
+/// the message (an endpoint label and a status) is never read here.
+fn itad_error_code(message: &str) -> Option<&'static str> {
+    [
+        ("[storeSearch:rateLimited]", "rateLimited"),
+        ("[storeSearch:notConfigured]", "notConfigured"),
+        ("[storeSearch:provider]", "provider"),
+    ]
+    .into_iter()
+    .find_map(|(marker, word)| message.starts_with(marker).then_some(word))
+}
+
+/// Runs one ITAD op on the blocking pool and logs what the TS handler logged, as categories only
+/// (T-86-35): a failed op as `itad <channel> failed (<code>)` with the marker string (an endpoint and a
+/// status, never a key or a URL) on stderr alone, and the first time ITAD refuses the user's key as one
+/// line. `channel` is the renderer-facing name.
+async fn run_itad_op(
+    info: &Arc<InfoCtx>,
+    channel: &'static str,
+    op: &'static str,
+    args: Vec<Value>,
+    failed: &'static str,
+) -> Result<Value, String> {
+    let was_rejected = info.itad_key.is_rejected();
+    let result = run_info_op(Arc::clone(info), op, args, failed).await;
+    if !was_rejected && info.itad_key.is_rejected() {
+        shell_log("itad user key rejected; using the built-in key");
+    }
+    if let Err(message) = &result {
+        if let Some(code) = itad_error_code(message) {
+            shell_log_detail(&format!("itad {channel} failed ({code})"), message);
+        }
+    }
+    result
+}
+
+/// Decodes the arguments of `searchStores`: a search term of 0 to
+/// [`gamelib_info::itad::QUERY_MAX_UTF16`] UTF-16 code units and an optional country (absent or null,
+/// else a string of 0 to [`gamelib_info::itad::COUNTRY_MAX_UTF16`] units), the zod bounds they replace.
+/// Fixed literals only, never the renderer's value.
+fn parse_search_stores(args: &[Value]) -> Result<(&str, Option<&str>), Rejection> {
+    let (query, country) = match args {
+        [] => return Err(("(args)", "too_small")),
+        [query] => (query, None),
+        [query, country] => (query, Some(country)),
+        _ => return Err(("(args)", "too_big")),
+    };
+    let Value::String(query) = query else {
+        return Err(("0", "invalid_type"));
+    };
+    if query.encode_utf16().count() > gamelib_info::itad::QUERY_MAX_UTF16 {
+        return Err(("0", "too_big"));
+    }
+    let country = match country {
+        None | Some(Value::Null) => None,
+        Some(Value::String(country)) => {
+            if country.encode_utf16().count() > gamelib_info::itad::COUNTRY_MAX_UTF16 {
+                return Err(("1", "too_big"));
+            }
+            Some(country.as_str())
+        }
+        Some(_) => return Err(("1", "invalid_type")),
+    };
+    Ok((query, country))
+}
+
+/// The native `searchStores` handler (slice `info`, D-17): rows for a title, one per game from its
+/// cheapest deal, with the TS caching, rate-limit and stale-serve behaviour. Validated before the
+/// context is looked at. A failure is the fixed `[storeSearch:<code>] <endpoint> <status>` string the
+/// renderer turns into its provider-failed state; the key is never in it (T-86-35).
+pub(crate) fn search_stores(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        let (query, country) = parse_search_stores(&args)
+            .map_err(|(path, code)| invalid_args("searchStores", &[path], &[code]))?;
+        let op_args = vec![serde_json::json!({ "query": query, "country": country })];
+        let info = info_ctx().ok_or_else(|| "searchStores: not ready".to_string())?;
+        run_itad_op(
+            info,
+            "searchStores",
+            "info_itad_search",
+            op_args,
+            "searchStores: the search did not finish",
+        )
+        .await
+    })
+}
+
 #[cfg(test)]
 use gamelib_store::host::StoreHost;
 #[cfg(test)]
@@ -1438,6 +1525,165 @@ mod tests {
             seen[0].url,
             "https://www.steamgriddb.com/api/v2/grids/game/7?dimensions=460x215&styles=alternate"
         );
+    }
+
+    #[test]
+    fn search_stores_accepts_a_bounded_term_and_an_optional_bounded_country() {
+        assert_eq!(
+            parse_search_stores(&[json!("portal")]),
+            Ok(("portal", None))
+        );
+        assert_eq!(parse_search_stores(&[json!("")]), Ok(("", None)));
+        assert_eq!(
+            parse_search_stores(&[json!("portal"), json!("US")]),
+            Ok(("portal", Some("US")))
+        );
+        assert_eq!(
+            parse_search_stores(&[json!("portal"), json!(null)]),
+            Ok(("portal", None))
+        );
+        assert_eq!(
+            parse_search_stores(&[json!("x".repeat(256)), json!("C".repeat(16))])
+                .map(|(q, c)| (q.len(), c.map(str::len))),
+            Ok((256, Some(16)))
+        );
+        for (args, want) in [
+            (vec![], ("(args)", "too_small")),
+            (
+                vec![json!("a"), json!("US"), json!("x")],
+                ("(args)", "too_big"),
+            ),
+            (vec![json!(1)], ("0", "invalid_type")),
+            (vec![json!(null)], ("0", "invalid_type")),
+            (vec![json!({})], ("0", "invalid_type")),
+            (vec![json!("a"), json!(1)], ("1", "invalid_type")),
+            (vec![json!("a"), json!({})], ("1", "invalid_type")),
+            (vec![json!("x".repeat(257))], ("0", "too_big")),
+            (vec![json!("a"), json!("C".repeat(17))], ("1", "too_big")),
+            // Two UTF-16 units per astral character: 129 of them are 258 units.
+            (vec![json!("\u{1F3AE}".repeat(129))], ("0", "too_big")),
+        ] {
+            assert_eq!(parse_search_stores(&args), Err(want), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn the_itad_error_code_reads_only_the_marker() {
+        assert_eq!(
+            itad_error_code("[storeSearch:provider] search 502"),
+            Some("provider")
+        );
+        assert_eq!(
+            itad_error_code("[storeSearch:rateLimited] deals 429"),
+            Some("rateLimited")
+        );
+        assert_eq!(
+            itad_error_code("[storeSearch:notConfigured] search none"),
+            Some("notConfigured")
+        );
+        assert_eq!(itad_error_code("info_itad_search:bad-args"), None);
+        assert_eq!(itad_error_code("searchStores: not ready"), None);
+        assert_eq!(itad_error_code(""), None);
+    }
+
+    #[test]
+    fn the_search_stores_handler_validates_first_and_answers_not_ready_before_install() {
+        assert!(info_ctx().is_none());
+        let router_ctx = Arc::new(crate::native_router::NativeCtx::for_tests(
+            Arc::new(NoHost),
+            None,
+        ));
+        let not_ready = tauri::async_runtime::block_on(search_stores(
+            Arc::clone(&router_ctx),
+            vec![json!("portal")],
+        ));
+        assert_eq!(not_ready, Err("searchStores: not ready".to_string()));
+        let secret = "SECRET-QUERY-".repeat(40);
+        for bad in [
+            tauri::async_runtime::block_on(search_stores(
+                Arc::clone(&router_ctx),
+                vec![json!(secret)],
+            )),
+            tauri::async_runtime::block_on(search_stores(router_ctx, vec![])),
+        ] {
+            let error = bad.unwrap_err();
+            assert!(
+                error.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+                "{error}"
+            );
+            assert!(!error.contains("SECRET"), "{error}");
+        }
+    }
+
+    /// Answers the ITAD search and price requests with one game and one deal, remembering every
+    /// request.
+    struct ItadCanned(Mutex<Vec<gamelib_info::http::Request>>);
+
+    impl gamelib_info::http::Http for ItadCanned {
+        fn send(&self, request: gamelib_info::http::Request) -> gamelib_info::http::HttpFuture<'_> {
+            let body = if request.url.contains("/games/search/v1") {
+                r#"[{"id":"018d937f-1749-73f8-bf5a-8e0aa3cdd9ff","title":"Portal"}]"#
+            } else {
+                r#"[{"id":"018d937f-1749-73f8-bf5a-8e0aa3cdd9ff","deals":[{"shop":{"id":61,"name":"Steam"},"price":{"amount":9.99,"amountInt":999,"currency":"USD"},"regular":{"amount":9.99,"amountInt":999,"currency":"USD"},"url":"https://itad.link/portal"}]}]"#
+            };
+            self.0.lock().unwrap().push(request);
+            Box::pin(async move {
+                Ok(gamelib_info::http::Response {
+                    status: 200,
+                    headers: Vec::new(),
+                    body: body.as_bytes().to_vec(),
+                })
+            })
+        }
+    }
+
+    #[test]
+    fn a_store_search_runs_through_the_blocking_pool_with_the_built_in_key_in_the_query() {
+        let home = FakeHome::new("info-dispatch-");
+        let canned = Arc::new(ItadCanned(Mutex::new(Vec::new())));
+        let mut ctx = test_ctx(&home, None);
+        ctx.http = canned.clone();
+        ctx.itad_env_key = Some("test-env-key".to_string());
+        let info = Arc::new(ctx);
+        let found = tauri::async_runtime::block_on(run_itad_op(
+            &info,
+            "searchStores",
+            "info_itad_search",
+            vec![json!({ "query": "portal", "country": null })],
+            "x",
+        ));
+        let answer = found.unwrap();
+        assert_eq!(answer["pricedCountry"], "US");
+        assert_eq!(answer["results"][0]["title"], "Portal");
+        assert_eq!(answer["results"][0]["cheapestPrice"], "9.99");
+        let seen = canned.0.lock().unwrap();
+        assert_eq!(seen.len(), 2);
+        assert_eq!(
+            seen[0].url,
+            "https://api.isthereanydeal.com/games/search/v1?title=portal&results=20&key=test-env-key"
+        );
+        assert_eq!(
+            seen[1].url,
+            "https://api.isthereanydeal.com/games/prices/v3?country=US&key=test-env-key"
+        );
+    }
+
+    #[test]
+    fn a_failed_store_search_is_the_fixed_marker_string_without_the_key() {
+        let home = FakeHome::new("info-dispatch-");
+        let mut ctx = test_ctx(&home, None);
+        // No key of any kind: the typed error, and the real transport is never reached.
+        ctx.itad_env_key = None;
+        let info = Arc::new(ctx);
+        let error = tauri::async_runtime::block_on(run_itad_op(
+            &info,
+            "searchStores",
+            "info_itad_search",
+            vec![json!({ "query": "portal" })],
+            "x",
+        ))
+        .unwrap_err();
+        assert_eq!(error, "[storeSearch:notConfigured] search none");
     }
 
     #[test]

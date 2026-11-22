@@ -451,6 +451,10 @@ impl NativeRouter {
         invoke.insert("steamgriddb.hasApiKey", info_dispatch::steamgrid_has_key);
         invoke.insert("steamgriddb.searchGame", info_dispatch::steamgrid_search);
         invoke.insert("steamgriddb.setApiKey", info_dispatch::steamgrid_set_key);
+        // Phase 86 (86-16, D-17): the IsThereAnyDeal store search, run by the `info` slice over the
+        // ITAD caches with the key from the Keychain owner. The sidecar no longer registers
+        // `searchStores`.
+        invoke.insert("searchStores", info_dispatch::search_stores);
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -813,6 +817,7 @@ mod tests {
             "steamgriddb.hasApiKey",
             "steamgriddb.searchGame",
             "steamgriddb.setApiKey",
+            "searchStores",
         ] {
             assert!(info.contains(&name), "{name}: {info:?}");
         }
