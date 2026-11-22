@@ -35,9 +35,11 @@
  * the `rustInvoke`-backed `StoreEmbedSeam` implementation via `storeEmbed.set()`), and the
  * two store-layer read handlers (D-03): the eager
  * `sidecar:store-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
- * through the single D-08 allow-list) and the lazy `sidecar:store-fetch`
+ * through the single D-08 allow-list) and the lazy `store:ts-fetch`
  * (single-store on-demand hydrate for everything else in `STORE_UNIVERSE`,
- * filtered identically).
+ * filtered identically). Since Phase 85 (85-16) both are shell-only: the
+ * renderer's channels are answered by the Rust shell, which forwards here only
+ * for a store TS still answers.
  *
  * Registration runs inside `registerHandlers()` (the 'register-handlers' boot step, D-08),
  * not at import time. `registerStoreWriteHandlers()` runs there, after the flow
@@ -115,7 +117,7 @@ import {
 } from 'common/types/storePolicy'
 import {
   STORE_SNAPSHOT_CHANNEL,
-  STORE_FETCH_CHANNEL
+  STORE_TS_FETCH_CHANNEL
 } from 'common/types/sidecarTransport'
 
 /**
@@ -502,14 +504,16 @@ export function registerHandlers(deps: {
   // D-03: lazy per-store hydrate for the tier that isn't part of the eager
   // snapshot. Applies the IDENTICAL filter as the eager path above (T-29-14 —
   // "enforced eagerly but forgotten in the lazy fetch" is exactly the gap
-  // this closes). Rides the existing `sidecar_invoke` Tauri command; this is
-  // an ordinary internal RPC channel, not a new Tauri command.
+  // this closes). Phase 85 (85-16): the renderer's `sidecar:store-fetch` is a
+  // native channel the Rust shell owns; this is its shell-only fallback
+  // (`store:ts-fetch`), forwarded under GAMELIB_STORE=ts and for a store whose
+  // row Rust never opens.
   ipc.handle(
-    STORE_FETCH_CHANNEL,
+    STORE_TS_FETCH_CHANNEL,
     async (_event: unknown, storeName: unknown) => {
       if (typeof storeName !== 'string') {
         process.stderr.write(
-          '[sidecar/handlers] sidecar:store-fetch rejected a non-string store name\n'
+          '[sidecar/handlers] store:ts-fetch rejected a non-string store name\n'
         )
         return {}
       }
@@ -524,7 +528,7 @@ export function registerHandlers(deps: {
         // exercised by a malicious name arriving here. The diagnostic below
         // names the rejected string only — never a store value (T-29-18).
         process.stderr.write(
-          `[sidecar/handlers] sidecar:store-fetch rejected an invalid store name: '${storeName}'\n`
+          `[sidecar/handlers] store:ts-fetch rejected an invalid store name: '${storeName}'\n`
         )
         return {}
       }

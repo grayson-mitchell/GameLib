@@ -181,7 +181,9 @@ export const sidecarInternalInvokeArgs = {
   devSweepEpicCookieDomain: z.tuple([nonEmptyString(253)]),
   trayResolveRunner: z.tuple([nonEmptyString(256)]),
   'sidecar:store-snapshot': noArgs,
-  'sidecar:store-fetch': z.tuple([storeName]),
+  // 85-16: the old renderer fetch, renamed: the shell forwards `sidecar:store-fetch` here for a
+  // store TS still answers (GAMELIB_STORE=ts, or a row Rust never opens).
+  'store:ts-fetch': z.tuple([storeName]),
   // Phase 64 plan 03: a confirmed write; resolves true only once persisted (renderer-invoked).
   'sidecar:store-set-checked': z.tuple([storeName, keyPath, z.json()]),
   // The `gamelib://` prefix check stays in bootstrap.ts (D-05).
@@ -212,6 +214,7 @@ export const sidecarInternalCallers = {
   health: 'shell',
   trayResolveRunner: 'shell',
   'sidecar:store-snapshot': 'shell',
+  'store:ts-fetch': 'shell',
   handleProtocolUrl: 'shell',
   shellWindowFocused: 'shell',
   depotCdnToken: 'shell',

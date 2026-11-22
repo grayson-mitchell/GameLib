@@ -334,15 +334,22 @@ impl Store {
     /// Every top-level `(key, value)` in file order, without the `__internal__` envelope; a key set
     /// after open is at the end.
     pub fn snapshot(&self) -> Vec<(String, Json)> {
+        self.snapshot_with_rev().0
+    }
+
+    /// [`Store::snapshot`] and [`Store::rev`] read under one lock, so the rev names exactly the
+    /// state the entries show (the renderer's fetch result carries both, 85-16).
+    pub fn snapshot_with_rev(&self) -> (Vec<(String, Json)>, u64) {
         let st = lock(&self.state);
-        match &st.view {
+        let entries = match &st.view {
             Json::Obj(o) => o
                 .iter()
                 .filter(|(k, _)| k.as_str() != RESERVED_KEY)
                 .map(|(k, v)| (k.clone(), v.clone()))
                 .collect(),
             _ => Vec::new(),
-        }
+        };
+        (entries, st.rev)
     }
 
     /// Calls `f` for every change of this store, in `rev` order, on the host's dispatcher thread.

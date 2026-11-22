@@ -1,0 +1,122 @@
+{
+  "storeAllowlist": {
+    "configStore": [
+      "userHome",
+      "userInfo",
+      "games",
+      "theme",
+      "zoomPercent",
+      "contentFontFamily",
+      "actionsFontFamily",
+      "allTilesInColor",
+      "titlesAlwaysVisible",
+      "hideTitles",
+      "cleanTiles",
+      "disableDialogBackdropClose",
+      "disableAnimations",
+      "language",
+      "general-logs",
+      "window-props",
+      "settings",
+      "skipVcRuntime",
+      "showSnapWarning",
+      "customThemes"
+    ],
+    "wineDownloaderInfoStore": ["wine-releases"],
+    "gogInstalledGamesStore": ["installed"],
+    "timestampStore": "*",
+    "fontsStore": ["fonts"],
+    "gogConfigStore": ["userData", "isLoggedIn", "expired"],
+    "steamConfigStore": ["isLoggedIn", "userData", "credentialsMissing"],
+    "steamBottleConfigStore": [
+      "bottleName",
+      "wineVersion",
+      "wineCrossoverBottle",
+      "provisioned"
+    ],
+    "nileConfigStore": ["userData", "expired"],
+    "legendaryConfigStore": ["expired"],
+    "humbleConfigStore": [
+      "isLoggedIn",
+      "userData",
+      "encryptionDegraded",
+      "expired"
+    ],
+    "sideloadedStore": ["games", "installed"],
+    "downloadManager": ["queue", "finished"],
+    "gogSyncStore": "*",
+    "gogPrivateBranches": "*",
+    "wikigameinfo": "*",
+    "migrationsStore": ["appliedMigrations"],
+    "gameOverridesStore": ["overrides"]
+  },
+  "writeDeniedFields": {
+    "configStore": ["settings", "userHome", "userInfo"],
+    "gogConfigStore": ["userData"],
+    "steamConfigStore": ["userData"],
+    "nileConfigStore": ["userData"],
+    "humbleConfigStore": ["userData"]
+  },
+  "deniedCacheStores": ["humble_library"],
+  "recognizedCacheStoreNames": [
+    "legendary_library",
+    "gog_library",
+    "nile_library",
+    "steam_library",
+    "humble_library"
+  ],
+  "cacheStoreNamePattern": "^[A-Za-z0-9_-]{1,64}$",
+  "bootSetStores": [
+    "configStore",
+    "gogConfigStore",
+    "gogInstalledGamesStore",
+    "nileConfigStore",
+    "legendaryConfigStore",
+    "steamConfigStore",
+    "humbleConfigStore",
+    "wineDownloaderInfoStore",
+    "sideloadedStore",
+    "gameOverridesStore",
+    "legendary_library",
+    "gog_library",
+    "nile_library",
+    "steam_library"
+  ],
+  "lazyStores": [
+    "steamBottleConfigStore",
+    "timestampStore",
+    "fontsStore",
+    "downloadManager",
+    "gogSyncStore",
+    "gogPrivateBranches",
+    "wikigameinfo",
+    "migrationsStore"
+  ],
+  "readOnlyAreas": {
+    "byKey": {
+      "store_cache/steam_library": "steam-library",
+      "store_cache/gog_library": "gog-library",
+      "gog_store/installed": "gog-library",
+      "store_cache/legendary_library": "epic-library",
+      "store_cache/nile_library": "amazon-library",
+      "sideload_apps/library": "sideload-library",
+      "steam_store/config": "steam-account",
+      "gog_store/config": "gog-account",
+      "legendary_store/config": "epic-account",
+      "nile_store/config": "amazon-account",
+      "humble_store/config": "humble",
+      "store/download-manager": "downloads",
+      "store/timestamp": "play-history",
+      "gog_store/saveTimestamps": "play-history",
+      "store_cache/gog_playtime_sync_queue": "play-history",
+      "store/config": "preferences",
+      "settings/global": "settings",
+      "settings/game": "game-settings"
+    },
+    "byPrefix": [
+      { "prefix": "store_cache/humble_", "area": "humble" },
+      { "prefix": "GamesConfig/", "area": "game-settings" }
+    ],
+    "fallback": "app-data"
+  }
+}

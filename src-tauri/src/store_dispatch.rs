@@ -649,6 +649,12 @@ pub(crate) fn install_sidecar(state: &Arc<SidecarState>) {
     let _ = SIDECAR.set(Arc::clone(state));
 }
 
+/// The sidecar's state, once [`install_sidecar`] has run: the native store reads forward to it for
+/// a store TS still owns (85-16). `None` before the sidecar is spawned.
+pub(crate) fn sidecar_state() -> Option<Arc<SidecarState>> {
+    SIDECAR.get().cloned()
+}
+
 fn global() -> Option<&'static Arc<Dispatcher>> {
     if let Some(d) = GLOBAL.get() {
         return Some(d);

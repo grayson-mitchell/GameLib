@@ -1476,13 +1476,22 @@ export const STORE_DELETE_CHANNEL = 'storeDelete' as const
 export const STORE_NEW_CHANNEL = 'storeNew' as const
 
 /**
- * `invoke`-kind INTERNAL RPC channel, ridden over the existing `SIDECAR_INVOKE`
- * (`sidecar_invoke`) Tauri command, for D-03's lazy per-store hydrate: the renderer fetches
- * one `LAZY_STORES` store's filtered snapshot on first access instead of every store being
- * eagerly hydrated at boot. This is NOT a new Tauri command and requires no Rust change —
- * it is dispatched exactly like any other sidecar RPC channel name.
+ * `invoke`-kind renderer channel for D-03's lazy per-store hydrate: the renderer fetches one
+ * `LAZY_STORES` store's filtered snapshot on first access instead of every store being eagerly
+ * hydrated at boot. Since Phase 85 (85-16) it is a NATIVE channel (`nativeChannels.json`, slice
+ * `store`): the Rust shell answers it from `StoreHost` and the result is
+ * `{ values, rev? }` (`rev` absent when the sidecar answered). The sidecar's own handler is
+ * `STORE_TS_FETCH_CHANNEL`, which only the shell can reach.
  */
 export const STORE_FETCH_CHANNEL = 'sidecar:store-fetch' as const
+
+/**
+ * The sidecar's store fetch, renamed in Phase 85 (85-16) so `STORE_FETCH_CHANNEL` has one owner
+ * (the Rust native router). Shell-only: the native handler forwards to it under
+ * `GAMELIB_STORE=ts` and for a store whose row Rust never opens. Its result is the bare filtered
+ * store object.
+ */
+export const STORE_TS_FETCH_CHANNEL = 'store:ts-fetch' as const
 
 /**
  * `invoke`-kind INTERNAL RPC channel, ridden over `SIDECAR_INVOKE`, for a CONFIRMED single-key

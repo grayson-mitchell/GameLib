@@ -29,6 +29,11 @@ export interface NativeAsync {
   ) => Promise<false | [string, UploadedLogData]>
   getUploadedLogFiles: () => Promise<Record<string, UploadedLogData>>
   deleteUploadedLogFile: (url: string) => Promise<boolean>
+  // Phase 85 (85-16): the renderer's lazy store fetch, answered from the Rust StoreHost. `rev` is
+  // the store's change count when Rust read it, absent when the sidecar answered.
+  'sidecar:store-fetch': (
+    storeName: string
+  ) => Promise<{ values: Record<string, unknown>; rev?: number }>
 }
 
 export interface NativeSync {

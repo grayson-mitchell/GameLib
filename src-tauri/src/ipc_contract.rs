@@ -785,6 +785,7 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "getHeroicVersion",
     "getLogContent",
     "getUploadedLogFiles",
+    "sidecar:store-fetch",
     "uploadLogFile",
 ];
 

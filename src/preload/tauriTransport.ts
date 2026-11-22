@@ -346,7 +346,11 @@ async function hydrateStore(storeName: string): Promise<void> {
 
   const task = (async () => {
     try {
-      const result = await invoke<Record<string, unknown>>(STORE_FETCH_CHANNEL, [storeName])
+      // Phase 85 (85-16): the Rust shell answers `{ values, rev? }`; the values are wrapped
+      // because a `'*'` store's top-level keys are arbitrary strings and a `rev` sibling could
+      // collide with one. `rev` is read by the stale-push guard (85-17).
+      const reply = await invoke<{ values?: Record<string, unknown>; rev?: number }>(STORE_FETCH_CHANNEL, [storeName])
+      const result = reply?.values
       if ((invalidationEpoch.get(storeName) ?? 0) !== epoch) {
         // Invalidated while in flight: this result may predate the bulk change. The
         // invalidation handler has queued a fresh fetch behind this one.

@@ -229,7 +229,8 @@ describe('lazy hydrate', () => {
       if (cmd === 'sidecar_invoke') {
         const { channel } = payload as { channel: string; args: unknown[] }
         if (channel === STORE_FETCH_CHANNEL) {
-          return { someKey: 'real' }
+          // 85-16: the shell answers `{ values, rev? }`.
+          return { values: { someKey: 'real' }, rev: 4 }
         }
       }
       throw new Error(`unmocked command: ${cmd}`)
@@ -249,6 +250,9 @@ describe('lazy hydrate', () => {
     expect(second).toBe('real')
     // No second warning -- the store is now marked hydrated.
     expect(warnSpy).toHaveBeenCalledTimes(1)
+    // The reply's `rev` rides beside the values and never becomes a field of a '*' store.
+    expect(snapshotGet('wikigameinfo', 'rev', 'NONE')).toBe('NONE')
+    expect(snapshotGet('wikigameinfo', 'values', 'NONE')).toBe('NONE')
   })
 
   it('a rejecting fetch is swallowed -- no unhandled rejection, and the read still returns the default', async () => {
@@ -286,7 +290,7 @@ describe('ensureStoreHydrated', () => {
   }
 
   it('resolves true after a successful fetch, and true again without re-fetching once hydrated', async () => {
-    mockedInvoke.mockResolvedValue({ game: { lastPlayed: '2026-01-01T00:00:00.000Z' } } as never)
+    mockedInvoke.mockResolvedValue({ values: { game: { lastPlayed: '2026-01-01T00:00:00.000Z' } } } as never)
 
     await expect(ensureStoreHydrated('steamBottleConfigStore')).resolves.toBe(true)
     expect(fetchCalls('steamBottleConfigStore')).toBe(1)
@@ -413,7 +417,7 @@ describe('change events', () => {
     })
     expect(snapshotGet('configStore', 'theme')).toBe('stale-value')
 
-    mockedInvoke.mockResolvedValueOnce({ theme: 'authoritative-value' })
+    mockedInvoke.mockResolvedValueOnce({ values: { theme: 'authoritative-value' } })
 
     storeChangedHandler!({
       payload: {
@@ -449,7 +453,8 @@ describe('change events', () => {
           resolve = r as typeof resolve
         }) as never
     )
-    return { resolve: (value) => resolve?.(value) }
+    // 85-16: the shell's fetch reply wraps the store's values.
+    return { resolve: (value) => resolve?.({ values: value }) }
   }
 
   function fetchCallCount(): number {

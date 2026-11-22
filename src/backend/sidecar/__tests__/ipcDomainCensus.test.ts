@@ -310,7 +310,8 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // That removed the last TestSync channel, so the TestSync kind left the census.
     // Phase 83 Plan 03 (2026-11-20): getHeroicVersion moved from appShell.ts to native.ts (NativeAsync), net 0.
     // Phase 84 Plan 06 (2026-11-21): getUploadedLogFiles and deleteUploadedLogFile moved from logger.ts (LoggerAsync, deleted) to native.ts (NativeAsync), net 0.
-    expect(total).toBe(289)
+    // Phase 85 Plan 16 (2026-11-22): +1 NativeAsync (sidecar:store-fetch, now a native channel; it had no typed declaration before, only its sidecarInternal zod key, which is the renamed store:ts-fetch).
+    expect(total).toBe(290)
     // Floor (Phase 67): originally measured - 6. Re-measured at 290 after quick 261115-tk8's deliberate
     // six-channel deletion and quick 261117-p38's two added channels (288 + 2), so the floor moves
     // 290 -> 284 and the parse-miss margin stays the same 6.

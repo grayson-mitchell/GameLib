@@ -158,6 +158,31 @@
         ["file:///etc/passwd"]
       ]
     },
+    "sidecar:store-fetch": {
+      "kind": "invoke",
+      "slice": "store",
+      "args": [{ "name": "storeName", "type": "string", "strict": true }],
+      "returns": "{ values: { [field]: unknown }, rev?: number }",
+      "valid": [
+        ["configStore"],
+        ["wikigameinfo"],
+        ["steam_library"],
+        ["fontsStore"]
+      ],
+      "invalid": [
+        [],
+        [1],
+        [null],
+        [""],
+        ["humble_library"],
+        ["notAStore"],
+        ["../config"],
+        [
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ],
+        ["configStore", "extra"]
+      ]
+    },
     "getHeroicVersion": {
       "kind": "invoke",
       "slice": "app-shell",

@@ -22,6 +22,7 @@ use crate::log_dispatch;
 use crate::log_upload::{self, PasteClient};
 use crate::native_handlers;
 use crate::relay_commands::echo_channel;
+use crate::store_native;
 use gamelib_core::emitter::FrontendEmitter;
 use gamelib_core::paths::{LogTarget, Platform};
 use gamelib_core::shutdown::Shutdown;
@@ -68,6 +69,9 @@ pub(crate) struct NativeCtx {
     pub(crate) paste: Arc<dyn PasteClient>,
     /// The app version, for the upload's User-Agent.
     pub(crate) app_version: String,
+    /// The renderer's store reads (85-16): the boot's store mode, user data and ownership, and the
+    /// proxy to the sidecar (the `SidecarState` `store_dispatch` holds) for a store TS answers.
+    pub(crate) store_reads: store_native::StoreReads,
 }
 
 #[cfg(test)]
@@ -79,6 +83,12 @@ impl NativeCtx {
         impl FrontendEmitter for NullEmitter {
             fn emit(&self, _channel: &str, _args: Vec<Value>) {}
         }
+        struct NoSidecar;
+        impl store_native::SidecarProxy for NoSidecar {
+            fn invoke(&self, _channel: &str, _args: Vec<Value>) -> Result<Value, String> {
+                Err("no sidecar in this test".to_string())
+            }
+        }
         NativeCtx {
             host,
             log_paths,
@@ -86,6 +96,10 @@ impl NativeCtx {
             emitter: Arc::new(NullEmitter),
             paste: Arc::new(log_upload::OfflinePaste),
             app_version: "0.0.0-test".to_string(),
+            store_reads: store_native::StoreReads {
+                config: None,
+                sidecar: Arc::new(NoSidecar),
+            },
         }
     }
 }
@@ -315,6 +329,8 @@ impl NativeRouter {
             "deleteUploadedLogFile",
             log_upload::delete_uploaded_log_file,
         );
+        // Phase 85 (85-16): the renderer's lazy store fetch, answered from StoreHost (slice `store`).
+        invoke.insert(store_native::STORE_FETCH_CHANNEL, store_native::store_fetch);
         let mut queues: HashMap<&'static str, SliceQueue> = HashMap::new();
         for slice in [APP_SHELL_SLICE, LOGGER_SLICE] {
             let worker_ctx = Arc::clone(&ctx);

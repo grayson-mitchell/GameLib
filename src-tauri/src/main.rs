@@ -144,6 +144,8 @@ mod store_boot;
 mod store_dispatch;
 mod store_embed;
 mod store_gate_dispatch;
+mod store_native;
+mod store_policy;
 mod terminate_veto;
 mod tray;
 mod wake_lock;
@@ -1879,6 +1881,9 @@ fn run_setup(
     if let Some(paths) = log_paths.as_ref() {
         store_dispatch::configure(std::path::PathBuf::from(&paths.user_data), store_mode);
     }
+    let log_paths_user_data = log_paths
+        .as_ref()
+        .map(|paths| std::path::PathBuf::from(&paths.user_data));
     app.manage(NativeRouter::new(Arc::new(NativeCtx {
         host: Arc::new(AppNativeHost(app.handle().clone())),
         log_paths,
@@ -1888,6 +1893,15 @@ fn run_setup(
         )),
         paste: Arc::new(log_upload::ReqwestPaste::new()),
         app_version: native_handlers::app_version().to_string(),
+        // 85-16: renderer store reads use the mode and ownership this boot opened with.
+        store_reads: store_native::StoreReads {
+            config: log_paths_user_data.map(|user_data| store_native::ReadConfig {
+                user_data,
+                mode: store_mode,
+                ownership: store_boot::Ownership::embedded().clone(),
+            }),
+            sidecar: Arc::new(store_native::DispatcherSidecar),
+        },
     })));
     let state = spawn_sidecar_state(app, store_boot_env.as_deref())?;
     start_single_instance_accept_loop(app, &state, primary_listener);
@@ -2369,6 +2383,8 @@ mod tests {
         "store_boot.rs",
         "store_dispatch.rs",
         "store_gate_dispatch.rs",
+        "store_native.rs",
+        "store_policy.rs",
         "steamcm_dispatch.rs",
         "steam_window.rs",
         "shell_state.rs",
@@ -2426,6 +2442,8 @@ mod tests {
         include_str!("store_boot.rs"),
         include_str!("store_dispatch.rs"),
         include_str!("store_gate_dispatch.rs"),
+        include_str!("store_native.rs"),
+        include_str!("store_policy.rs"),
         include_str!("steamcm_dispatch.rs"),
         include_str!("steam_window.rs"),
         include_str!("shell_state.rs"),

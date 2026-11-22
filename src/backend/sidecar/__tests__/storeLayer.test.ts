@@ -81,7 +81,7 @@ import CacheStore from '../../cache'
 import { BOOT_SET_STORES, STORE_ALLOWLIST } from 'common/types/storePolicy'
 import {
   STORE_SNAPSHOT_CHANNEL,
-  STORE_FETCH_CHANNEL,
+  STORE_TS_FETCH_CHANNEL,
   STORE_SET_CHANNEL,
   STORE_SET_CHECKED_CHANNEL
 } from 'common/types/sidecarTransport'
@@ -148,14 +148,14 @@ async function invokeStoreSnapshot(
   return (await handler(undefined)) as Record<string, unknown>
 }
 
-/** Invokes the real registered `sidecar:store-fetch` handler directly off the recorder. */
+/** Invokes the real registered `store:ts-fetch` handler directly off the recorder (85-16: the shell forwards the renderer's fetch here). */
 async function invokeStoreFetch(
   storeName: string
 ): Promise<Record<string, unknown>> {
-  const handler = bootServices.host.ipc.getHandler(STORE_FETCH_CHANNEL)
+  const handler = bootServices.host.ipc.getHandler(STORE_TS_FETCH_CHANNEL)
   if (!handler) {
     throw new Error(
-      `${STORE_FETCH_CHANNEL} handler was not registered by ../handlers`
+      `${STORE_TS_FETCH_CHANNEL} handler was not registered by ../handlers`
     )
   }
   return (await handler(undefined, storeName)) as Record<string, unknown>

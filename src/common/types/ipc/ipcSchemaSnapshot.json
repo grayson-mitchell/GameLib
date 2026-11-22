@@ -6961,20 +6961,15 @@
     {
       "channel": "sidecar:store-fetch",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "storeName",
+          "type": "string",
+          "strict": true
+        }
+      ],
+      "returns": "{ values: { [field]: unknown }, rev?: number }"
     },
     {
       "channel": "sidecar:store-set-checked",
