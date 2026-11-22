@@ -26,6 +26,8 @@ import { isDecodeStageError } from '../depotDecodeErrors'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { logInfo } from 'backend/logger'
 import {
+  listOptInDlc,
+  optInDepotsOfDlc,
   optInDlcOfInstalledDepots,
   selectAllDepots,
   selectDepots,
@@ -319,6 +321,74 @@ describe('config.optionaldlc opt-in DLC (quick 261120-st3)', () => {
       )
       expect(out).toContain('381450')
       expect(out).not.toContain('401531')
+    })
+  })
+
+  describe('listing opt-in DLC (quick 261122-rgi)', () => {
+    const named = (): Record<string, SteamAppInfo> => ({
+      '313250': {
+        extended: { optionaldlc: '1' },
+        common: { name: 'Dota 2 Workshop Tools' }
+      }
+    })
+
+    it('261122-rgi: lists the Dota Workshop Tools DLC with name, size and depot for windows', () => {
+      expect(
+        listOptInDlc(dota, named(), '570', { os: 'windows', branch: 'public' })
+      ).toEqual([
+        {
+          appId: '313250',
+          name: 'Dota 2 Workshop Tools',
+          bytes: 5918914121,
+          depotIds: ['381450']
+        }
+      ])
+    })
+
+    it('261122-rgi: lists nothing for macos, where the only depot is windows-only', () => {
+      expect(listOptInDlc(dota, named(), '570', { os: 'macos' })).toEqual([])
+    })
+
+    it('261122-rgi: never lists a DLC whose optionaldlc is absent or 0', () => {
+      const infos = {
+        '313250': { common: { name: 'x' } },
+        '401530': { extended: { optionaldlc: '0' } }
+      }
+      expect(listOptInDlc(dota, infos, '570', { os: 'windows' })).toEqual([])
+    })
+
+    it('261122-rgi: counts a depot defined in the DLC own depots, skips one with no manifest, falls back to a label', () => {
+      const base: SteamAppInfo = { depots: {} }
+      const infos: Record<string, SteamAppInfo> = {
+        '900': {
+          extended: { optionaldlc: '1' },
+          depots: {
+            '901': {
+              config: { optionaldlc: 900 },
+              manifests: { public: { gid: '1', size: 10 } }
+            },
+            '902': { config: { optionaldlc: 900 } }
+          }
+        }
+      }
+      expect(listOptInDlc(base, infos, '1', { os: 'linux' })).toEqual([
+        { appId: '900', name: 'DLC 900', bytes: 10, depotIds: ['901'] }
+      ])
+    })
+
+    it('261122-rgi: optInDepotsOfDlc owns base depots by the base app and DLC depots by the DLC record key', () => {
+      const base: SteamAppInfo = {
+        depots: { '10': { config: { optionaldlc: '5' } } }
+      }
+      const infos: Record<string, SteamAppInfo> = {
+        '5': { depots: { '11': { config: { optionaldlc: '5' } } } },
+        '6': { depots: { '12': { config: { optionaldlc: '6' } } } }
+      }
+      expect(optInDepotsOfDlc(base, infos, '1', new Set(['5']))).toEqual([
+        { depotId: '10', ownerAppId: '1', dlcAppId: '5' },
+        { depotId: '11', ownerAppId: '5', dlcAppId: '5' }
+      ])
+      expect(optInDepotsOfDlc(base, infos, '1', new Set())).toEqual([])
     })
   })
 })

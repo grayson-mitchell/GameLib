@@ -78,9 +78,14 @@ const table: FixtureTable<typeof installAsyncArgs> = {
     valid: [['1603180'], ['1603180', { computeSize: true }]],
     invalid: [[''], ['1', { computeSize: 'yes' }], ['1', { extra: 1 }]]
   },
+  getSteamOptInDlc: {
+    valid: [['570'], ['570', { windowsBuild: true }], ['570', undefined]],
+    invalid: [[''], ['570', { windowsBuild: 'yes' }], ['570', { extra: 1 }]]
+  },
   install: {
     valid: [
       ...perRunner.map((g) => [installArg(g)]),
+      [{ ...installArg(gameInfo), steamOptInDlc: ['313250'] }],
       [installArg(legendaryWithDlc)],
       [
         {
@@ -123,6 +128,7 @@ const table: FixtureTable<typeof installAsyncArgs> = {
         }
       ],
       [{ appName: '220', runner: 'steam', gameInfo, path: '/p' }],
+      [{ ...installArg(gameInfo), steamOptInDlc: 'nope' }],
       [
         {
           appName: '220',
@@ -219,6 +225,7 @@ const table: FixtureTable<typeof installAsyncArgs> = {
     valid: [
       ...perRunner.map((g) => [updateArg(g)]),
       [updateArg(legendaryWithDlc)],
+      [{ ...updateArg(gameInfo), steamOptInDlc: [] }],
       [
         {
           gameInfo: installedGameInfo,

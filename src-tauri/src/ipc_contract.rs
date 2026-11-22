@@ -618,6 +618,7 @@ pub(crate) const RENDERER_CHANNELS: &[&str] = &[
     "getSteamDeleteRoute",
     "getSteamInstallAppTargets",
     "getSteamInstallSize",
+    "getSteamOptInDlc",
     "getSteamSyncedAt",
     "getSteamUpdateInfo",
     "getSteamUserInfo",

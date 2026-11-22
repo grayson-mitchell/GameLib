@@ -45,3 +45,15 @@ Directions, not yet decided:
   the grandchild gone within 5 s.
 - (c) Sample the precondition immediately after the SIGKILL, before any sleep.
 - No retries.
+
+## Outcome (2026-11-22)
+
+Resolved in `0c1ea4a87` (test-only; product `WATCHDOG_SH` unchanged). The hypothesis held: the
+test's fixed 1500 ms + 300 ms sleeps phase-locked the `alive(rig.grand)` sample ~150 ms before the
+watchdog's second tick, which kills the orphan by design; spawn latency on a loaded runner slid the
+sample past it. CPU load alone did not reproduce it (0/40); 30 concurrent copies did (31–46/90).
+The fix is neither (b) nor (c): it syncs on two observed watchdog ticks instead of the fixed sleep
+and freezes the watchdog with SIGSTOP across the kill and the strict precondition, then SIGCONTs
+before the unchanged 5 s wait. 0/840 locally under the same loads; macOS CI green in four
+consecutive Rust test runs. Closes the third cause of UAT gap G-82-2-r3. Debug session:
+`.planning/debug/resolved/steampoll-watchdog-grandchild.md`.

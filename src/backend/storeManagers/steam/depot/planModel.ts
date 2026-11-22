@@ -103,6 +103,11 @@ export interface DownloadSteamDepotsOpts {
    *  `delta.oldGidByDepot`'s keys, an installed `config.optionaldlc` depot marks its opt-in DLC
    *  enabled in selection, so it stays in the plan (quick 261120-tbr). A fresh install leaves it absent. */
   installedDepotIds?: ReadonlySet<string>
+  /** Quick 261122-rgi: the complete set of opt-in DLC appIds the user wants enabled. When present
+   *  it REPLACES the installed-derived set: a fresh-install tick or the Install tab's add/remove
+   *  supplies it, and an installed opt-in DLC depot whose DLC is absent from it is retired.
+   *  Absent keeps the installed-derived behaviour (quick 261120-tbr). */
+  chosenOptInDlc?: ReadonlySet<string>
 }
 
 /** Narrow, ADDITIONAL view of PICS appinfo's `common.name` field — not part of

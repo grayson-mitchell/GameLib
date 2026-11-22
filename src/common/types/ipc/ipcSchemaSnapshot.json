@@ -1,6 +1,6 @@
 {
   "generatedBy": "meta/genIpcContract.ts",
-  "channelCount": 237,
+  "channelCount": 238,
   "channels": [
     {
       "channel": "abort",
@@ -1947,6 +1947,43 @@
         "items": false,
         "minItems": 1,
         "maxItems": 1
+      }
+    },
+    {
+      "channel": "getSteamOptInDlc",
+      "kind": "invoke",
+      "owner": "sidecar",
+      "args": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "windowsBuild": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "windowsBuild"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        ],
+        "items": false,
+        "minItems": 1,
+        "maxItems": 2
       }
     },
     {
@@ -4411,6 +4448,14 @@
               },
               "steamForceWindowsViaBottle": {
                 "type": "boolean"
+              },
+              "steamOptInDlc": {
+                "maxItems": 4096,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 4096
+                }
               },
               "size": {
                 "type": "string",
@@ -9769,6 +9814,14 @@
               },
               "steamForceWindowsViaBottle": {
                 "type": "boolean"
+              },
+              "steamOptInDlc": {
+                "maxItems": 4096,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 4096
+                }
               },
               "size": {
                 "type": "string",

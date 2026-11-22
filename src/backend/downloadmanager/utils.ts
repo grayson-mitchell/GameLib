@@ -152,7 +152,10 @@ async function installQueueElement(
     // `SteamGame.install(args)`. `tsc` cannot see the drop because the field
     // is optional on `InstallArgs`. Kept runner-agnostic (forwarded for every
     // runner, exactly like `build`/`branch`) — non-Steam managers ignore it.
-    steamForceWindowsViaBottle
+    steamForceWindowsViaBottle,
+    // Quick 261122-rgi: the opt-in DLC the user ticked. Same fixed-list rule as the field above:
+    // a field omitted from the `.install()` literal is silently dropped.
+    steamOptInDlc
   } = params
   const library = deps.managers.library
   const title = resolveQueueElementTitle(library, runner, appName)
@@ -270,7 +273,9 @@ async function installQueueElement(
         // makes `SteamGame.install()`'s `overrideRequested` permanently
         // false and the whole D-17 contract inert, with a green suite and a
         // clean `tsc`.
-        steamForceWindowsViaBottle
+        steamForceWindowsViaBottle,
+        // Quick 261122-rgi: see the destructure above.
+        steamOptInDlc
       }),
       appName,
       INSTALL_NO_PROGRESS_TIMEOUT_MS,

@@ -105,7 +105,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Phase 34.6 Plan 06 (2026-08-24): invoke 5 -> 7 -- moveInstall/importGame
   // ported byte-equivalently from main.ts (D-02); send count unchanged.
   // Phase 74 Plan 11 (2026-11-12): invoke 9 -> 10 -- getSteamUpdateInfo (STEAM-01).
-  'installFlowRegistration.ts': { invoke: 10, send: 0 },
+  // Quick 261122-rgi: invoke 10 -> 11 -- getSteamOptInDlc.
+  'installFlowRegistration.ts': { invoke: 11, send: 0 },
   // Phase 84 Plan 06 / 84-06 (2026-11-21): the `loggerFlowRegistration.ts` row is gone -- its last two
   // invokes (`getUploadedLogFiles`, `deleteUploadedLogFile`) moved to the Rust native router
   // (`nativeChannels.json`, slice `logger`) and the module registered nothing, so it was deleted

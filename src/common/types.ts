@@ -484,6 +484,10 @@ export interface InstallArgs {
    * only SELECT among `SteamGame.install()`'s four existing branches, never
    * widen the install surface. */
   steamForceWindowsViaBottle?: boolean
+  /** The complete set of opt-in Steam DLC appIds the user wants enabled (quick 261122-rgi).
+   * Absent means no choice was made: a fresh install enables none, an update keeps what is
+   * installed. Steam only; other runners ignore it. */
+  steamOptInDlc?: string[]
 }
 
 export interface InstallParams extends InstallArgs {
@@ -506,6 +510,10 @@ export interface UpdateParams {
   installLanguage?: string
   build?: string
   branch?: string
+  /** The complete set of opt-in Steam DLC appIds the user wants enabled (quick 261122-rgi).
+   * Absent means no choice was made: a fresh install enables none, an update keeps what is
+   * installed. Steam only; other runners ignore it. */
+  steamOptInDlc?: string[]
 }
 
 export interface LaunchPreperationResult {

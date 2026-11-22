@@ -36,6 +36,8 @@
  *     duplicate Steam toast (GAME-03) — no reshaping needed.
  *   - `getSteamUpdateInfo` -> `getSteamUpdateInfo()` (Phase 74 plan 11):
  *     the renderer's view of one Steam game's update state and size.
+ *   - `getSteamOptInDlc` -> `getSteamOptInDlc()` (quick 261122-rgi): the owned opt-in
+ *     DLC of one Steam game, never opening a signed-in session.
  *   - `checkGameUpdates` -> the shared `checkGameUpdates` function
  *     (`backend/utils/checkGameUpdates.ts`) reused UNCHANGED, all runners
  *     (D-12, follows D-05b).
@@ -141,6 +143,7 @@ import {
 } from '../utils/uninstaller'
 import { checkGameUpdates } from '../utils/checkGameUpdates'
 import { getSteamUpdateInfo } from '../storeManagers/steam/updateInfo'
+import { getSteamOptInDlc } from '../storeManagers/steam/optInDlc'
 import { listSteamLibraryTargets } from '../storeManagers/steam/installLocation'
 import {
   isSteamNativeDeleteEnabled,
@@ -226,7 +229,7 @@ function statusDeps(
 }
 
 /**
- * Registers the ten install-slice invoke handlers. Called once from
+ * Registers the eleven install-slice invoke handlers. Called once from
  * `handlers.ts` — this module owns no side effects at import time beyond the
  * imports above; the caller decides when registration onto the handler
  * registry happens.
@@ -335,6 +338,20 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
       if (typeof appId !== 'string' || !/^\d+$/.test(appId)) return null
       return getSteamUpdateInfo(managerDepsFromServices(deps), appId, {
         computeSize: opts?.computeSize === true
+      })
+    }
+  )
+
+  // Quick 261122-rgi: opt-in DLC for the install dialog and the Install tab. Read-only; the
+  // module asks for an already-open session and never logs on.
+  deps.ipc.handle(
+    'getSteamOptInDlc',
+    async (_event: unknown, ...args: unknown[]) => {
+      const appId = args[0]
+      const opts = args[1] as { windowsBuild?: boolean } | undefined
+      if (typeof appId !== 'string' || !/^\d+$/.test(appId)) return null
+      return getSteamOptInDlc(managerDepsFromServices(deps), appId, {
+        windowsBuild: opts?.windowsBuild === true
       })
     }
   )

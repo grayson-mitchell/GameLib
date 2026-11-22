@@ -19,7 +19,10 @@
 // DLC with no appinfo keeps its depots. `buildDepotRefs` passes the DLCs of the
 // opt-in depots that are already installed (quick 261120-tbr), so an installed
 // opt-in DLC stays enabled on update, verify and the update estimate; a fresh
-// install passes none. The legacy depot-level `optional` /
+// install passes none. Quick 261122-rgi adds the pure `listOptInDlc` and
+// `optInDepotsOfDlc` helpers, which list the opt-in DLC a user could enable and
+// the depots each one owns, so the install dialog, the Install tab and the
+// retirement of a switched-off DLC all read the same PICS key. The legacy depot-level `optional` /
 // `dlcappid` / `systemdefined` flags still do not decide selection (quick
 // 261029-ge1).
 //
@@ -108,6 +111,7 @@ interface DepotEntry {
 
 export interface SteamAppInfo {
   depots?: Record<string, DepotEntry>
+  common?: { name?: string }
   extended?: {
     listofdlc?: string
     /** "1" on a DLC app that Steam leaves unticked until the user enables it. */
@@ -241,6 +245,91 @@ export function branchManifestGid(
     }
   }
   return gid
+}
+
+/**
+ * The depots whose `config.optionaldlc` names a DLC in `dlcIds`, from the base
+ * app's own depots (owner = `baseAppId`) and from each DLC app's own depots
+ * (owner = that `dlcInfos` record key). Digit-only depot ids, deduped by depot
+ * id; values are only `String()`-coerced (quick 261122-rgi).
+ */
+export function optInDepotsOfDlc(
+  appinfo: SteamAppInfo,
+  dlcInfos: Record<string, SteamAppInfo> | undefined,
+  baseAppId: string,
+  dlcIds: ReadonlySet<string>
+): Array<{ depotId: string; ownerAppId: string; dlcAppId: string }> {
+  const out: Array<{ depotId: string; ownerAppId: string; dlcAppId: string }> =
+    []
+  if (dlcIds.size === 0) return out
+  const seen = new Set<string>()
+  const owners: Array<[string, SteamAppInfo | undefined]> = [
+    [baseAppId, appinfo],
+    ...Object.entries(dlcInfos ?? {})
+  ]
+  for (const [ownerAppId, app] of owners) {
+    for (const [depotId, d] of Object.entries(app?.depots ?? {})) {
+      if (!/^\d+$/.test(depotId) || seen.has(depotId)) continue
+      const dlc = d?.config?.optionaldlc
+      if (dlc === undefined || dlc === null || dlc === '') continue
+      const dlcAppId = String(dlc)
+      if (!dlcIds.has(dlcAppId)) continue
+      seen.add(depotId)
+      out.push({ depotId, ownerAppId, dlcAppId })
+    }
+  }
+  return out
+}
+
+/**
+ * The opt-in DLC (own `extended.optionaldlc` "1") a user could enable for
+ * `opts.os` on `opts.branch` (default 'public'): each with its name, the sum of
+ * its depots' manifest sizes and those depot ids. A depot counts only with a
+ * manifest on the branch and an `oslist` that is absent or lists the OS; a DLC
+ * with no such depot is not listed (quick 261122-rgi). Pure and silent.
+ */
+export function listOptInDlc(
+  appinfo: SteamAppInfo,
+  dlcInfos: Record<string, SteamAppInfo> | undefined,
+  baseAppId: string,
+  opts: { os: string; branch?: string }
+): Array<{ appId: string; name: string; bytes: number; depotIds: string[] }> {
+  const branch = opts.branch ?? 'public'
+  const out: Array<{
+    appId: string
+    name: string
+    bytes: number
+    depotIds: string[]
+  }> = []
+  for (const [dlcAppId, dlc] of Object.entries(dlcInfos ?? {})) {
+    if (String(dlc?.extended?.optionaldlc) !== '1') continue
+    let bytes = 0
+    const depotIds: string[] = []
+    for (const { depotId, ownerAppId } of optInDepotsOfDlc(
+      appinfo,
+      dlcInfos,
+      baseAppId,
+      new Set([dlcAppId])
+    )) {
+      const d = (ownerAppId === baseAppId ? appinfo : dlcInfos?.[ownerAppId])
+        ?.depots?.[depotId]
+      if (!branchManifestGid(d, branch, depotId, { log: false })) continue
+      const oslist = d?.config?.oslist
+      if (oslist && !String(oslist).split(',').includes(opts.os)) continue
+      const onBranch = d?.manifests?.[branch]
+      const m = gidOfEntry(onBranch) ? onBranch : d?.manifests?.public
+      bytes += Number(typeof m === 'object' ? (m.size ?? 0) : 0) || 0
+      depotIds.push(depotId)
+    }
+    if (depotIds.length === 0) continue
+    out.push({
+      appId: dlcAppId,
+      name: dlc?.common?.name?.trim() || `DLC ${dlcAppId}`,
+      bytes,
+      depotIds
+    })
+  }
+  return out
 }
 
 /**

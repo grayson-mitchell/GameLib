@@ -541,6 +541,18 @@ export async function runNativeDepotDownloadLeased(
     }
   )
 
+  // Quick 261122-rgi (D-01): the opt-in DLC the user ticked. Digit-only ids; with none the
+  // call is byte-identical to before (no `chosenOptInDlc`, opt-in depots stay skipped).
+  const chosenOptIn = (args.steamOptInDlc ?? []).filter((id) =>
+    /^\d+$/.test(id)
+  )
+  if (chosenOptIn.length > 0) {
+    logInfo(
+      `SteamGame: install of appId ${steamGame.appId} carries opt-in DLC ${chosenOptIn.join(',')}`,
+      LogPrefix.Steam
+    )
+  }
+
   const downloadStart = Date.now()
   const outcome = await downloadSteamDepots(steamGame.appId, {
     installRuntime: steamGame.deps.steamInstallRuntime,
@@ -549,7 +561,8 @@ export async function runNativeDepotDownloadLeased(
     targetSteamappsDir,
     installdir: resolved.installdir,
     os: opts.os,
-    signal: controller.signal
+    signal: controller.signal,
+    ...(chosenOptIn.length > 0 ? { chosenOptInDlc: new Set(chosenOptIn) } : {})
   })
   logInfo(
     `[Timing] runNativeDepotDownload: downloadSteamDepots (buildDepotPlan + stream) took ${Date.now() - downloadStart}ms so far for appId ${steamGame.appId} (status=${outcome.status}); total since click ${Date.now() - runStart}ms`,

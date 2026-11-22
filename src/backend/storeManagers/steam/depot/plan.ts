@@ -6,6 +6,7 @@ import { prescreenBridgeDepotsRust } from '../depotRust/secondary'
 import { chooseInstallBranch, resolveUserBetaKey } from './betaBranch'
 import {
   selectAllDepots,
+  optInDepotsOfDlc,
   optInDlcOfInstalledDepots,
   dlcAppIds,
   branchManifestGid,
@@ -200,7 +201,7 @@ export async function withPlanBuildRetry<T>(
  * anonymous/PICS-only connection cannot supply this, which is why this must
  * run over the authenticated CM connection, never a second/anonymous one.
  */
-async function getOwnedSets(client: SteamCmClient): Promise<OwnedSets> {
+export async function getOwnedSets(client: SteamCmClient): Promise<OwnedSets> {
   // C1/WR-05: an unread licence list is not "owns nothing": that misreported the game as not
   // owned. Fail the step instead (it is retried like any other plan-build failure).
   if (!client.licenses) {
@@ -393,6 +394,11 @@ export interface DepotRefsResult {
   /** False when the branch depot list cannot be shown complete: no numeric base depot, or a
    *  listed DLC app has no fetched entry. A retire decision needs this true. */
   branchDepotListComplete: boolean
+  /** Quick 261122-rgi (D-02): installed depots of opt-in DLC the user switched off, with the
+   *  app each is keyed under. Derived here from the installed ACF depots and the PICS
+   *  `config.optionaldlc` key, never from the renderer; `decideRetirement` retires them even
+   *  though they are still on the branch. Absent or empty when nothing was switched off. */
+  optInRetiredDepots?: Array<{ depotId: string; ownerAppId: string }>
 }
 
 /** The unfiltered branch depot list and completeness (WR-01). Pure. */
@@ -519,16 +525,42 @@ export async function buildDepotRefs(
 
   // quick 261120-tbr: an installed opt-in DLC depot means that DLC is enabled, so it stays
   // selected on update, verify and the update estimate. A fresh install has no installed set.
-  const enabledOptInDlc = optInDlcOfInstalledDepots(
+  // quick 261122-rgi: a chosen set, when given, replaces that installed-derived one.
+  const installedOptInDlc = optInDlcOfInstalledDepots(
     appinfo,
     dlcInfos,
     installedDepotIdsOf(opts)
   )
-  if (enabledOptInDlc.size > 0) {
+  const enabledOptInDlc = opts.chosenOptInDlc
+    ? new Set(opts.chosenOptInDlc)
+    : installedOptInDlc
+  if (opts.chosenOptInDlc) {
+    logInfo(
+      `buildDepotRefs: chosen opt-in DLC ${[...enabledOptInDlc].join(',') || 'none'} for app ${appId}`,
+      LogPrefix.Steam
+    )
+  } else if (enabledOptInDlc.size > 0) {
     logInfo(
       `buildDepotRefs: installed opt-in DLC ${[...enabledOptInDlc].join(',')} enabled for app ${appId}`,
       LogPrefix.Steam
     )
+  }
+  // quick 261122-rgi (D-02): installed depots of an opt-in DLC the user dropped.
+  let optInRetiredDepots: Array<{ depotId: string; ownerAppId: string }> = []
+  if (opts.chosenOptInDlc) {
+    const dropped = new Set(
+      [...installedOptInDlc].filter((id) => !enabledOptInDlc.has(id))
+    )
+    const installedIds = installedDepotIdsOf(opts)
+    optInRetiredDepots = optInDepotsOfDlc(appinfo, dlcInfos, appId, dropped)
+      .filter((d) => installedIds.has(d.depotId))
+      .map(({ depotId, ownerAppId }) => ({ depotId, ownerAppId }))
+    if (optInRetiredDepots.length > 0) {
+      logInfo(
+        `buildDepotRefs: opt-in DLC ${[...dropped].join(',')} switched off, retiring depot(s) ${optInRetiredDepots.map((d) => d.depotId).join(',')} for app ${appId}`,
+        LogPrefix.Steam
+      )
+    }
   }
   const selectOpts: DepotSelectOpts = {
     os: opts.os,
@@ -590,6 +622,7 @@ export async function buildDepotRefs(
     branch,
     depots,
     skippedDepots,
+    ...(optInRetiredDepots.length > 0 ? { optInRetiredDepots } : {}),
     ...collectBranchDepotList(appinfo, dlcInfos, branch)
   }
 }

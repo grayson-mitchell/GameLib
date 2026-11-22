@@ -286,6 +286,24 @@ export interface SteamUpdateInfo {
   sizeError?: string
 }
 
+/** Quick 261122-rgi: one opt-in DLC (`config.optionaldlc`) a Steam game offers. */
+export interface SteamOptInDlcEntry {
+  appId: string
+  name: string
+  /** Sum of the DLC's depot manifest sizes on the branch for the target OS. */
+  bytes: number
+  /** True/false from the licence list; null when no signed-in session is open (unknown). */
+  owned: boolean | null
+  /** Any of the DLC's depots is installed. */
+  installed: boolean
+}
+
+/** Quick 261122-rgi: the opt-in DLC of one Steam game and who manages the installed copy. */
+export interface SteamOptInDlcInfo {
+  manage: 'gamelib' | 'steam' | 'not-installed'
+  entries: SteamOptInDlcEntry[]
+}
+
 interface SteamExtraInfo extends ExtraInfo {
   /** total playtime in minutes from getUserOwnedApps() */
   steamPlaytimeMinutes?: number

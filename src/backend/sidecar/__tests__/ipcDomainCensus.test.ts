@@ -291,6 +291,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Phase 72 Plan 09 (2026-11-08): -1 Sync (`removeFolder` deleted from shellFilesSyncArgs, D-09).
     // Phase 68 Plan 06: +1 FrontendMessages (readOnlyStoresNotice); owner-less allowlist 65 -> 66.
     // Phase 74 Plan 11: +1 Async (getSteamUpdateInfo in install.ts).
+    // Quick 261122-rgi: +1 Async (getSteamOptInDlc in install.ts).
     // Quick 261116-vt7: -3 (steamGoOfflineRetry, steamGoOfflineCancel, FrontendMessages steamGoOfflineRequired); owner-less allowlist 66 -> 65.
     // Quick 261115-tk8 (6254354b2): -6 (openWeblate, openSupportPage, openDiscordLink, openGithubSponsorsPage,
     // openWikiLink, openReleases).
@@ -313,7 +314,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Phase 85 Plan 16 (2026-11-22): +1 NativeAsync (sidecar:store-fetch, now a native channel; it had no typed declaration before, only its sidecarInternal zod key, which is the renamed store:ts-fetch).
     // Phase 85 Plan 17 (2026-11-22): +1 NativeSync (storeSet, now a native channel; it had no typed declaration before, only its sidecarInternal zod key, which is the renamed store:ts-set).
     // Phase 85 Plan 17: +3 more (sidecar:store-set-checked NativeAsync, storeDelete and storeNew NativeSync), the same way.
-    expect(total).toBe(294)
+    expect(total).toBe(295)
     // Floor (Phase 67): originally measured - 6. Re-measured at 290 after quick 261115-tk8's deliberate
     // six-channel deletion and quick 261117-p38's two added channels (288 + 2), so the floor moves
     // 290 -> 284 and the parse-miss margin stays the same 6.

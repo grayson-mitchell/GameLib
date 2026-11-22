@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import type { StatusPromise } from '../../types'
-import type { SteamUpdateInfo } from '../steam'
+import type { SteamOptInDlcInfo, SteamUpdateInfo } from '../steam'
 
 import { gameInfoSchema, installPlatform } from './gameInfoSchema'
 import {
@@ -30,6 +30,7 @@ const installFields = {
   build: z.string().max(1024).optional(),
   dependencies: stringList.optional(),
   steamForceWindowsViaBottle: z.boolean().optional(),
+  steamOptInDlc: stringList.optional(),
   size: z.string().max(256).optional()
 }
 
@@ -47,6 +48,10 @@ export const installAsyncArgs = {
   getSteamUpdateInfo: z.tuple([
     nonEmptyString(),
     optionalArg(z.strictObject({ computeSize: z.boolean() }))
+  ]),
+  getSteamOptInDlc: z.tuple([
+    nonEmptyString(),
+    optionalArg(z.strictObject({ windowsBuild: z.boolean() }))
   ]),
   install: z.tuple([z.strictObject(installFields)]),
   uninstall: z.tuple([plainNameArg(), runnerArg(), z.boolean(), z.boolean()]),
@@ -101,6 +106,7 @@ interface InstallAsyncReturns {
     libraries: SteamLibraryTarget[]
   }>
   getSteamUpdateInfo: Promise<SteamUpdateInfo | null>
+  getSteamOptInDlc: Promise<SteamOptInDlcInfo | null>
   install: Promise<void>
   uninstall: Promise<void>
   moveInstall: Promise<void>

@@ -96,7 +96,9 @@ const ACQUIRE_OPEN_ALLOW = [
   `${S}library/refresh.ts`,
   `${S}depot/sharedRedist.ts`,
   `${S}installLocation.ts`,
-  `${S}bridge/launchTarget.ts`
+  `${S}bridge/launchTarget.ts`,
+  // quick 261122-rgi: opt-in DLC listing reads an ALREADY-open session, never logs on.
+  `${S}optInDlc.ts`
 ]
 // Phase 79 (79-38): rustSession.ts is the Rust-session half of user.ts. SteamUser delegates its
 // session ownership to it, and it DEFINES `ensureConnected()` (it is the method's implementation,

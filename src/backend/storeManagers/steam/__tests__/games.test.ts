@@ -4382,6 +4382,32 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     expect(result).toEqual({ status: 'done' })
   })
 
+  it('261122-rgi: steamOptInDlc becomes chosenOptInDlc (digit-only ids) in the depot download opts', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    await new SteamGame(APP_ID, steamTestDeps).install({
+      steamOptInDlc: ['313250', 'abc', '../x']
+    } as any)
+
+    const opts = (downloadSteamDepots as jest.Mock).mock.calls[0]?.[1]
+    expect(opts.chosenOptInDlc).toEqual(new Set(['313250']))
+  })
+
+  it('261122-rgi: no steamOptInDlc, or only invalid ids, leaves chosenOptInDlc out entirely', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).install({
+      steamOptInDlc: ['nope']
+    } as any)
+
+    for (const call of (downloadSteamDepots as jest.Mock).mock.calls) {
+      expect(call[1]).not.toHaveProperty('chosenOptInDlc')
+    }
+  })
+
   it('Phase 54: native install acquires one user-install lease before resolveSteamInstallTarget and the crash breadcrumb, and releases it once after the download settles', async () => {
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })

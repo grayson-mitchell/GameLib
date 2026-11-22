@@ -278,6 +278,68 @@ describe('buildDepotRefs', () => {
       const selectOpts = jest.mocked(selectAllDepots).mock.calls[0]?.[3]
       expect(selectOpts).not.toHaveProperty('enabledOptInDlc')
     })
+
+    it('261122-rgi: chosenOptInDlc on a fresh install selects the opt-in depot under the base owner', async () => {
+      wireOptIn()
+      const refs = await buildDepotRefs(APP_ID, {
+        ...BASE_OPTS,
+        chosenOptInDlc: new Set(['313250'])
+      })
+      expect(depotIds(refs)).toEqual(
+        expect.arrayContaining(['111', OPT_IN_DEPOT])
+      )
+      expect(
+        refs.depots.find((d) => d.depotId === OPT_IN_DEPOT)?.ownerAppId
+      ).toBe(APP_ID)
+      expect(refs.optInRetiredDepots ?? []).toEqual([])
+      const lines = jest
+        .mocked(logInfo)
+        .mock.calls.map((c) => String(c[0]))
+        .filter((m) => m.includes('chosen opt-in DLC'))
+      expect(lines).toHaveLength(1)
+      expect(lines[0]).toContain('313250')
+    })
+
+    it('261122-rgi: no chosenOptInDlc and no installed set skips the opt-in depot (unchanged)', async () => {
+      wireOptIn()
+      const refs = await buildDepotRefs(APP_ID, BASE_OPTS)
+      expect(depotIds(refs)).toEqual(['111'])
+      expect(refs.optInRetiredDepots ?? []).toEqual([])
+    })
+
+    it('261122-rgi: an empty chosen set replaces the installed-derived set and retires the installed opt-in depot', async () => {
+      wireOptIn()
+      const refs = await buildDepotRefs(APP_ID, {
+        ...BASE_OPTS,
+        installedDepotIds: new Set(['111', OPT_IN_DEPOT]),
+        chosenOptInDlc: new Set()
+      })
+      expect(depotIds(refs)).toEqual(['111'])
+      expect(refs.optInRetiredDepots).toEqual([
+        { depotId: OPT_IN_DEPOT, ownerAppId: APP_ID }
+      ])
+    })
+
+    it('261122-rgi: a chosen set that keeps the DLC retires nothing', async () => {
+      wireOptIn()
+      const refs = await buildDepotRefs(APP_ID, {
+        ...BASE_OPTS,
+        installedDepotIds: new Set(['111', OPT_IN_DEPOT]),
+        chosenOptInDlc: new Set(['313250'])
+      })
+      expect(depotIds(refs)).toContain(OPT_IN_DEPOT)
+      expect(refs.optInRetiredDepots ?? []).toEqual([])
+    })
+
+    it('261122-rgi: only installed depots are retired, never an uninstalled one of a dropped DLC', async () => {
+      wireOptIn()
+      const refs = await buildDepotRefs(APP_ID, {
+        ...BASE_OPTS,
+        installedDepotIds: new Set(['111']),
+        chosenOptInDlc: new Set()
+      })
+      expect(refs.optInRetiredDepots ?? []).toEqual([])
+    })
   })
 
   describe('quick 261110-up7: per-app beta branch', () => {

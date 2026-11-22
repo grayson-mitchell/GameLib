@@ -621,6 +621,25 @@ describe('installQueueElement — 34.13 A-01: the reshape must not drop InstallA
     ).toBeUndefined()
   })
 
+  it('261122-rgi: steamOptInDlc survives the queue hop and reaches .install() unchanged', async () => {
+    installMock.mockResolvedValue({ status: 'done' })
+
+    await installQueueElement(
+      queueDeps,
+      makeParams({ steamOptInDlc: ['313250'] })
+    )
+
+    expect(installMock.mock.calls[0][0].steamOptInDlc).toEqual(['313250'])
+  })
+
+  it('261122-rgi: no steamOptInDlc stays undefined at .install()', async () => {
+    installMock.mockResolvedValue({ status: 'done' })
+
+    await installQueueElement(queueDeps, makeParams())
+
+    expect(installMock.mock.calls[0][0].steamOptInDlc).toBeUndefined()
+  })
+
   it('A-01: the forward is runner-agnostic — a non-Steam runner receives the field untouched rather than having it stripped', async () => {
     installMock.mockResolvedValue({ status: 'done' })
 
