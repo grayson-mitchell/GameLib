@@ -9,6 +9,9 @@ files:
 severity: minor
 platform: any
 ready: code
+status: CLOSED
+closed: 2026-11-23
+closed_by: "operator decision -- won't fix; D-23 stands"
 ---
 
 ## Problem
@@ -41,3 +44,22 @@ The decision (D-23) was taken with the operator knowing this.
 Have the GOG manager (when it moves to Rust) own `gog_api_info` and call `gog_ctx::gamesdb_release` through it, or
 give `gamesdb_release` a store-host write guarded to the GOG store. Re-record the GOG wiki goldens without the
 `tsOnly` flags.
+
+## Resolution
+
+**CLOSED 2026-11-23 (operator decision): won't fix. D-23 stands.**
+
+Nothing needs the entries the wiki lookup used to leave in `gog_api_info`. The lookup always forced an update and
+never read them back, and the renderer gets the same results either way. The only other reader, the GOG manager's
+own `getGamesdbData`, fetches from the network when it misses.
+
+Two options were weighed and rejected:
+
+- **Rust writes `gog_api_info.json` directly.** The file belongs to a sidecar `CacheStore`
+  (`src/backend/storeManagers/gog/stores.ts`) that keeps it in memory and commits it during a library refresh
+  (`use_in_memory` / `commit`). A second writer would race it, and the sidecar's copy would overwrite Rust's.
+- **Rust hands each answer to a sidecar handler that calls `apiInfoCache.set`.** That adds an IPC round-trip
+  per lookup to fill a cache nothing depends on.
+
+Reopen this when the GOG manager moves to Rust and owns `gog_api_info`. At that point have `gog_ctx::gamesdb_release`
+go through it, as "If it ever matters" above describes.
