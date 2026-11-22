@@ -18,7 +18,8 @@ import {
 import { steamAsyncArgs } from 'common/types/ipc/steam'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
-import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
+import { createTestStoreRoot } from 'backend/testUtils/testStoreRoot'
+import { dirname } from 'path'
 import { createGlobalConfig } from '../../../config'
 import { createGameConfigs } from '../../../game_config'
 
@@ -265,16 +266,16 @@ describe('backend-produced settings pass writeConfig (D-11, T-70-31)', () => {
 
   it('the default AppSettings and default GameSettings are valid', async () => {
     const paths = createTestAppPaths(profile.root)
-    const versioning = createTestVersioning()
+    const root = createTestStoreRoot(dirname(paths.configPath))
     const global = createGlobalConfig({
       requestRustInvoke: jest.fn(),
-      versioning,
+      root,
       paths
     })
     const appDefaults = JSON.parse(JSON.stringify(global.getFactoryDefaults()))
     const gameDefaults = JSON.parse(
       JSON.stringify(
-        await createGameConfigs({ config: global, versioning, paths })
+        await createGameConfigs({ config: global, root, paths })
           .get('some-game')
           .getSettings()
       )

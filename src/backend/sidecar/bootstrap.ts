@@ -1747,7 +1747,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         const config =
           prebuilt.config ??
           createGlobalConfig({
-            versioning: requireStoreRoot(state).versioning,
             root: requireStoreRoot(state),
             paths: prebuilt.paths ?? ctx.paths,
             requestRustInvoke: requireHost(state).requestRustInvoke,
@@ -1767,7 +1766,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           prebuilt.gameConfigs ??
           createGameConfigs({
             config,
-            versioning: requireStoreRoot(state).versioning,
             root: requireStoreRoot(state),
             paths: prebuilt.paths ?? ctx.paths
           })

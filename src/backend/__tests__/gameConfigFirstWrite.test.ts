@@ -1,7 +1,7 @@
-import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -9,6 +9,7 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import { createTestStoreRoot } from 'backend/testUtils/testStoreRoot'
 
 // G17 (59-30 re-UAT item 22): `GameConfig`'s constructor started an async
 // `load()`, so `this.config` was undefined for a tick. A per-game write that was
@@ -16,23 +17,9 @@ import { join } from 'path'
 // "Cannot use 'in' operator to search for '<key>' in undefined" and the change
 // was lost; the same-tick retry in applyGameSetting hit the same undefined.
 
-// WR-04: a spy cannot redefine fs exports, so wrap writeFileSync in a plain
-// function (not a jest.fn: the config resets mocks) that fails on demand.
+// WR-04: a write that fails. A per-game flush is one frame to the shell (85-15), so the failure is
+// a frame sink that throws on demand and otherwise lets the frame through to the file.
 const failNextWrite: { error: Error | null } = { error: null }
-jest.mock('fs', () => {
-  const actual = jest.requireActual<typeof import('fs')>('fs')
-  return {
-    ...actual,
-    writeFileSync: (...args: Parameters<typeof actual.writeFileSync>) => {
-      // Persistent until the test's afterEach clears it: the atomic writer
-      // retries once with a direct write, and a real ENOSPC fails both.
-      if (failNextWrite.error) {
-        throw failNextWrite.error
-      }
-      return actual.writeFileSync(...args)
-    }
-  }
-})
 
 const dir = mkdtempSync(join(tmpdir(), 'gamelib-gameconfig-'))
 
@@ -47,17 +34,26 @@ jest.mock('../logger', () => ({
 }))
 const globalExtra: Record<string, unknown> = {}
 import { createGameConfigs } from '../game_config'
+const games = join(dir, 'GamesConfig')
+mkdirSync(games)
 const pathsModule = createTestAppPaths(dir, {
   configPath: join(dir, 'config.json'),
-  gamesConfigPath: dir,
+  gamesConfigPath: games,
   sharedWinePrefix: join(dir, 'prefixes'),
   userHome: dir
 })
 
 // The global defaults the per-game config reads through its injected slice.
 const gameConfigs = createGameConfigs({
-  versioning: createTestVersioning(),
   paths: pathsModule,
+  root: createTestStoreRoot(dir, {
+    wrapSink: (inner) => ({
+      send: (frame) => {
+        if (failNextWrite.error) throw failNextWrite.error
+        return inner.send(frame)
+      }
+    })
+  }),
   config: {
     getSettings: () =>
       ({
@@ -73,7 +69,7 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }))
 describe('GameConfig first write (G17)', () => {
   it('a setSetting that is the first gameConfigs.get keeps the other settings', () => {
     writeFileSync(join(dir, 'config.json'), '{}')
-    const path = join(dir, '1284190.json')
+    const path = join(games, '1284190.json')
     writeFileSync(
       path,
       JSON.stringify({
@@ -100,7 +96,7 @@ describe('GameConfig first write (G17)', () => {
 
   it('the in-memory config is not overwritten by a late load after the write', async () => {
     writeFileSync(
-      join(dir, '38400.json'),
+      join(games, '38400.json'),
       JSON.stringify({
         '38400': { steamEngineOverride: 'crossover' },
         version: 'v0',
@@ -118,7 +114,7 @@ describe('GameConfig first write (G17)', () => {
 
     const seed = (name: string, settings: Record<string, unknown>) =>
       writeFileSync(
-        join(dir, `${name}.json`),
+        join(games, `${name}.json`),
         JSON.stringify({ [name]: settings, version: 'v0', explicit: true })
       )
 
@@ -149,7 +145,7 @@ describe('GameConfig first write (G17)', () => {
       seed('wr04c', { steamEngineOverride: 'pinned:a' })
       gameConfigs.get('wr04c').setSetting('steamEngineOverride', 'automatic')
       const written = JSON.parse(
-        readFileSync(join(dir, 'wr04c.json'), 'utf-8')
+        readFileSync(join(games, 'wr04c.json'), 'utf-8')
       )['wr04c']
       expect(written.steamEngineOverride).toBe('automatic')
     })
@@ -158,7 +154,7 @@ describe('GameConfig first write (G17)', () => {
   it('gameConfigs.get for a missing game config no longer creates a file as a side effect (68-05, RESEARCH A5)', () => {
     writeFileSync(join(dir, 'config.json'), '{}')
     gameConfigs.get('p68missing')
-    expect(existsSync(join(dir, 'p68missing.json'))).toBe(false)
+    expect(existsSync(join(games, 'p68missing.json'))).toBe(false)
   })
 
   describe('Phase 61: engineOverride is never a game default (CR-05, D-08)', () => {
@@ -178,7 +174,7 @@ describe('GameConfig first write (G17)', () => {
       globalExtra.engineOverride = 'pinned:wine-staging-11.20'
       gameConfigs.get('p61unrelated').setSetting('showFps', true)
       const written = JSON.parse(
-        readFileSync(join(dir, 'p61unrelated.json'), 'utf-8')
+        readFileSync(join(games, 'p61unrelated.json'), 'utf-8')
       )['p61unrelated']
       expect(written.showFps).toBe(true)
       expect('engineOverride' in written).toBe(false)
@@ -189,7 +185,7 @@ describe('GameConfig first write (G17)', () => {
       globalExtra.engineOverride = 'pinned:wine-staging-11.20'
       gameConfigs.get('p61edit').setSetting('engineOverride', 'crossover')
       const written = JSON.parse(
-        readFileSync(join(dir, 'p61edit.json'), 'utf-8')
+        readFileSync(join(games, 'p61edit.json'), 'utf-8')
       )['p61edit']
       expect(written.engineOverride).toBe('crossover')
     })

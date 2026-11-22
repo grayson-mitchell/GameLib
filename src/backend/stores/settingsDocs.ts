@@ -14,10 +14,10 @@
  *   the first read of a file that exists, or on the first write. A write is ONE `replace` frame:
  *   the shell owns the bytes (2-space, the chain's `version: 'vN'`, `sync_all`). The shell migrated
  *   every document at boot before this process started (store_boot), so no TS migration runs.
- * - **TS-read** (a caller with no root, only the versioning engine or nothing, or a path that is not
- *   the table path): exactly what the callers did before: `readFileSync` + `JSON.parse` (a corrupt
- *   file throws, as it did), `ensureSettingsMigrated` before a read, `writeSettingsFile` for a
- *   write. Production always passes the root; 85-23 and 85-24 delete this path with the engine.
+ * - **File read** (a caller with no root, or a path that is not the table path): `readFileSync` +
+ *   `JSON.parse` (a corrupt file throws, as it did), the file as it stands. A write on such a path
+ *   throws: only the shell writes a settings document (85-23 deleted the TS writer with the
+ *   engine). Production always passes the root.
  *
  * A `GamesConfig` document name must be one plain path segment (the `isContainedGameConfig` rule);
  * `storeFrames.isStoreKey` refuses anything else, so such a path never becomes a frame (T-85-37).
@@ -27,23 +27,15 @@
  */
 import { existsSync, readFileSync } from 'graceful-fs'
 import { relative, sep } from 'path'
-import {
-  ensureSettingsMigrated,
-  writeSettingsFile
-} from '../storeVersioning/settingsFiles'
 import { isRustOwnedStoreKey, isStoreKey } from './storeFrames'
 import type { StoreRoot } from './storeRoot'
 
 /**
- * What the helpers need of the boot's `StoreRoot`. Production passes the root itself. A caller with
- * only the versioning engine (or nothing, for a read-only caller) passes `{ versioning }` or `{}`
- * and gets the TS-read path: the Rust-owned path needs the root's `userData` and `mirrors`.
+ * What the helpers need of the boot's `StoreRoot`. Production passes the root itself. A read-only
+ * caller passes `{}` and gets the file-read path: the Rust-owned path needs the root's `userData`
+ * and `mirrors`.
  */
-export type SettingsDocRoot = Partial<
-  Pick<StoreRoot, 'userData' | 'mirrors' | 'versioning'>
->
-
-type SettingsChain = 'settings/global' | 'settings/game'
+export type SettingsDocRoot = Partial<Pick<StoreRoot, 'userData' | 'mirrors'>>
 
 type Doc = Record<string, unknown>
 
@@ -59,7 +51,7 @@ function docKeyOf(userData: string, path: string): string | undefined {
   return isStoreKey(key) ? key : undefined
 }
 
-/** The document's store key when the shell owns it under this root, else `undefined` (TS-owned). */
+/** The document's store key when the shell owns it under this root, else `undefined`. */
 function rustDocKey(root: SettingsDocRoot, path: string): string | undefined {
   if (!root.userData || !root.mirrors) return undefined
   const key = docKeyOf(root.userData, path)
@@ -78,7 +70,7 @@ function cellFor(root: SettingsDocRoot, path: string, storeKey: string) {
 /**
  * The document at `path`, or `undefined` when there is none. Rust-owned: the cell's view, pending
  * writes included (an unreadable file reads as `{}`, the shell reported it read-only at boot).
- * TS-owned: the file parsed (a corrupt file throws, as the direct reads did).
+ * Otherwise the file parsed (a corrupt file throws, as the direct reads did).
  */
 export function readSettingsDoc(
   root: SettingsDocRoot,
@@ -107,9 +99,9 @@ export function settingsDocExists(
 }
 
 /**
- * Replaces the whole document. Rust-owned: one `replace` frame through the cell, visible to every
- * read at once (a read-only cell refuses it silently, as `writeSettingsFile` did). TS-owned:
- * `writeSettingsFile` (atomic, private, refused for a read-only file).
+ * Replaces the whole document: one `replace` frame through the cell, visible to every read at once
+ * (a read-only cell refuses it silently). A path the shell does not own (no root, or not the
+ * table path) throws: there is no TS writer.
  */
 export function writeSettingsDoc(
   root: SettingsDocRoot,
@@ -117,36 +109,18 @@ export function writeSettingsDoc(
   data: Doc
 ): void {
   const key = rustDocKey(root, path)
-  if (key !== undefined) {
-    cellFor(root, path, key).replace(data)
-    return
-  }
-  if (!root.versioning) {
+  if (key === undefined) {
     throw new Error(
-      '[settingsDocs] a TS-owned settings write needs the versioning engine'
+      '[settingsDocs] a settings write needs the store root and a settings document path'
     )
   }
-  writeSettingsFile(root.versioning, path, data)
-}
-
-/**
- * Migrates a TS-owned document before its first read (`ensureSettingsMigrated`, memoised per path).
- * A Rust-owned one was migrated by the shell at boot, so nothing runs. Without a versioning engine
- * (a read-only caller) nothing runs either.
- */
-export function prepareSettingsDoc(
-  root: SettingsDocRoot,
-  path: string,
-  chain: SettingsChain
-): void {
-  if (rustDocKey(root, path) !== undefined || !root.versioning) return
-  ensureSettingsMigrated(root.versioning, path, chain)
+  cellFor(root, path, key).replace(data)
 }
 
 /**
  * The document's file was deleted (an uninstall's settings removal reported `removed`): drop its
- * cell so no read serves the deleted settings and the next write starts over. TS-owned: nothing to
- * drop. `true` when a cell was dropped.
+ * cell so no read serves the deleted settings and the next write starts over. A path the shell does not
+ * own: nothing to drop. `true` when a cell was dropped.
  */
 export function dropSettingsDoc(root: SettingsDocRoot, path: string): boolean {
   if (rustDocKey(root, path) === undefined) return false

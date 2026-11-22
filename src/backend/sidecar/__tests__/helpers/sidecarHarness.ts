@@ -169,6 +169,11 @@ export function bootFresh(opts?: {
     paths: {
       appRoot: real.appRoot,
       publicDir: real.publicDir,
+      // A prebuilt root owns the settings documents under its own userData (85-23): the paths
+      // name the same folder, as a booted sidecar's do.
+      ...(opts?.services?.storeRoot
+        ? { userData: opts.services.storeRoot.userData }
+        : {}),
       ...opts?.context?.paths
     }
   })

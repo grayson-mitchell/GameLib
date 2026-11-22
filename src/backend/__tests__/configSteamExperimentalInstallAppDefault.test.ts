@@ -1,5 +1,5 @@
-import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
+import { createTestStoreRoot } from 'backend/testUtils/testStoreRoot'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -33,7 +33,7 @@ describe('steamExperimentalInstallApp default', () => {
     expect(
       createGlobalConfig({
         requestRustInvoke: jest.fn(),
-        versioning: createTestVersioning(),
+        root: createTestStoreRoot(dir),
         paths: pathsModule
       }).getFactoryDefaults().steamExperimentalInstallApp
     ).toBe(false)
@@ -43,7 +43,7 @@ describe('steamExperimentalInstallApp default', () => {
     expect(
       createGlobalConfig({
         requestRustInvoke: jest.fn(),
-        versioning: createTestVersioning(),
+        root: createTestStoreRoot(dir),
         paths: pathsModule
       }).getSettings().steamExperimentalInstallApp
     ).toBe(false)

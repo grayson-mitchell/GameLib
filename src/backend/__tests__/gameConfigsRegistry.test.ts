@@ -1,7 +1,8 @@
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
-import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
+import { createTestStoreRoot } from 'backend/testUtils/testStoreRoot'
 import { createGameConfigs } from '../game_config'
+import { dirname } from 'path'
 import {
   createTestGameConfigs,
   createTestGlobalConfig
@@ -11,6 +12,7 @@ describe('createGameConfigs', () => {
   const profile = createFakeHomeProfile()
   afterAll(() => profile.dispose())
   const pathsModule = createTestAppPaths(profile.root)
+  const root = createTestStoreRoot(dirname(pathsModule.configPath))
 
   // The per-game defaults read these two keys of the global settings.
   const config = createTestGlobalConfig({
@@ -21,7 +23,7 @@ describe('createGameConfigs', () => {
   it('returns the same object on repeated gets', () => {
     const configs = createGameConfigs({
       config,
-      versioning: createTestVersioning(),
+      root,
       paths: pathsModule
     })
     expect(configs.get('a')).toBe(configs.get('a'))
@@ -30,7 +32,7 @@ describe('createGameConfigs', () => {
   it('returns a different object for a different game', () => {
     const configs = createGameConfigs({
       config,
-      versioning: createTestVersioning(),
+      root,
       paths: pathsModule
     })
     expect(configs.get('a')).not.toBe(configs.get('b'))
@@ -40,13 +42,13 @@ describe('createGameConfigs', () => {
     expect(
       createGameConfigs({
         config,
-        versioning: createTestVersioning(),
+        root,
         paths: pathsModule
       }).get('a')
     ).not.toBe(
       createGameConfigs({
         config,
-        versioning: createTestVersioning(),
+        root,
         paths: pathsModule
       }).get('a')
     )

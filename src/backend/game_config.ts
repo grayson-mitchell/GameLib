@@ -3,13 +3,11 @@ import type { GlobalConfigSlice } from './config'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isStoreKey } from './stores/storeFrames'
 import {
-  prepareSettingsDoc,
   readSettingsDoc,
   settingsDocExists,
   writeSettingsDoc,
   type SettingsDocRoot
 } from './stores/settingsDocs'
-import type { StoreVersioning } from './storeVersioning/engine'
 import { join } from 'path'
 import { currentGameConfigVersion } from 'backend/constants/others'
 import { isMac, isWindows } from './constants/environment'
@@ -359,32 +357,25 @@ export interface GameConfigs {
  * flag since 85-21, D-03). Its boot sweep migrates every `GamesConfig/*.json` before this process is
  * spawned, inside the store boot bound, so a synchronous read here never sees an unmigrated
  * document and nothing is migrated from TS. Only a caller with no root (a test) reads the file
- * directly, migrating it lazily on its first `get` (memoised per file); TS never sweeps
- * GamesConfig/ at boot (the sidecar exit contract).
+ * directly, as it stands; TS never sweeps GamesConfig/ at boot (the sidecar exit contract).
  */
 export function createGameConfigs(deps: {
   config: Pick<GlobalConfigSlice, 'getSettings'>
-  /** The boot's store-versioning engine (`StoreRoot.versioning`). */
-  versioning: StoreVersioning
   /**
-   * The boot's store root (85-15): the settings documents read and write through its mirror when
-   * the shell owns them. Absent (a test), the documents are TS-owned over `versioning`.
+   * The boot's store root (85-15): the settings documents read and write through its mirror, the
+   * shell being the one writer. Absent (a test that only reads), a file is read as it stands and a
+   * write throws.
    */
   root?: SettingsDocRoot
   /** The boot's path roots: the games-config folder, the config file and the prefix defaults. */
   paths: GameConfigPaths
 }): GameConfigs {
   const instances = new Map<string, GameConfigSlice>()
-  const docs: SettingsDocRoot = deps.root ?? { versioning: deps.versioning }
+  const docs: SettingsDocRoot = deps.root ?? {}
   return {
     get: (appName) => {
       let instance = instances.get(appName)
       if (!instance) {
-        prepareSettingsDoc(
-          docs,
-          join(deps.paths.gamesConfigPath, appName + '.json'),
-          'settings/game'
-        )
         instance = new GameConfigV0(appName, deps.config, docs, deps.paths)
         instances.set(appName, instance)
       }

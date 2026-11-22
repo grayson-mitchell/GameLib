@@ -4,8 +4,8 @@
  *
  * Over the boot's root a per-game document is a mirror cell keyed `GamesConfig/<app>`: a GameConfig
  * flush is ONE `replace` frame, and GameConfig.readSettings sees it at once, before the shell
- * answers (no flag since 85-21, D-03). A caller with no root (a test) reads and writes the file
- * directly through `writeSettingsFile`, as before. The Rust half (2-space bytes, the chain's
+ * answers (no flag since 85-21, D-03). A caller with no root (a test) reads the file as it stands and
+ * cannot write (85-23 deleted the TS writer). The Rust half (2-space bytes, the chain's
  * version, a set/delete/clear refused, a path-like app name refused) is `cargo test -p
  * gamelib-store host::doc_tests` and `cargo test --bin gamelib-shell store_frame`.
  */
@@ -95,7 +95,6 @@ function build(
   })
   const gameConfigs = createGameConfigs({
     config: GLOBAL,
-    versioning: root.versioning,
     root,
     paths: paths()
   })
@@ -151,7 +150,7 @@ describe('the tracer: one per-game setting end to end', () => {
 
   it('the shell-side bytes are two-space JSON with no trailing newline and read back through the helper', async () => {
     seedGlobal()
-    const { root, frames, gameConfigs } = build()
+    const { frames, gameConfigs } = build()
     gameConfigs.get(APP).setSetting('maxSharpness', 9)
 
     expect(frames.map((f) => [f.store, f.op])).toEqual([
@@ -168,7 +167,6 @@ describe('the tracer: one per-game setting end to end', () => {
     // (a later boot) reads it from disk.
     const again = createGameConfigs({
       config: GLOBAL,
-      versioning: root.versioning,
       root: createTestStoreRoot(userData),
       paths: paths()
     })
@@ -200,23 +198,14 @@ describe('the tracer: one per-game setting end to end', () => {
     expect(frames).toEqual([])
   })
 
-  it('without a root (a test caller) the document is TS-written: no frame, writeSettingsFile writes it', async () => {
+  it('without a root (a test caller) a write throws: no frame, and no TS writer', () => {
     seedGlobal()
     mkdirSync(gamesConfig(), { recursive: true })
-    const { frames, root } = build()
-    const gameConfigs = createGameConfigs({
-      config: GLOBAL,
-      versioning: root.versioning,
-      paths: paths()
-    })
-    gameConfigs.get(APP).setSetting('maxSharpness', 5)
-    expect(frames).toEqual([])
-    const doc = JSON.parse(readFileSync(gamePath(), 'utf8')) as Record<
-      string,
-      unknown
-    >
-    expect((doc[APP] as Record<string, unknown>).maxSharpness).toBe(5)
-    expect(readFileSync(gamePath(), 'utf8')).toBe(JSON.stringify(doc, null, 2))
+    const gameConfigs = createGameConfigs({ config: GLOBAL, paths: paths() })
+    expect(() => gameConfigs.get(APP).setSetting('maxSharpness', 5)).toThrow(
+      /needs the store root/
+    )
+    expect(existsSync(gamePath())).toBe(false)
   })
 })
 
@@ -259,17 +248,20 @@ describe('readSettingsDoc / writeSettingsDoc / dropSettingsDoc', () => {
     expect(dropSettingsDoc(root, gamePath())).toBe(false)
   })
 
-  it('a path that is not a settings document is read and written by TS', () => {
+  it('a path that is not a settings document is read from the file and takes no write', () => {
     const { root, frames } = build({ silent: true })
     const elsewhere = join(userData, 'other', 'config.json')
     mkdirSync(join(userData, 'other'))
-    writeSettingsDoc(root, elsewhere, { version: 'v2' })
-    expect(frames).toEqual([])
+    writeFileSync(elsewhere, JSON.stringify({ version: 'v2' }))
     expect(readSettingsDoc(root, elsewhere)).toEqual({ version: 'v2' })
+    expect(() => writeSettingsDoc(root, elsewhere, { version: 'v3' })).toThrow(
+      /needs the store root/
+    )
+    expect(frames).toEqual([])
   })
 
   it('without a root a corrupt document throws, as the direct reads did', () => {
-    const docs = { versioning: build().root.versioning }
+    const docs = {}
     mkdirSync(gamesConfig())
     writeFileSync(gamePath(), '{not json')
     expect(() => readSettingsDoc(docs, gamePath())).toThrow()

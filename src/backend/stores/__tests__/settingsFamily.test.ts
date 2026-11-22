@@ -74,7 +74,6 @@ function build(opts: { silent?: boolean } = {}) {
   const config = () =>
     createGlobalConfig({
       requestRustInvoke: jest.fn(),
-      versioning: root.versioning,
       root,
       paths: paths()
     })

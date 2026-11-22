@@ -43,10 +43,15 @@ export function createTestContext<R extends ProcessRunner = ScriptedRunner>(
 ): TestContext<R> {
   const profile = createFakeHomeProfile({ prefix: 'gamelib-test-context-' })
   const appRoot = join(profile.root, 'app')
+  // The settings documents live directly under userData, as in a booted sidecar: the boot's store
+  // root is built over `userData`, and a settings write is refused for a path outside it (85-23).
+  const userData = overrides.paths?.userData ?? join(profile.root, 'userData')
   const defaults: AppPaths = createTestAppPaths(profile.root, {
     appRoot,
     publicDir: join(appRoot, 'public'),
-    userData: join(profile.root, 'userData'),
+    userData,
+    configPath: join(userData, 'config.json'),
+    gamesConfigPath: join(userData, 'GamesConfig'),
     appData: join(profile.root, 'appData'),
     exe: join(profile.root, 'GameLib'),
     knownFolder: (name) =>

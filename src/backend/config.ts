@@ -11,13 +11,11 @@ import { migrateFocusRowSelection } from 'common/focusRowMigration'
 import { migrateTrayIconVariant } from 'common/trayIconVariant'
 
 import {
-  prepareSettingsDoc,
   readSettingsDoc,
   settingsDocExists,
   writeSettingsDoc,
   type SettingsDocRoot
 } from './stores/settingsDocs'
-import type { StoreVersioning } from './storeVersioning/engine'
 import type { RustInvokeDeps } from './host/rustInvokeDeps'
 import {
   getCrossover,
@@ -75,11 +73,10 @@ export type GlobalConfigPaths = Pick<
 export interface GlobalConfigDeps extends RustInvokeDeps {
   /** The boot's path roots: the config file, the games-config folder and the install/prefix defaults. */
   paths: GlobalConfigPaths
-  /** The boot's store-versioning engine (`StoreRoot.versioning`): settings migration and read-only guard. */
-  versioning: StoreVersioning
   /**
-   * The boot's store root (85-15): config.json is read and written through its mirror when the
-   * shell owns the settings family. Absent (a test), the document is TS-owned over `versioning`.
+   * The boot's store root (85-15): config.json is read and written through its mirror, the shell
+   * being the one writer. Absent (a test that only reads), the file is read as it stands and a
+   * write throws.
    */
   root?: SettingsDocRoot
   onSettingChanged?: (
@@ -102,7 +99,7 @@ abstract class GlobalConfig {
   protected readonly docs: SettingsDocRoot
 
   constructor(protected readonly deps: GlobalConfigDeps) {
-    this.docs = deps.root ?? { versioning: deps.versioning }
+    this.docs = deps.root ?? {}
   }
 
   protected config: AppSettings | undefined
@@ -425,19 +422,12 @@ export type GlobalConfigSlice = Pick<
 
 /**
  * Builds the global config handler. Called once by the boot's 'config' step; the instance is then
- * handed to every consumer as `GlobalConfigSlice`. Migrates (or marks read-only) the settings
- * file before anything reads it; memoised per path and never throws (Phase 68, D-10). A single
- * loader serves every version: a newer file loads what this build understands (D-03) instead of
- * crashing on an unknown version.
+ * handed to every consumer as `GlobalConfigSlice`. Nothing is migrated or guarded here: the shell
+ * migrated config.json at boot (store_boot, 85-15) and refuses a write to a newer one (85-16). A
+ * single loader serves every version: a newer file loads what this build understands (D-03)
+ * instead of crashing on an unknown version.
  */
 export function createGlobalConfig(deps: GlobalConfigDeps): GlobalConfig {
-  // TS-owned only: when the shell owns config.json it migrated it at boot, before this process
-  // started (store_boot, 85-15), so nothing runs here.
-  prepareSettingsDoc(
-    deps.root ?? { versioning: deps.versioning },
-    deps.paths.configPath,
-    'settings/global'
-  )
   return new GlobalConfigV0(deps)
 }
 

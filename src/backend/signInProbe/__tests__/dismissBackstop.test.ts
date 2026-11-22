@@ -15,7 +15,6 @@
  * the same assertion must fail for it.
  */
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
-import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
@@ -94,7 +93,7 @@ let globalConfig: ReturnType<typeof createGlobalConfig> | undefined
 const config = () =>
   (globalConfig ??= createGlobalConfig({
     requestRustInvoke: jest.fn(),
-    versioning: createTestVersioning(),
+    root: createTestStoreRoot(),
     paths: pathsModule
   }))
 

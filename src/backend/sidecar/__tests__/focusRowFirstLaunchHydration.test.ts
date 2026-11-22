@@ -8,8 +8,8 @@
  * `GlobalConfigV0.getSettings()`, yet the live app never showed the strip.
  * The renderer seeds `focusRow` from the `store/config.json` `settings`
  * MIRROR (`configStore.get_nodefault('settings')`), which the migration never
- * wrote (the `settings/global` v0->v1 migration now persists the seed into
- * `config.json` at the first global config build, but still never into the
+ * wrote (the shell's `settings/global` v0->v1 migration persists the seed into
+ * `config.json` at boot, but still never into the
  * mirror, which is why hydration remains necessary): two stores, one setting, and the renderer read the one the seed never
  * entered. Every existing suite mocks `backend/config`, so the gap was
  * invisible to all of them.
@@ -44,6 +44,7 @@
  * the only state carried between launches, which is what a real relaunch is.
  */
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+import { migrateFocusRowSelection } from 'common/focusRowMigration'
 import { ipcViews } from 'backend/testUtils/ipcViews'
 import { defined } from 'backend/testUtils/indexed'
 import {
@@ -131,7 +132,7 @@ function launch(): Launch {
     /* eslint-enable @typescript-eslint/no-require-imports */
 
     const config = createGlobalConfig({
-      versioning: createTestStoreRoot().versioning,
+      root: createTestStoreRoot(),
       // The jest-contained AppPaths is this launch's AppPaths.
       paths
     })
@@ -210,8 +211,8 @@ interface LegacyFixture {
 }
 
 /**
- * Writes the legacy profile: `config.json` carries `libraryTopSection` and no
- * `focusRow`; the mirror's `settings` carries the same and no `focusRow`, plus
+ * Writes the legacy profile: `config.json` is the document the shell's boot migration leaves (the
+ * seed persisted as `focusRow`, no `libraryTopSection`); the mirror's `settings` carries the same and no `focusRow`, plus
  * the two stores the migration must never touch.
  */
 function writeLegacyProfile(
@@ -220,11 +221,16 @@ function writeLegacyProfile(
 ): void {
   mkdirSync(dirname(paths.configPath), { recursive: true })
   mkdirSync(dirname(paths.mirrorPath), { recursive: true })
+  // config.json as the shell's boot migration leaves it (settings/global, Rust, 85-08): the legacy
+  // key removed and its seed persisted as `focusRow`. No migration runs from TS since 85-23.
   writeFileSync(
     paths.configPath,
     JSON.stringify({
-      version: 'v0',
-      defaultSettings: { libraryTopSection, language: 'en' }
+      version: 'v2',
+      defaultSettings: {
+        focusRow: migrateFocusRowSelection({ libraryTopSection }),
+        language: 'en'
+      }
     })
   )
   writeFileSync(
@@ -305,9 +311,8 @@ describe('CR-01: legacy libraryTopSection reaches the renderer focusRow on first
       expect(mirror.settings.focusRow).toEqual(expected)
       expect(config.defaultSettings.focusRow).toEqual(expected)
       // The mirror (`store/config.json`) is not touched by the `settings/global`
-      // chain, so it keeps the legacy field. In `config.json` the v0->v1
-      // migration removes it (D-04); the pre-upgrade file is recoverable from
-      // its `config.v0.<stamp>.bak.json`.
+      // chain, so it keeps the legacy field. In `config.json` the shell's v0->v1
+      // migration removed it at boot (D-04).
       expect(mirror.settings.libraryTopSection).toBe(libraryTopSection)
       expect(config.defaultSettings.libraryTopSection).toBeUndefined()
       // Prohibitions: hydration writes only `settings.focusRow`.

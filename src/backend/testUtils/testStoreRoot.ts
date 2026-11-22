@@ -1,7 +1,7 @@
 import { homedir } from 'os'
 import { join } from 'path'
 import { resolveAppDataDir } from '../process/appPaths'
-import type { StoreFrame } from '../stores/storeFrames'
+import type { StoreFrame, StoreFrameSink } from '../stores/storeFrames'
 import { createStoreRoot, type StoreRoot } from '../stores/storeRoot'
 import type { Migration } from '../storeVersioning/types'
 import { createDiskStoreSink } from './diskStoreSink'
@@ -29,23 +29,29 @@ export function testUserDataDir(): string {
  * (`diskStoreSink.ts`): it applies each frame to the store's file the way the shell's writer
  * would and answers it at once, so a real-store suite keeps writing through a store and reading the
  * file back. `recordFrames` keeps that sink and also collects every frame it receives, in order.
- * An explicit `frameSink` replaces the disk sink and the suite owns the answers.
+ * An explicit `frameSink` replaces the disk sink and the suite owns the answers. `wrapSink` keeps
+ * the disk sink and puts a wrapper in front of it (a suite that makes a write throw, then lets the
+ * rest through to the file).
  */
 export function createTestStoreRoot(
   userData?: string,
   options: Pick<
     Parameters<typeof createStoreRoot>[0],
     'readOnlySinks' | 'migrationOverrides' | 'boot' | 'frameSink'
-  > & { recordFrames?: StoreFrame[] } = {}
+  > & {
+    recordFrames?: StoreFrame[]
+    wrapSink?: (inner: StoreFrameSink) => StoreFrameSink
+  } = {}
 ): StoreRoot {
-  const { recordFrames, frameSink, ...rest } = options
+  const { recordFrames, frameSink, wrapSink, ...rest } = options
   const resolvedUserData = userData ?? testUserDataDir()
   const disk = frameSink
     ? undefined
     : createDiskStoreSink({ userData: resolvedUserData, recordFrames })
   const root = createStoreRoot({
     ...rest,
-    frameSink: frameSink ?? disk?.sink,
+    frameSink:
+      frameSink ?? (disk && wrapSink ? wrapSink(disk.sink) : disk?.sink),
     userData: resolvedUserData
   })
   disk?.attach(root)

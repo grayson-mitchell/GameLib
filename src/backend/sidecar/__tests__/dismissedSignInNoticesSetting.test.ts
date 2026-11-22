@@ -97,7 +97,7 @@ function launch(): Launch {
     /* eslint-enable @typescript-eslint/no-require-imports */
 
     const config = createGlobalConfig({
-      versioning: createTestStoreRoot().versioning,
+      root: createTestStoreRoot(),
       // The jest-contained AppPaths is this launch's AppPaths.
       paths
     })

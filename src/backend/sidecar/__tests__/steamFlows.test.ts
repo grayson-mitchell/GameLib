@@ -22,7 +22,6 @@
  * non-Steam launch succeeding end to end.
  */
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
-import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 
@@ -355,7 +354,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
       // The boot's real global config, with only the two launch-hide settings overridden.
       const real = createGlobalConfig({
         requestRustInvoke: jest.fn(),
-        versioning: createTestVersioning(),
+        root: createTestStoreRoot(),
         paths: createContainedHomeAppPaths()
       })
       const config = new Proxy(real, {
