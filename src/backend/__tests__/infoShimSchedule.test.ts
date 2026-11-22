@@ -49,6 +49,11 @@ interface ScheduleRow extends ShimRow {
   deletedBy: number
 }
 
+const OVERRIDES_CALLERS = [
+  'src/backend/gamedetails/dispatch.ts',
+  'src/backend/gamedetails/overrides.ts'
+] as const
+
 const SCHEDULE: readonly ScheduleRow[] = [
   // 86-09, recent games: both bodies are one typed call into `gamelib-info`. `callers` is checked
   // per FILE (every importer of `recentGames.ts`), so both rows list all three importers: the
@@ -77,6 +82,45 @@ const SCHEDULE: readonly ScheduleRow[] = [
       'src/backend/storeManagers/steam/launchDispatch.ts'
     ],
     deletedBy: 92
+  },
+  // 86-11, per-game overrides: four one-call shims over `gamelib-info` `overrides`. Every function
+  // answers a Promise now, so the two callers gained an `await` (Pitfall 9): `getGameInfo` awaits
+  // `attachOverrides` (dispatch.ts) and `setGameMetadataOverride` awaits `setGameOverrides` then
+  // `getAllGameOverrides` (overrides.ts). `getGameOverrides` has no non-test caller left (it
+  // served `attachOverrides` inside the deleted TS module); it stays as the shim for the
+  // `info_overrides_get` op until phase 88 deletes the file. `callers` is per FILE, so all four
+  // rows list both importers. Phase 88 owns the game-details dispatchers.
+  {
+    name: 'getGameOverrides',
+    file: 'src/backend/info/gameOverrides.ts',
+    shape: 'shim',
+    channel: 'RUST_INFO_OVERRIDES_GET',
+    callers: OVERRIDES_CALLERS,
+    deletedBy: 88
+  },
+  {
+    name: 'getAllGameOverrides',
+    file: 'src/backend/info/gameOverrides.ts',
+    shape: 'shim',
+    channel: 'RUST_INFO_OVERRIDES_GET_ALL',
+    callers: OVERRIDES_CALLERS,
+    deletedBy: 88
+  },
+  {
+    name: 'setGameOverrides',
+    file: 'src/backend/info/gameOverrides.ts',
+    shape: 'shim',
+    channel: 'RUST_INFO_OVERRIDES_SET',
+    callers: OVERRIDES_CALLERS,
+    deletedBy: 88
+  },
+  {
+    name: 'attachOverrides',
+    file: 'src/backend/info/gameOverrides.ts',
+    shape: 'shim',
+    channel: 'RUST_INFO_OVERRIDES_ATTACH',
+    callers: OVERRIDES_CALLERS,
+    deletedBy: 88
   }
 ]
 

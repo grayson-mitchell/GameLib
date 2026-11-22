@@ -104,6 +104,17 @@ afterEach(() => {
   for (const t of liveContexts.splice(0)) t.dispose()
 })
 
+/** What the shell's `info` ops answer by default: nothing stored, every write accepted. */
+const DEFAULT_RUST_ANSWERS: Record<string, (args: unknown[]) => unknown> = {
+  info_recent_add: () => null,
+  info_recent_remove: () => null,
+  info_overrides_get: () => null,
+  info_overrides_get_all: () => ({}),
+  info_overrides_set: () => true,
+  // The game object comes back unchanged when no override is stored for it.
+  info_overrides_attach: (args) => (args[0] as { gameInfo: unknown }).gameInfo
+}
+
 export interface FreshSidecar {
   input: PassThrough
   output: PassThrough
@@ -140,6 +151,11 @@ export function bootFresh(opts?: {
    * would stall them. A case that drives configure itself passes false.
    */
   answerSteamCmConfigure?: boolean
+  /**
+   * Answers for `rustInvoke` frames by channel, layered over the defaults above (the `info_*` ops).
+   * A case that checks what a shim sent and what it did with the answer supplies its own.
+   */
+  rustAnswers?: Record<string, (args: unknown[]) => unknown>
   /** Prebuilt services handed to the boot; every other service is built by its step. */
   services?: Partial<BootServices>
   /** Overrides for this case's createTestContext(); `userData` stays under the fake HOME. */
@@ -184,6 +200,7 @@ export function bootFresh(opts?: {
   // frames need an answer; a file-backed double over the case's fake HOME stands in for the shell.
   const steamFiles = fsBackedSteamFiles()
   const answerConfigure = opts?.answerSteamCmConfigure ?? true
+  const rustAnswers = { ...DEFAULT_RUST_ANSWERS, ...opts?.rustAnswers }
   const frames = collectFrames(output, (frame) => {
     if (
       answerConfigure &&
@@ -193,17 +210,17 @@ export function bootFresh(opts?: {
       input.write(`${JSON.stringify({ id: frame.id, ok: true, result: {} })}\n`)
       return
     }
-    // 86-09: the recent-games writes are Rust's now, and a Steam launch awaits the shim, so the
-    // double acknowledges them (the frames stay in `frames` for a case to assert on).
-    if (
-      frame.kind === 'rustInvoke' &&
-      (frame.channel === 'info_recent_add' ||
-        frame.channel === 'info_recent_remove')
-    ) {
-      input.write(
-        `${JSON.stringify({ id: frame.id, ok: true, result: null })}\n`
-      )
-      return
+    // 86-09 and 86-11: the recent-games writes and the per-game overrides are Rust's now, and a
+    // Steam launch or a game-info read awaits the shim, so the double answers them (the frames stay
+    // in `frames` for a case to assert on). A case that needs the ops to behave passes `rustAnswers`.
+    if (frame.kind === 'rustInvoke' && typeof frame.channel === 'string') {
+      const answer = rustAnswers[frame.channel]
+      if (answer) {
+        input.write(
+          `${JSON.stringify({ id: frame.id, ok: true, result: answer((frame.args as unknown[]) ?? []) })}\n`
+        )
+        return
+      }
     }
     if (
       frame.kind !== 'rustInvoke' ||

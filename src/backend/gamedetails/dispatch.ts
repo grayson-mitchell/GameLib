@@ -21,8 +21,8 @@
  *
  * 19-channel reconciliation for this slice: 15 bodies live here, 1
  * (`setGameMetadataOverride`) lives in `./overrides`, 2
- * (`getGameMetadataOverride`/`getAllGameOverrides`) are already bare
- * pass-throughs to `game_overrides/index.ts` and were never extracted, and 1
+ * (`getGameMetadataOverride`/`getAllGameOverrides`) are native `info` channels
+ * served by Rust since Phase 86 (no sidecar body), and 1
  * (`getKnownFixes`) is plan 34.2-03's `knownFixes.ts`.
  *
  * D-01 declaration rider: for the Steam runner, `repair`,
@@ -55,7 +55,7 @@ import type { SideloadGameInfo } from 'common/types/sideload'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 
 import type { Stores, StoreManagers, ManagerDeps } from '../services/types'
-import { attachOverrides, type GameOverridesDeps } from '../game_overrides'
+import { attachOverrides } from '../info/gameOverrides'
 import { isDelegatedInstallPolling } from '../storeManagers/steam/library/installPolling'
 import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { OnlineMonitor } from '../online_monitor'
@@ -75,7 +75,7 @@ export interface GameDetailsDeps extends NotifyDeps, StatusUpdateDeps {
   paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath' | 'userData'>
   stores: {
     kvs: Pick<Stores['kvs'], 'configStore'>
-  } & GameOverridesDeps['stores']
+  }
 }
 
 export async function isGameAvailable(
@@ -110,7 +110,7 @@ export async function getGameInfo(
   // The frontend can however handle being passed an explicit `null` value, so
   // we return that here instead if the game info is empty
   if (!Object.keys(tempGameInfo).length) return null
-  return attachOverrides(deps, tempGameInfo)
+  return (await attachOverrides(deps, tempGameInfo)) as GameInfo
 }
 
 export async function getExtraInfo(

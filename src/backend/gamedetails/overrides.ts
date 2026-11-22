@@ -8,13 +8,12 @@
  * this export.
  *
  * The other two override channels, `getGameMetadataOverride` and
- * `getAllGameOverrides`, are NOT extracted -- this is deliberate. Their
- * `main.ts` handlers are already bare pass-throughs to
- * `game_overrides/index.ts`'s clean exports, so there is no body to move --
- * the sidecar registration (plan 34.2-04) imports `getGameOverrides`/
- * `getAllGameOverrides` from `../game_overrides` directly. 19-channel
- * reconciliation for this slice: 15 in `dispatch.ts` + 1 here + 2
- * already-clean pass-throughs + 1 (`getKnownFixes`, plan 34.2-03's
+ * `getAllGameOverrides`, are native `info` channels served by Rust since
+ * Phase 86 (86-10) and have no sidecar body. The write goes to Rust too
+ * (86-11, `../info/gameOverrides`): the store write, the cleanup of the
+ * game's stored images and the log lines' boolean all come from the
+ * `info_overrides_set` op. 19-channel reconciliation for this slice: 15 in
+ * `dispatch.ts` + 1 here + 2 native + 1 (`getKnownFixes`, plan 34.2-03's
  * `knownFixes.ts`) = 19.
  *
  * `sendFrontendMessage` is exported from `backend/ipc.ts`, which imports the
@@ -34,22 +33,21 @@
  * including `backend/ipc`.
  */
 
-import {
-  getAllGameOverrides,
-  setGameOverrides,
-  type GameOverridesWriteDeps
-} from '../game_overrides'
-import type { GameMetadataOverride } from '../game_overrides/stores'
-import { logWarning, LogPrefix } from '../logger'
+import type { MetadataOverride } from 'common/types/ipc/gameDetails'
+import type { RustInvokeDeps } from '../host/rustInvokeDeps'
+import { getAllGameOverrides, setGameOverrides } from '../info/gameOverrides'
+import { logError, logInfo, logWarning, LogPrefix } from '../logger'
 import type { MiscRuntimeSlice } from '../miscRuntime'
 
+const logPrefix: LogPrefix = 'GameOverrides'
+
 export type MetadataChangedNotifier = (
-  overrides: Record<string, GameMetadataOverride>
+  overrides: Record<string, MetadataOverride>
 ) => void
 
 export interface MetadataOverrides {
   /** Pushes the changed overrides to the frontend through the notifier given at construction. */
-  notifyChanged(overrides: Record<string, GameMetadataOverride>): void
+  notifyChanged(overrides: Record<string, MetadataOverride>): void
 }
 
 /**
@@ -80,16 +78,29 @@ export function createMetadataOverrides(deps: {
   }
 }
 
-export function setGameMetadataOverride(
-  deps: GameOverridesWriteDeps & MiscRuntimeSlice<'metadataOverrides'>,
+export async function setGameMetadataOverride(
+  deps: RustInvokeDeps & MiscRuntimeSlice<'metadataOverrides'>,
   args: {
     appName: string
     title?: string
     art_cover?: string
     art_square?: string
   }
-): void {
+): Promise<void> {
   const { appName, title, art_cover, art_square } = args
-  setGameOverrides(deps, appName, { title, art_cover, art_square })
-  deps.miscRuntime.metadataOverrides.notifyChanged(getAllGameOverrides(deps))
+  // The crate has no logger: it resolves the boolean the TS write returned, and the two log lines
+  // the TS write wrote come from it here.
+  const saved = await setGameOverrides(deps, appName, {
+    title,
+    art_cover,
+    art_square
+  })
+  if (saved === true) {
+    logInfo(`Saved overrides for ${appName}`, logPrefix)
+  } else {
+    logError(`Failed to save overrides for ${appName}`, logPrefix)
+  }
+  deps.miscRuntime.metadataOverrides.notifyChanged(
+    (await getAllGameOverrides(deps)) as Record<string, MetadataOverride>
+  )
 }

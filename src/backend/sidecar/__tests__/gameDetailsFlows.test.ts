@@ -28,7 +28,7 @@
  * `homedir()`, so on those platforms `constants/paths.ts`'s module-scope
  * `appFolder`/`userDataPath`/`fixesPath` resolve to the REAL user config
  * directory instead — where this suite's two `beforeEach` blocks then
- * `gameOverridesStore.set('overrides', {})`, wiping a real user's title/art
+ * a store write that wiped a real user's title/art
  * customizations. `jest.mock('os', ...)` is KEPT below as defence-in-depth;
  * the actual redirect mocks `pathShim` itself — the single choke point
  * `platform/index.ts`'s `app.getPath()` calls through — with no platform
@@ -42,13 +42,10 @@
  * platform/index.ts directly — see skeletonFlows.test.ts's header for why this
  * is necessary. `backend/store_backend` is not mocked (quick 261121-pwt): the
  * production conf-backed store runs.
- * Because `backend/store_backend` resolves to the REAL `store_backend.ts` (not a mock
- * class), `game_overrides/stores.ts`'s `gameOverridesStore` is a
- * REAL, disk-backed `TypeCheckedStoreBackend` for this suite — the
- * `setGameMetadataOverride` tests below read it back directly, proving the
- * Phase 29 store registration (`storeRegistration.ts:99`) is genuinely
- * sufficient with zero new plumbing, rather than asserting against a mock.
- * (Phase 86: the two override READ channels are native Rust `info` channels now.)
+ * (Phase 86: the per-game overrides are Rust's. `setGameMetadataOverride` forwards to the
+ * `info_overrides_set` / `info_overrides_get_all` ops, which this suite answers with a small
+ * in-memory double passed to the harness as `rustAnswers`; the real op semantics are proven by the
+ * `gamelib-info` golden tests.)
  *
  * Mocked only at the boundaries this plan's own module docstring names:
  *   - `backend/storeManagers` (`libraryManagerMap`) — six scriptable
@@ -73,9 +70,8 @@
  *     `runOnceWhenOnline`/`onConnectivityChange` stubbed alongside it so
  *     `bootstrap.ts`'s own call into this module never touches the real
  *     `electron` `net` surface.
- *   - `backend/game_overrides` is intentionally NOT mocked — see the
- *     store note above; the REAL store is the only way to prove the
- *     `setGameMetadataOverride` write lands.
+ *   - The `info_overrides_*` rustInvoke frames are answered by the in-memory
+ *     `overridesDouble` below (86-11), so the write the sidecar forwards can be read back.
  *   - `backend/storeManagers/legendary/user`'s `LegendaryUser` — a narrow
  *     `{ getUserInfo: jest.fn() }` stub; `readConfig('user')`'s real call
  *     target.
@@ -290,12 +286,12 @@ const {
   userData: userDataPath
 } = createContainedHomeAppPaths()
 import { defined } from 'backend/testUtils/indexed'
-import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 
 // ── CR-03 / WR-01 containment guard — MUST run before either describe
-// block's first beforeEach (both end in a destructive
-// gameOverridesStore.set('overrides', {})). Jest runs a top-level beforeAll
+// block's first beforeEach (both used to end in a destructive
+// store write; the overrides are Rust's now, but the guard stays as the tripwire for
+// the rest of the file). Jest runs a top-level beforeAll
 // before any nested describe's beforeEach. Uses resolve+relative, never
 // startsWith/join (Phase 18: "join is not containment"; a bare prefix check
 // would also pass for a sibling directory sharing the tmp prefix). Throws
@@ -326,9 +322,27 @@ beforeAll(() => {
 // handles the cases configure or inspect are rebound from that registry in
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset.
-let gameOverridesStore: ReturnType<
-  typeof import('../../game_overrides/stores').createGameOverridesStores
->['gameOverridesStore']
+/** The Rust `info_overrides_*` ops over an in-memory map (the crate's own tests are the oracle). */
+let storedOverrides: Record<string, Record<string, string | undefined>> = {}
+const overridesDouble: Record<string, (args: unknown[]) => unknown> = {
+  info_overrides_get_all: () => ({ ...storedOverrides }),
+  info_overrides_set: (args) => {
+    const { appName, overrideData } = args[0] as {
+      appName: string
+      overrideData: Record<string, string | undefined>
+    }
+    if (
+      !overrideData.title &&
+      !overrideData.art_cover &&
+      !overrideData.art_square
+    ) {
+      delete storedOverrides[appName]
+    } else {
+      storedOverrides[appName] = overrideData
+    }
+    return true
+  }
+}
 let mockedGlobalConfigGet: jest.Mock
 let mockedIsOnline: jest.Mock
 let mockedNotify: jest.Mock
@@ -367,11 +381,6 @@ function freshRegistry(): void {
   const { notify } = require('../../dialog/dialog')
   const { sendGameStatusUpdate } = require('../../utils')
   const { LegendaryUser } = require('../../storeManagers/legendary/user')
-  ;({ gameOverridesStore } =
-    require('../../game_overrides/stores').createGameOverridesStores({
-      registry: createStoreRegistry(),
-      root: testRoot
-    }))
   /* eslint-enable @typescript-eslint/no-require-imports */
   mockedGlobalConfigGet = createGlobalConfig as jest.Mock
   mockedIsOnline = jest.fn()
@@ -388,6 +397,7 @@ function freshRegistry(): void {
 const boot = (extra: Partial<BootServices> = {}) =>
   bootFresh({
     reuseRegistry: true,
+    rustAnswers: overridesDouble,
     services: {
       ...extra,
       storeRoot: testRoot,
@@ -483,7 +493,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     gogManager.getGame.mockReturnValue(makeGameHandle())
     steamManager.getGame.mockReturnValue(makeGameHandle())
 
-    gameOverridesStore.set('overrides', {})
+    storedOverrides = {}
   })
 
   // ── REQ-34.2-01: the 8 gamedetails/dispatch generic per-game channels ─────
@@ -945,7 +955,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     expect(callMatch).not.toBeNull()
   })
 
-  // ── REQ-34.2-08: the two already-clean game_overrides pass-throughs, real store ─
+  // ── REQ-34.2-08: the two override read channels are native ─
 
   it('Phase 86 (D-17) getGameMetadataOverride and getAllGameOverrides are native `info` channels: the sidecar no longer registers them', () => {
     boot()
@@ -1039,7 +1049,7 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
         mock.mockReset()
       }
     }
-    gameOverridesStore.set('overrides', {})
+    storedOverrides = {}
   })
 
   // ── REQ-34.2-08: setGameMetadataOverride round-trip, push, delete ────────
@@ -1051,7 +1061,7 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
     ])
     await flush()
 
-    expect(gameOverridesStore.get('overrides', {})).toMatchObject({
+    expect(storedOverrides).toMatchObject({
       X: { title: 'T', art_cover: 'C', art_square: 'S' }
     })
   })
@@ -1070,14 +1080,12 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
     // The proof is the FRAME reaching the transport, not a spy on the
     // notifier function — asserted against the collected output stream.
     expect(pushFrame).toBeDefined()
-    expect(pushFrame?.args?.[0]).toEqual(
-      gameOverridesStore.get('overrides', {})
-    )
+    expect(pushFrame?.args?.[0]).toEqual(storedOverrides)
     expect(pushFrame?.args?.[0]).toMatchObject({ Y: { title: 'Pushed Title' } })
   })
 
   it('REQ-34.2-08 setGameMetadataOverride (send) with every field empty deletes the entry from the store', async () => {
-    gameOverridesStore.set('overrides', { Z: { title: 'Stale' } })
+    storedOverrides = { Z: { title: 'Stale' } }
 
     const { input } = boot()
     writeSend(input, 'sgmo-del-1', 'setGameMetadataOverride', [
@@ -1085,7 +1093,7 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
     ])
     await flush()
 
-    expect(gameOverridesStore.get('overrides', {})).toEqual({})
+    expect(storedOverrides).toEqual({})
   })
 
   // ── REQ-34.2-09: addNewApp ────────────────────────────────────────────────

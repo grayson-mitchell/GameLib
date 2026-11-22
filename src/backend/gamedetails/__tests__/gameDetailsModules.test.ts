@@ -80,13 +80,13 @@ const dispatchDeps = {
   stores: { kvs: { configStore: {} } }
 } as never
 
-// ── backend/game_overrides mock -- observes attachOverrides/setGameOverrides/
-// getAllGameOverrides calls without touching the real electron-store-backed
-// implementation. ────────────────────────────────────────────────────────
+// ── backend/info/gameOverrides mock -- observes attachOverrides/setGameOverrides/
+// getAllGameOverrides calls without sending a real rustInvoke frame (the four are
+// shims over Rust since 86-11, so each answers a Promise). ──────────────────
 const attachOverridesMock = jest.fn()
 const setGameOverridesMock = jest.fn()
 const getAllGameOverridesMock = jest.fn()
-jest.mock('backend/game_overrides', () => ({
+jest.mock('backend/info/gameOverrides', () => ({
   attachOverrides: (...args: [unknown, unknown]) =>
     attachOverridesMock(...args),
   setGameOverrides: (...args: [unknown, unknown]) =>
@@ -266,7 +266,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
       getGameInfo: jest.fn().mockReturnValue(rawInfo)
     })
     managerMocks.steam.getGame.mockReturnValue(gameDouble)
-    attachOverridesMock.mockReturnValue(overriddenInfo)
+    attachOverridesMock.mockResolvedValue(overriddenInfo)
 
     const result = await getGameInfo(dispatchDeps, '440', 'steam')
 
@@ -687,18 +687,19 @@ describe('backend/gamedetails/overrides.ts (REQ-34.2-08)', () => {
 
   // An instance built with no notifier is the real, untouched, fail-safe default (a no-op that
   // logWarning()s once per instance), exercised here rather than a test-installed replacement.
-  it('REQ-34.2-08 setGameMetadataOverride still performs the store write and does not throw when NO notifier was given', () => {
-    getAllGameOverridesMock.mockReturnValue({})
+  it('REQ-34.2-08 setGameMetadataOverride still performs the store write and does not throw when NO notifier was given', async () => {
+    setGameOverridesMock.mockResolvedValue(true)
+    getAllGameOverridesMock.mockResolvedValue({})
     const deps = {
       miscRuntime: { metadataOverrides: createMetadataOverrides({}) }
     }
 
-    expect(() =>
+    await expect(
       setGameMetadataOverride(deps as never, {
         appName: '440',
         title: 'Custom Title'
       })
-    ).not.toThrow()
+    ).resolves.toBeUndefined()
     expect(setGameOverridesMock).toHaveBeenCalledWith(deps, '440', {
       title: 'Custom Title',
       art_cover: undefined,
@@ -706,9 +707,10 @@ describe('backend/gamedetails/overrides.ts (REQ-34.2-08)', () => {
     })
   })
 
-  it("REQ-34.2-08 setGameMetadataOverride calls setGameOverrides(appName, {title, art_cover, art_square}) and invokes the given notifier with getAllGameOverrides()'s value", () => {
+  it("REQ-34.2-08 setGameMetadataOverride calls setGameOverrides(appName, {title, art_cover, art_square}) and invokes the given notifier with getAllGameOverrides()'s value", async () => {
     const overridesSnapshot = { '440': { title: 'Custom Title' } }
-    getAllGameOverridesMock.mockReturnValue(overridesSnapshot)
+    setGameOverridesMock.mockResolvedValue(true)
+    getAllGameOverridesMock.mockResolvedValue(overridesSnapshot)
     const notifierMock = jest.fn()
     const deps = {
       miscRuntime: {
@@ -716,7 +718,7 @@ describe('backend/gamedetails/overrides.ts (REQ-34.2-08)', () => {
       }
     }
 
-    setGameMetadataOverride(deps as never, {
+    await setGameMetadataOverride(deps as never, {
       appName: '440',
       title: 'Custom Title',
       art_cover: 'cover.png',

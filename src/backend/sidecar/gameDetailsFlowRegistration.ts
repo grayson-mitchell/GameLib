@@ -246,20 +246,20 @@ export function registerGameDetailsFlows(deps: GameDetailsFlowDeps): void {
 
   deps.ipc.on(
     'setGameMetadataOverride',
+    // 86-11: the write goes to Rust, so the body is async and a rejection (Rust refusing the
+    // frame, or the transport timing out) lands in the same log line a sync throw used to.
     (_event: unknown, ...args: unknown[]) => {
-      try {
-        setGameMetadataOverride(
-          deps,
-          args[0] as {
-            appName: string
-            title?: string
-            art_cover?: string
-            art_square?: string
-          }
-        )
-      } catch (error) {
+      setGameMetadataOverride(
+        deps,
+        args[0] as {
+          appName: string
+          title?: string
+          art_cover?: string
+          art_square?: string
+        }
+      ).catch((error: unknown) =>
         logSendFailure('setGameMetadataOverride', error)
-      }
+      )
     }
   )
 
