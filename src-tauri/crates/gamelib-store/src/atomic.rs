@@ -22,7 +22,8 @@ const RENAME_RETRY_DELAYS_MS: [u64; 3] = [25, 50, 100];
 /// Whether the temp file is `sync_all`-ed before it replaces the file (D-21).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Durability {
-    /// User-state, settings and account stores: a crash right after the write must not lose it.
+    /// User-state, settings and account stores: a crash right after the write must not lose it. The
+    /// temp file is `sync_all`-ed and, on Unix, the parent directory is fsynced after the rename.
     Synced,
     /// Caches, rewritten in bursts and rebuilt on demand.
     Unsynced,
@@ -89,6 +90,20 @@ fn finish(mut f: File, bytes: &[u8], durability: Durability) -> io::Result<()> {
     Ok(())
 }
 
+/// After a rename, a `Synced` write also fsyncs the containing directory, so the new directory entry
+/// survives a crash (A-WR-01): ext4, xfs and btrfs can otherwise bring back the old entry. Unix only;
+/// Windows cannot open a directory handle this way. Best effort: the data itself is already synced.
+fn sync_parent_dir(parent: &Path, durability: Durability) {
+    #[cfg(unix)]
+    if durability == Durability::Synced {
+        if let Ok(dir) = File::open(parent) {
+            let _ = dir.sync_all();
+        }
+    }
+    #[cfg(not(unix))]
+    let _ = (parent, durability);
+}
+
 /// A rename worth trying again: a permission refusal anywhere, or on Windows a sharing violation
 /// (os error 32) or access denied (os error 5).
 fn is_retryable(e: &io::Error) -> bool {
@@ -150,6 +165,7 @@ pub fn write_atomic_with(
         }
     }
     if attempt.is_ok() {
+        sync_parent_dir(parent, durability);
         return Ok(());
     }
 
