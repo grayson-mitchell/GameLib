@@ -63,6 +63,12 @@ const logError = (message: unknown, options?: LogOptions): void => {
  * any writer holds a Promise message that never settles, every call takes the full
  * `LOG_FLUSH_TIMEOUT_MS` (2 s), whatever its own entry is.
  *
+ * On that fatal path the guard's own cap ends the wait first: it races this promise against
+ * `UNCAUGHT_FLUSH_CAP_MS` (1.5 s, `sidecar/processGuards.ts`) and then exits. So the full 2 s never
+ * happens there, held lines that settle after 1.5 s are lost there, and with a link that never
+ * settles the chain wait uses the guard's whole window: the fatal entry then reaches stdout only
+ * through the 50 ms tick, and its write callback is never awaited (IN-14).
+ *
  * Deliberately NOT applied to `logDebug`/`logWarning`/`logError` above: widening the shared
  * wrappers to return a promise would add roughly 309 floating-promise warnings at the
  * statement-position call sites with no runtime change (the 34.2-26 audit).
