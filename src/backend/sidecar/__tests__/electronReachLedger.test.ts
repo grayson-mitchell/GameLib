@@ -50,6 +50,12 @@
  * transcribed) after the clearing commits: electronImportingFiles.size = 0,
  * visitedFiles.size = 256 (same run) -- confirming the empty reach set is a completed
  * traversal, not a vacuous one that visited nothing.
+ *
+ * **Phase 86 plan 18 (2026-11-23):** `discounts/fetchDiscounts.ts`, which the enrichment entry point
+ * reached for the catalog request's `User-Agent`, is deleted: the fetch is Rust now. The resolver that
+ * takes its place (`info/discounts.ts`) imports `GOGUser` and the typed Rust transport, neither of
+ * which reaches `electron`. Measured by running this test after the deletion: the reach set is still
+ * empty, so no baseline entry moved and none was added; the anti-degradation test passes unchanged.
  */
 
 import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'

@@ -34,8 +34,8 @@
  * force-exit.
  *
  * Mocked only at the boundaries this plan's own module docstring names:
- *   - `axios` — scriptable per-URL, so the GOG discounts body runs against
- *     controlled fixture data/failures instead of a real network call.
+ *   - `axios` — scriptable, so no boot path or channel body reaches a real network call. (The GOG
+ *     discounts body that once ran against it is Rust now, 86-18; the registration is a forward.)
  *   - `backend/storeManagers` (`libraryManagerMap`) — scriptable managers,
  *     the boundary `buildCrossoverRatingMap`'s enumeration walks and
  *     `getGame` (real, from `backend/utils`) resolves through.
@@ -85,8 +85,8 @@ jest.mock('os', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
-// ── axios — scriptable per-URL. `mockAxiosGet` / `mockAxiosPost` drive the
-// GOG discounts body (top-level `axios.get` / `axios.post`);
+// ── axios — scriptable. `mockAxiosGet` / `mockAxiosPost` stand in for the top-level
+// `axios.get` / `axios.post` (nothing here calls them any more: the GOG discounts fetch is Rust, 86-18);
 // `create()` still exists so bootstrap.ts's real `fetchLastestReleases()`
 // (`axiosClient = axios.create(...)`) does not crash at startup ──────────────
 const mockAxiosGet = jest.fn()

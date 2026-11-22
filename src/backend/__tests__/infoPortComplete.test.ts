@@ -31,6 +31,7 @@ import type { StrippedFile } from 'backend/testUtils/infoPortGate'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import * as ts from 'typescript'
 
 /**
  * Floors (82 D-05). Measured 2026-11-22 (86-05, after the images_cache deletion) over non-test
@@ -519,6 +520,184 @@ describe('storeSearchPortComplete', () => {
       'utf8'
     )
     expect(coverage).toContain('itadCoverage.json')
+  })
+})
+
+/**
+ * 86-18 (SC4, D-13, D-24): GOG discounts are Rust. The catalog fetch, paging, dedupe, fallback and the
+ * request shape are `gamelib-info` `discounts`; the TS fetcher and its oracle are deleted, and the
+ * goldens and recordings stay for `golden_discounts`. `getGogDiscounts` keeps its sidecar registration
+ * as a resolver (D-24: the GOG access token needs the `gogdl` child process, which stays TS until phase
+ * 92), so there is no native-channel check here: the registration is allowed, but it may hold nothing
+ * beyond the one call to the resolver. The humble badge tests under `src/backend/discounts/__tests__`
+ * test code in `common/` and stay.
+ */
+const DISCOUNTS: SliceSpec = {
+  deleted: [
+    'src/backend/discounts/fetchDiscounts.ts',
+    'src/backend/info/__tests__/oracle/discounts.oracle.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-info/tests/fixtures/golden/discounts',
+    'src-tauri/crates/gamelib-info/tests/fixtures/recorded/discounts',
+    'src/backend/discounts/__tests__/badges.test.ts',
+    'src/backend/discounts/__tests__/storeSearchBadges.test.ts'
+  ],
+  forbiddenIdentifiers: ['fetchAllDiscounts', 'buildUrl', 'CATALOG_URL'],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_DISCOUNTS'
+}
+
+/**
+ * Why the `getGogDiscounts` registration in `source` is not exactly a forward to the resolver, or an
+ * empty list when it is: `deps.ipc.handle('getGogDiscounts', <arrow>)` whose body is one expression, a
+ * call of `getGogDiscounts` (no block, no statements, no other call around it).
+ */
+function discountsRegistrationProblems(source: string): string[] {
+  const sf = ts.createSourceFile(
+    'registration.ts',
+    source,
+    ts.ScriptTarget.Latest,
+    true
+  )
+  const found: ts.CallExpression[] = []
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.getText(sf) === 'deps.ipc.handle' &&
+      node.arguments[0] !== undefined &&
+      ts.isStringLiteralLike(node.arguments[0]) &&
+      node.arguments[0].text === 'getGogDiscounts'
+    ) {
+      found.push(node)
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sf)
+  const [registration] = found
+  if (found.length !== 1 || !registration) {
+    return [`expected one getGogDiscounts registration, found ${found.length}`]
+  }
+  const handler = registration.arguments[1]
+  if (!handler || !ts.isArrowFunction(handler)) {
+    return ['the handler is not an arrow function']
+  }
+  if (ts.isBlock(handler.body)) {
+    return ['the handler has a block body, not one forwarded call']
+  }
+  let body: ts.Expression = handler.body
+  while (ts.isParenthesizedExpression(body) || ts.isAwaitExpression(body)) {
+    body = body.expression
+  }
+  if (
+    !ts.isCallExpression(body) ||
+    body.expression.getText(sf) !== 'getGogDiscounts'
+  ) {
+    return [
+      `the handler body is not a call of getGogDiscounts: ${body.getText(sf).slice(0, 60)}`
+    ]
+  }
+  // Nothing inside the forwarded arguments may be another call (a fetch, a log, a lookup).
+  const inner: string[] = []
+  const walkArgs = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) inner.push(node.getText(sf).slice(0, 40))
+    ts.forEachChild(node, walkArgs)
+  }
+  for (const arg of body.arguments) walkArgs(arg)
+  return inner.map((c) => `the forwarded arguments hold a call: ${c}`)
+}
+
+describe('discountsPortComplete', () => {
+  runSlice(DISCOUNTS)
+
+  it('no non-test TS file names the catalog host (the crate owns the request)', () => {
+    expect(findIdentifiers(tsWalk.files, ['catalog.gog.com'])).toEqual([])
+  })
+
+  it('the getGogDiscounts registration holds only the forward to the resolver', () => {
+    const registration = tsWalk.files.find(
+      (f) => f.path === 'src/backend/sidecar/enrichmentFlowRegistration.ts'
+    )
+    expect(registration).toBeDefined()
+    expect(discountsRegistrationProblems(registration?.raw ?? '')).toEqual([])
+  })
+
+  it('the resolver is the one place that names the discounts channel, and it imports no HTTP client', () => {
+    const resolver = tsWalk.files.find(
+      (f) => f.path === 'src/backend/info/discounts.ts'
+    )
+    expect(resolver).toBeDefined()
+    expect(resolver?.code).toContain('RUST_INFO_GOG_DISCOUNTS')
+    expect(resolver?.code).not.toMatch(/axios|fetch\(|URLSearchParams/)
+    expect(
+      findRustInfoCalls(tsWalk.files).filter(
+        (c) => c.constant === 'RUST_INFO_GOG_DISCOUNTS'
+      )
+    ).toEqual([
+      {
+        path: 'src/backend/info/discounts.ts',
+        constant: 'RUST_INFO_GOG_DISCOUNTS',
+        fn: 'getGogDiscounts'
+      }
+    ])
+  })
+
+  it('the resolver keeps the D-24 shape: const token, then one typed call', () => {
+    const raw = readFileSync(
+      join(REPO_ROOT, 'src/backend/info/discounts.ts'),
+      'utf8'
+    )
+    expect(
+      checkShimShape(raw, 'getGogDiscounts', {
+        shape: 'resolver',
+        inputs: ['token']
+      })
+    ).toEqual([])
+  })
+
+  it('self-test: the registration check passes a plain forward and names a block, an extra call and a missing registration', () => {
+    const plain =
+      "deps.ipc.handle('getGogDiscounts', async (_e, ...args) => getGogDiscounts({ a: deps.a }, args[0], args[1]))"
+    const block =
+      "deps.ipc.handle('getGogDiscounts', async () => { const x = await axios.get(u); return x })"
+    const extra =
+      "deps.ipc.handle('getGogDiscounts', async () => getGogDiscounts(deps, fetchPage(1)))"
+    const wrong =
+      "deps.ipc.handle('getGogDiscounts', async () => somethingElse(deps))"
+    expect(discountsRegistrationProblems(plain)).toEqual([])
+    expect(discountsRegistrationProblems(block)).toEqual([
+      expect.stringContaining('block body')
+    ])
+    expect(discountsRegistrationProblems(extra)).toEqual([
+      expect.stringContaining('hold a call: fetchPage(1)')
+    ])
+    expect(discountsRegistrationProblems(wrong)).toEqual([
+      expect.stringContaining('not a call of getGogDiscounts')
+    ])
+    expect(discountsRegistrationProblems('const a = 1')).toEqual([
+      expect.stringContaining('found 0')
+    ])
+  })
+
+  it('self-test: a planted fetcher in the resolver text is caught', () => {
+    expect(
+      findIdentifiers(
+        [
+          {
+            path: 'x.ts',
+            raw: '',
+            code: "const u = 'https://catalog.gog.com/v1/catalog'"
+          }
+        ],
+        ['fetchAllDiscounts', 'buildUrl', 'CATALOG_URL']
+      )
+    ).toEqual([])
+    expect(
+      findIdentifiers(
+        [{ path: 'x.ts', raw: '', code: 'const u = buildUrl(1)' }],
+        ['buildUrl']
+      )
+    ).toEqual(['x.ts: buildUrl'])
   })
 })
 

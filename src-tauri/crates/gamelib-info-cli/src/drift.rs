@@ -202,6 +202,24 @@ const CASES: &[Case] = &[
         mode: Mode::Whole,
         needs_env: Some(ITAD_KEY_VAR),
     },
+    // GOG discounts (86-18, D-12): the live catalog's pages, with no flags and so no token (the token is
+    // the one input TS collects, D-24; the catalog itself needs no key). The golden is the 5-product
+    // sample of the 86-06 synthetic cases, which were cloned from the live first page: the live list
+    // (30 pages of 48) must carry every key path of those products. The live case's own golden holds
+    // only a count, the ids and a digest, so it has no shape to compare.
+    Case {
+        id: "gog-discounts",
+        slice: "discounts",
+        platform: Platform::Linux,
+        setup: &[],
+        op: "info_gog_discounts",
+        args: r#"[{"locale":{"countryCode":"US","locale":"en-US","currencyCode":"USD"},"hideOwned":false,"wishlistOnly":false,"token":null}]"#,
+        read: Read::Answer,
+        golden: "discounts/expected/synthetic-hide-owned-no-credentials/result.json",
+        pointer: "/products",
+        mode: Mode::Whole,
+        needs_env: None,
+    },
 ];
 
 /// The golden folder, baked in at build time: drift is a developer tool run from this checkout.
@@ -699,6 +717,40 @@ mod tests {
             assert_eq!(outcome, Ok(String::new()), "{case_id}");
             replay.finish().expect(case_id);
         }
+    }
+
+    #[test]
+    fn a_recorded_catalog_that_matches_the_golden_passes_the_gog_discounts_case() {
+        let case = CASES.iter().find(|c| c.id == "gog-discounts").unwrap();
+        // The live-us-default recording is 30 pages of the real catalog: every request the op makes is
+        // pinned (the Replay finishes clean), and every key path of the golden's sample is in the list.
+        let replay = recorded("discounts", "live-us-default");
+        let outcome = run_case(case, replay.clone(), no_keys(), "0.11.0", &golden_root());
+        assert!(outcome.is_ok(), "{outcome:?}");
+        replay.finish().expect("gog-discounts");
+        // The catalog needs no key, so the case is never skipped.
+        assert_eq!(skip_reason(case, |_| None), None);
+    }
+
+    #[test]
+    fn a_catalog_that_drops_a_product_key_fails_with_the_path() {
+        let case = CASES.iter().find(|c| c.id == "gog-discounts").unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("body.json"),
+            r#"{"pages":1,"productCount":1,"products":[{"id":"1"}]}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.path().join("exchanges.json"),
+            r#"[{"id":"e","request":{"method":"GET","url":"https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=1&countryCode=US&locale=en-US&currencyCode=USD","headers":{"user-agent":"HeroicGamesLauncher/0.11.0"}},"response":{"status":200,"headers":{},"bodyFile":"body.json"}}]"#,
+        )
+        .unwrap();
+        let replay = Arc::new(Replay::from_case(dir.path()).unwrap());
+        let err = run_case(case, replay, no_keys(), "0.11.0", &golden_root()).unwrap_err();
+        // The live product lost every key but `id`.
+        assert!(err.contains("is missing from the live result"), "{err}");
+        assert!(err.contains("[].coverHorizontal"), "{err}");
     }
 
     #[test]
