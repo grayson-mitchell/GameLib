@@ -562,12 +562,12 @@ Plans:
   3. Recorded fixtures exist for each previously untested directory before it is ported
   4. Each ported slice's TypeScript and sidecar registrations are deleted in this phase (the delete gate per slice passes)
 
-**Plans:** 1/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
+**Plans:** 2/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
 
 Plans:
 **Wave 1**
 - [x] 86-01-PLAN.md — D-29 checkpoint: re-read the shipped gamelib-store host API; amend 82-STATE-OWNERSHIP (umu 86, macArch 89, runsForMe 96)
-- [ ] 86-02-PLAN.md — The live macOS gate contract 86-HUMAN-UAT.md (four D-14 items, D-15 signed upgrade), authored before coding
+- [x] 86-02-PLAN.md — The live macOS gate contract 86-HUMAN-UAT.md (four D-14 items, D-15 signed upgrade), authored before coding
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 86-03-PLAN.md — `gamelib-info` (+cli) crate: CacheView over StoreHost, Http trait with pinned Replay, op wrapper with shutdown registrant; CI wiring
