@@ -1584,6 +1584,14 @@ export interface StoreChangedPayload {
   value?: unknown
   deleted?: boolean
   invalidated?: boolean
+  /**
+   * The store's change count after this change. Present when Rust owns the store (Phase 85, 85-17):
+   * the shell emits every push in rev order and the boot snapshot (`STORE_REV_KEY`) and the lazy
+   * fetch (`{ values, rev }`) carry the rev they were read at, so the renderer drops a push that is
+   * not newer than what it already holds. Absent under `GAMELIB_STORE=ts` (the sidecar pushes).
+   * Revs can skip: a change to a field the renderer may not read is never pushed.
+   */
+  rev?: number
 }
 
 /**

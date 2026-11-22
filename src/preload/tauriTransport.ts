@@ -31,6 +31,8 @@ import {
   SIDECAR_STORE_SNAPSHOT,
   FRONTEND_MESSAGE_EVENT,
   STORE_FETCH_CHANNEL,
+  STORE_SET_CHANNEL,
+  STORE_DELETE_CHANNEL,
   STORE_SET_CHECKED_CHANNEL,
   STORE_NEW_CHANNEL,
   STORE_CHANGED_CHANNEL,
@@ -177,6 +179,40 @@ const invalidationEpoch = new Map<string, number>()
  */
 const changesDuringFetch = new Map<string, StoreChangedPayload[]>()
 
+/**
+ * Phase 85 (85-17, research Pitfall 8, S1 rule 9): the newest rev each store's snapshot reflects,
+ * from the boot snapshot (`STORE_REV_KEY`), a fetch result (`{ values, rev }`) or an applied push.
+ * A push whose `rev` is present and not above it is stale (it is already in the snapshot, or a newer
+ * state replaced it) and is dropped. A store with no entry here (`GAMELIB_STORE=ts`, or a store the
+ * sidecar answered) takes every push, exactly as before. Revs are never required to be gapless: a
+ * change to a field the renderer may not read is never pushed, so a gap is normal, not a resync.
+ */
+const lastRev = new Map<string, number>()
+
+/** Records `rev` as seen for `store` when it is newer than what is recorded. */
+function noteRev(store: string, rev: number | undefined): void {
+  if (rev === undefined) return
+  if (rev > (lastRev.get(store) ?? -1)) lastRev.set(store, rev)
+}
+
+/** A push carrying a rev the store's snapshot already reflects. A rev-less push is never stale. */
+function isStalePush(change: StoreChangedPayload): boolean {
+  if (change.rev === undefined) return false
+  const seen = lastRev.get(change.store)
+  return seen !== undefined && change.rev <= seen
+}
+
+/** A change buffered during a read that read at `readRev` is replayed only when it is newer. */
+function newerThanRead(change: StoreChangedPayload, readRev: number | undefined): boolean {
+  return change.rev === undefined || readRev === undefined || change.rev > readRev
+}
+
+/**
+ * Pushes that arrive while the boot snapshot is in flight, replayed over its result per store when
+ * newer than the rev that store was read at (`null` when no boot snapshot is in flight).
+ */
+let changesDuringSnapshot: StoreChangedPayload[] | null = null
+
 /** D-04: warn at most once per store+key pair, so a hot render loop cannot flood the console. */
 const lazyMissWarned = new Set<string>()
 
@@ -204,6 +240,11 @@ function ensureChangeListenerAttached(): void {
     const payload = args[0] as StoreChangedPayload | undefined
     if (!payload) return
     const { store, invalidated } = payload
+    // Phase 85 (85-17): a push the snapshot already reflects (or a newer state replaced) is dropped
+    // before it can be applied, buffered or trigger a re-fetch.
+    if (isStalePush(payload)) return
+    noteRev(store, payload.rev)
+    changesDuringSnapshot?.push(payload)
     if (!snapshot[store]) snapshot[store] = {}
 
     // A whole-store change (`store.clear()`, or a `CacheStore.commit()` replacing the
@@ -317,13 +358,31 @@ export function registerStore(storeName: string, options?: Record<string, unknow
  * on demand by `hydrateStore()` below.
  */
 export async function hydrateStoreSnapshot(): Promise<void> {
-  const result = await tauriInvoke<StoreSnapshot>(SIDECAR_STORE_SNAPSHOT)
+  const buffered: StoreChangedPayload[] = []
+  changesDuringSnapshot = buffered
+  let result: StoreSnapshot
+  try {
+    result = await tauriInvoke<StoreSnapshot>(SIDECAR_STORE_SNAPSHOT)
+  } finally {
+    changesDuringSnapshot = null
+  }
+  // Phase 85 (85-16): the Rust snapshot carries each store's rev under STORE_REV_KEY, which can
+  // never be a store name. 85-17: each rev seeds that store's stale-push guard.
+  const revs: Record<string, unknown> = result?.[STORE_REV_KEY] ?? {}
   for (const [storeName, values] of Object.entries(result ?? {})) {
-    // Phase 85 (85-16): the Rust snapshot carries each store's rev under STORE_REV_KEY, which can
-    // never be a store name; the stale-push guard reads it (85-17).
     if (storeName === STORE_REV_KEY) continue
-    // WR-07: REPLACE, do not merge. See `hydrateStore` below for the rationale.
-    snapshot[storeName] = { ...values }
+    const readRev = typeof revs[storeName] === 'number' ? revs[storeName] : undefined
+    // WR-07: REPLACE, do not merge. See `hydrateStore` below for the rationale. A push that
+    // arrived while the snapshot was in flight and is newer than the rev it was read at is
+    // replayed over it, as a fetch does.
+    const fresh = { ...values }
+    for (const change of buffered) {
+      if (change.store === storeName && !change.invalidated && newerThanRead(change, readRev)) {
+        applyFieldChange(fresh, change)
+      }
+    }
+    snapshot[storeName] = fresh
+    noteRev(storeName, readRev)
     hydrated.add(storeName)
   }
 }
@@ -355,6 +414,7 @@ async function hydrateStore(storeName: string): Promise<void> {
       // collide with one. `rev` is read by the stale-push guard (85-17).
       const reply = await invoke<{ values?: Record<string, unknown>; rev?: number }>(STORE_FETCH_CHANNEL, [storeName])
       const result = reply?.values
+      const readRev = typeof reply?.rev === 'number' ? reply.rev : undefined
       if ((invalidationEpoch.get(storeName) ?? 0) !== epoch) {
         // Invalidated while in flight: this result may predate the bulk change. The
         // invalidation handler has queued a fresh fetch behind this one.
@@ -368,8 +428,13 @@ async function hydrateStore(storeName: string): Promise<void> {
       // is supposed to guarantee for backend-side deletions. The sidecar's filtered
       // payload is authoritative for the store it names.
       const fresh = { ...(result ?? {}) }
-      for (const change of buffered) applyFieldChange(fresh, change)
+      // 85-17: a change buffered during the fetch is replayed only when it is newer than the rev the
+      // fetch read at (a rev-less one, under GAMELIB_STORE=ts, always is, as before).
+      for (const change of buffered) {
+        if (newerThanRead(change, readRev)) applyFieldChange(fresh, change)
+      }
       snapshot[storeName] = fresh
+      noteRev(storeName, readRev)
       hydrated.add(storeName)
       notifyStoreListeners(storeName)
     } catch (error) {
@@ -553,7 +618,7 @@ export function snapshotSet(storeName: string, key: string, value?: unknown): vo
   if (!snapshot[storeName]) snapshot[storeName] = {}
   // CR-03: nested write, mirroring `getAtPath`'s nested read.
   setAtPath(snapshot[storeName], key, value)
-  send('storeSet', [storeName, key, value])
+  send(STORE_SET_CHANNEL, [storeName, key, value])
 }
 
 /**
@@ -591,5 +656,5 @@ export function snapshotDelete(storeName: string, key: string): void {
   }
   // CR-03: nested delete, mirroring `getAtPath`'s nested read.
   if (snapshot[storeName]) deleteAtPath(snapshot[storeName], key)
-  send('storeDelete', [storeName, key])
+  send(STORE_DELETE_CHANNEL, [storeName, key])
 }

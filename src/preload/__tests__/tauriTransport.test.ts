@@ -586,6 +586,115 @@ describe('change events', () => {
     expect(fetchCallCount()).toBe(1)
     expect(snapshotGet('configStore', 'theme')).toBe('post-invalidation')
   })
+
+  // Phase 85 (85-17, research Pitfall 8, S1 rule 9): a push carries the rev Rust applied it at, and
+  // the boot snapshot and a fetch carry the rev they read at. A push not newer than what the store's
+  // snapshot reflects is dropped. Each case uses its own store: the guard is per store and module state.
+  function push(change: Record<string, unknown>): void {
+    storeChangedHandler!({ payload: { channel: STORE_CHANGED_CHANNEL, args: [change] } })
+  }
+
+  function deferredFetchWithRev(): { resolve: (values: Record<string, unknown>, rev?: number) => void } {
+    let resolve: ((value: unknown) => void) | undefined
+    mockedInvoke.mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          resolve = r
+        }) as never
+    )
+    return {
+      resolve: (values, rev) => resolve?.(rev === undefined ? { values } : { values, rev })
+    }
+  }
+
+  it('85-17: a push with rev 5 after a fetch at rev 7 is dropped; a push with rev 8 is applied', async () => {
+    mockedInvoke.mockResolvedValueOnce({ values: { k: 'fetched-at-7' }, rev: 7 } as never)
+    expect(await ensureStoreHydrated('timestampStore')).toBe(true)
+    expect(snapshotGet('timestampStore', 'k')).toBe('fetched-at-7')
+
+    push({ store: 'timestampStore', key: 'k', value: 'stale-5', rev: 5 })
+    expect(snapshotGet('timestampStore', 'k')).toBe('fetched-at-7')
+    push({ store: 'timestampStore', key: 'k', value: 'at-7-again', rev: 7 })
+    expect(snapshotGet('timestampStore', 'k')).toBe('fetched-at-7')
+
+    push({ store: 'timestampStore', key: 'k', value: 'newer-8', rev: 8 })
+    expect(snapshotGet('timestampStore', 'k')).toBe('newer-8')
+    // The applied push moved the guard: a second rev 8 is already reflected.
+    push({ store: 'timestampStore', key: 'k', value: 'repeat-8', rev: 8 })
+    expect(snapshotGet('timestampStore', 'k')).toBe('newer-8')
+    // Revs may skip (a field the renderer cannot read is never pushed): a gap is applied, not refused.
+    push({ store: 'timestampStore', key: 'k', value: 'after-gap-12', rev: 12 })
+    expect(snapshotGet('timestampStore', 'k')).toBe('after-gap-12')
+  })
+
+  it('85-17: a push without rev (GAMELIB_STORE=ts) is handled as today, including replay over a fetch', async () => {
+    const fetch = deferredFetchWithRev()
+    push({ store: 'gogSyncStore', key: '', invalidated: true })
+    push({ store: 'gogSyncStore', key: 'k', value: 'newer-no-rev' })
+    fetch.resolve({ k: 'older-no-rev' })
+    await settle()
+    expect(snapshotGet('gogSyncStore', 'k')).toBe('newer-no-rev')
+    push({ store: 'gogSyncStore', key: 'k', value: 'later-no-rev' })
+    expect(snapshotGet('gogSyncStore', 'k')).toBe('later-no-rev')
+  })
+
+  it('85-17: a change buffered during a fetch is replayed only when newer than the rev the fetch read', async () => {
+    const first = deferredFetchWithRev()
+    push({ store: 'gogPrivateBranches', key: '', invalidated: true, rev: 1 })
+    push({ store: 'gogPrivateBranches', key: 'a', value: 'pushed-6', rev: 6 })
+    push({ store: 'gogPrivateBranches', key: 'b', value: 'pushed-9', rev: 9 })
+    // The fetch read at rev 8: it already holds a later `a` than push 6, but not push 9.
+    first.resolve({ a: 'fetched-at-8', b: 'fetched-at-8' }, 8)
+    await settle()
+    expect(snapshotGet('gogPrivateBranches', 'a')).toBe('fetched-at-8')
+    expect(snapshotGet('gogPrivateBranches', 'b')).toBe('pushed-9')
+  })
+
+  it('85-17: an `invalidated` push with a newer rev re-fetches; a stale one does not', async () => {
+    // Seed the store at rev 10 through the existing re-fetch (the lazy-hydrate case above left it at 4).
+    mockedInvoke.mockResolvedValueOnce({ values: { a: 1 }, rev: 10 } as never)
+    push({ store: 'wikigameinfo', key: '', invalidated: true, rev: 10 })
+    await settle()
+    expect(snapshotGet('wikigameinfo', 'a')).toBe(1)
+    const before = fetchCallCount()
+
+    push({ store: 'wikigameinfo', key: '', invalidated: true, rev: 9 })
+    await settle()
+    expect(fetchCallCount()).toBe(before)
+    expect(snapshotGet('wikigameinfo', 'a')).toBe(1)
+
+    mockedInvoke.mockResolvedValueOnce({ values: { a: 2 }, rev: 11 } as never)
+    push({ store: 'wikigameinfo', key: '', invalidated: true, rev: 11 })
+    await settle()
+    expect(fetchCallCount()).toBe(before + 1)
+    expect(snapshotGet('wikigameinfo', 'a')).toBe(2)
+  })
+
+  it('85-17: the boot snapshot seeds each store guard from STORE_REV_KEY and replays a newer push that raced it', async () => {
+    let resolveSnapshot: ((value: unknown) => void) | undefined
+    mockedInvoke.mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          resolveSnapshot = r
+        }) as never
+    )
+    const hydrating = hydrateStoreSnapshot()
+    // Pushes that arrive while the snapshot is in flight: one already in it, one newer.
+    push({ store: 'steamConfigStore', key: 'isLoggedIn', value: false, rev: 49 })
+    push({ store: 'steamConfigStore', key: 'credentialsMissing', value: 'raced-51', rev: 51 })
+    resolveSnapshot?.({
+      steamConfigStore: { isLoggedIn: true, credentialsMissing: 'boot-50' },
+      '@rev': { steamConfigStore: 50 }
+    })
+    await hydrating
+    expect(snapshotGet('steamConfigStore', 'isLoggedIn')).toBe(true)
+    expect(snapshotGet('steamConfigStore', 'credentialsMissing')).toBe('raced-51')
+    // The guard is at 51 now: an older push is dropped, a newer one applied.
+    push({ store: 'steamConfigStore', key: 'isLoggedIn', value: false, rev: 50 })
+    expect(snapshotGet('steamConfigStore', 'isLoggedIn')).toBe(true)
+    push({ store: 'steamConfigStore', key: 'isLoggedIn', value: false, rev: 52 })
+    expect(snapshotGet('steamConfigStore', 'isLoggedIn')).toBe(false)
+  })
 })
 
 describe('allow-list', () => {
