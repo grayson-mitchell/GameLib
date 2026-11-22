@@ -413,6 +413,23 @@ describe('the shared storeFrameVectors contract', () => {
     }
   )
 
+  it('counts the frame in UTF-8 bytes, as the shell does, not in UTF-16 units', () => {
+    // 4M CJK characters are 4M UTF-16 units (under the cap) and 12M UTF-8 bytes (over it).
+    const frame = {
+      kind: STORE_FRAME_KIND,
+      seq: 1,
+      store: 'store/config',
+      op: 'set',
+      key: 'k',
+      valueJson: JSON.stringify('語'.repeat(4 * 1024 * 1024))
+    }
+    expect(JSON.stringify(frame).length).toBeLessThan(STORE_FRAME_MAX_BYTES)
+    expect(validateStoreFrame(frame)).toEqual({
+      ok: false,
+      reason: 'too-large'
+    })
+  })
+
   it('exercises all nine reason categories', () => {
     expect(new Set(invalid.map((v) => v.reason)).size).toBe(9)
   })

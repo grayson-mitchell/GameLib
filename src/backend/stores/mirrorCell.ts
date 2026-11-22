@@ -267,7 +267,10 @@ export class MirrorCell {
   private write(op: MirrorOp): void {
     if (this.readOnly) return
     const frame = this.frameFor(op)
-    const verdict = validateStoreFrame(frame)
+    const verdict = validateStoreFrame(
+      frame,
+      Buffer.byteLength(JSON.stringify(frame), 'utf8')
+    )
     if (!verdict.ok) {
       // A frame the shell would refuse is refused here, before the view can claim it. The reason
       // word is the only thing logged: a key or a value can be a token.

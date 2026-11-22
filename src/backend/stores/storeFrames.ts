@@ -195,8 +195,9 @@ const refuse = (reason: StoreFrameRejectReason): StoreFrameVerdict => ({
 
 /**
  * Whether `value` is a frame the shell accepts, as one of the nine categories when it is not. The
- * argument is `unknown` because a vector is arbitrary JSON. `lineBytes` is the length of the
- * serialised line when the caller already has it.
+ * argument is `unknown` because a vector is arbitrary JSON. `lineBytes` is the length in UTF-8
+ * bytes of the serialised line when the caller already has it; the shell counts bytes, so counting
+ * UTF-16 units would let a frame of non-ASCII text through that the shell then refuses `too-large`.
  */
 export function validateStoreFrame(
   value: unknown,
@@ -206,7 +207,7 @@ export function validateStoreFrame(
     return refuse('shape')
   }
   const frame = value as Record<string, unknown>
-  const size = lineBytes ?? JSON.stringify(frame).length
+  const size = lineBytes ?? Buffer.byteLength(JSON.stringify(frame), 'utf8')
   if (size > STORE_FRAME_MAX_BYTES) return refuse('too-large')
   if (frame.kind !== STORE_FRAME_KIND) return refuse('shape')
   if (Object.keys(frame).some((field) => !FIELDS.includes(field))) {
