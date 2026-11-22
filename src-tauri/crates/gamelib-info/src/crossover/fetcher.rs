@@ -1,8 +1,10 @@
 //! The CrossOver index loader, ported from `src/backend/crossover_index/fetcher.ts` (`loadIndex`): a
 //! cached copy inside its 24 hours is served with no request; otherwise the release asset is fetched,
 //! gunzipped, parsed and validated ([`super::schema`]) and stored with the loader's own `fetchedAt`. On
-//! ANY failure the last good copy is kept and returned, and a bad payload never replaces a good one
-//! (D-09, T-19-01, T-19-05).
+//! any failure of the request or the payload the last good copy is kept and returned, and a bad payload
+//! never replaces a good one (D-09, T-19-01, T-19-05). A validated payload whose cache write fails is
+//! still returned, with one note and no back-off (quick 261123-9i7, a deliberate departure from the TS
+//! `loadIndex`, whose store write sat inside the request's `try`, kept for parity by D-03).
 //!
 //! The cache is `store_cache/crossover_index.json` through [`CacheView`] with the TS store's parameters
 //! (24 hours, `invalidate: Never`, key `index`): an expired entry is never evicted on read, it is only
@@ -88,6 +90,11 @@ fn write_cached(ctx: &InfoCtx, index: &Index, now_ms: u64) -> std::io::Result<()
     open(ctx)?.set(INDEX_KEY, Json::Obj(entry))
 }
 
+/// Logged when a validated payload's cache write fails: the payload is still served, uncached. Fixed
+/// text with no error detail, like every diagnostic line of this module.
+const UNCACHED_NOTE: &str =
+    "crossover index: the fresh copy could not be cached (store write), serving it uncached";
+
 /// Why a refresh produced no usable payload. [`Failure::word`] is what the log line says.
 #[derive(Debug)]
 enum Failure {
@@ -99,8 +106,6 @@ enum Failure {
     Inflated,
     Json,
     Rejected(Reject),
-    /// The validated payload could not be written.
-    Store,
 }
 
 impl Failure {
@@ -136,10 +141,6 @@ impl Failure {
                 "crossover index payload rejected ({}), keeping the last good copy",
                 reject.word()
             ),
-            Failure::Store => {
-                "crossover index refresh failed (store write), keeping the last good copy"
-                    .to_string()
-            }
         }
     }
 }
@@ -167,7 +168,8 @@ fn parse_payload(body: &[u8]) -> Result<Index, Failure> {
     validate(&value).map_err(Failure::Rejected)
 }
 
-/// One refresh: request, status, payload, and the write of the validated copy.
+/// One refresh: request, status, payload, and the best-effort write of the validated copy: a failed
+/// write is logged and does not fail the refresh.
 async fn refresh(ctx: &InfoCtx, url: &str, now_ms: u64) -> Result<Index, Failure> {
     // The shared axios client's headers: its `User-Agent` and axios's default `Accept`.
     let request = Request::get(url, REQUEST_TIMEOUT)
@@ -186,7 +188,11 @@ async fn refresh(ctx: &InfoCtx, url: &str, now_ms: u64) -> Result<Index, Failure
         return Err(Failure::Status(response.status));
     }
     let index = parse_payload(&response.body)?;
-    write_cached(ctx, &index, now_ms).map_err(|_| Failure::Store)?;
+    // The copy is validated, so it is served even when it cannot be cached: a failed write is a note,
+    // not a refresh failure, and arms no back-off.
+    if write_cached(ctx, &index, now_ms).is_err() {
+        ctx.note(UNCACHED_NOTE);
+    }
     Ok(index)
 }
 
@@ -325,6 +331,201 @@ mod tests {
         encoder.finish().unwrap()
     }
 
+    use crate::ctx::{InfoLog, InfoPaths, Platform};
+    use crate::http::{Http, HttpFuture, Response};
+    use gamelib_core::clock::Clock;
+    use gamelib_core::shutdown::Shutdown;
+    use gamelib_store::host::StoreHost;
+    use gamelib_testutil::FakeHome;
+    use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+    use std::sync::{Arc, Mutex};
+
+    /// A clock that only moves when a test says so.
+    struct TestClock(AtomicU64);
+
+    impl Clock for TestClock {
+        fn now_ms(&self) -> u64 {
+            self.0.load(Ordering::SeqCst)
+        }
+    }
+
+    /// Serves one swappable body to every request and counts them.
+    struct Feed {
+        body: Mutex<Vec<u8>>,
+        requests: AtomicUsize,
+    }
+
+    impl Http for Feed {
+        fn send(&self, _request: Request) -> HttpFuture<'_> {
+            self.requests.fetch_add(1, Ordering::SeqCst);
+            let body = self.body.lock().unwrap().clone();
+            Box::pin(async move {
+                Ok(Response {
+                    status: 200,
+                    headers: Vec::new(),
+                    body,
+                })
+            })
+        }
+    }
+
+    /// Keeps every diagnostic line the crate wrote.
+    #[derive(Default)]
+    struct Lines(Mutex<Vec<String>>);
+
+    impl InfoLog for Lines {
+        fn line(&self, text: &str) {
+            self.0.lock().unwrap().push(text.to_string());
+        }
+    }
+
+    /// A gzip payload that passes the schema, stamped with `generated_at`.
+    fn payload(generated_at: &str) -> Vec<u8> {
+        let entries: Vec<Value> = (0..crate::crossover::schema::MIN_ENTRIES)
+            .map(|i| {
+                serde_json::json!({
+                    "name": format!("Game {i}"),
+                    "rating": i % 5 + 1,
+                    "steamid": i.to_string(),
+                })
+            })
+            .collect();
+        let doc = serde_json::json!({
+            "version": 1,
+            "generatedAt": generated_at,
+            "entries": entries,
+        });
+        gz(doc.to_string().as_bytes())
+    }
+
+    /// A host whose every store write fails.
+    fn failing_host() -> Arc<StoreHost> {
+        Arc::new(StoreHost::with_writer(Arc::new(|_, _, _| {
+            Err(std::io::Error::other("forced store write failure"))
+        })))
+    }
+
+    struct Rig {
+        _home: FakeHome,
+        ctx: InfoCtx,
+        clock: Arc<TestClock>,
+        feed: Arc<Feed>,
+        lines: Arc<Lines>,
+    }
+
+    fn rig(host: Arc<StoreHost>, now_ms: u64, body: Vec<u8>) -> Rig {
+        let home = FakeHome::new("crossover-fetcher-");
+        let dir = home.root().join("userData");
+        std::fs::create_dir_all(&dir).unwrap();
+        let clock = Arc::new(TestClock(AtomicU64::new(now_ms)));
+        let feed = Arc::new(Feed {
+            body: Mutex::new(body),
+            requests: AtomicUsize::new(0),
+        });
+        let lines = Arc::new(Lines::default());
+        let mut ctx = InfoCtx::new(
+            host,
+            Arc::clone(&clock) as Arc<dyn Clock>,
+            Platform::Mac,
+            InfoPaths {
+                app_folder: dir.clone(),
+                user_data: dir,
+                temp: home.root().join("temp"),
+                public_dir: None,
+            },
+            "9.8.7".to_string(),
+            Shutdown::new(),
+            Arc::clone(&feed) as Arc<dyn Http>,
+        );
+        ctx.log = Some(Arc::clone(&lines) as Arc<dyn InfoLog>);
+        Rig {
+            _home: home,
+            ctx,
+            clock,
+            feed,
+            lines,
+        }
+    }
+
+    fn uncached_notes(lines: &Lines) -> usize {
+        let lines = lines.0.lock().unwrap();
+        assert!(
+            lines.iter().all(|l| !l.contains("refresh failed")),
+            "{lines:?}"
+        );
+        lines.iter().filter(|l| l.as_str() == UNCACHED_NOTE).count()
+    }
+
+    #[test]
+    fn the_uncached_note_is_fixed_text() {
+        for forbidden in ["://", "github", "userData"] {
+            assert!(!UNCACHED_NOTE.contains(forbidden), "{UNCACHED_NOTE}");
+        }
+    }
+
+    #[tokio::test]
+    async fn a_failed_cache_write_still_serves_the_fresh_payload_over_a_stale_copy_and_arms_no_back_off(
+    ) {
+        const T0: u64 = 1_800_000_000_000;
+        let rig = rig(
+            Arc::new(StoreHost::new()),
+            T0,
+            payload("2026-11-01T00:00:00Z"),
+        );
+        let mut rig = rig;
+        let url = crate::crossover::INDEX_URL;
+
+        let first = load_index(&rig.ctx, url).await.unwrap().unwrap();
+        assert_eq!(first.index.generated_at, "2026-11-01T00:00:00Z");
+        let stored = read_cached(&rig.ctx).unwrap();
+        assert_eq!(stored.index.generated_at, "2026-11-01T00:00:00Z");
+        assert_eq!(stored.fetched_at, Some(T0 as f64));
+        assert_eq!(rig.feed.requests.load(Ordering::SeqCst), 1);
+
+        // 25 hours on: stale. The cache can no longer be written, and the feed has a newer payload.
+        rig.clock
+            .0
+            .store(T0 + 25 * 60 * 60 * 1000, Ordering::SeqCst);
+        rig.ctx.host = failing_host();
+        *rig.feed.body.lock().unwrap() = payload("2026-11-02T00:00:00Z");
+
+        let second = load_index(&rig.ctx, url).await.unwrap().unwrap();
+        assert_eq!(second.index.generated_at, "2026-11-02T00:00:00Z");
+        assert_eq!(rig.ctx.crossover.last_failure_ms(), None);
+        let still = read_cached(&rig.ctx).unwrap();
+        assert_eq!(still.index.generated_at, "2026-11-01T00:00:00Z");
+        assert_eq!(still.fetched_at, Some(T0 as f64));
+        assert_eq!(rig.feed.requests.load(Ordering::SeqCst), 2);
+        assert_eq!(uncached_notes(&rig.lines), 1);
+
+        // No back-off: the very next load asks again and answers the fresh payload again.
+        let third = load_index(&rig.ctx, url).await.unwrap().unwrap();
+        assert_eq!(third.index.generated_at, "2026-11-02T00:00:00Z");
+        assert_eq!(rig.feed.requests.load(Ordering::SeqCst), 3);
+        assert_eq!(rig.ctx.crossover.last_failure_ms(), None);
+    }
+
+    #[tokio::test]
+    async fn a_failed_cache_write_on_a_cold_profile_still_serves_the_fresh_payload() {
+        let rig = rig(
+            failing_host(),
+            1_800_000_000_000,
+            payload("2026-11-02T00:00:00Z"),
+        );
+        let url = crate::crossover::INDEX_URL;
+
+        let first = load_index(&rig.ctx, url).await.unwrap().unwrap();
+        assert_eq!(first.index.generated_at, "2026-11-02T00:00:00Z");
+        assert_eq!(rig.ctx.crossover.last_failure_ms(), None);
+        assert!(read_cached(&rig.ctx).is_none());
+        assert_eq!(rig.feed.requests.load(Ordering::SeqCst), 1);
+        assert_eq!(uncached_notes(&rig.lines), 1);
+
+        let second = load_index(&rig.ctx, url).await.unwrap().unwrap();
+        assert_eq!(second.index.generated_at, "2026-11-02T00:00:00Z");
+        assert_eq!(rig.feed.requests.load(Ordering::SeqCst), 2);
+    }
+
     #[test]
     fn gunzip_reads_every_member_as_nodes_gunzip_sync_does() {
         let mut body = gz(b"ab");
@@ -401,7 +602,6 @@ mod tests {
             Failure::Inflated,
             Failure::Json,
             Failure::Rejected(Reject::Version),
-            Failure::Store,
         ] {
             let line = failure.line();
             assert!(
