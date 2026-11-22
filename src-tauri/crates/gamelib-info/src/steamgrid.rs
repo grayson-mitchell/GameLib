@@ -26,6 +26,7 @@ use serde_json::{json, Map, Value};
 
 use crate::ctx::InfoCtx;
 use crate::http::{axios_query, HttpError, Request};
+use crate::js::{encode_uri_component, truthy};
 
 /// The SteamGridDB v2 API root.
 pub const API_URL: &str = "https://www.steamgriddb.com/api/v2";
@@ -136,52 +137,12 @@ pub fn set_api_key(ctx: &InfoCtx, args: SetKeyArgs) -> Result<Value, String> {
     Ok(Value::Null)
 }
 
-/// JS `encodeURIComponent`: everything but `A-Z a-z 0-9 - _ . ! ~ * ' ( )` is `%XX` over the UTF-8
-/// bytes (a space is `%20`, not `+`).
-fn encode_uri_component(text: &str) -> String {
-    const HEX: &[u8; 16] = b"0123456789ABCDEF";
-    let mut out = String::with_capacity(text.len());
-    for byte in text.bytes() {
-        match byte {
-            b'A'..=b'Z'
-            | b'a'..=b'z'
-            | b'0'..=b'9'
-            | b'-'
-            | b'_'
-            | b'.'
-            | b'!'
-            | b'~'
-            | b'*'
-            | b'\''
-            | b'('
-            | b')' => out.push(char::from(byte)),
-            _ => {
-                out.push('%');
-                out.push(char::from(HEX[usize::from(byte >> 4)]));
-                out.push(char::from(HEX[usize::from(byte & 0x0F)]));
-            }
-        }
-    }
-    out
-}
-
 /// The TS `userAgentFor`: the Heroic-style string the recorded requests carry.
 fn user_agent(ctx: &InfoCtx) -> String {
     format!(
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeroicGamesLauncher/{}",
         ctx.app_version
     )
-}
-
-/// JS truthiness of a JSON value.
-fn truthy(value: &Value) -> bool {
-    match value {
-        Value::Null => false,
-        Value::Bool(b) => *b,
-        Value::Number(n) => n.as_f64().is_some_and(|f| f != 0.0 && !f.is_nan()),
-        Value::String(s) => !s.is_empty(),
-        Value::Array(_) | Value::Object(_) => true,
-    }
 }
 
 /// The error text axios gave for a request that produced no response. Fixed categories only: the
@@ -366,23 +327,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn encode_uri_component_matches_javascript() {
-        assert_eq!(encode_uri_component("Dead Cells"), "Dead%20Cells");
-        assert_eq!(
-            encode_uri_component("a-b_c.d!e~f*g'h(i)j"),
-            "a-b_c.d!e~f*g'h(i)j"
-        );
-        assert_eq!(
-            encode_uri_component("a/b?c=d&e#f+g,h:i"),
-            "a%2Fb%3Fc%3Dd%26e%23f%2Bg%2Ch%3Ai"
-        );
-        assert_eq!(encode_uri_component("é"), "%C3%A9");
-        assert_eq!(encode_uri_component("日本"), "%E6%97%A5%E6%9C%AC");
-        assert_eq!(encode_uri_component("100%"), "100%25");
-        assert_eq!(encode_uri_component(""), "");
-    }
-
-    #[test]
     fn artwork_url_lists_dimensions_before_styles_and_omits_empty_lists() {
         let args = GridArgs {
             game_id: 7,
@@ -463,23 +407,6 @@ mod tests {
             dimensions: None,
         };
         assert_eq!(check(&zero), Err("op:bad-args".into()));
-    }
-
-    #[test]
-    fn truthy_follows_javascript() {
-        for (value, want) in [
-            (json!(true), true),
-            (json!(false), false),
-            (json!(null), false),
-            (json!(0), false),
-            (json!(2), true),
-            (json!(""), false),
-            (json!("x"), true),
-            (json!([]), true),
-            (json!({}), true),
-        ] {
-            assert_eq!(truthy(&value), want, "{value}");
-        }
     }
 
     #[test]

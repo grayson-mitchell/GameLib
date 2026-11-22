@@ -69,6 +69,7 @@ import {
   RUST_INFO_OVERRIDES_SET,
   RUST_INFO_RECENT_ADD,
   RUST_INFO_RECENT_REMOVE,
+  RUST_INFO_UMU_GET,
   RUST_STEAMCM_ANON_CLOSE,
   RUST_STEAMCM_ANON_PRODUCT_INFO,
   RUST_STEAMCM_CONFIGURE,
@@ -764,6 +765,16 @@ export const rustInvokeArgs = {
               .strict()
           )
           .max(20000)
+      })
+      .strict()
+  ]),
+  // Phase 86 (SVC-01, 86-20, D-04): the umu id lookup. `runner` is one of the five runner names; the
+  // crate re-validates (deny_unknown_fields, the runner table).
+  [RUST_INFO_UMU_GET]: z.tuple([
+    z
+      .object({
+        appName: z.string(),
+        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam'])
       })
       .strict()
   ]),

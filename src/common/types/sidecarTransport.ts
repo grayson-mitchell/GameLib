@@ -1020,6 +1020,17 @@ export const RUST_INFO_CROSSOVER_RATING_MAP =
   'info_crossover_rating_map' as const
 
 /**
+ * Phase 86 (SVC-01, 86-20, D-04): the umu id lookup, served by `gamelib-info` `umu`. Args `{ appName,
+ * runner }` with `runner` one of the five runner names. Resolves the umu id (a string) or `null`: `null`
+ * for a runner with no store catalog (sideload, no request), for a miss, and for any failure of the
+ * request. A server answer that is not a list, or whose first entry carries no `umu_id`, rejects with
+ * `info_umu_get:bad-response` (the TS threw there too). The id is cached in `store_cache/umu.json` for
+ * six hours; a cached miss is asked for again on every call, exactly as the TS did (todo
+ * `2026-11-22-umu-cached-null-refetched-every-call`). The store managers' shims (86-23) are the callers.
+ */
+export const RUST_INFO_UMU_GET = 'info_umu_get' as const
+
+/**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
  * the macOS bridge helper loads: the GameLib cache, else a snapshot of the Steam client's own copy
  * when it already hashes to the pin, else a fetch from Valve's client-update CDN (sha2vz, VZ decode,
@@ -1350,7 +1361,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_INFO_ANTICHEAT_STATUS,
   RUST_INFO_ANTICHEAT_DOWNLOAD,
   RUST_INFO_GOG_DISCOUNTS,
-  RUST_INFO_CROSSOVER_RATING_MAP
+  RUST_INFO_CROSSOVER_RATING_MAP,
+  RUST_INFO_UMU_GET
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
@@ -1477,7 +1489,8 @@ export const RUST_INFO_CHANNELS = [
   RUST_INFO_ANTICHEAT_STATUS,
   RUST_INFO_ANTICHEAT_DOWNLOAD,
   RUST_INFO_GOG_DISCOUNTS,
-  RUST_INFO_CROSSOVER_RATING_MAP
+  RUST_INFO_CROSSOVER_RATING_MAP,
+  RUST_INFO_UMU_GET
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */

@@ -424,6 +424,24 @@ mod replay {
         /// transport failure: it matches and is consumed like any other, then answers
         /// [`HttpError::Network`] instead of a response.
         pub fn from_case(dir: &Path) -> Result<Replay, String> {
+            Replay::load(dir, None)
+        }
+
+        /// [`Replay::from_case`] keeping only the exchanges whose host is `host` (case-insensitive), so
+        /// a per-source test replays one source's requests out of a case that recorded several (the
+        /// wiki cases hold PCGamingWiki, AppleGamingWiki, ProtonDB and the rest in one list). The other
+        /// hosts' exchanges are dropped, so [`Replay::finish`] does not count them as left over and a
+        /// request to one of them is unmatched.
+        pub fn for_host(dir: &Path, host: &str) -> Result<Replay, String> {
+            Replay::for_hosts(dir, &[host])
+        }
+
+        /// [`Replay::for_host`] for several hosts.
+        pub fn for_hosts(dir: &Path, hosts: &[&str]) -> Result<Replay, String> {
+            Replay::load(dir, Some(hosts))
+        }
+
+        fn load(dir: &Path, hosts: Option<&[&str]>) -> Result<Replay, String> {
             let text = std::fs::read_to_string(dir.join("exchanges.json"))
                 .map_err(|e| format!("cannot read exchanges.json: {}", e.kind()))?;
             let list: Value = serde_json::from_str(&text)
@@ -449,6 +467,12 @@ mod replay {
                     .ok_or_else(|| format!("exchange {id}: url must be a string"))?;
                 let url = Url::parse(url_text)
                     .map_err(|_| format!("exchange {id}: the request url is not absolute"))?;
+                if let Some(hosts) = hosts {
+                    let host = url.host_str().unwrap_or_default();
+                    if !hosts.iter().any(|h| h.eq_ignore_ascii_case(host)) {
+                        continue;
+                    }
+                }
                 let body = match request.get("body") {
                     None | Some(Value::Null) => None,
                     Some(Value::String(s)) => Some(s.clone().into_bytes()),

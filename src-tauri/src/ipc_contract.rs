@@ -157,6 +157,7 @@ pub(crate) enum RustInvokeChannel {
     InfoAnticheatDownload,
     InfoGogDiscounts,
     InfoCrossoverRatingMap,
+    InfoUmuGet,
 }
 
 impl RustInvokeChannel {
@@ -295,6 +296,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::InfoAnticheatDownload,
         RustInvokeChannel::InfoGogDiscounts,
         RustInvokeChannel::InfoCrossoverRatingMap,
+        RustInvokeChannel::InfoUmuGet,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -433,6 +435,7 @@ impl RustInvokeChannel {
             "info_anticheat_download" => Some(RustInvokeChannel::InfoAnticheatDownload),
             "info_gog_discounts" => Some(RustInvokeChannel::InfoGogDiscounts),
             "info_crossover_rating_map" => Some(RustInvokeChannel::InfoCrossoverRatingMap),
+            "info_umu_get" => Some(RustInvokeChannel::InfoUmuGet),
             _ => None,
         }
     }
@@ -573,6 +576,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::InfoAnticheatDownload => "info_anticheat_download",
             RustInvokeChannel::InfoGogDiscounts => "info_gog_discounts",
             RustInvokeChannel::InfoCrossoverRatingMap => "info_crossover_rating_map",
+            RustInvokeChannel::InfoUmuGet => "info_umu_get",
         }
     }
 }
@@ -3003,5 +3007,33 @@ impl InfoCrossoverRatingMapArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "info_crossover_rating_map:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "info_crossover_rating_map:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoUmuGetArgs {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) runner: InfoUmuGetArgsRunner,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum InfoUmuGetArgsRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+impl InfoUmuGetArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "info_umu_get:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "info_umu_get:bad-args".to_string())
     }
 }

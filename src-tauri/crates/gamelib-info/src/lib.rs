@@ -18,11 +18,14 @@ pub mod ctx;
 pub mod discounts;
 pub mod http;
 pub mod itad;
+pub mod js;
 pub mod overrides;
 pub mod recent;
 pub mod runner_caps;
 pub mod secrets;
 pub mod steamgrid;
+pub mod umu;
+pub mod wiki;
 
 use ctx::InfoCtx;
 use serde_json::Value;
@@ -57,6 +60,7 @@ pub const OPS: &[&str] = &[
     "info_steamgrid_heroes",
     "info_steamgrid_search",
     "info_steamgrid_set_key",
+    "info_umu_get",
 ];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
@@ -99,6 +103,7 @@ async fn route(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, String>
         "info_steamgrid_heroes" => steamgrid::get_heroes(ctx, decode(op, args)?).await,
         "info_steamgrid_search" => steamgrid::search_game(ctx, decode(op, args)?).await,
         "info_steamgrid_set_key" => steamgrid::set_api_key(ctx, decode(op, args)?),
+        "info_umu_get" => umu::get(ctx, decode(op, args)?).await,
         _ => Err(format!("unknown op: {op}")),
     }
 }

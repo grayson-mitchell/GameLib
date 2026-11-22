@@ -355,6 +355,44 @@ async fn replay_fails_on_an_unconsumed_exchange_unless_it_is_ts_only() {
     r.with_ts_only(&["e1"]).finish().unwrap();
 }
 
+/// `for_host` keeps one source's exchanges out of a case that recorded several (86-20): the others are
+/// dropped, so they are neither served nor reported as left over.
+#[tokio::test]
+async fn for_host_keeps_only_that_hosts_exchanges() {
+    let two = json!([
+        {
+            "id": "a",
+            "request": { "method": "GET", "url": "https://one.test/x?q=1", "headers": {} },
+            "response": { "status": 200, "headers": {} }
+        },
+        {
+            "id": "b",
+            "request": { "method": "GET", "url": "https://TWO.test/y", "headers": {} },
+            "response": { "status": 200, "headers": {} }
+        }
+    ]);
+    let dir = case(two, &[]);
+    let r = Replay::for_host(dir.path(), "two.test").unwrap();
+    // Host names compare without case; the dropped exchange is not left over and is not served.
+    let ok = r.send(Request::get("https://two.test/y", T)).await.unwrap();
+    assert_eq!(ok.status, 200);
+    let miss = r.send(Request::get("https://one.test/x?q=1", T)).await;
+    assert!(miss.is_err());
+    assert!(r.finish().is_err(), "the unmatched request is drift");
+
+    let both = Replay::for_hosts(dir.path(), &["one.test", "two.test"]).unwrap();
+    both.send(Request::get("https://one.test/x?q=1", T))
+        .await
+        .unwrap();
+    both.send(Request::get("https://two.test/y", T))
+        .await
+        .unwrap();
+    both.finish().unwrap();
+
+    let none = Replay::for_hosts(dir.path(), &[]).unwrap();
+    none.finish().unwrap();
+}
+
 #[tokio::test]
 async fn replay_matches_paginated_exchanges_in_any_order() {
     let page = |n: u32| {

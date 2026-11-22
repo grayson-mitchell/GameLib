@@ -348,6 +348,18 @@ pub(crate) fn rpc_info_crossover_rating_map(args: &[Value]) -> Result<Value, Str
     crossover_rating_map_with(installed("info_crossover_rating_map")?, args)
 }
 
+/// `info_umu_get`: validated by the generated args struct (the runner is one of the five names), then
+/// the crate (which validates again with its own `deny_unknown_fields` struct and the runner table).
+/// The callers are the GOG, Epic and Amazon store managers' shims (86-23, D-04).
+fn umu_get_with(ctx: &InfoCtx, args: &[Value]) -> Result<Value, String> {
+    InfoUmuGetArgs::from_args(args)?;
+    gamelib_info::dispatch_sync("info_umu_get", args, ctx)
+}
+
+pub(crate) fn rpc_info_umu_get(args: &[Value]) -> Result<Value, String> {
+    umu_get_with(installed("info_umu_get")?, args)
+}
+
 /// What a rejected `removeRecent` argument looks like: the JSON path and the zod-vocabulary code.
 /// Fixed literals only, never the renderer's value (T-86-15).
 type Rejection = (&'static str, &'static str);
@@ -2355,6 +2367,59 @@ mod tests {
         assert_eq!(
             rpc_info_crossover_rating_map(&[json!({ "games": [] })]),
             Err("info_crossover_rating_map:not-ready".to_string())
+        );
+    }
+
+    #[test]
+    fn the_umu_rpc_op_validates_first_and_answers_the_crates_lookup() {
+        let home = FakeHome::new("info-dispatch-");
+        let mut ctx = test_ctx(&home, None);
+        let canned = Arc::new(CannedCatalog(Mutex::new(Vec::new())));
+        ctx.http = canned.clone();
+        for bad in [
+            vec![],
+            vec![json!({})],
+            vec![json!({ "appName": "a" })],
+            vec![json!({ "appName": "a", "runner": "humble" })],
+            vec![json!({ "appName": "a", "runner": 1 })],
+            vec![json!({ "appName": "a", "runner": "gog", "extra": true })],
+            vec![
+                json!({ "appName": "a", "runner": "gog" }),
+                json!({ "appName": "a", "runner": "gog" }),
+            ],
+        ] {
+            assert_eq!(
+                umu_get_with(&ctx, &bad),
+                Err("info_umu_get:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+        // A runner with no store catalog is `null` and asks nothing.
+        assert_eq!(
+            umu_get_with(&ctx, &[json!({ "appName": "a", "runner": "sideload" })]),
+            Ok(Value::Null)
+        );
+        assert!(canned.0.lock().unwrap().is_empty());
+        // A store runner asks umu once, with the lower-cased codename and the store name; this server's
+        // answer is not a list, which the op refuses (the TS threw there).
+        assert_eq!(
+            umu_get_with(
+                &ctx,
+                &[json!({ "appName": "Ginger", "runner": "legendary" })]
+            ),
+            Err("info_umu_get:bad-response".to_string())
+        );
+        let seen = canned.0.lock().unwrap();
+        assert_eq!(seen.len(), 1);
+        assert_eq!(
+            seen[0].url,
+            "https://umu.openwinecomponents.org/umu_api.php?codename=ginger&store=egs"
+        );
+        // No test installs the global context, so this is the pre-install answer.
+        assert!(info_ctx().is_none());
+        assert_eq!(
+            rpc_info_umu_get(&[json!({ "appName": "a", "runner": "gog" })]),
+            Err("info_umu_get:not-ready".to_string())
         );
     }
 

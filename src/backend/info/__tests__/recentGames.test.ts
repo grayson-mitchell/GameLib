@@ -12,6 +12,7 @@ import {
   RUST_INFO_OVERRIDES_SET,
   RUST_INFO_RECENT_ADD,
   RUST_INFO_RECENT_REMOVE,
+  RUST_INFO_UMU_GET,
   RUST_INVOKE_CHANNELS
 } from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
@@ -87,7 +88,7 @@ describe('removeRecentGame shim', () => {
 })
 
 describe('the info channel list', () => {
-  it('names exactly the recent-games, overrides, anticheat, GOG discounts and CrossOver rating map channels, each one allowed on the Rust invoke leg', () => {
+  it('names exactly the recent-games, overrides, anticheat, GOG discounts, CrossOver rating map and umu channels, each one allowed on the Rust invoke leg', () => {
     expect([...RUST_INFO_CHANNELS].sort()).toEqual(
       [
         RUST_INFO_RECENT_ADD,
@@ -100,7 +101,8 @@ describe('the info channel list', () => {
         RUST_INFO_ANTICHEAT_STATUS,
         RUST_INFO_ANTICHEAT_DOWNLOAD,
         RUST_INFO_GOG_DISCOUNTS,
-        RUST_INFO_CROSSOVER_RATING_MAP
+        RUST_INFO_CROSSOVER_RATING_MAP,
+        RUST_INFO_UMU_GET
       ].sort()
     )
     for (const channel of RUST_INFO_CHANNELS) {
