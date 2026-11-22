@@ -203,6 +203,44 @@ describeDarwinOnly(
       )
 
       it.each([
+        ['--add-library'],
+        ['--add-library', '--wait'],
+        ['--add-library', '--dry-run'],
+        ['--add-library', '--wait', '--dry-run']
+      ])(
+        'accepts %s with the same unavailable result (quick 261122-n4q)',
+        (...flags) => {
+          const res = run(
+            '--steam-moveapp',
+            '264160',
+            '--library',
+            '/tmp/x',
+            ...flags
+          )
+          expect(res.status).toBe(2)
+          expect(oneLine(res.stdout)).toEqual({
+            result: 'unavailable',
+            reason: 'steamclient-missing'
+          })
+        }
+      )
+
+      it('rejects --add-library on --steam-installapp as unknown-argument', () => {
+        const res = run(
+          '--steam-installapp',
+          '264160',
+          '--library',
+          '/tmp/x',
+          '--add-library'
+        )
+        expect(res.status).toBe(64)
+        expect(oneLine(res.stdout)).toEqual({
+          result: 'usage',
+          error: 'unknown-argument'
+        })
+      })
+
+      it.each([
         [
           'non-numeric appId',
           ['--steam-moveapp', 'abc', '--library', '/tmp/x'],

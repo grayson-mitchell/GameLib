@@ -7,6 +7,7 @@ import {
   requestSteamMoveApp,
   requestSteamUninstallApp,
   requestSteamValidateApp,
+  STEAM_LIBRARY_PATH_MAX_BYTES,
   VALIDATE_WAIT_TIMEOUT_MS
 } from '../steamInstallApp'
 
@@ -535,6 +536,124 @@ describe('requestSteamMoveApp (quick 261122-9sl)', () => {
     await expect(
       requestSteamMoveApp('440', opts, deps(runWith('{"result":"huh"}')))
     ).resolves.toEqual({ kind: 'unavailable', reason: 'helper-failed' })
+  })
+
+  describe('addLibrary (quick 261122-n4q)', () => {
+    it('puts --add-library right after the library path and before --wait', async () => {
+      const run = runWith(
+        '{"result":"ok","tracked":true,"finished":true,"installState":4,"folderIndex":5,"addedLibrary":true}'
+      )
+      await requestSteamMoveApp('440', { ...opts, addLibrary: true }, deps(run))
+      expect(run.mock.calls[0]?.[1]).toEqual([
+        '--steam-moveapp',
+        '440',
+        '--library',
+        '/libB',
+        '--add-library',
+        '--wait'
+      ])
+    })
+
+    it('omits --add-library when the option is absent or false', async () => {
+      const run = runWith('{"result":"ok","tracked":false,"folderIndex":1}')
+      await requestSteamMoveApp(
+        '440',
+        { ...opts, addLibrary: false },
+        deps(run)
+      )
+      expect(run.mock.calls[0]?.[1]).not.toContain('--add-library')
+    })
+
+    it('maps addedLibrary on ok, and leaves the key out without it', async () => {
+      await expect(
+        requestSteamMoveApp(
+          '440',
+          opts,
+          deps(
+            runWith(
+              '{"result":"ok","tracked":true,"finished":true,"installState":4,"folderIndex":5,"addedLibrary":true}'
+            )
+          )
+        )
+      ).resolves.toEqual({
+        kind: 'ok',
+        tracked: true,
+        finished: true,
+        installState: 4,
+        folderIndex: 5,
+        addedLibrary: true
+      })
+      const plain = await requestSteamMoveApp(
+        '440',
+        opts,
+        deps(
+          runWith(
+            '{"result":"ok","tracked":true,"finished":true,"installState":4,"folderIndex":5,"addedLibrary":false}'
+          )
+        )
+      )
+      expect(plain).not.toHaveProperty('addedLibrary')
+    })
+
+    it('carries addedLibrary on an error line', async () => {
+      await expect(
+        requestSteamMoveApp(
+          '440',
+          opts,
+          deps(
+            runWith(
+              '{"result":"error","appId":440,"stage":"MoveApp","eAppUpdateError":16,"addedLibrary":true}',
+              3
+            )
+          )
+        )
+      ).resolves.toEqual({
+        kind: 'error',
+        stage: 'MoveApp',
+        code: 16,
+        addedLibrary: true
+      })
+    })
+
+    it.each([
+      'library-not-directory',
+      'path-too-long',
+      'inside-library',
+      'contains-library',
+      'add-library-refused',
+      'add-library-unverified'
+    ])('passes the refused reason %s through', async (reason) => {
+      await expect(
+        requestSteamMoveApp(
+          '440',
+          opts,
+          deps(
+            runWith(`{"result":"refused","appId":440,"reason":"${reason}"}`, 3)
+          )
+        )
+      ).resolves.toEqual({ kind: 'refused', reason })
+    })
+
+    it('STEAM_LIBRARY_PATH_MAX_BYTES tracks GL_IA_ADD_PATH_MAX in the helper header', () => {
+      const header = readFileSync(
+        join(
+          __dirname,
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          'native',
+          'steam-bridge',
+          'helper',
+          'gamelib_installapp.h'
+        ),
+        'utf8'
+      )
+      const max = /#define GL_IA_ADD_PATH_MAX (\d+)/.exec(header)
+      expect(max).not.toBeNull()
+      expect(STEAM_LIBRARY_PATH_MAX_BYTES).toBe(Number(max?.[1]))
+    })
   })
 
   it('MOVE_WAIT_TIMEOUT_MS tracks GL_IA_MOVE_WAIT_CAP_S in the helper header', () => {

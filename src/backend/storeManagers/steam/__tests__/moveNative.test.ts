@@ -1,4 +1,14 @@
 /** quick 261122-9sl: moveRegisteredSteamGame (Mac-native Move) and the moveInstall routing. */
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { moveRegisteredSteamGame } from '../moveNative'
 import { moveInstall } from '../gameMaintenance'
 import * as bridgeBottle from '../bridgeBottle'
@@ -97,11 +107,10 @@ describe('moveRegisteredSteamGame', () => {
     expect(requestMove).not.toHaveBeenCalled()
   })
 
-  it('refuses a path outside every library and names the libraries', async () => {
+  it('refuses a path that is not an existing folder without a helper call', async () => {
     const r = await moveRegisteredSteamGame(game, '/elsewhere', makeCollab())
     expect(r.status).toBe('error')
-    expect(r.error).toContain('/libA')
-    expect(r.error).toContain('/libB/steamapps')
+    expect(r.error).toContain("isn't an existing folder")
     expect(requestMove).not.toHaveBeenCalled()
   })
 
@@ -113,6 +122,7 @@ describe('moveRegisteredSteamGame', () => {
       makeCollab()
     )
     expect(r.status).toBe('error')
+    expect(r.error).toContain("couldn't read Steam's library list")
     expect(requestMove).not.toHaveBeenCalled()
   })
 
@@ -291,6 +301,203 @@ describe('moveRegisteredSteamGame', () => {
     await moveRegisteredSteamGame(game, '/libB/steamapps', makeCollab())
     expect(aborts.create).not.toHaveBeenCalled()
     expect(aborts.delete).not.toHaveBeenCalled()
+  })
+})
+
+describe('add-library route (quick 261122-n4q)', () => {
+  let base: string
+  let lib: string
+  let picked: string
+  let current: string
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    base = realpathSync(mkdtempSync(join(tmpdir(), 'gamelib-move-n4q-')))
+    lib = join(base, 'lib')
+    picked = join(base, 'new')
+    current = join(lib, 'steamapps', 'common', 'WazHack')
+    mkdirSync(current, { recursive: true })
+    mkdirSync(picked)
+    installPath = current
+    getGameInfo.mockImplementation(() => ({
+      title: 'WazHack',
+      install: installPath ? { install_path: installPath } : {}
+    }))
+    createRun.mockReturnValue('run')
+    readRunningApp.mockResolvedValue(0)
+    listLibraries.mockResolvedValue([
+      { path: lib, steamappsDir: join(lib, 'steamapps'), isPrimary: true }
+    ])
+    aborts.has.mockReturnValue(false)
+    aborts.create.mockReturnValue(controller)
+    aborts.getSignal.mockReturnValue(controller.signal)
+    reconcile.mockImplementation(() => {
+      installPath = join(picked, 'steamapps', 'common', 'WazHack')
+      return Promise.resolve()
+    })
+  })
+
+  afterEach(() => {
+    chmodSync(picked, 0o755)
+    rmSync(base, { recursive: true, force: true })
+  })
+
+  const added = (extra: object = {}) => ({
+    ...finished(),
+    addedLibrary: true,
+    ...extra
+  })
+
+  it.each([
+    ['an empty folder', undefined],
+    ['a folder holding files', 'keep.txt']
+  ])('registers %s and moves into it', async (_n, file) => {
+    if (file) writeFileSync(join(picked, file), 'x')
+    requestMove.mockResolvedValue(added())
+    await expect(
+      moveRegisteredSteamGame(game, picked, makeCollab())
+    ).resolves.toEqual({ status: 'done' })
+    expect(requestMove).toHaveBeenCalledWith(
+      '264160',
+      {
+        libraryPath: realpathSync(picked),
+        wait: true,
+        signal: controller.signal,
+        addLibrary: true
+      },
+      { paths: { p: 1 }, run: 'run' }
+    )
+    expect(reconcile).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the existing-library route free of addLibrary', async () => {
+    mkdirSync(join(base, 'lib2', 'steamapps'), { recursive: true })
+    listLibraries.mockResolvedValue([
+      { path: lib, steamappsDir: join(lib, 'steamapps'), isPrimary: true },
+      {
+        path: join(base, 'lib2'),
+        steamappsDir: join(base, 'lib2', 'steamapps'),
+        isPrimary: false
+      }
+    ])
+    reconcile.mockImplementation(() => {
+      installPath = join(base, 'lib2', 'steamapps', 'common', 'WazHack')
+      return Promise.resolve()
+    })
+    requestMove.mockResolvedValue(finished())
+    await moveRegisteredSteamGame(game, join(base, 'lib2'), makeCollab())
+    const opts = requestMove.mock.calls[0]?.[1] as Record<string, unknown>
+    expect(opts).toEqual({
+      libraryPath: join(base, 'lib2'),
+      wait: true,
+      signal: controller.signal
+    })
+    expect(opts).not.toHaveProperty('addLibrary')
+  })
+
+  const refuses = async (path: string, text: string) => {
+    const r = await moveRegisteredSteamGame(game, path, makeCollab())
+    expect(r.status).toBe('error')
+    expect(r.error).toContain(text)
+    expect(requestMove).not.toHaveBeenCalled()
+  }
+
+  it('refuses a missing path', async () => {
+    await refuses(join(base, 'nope'), "isn't an existing folder")
+  })
+
+  it('refuses a file', async () => {
+    const f = join(base, 'a-file')
+    writeFileSync(f, 'x')
+    await refuses(f, "isn't an existing folder")
+  })
+
+  const itNotRoot = process.getuid?.() === 0 ? it.skip : it
+  itNotRoot('refuses a folder GameLib cannot write to', async () => {
+    chmodSync(picked, 0o555)
+    await refuses(picked, "can't write to")
+  })
+
+  it('refuses a path of 255 bytes or more', async () => {
+    let long = base
+    while (Buffer.byteLength(long) < 255) long = join(long, 'x'.repeat(60))
+    mkdirSync(long, { recursive: true })
+    await refuses(long, 'too long for Steam')
+  })
+
+  it('refuses the current install and a folder inside it', async () => {
+    await refuses(current, 'is installed now')
+    const inside = join(current, 'data')
+    mkdirSync(inside)
+    await refuses(inside, 'is installed now')
+  })
+
+  it('refuses a folder containing the current install even outside every library', async () => {
+    const outside = join(base, 'outside', 'deep', 'WazHack')
+    mkdirSync(outside, { recursive: true })
+    installPath = outside
+    await refuses(join(base, 'outside'), "contains WazHack's current install")
+  })
+
+  it('refuses a folder inside an existing library', async () => {
+    const inside = join(lib, 'Extra')
+    mkdirSync(inside)
+    await refuses(inside, 'is inside the Steam library')
+  })
+
+  it('refuses a folder containing an existing library', async () => {
+    installPath = '/not/anywhere/WazHack'
+    await refuses(base, 'contains the Steam library')
+  })
+
+  it("refuses a folder that already holds this game's install folder", async () => {
+    mkdirSync(join(picked, 'steamapps', 'common', 'WazHack'), {
+      recursive: true
+    })
+    await refuses(picked, 'already holds a copy of WazHack')
+  })
+
+  it("refuses a folder that already holds this game's appmanifest", async () => {
+    mkdirSync(join(picked, 'steamapps'))
+    writeFileSync(join(picked, 'steamapps', 'appmanifest_264160.acf'), '')
+    await refuses(picked, 'already holds a copy of WazHack')
+  })
+
+  it('refuses when the library list cannot be read', async () => {
+    listLibraries.mockRejectedValue(new Error('boom'))
+    await refuses(picked, "couldn't read Steam's library list")
+  })
+
+  it.each([
+    [
+      { kind: 'refused', reason: 'inside-library' },
+      "inside one of Steam's libraries"
+    ],
+    [
+      { kind: 'refused', reason: 'contains-library' },
+      "contains one of Steam's libraries"
+    ],
+    [{ kind: 'refused', reason: 'library-not-directory' }, "isn't an existing"],
+    [{ kind: 'refused', reason: 'path-too-long' }, 'too long for Steam'],
+    [{ kind: 'refused', reason: 'add-library-refused' }, "Steam wouldn't add"],
+    [
+      { kind: 'refused', reason: 'add-library-unverified' },
+      "couldn't confirm it"
+    ],
+    [
+      { kind: 'unavailable', reason: 'method-unverified:AddLibraryFolder' },
+      "doesn't let GameLib add"
+    ],
+    [
+      { kind: 'error', stage: 'MoveApp', code: 16, addedLibrary: true },
+      'Steam added'
+    ]
+  ])('maps %j to a message', async (outcome, text) => {
+    requestMove.mockResolvedValue(outcome)
+    const r = await moveRegisteredSteamGame(game, picked, makeCollab())
+    expect(r.status).toBe('error')
+    expect(r.error).toContain(text)
+    expect(reconcile).not.toHaveBeenCalled()
   })
 })
 

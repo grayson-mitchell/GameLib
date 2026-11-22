@@ -63,6 +63,23 @@
  *   {"result":"refused","appId":N,"reason":"not-installed|already-in-folder"} exit 3
  *   {"result":"error","appId":N,"stage":"CanMoveApp|MoveApp","eAppUpdateError":E} exit 3
  *
+ * quick 261122-n4q. `--steam-moveapp <appId> --library <absPath> --add-library
+ * [--wait] [--dry-run]` also registers a folder Steam does not list as a library
+ * (spike 094): IClientAppManager::AddLibraryFolder(path) returns the new folder's
+ * index and MoveApp then targets THAT RETURNED INDEX, never a list position (Steam
+ * reuses gaps from the top). It runs only when the picked folder matches none of
+ * Steam's live folders, after the refusals and a read-only CanMoveApp, so a refused
+ * move never leaves a new library behind. The slot is called only when its unique
+ * 0x16a1 ID resolves and RemoveLibraryFolder's unique 0xbc0b sits at exactly
+ * Add + 3 (guard only: Remove is never called). Without the flag an unmatched
+ * library is still `unavailable library-not-registered`. Refused reasons added:
+ * library-not-directory, path-too-long, inside-library, contains-library (these
+ * carry folderIndex), add-library-refused (addRet), add-library-unverified
+ * (folderIndex). Every non-dry-run ok line and the MoveApp-stage error line carry
+ * "addedLibrary":true|false. A dry run reports "wouldAddLibrary":true and
+ * "addLibrarySlot":S with folderIndex -1, and never calls Add. The dry-run
+ * libraryFolders array has one entry per Steam index; a gap is "".
+ *
  * Output: exactly ONE JSON line on the original stdout; everything Steam logs
  * goes to stderr (fd 1 is redirected to fd 2 while Steam code runs).
  *   {"result":"ok",...}                       exit 0
@@ -128,6 +145,15 @@
 #define GL_IA_STATE_FILES_MISSING 0x20u
 /* UpdateRunning | UpdateStarted | Validating: work actually running, not queued. */
 #define GL_IA_MOVE_BUSY_MASK (0x100u | 0x400u | 0x20000u)
+
+/* quick 261122-n4q: AddLibraryFolder (spike 094 slot 77). RemoveLibraryFolder is a
+ * guard only: its unique ID must sit at Add + 3, and it is never called. */
+#define GL_IA_FN_ADDFOLDER 0x16a1u
+#define GL_IA_FN_REMOVEFOLDER 0xbc0bu
+/* Must track STEAM_LIBRARY_PATH_MAX_BYTES in steamInstallApp.ts. Steam's C-string
+ * writer for AddLibraryFolder caps at 255 (spike 094), so a longer path would
+ * register a truncated, different folder. */
+#define GL_IA_ADD_PATH_MAX 254
 
 #define GL_IA_CHILD_TIMEOUT_MS 3000
 #define GL_IA_SCAN_CAP_MS 20000
@@ -401,11 +427,18 @@ static int gl_ia_find_method_slot(void **vtable, uint32_t hi) {
 }
 
 /*
- * Reads Steam's own library folders. Returns count (>=1) or -1 (lookup
- * unverified). GetNumLibraryFolders / GetLibraryFolderPath were located in
- * spike 066 but never called; assumed shapes are `uint32 (this)` and
- * `int32 (this, int32 index, char *buf, int32 cap)`, hence the strict output
- * validation below.
+ * Reads Steam's own library folders. `gl_ia_folders` is indexed by STEAM index and
+ * the returned count includes gaps (spike 094 step 5: a library removal leaves an
+ * empty path in Steam's in-memory list, and a later AddLibraryFolder reuses gaps
+ * from the top). A gap is skipped, never fatal, and every other folder keeps its
+ * Steam index. Returns the count (>=1, at least one real folder) or -1 (lookup
+ * unverified). GetNumLibraryFolders / GetLibraryFolderPath shapes are verified
+ * (spike 094): `uint32 (this)` and `int32 (this, int32 index, char *buf, int32
+ * cap)` (returns 0 and "" for a gap). A non-empty entry that is not absolute, or an
+ * absolute path that is not a directory, still fails the whole lookup: non-absolute
+ * output is the only run-time signal that the shape drifted (serializer sizes are
+ * not decoded), and an absolute path that does not stat is a library on an
+ * unmounted volume, which spike 094 lists as untested.
  */
 static char gl_ia_folders[GL_IA_MAX_FOLDERS][GL_IA_PATH_CAP];
 
@@ -413,15 +446,19 @@ static int gl_ia_list_folders(void *apm, int slot_n, int slot_p) {
   void **vt = gl_ia_vt(apm);
   uint32_t n = ((uint32_t (*)(void *))vt[slot_n])(apm);
   if (n < 1 || n > GL_IA_MAX_FOLDERS) return -1;
+  int real_count = 0;
   for (uint32_t i = 0; i < n; i++) {
     char *buf = gl_ia_folders[i];
     memset(buf, 0, GL_IA_PATH_CAP);
     ((int32_t (*)(void *, int32_t, char *, int32_t))vt[slot_p])(
         apm, (int32_t)i, buf, GL_IA_PATH_CAP);
     buf[GL_IA_PATH_CAP - 1] = '\0';
+    if (buf[0] == '\0') continue; /* a gap: keep the index, skip the entry */
     struct stat st;
     if (buf[0] != '/' || stat(buf, &st) != 0 || !S_ISDIR(st.st_mode)) return -1;
+    real_count++;
   }
+  if (real_count < 1) return -1;
   return (int)n;
 }
 
@@ -433,6 +470,46 @@ static bool gl_ia_folder_matches(const char *folder, const char *want) {
   char with_sa[PATH_MAX + 16];
   snprintf(with_sa, sizeof with_sa, "%s/steamapps", rf);
   return strcmp(with_sa, rw) == 0;
+}
+
+/* The first non-gap Steam index whose folder matches `want`, else -1. */
+static int gl_ia_find_folder(int count, const char *want) {
+  for (int i = 0; i < count; i++) {
+    if (gl_ia_folders[i][0] == '\0') continue;
+    if (gl_ia_folder_matches(gl_ia_folders[i], want)) return i;
+  }
+  return -1;
+}
+
+/* quick 261122-n4q: a strict descendant by prefix plus a '/' boundary. "/" holds
+ * every other absolute path; an equal path is not within. */
+static bool gl_ia_path_within(const char *root, const char *p) {
+  size_t rl = strlen(root);
+  while (rl > 1 && root[rl - 1] == '/') rl--;
+  if (rl == 1 && root[0] == '/') return p[0] == '/' && p[1] != '\0';
+  if (strncmp(p, root, rl) != 0) return false;
+  return p[rl] == '/' && p[rl + 1] != '\0';
+}
+
+/* quick 261122-n4q: Steam cannot nest one library in another. NULL when the picked
+ * (already realpath'd) folder neither sits inside nor contains a listed folder;
+ * otherwise the refusal reason, with *conflict set to that Steam index. */
+static const char *gl_ia_nesting_refusal(int count, const char *picked_real,
+                                         int *conflict) {
+  for (int i = 0; i < count; i++) {
+    if (gl_ia_folders[i][0] == '\0') continue;
+    char rf[PATH_MAX];
+    const char *f = realpath(gl_ia_folders[i], rf) ? rf : gl_ia_folders[i];
+    if (gl_ia_path_within(f, picked_real)) {
+      *conflict = i;
+      return "inside-library";
+    }
+    if (gl_ia_path_within(picked_real, f)) {
+      *conflict = i;
+      return "contains-library";
+    }
+  }
+  return NULL;
 }
 
 static int gl_ia_run(uint32_t app_id, const char *library, bool dry_run) {
@@ -479,13 +556,7 @@ static int gl_ia_run(uint32_t app_id, const char *library, bool dry_run) {
       }
     }
     if (library != NULL && listed) {
-      int match = -1;
-      for (int i = 0; i < folder_count; i++) {
-        if (gl_ia_folder_matches(gl_ia_folders[i], library)) {
-          match = i;
-          break;
-        }
-      }
+      int match = gl_ia_find_folder(folder_count, library);
       if (match < 0) return gl_ia_unavailable("library-not-registered");
       folder_index = match;
     }
@@ -707,15 +778,29 @@ static int gl_ia_run_validate(uint32_t app_id, bool wait, bool dry_run) {
  * real stack variable of exactly that width, never NULL. CancelMoveApp is never
  * called; it only guards the slot order.
  */
-static int gl_ia_move_error(uint32_t app_id, const char *stage, uint32_t err) {
+static int gl_ia_move_error(uint32_t app_id, const char *stage, uint32_t err,
+                            bool added) {
   gl_ia_emit("{\"result\":\"error\",\"appId\":%u,\"stage\":\"%s\","
-             "\"eAppUpdateError\":%u}",
-             app_id, stage, err);
+             "\"eAppUpdateError\":%u,\"addedLibrary\":%s}",
+             app_id, stage, err, added ? "true" : "false");
+  return GL_IA_EXIT_ERROR;
+}
+
+/* quick 261122-n4q: one refused line, exit 3. folder_index < 0 omits the index. */
+static int gl_ia_move_refused(uint32_t app_id, const char *reason, int folder_index) {
+  if (folder_index >= 0) {
+    gl_ia_emit("{\"result\":\"refused\",\"appId\":%u,\"reason\":\"%s\","
+               "\"folderIndex\":%d}",
+               app_id, reason, folder_index);
+  } else {
+    gl_ia_emit("{\"result\":\"refused\",\"appId\":%u,\"reason\":\"%s\"}",
+               app_id, reason);
+  }
   return GL_IA_EXIT_ERROR;
 }
 
 static int gl_ia_run_move(uint32_t app_id, const char *library, bool wait,
-                          bool dry_run) {
+                          bool dry_run, bool add_library) {
   fflush(NULL);
   gl_ia_out_fd = dup(1);
   if (gl_ia_out_fd < 0) gl_ia_out_fd = 1;
@@ -755,28 +840,37 @@ static int gl_ia_run_move(uint32_t app_id, const char *library, bool wait,
   if (slot_n < 0 || slot_p < 0) return gl_ia_unavailable("library-lookup-unverified");
   int folder_count = gl_ia_list_folders(apm, slot_n, slot_p);
   if (folder_count < 0) return gl_ia_unavailable("library-lookup-unverified");
-  int target = -1;
-  for (int i = 0; i < folder_count; i++) {
-    if (gl_ia_folder_matches(gl_ia_folders[i], library)) {
-      target = i;
-      break;
-    }
+  int target = gl_ia_find_folder(folder_count, library);
+  int add_slot = -1;
+  bool add_pending = false;
+  char real[PATH_MAX];
+  real[0] = '\0';
+  if (target < 0) {
+    if (!add_library) return gl_ia_unavailable("library-not-registered");
+    /* AddLibraryFolder guard: unique 0x16a1, and RemoveLibraryFolder's unique
+     * 0xbc0b at exactly Add + 3. remove_slot is used ONLY in this comparison. */
+    add_slot = gl_ia_find_method_slot(vt, GL_IA_FN_ADDFOLDER);
+    int remove_slot = gl_ia_find_method_slot(vt, GL_IA_FN_REMOVEFOLDER);
+    if (add_slot < 0 || remove_slot != add_slot + 3 ||
+        gl_ia_slot_hi(vt, add_slot) != (int)GL_IA_FN_ADDFOLDER ||
+        gl_ia_slot_hi(vt, add_slot + 3) != (int)GL_IA_FN_REMOVEFOLDER)
+      return gl_ia_unavailable("method-unverified:AddLibraryFolder");
+    struct stat st;
+    if (!realpath(library, real) || stat(real, &st) != 0 || !S_ISDIR(st.st_mode))
+      return gl_ia_move_refused(app_id, "library-not-directory", -1);
+    if (strlen(real) > GL_IA_ADD_PATH_MAX)
+      return gl_ia_move_refused(app_id, "path-too-long", -1);
+    int conflict = -1;
+    const char *nest = gl_ia_nesting_refusal(folder_count, real, &conflict);
+    if (nest) return gl_ia_move_refused(app_id, nest, conflict);
+    add_pending = true;
   }
-  if (target < 0) return gl_ia_unavailable("library-not-registered");
 
   int32_t from =
       ((int32_t (*)(void *, uint32_t))vt[folder_slot])(apm, app_id);
-  if (from < 0) {
-    gl_ia_emit("{\"result\":\"refused\",\"appId\":%u,\"reason\":\"not-installed\"}",
-               app_id);
-    return GL_IA_EXIT_ERROR;
-  }
-  if (from == target) {
-    gl_ia_emit("{\"result\":\"refused\",\"appId\":%u,"
-               "\"reason\":\"already-in-folder\",\"folderIndex\":%d}",
-               app_id, target);
-    return GL_IA_EXIT_ERROR;
-  }
+  if (from < 0) return gl_ia_move_refused(app_id, "not-installed", -1);
+  if (target >= 0 && from == target)
+    return gl_ia_move_refused(app_id, "already-in-folder", target);
 
   /* CanMoveApp: the reply writes 4 bytes into a REAL pointer. Its value's
    * meaning is unknown (always 0 in spike 090), so it is ignored. */
@@ -796,12 +890,17 @@ static int gl_ia_run_move(uint32_t app_id, const char *library, bool wait,
       if (w < 0 || (size_t)w >= sizeof list - o) break;
       o += (size_t)w;
     }
-    gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"dryRun\":true,"
+    char extra[96];
+    extra[0] = '\0';
+    if (add_pending)
+      snprintf(extra, sizeof extra, "\"wouldAddLibrary\":true,\"addLibrarySlot\":%d,",
+               add_slot);
+    gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"dryRun\":true,%s"
                "\"folderIndex\":%d,\"fromFolder\":%d,\"canMoveError\":%u,"
                "\"engineSlot\":%d,\"canMoveSlot\":%d,\"moveSlot\":%d,"
                "\"progressSlot\":%d,\"libraryFolders\":[%s]}",
-               app_id, target, (int)from, can_err, getter_slot, can_slot,
-               move_slot, prog_slot, list);
+               app_id, extra, add_pending ? -1 : target, (int)from, can_err,
+               getter_slot, can_slot, move_slot, prog_slot, list);
     return GL_IA_EXIT_OK;
   }
 
@@ -814,21 +913,46 @@ static int gl_ia_run_move(uint32_t app_id, const char *library, bool wait,
     if (state_slot < 0) untracked = "method-unverified:GetAppInstallState";
   }
 
-  if (can_err != 0) return gl_ia_move_error(app_id, "CanMoveApp", can_err);
+  /* A CanMoveApp error returns BEFORE any Add, so a refused move never leaves a
+   * new library behind. */
+  if (can_err != 0) return gl_ia_move_error(app_id, "CanMoveApp", can_err, false);
+
+  bool added = false;
+  if (add_pending) {
+    int32_t ret = ((int32_t (*)(void *, const char *))vt[add_slot])(apm, real);
+    fprintf(stderr, "[moveapp] AddLibraryFolder(%s) -> %d\n", real, (int)ret);
+    if (ret < 0) {
+      gl_ia_emit("{\"result\":\"refused\",\"appId\":%u,"
+                 "\"reason\":\"add-library-refused\",\"addRet\":%d}",
+                 app_id, (int)ret);
+      return GL_IA_EXIT_ERROR;
+    }
+    /* The target is Add's RETURN VALUE, never a list position, and it must be
+     * re-verified against a fresh listing. */
+    int recount = gl_ia_list_folders(apm, slot_n, slot_p);
+    if (recount < 0 || ret >= recount || gl_ia_folders[ret][0] == '\0' ||
+        !gl_ia_folder_matches(gl_ia_folders[ret], real))
+      return gl_ia_move_refused(app_id, "add-library-unverified", (int)ret);
+    target = (int)ret;
+    folder_count = recount;
+    added = true;
+  }
+
   uint32_t err =
       ((uint32_t (*)(void *, uint32_t, int32_t))vt[move_slot])(apm, app_id,
                                                                (int32_t)target);
-  if (err != 0) return gl_ia_move_error(app_id, "MoveApp", err);
+  if (err != 0) return gl_ia_move_error(app_id, "MoveApp", err, added);
 
   if (!wait || untracked) {
     if (untracked) {
       gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"tracked\":false,"
-                 "\"folderIndex\":%d,\"fromFolder\":%d,\"reason\":\"%s\"}",
-                 app_id, target, (int)from, untracked);
+                 "\"folderIndex\":%d,\"fromFolder\":%d,\"reason\":\"%s\","
+                 "\"addedLibrary\":%s}",
+                 app_id, target, (int)from, untracked, added ? "true" : "false");
     } else {
       gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"tracked\":false,"
-                 "\"folderIndex\":%d,\"fromFolder\":%d}",
-                 app_id, target, (int)from);
+                 "\"folderIndex\":%d,\"fromFolder\":%d,\"addedLibrary\":%s}",
+                 app_id, target, (int)from, added ? "true" : "false");
     }
     return GL_IA_EXIT_OK;
   }
@@ -904,14 +1028,15 @@ static int gl_ia_run_move(uint32_t app_id, const char *library, bool wait,
   }
   if (finished) {
     gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"tracked\":true,\"finished\":true,"
-               "\"installState\":%u,\"folderIndex\":%d,\"fromFolder\":%d}",
-               app_id, last_state, target, (int)from);
+               "\"installState\":%u,\"folderIndex\":%d,\"fromFolder\":%d,"
+               "\"addedLibrary\":%s}",
+               app_id, last_state, target, (int)from, added ? "true" : "false");
   } else {
     gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"tracked\":true,\"finished\":false,"
                "\"installState\":%u,\"folderIndex\":%d,\"fromFolder\":%d,"
-               "\"reason\":\"%s\"}",
+               "\"reason\":\"%s\",\"addedLibrary\":%s}",
                app_id, last_state, target, (int)from,
-               stop_reason ? stop_reason : "unknown");
+               stop_reason ? stop_reason : "unknown", added ? "true" : "false");
   }
   return GL_IA_EXIT_OK;
 }
@@ -1011,7 +1136,8 @@ static int gamelib_validateapp_main(int argc, char **argv) {
 }
 
 /* argv[1] == "--steam-moveapp" (quick 261122-9sl). Same isolation as the other
- * subcommands; requires --library <abs>, accepts --wait and --dry-run. */
+ * subcommands; requires --library <abs>, accepts --wait, --dry-run and (quick
+ * 261122-n4q) --add-library. */
 static int gamelib_moveapp_main(int argc, char **argv) {
   uint32_t app_id = 0;
   int rc = gl_ia_parse_app_id(argc, argv, &app_id);
@@ -1020,11 +1146,14 @@ static int gamelib_moveapp_main(int argc, char **argv) {
   const char *library = NULL;
   bool wait = false;
   bool dry_run = false;
+  bool add_library = false;
   for (int i = 3; i < argc; i++) {
     if (strcmp(argv[i], "--wait") == 0) {
       wait = true;
     } else if (strcmp(argv[i], "--dry-run") == 0) {
       dry_run = true;
+    } else if (strcmp(argv[i], "--add-library") == 0) {
+      add_library = true;
     } else if (strcmp(argv[i], "--library") == 0) {
       if (i + 1 >= argc || !gl_ia_library_arg_ok(argv[i + 1]))
         return gl_ia_usage("bad-library");
@@ -1036,11 +1165,12 @@ static int gamelib_moveapp_main(int argc, char **argv) {
   if (library == NULL) return gl_ia_usage("missing-library");
 
 #if defined(__aarch64__)
-  return gl_ia_run_move(app_id, library, wait, dry_run);
+  return gl_ia_run_move(app_id, library, wait, dry_run, add_library);
 #else
   (void)library;
   (void)wait;
   (void)dry_run;
+  (void)add_library;
   (void)app_id;
   return gl_ia_unavailable("unsupported-arch");
 #endif

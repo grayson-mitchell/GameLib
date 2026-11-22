@@ -71,6 +71,13 @@ export type SteamValidateAppOutcome =
  */
 export const MOVE_WAIT_TIMEOUT_MS = (21600 + 120) * 1000
 
+/**
+ * quick 261122-n4q: the longest picked-folder path (bytes) GameLib hands to AddLibraryFolder.
+ * Must track GL_IA_ADD_PATH_MAX in gamelib_installapp.h. Steam's C-string writer for that call caps
+ * at 255 (spike 094), so a longer path would register a truncated, different folder.
+ */
+export const STEAM_LIBRARY_PATH_MAX_BYTES = 254
+
 export type SteamMoveAppOutcome =
   | {
       kind: 'ok'
@@ -79,9 +86,10 @@ export type SteamMoveAppOutcome =
       installState: number | null
       folderIndex: number | null
       reason?: string
+      addedLibrary?: true
     }
   | { kind: 'refused'; reason: string }
-  | { kind: 'error'; stage: string; code: number }
+  | { kind: 'error'; stage: string; code: number; addedLibrary?: true }
   | { kind: 'unavailable'; reason: string }
 
 /**
@@ -325,10 +333,20 @@ export async function requestSteamValidateApp(
  * plus margin and by `signal` (stdin-EOF release aborts it). Killing the helper does not stop
  * Steam's move. Not gated on the experimental InstallApp setting (like validate and uninstall).
  * The default runner passes no `env`: the helper needs the real HOME to find steamclient.dylib.
+ *
+ * quick 261122-n4q: with `addLibrary` the helper first registers `libraryPath` as a Steam library
+ * (AddLibraryFolder, spike 094) when Steam does not list it, then moves to the index that call
+ * returned. The result carries `addedLibrary: true` when it did. Without it an unlisted library is
+ * `unavailable library-not-registered`, as before.
  */
 export async function requestSteamMoveApp(
   appId: string,
-  opts: { libraryPath: string; wait: boolean; signal?: AbortSignal },
+  opts: {
+    libraryPath: string
+    wait: boolean
+    signal?: AbortSignal
+    addLibrary?: boolean
+  },
   deps: SteamInstallAppDeps
 ): Promise<SteamMoveAppOutcome> {
   if (!/^\d{1,10}$/.test(appId)) {
@@ -344,6 +362,7 @@ export async function requestSteamMoveApp(
   }
 
   const args = ['--steam-moveapp', appId, '--library', opts.libraryPath]
+  if (opts.addLibrary) args.push('--add-library')
   if (opts.wait) args.push('--wait')
   const call = await callHelper(
     appId,
@@ -364,7 +383,8 @@ export async function requestSteamMoveApp(
       finished: parsed.finished === true,
       installState: typeof state === 'number' ? state : null,
       folderIndex: typeof folder === 'number' ? folder : null,
-      ...(typeof parsed.reason === 'string' ? { reason: parsed.reason } : {})
+      ...(typeof parsed.reason === 'string' ? { reason: parsed.reason } : {}),
+      ...(parsed.addedLibrary === true ? { addedLibrary: true as const } : {})
     }
   }
   if (parsed.result === 'refused' && typeof parsed.reason === 'string') {
@@ -384,7 +404,8 @@ export async function requestSteamMoveApp(
     return {
       kind: 'error',
       stage: parsed.stage,
-      code: parsed.eAppUpdateError
+      code: parsed.eAppUpdateError,
+      ...(parsed.addedLibrary === true ? { addedLibrary: true as const } : {})
     }
   }
   if (parsed.result === 'unavailable' && typeof parsed.reason === 'string') {
