@@ -154,7 +154,11 @@ question requires otherwise.
   which are written to after the reply. `CanMoveApp(appId, folder)` drifted to `(appId, uint32 *out)`
   and segfaulted with a folder index. Steam app-manager probes `#include`
   `native/steam-bridge/helper/gamelib_installapp.h`, so they use the production trust model rather
-  than a copy. *(090, 091)*
+  than a copy. To read a proxy: a 4-byte argument goes through the writer at `0x10d26c0` with
+  `w2 = 4` (a bool: `w2 = 1`), and a C string through `0xda37c` (strlen, capped at 255). An
+  argument never passed to a writer is an out-pointer. Probe a method with an unknown side effect on
+  a scratch folder first, and refuse its riskiest inputs in the probe itself (094's `remove`
+  refuses index 0 and sends only `false, false`). *(090, 091, 094)*
 - **Mac Steam logon oracle without CM traffic:** 084's `probe whoami` (`GetSteamID` +
   `BLoggedOn`) every 30 s beside the mirrored `connection_log.txt`. For install state, mirror
   `content_log.txt` too: it names the rescan ("Loaded N apps from install folder") and whether
