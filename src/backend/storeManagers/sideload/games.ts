@@ -229,7 +229,14 @@ export default class SideloadGame implements Game {
     notify(this.deps, { title, body: i18next.t('notify.uninstalled') })
 
     removeShortcutsUtil(this.deps, this)
-    removeRecentGame(this.deps, this.id)
+    // Recent-games bookkeeping is Rust's now and can reject (a transport or store failure); the
+    // uninstall already succeeded, so it is logged and never turned into an uninstall failure.
+    removeRecentGame(this.deps, this.id).catch((error: unknown) => {
+      logWarning(
+        [`removing ${this.id} from recent games failed:`, error],
+        LogPrefix.Backend
+      )
+    })
     removeNonSteamGame(this.deps, this)
 
     sendGameStatusUpdate(this.deps, {

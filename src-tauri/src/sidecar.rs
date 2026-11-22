@@ -520,37 +520,9 @@ pub(crate) fn start_reader(
                     .cloned()
                     .unwrap_or_default();
 
-                // Tray recent-games rebuild (Phase 35 Plan 06, D-06). `tray_icon.ts` rebuilt
-                // its whole context menu from `backendEvents.on('recentGamesChanged')`; the
-                // sidecar-side emitter (`recent_games.ts`'s `setRecentGames`) ALSO pushes the
-                // same list to the frontend over this exact frontend-message channel, and every
-                // one of those frames already passes through this reader thread on its way to
-                // the webview. Observing it here gives the tray its live rebuild with NO new
-                // channel and NO new sidecar registration -- and therefore no possibility of a
-                // send channel whose listener was never registered.
-                //
-                // Non-consuming: the frame is still emitted to the webview below, unchanged.
-                if channel == RECENT_GAMES_CHANGED_CHANNEL {
-                    let limit = tray_settings().max_recent_games;
-                    let games = match args.first() {
-                        Some(list) => tray_recent_games_from_value(list, limit),
-                        None => Vec::new(),
-                    };
-                    let tray_app = app.clone();
-                    // Menu construction wants the main thread on macOS; `set_menu` itself
-                    // hops there internally, but the `MenuItemBuilder`/`MenuBuilder` calls in
-                    // `build_tray_menu` do not, so the whole rebuild is hopped as one unit.
-                    // Failure to schedule is logged, never fatal -- the reader thread must keep
-                    // servicing every other frame.
-                    if let Err(e) =
-                        app.run_on_main_thread(move || update_tray_recent_games(&tray_app, games))
-                    {
-                        shell_eprintln!(
-                            "[shell] WARN: tray recent-games rebuild could not be scheduled ({e}) -- tray menu left as-is"
-                        );
-                    }
-                }
-
+                // No tray sniff here (86-09, D-08): the recent-games list is Rust's, and its
+                // `TrayRecentSink` (info_dispatch.rs) feeds the tray directly, so no sidecar frame
+                // carries a recent-games push for the shell to observe any more.
                 let _ = app.emit(
                     FRONTEND_MESSAGE_EVENT,
                     FrontendMessagePayload { channel, args },

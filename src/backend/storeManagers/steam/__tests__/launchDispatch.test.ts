@@ -23,7 +23,7 @@ const deps = {
   appRuntime: undefined
 } as unknown as Parameters<typeof dispatchSteamLaunch>[0]
 
-// ── recent_games — the side effect under test. ────────────────────────────────────────────
+// ── the recent-games shim — the side effect under test. ────────────────────────────────────────────
 const addRecentGameMock = jest.fn()
 jest.mock('backend/info/recentGames', () => ({
   addRecentGame: (...args: unknown[]) => addRecentGameMock(...args)

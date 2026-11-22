@@ -29,13 +29,6 @@ pub(crate) const TRAY_RECENT_MAX_LIMIT: usize = 20;
 /// (T-35-20's "not wholly trusted" note); a very long one would produce an unusable menu.
 pub(crate) const TRAY_RECENT_TITLE_MAX_CHARS: usize = 60;
 
-/// The frontend-message channel the sidecar pushes on every recent-games mutation
-/// (`recent_games.ts`'s `setRecentGames` -> `sendFrontendMessage('recentGamesChanged', ...)`).
-/// The shell's reader thread already sees every such frame on its way to the webview, so the
-/// tray gets its live rebuild signal by OBSERVING that existing push -- no new channel, no new
-/// sidecar registration, and no chance of a send-channel with no registered listener.
-pub(crate) const RECENT_GAMES_CHANGED_CHANNEL: &str = "recentGamesChanged";
-
 /// The `Runner` union from `src/common/types.ts:23`, mirrored here as an allow-list.
 ///
 /// Kept in lockstep with that union deliberately: omitting a member would make this list a
@@ -80,8 +73,7 @@ impl Default for TraySettingsSnapshot {
 }
 
 /// Shell-side cache of the recent-games list backing the tray menu. Seeded at startup from
-/// `configStore`'s on-disk JSON and refreshed whenever a `recentGamesChanged` frontend-message
-/// frame passes through the reader thread.
+/// the store and refreshed by the Rust `TrayRecentSink` on every recent-games change.
 static TRAY_RECENT_GAMES: OnceLock<Mutex<Vec<TrayRecentGame>>> = OnceLock::new();
 
 /// Startup snapshot of the two tray settings that are legitimately startup-only: `noTrayIcon`
@@ -102,7 +94,7 @@ static TRAY_RECENT_GAMES: OnceLock<Mutex<Vec<TrayRecentGame>>> = OnceLock::new()
 /// It is written this way because the alternative already failed. The lock previously sat at
 /// file scope with TWO initialisers: `get_or_init(TraySettingsSnapshot::default)` in the
 /// accessor and `get_or_init(load_tray_settings)` in `.setup()`. Whichever ran first won
-/// permanently. `tray_settings()`'s caller is the sidecar reader thread's `recentGamesChanged`
+/// permanently. `tray_settings()`'s caller was the sidecar reader thread's recent-games
 /// handler, so a frame arriving before `.setup()` reached its initialiser would have latched the
 /// lock to ALL-FALSE defaults, silently turned the real load into a no-op, and disabled every
 /// tray setting for the whole run with no error anywhere. Intermittent, and undiagnosable from
@@ -426,7 +418,7 @@ pub(crate) fn close_request_action(tray_exists: bool, hide_on_close: bool) -> Cl
 /// would race the host's writer and would never see a change the host has applied but not yet
 /// written. Startup seeding is a READ, not a second writer, and it runs after `run_setup` opened
 /// the host and installed the info context. Live updates come from the Rust `TrayRecentSink`
-/// (and, until 86-09, from the sidecar relay's `recentGamesChanged` frames). This read exists only
+/// (the sidecar relay's `recentGamesChanged` sniff was deleted in 86-09). This read exists only
 /// to make the tray useful BEFORE the first launch of a session.
 ///
 /// When the context is not installed (no home directory, so no store paths) the seed is an empty

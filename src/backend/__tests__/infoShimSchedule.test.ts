@@ -12,8 +12,8 @@
  *
  * The discovered set is every exported function in non-test src/backend/info/ plus the function
  * holding every `requestRustInvoke(RUST_INFO_<X>` call site outside src/backend/info/. It must equal
- * SCHEDULE's rows by file and name, in both directions. Plans 86-09 onward add the first rows; at
- * this commit nothing is ported, so SCHEDULE is empty and the planted fixtures below keep the
+ * SCHEDULE's rows by file and name, in both directions. Plans 86-09 onward add the rows, one with
+ * each plan that ports its service, and the planted fixtures below keep the
  * detector proven rather than vacuous (82 D-05).
  *
  * Floor: the walk read 611 non-test .ts/.tsx files under src/backend when measured on 2026-11-22
@@ -49,7 +49,36 @@ interface ScheduleRow extends ShimRow {
   deletedBy: number
 }
 
-const SCHEDULE: readonly ScheduleRow[] = []
+const SCHEDULE: readonly ScheduleRow[] = [
+  // 86-09, recent games: both bodies are one typed call into `gamelib-info`. `callers` is checked
+  // per FILE (every importer of `recentGames.ts`), so both rows list all three importers: the
+  // launch paths (launcher.ts, steam/launchDispatch.ts) call addRecentGame and the sideload
+  // uninstall (sideload/games.ts) calls removeRecentGame. `deletedBy` is per function.
+  {
+    name: 'addRecentGame',
+    file: 'src/backend/info/recentGames.ts',
+    shape: 'shim',
+    channel: 'RUST_INFO_RECENT_ADD',
+    callers: [
+      'src/backend/launcher.ts',
+      'src/backend/storeManagers/sideload/games.ts',
+      'src/backend/storeManagers/steam/launchDispatch.ts'
+    ],
+    deletedBy: 90
+  },
+  {
+    name: 'removeRecentGame',
+    file: 'src/backend/info/recentGames.ts',
+    shape: 'shim',
+    channel: 'RUST_INFO_RECENT_REMOVE',
+    callers: [
+      'src/backend/launcher.ts',
+      'src/backend/storeManagers/sideload/games.ts',
+      'src/backend/storeManagers/steam/launchDispatch.ts'
+    ],
+    deletedBy: 92
+  }
+]
 
 const key = (file: string, name: string): string => `${file}#${name}`
 
@@ -113,7 +142,7 @@ describe('infoShimSchedule', () => {
     expect(new Set(keys).size).toBe(keys.length)
   })
 
-  // One loop per check rather than `it.each`: jest refuses an empty table, and SCHEDULE is empty until 86-09.
+  // One loop per check rather than `it.each`, so a schedule that ever empties again does not trip jest's empty-table refusal.
   it('every row has the shape it claims and sends its row channel', () => {
     const calls = findRustInfoCalls(allWalk.files)
     for (const row of SCHEDULE) {

@@ -170,6 +170,40 @@ describe('imagesCachePortComplete', () => {
   runSlice(IMAGES_CACHE)
 })
 
+/**
+ * 86-09, D-05 and D-13: recent games is Rust's. The TS slice and its oracle are deleted; the golden
+ * fixtures stay for the Rust golden. Only two scheduled shims (infoShimSchedule) reach it from TS.
+ */
+const RECENT_GAMES: SliceSpec = {
+  deleted: [
+    'src/backend/recent_games/recent_games.ts',
+    'src/backend/info/__tests__/oracle/recentGames.oracle.test.ts'
+  ],
+  kept: ['src-tauri/crates/gamelib-info/tests/fixtures/golden/recent'],
+  forbiddenIdentifiers: [
+    'RecentGamesDeps',
+    'getRecentGames',
+    'testingExportsRecentGames'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_RECENT_GAMES'
+}
+
+describe('recentGamesPortComplete', () => {
+  runSlice(RECENT_GAMES)
+
+  it('removeRecent has no sidecar ipc.on or ipc.handle (it is a native info channel)', () => {
+    expect(findTsRegistrations(tsWalk.files, ['removeRecent'])).toEqual([])
+  })
+
+  it('no non-test backend file reads or writes the games.recent store key (SC4: no TS path writes it)', () => {
+    const backend = tsWalk.files.filter((f) =>
+      f.path.startsWith('src/backend/')
+    )
+    expect(findIdentifiers(backend, ['games.recent'])).toEqual([])
+  })
+})
+
 describe('infoPortComplete scans', () => {
   it('anti-vacuity: the walks read real trees', () => {
     assertAtOrAboveFloor(

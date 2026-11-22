@@ -66,7 +66,7 @@
  * Deliberately NOT mocked (the bodies actually under test — mocking them
  * would prove only that a jest.fn() was called, per this plan's own
  * instruction): `storeSearch/itad`, `anticheat/utils`,
- * `crossover_index/crossoverRatingMap`, `knownFixes`, `recent_games/recent_games`.
+ * `crossover_index/crossoverRatingMap`, `knownFixes`.
  */
 
 // ── os — GAP FIX precedent: redirect homedir() to a disposable per-process

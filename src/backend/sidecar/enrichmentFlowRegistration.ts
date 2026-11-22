@@ -102,7 +102,7 @@
  * four gated entry points. Every import below reaches an
  * UNDERLYING module (`anticheat/utils`, `../knownFixes`,
  * `../crossover_index/crossoverRatingMap`, `../storeSearch/handlers`,
- * `../recent_games/recent_games`, `../wiki_game_info/wiki_game_info`,
+ * `../wiki_game_info/wiki_game_info`,
  * `../utils`) — NEVER a feature module's `ipc_handler.ts` and NEVER
  * `storeSearch/index.ts` (which itself calls `addHandler`).
  * `storeSearch/handlers.ts` is the correct import target precisely because

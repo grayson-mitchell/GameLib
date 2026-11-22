@@ -1,7 +1,9 @@
 import { addRecentGame, removeRecentGame } from '../recentGames'
 import {
+  RUST_INFO_CHANNELS,
   RUST_INFO_RECENT_ADD,
-  RUST_INFO_RECENT_REMOVE
+  RUST_INFO_RECENT_REMOVE,
+  RUST_INVOKE_CHANNELS
 } from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
@@ -72,5 +74,16 @@ describe('removeRecentGame shim', () => {
     const done = removeRecentGame(deps, 'Quail')
     settle(new Error('gone'))
     await expect(done).rejects.toThrow('gone')
+  })
+})
+
+describe('the info channel list', () => {
+  it('names exactly the recent-games channels, each one allowed on the Rust invoke leg', () => {
+    expect([...RUST_INFO_CHANNELS].sort()).toEqual(
+      [RUST_INFO_RECENT_ADD, RUST_INFO_RECENT_REMOVE].sort()
+    )
+    for (const channel of RUST_INFO_CHANNELS) {
+      expect(RUST_INVOKE_CHANNELS).toContain(channel)
+    }
   })
 })

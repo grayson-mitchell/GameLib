@@ -198,7 +198,7 @@ describe('SideloadGame.uninstall delete-files guard (82-07, D-22)', () => {
   })
 
   it('a dedicated folder is removed, then the library entry is dropped', async () => {
-    const { requestRustInvoke } = fakeSafetyRustInvoke()
+    const { requestRustInvoke, calls } = fakeSafetyRustInvoke()
     const h = build(requestRustInvoke)
 
     const res = await h.game.uninstall({
@@ -210,6 +210,11 @@ describe('SideloadGame.uninstall delete-files guard (82-07, D-22)', () => {
     expect(existsSync(folder)).toBe(false)
     expect(h.librarySet).toEqual([[]])
     expect(notices(h)).toEqual([])
+    // 86-09: the recent-games entry is dropped through Rust. The fake rejects that channel, and the
+    // uninstall still reports success: the bookkeeping failure is logged, never raised.
+    expect(
+      calls.filter((c) => c.channel === 'info_recent_remove').map((c) => c.args)
+    ).toEqual([[{ appName: ID }]])
   })
 
   it('a delete that rejects after the check reports failed and keeps the library entry', async () => {
@@ -295,7 +300,7 @@ describe('SideloadGame.uninstall delete-files guard (82-07, D-22)', () => {
     expect(existsSync(executable)).toBe(true)
   })
 
-  it('without deleteFiles it never asks Rust and just drops the library entry', async () => {
+  it('without deleteFiles it never asks Rust for a safety check or a delete and just drops the library entry', async () => {
     const { requestRustInvoke, calls } = fakeSafetyRustInvoke({
       rejectCheck: true
     })
@@ -304,7 +309,8 @@ describe('SideloadGame.uninstall delete-files guard (82-07, D-22)', () => {
     const res = await h.game.uninstall({ shouldRemovePrefix: true })
 
     expect(res).toEqual({ stderr: '', stdout: '' })
-    expect(calls).toEqual([])
+    // The only Rust call is the recent-games bookkeeping (86-09), never a safety check or delete.
+    expect(calls.map((c) => c.channel)).toEqual(['info_recent_remove'])
     expect(existsSync(executable)).toBe(true)
     expect(h.librarySet).toEqual([[]])
   })

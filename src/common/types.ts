@@ -647,8 +647,8 @@ export type RecentGame = {
    * `main.rs`'s `dispatch_tray_launch`, which falls back to the
    * `trayResolveRunner` probe rather than dropping a legacy entry on the floor.
    *
-   * `addRecentGame` (`backend/recent_games/recent_games.ts`) is the ONLY writer
-   * that populates this. It always had the value: its argument is a `GameInfo`,
+   * `recent::add` in the Rust `gamelib-info` crate (reached through the
+   * `addRecentGame` shim, `backend/info/recentGames.ts`) is the ONLY writer that populates this. It always had the value: its argument is a `GameInfo`,
    * which carries `runner` as a required field, and the write used to discard it.
    *
    * DELIBERATELY inherited by `HiddenGame`/`FavouriteGame` below, and

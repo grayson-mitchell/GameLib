@@ -5448,3 +5448,33 @@ describe('Phase 85 plan 09: store boot wiring', () => {
     )
   })
 })
+
+describe('the tray recent-games feed is Rust-only (Phase 86 plan 09, D-08)', () => {
+  // The sidecar reader thread used to sniff `recentGamesChanged` frames to rebuild the tray,
+  // because the TS recent-games writer pushed them. That writer is deleted: recent games lives in
+  // `gamelib-info` and Rust's `TrayRecentSink` feeds the tray, so the sniff is dead code.
+  test('sidecar.rs no longer observes recentGamesChanged or rebuilds the tray from a sidecar frame', () => {
+    const code = loadMainRsCode(readTauriShellProductionFile('sidecar.rs'))
+    expect(code).not.toContain('RECENT_GAMES_CHANGED_CHANNEL')
+    expect(code).not.toContain('recentGamesChanged')
+    expect(code).not.toContain('update_tray_recent_games')
+    expect(code).not.toContain('tray_recent_games_from_value')
+    // The renderer relay of every frontend message is untouched.
+    expect(code).toContain('FRONTEND_MESSAGE_EVENT')
+  })
+
+  test('the tray module no longer defines the sniffed channel constant', () => {
+    const code = loadMainRsCode(readTauriShellProductionFile('tray/recent.rs'))
+    expect(code).not.toContain('RECENT_GAMES_CHANGED_CHANNEL')
+  })
+
+  test("TrayRecentSink is the tray's only recent-games feed: it hops update_tray_recent_games onto the main thread", () => {
+    const code = loadMainRsCode(
+      readTauriShellProductionFile('info_dispatch.rs')
+    )
+    expect(code).toContain('struct TrayRecentSink')
+    expect(code).toMatch(
+      /run_on_main_thread\(move \|\| update_tray_recent_games\(/
+    )
+  })
+})
