@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 86-05-PLAN.md
-last_updated: "2026-11-22T09:57:07.794Z"
+stopped_at: Completed 86-06-PLAN.md
+last_updated: "2026-11-22T10:11:10.342Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 86 execution started
-state_head: e954ece0dd77021ab029f3949e0f99e74c9823ee
+state_head: ff420415aba5ec091a235207f618a7628465a1cc
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 86 (Pure leaf services) — EXECUTING
-Plan: 6 of 26
+Plan: 7 of 26
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 86 execution started
 Progress: [██████████] 100%
@@ -389,6 +389,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 86 P03 | 20min | 3 tasks | 18 files |
 | Phase 86 P04 | 40min | 3 tasks | 195 files |
 | Phase 86 P05 | 45min | 2 tasks | 8 files |
+| Phase 86 P06 | 90min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -767,6 +768,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 86]: 86-04: recorded response bodies are decoded bytes, so content-length and transfer-encoding are dropped from recorded response headers
 - [Phase 86]: 86-05: shim and resolver bodies are checked with the TypeScript AST (one returned typed requestRustInvoke call, first arg a RUST_INFO_ constant, args from parameters; resolver const names equal the row inputs)
 - [Phase 86]: 86-05: a slice's delete gate is a SliceSpec run by one runSlice, with optional storeRowKeys to pin storeTable.json rows that outlive a TS store registration (D-29 row 5)
+- [Phase 86]: 86-06: crossover and wiki starting state is generated through the real CacheStore and committed under state/; every GOG getExtraInfo request is tsOnly and Rust's own v2/games GET is a rustOnly exchange
 
 ### Pending Todos
 
@@ -1036,8 +1038,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T09:57:06.564Z
-Stopped at: Completed 86-05-PLAN.md
+Last session: 2026-11-22T10:11:09.123Z
+Stopped at: Completed 86-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

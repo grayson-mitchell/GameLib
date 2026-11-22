@@ -562,7 +562,7 @@ Plans:
   3. Recorded fixtures exist for each previously untested directory before it is ported
   4. Each ported slice's TypeScript and sidecar registrations are deleted in this phase (the delete gate per slice passes)
 
-**Plans:** 5/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
+**Plans:** 6/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
 
 Plans:
 **Wave 1**
@@ -575,7 +575,7 @@ Plans:
 - [x] 86-05-PLAN.md — Delete-gate machinery (infoPortComplete, shim/resolver schedule) proven by deleting images_cache (D-22)
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 86-06-PLAN.md — Record discounts, CrossOver index and wiki + umu live; TS goldens with D-23 TS-only/Rust-only exchanges
+- [x] 86-06-PLAN.md — Record discounts, CrossOver index and wiki + umu live; TS goldens with D-23 TS-only/Rust-only exchanges
 - [ ] 86-07-PLAN.md — ITAD and SteamGridDB oracles; operator records the keyed cases in their own terminal
 - [ ] 86-08-PLAN.md — Tracer: recent games in Rust with the shell info wiring, `removeRecent` native, Rust emit and tray (D-08)
 
