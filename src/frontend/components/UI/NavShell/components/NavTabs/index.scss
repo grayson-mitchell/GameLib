@@ -225,11 +225,24 @@
         var(--navbar-inactive) 8%,
         transparent
       );
+
+      // 261122-rz8 made nord-light's bar Frost nord9, where --text-hover
+      // (nord10) reads 1.50:1 as a label and as a focus ring; nord0 reads
+      // 4.64:1. The same nesting and reason as the selected-label override
+      // below.
+      body.nord-light & {
+        color: var(--navbar-inactive);
+      }
     }
 
     &:focus-visible {
       outline: 2px solid var(--text-hover);
       outline-offset: -2px;
+
+      // See the hover override above: --text-hover is 1.50:1 on nord9.
+      body.nord-light & {
+        outline-color: var(--navbar-inactive);
+      }
     }
 
     // The whole point of this plan (D-04): the active tab's merge is
@@ -290,10 +303,12 @@
       // live WKWebView sweep did not. A live look at `nord-light` is owed.
       //
       // 261122-qwk: nord-light is now palette-only. The rule is unchanged, but
-      // `--accent` is nord1 (#3b4252) there, reading 8.73:1 on the nord6 body,
-      // and `--navbar-active` is nord8 (#88c0d0), 5.03:1 on the nord1
-      // `--navbar-active-background`. The hexes quoted above are the
-      // pre-change palette, which gamelib-light keeps.
+      // `--accent` is nord1 (#3b4252) there, reading 8.73:1 on the nord6 body.
+      // Since 261122-rz8, `--navbar-active` is nord0 on the nord8 active row
+      // (6.24:1) and would read 10.84:1 on the body, so the override is no
+      // longer load-bearing for contrast; it keeps the selected label on
+      // `--accent`. The hexes quoted above are the pre-change palette, which
+      // gamelib-light keeps.
       body.nord-light & {
         color: var(--accent);
       }

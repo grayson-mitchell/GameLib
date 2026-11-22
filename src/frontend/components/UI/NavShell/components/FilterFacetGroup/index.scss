@@ -309,6 +309,15 @@
     transition:
       background-color 0.12s ease,
       border-color 0.12s ease;
+
+    // 261122-rz8: nord-light's panel is Frost nord9, where --neutral-05 reads
+    // 1.20:1 against the 3:1 non-text floor. Follows the FilterFocusRow
+    // per-theme precedent and paints the chain NavItem's rows use (nord0,
+    // 4.64:1). --neutral-05 cannot be redeclared in a theme block
+    // (themeTokens.test.ts forbids it), hence a component override.
+    body.nord-light & {
+      border-color: var(--navbar-inactive, var(--navbar-accent));
+    }
   }
 
   .FilterFacetRow--checked .FilterFacetRow__box {
@@ -330,5 +339,12 @@
     font-weight: var(--regular);
     font-variant-numeric: tabular-nums;
     color: var(--text-secondary);
+
+    // 261122-rz8: --text-secondary reads 2.74:1 on nord-light's nord9 panel;
+    // the NavItem row chain reads 4.64:1. Hierarchy comes from --text-xs and
+    // --regular, as in the FilterFocusRow precedent.
+    body.nord-light & {
+      color: var(--navbar-inactive, var(--navbar-accent));
+    }
   }
 }

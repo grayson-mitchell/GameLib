@@ -81,9 +81,11 @@
     // collision, not a general rule. Gated for all 10 themes by the divider
     // census in `themeTokens.test.ts`.
     //
-    // 261122-qwk: nord-light is now palette-only; the same chain resolves to
-    // nord6 (#eceff4) on the nord3 (#4c566a) panel, 6.40:1. The 7.38 above is
-    // the pre-change palette, which gamelib-light keeps.
+    // 261122-qwk: nord-light is now palette-only. Since 261122-rz8 the same
+    // chain resolves to nord0 on the nord9 panel, 4.64:1, and the base
+    // --text-secondary reads 2.74:1 there, so the override still earns its
+    // place. The 7.38 above is the pre-change palette, which gamelib-light
+    // keeps.
     body.dracula &,
     body.nord-light &,
     body.gamelib-light & {
