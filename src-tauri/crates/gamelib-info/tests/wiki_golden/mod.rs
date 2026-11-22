@@ -84,6 +84,8 @@ impl Clock for TestClock {
 pub struct Tap {
     pub inner: Arc<dyn Http>,
     pub seen: Mutex<Vec<String>>,
+    /// The header names of each request, in the same order as `seen`.
+    pub header_names: Mutex<Vec<Vec<String>>>,
 }
 
 impl Http for Tap {
@@ -92,6 +94,10 @@ impl Http for Tap {
             .lock()
             .unwrap()
             .push(format!("{} {}", request.method.as_str(), request.url));
+        self.header_names
+            .lock()
+            .unwrap()
+            .push(request.headers.iter().map(|(k, _)| k.to_string()).collect());
         self.inner.send(request)
     }
 }
@@ -101,6 +107,7 @@ impl Tap {
         Tap {
             inner,
             seen: Mutex::new(Vec::new()),
+            header_names: Mutex::new(Vec::new()),
         }
     }
 

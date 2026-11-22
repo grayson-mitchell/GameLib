@@ -347,6 +347,10 @@ mod replay {
         response_headers: Vec<(String, String)>,
         response_body: Vec<u8>,
         ts_only: bool,
+        /// A request only Rust makes (D-23): the TS made no such call, so a recorder added it. A request
+        /// that matches it and an older twin is served by this one first, so the exchange the TS also
+        /// made stays left over as `tsOnly`.
+        rust_only: bool,
         /// The recorded call produced no response (a synthetic `networkError` exchange, status 0):
         /// the request is matched and consumed like any other, then fails as a transport error.
         network_error: bool,
@@ -518,6 +522,10 @@ mod replay {
                         .unwrap_or_default(),
                     response_body,
                     ts_only: item.get("tsOnly").and_then(Value::as_bool).unwrap_or(false),
+                    rust_only: item
+                        .get("rustOnly")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false),
                     network_error: item
                         .get("networkError")
                         .and_then(Value::as_bool)
@@ -583,10 +591,12 @@ mod replay {
             let name = request_name(method, &url);
             let wanted = pairs(&url);
             let free = |e: &Exchange| !e.consumed && e.method == method && same_path(&e.url, &url);
+            let twin = |e: &Exchange| free(e) && query_matches(&pairs(&e.url), &wanted);
             let index = st
                 .exchanges
                 .iter()
-                .position(|e| free(e) && query_matches(&pairs(&e.url), &wanted))
+                .position(|e| e.rust_only && twin(e))
+                .or_else(|| st.exchanges.iter().position(twin))
                 .or_else(|| st.exchanges.iter().position(free));
             let Some(index) = index else {
                 return fail(&mut st, format!("replay: unmatched request: {name}"));

@@ -1,11 +1,17 @@
-//! The simple wiki sources against the TS goldens (86-06 recorded them, 86-20 ports them; SC1, D-10):
-//! PCGamingWiki, AppleGamingWiki, ProtonDB and Steam Deck, each replayed over the exchanges of its own
-//! host out of every `wiki` case that made a request to it.
+//! The wiki sources against the TS goldens (86-06 recorded them, 86-20 and 86-21 port them; SC1, D-10):
+//! PCGamingWiki, AppleGamingWiki, ProtonDB and Steam Deck (86-20), then GamesDB and HowLongToBeat with its
+//! GOG branch (86-21), each replayed over the exchanges of its own hosts out of every `wiki` case that
+//! made a request to them.
 //!
 //! A source's output must equal the matching part of the case's golden `wiki` result (`pcgamingwiki` and
 //! `fetchStatus.pcgamingwiki`, `applegamingwiki`, `steamInfo`), the requests it made must be the golden
 //! requests to its host in the same order, and its replay must finish clean (no unmatched request, none
 //! left over). The aggregator that decides when each source runs is 86-22.
+//!
+//! The GOG cases hold requests the TS made and Rust does not (D-23: the system-requirements array and
+//! the changelog, flagged `tsOnly` in the recording) and one Rust makes alone (`rustOnly`: its own store
+//! link GET). A source that touches those hosts is compared with the recording minus the `tsOnly`
+//! exchanges, and no GOG store file may change.
 
 mod wiki_golden;
 
@@ -15,7 +21,7 @@ use std::sync::Arc;
 use gamelib_info::http::{Http, Replay};
 use gamelib_info::js::remove_special_characters;
 use gamelib_info::runner_caps;
-use gamelib_info::wiki::{agw, deck, pcgw, protondb};
+use gamelib_info::wiki::{agw, deck, gamesdb, pcgw, protondb};
 use gamelib_testutil::FakeHome;
 use serde_json::Value;
 use url::Url;
@@ -67,6 +73,15 @@ fn host_of(request: &str) -> String {
 
 /// Every golden `wiki` op that requested one of `hosts`.
 fn runs_for(hosts: &[&str]) -> Vec<Run> {
+    every_run(hosts)
+        .into_iter()
+        .filter(|run| !run.requests.is_empty())
+        .collect()
+}
+
+/// The first golden `wiki` op that made requests, of every case that has one (a case served from the
+/// cache has none), with its golden requests to `hosts` (possibly none).
+fn every_run(hosts: &[&str]) -> Vec<Run> {
     let cases = read_json(&golden_dir().join("cases.json"));
     let mut runs = Vec::new();
     for case in cases.as_array().unwrap() {
@@ -79,18 +94,17 @@ fn runs_for(hosts: &[&str]) -> Vec<Run> {
             .map(|r| r.as_str().unwrap().to_string())
             .filter(|r| hosts.contains(&host_of(r).as_str()))
             .collect();
-        if requests.is_empty() {
-            continue;
-        }
         // The op that made them: the only `wiki` op with a request count in every recorded case that
         // reached a source (a later repeat is served from the cache).
         let ops = case["ops"].as_array().unwrap();
-        let at = want["ops"]
+        let Some(at) = want["ops"]
             .as_array()
             .unwrap()
             .iter()
             .position(|o| o["op"] == "wiki" && o["requestsMade"].as_u64().unwrap_or(0) > 0)
-            .unwrap_or_else(|| panic!("{id}: no wiki op made the requests"));
+        else {
+            continue;
+        };
         runs.push(Run {
             case: case.clone(),
             game: ops[at]["game"].clone(),
@@ -103,6 +117,9 @@ fn runs_for(hosts: &[&str]) -> Vec<Run> {
 
 struct Harness {
     _home: FakeHome,
+    /// The profile the case ran in and what it held before the source ran.
+    user_data: std::path::PathBuf,
+    before: std::collections::BTreeMap<String, Vec<u8>>,
     ctx: gamelib_info::ctx::InfoCtx,
     tap: Arc<Tap>,
     replay: Arc<Replay>,
@@ -118,11 +135,14 @@ fn harness(run: &Run, hosts: &[&str]) -> Harness {
     let tap = Arc::new(Tap::new(Arc::clone(&replay) as Arc<dyn Http>));
     let clock = Arc::new(TestClock(AtomicU64::new(ORACLE_NOW)));
     let home = FakeHome::new("info-wiki-sources-");
-    let (mut ctx, _) = case_ctx(&run.case, &home, &clock, Arc::clone(&tap) as Arc<dyn Http>);
+    let (mut ctx, user_data) =
+        case_ctx(&run.case, &home, &clock, Arc::clone(&tap) as Arc<dyn Http>);
     let lines = Arc::new(Lines::default());
     ctx.log = Some(Arc::clone(&lines) as Arc<dyn gamelib_info::ctx::InfoLog>);
     Harness {
         _home: home,
+        before: tree(&user_data),
+        user_data,
         ctx,
         tap,
         replay,
@@ -133,8 +153,13 @@ fn harness(run: &Run, hosts: &[&str]) -> Harness {
 impl Harness {
     /// The run's requests, the replay's verdict and the fixed-text rule on diagnostic lines.
     fn check(&self, run: &Run) {
+        self.check_requests(run, &run.requests);
+    }
+
+    /// [`Harness::check`] against an explicit list of the requests the source should have made.
+    fn check_requests(&self, run: &Run, requests: &[String]) {
         let id = run.case["id"].as_str().unwrap();
-        assert_eq!(self.tap.urls(), run.requests, "{id}: requests");
+        assert_eq!(self.tap.urls(), requests, "{id}: requests");
         self.replay.finish().unwrap_or_else(|e| panic!("{id}: {e}"));
         for line in self.lines.0.lock().unwrap().iter() {
             assert!(
@@ -266,4 +291,97 @@ async fn protondb_and_the_steam_deck_match_every_ts_golden_that_asked_them() {
         }
     }
     assert!(levels > 0);
+}
+
+// ---- 86-21: GamesDB, HowLongToBeat and the GOG context ----
+
+const GAMESDB_HOST: &str = "gamesdb.gog.com";
+
+fn str_of<'a>(value: &'a Value, key: &str) -> &'a str {
+    value[key].as_str().unwrap()
+}
+
+impl Harness {
+    /// D-23: a GOG case never writes GOG's `gog_api_info` cache or any other file of the profile.
+    fn assert_no_store_writes(&self, run: &Run) {
+        let id = run.case["id"].as_str().unwrap();
+        assert_eq!(
+            tree(&self.user_data),
+            self.before,
+            "{id}: the profile changed during a wiki source"
+        );
+        assert!(
+            !self
+                .user_data
+                .join("store_cache/gog_api_info.json")
+                .exists(),
+            "{id}: gog_api_info was written"
+        );
+    }
+}
+
+#[tokio::test]
+async fn gamesdb_matches_every_ts_golden_including_the_gog_cases() {
+    let runs = every_run(&[GAMESDB_HOST]);
+    assert!(runs.len() >= 25, "{} gamesdb runs", runs.len());
+    // A request was made (GOG and Epic), no request was made (Steam appId, sideload), and a Steam id
+    // was found.
+    let (mut asked, mut silent, mut found) = (0, 0, 0);
+    for run in &runs {
+        let id = run.case["id"].as_str().unwrap();
+        let h = harness(run, &[GAMESDB_HOST]);
+        let got = gamesdb::get(
+            &h.ctx,
+            &title_of(run),
+            str_of(&run.game, "app_name"),
+            str_of(&run.game, "runner"),
+        )
+        .await
+        .unwrap_or_else(|e| panic!("{id}: {e:?}"));
+        h.check(run);
+        h.assert_no_store_writes(run);
+        assert_eq!(got.to_value(), run.result["gamesdb"], "{id}: gamesdb");
+        if run.requests.is_empty() {
+            silent += 1;
+            assert!(!got.has_steam_id(), "{id}: a silent runner has no Steam id");
+        } else {
+            asked += 1;
+        }
+        if got.has_steam_id() {
+            found += 1;
+        }
+    }
+    assert!(
+        asked > 0 && silent > 0 && found > 0,
+        "{asked} {silent} {found}"
+    );
+}
+
+#[tokio::test]
+async fn a_gog_game_resolves_its_steam_id_through_the_d23_get_without_touching_gog_state() {
+    let runs: Vec<Run> = runs_for(&[GAMESDB_HOST])
+        .into_iter()
+        .filter(|run| run.game["runner"] == "gog")
+        .collect();
+    assert!(runs.len() >= 4, "{} gog runs", runs.len());
+    for run in &runs {
+        let h = harness(run, &[GAMESDB_HOST]);
+        let got = gamesdb::get(
+            &h.ctx,
+            "",
+            str_of(&run.game, "app_name"),
+            str_of(&run.game, "runner"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(got.to_value(), serde_json::json!({ "steamID": "1091500" }));
+        assert_eq!(
+            h.tap.urls(),
+            [format!(
+                "GET https://gamesdb.gog.com/platforms/gog/external_releases/{}",
+                str_of(&run.game, "app_name")
+            )]
+        );
+        h.assert_no_store_writes(run);
+    }
 }

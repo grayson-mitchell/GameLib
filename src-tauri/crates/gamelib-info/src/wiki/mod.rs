@@ -1,7 +1,7 @@
 //! The wiki game info sources (Phase 86, SVC-01), ported from `src/backend/wiki_game_info/`:
 //! [`pcgw`] (PCGamingWiki), [`agw`] (AppleGamingWiki), [`protondb`], [`deck`] (Steam Deck
-//! compatibility) and [`codeweavers`] (the slug). The aggregator that calls them, the cache and the
-//! stale rules are 86-22; HowLongToBeat and the GOG sources are 86-21.
+//! compatibility) and [`codeweavers`] (the slug), plus [`gamesdb`] and [`gog_ctx`] (the two unauthenticated GOG GETs D-23 moved into Rust, 86-21). The
+//! aggregator that calls them, the cache and the stale rules are 86-22.
 //!
 //! Every source asks through `ctx.http`, with the 10 s timeout of the TS `axiosClient`, the response read
 //! the way axios reads it (a 2xx status, the body parsed as JSON when it parses and kept as text when it
@@ -17,11 +17,13 @@ use std::time::Duration;
 use serde_json::Value;
 
 use crate::ctx::InfoCtx;
-use crate::http::{HttpError, Request};
+use crate::http::{HttpError, Request, Response};
 
 pub mod agw;
 pub mod codeweavers;
 pub mod deck;
+pub mod gamesdb;
+pub mod gog_ctx;
 pub mod pcgw;
 pub mod protondb;
 pub mod regexes;
@@ -62,6 +64,16 @@ impl Thrown {
     }
 }
 
+impl From<HttpError> for Thrown {
+    fn from(error: HttpError) -> Thrown {
+        match error {
+            HttpError::Timeout => Thrown::Timeout,
+            HttpError::TooLarge => Thrown::TooLarge,
+            HttpError::Network(_) | HttpError::Cancelled => Thrown::Network,
+        }
+    }
+}
+
 impl From<crate::js::TypeError> for Thrown {
     fn from(_: crate::js::TypeError) -> Thrown {
         Thrown::Shape
@@ -96,15 +108,17 @@ pub(crate) async fn get_data(
     user_agent: &str,
 ) -> Result<Value, Thrown> {
     let request = Request::get(url, TIMEOUT).header("User-Agent", user_agent);
-    let response = ctx.http.send(request).await.map_err(|error| match error {
-        HttpError::Timeout => Thrown::Timeout,
-        HttpError::TooLarge => Thrown::TooLarge,
-        HttpError::Network(_) | HttpError::Cancelled => Thrown::Network,
-    })?;
+    let response = ctx.http.send(request).await.map_err(Thrown::from)?;
     if !(200..300).contains(&response.status) {
         return Err(Thrown::Status(response.status));
     }
+    Ok(data_of(&response))
+}
+
+/// axios's `response.data` for any status: the body parsed as JSON when it parses (a leading BOM is
+/// stripped first, as axios strips it) and otherwise the text itself.
+pub(crate) fn data_of(response: &Response) -> Value {
     let text = String::from_utf8_lossy(&response.body);
     let text = text.strip_prefix('\u{FEFF}').unwrap_or(&text);
-    Ok(serde_json::from_str(text).unwrap_or_else(|_| Value::String(text.to_string())))
+    serde_json::from_str(text).unwrap_or_else(|_| Value::String(text.to_string()))
 }
