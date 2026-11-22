@@ -562,7 +562,7 @@ Plans:
   3. Recorded fixtures exist for each previously untested directory before it is ported
   4. Each ported slice's TypeScript and sidecar registrations are deleted in this phase (the delete gate per slice passes)
 
-**Plans:** 23/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
+**Plans:** 24/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
 
 Plans:
 **Wave 1**
@@ -625,7 +625,7 @@ Plans:
 - [x] 86-23-PLAN.md — umu shims, nonesteamgame wiki resolver, clear-cache shim; HLTB type moved to common
 
 **Wave 19** *(blocked on Wave 18 completion)*
-- [ ] 86-24-PLAN.md — Wiki and CrossOver TS deleted together; three cache rows kept; oracle harness retired
+- [x] 86-24-PLAN.md — Wiki and CrossOver TS deleted together; three cache rows kept; oracle harness retired
 
 **Wave 20** *(blocked on Wave 19 completion)*
 - [ ] 86-25-PLAN.md — Clean-worktree proof, SC4 sweep, drift run, push and signed Phase 86 build checkpoint, three-OS CI

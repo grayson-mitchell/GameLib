@@ -20,3 +20,13 @@ Out-of-scope discoveries logged by executors. Not fixed by the plan that found t
 - OWED: `ClearCacheDeps.requestRustInvoke` is optional until `sidecar/handlers.ts` (foreign-dirty) passes it to
   `registerRunnerAuthFlows`; the GOG, Nile and Legendary sign-outs do not clear the Rust wiki cache until then. See
   86-23-SUMMARY.md.
+
+## 86-24
+
+- FOREIGN, owed: `meta/__tests__/genI18nGateScope.test.ts` "A-17 ANTI-ROT" fails because `meta/i18nForkTouchedFiles.json` does not list
+  `src/frontend/components/UI/WikiGameInfo/components/HowLongToBeat/index.tsx`, which 86-23 (`3dbdd45c4`) modified (it imports
+  `HeroicHowLongToBeatEntry` from `common/` now). `meta/i18n*` was off limits for this run. Fix: `pnpm gen-i18n-gate-scope`, then commit
+  `meta/i18nForkTouchedFiles.json` (and `i18nGateScope.json` if it moves), as `ee1995796` did.
+- OWED (foreign-dirty `sidecar/handlers.ts`): inert `infoCaches?: unknown` (enrichment and shortcuts deps) and `appRuntime?: unknown` (shortcuts deps) stay
+  until handlers.ts is clean; `INERT_DEPS_EXEMPT` in infoPortComplete.test.ts pins the exact files. Delete with the 86-15/86-17/86-18 leftovers.
+- `pnpm lint` is clean again (0 errors): the bootstrap.ts `config` error recorded under 86-23 was introduced by 86-15 and fixed in `618c50302`.

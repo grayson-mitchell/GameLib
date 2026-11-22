@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 86-23-PLAN.md
-last_updated: "2026-11-22T15:29:12.864Z"
+stopped_at: Completed 86-24-PLAN.md
+last_updated: "2026-11-22T15:49:47.774Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 86 execution started
-state_head: 3dbdd45c446d7b2dc1f89205a2afbc822bb57778
+state_head: 81fd93a07169bcc9de5b6851d27fabba726af90b
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 86 (Pure leaf services) — EXECUTING
-Plan: 23 of 26
+Plan: 24 of 26
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 86 execution started
 Progress: [██████████] 100%
@@ -407,6 +407,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 86 P21 | 55min | 3 tasks | 13 files |
 | Phase 86 P22 | 2h 10m | 3 tasks | 23 files |
 | Phase 86 P23 | 1h30m | 2 tasks | 21 files |
+| Phase 86 P24 | 1h | 3 tasks | 60 files |
 
 ## Accumulated Context
 
@@ -811,6 +812,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 86]: 86-22: the five wiki sources run in one tokio join and a GamesDB or umu Err is mapped to the whole-lookup null only afterwards, as Promise.all left the others running; HowLongToBeat takes the raw title
 - [Phase 86]: 86-22: wiki drift cases run for every golden platform and are held in Whole mode against the golden result, so a Rust-only 403 empties a part and fails naming the paths; the live run passed all 8
 - [Phase 86]: 86-23: ClearCacheDeps.requestRustInvoke is optional until handlers.ts can pass it to registerRunnerAuthFlows; the GOG/Nile/Legendary sign-outs skip the Rust wiki cache clear (OWED)
+- [Phase 86]: 86-24: meta/measureCrossoverMatching.ts deleted (Phase 19 one-off harness; its import target crossover_index/normalize is gone)
+- [Phase 86]: 86-24: wiki, umu and crossover_index cache rows kept in genStoreTable EXTRA_ROWS (tsNames kept); storeTable.json byte-identical
+- [Phase 86]: 86-24: infoCaches and appRuntime stay inert optional members on the enrichment and shortcuts deps (foreign-dirty handlers.ts still passes them); INERT_DEPS_EXEMPT pins the files
 
 ### Pending Todos
 
@@ -1080,8 +1084,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T15:29:11.007Z
-Stopped at: Completed 86-23-PLAN.md
+Last session: 2026-11-22T15:49:46.000Z
+Stopped at: Completed 86-24-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
