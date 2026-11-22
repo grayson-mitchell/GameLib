@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 86-10-PLAN.md
-last_updated: "2026-11-22T11:05:22.132Z"
+stopped_at: Completed 86-11-PLAN.md
+last_updated: "2026-11-22T11:18:12.872Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 86 execution started
-state_head: e91d169778a04098180fa810fabdc1ffb7ec7b81
+state_head: ccb1949d93083a6eca5195d8b8ce5e2eb220e5d6
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 86 (Pure leaf services) — EXECUTING
-Plan: 10 of 26
+Plan: 11 of 26
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 86 execution started
 Progress: [██████████] 100%
@@ -394,6 +394,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 86 P07 | n/a | 3 tasks | 55 files |
 | Phase 86 P09 | 55min | 2 tasks | 24 files |
 | Phase 86 P10 | 70min | 2 tasks | 20 files |
+| Phase 86 P11 | 35min | 2 tasks | 25 files |
 
 ## Accumulated Context
 
@@ -778,6 +779,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 86]: 86-08: the generator takes no length keywords, so the appName 1..1024 UTF-16 bound lives in the crate and the native decode
 - [Phase 86]: 86-09: requestRustInvoke reaches steamFlowRegistration through the launcher service (Launcher.requestRustInvoke) so handlers.ts needs no change; protocol.ts takes it from the boot host
 - [Phase 86]: 86-10: the set op's wire field is overrideData (override is a Rust keyword); set answers the TS boolean and the 86-11 shim writes the TS log lines from it; getAllGameOverrides and getGameMetadataOverride are native info channels, the four info_overrides_* rustInvoke ops stay unreachable from TS until 86-11 (D-29 row 7)
+- [Phase 86]: 86-11: override log lines are written by setGameMetadataOverride from the info_overrides_set boolean (a D-06 shim holds only the call); info_overrides_get_all is sent with [] not [{}]
+- [Phase 86]: 86-11: storeMirrorSchedule gains DELETED_IN_PHASE_86 (cell stays 86, CURRENT_PHASE stays 85); 86-17 and 86-24 add their stores to it
 
 ### Pending Todos
 
@@ -1047,8 +1050,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T11:05:20.395Z
-Stopped at: Completed 86-10-PLAN.md
+Last session: 2026-11-22T11:18:11.141Z
+Stopped at: Completed 86-11-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

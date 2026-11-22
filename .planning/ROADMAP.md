@@ -562,7 +562,7 @@ Plans:
   3. Recorded fixtures exist for each previously untested directory before it is ported
   4. Each ported slice's TypeScript and sidecar registrations are deleted in this phase (the delete gate per slice passes)
 
-**Plans:** 10/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
+**Plans:** 11/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
 
 Plans:
 **Wave 1**
@@ -586,7 +586,7 @@ Plans:
 - [x] 86-10-PLAN.md — Per-game overrides in Rust; two native read channels; image cleanup confined to its dir
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 86-11-PLAN.md — Override shims (async ripple in gamedetails); TS slice deleted, store row kept in EXTRA_ROWS
+- [x] 86-11-PLAN.md — Override shims (async ripple in gamedetails); TS slice deleted, store row kept in EXTRA_ROWS
 
 **Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 86-12-PLAN.md — Anticheat in Rust (native lookup, status/download ops, md-5); the D-12 drift command
