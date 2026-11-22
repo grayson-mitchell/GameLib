@@ -737,7 +737,7 @@ fn global() -> Option<&'static Arc<Dispatcher>> {
         // A dead pipe just means the sidecar is gone; EOF handling owns that.
         let _ = state.write_frame(&req);
     });
-    let log: LogSink = Arc::new(|line| crate::shell_log(line));
+    let log: LogSink = Arc::new(crate::shell_log);
     let created = Dispatcher::new(
         Arc::clone(store_boot::host()),
         config,
@@ -778,7 +778,11 @@ pub(crate) fn evict_queued(removed: &Path) -> usize {
 
 /// `true` when no frame is queued or being applied (and when no frame ever arrived).
 pub(crate) fn wait_idle(bound: Duration) -> bool {
-    GLOBAL.get().is_none_or(|d| d.wait_idle(bound))
+    // A `match`, not `Option::is_none_or`: that is stable since 1.82 and the crate MSRV is 1.77.2.
+    match GLOBAL.get() {
+        Some(d) => d.wait_idle(bound),
+        None => true,
+    }
 }
 
 #[cfg(test)]
