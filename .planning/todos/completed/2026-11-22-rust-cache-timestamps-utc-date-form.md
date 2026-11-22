@@ -38,3 +38,20 @@ table, or the shell passing both in `InfoCtx`). Not worth a time-zone database f
 
 - Decide whether anything reads the string as text. If not, close this todo as wontfix.
 - Otherwise `js_date_string` emits the local form and a golden pins it for at least two zones.
+
+## Resolution
+
+Closed 2026-11-23 as wontfix, per the first Acceptance item: nothing reads the timestamp string as text.
+
+Every reader of `__timestamp.<key>` parses it to an instant and compares ages, never the text:
+
+- `src/backend/cache.ts` `CacheStore.get`: `new Date(lastUpdateTimestamp).getTime()` against `Date.now()`.
+- `src/frontend/helpers/stores.ts` `CacheStore.get` (the renderer mirror): the same `new Date(...)` age check.
+- `src-tauri/crates/gamelib-info/src/cache_view.rs` `CacheView::get_opt`: `parse_js_date`, which takes the numeric
+  `GMT+HHMM` offset and ignores the parenthetical.
+- `registerLibraryStoreFollowers` (`src/frontend/state/libraryState.ts`) compares only the cached values
+  (`library`, `games`, `installed`), not their timestamps, so the second push of a write is a no-op either way.
+
+The only other hits are tests that seed an arbitrary stamp (ISO strings or `'x'`) for the presence check. A grep
+for `GMT[+-]`, `Coordinated Universal` and `Daylight Time` outside tests finds only `cache_view.rs` itself.
+Rust-written files keep showing UTC; that is cosmetic.
