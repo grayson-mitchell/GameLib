@@ -6,14 +6,6 @@
 //! [`MIN_CONFIDENCE`], a runner-up within the margin, or sequel numbers that disagree. Pure and
 //! network-free. Every pattern is the one in [`super::regexes`] (86-20), and every vector of
 //! `titleMatch.test.ts` is repeated in this file's tests.
-//!
-//! Parity points copied, not fixed (D-03):
-//! - the roman-numeral table is a JS object literal, so a title whose last word is `constructor` finds
-//!   `Object.prototype.constructor` there and is "folded" to the text of that function
-//!   (`bridge function Object() { [native code] }`). The query and every candidate go through the same
-//!   fold, so equal titles still match; two titles differing only in whether one ends in `constructor`
-//!   score differently from what a clean fold would give
-//!   (`2026-11-23-hltb-title-match-constructor-word-folds-to-function-text`).
 
 use std::collections::HashMap;
 
@@ -28,11 +20,9 @@ pub const MIN_CONFIDENCE: f64 = 0.9;
 /// identically, so similarity alone would pick whichever HLTB ranked first).
 const MIN_MARGIN: f64 = 0.05;
 
-/// `String(Object)` in V8: what `ROMAN_NUMERALS['constructor']` reads as (see the module docs).
-const CONSTRUCTOR_FOLD: &str = "function Object() { [native code] }";
-
-/// `ROMAN_NUMERALS[word]` for a normalized (`[a-z0-9]`) word: the arabic text, or `None` for
-/// `undefined`.
+/// The arabic text of a normalized (`[a-z0-9]`) roman numeral word, or `None`. The TS read a JS object
+/// literal here, so a trailing `constructor` found `Object.prototype.constructor` and was folded to
+/// that function's text; this table has no such entry.
 fn roman_numeral(word: &str) -> Option<&'static str> {
     Some(match word {
         "i" => "1",
@@ -51,7 +41,6 @@ fn roman_numeral(word: &str) -> Option<&'static str> {
         "xiv" => "14",
         "xv" => "15",
         "xvi" => "16",
-        "constructor" => CONSTRUCTOR_FOLD,
         _ => return None,
     })
 }
@@ -222,17 +211,12 @@ mod tests {
         assert_eq!(normalize_title("Final Fantasy ⅶ"), "final fantasy 7");
     }
 
-    /// The copied quirk (D-03): the last word `constructor` finds `Object.prototype.constructor` in the
-    /// roman table, as recorded in node.
+    /// A trailing `constructor` is an ordinary word, not `Object.prototype.constructor` as it was in
+    /// the TS's object-literal lookup.
     #[test]
-    fn a_trailing_constructor_folds_to_the_function_text_as_the_ts_does() {
-        assert_eq!(
-            normalize_title("Bridge Constructor"),
-            "bridge function Object() { [native code] }"
-        );
-        // A one-word title is never folded.
+    fn a_trailing_constructor_is_left_as_a_word() {
+        assert_eq!(normalize_title("Bridge Constructor"), "bridge constructor");
         assert_eq!(normalize_title("Constructor"), "constructor");
-        // The same fold on both sides still matches itself.
         assert_eq!(
             pick("Bridge Constructor", &["Bridge Constructor"]).as_deref(),
             Some("Bridge Constructor")

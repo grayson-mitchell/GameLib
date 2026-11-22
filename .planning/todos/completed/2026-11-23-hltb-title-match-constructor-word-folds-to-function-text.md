@@ -35,3 +35,12 @@ It affects only titles ending in "Constructor" and only turns a possible match i
 
 Look the word up with `Object.hasOwn(ROMAN_NUMERALS, last)` in the TS (or a `Map`) and delete the `constructor` arm
 in the Rust, then re-run the `titleMatch` vectors.
+
+## Resolution
+
+Fixed 2026-11-23. The TS half no longer exists: `src/backend/wiki_game_info/howlongtobeat/titleMatch.ts` was deleted
+in 86-24 (`fcf981590`), so the D-03 parity reason for keeping the quirk is gone. In
+`src-tauri/crates/gamelib-info/src/wiki/title_match.rs` the `"constructor"` arm of `roman_numeral` and the
+`CONSTRUCTOR_FOLD` constant are deleted, along with the module-doc parity note. The quirk test is replaced by
+`a_trailing_constructor_is_left_as_a_word`: `normalize_title("Bridge Constructor")` is now `"bridge constructor"`.
+`cargo test -p gamelib-info --lib wiki::title_match`: 10 passed.
