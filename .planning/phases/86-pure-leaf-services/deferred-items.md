@@ -11,3 +11,12 @@ Out-of-scope discoveries logged by executors. Not fixed by the plan that found t
   with the 86-17 follow-up (the test reads the TS ITAD source to check a thumbnail-box constant; that constant
   now lives in Rust or in `src/common/itadCoverage.json`, so the assertion needs a new source or should be
   dropped).
+
+## 86-23
+
+- `pnpm lint` exits 1 on one production-scope error that this plan did not cause: `src/backend/sidecar/bootstrap.ts:2784`
+  `'config' is assigned a value but never used` (the destructuring in `requireServices(state)`; the line dates from
+  66.4-14). Not fixed here (out of scope, no file of this plan). Whoever next edits bootstrap.ts removes `config` there.
+- OWED: `ClearCacheDeps.requestRustInvoke` is optional until `sidecar/handlers.ts` (foreign-dirty) passes it to
+  `registerRunnerAuthFlows`; the GOG, Nile and Legendary sign-outs do not clear the Rust wiki cache until then. See
+  86-23-SUMMARY.md.
