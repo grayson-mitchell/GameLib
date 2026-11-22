@@ -1,0 +1,24 @@
+{
+	"search:US:2d6ccd34ad7af363159ed4bbe18c0e43": {
+		"data": {
+			"results": [],
+			"pricedCountry": "US"
+		},
+		"fetchedAt": 1795348800000
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"search:US:2d6ccd34ad7af363159ed4bbe18c0e43": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"index": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)"
+	},
+	"index": {
+		"data": [
+			"search:US:2d6ccd34ad7af363159ed4bbe18c0e43"
+		],
+		"fetchedAt": 1795348800000
+	}
+}

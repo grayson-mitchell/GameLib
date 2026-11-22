@@ -1,0 +1,15 @@
+{
+  "ops": [
+    {
+      "error": {
+        "name": "StoreSearchError",
+        "code": "provider",
+        "message": "[storeSearch:provider] deals none"
+      }
+    }
+  ],
+  "requests": [],
+  "keyPerRequest": [],
+  "userKeyMarkedRejected": 0,
+  "gateBlockedForMs": null
+}

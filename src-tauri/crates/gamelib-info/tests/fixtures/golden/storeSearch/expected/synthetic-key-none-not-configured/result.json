@@ -1,0 +1,22 @@
+{
+  "ops": [
+    {
+      "error": {
+        "name": "StoreSearchError",
+        "code": "notConfigured",
+        "message": "[storeSearch:notConfigured] search none"
+      }
+    },
+    {
+      "error": {
+        "name": "StoreSearchError",
+        "code": "notConfigured",
+        "message": "[storeSearch:notConfigured] deals none"
+      }
+    }
+  ],
+  "requests": [],
+  "keyPerRequest": [],
+  "userKeyMarkedRejected": 0,
+  "gateBlockedForMs": null
+}

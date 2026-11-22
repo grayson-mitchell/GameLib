@@ -1,0 +1,17 @@
+{
+  "ops": [
+    {
+      "ok": {
+        "220": "018d937f-012f-73b8-ab2c-898516969e6a"
+      }
+    }
+  ],
+  "requests": [
+    "POST https://api.isthereanydeal.com/lookup/id/shop/61/v1"
+  ],
+  "keyPerRequest": [
+    null
+  ],
+  "userKeyMarkedRejected": 0,
+  "gateBlockedForMs": null
+}

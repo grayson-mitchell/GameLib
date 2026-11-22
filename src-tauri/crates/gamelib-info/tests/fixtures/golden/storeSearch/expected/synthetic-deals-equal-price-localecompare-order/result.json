@@ -1,0 +1,80 @@
+{
+  "ops": [
+    {
+      "ok": [
+        {
+          "storeId": "2",
+          "storeName": "Cheap",
+          "price": "1.5",
+          "retailPrice": "10",
+          "currencyCode": "USD",
+          "buyUrl": "https://itad.link/cheap"
+        },
+        {
+          "storeId": "1",
+          "storeName": "alpha",
+          "price": "5",
+          "retailPrice": "10",
+          "currencyCode": "USD",
+          "buyUrl": "https://itad.link/2"
+        },
+        {
+          "storeId": "1",
+          "storeName": "Alpha",
+          "price": "5",
+          "retailPrice": "10",
+          "currencyCode": "USD",
+          "buyUrl": "https://itad.link/4"
+        },
+        {
+          "storeId": "1",
+          "storeName": "Álpha",
+          "price": "5",
+          "retailPrice": "10",
+          "currencyCode": "USD",
+          "buyUrl": "https://itad.link/1"
+        },
+        {
+          "storeId": "1",
+          "storeName": "Beta",
+          "price": "5",
+          "retailPrice": "10",
+          "currencyCode": "USD",
+          "buyUrl": "https://itad.link/3"
+        },
+        {
+          "storeId": "1",
+          "storeName": "epic",
+          "price": "5",
+          "retailPrice": "10",
+          "currencyCode": "USD",
+          "buyUrl": "https://itad.link/6"
+        },
+        {
+          "storeId": "1",
+          "storeName": "épic",
+          "price": "5",
+          "retailPrice": "10",
+          "currencyCode": "USD",
+          "buyUrl": "https://itad.link/5"
+        },
+        {
+          "storeId": "1",
+          "storeName": "zebra",
+          "price": "5",
+          "retailPrice": "10",
+          "currencyCode": "USD",
+          "buyUrl": "https://itad.link/0"
+        }
+      ]
+    }
+  ],
+  "requests": [
+    "POST https://api.isthereanydeal.com/games/prices/v3?country=US&key=REDACTED"
+  ],
+  "keyPerRequest": [
+    "env"
+  ],
+  "userKeyMarkedRejected": 0,
+  "gateBlockedForMs": null
+}

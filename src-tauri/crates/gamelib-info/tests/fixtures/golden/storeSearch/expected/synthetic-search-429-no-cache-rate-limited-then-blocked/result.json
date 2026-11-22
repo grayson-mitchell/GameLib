@@ -1,0 +1,26 @@
+{
+  "ops": [
+    {
+      "error": {
+        "name": "StoreSearchError",
+        "code": "rateLimited",
+        "message": "[storeSearch:rateLimited] search 429"
+      }
+    },
+    {
+      "error": {
+        "name": "StoreSearchError",
+        "code": "rateLimited",
+        "message": "[storeSearch:rateLimited] deals 429"
+      }
+    }
+  ],
+  "requests": [
+    "GET https://api.isthereanydeal.com/games/search/v1?title=portal&results=20&key=REDACTED"
+  ],
+  "keyPerRequest": [
+    "env"
+  ],
+  "userKeyMarkedRejected": 0,
+  "gateBlockedForMs": 120000
+}

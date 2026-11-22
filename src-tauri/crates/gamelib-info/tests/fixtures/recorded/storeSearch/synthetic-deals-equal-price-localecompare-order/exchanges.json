@@ -1,0 +1,23 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "POST",
+      "url": "https://api.isthereanydeal.com/games/prices/v3?country=US&key=REDACTED",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "user-agent": "GameLib/0.11.0"
+      },
+      "body": "[\"018d937f-012f-73b8-ab2c-898516969e6a\"]"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyFile": "body-1.json"
+    },
+    "synthetic": true
+  }
+]

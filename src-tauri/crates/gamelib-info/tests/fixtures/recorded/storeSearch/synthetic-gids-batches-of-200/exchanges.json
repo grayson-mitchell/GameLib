@@ -1,0 +1,44 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "POST",
+      "url": "https://api.isthereanydeal.com/lookup/id/shop/61/v1",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "user-agent": "GameLib/0.11.0"
+      },
+      "body": "[\"app/1000\",\"app/1001\",\"app/1002\",\"app/1003\",\"app/1004\",\"app/1005\",\"app/1006\",\"app/1007\",\"app/1008\",\"app/1009\",\"app/1010\",\"app/1011\",\"app/1012\",\"app/1013\",\"app/1014\",\"app/1015\",\"app/1016\",\"app/1017\",\"app/1018\",\"app/1019\",\"app/1020\",\"app/1021\",\"app/1022\",\"app/1023\",\"app/1024\",\"app/1025\",\"app/1026\",\"app/1027\",\"app/1028\",\"app/1029\",\"app/1030\",\"app/1031\",\"app/1032\",\"app/1033\",\"app/1034\",\"app/1035\",\"app/1036\",\"app/1037\",\"app/1038\",\"app/1039\",\"app/1040\",\"app/1041\",\"app/1042\",\"app/1043\",\"app/1044\",\"app/1045\",\"app/1046\",\"app/1047\",\"app/1048\",\"app/1049\",\"app/1050\",\"app/1051\",\"app/1052\",\"app/1053\",\"app/1054\",\"app/1055\",\"app/1056\",\"app/1057\",\"app/1058\",\"app/1059\",\"app/1060\",\"app/1061\",\"app/1062\",\"app/1063\",\"app/1064\",\"app/1065\",\"app/1066\",\"app/1067\",\"app/1068\",\"app/1069\",\"app/1070\",\"app/1071\",\"app/1072\",\"app/1073\",\"app/1074\",\"app/1075\",\"app/1076\",\"app/1077\",\"app/1078\",\"app/1079\",\"app/1080\",\"app/1081\",\"app/1082\",\"app/1083\",\"app/1084\",\"app/1085\",\"app/1086\",\"app/1087\",\"app/1088\",\"app/1089\",\"app/1090\",\"app/1091\",\"app/1092\",\"app/1093\",\"app/1094\",\"app/1095\",\"app/1096\",\"app/1097\",\"app/1098\",\"app/1099\",\"app/1100\",\"app/1101\",\"app/1102\",\"app/1103\",\"app/1104\",\"app/1105\",\"app/1106\",\"app/1107\",\"app/1108\",\"app/1109\",\"app/1110\",\"app/1111\",\"app/1112\",\"app/1113\",\"app/1114\",\"app/1115\",\"app/1116\",\"app/1117\",\"app/1118\",\"app/1119\",\"app/1120\",\"app/1121\",\"app/1122\",\"app/1123\",\"app/1124\",\"app/1125\",\"app/1126\",\"app/1127\",\"app/1128\",\"app/1129\",\"app/1130\",\"app/1131\",\"app/1132\",\"app/1133\",\"app/1134\",\"app/1135\",\"app/1136\",\"app/1137\",\"app/1138\",\"app/1139\",\"app/1140\",\"app/1141\",\"app/1142\",\"app/1143\",\"app/1144\",\"app/1145\",\"app/1146\",\"app/1147\",\"app/1148\",\"app/1149\",\"app/1150\",\"app/1151\",\"app/1152\",\"app/1153\",\"app/1154\",\"app/1155\",\"app/1156\",\"app/1157\",\"app/1158\",\"app/1159\",\"app/1160\",\"app/1161\",\"app/1162\",\"app/1163\",\"app/1164\",\"app/1165\",\"app/1166\",\"app/1167\",\"app/1168\",\"app/1169\",\"app/1170\",\"app/1171\",\"app/1172\",\"app/1173\",\"app/1174\",\"app/1175\",\"app/1176\",\"app/1177\",\"app/1178\",\"app/1179\",\"app/1180\",\"app/1181\",\"app/1182\",\"app/1183\",\"app/1184\",\"app/1185\",\"app/1186\",\"app/1187\",\"app/1188\",\"app/1189\",\"app/1190\",\"app/1191\",\"app/1192\",\"app/1193\",\"app/1194\",\"app/1195\",\"app/1196\",\"app/1197\",\"app/1198\",\"app/1199\"]"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyFile": "body-1.json"
+    },
+    "synthetic": true
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "POST",
+      "url": "https://api.isthereanydeal.com/lookup/id/shop/61/v1",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "user-agent": "GameLib/0.11.0"
+      },
+      "body": "[\"app/1200\"]"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyFile": "body-2.json"
+    },
+    "synthetic": true
+  }
+]

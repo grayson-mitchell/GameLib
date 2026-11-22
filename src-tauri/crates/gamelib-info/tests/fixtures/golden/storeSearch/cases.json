@@ -1,0 +1,1452 @@
+[
+  {
+    "id": "synthetic-search-us-cheapest-per-game-and-caches",
+    "note": "search then price: one row per game from its cheapest deal, an unpriced game dropped, the thumbnail falls back banner300 to banner145 to boxart; writes search, deals and index cache entries",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 200,
+        "bodyJson": [
+          {
+            "id": "018d937f-012f-73b8-ab2c-898516969e6a",
+            "title": "Half-Life 2",
+            "assets": {
+              "banner145": "https://a/145.jpg"
+            }
+          },
+          {
+            "id": "018d937f-1212-7232-b23f-a046f6fd4a57",
+            "title": "Overwatch",
+            "assets": {
+              "boxart": "https://a/box.jpg"
+            }
+          },
+          {
+            "id": "018d937f-0000-7000-8000-000000000001",
+            "title": "Unpriced",
+            "assets": {}
+          },
+          {
+            "id": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal"
+          }
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyFixture": "prices-US"
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-search-non-us-priced-country-au",
+    "note": "AU is priced in its own currency (AUD)",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 200,
+        "bodyJson": [
+          {
+            "id": "018d937f-012f-73b8-ab2c-898516969e6a",
+            "title": "Half-Life 2",
+            "assets": {
+              "banner145": "https://a/145.jpg"
+            }
+          },
+          {
+            "id": "018d937f-1212-7232-b23f-a046f6fd4a57",
+            "title": "Overwatch",
+            "assets": {
+              "boxart": "https://a/box.jpg"
+            }
+          },
+          {
+            "id": "018d937f-0000-7000-8000-000000000001",
+            "title": "Unpriced",
+            "assets": {}
+          },
+          {
+            "id": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal"
+          }
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyFixture": "prices-nonUSD"
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "AU"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-search-zero-decimal-currency-jp",
+    "note": "JPY has no minor unit: prices stay whole numbers",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 200,
+        "bodyJson": [
+          {
+            "id": "018d937f-012f-73b8-ab2c-898516969e6a",
+            "title": "Half-Life 2",
+            "assets": {
+              "banner145": "https://a/145.jpg"
+            }
+          },
+          {
+            "id": "018d937f-1212-7232-b23f-a046f6fd4a57",
+            "title": "Overwatch",
+            "assets": {
+              "boxart": "https://a/box.jpg"
+            }
+          },
+          {
+            "id": "018d937f-0000-7000-8000-000000000001",
+            "title": "Unpriced",
+            "assets": {}
+          },
+          {
+            "id": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal"
+          }
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyFixture": "prices-zeroDecimal"
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "JP"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-search-country-normalisation",
+    "note": "an unpriced ISO shape (ZZ) is priced as US; a lower-case country normalises to US and then hits the cache the first op wrote",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 200,
+        "bodyJson": [
+          {
+            "id": "018d937f-012f-73b8-ab2c-898516969e6a",
+            "title": "Half-Life 2",
+            "assets": {
+              "banner145": "https://a/145.jpg"
+            }
+          },
+          {
+            "id": "018d937f-1212-7232-b23f-a046f6fd4a57",
+            "title": "Overwatch",
+            "assets": {
+              "boxart": "https://a/box.jpg"
+            }
+          },
+          {
+            "id": "018d937f-0000-7000-8000-000000000001",
+            "title": "Unpriced",
+            "assets": {}
+          },
+          {
+            "id": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal"
+          }
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyFixture": "prices-US"
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "ZZ"
+      },
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "us"
+      },
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "usa"
+      },
+      {
+        "op": "search",
+        "query": "portal"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-search-prices-4xx-retries-as-us",
+    "note": "a 400 for the AU prices call is retried once as US and the response says pricedCountry US",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 200,
+        "bodyJson": [
+          {
+            "id": "018d937f-012f-73b8-ab2c-898516969e6a",
+            "title": "Half-Life 2",
+            "assets": {
+              "banner145": "https://a/145.jpg"
+            }
+          },
+          {
+            "id": "018d937f-1212-7232-b23f-a046f6fd4a57",
+            "title": "Overwatch",
+            "assets": {
+              "boxart": "https://a/box.jpg"
+            }
+          },
+          {
+            "id": "018d937f-0000-7000-8000-000000000001",
+            "title": "Unpriced",
+            "assets": {}
+          },
+          {
+            "id": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal"
+          }
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "bodyJson": {
+          "status_code": 400,
+          "reason_phrase": "Bad request"
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyFixture": "prices-US"
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "AU"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-search-empty-results-cached",
+    "note": "no search hits: an empty payload is cached and no prices request is made",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 200,
+        "bodyJson": []
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "zzzz"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-search-malformed-items-filtered",
+    "note": "items with a non-uuid id, no title string or a null entry are dropped before pricing",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 200,
+        "bodyJson": [
+          {
+            "id": "not-a-uuid",
+            "title": "x"
+          },
+          null,
+          {
+            "id": "018d937f-012f-73b8-ab2c-898516969e6a"
+          },
+          {
+            "id": "018d937f-1212-7232-b23f-a046f6fd4a57",
+            "title": 5
+          },
+          {
+            "id": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal"
+          }
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyFixture": "prices-US"
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-deals-fallback-country-caches-both-keys",
+    "note": "a deals call for AU that falls back to US writes the deals entry under both country keys",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "bodyJson": {
+          "status_code": 400,
+          "reason_phrase": "Bad request"
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyFixture": "prices-US"
+      }
+    ],
+    "ops": [
+      {
+        "op": "deals",
+        "gameId": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+        "country": "AU"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-deals-plain-us",
+    "note": "deals for one game id: the request body is the one-element id list",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyFixture": "prices-US"
+      }
+    ],
+    "ops": [
+      {
+        "op": "deals",
+        "gameId": "018d937f-012f-73b8-ab2c-898516969e6a",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-deals-invalid-gid-rejects-without-request",
+    "note": "a game id that is not a uuid rejects as provider/deals with no request",
+    "keys": {
+      "env": true
+    },
+    "ops": [
+      {
+        "op": "deals",
+        "gameId": "../not-a-uuid",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-deals-equal-price-localecompare-order",
+    "note": "deals sort by price then storeName.localeCompare: names differing by case and accent at one price pin the ICU order",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyJson": [
+          {
+            "id": "018d937f-012f-73b8-ab2c-898516969e6a",
+            "deals": [
+              {
+                "shop": {
+                  "id": 1,
+                  "name": "zebra"
+                },
+                "price": {
+                  "amount": 5,
+                  "amountInt": 500,
+                  "currency": "USD"
+                },
+                "regular": {
+                  "amount": 10,
+                  "amountInt": 1000,
+                  "currency": "USD"
+                },
+                "url": "https://itad.link/0"
+              },
+              {
+                "shop": {
+                  "id": 1,
+                  "name": "Álpha"
+                },
+                "price": {
+                  "amount": 5,
+                  "amountInt": 500,
+                  "currency": "USD"
+                },
+                "regular": {
+                  "amount": 10,
+                  "amountInt": 1000,
+                  "currency": "USD"
+                },
+                "url": "https://itad.link/1"
+              },
+              {
+                "shop": {
+                  "id": 1,
+                  "name": "alpha"
+                },
+                "price": {
+                  "amount": 5,
+                  "amountInt": 500,
+                  "currency": "USD"
+                },
+                "regular": {
+                  "amount": 10,
+                  "amountInt": 1000,
+                  "currency": "USD"
+                },
+                "url": "https://itad.link/2"
+              },
+              {
+                "shop": {
+                  "id": 1,
+                  "name": "Beta"
+                },
+                "price": {
+                  "amount": 5,
+                  "amountInt": 500,
+                  "currency": "USD"
+                },
+                "regular": {
+                  "amount": 10,
+                  "amountInt": 1000,
+                  "currency": "USD"
+                },
+                "url": "https://itad.link/3"
+              },
+              {
+                "shop": {
+                  "id": 1,
+                  "name": "Alpha"
+                },
+                "price": {
+                  "amount": 5,
+                  "amountInt": 500,
+                  "currency": "USD"
+                },
+                "regular": {
+                  "amount": 10,
+                  "amountInt": 1000,
+                  "currency": "USD"
+                },
+                "url": "https://itad.link/4"
+              },
+              {
+                "shop": {
+                  "id": 1,
+                  "name": "épic"
+                },
+                "price": {
+                  "amount": 5,
+                  "amountInt": 500,
+                  "currency": "USD"
+                },
+                "regular": {
+                  "amount": 10,
+                  "amountInt": 1000,
+                  "currency": "USD"
+                },
+                "url": "https://itad.link/5"
+              },
+              {
+                "shop": {
+                  "id": 1,
+                  "name": "epic"
+                },
+                "price": {
+                  "amount": 5,
+                  "amountInt": 500,
+                  "currency": "USD"
+                },
+                "regular": {
+                  "amount": 10,
+                  "amountInt": 1000,
+                  "currency": "USD"
+                },
+                "url": "https://itad.link/6"
+              },
+              {
+                "shop": {
+                  "id": 2,
+                  "name": "Cheap"
+                },
+                "price": {
+                  "amount": 1.5,
+                  "amountInt": 150,
+                  "currency": "USD"
+                },
+                "regular": {
+                  "amount": 10,
+                  "amountInt": 1000,
+                  "currency": "USD"
+                },
+                "url": "https://itad.link/cheap"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "ops": [
+      {
+        "op": "deals",
+        "gameId": "018d937f-012f-73b8-ab2c-898516969e6a",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-deals-malformed-entries-dropped",
+    "note": "a non-https url, missing shop name, missing or non-numeric money, a bad url and a null entry are dropped; the deal url passes through byte for byte",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyJson": [
+          {
+            "id": "018d937f-012f-73b8-ab2c-898516969e6a",
+            "deals": [
+              {
+                "shop": {
+                  "id": 61,
+                  "name": "Steam"
+                },
+                "price": {
+                  "amount": 9.99,
+                  "amountInt": 999,
+                  "currency": "USD"
+                },
+                "regular": {
+                  "amount": 19.99,
+                  "amountInt": 1999,
+                  "currency": "USD"
+                },
+                "url": "https://itad.link/ok?a=1&b=%7Bx%7D"
+              },
+              {
+                "shop": {
+                  "id": 35,
+                  "name": "GOG"
+                },
+                "price": {
+                  "amount": 8,
+                  "amountInt": 800,
+                  "currency": "USD"
+                },
+                "regular": {
+                  "amount": 8,
+                  "amountInt": 800,
+                  "currency": "USD"
+                },
+                "url": "http://itad.link/insecure"
+              },
+              {
+                "shop": {
+                  "id": 16
+                },
+                "price": {
+                  "amount": 7,
+                  "amountInt": 700,
+                  "currency": "USD"
+                },
+                "regular": {
+                  "amount": 7,
+                  "amountInt": 700,
+                  "currency": "USD"
+                },
+                "url": "https://itad.link/noname"
+              },
+              {
+                "shop": {
+                  "id": 4,
+                  "name": "NoPrice"
+                },
+                "regular": {
+                  "amount": 7,
+                  "amountInt": 700,
+                  "currency": "USD"
+                },
+                "url": "https://itad.link/noprice"
+              },
+              {
+                "shop": {
+                  "id": 5,
+                  "name": "BadMoney"
+                },
+                "price": {
+                  "amount": "7",
+                  "amountInt": 700,
+                  "currency": "USD"
+                },
+                "regular": {
+                  "amount": 7,
+                  "amountInt": 700,
+                  "currency": "USD"
+                },
+                "url": "https://itad.link/badmoney"
+              },
+              {
+                "shop": {
+                  "id": 6,
+                  "name": "BadUrl"
+                },
+                "price": {
+                  "amount": 7,
+                  "amountInt": 700,
+                  "currency": "USD"
+                },
+                "regular": {
+                  "amount": 7,
+                  "amountInt": 700,
+                  "currency": "USD"
+                },
+                "url": "not a url"
+              },
+              null,
+              {
+                "shop": {
+                  "id": "epic-str",
+                  "name": "Epic Game Store"
+                },
+                "price": {
+                  "amount": 9.99,
+                  "amountInt": 999,
+                  "currency": "USD"
+                },
+                "regular": {
+                  "amount": 19.99,
+                  "amountInt": 1999,
+                  "currency": "USD"
+                },
+                "url": "https://itad.link/epic"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "ops": [
+      {
+        "op": "deals",
+        "gameId": "018d937f-012f-73b8-ab2c-898516969e6a",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-gids-batch-dedupes-and-caches-misses",
+    "note": "non-numeric ids and duplicates are dropped; a null mapping is cached as a miss; the request body is [\"app/<id>\", ...] and carries no key",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "POST",
+        "path": "/lookup/id/shop/61/v1",
+        "status": 200,
+        "bodyJson": {
+          "app/220": "018d937f-012f-73b8-ab2c-898516969e6a",
+          "app/400": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+          "app/292030": "018d937f-1212-7232-b23f-a046f6fd4a57",
+          "app/999999": null
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "gids",
+        "appIds": [
+          "220",
+          "400",
+          "292030",
+          "abc",
+          "220",
+          "999999"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "synthetic-gids-batches-of-200",
+    "note": "201 ids go out as two lookup requests of 200 and 1",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "POST",
+        "path": "/lookup/id/shop/61/v1",
+        "status": 200,
+        "bodyJson": {}
+      }
+    ],
+    "ops": [
+      {
+        "op": "gids",
+        "appIdRange": {
+          "from": 1000,
+          "count": 201
+        }
+      }
+    ]
+  },
+  {
+    "id": "synthetic-key-user-wins-over-env-and-baked",
+    "note": "the user key is used for the search and the prices call",
+    "keys": {
+      "user": true,
+      "env": true,
+      "baked": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 200,
+        "bodyJson": [
+          {
+            "id": "018d937f-012f-73b8-ab2c-898516969e6a",
+            "title": "Half-Life 2",
+            "assets": {
+              "banner145": "https://a/145.jpg"
+            }
+          },
+          {
+            "id": "018d937f-1212-7232-b23f-a046f6fd4a57",
+            "title": "Overwatch",
+            "assets": {
+              "boxart": "https://a/box.jpg"
+            }
+          },
+          {
+            "id": "018d937f-0000-7000-8000-000000000001",
+            "title": "Unpriced",
+            "assets": {}
+          },
+          {
+            "id": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal"
+          }
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyFixture": "prices-US"
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-key-env-beats-baked",
+    "note": "GAMELIB_ITAD_API_KEY wins over the baked key",
+    "keys": {
+      "env": true,
+      "baked": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 200,
+        "bodyJson": [
+          {
+            "id": "018d937f-012f-73b8-ab2c-898516969e6a",
+            "title": "Half-Life 2",
+            "assets": {
+              "banner145": "https://a/145.jpg"
+            }
+          },
+          {
+            "id": "018d937f-1212-7232-b23f-a046f6fd4a57",
+            "title": "Overwatch",
+            "assets": {
+              "boxart": "https://a/box.jpg"
+            }
+          },
+          {
+            "id": "018d937f-0000-7000-8000-000000000001",
+            "title": "Unpriced",
+            "assets": {}
+          },
+          {
+            "id": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal"
+          }
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyFixture": "prices-US"
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-key-baked-only",
+    "note": "the baked key is the last resort",
+    "keys": {
+      "baked": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 200,
+        "bodyJson": [
+          {
+            "id": "018d937f-012f-73b8-ab2c-898516969e6a",
+            "title": "Half-Life 2",
+            "assets": {
+              "banner145": "https://a/145.jpg"
+            }
+          },
+          {
+            "id": "018d937f-1212-7232-b23f-a046f6fd4a57",
+            "title": "Overwatch",
+            "assets": {
+              "boxart": "https://a/box.jpg"
+            }
+          },
+          {
+            "id": "018d937f-0000-7000-8000-000000000001",
+            "title": "Unpriced",
+            "assets": {}
+          },
+          {
+            "id": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal"
+          }
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyFixture": "prices-US"
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-key-none-not-configured",
+    "note": "no key anywhere: search and deals reject as notConfigured with no request",
+    "keys": {},
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal"
+      },
+      {
+        "op": "deals",
+        "gameId": "018d937f-012f-73b8-ab2c-898516969e6a",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-key-user-401-marks-rejected-and-retries-with-env",
+    "note": "a 401 to the user key marks it rejected for the session and retries the same request with the env key; the prices call then resolves afresh to the env key",
+    "keys": {
+      "user": true,
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 401,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "bodyJson": {
+          "status_code": 401,
+          "reason_phrase": "Invalid or expired api key"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 200,
+        "bodyJson": [
+          {
+            "id": "018d937f-012f-73b8-ab2c-898516969e6a",
+            "title": "Half-Life 2",
+            "assets": {
+              "banner145": "https://a/145.jpg"
+            }
+          },
+          {
+            "id": "018d937f-1212-7232-b23f-a046f6fd4a57",
+            "title": "Overwatch",
+            "assets": {
+              "boxart": "https://a/box.jpg"
+            }
+          },
+          {
+            "id": "018d937f-0000-7000-8000-000000000001",
+            "title": "Unpriced",
+            "assets": {}
+          },
+          {
+            "id": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal"
+          }
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyFixture": "prices-US"
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-key-user-403-no-builtin-key-not-configured",
+    "note": "a 403 to the user key with no built-in key rejects as notConfigured after marking the key rejected",
+    "keys": {
+      "user": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 403,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "errorFixture": "error-badkey"
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-key-env-403-provider-error-no-retry",
+    "note": "a rejected built-in key is not retried and is not marked: provider/search/403",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 403,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "errorFixture": "error-badkey"
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-key-user-already-rejected-uses-env",
+    "note": "a user key already rejected this session is skipped",
+    "keys": {
+      "user": true,
+      "env": true,
+      "baked": true
+    },
+    "rejected": true,
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 200,
+        "bodyJson": [
+          {
+            "id": "018d937f-012f-73b8-ab2c-898516969e6a",
+            "title": "Half-Life 2",
+            "assets": {
+              "banner145": "https://a/145.jpg"
+            }
+          },
+          {
+            "id": "018d937f-1212-7232-b23f-a046f6fd4a57",
+            "title": "Overwatch",
+            "assets": {
+              "boxart": "https://a/box.jpg"
+            }
+          },
+          {
+            "id": "018d937f-0000-7000-8000-000000000001",
+            "title": "Unpriced",
+            "assets": {}
+          },
+          {
+            "id": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal"
+          }
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 200,
+        "bodyFixture": "prices-US"
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-cache-hit-search-fresh-normalised-query",
+    "note": "a fresh search entry answers a differently cased and spaced query with no request",
+    "keys": {
+      "env": true
+    },
+    "state": true,
+    "ops": [
+      {
+        "op": "search",
+        "query": "  PORTAL  ",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-cache-hit-deals-fresh",
+    "note": "a fresh deals entry answers with no request",
+    "keys": {
+      "env": true
+    },
+    "state": true,
+    "ops": [
+      {
+        "op": "deals",
+        "gameId": "018d937f-012f-73b8-ab2c-898516969e6a",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-cache-gids-fresh-expired-and-unseen",
+    "note": "fresh hit and fresh miss need no request; an expired mapping and an unseen id are requested together",
+    "keys": {
+      "env": true
+    },
+    "state": true,
+    "synthetic": [
+      {
+        "method": "POST",
+        "path": "/lookup/id/shop/61/v1",
+        "status": 200,
+        "bodyJson": {
+          "app/400": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+          "app/292030": "018d937f-1212-7232-b23f-a046f6fd4a57"
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "gids",
+        "appIds": [
+          "220",
+          "400",
+          "999999",
+          "292030"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "synthetic-cache-gids-expired-refresh-fails-keeps-stale",
+    "note": "an expired mapping is still returned when the refresh fails; the failure never throws",
+    "keys": {
+      "env": true
+    },
+    "state": true,
+    "synthetic": [
+      {
+        "method": "POST",
+        "path": "/lookup/id/shop/61/v1",
+        "status": 500,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "bodyJson": {}
+      }
+    ],
+    "ops": [
+      {
+        "op": "gids",
+        "appIds": [
+          "220"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "synthetic-search-429-stale-served-then-gate-blocks",
+    "note": "a 429 with a stale entry serves it with cachedAt on every row and blocks the gate; the second search is answered from the stale entry with no request",
+    "keys": {
+      "env": true
+    },
+    "state": true,
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 429,
+        "headers": {
+          "content-type": "application/json",
+          "retry-after": "30"
+        },
+        "bodyJson": {
+          "status_code": 429
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "US"
+      },
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-search-network-error-stale-served",
+    "note": "a transport error with a stale entry serves it with cachedAt",
+    "keys": {
+      "env": true
+    },
+    "state": true,
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "networkError": true
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-search-429-no-cache-rate-limited-then-blocked",
+    "note": "a 429 with no cache rejects as rateLimited and blocks the gate: the following deals call rejects rateLimited without a request",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 429,
+        "headers": {
+          "content-type": "application/json",
+          "retry-after": "120"
+        },
+        "bodyJson": {
+          "status_code": 429
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "US"
+      },
+      {
+        "op": "deals",
+        "gameId": "018d937f-012f-73b8-ab2c-898516969e6a",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-deals-500-stale-served",
+    "note": "a 5xx with a stale deals entry serves it with cachedAt",
+    "keys": {
+      "env": true
+    },
+    "state": true,
+    "synthetic": [
+      {
+        "method": "POST",
+        "path": "/games/prices/v3",
+        "status": 500,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "bodyJson": {}
+      }
+    ],
+    "ops": [
+      {
+        "op": "deals",
+        "gameId": "018d937f-012f-73b8-ab2c-898516969e6a",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-search-502-no-cache-provider-error",
+    "note": "a 5xx with no cache rejects provider/search/502",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "status": 502,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "bodyJson": {}
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "synthetic-search-network-error-no-cache-provider-none",
+    "note": "a transport error with no cache rejects provider/search/none",
+    "keys": {
+      "env": true
+    },
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/games/search/v1",
+        "networkError": true
+      }
+    ],
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "live-search-portal-us",
+    "note": "recorded live from ITAD: search and prices for 'portal' in US",
+    "live": true,
+    "keys": {
+      "env": true
+    },
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "live-search-hollow-knight-us",
+    "note": "recorded live: a second US query",
+    "live": true,
+    "keys": {
+      "env": true
+    },
+    "ops": [
+      {
+        "op": "search",
+        "query": "hollow knight",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "live-search-portal-de",
+    "note": "recorded live: a non-US priced country (DE, EUR)",
+    "live": true,
+    "keys": {
+      "env": true
+    },
+    "ops": [
+      {
+        "op": "search",
+        "query": "portal",
+        "country": "DE"
+      }
+    ]
+  },
+  {
+    "id": "live-deals-portal-us",
+    "note": "recorded live: deals for Portal's ITAD id",
+    "live": true,
+    "keys": {
+      "env": true
+    },
+    "ops": [
+      {
+        "op": "deals",
+        "gameId": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+        "country": "US"
+      }
+    ]
+  },
+  {
+    "id": "live-gids-five-appids",
+    "note": "recorded live: five Steam app ids, one of them unmapped",
+    "live": true,
+    "keys": {
+      "env": true
+    },
+    "ops": [
+      {
+        "op": "gids",
+        "appIds": [
+          "220",
+          "400",
+          "292030",
+          "1245620",
+          "99999999"
+        ]
+      }
+    ]
+  }
+]

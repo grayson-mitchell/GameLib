@@ -1,0 +1,161 @@
+{
+	"search:AU:d0960501f8971be812f2e5494426e08c": {
+		"data": {
+			"results": [
+				{
+					"gameId": "018d937f-012f-73b8-ab2c-898516969e6a",
+					"title": "Half-Life 2",
+					"thumb": "https://a/145.jpg",
+					"cheapestPrice": "9.99",
+					"currencyCode": "USD",
+					"buyUrl": "https://itad.link/018d9386-7132-719b-89e1-e11b8c591ee7/?app=tagwff"
+				},
+				{
+					"gameId": "018d937f-1212-7232-b23f-a046f6fd4a57",
+					"title": "Overwatch",
+					"thumb": "https://a/box.jpg",
+					"cheapestPrice": "49.99",
+					"currencyCode": "USD",
+					"buyUrl": "https://itad.link/01a03ad0-d2bb-70b0-a2de-a6e8b1fc8a49/?app=tagwff"
+				},
+				{
+					"gameId": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+					"title": "Portal",
+					"thumb": "",
+					"cheapestPrice": "9.99",
+					"currencyCode": "USD",
+					"buyUrl": "https://itad.link/018d9386-b04b-7194-9d66-ee76a81e6050/?app=tagwff"
+				}
+			],
+			"pricedCountry": "US"
+		},
+		"fetchedAt": 1795348800000
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"search:AU:d0960501f8971be812f2e5494426e08c": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"index": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"deals:AU:018d937f-012f-73b8-ab2c-898516969e6a": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"deals:US:018d937f-012f-73b8-ab2c-898516969e6a": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"deals:AU:018d937f-1212-7232-b23f-a046f6fd4a57": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"deals:US:018d937f-1212-7232-b23f-a046f6fd4a57": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"deals:AU:018d937f-1749-73f8-bf5a-8e0aa3cdd9ff": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"deals:US:018d937f-1749-73f8-bf5a-8e0aa3cdd9ff": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)"
+	},
+	"index": {
+		"data": [
+			"search:AU:d0960501f8971be812f2e5494426e08c",
+			"deals:AU:018d937f-012f-73b8-ab2c-898516969e6a",
+			"deals:US:018d937f-012f-73b8-ab2c-898516969e6a",
+			"deals:AU:018d937f-1212-7232-b23f-a046f6fd4a57",
+			"deals:US:018d937f-1212-7232-b23f-a046f6fd4a57",
+			"deals:AU:018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+			"deals:US:018d937f-1749-73f8-bf5a-8e0aa3cdd9ff"
+		],
+		"fetchedAt": 1795348800000
+	},
+	"deals:AU:018d937f-012f-73b8-ab2c-898516969e6a": {
+		"data": [
+			{
+				"storeId": "61",
+				"storeName": "Steam",
+				"runner": "steam",
+				"price": "9.99",
+				"retailPrice": "9.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-7132-719b-89e1-e11b8c591ee7/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	},
+	"deals:US:018d937f-012f-73b8-ab2c-898516969e6a": {
+		"data": [
+			{
+				"storeId": "61",
+				"storeName": "Steam",
+				"runner": "steam",
+				"price": "9.99",
+				"retailPrice": "9.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-7132-719b-89e1-e11b8c591ee7/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	},
+	"deals:AU:018d937f-1212-7232-b23f-a046f6fd4a57": {
+		"data": [
+			{
+				"storeId": "4",
+				"storeName": "Blizzard",
+				"price": "49.99",
+				"retailPrice": "49.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/01a03ad0-d2bb-70b0-a2de-a6e8b1fc8a49/?app=tagwff"
+			},
+			{
+				"storeId": "61",
+				"storeName": "Steam",
+				"runner": "steam",
+				"price": "49.99",
+				"retailPrice": "49.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-f72d-7282-ba92-7e682f310719/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	},
+	"deals:US:018d937f-1212-7232-b23f-a046f6fd4a57": {
+		"data": [
+			{
+				"storeId": "4",
+				"storeName": "Blizzard",
+				"price": "49.99",
+				"retailPrice": "49.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/01a03ad0-d2bb-70b0-a2de-a6e8b1fc8a49/?app=tagwff"
+			},
+			{
+				"storeId": "61",
+				"storeName": "Steam",
+				"runner": "steam",
+				"price": "49.99",
+				"retailPrice": "49.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-f72d-7282-ba92-7e682f310719/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	},
+	"deals:AU:018d937f-1749-73f8-bf5a-8e0aa3cdd9ff": {
+		"data": [
+			{
+				"storeId": "61",
+				"storeName": "Steam",
+				"runner": "steam",
+				"price": "9.99",
+				"retailPrice": "9.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-b04b-7194-9d66-ee76a81e6050/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	},
+	"deals:US:018d937f-1749-73f8-bf5a-8e0aa3cdd9ff": {
+		"data": [
+			{
+				"storeId": "61",
+				"storeName": "Steam",
+				"runner": "steam",
+				"price": "9.99",
+				"retailPrice": "9.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-b04b-7194-9d66-ee76a81e6050/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	}
+}

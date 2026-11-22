@@ -1,0 +1,42 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://api.isthereanydeal.com/games/search/v1?title=portal&results=20&key=REDACTED",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyFile": "body-1.json"
+    },
+    "synthetic": true
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "POST",
+      "url": "https://api.isthereanydeal.com/games/prices/v3?country=JP&key=REDACTED",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "user-agent": "GameLib/0.11.0"
+      },
+      "body": "[\"018d937f-012f-73b8-ab2c-898516969e6a\",\"018d937f-1212-7232-b23f-a046f6fd4a57\",\"018d937f-0000-7000-8000-000000000001\",\"018d937f-1749-73f8-bf5a-8e0aa3cdd9ff\"]"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyFile": "body-2.json"
+    },
+    "synthetic": true
+  }
+]

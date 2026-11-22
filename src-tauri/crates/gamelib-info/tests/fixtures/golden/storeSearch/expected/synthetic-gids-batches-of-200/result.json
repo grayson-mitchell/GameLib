@@ -1,0 +1,17 @@
+{
+  "ops": [
+    {
+      "ok": {}
+    }
+  ],
+  "requests": [
+    "POST https://api.isthereanydeal.com/lookup/id/shop/61/v1",
+    "POST https://api.isthereanydeal.com/lookup/id/shop/61/v1"
+  ],
+  "keyPerRequest": [
+    null,
+    null
+  ],
+  "userKeyMarkedRejected": 0,
+  "gateBlockedForMs": null
+}

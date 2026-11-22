@@ -1,0 +1,45 @@
+{
+  "ops": [
+    {
+      "ok": {
+        "results": [
+          {
+            "gameId": "018d937f-012f-73b8-ab2c-898516969e6a",
+            "title": "Half-Life 2",
+            "thumb": "https://a/145.jpg",
+            "cheapestPrice": "9.99",
+            "currencyCode": "USD",
+            "buyUrl": "https://itad.link/018d9386-7132-719b-89e1-e11b8c591ee7/?app=tagwff"
+          },
+          {
+            "gameId": "018d937f-1212-7232-b23f-a046f6fd4a57",
+            "title": "Overwatch",
+            "thumb": "https://a/box.jpg",
+            "cheapestPrice": "49.99",
+            "currencyCode": "USD",
+            "buyUrl": "https://itad.link/01a03ad0-d2bb-70b0-a2de-a6e8b1fc8a49/?app=tagwff"
+          },
+          {
+            "gameId": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal",
+            "thumb": "",
+            "cheapestPrice": "9.99",
+            "currencyCode": "USD",
+            "buyUrl": "https://itad.link/018d9386-b04b-7194-9d66-ee76a81e6050/?app=tagwff"
+          }
+        ],
+        "pricedCountry": "US"
+      }
+    }
+  ],
+  "requests": [
+    "GET https://api.isthereanydeal.com/games/search/v1?title=portal&results=20&key=REDACTED",
+    "POST https://api.isthereanydeal.com/games/prices/v3?country=US&key=REDACTED"
+  ],
+  "keyPerRequest": [
+    "user",
+    "user"
+  ],
+  "userKeyMarkedRejected": 0,
+  "gateBlockedForMs": null
+}

@@ -1,0 +1,33 @@
+{
+  "ops": [
+    {
+      "ok": [
+        {
+          "storeId": "epic-str",
+          "storeName": "Epic Game Store",
+          "price": "9.99",
+          "retailPrice": "19.99",
+          "currencyCode": "USD",
+          "buyUrl": "https://itad.link/epic"
+        },
+        {
+          "storeId": "61",
+          "storeName": "Steam",
+          "runner": "steam",
+          "price": "9.99",
+          "retailPrice": "19.99",
+          "currencyCode": "USD",
+          "buyUrl": "https://itad.link/ok?a=1&b=%7Bx%7D"
+        }
+      ]
+    }
+  ],
+  "requests": [
+    "POST https://api.isthereanydeal.com/games/prices/v3?country=US&key=REDACTED"
+  ],
+  "keyPerRequest": [
+    "env"
+  ],
+  "userKeyMarkedRejected": 0,
+  "gateBlockedForMs": null
+}

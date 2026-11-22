@@ -1,0 +1,23 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "POST",
+      "url": "https://api.isthereanydeal.com/lookup/id/shop/61/v1",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "user-agent": "GameLib/0.11.0"
+      },
+      "body": "[\"app/220\",\"app/400\",\"app/292030\",\"app/999999\"]"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyFile": "body-1.json"
+    },
+    "synthetic": true
+  }
+]

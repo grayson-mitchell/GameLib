@@ -1,0 +1,19 @@
+{
+  "ops": [
+    {
+      "error": {
+        "name": "StoreSearchError",
+        "code": "provider",
+        "message": "[storeSearch:provider] search 502"
+      }
+    }
+  ],
+  "requests": [
+    "GET https://api.isthereanydeal.com/games/search/v1?title=portal&results=20&key=REDACTED"
+  ],
+  "keyPerRequest": [
+    "env"
+  ],
+  "userKeyMarkedRejected": 0,
+  "gateBlockedForMs": null
+}

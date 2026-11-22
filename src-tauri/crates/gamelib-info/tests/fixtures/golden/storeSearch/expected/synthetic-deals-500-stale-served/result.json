@@ -1,0 +1,26 @@
+{
+  "ops": [
+    {
+      "ok": [
+        {
+          "storeId": "61",
+          "storeName": "Steam",
+          "runner": "steam",
+          "price": "9.99",
+          "retailPrice": "19.99",
+          "currencyCode": "USD",
+          "buyUrl": "https://itad.link/steam-a",
+          "cachedAt": 1795341600000
+        }
+      ]
+    }
+  ],
+  "requests": [
+    "POST https://api.isthereanydeal.com/games/prices/v3?country=US&key=REDACTED"
+  ],
+  "keyPerRequest": [
+    "env"
+  ],
+  "userKeyMarkedRejected": 0,
+  "gateBlockedForMs": null
+}

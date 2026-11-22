@@ -1,0 +1,44 @@
+{
+  "ops": [
+    {
+      "ok": {
+        "results": [
+          {
+            "gameId": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal",
+            "thumb": "https://a/300.jpg",
+            "cheapestPrice": "9.99",
+            "currencyCode": "USD",
+            "buyUrl": "https://itad.link/portal",
+            "cachedAt": 1795341600000
+          }
+        ],
+        "pricedCountry": "US"
+      }
+    },
+    {
+      "ok": {
+        "results": [
+          {
+            "gameId": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal",
+            "thumb": "https://a/300.jpg",
+            "cheapestPrice": "9.99",
+            "currencyCode": "USD",
+            "buyUrl": "https://itad.link/portal",
+            "cachedAt": 1795341600000
+          }
+        ],
+        "pricedCountry": "US"
+      }
+    }
+  ],
+  "requests": [
+    "GET https://api.isthereanydeal.com/games/search/v1?title=portal&results=20&key=REDACTED"
+  ],
+  "keyPerRequest": [
+    "env"
+  ],
+  "userKeyMarkedRejected": 0,
+  "gateBlockedForMs": 30000
+}

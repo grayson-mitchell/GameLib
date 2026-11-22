@@ -70,6 +70,11 @@ export interface SyntheticResponse {
   status: number
   headers?: Record<string, string>
   body: string
+  /**
+   * The TS sees a transport failure (no response at all). Recorded as an exchange with
+   * `status: 0` and `networkError: true`; the TS gets an AxiosError with no `response`.
+   */
+  networkError?: boolean
 }
 
 export interface RustOnlyRequest {
@@ -106,6 +111,8 @@ export interface RecordedExchange {
   tsOnly?: true
   rustOnly?: true
   synthetic?: true
+  /** The request failed at the transport: the caller saw an error with no response. */
+  networkError?: true
 }
 
 export interface Recorder {
@@ -213,6 +220,15 @@ function respond(
   )
 }
 
+/** What axios throws for a transport failure: an AxiosError with a code and no `response`. */
+function networkFailure(config: InternalAxiosRequestConfig): AxiosError {
+  return new AxiosError(
+    'connect ECONNREFUSED oracle.invalid:443',
+    AxiosError.ERR_NETWORK,
+    config
+  )
+}
+
 interface CaseState {
   options: Required<Pick<RecorderOptions, 'slice' | 'caseId'>> &
     RecorderOptions & { mode: OracleMode }
@@ -299,6 +315,7 @@ export function installRecorder(options: RecorderOptions): Recorder {
   const served = new Set<number>()
   const unmatched: string[] = []
   const requested: string[] = []
+  const syntheticUses = new Map<string, number>()
 
   if (mode !== 'record') {
     const file = join(dir, 'exchanges.json')
@@ -321,7 +338,9 @@ export function installRecorder(options: RecorderOptions): Recorder {
   const store = (
     request: RecordedExchange['request'],
     response: { status: number; headers: Record<string, string>; body: Buffer },
-    flags: Partial<Pick<RecordedExchange, 'rustOnly' | 'synthetic'>> = {}
+    flags: Partial<
+      Pick<RecordedExchange, 'rustOnly' | 'synthetic' | 'networkError'>
+    > = {}
   ): void => {
     const n = exchanges.length + 1
     const id = `ex-${n}`
@@ -346,6 +365,7 @@ export function installRecorder(options: RecorderOptions): Recorder {
     }
     if (flags.rustOnly) exchange.rustOnly = true
     if (flags.synthetic) exchange.synthetic = true
+    if (flags.networkError) exchange.networkError = true
     exchanges.push(exchange)
   }
 
@@ -362,11 +382,25 @@ export function installRecorder(options: RecorderOptions): Recorder {
       headers: headerRecord(config),
       ...(body === undefined ? {} : { body })
     }
-    const synthetic = (options.synthetic ?? []).find(
+    // Several synthetic responses for one method and path are served in order, one per request;
+    // the last one repeats (a single entry therefore answers every matching request).
+    const candidates = (options.synthetic ?? []).filter(
       (s) =>
         s.method.toUpperCase() === method &&
         s.path === pathOf(axios.getUri(config))
     )
+    const nth =
+      syntheticUses.get(`${method} ${pathOf(axios.getUri(config))}`) ?? 0
+    syntheticUses.set(`${method} ${pathOf(axios.getUri(config))}`, nth + 1)
+    const synthetic = candidates[Math.min(nth, candidates.length - 1)]
+    if (synthetic?.networkError) {
+      store(
+        request,
+        { status: 0, headers: {}, body: Buffer.alloc(0) },
+        { synthetic: true, networkError: true }
+      )
+      throw networkFailure(config)
+    }
     if (synthetic) {
       const response = {
         status: synthetic.status,
@@ -404,6 +438,7 @@ export function installRecorder(options: RecorderOptions): Recorder {
     }
     served.add(index)
     const exchange = exchanges[index] as RecordedExchange
+    if (exchange.networkError) return Promise.reject(networkFailure(config))
     const body = exchange.response.bodyFile
       ? (bodies.get(exchange.response.bodyFile) ?? Buffer.alloc(0))
       : Buffer.alloc(0)

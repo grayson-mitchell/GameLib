@@ -1,0 +1,31 @@
+{
+	"deals:US:018d937f-012f-73b8-ab2c-898516969e6a": {
+		"data": [
+			{
+				"storeId": "61",
+				"storeName": "Steam",
+				"runner": "steam",
+				"price": "9.99",
+				"retailPrice": "9.99",
+				"currencyCode": "USD",
+				"buyUrl": "https://itad.link/018d9386-7132-719b-89e1-e11b8c591ee7/?app=tagwff"
+			}
+		],
+		"fetchedAt": 1795348800000
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"deals:US:018d937f-012f-73b8-ab2c-898516969e6a": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)",
+		"index": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)"
+	},
+	"index": {
+		"data": [
+			"deals:US:018d937f-012f-73b8-ab2c-898516969e6a"
+		],
+		"fetchedAt": 1795348800000
+	}
+}

@@ -1,0 +1,23 @@
+{
+  "ops": [
+    {
+      "ok": {
+        "results": [
+          {
+            "gameId": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+            "title": "Portal",
+            "thumb": "https://a/300.jpg",
+            "cheapestPrice": "9.99",
+            "currencyCode": "USD",
+            "buyUrl": "https://itad.link/portal"
+          }
+        ],
+        "pricedCountry": "US"
+      }
+    }
+  ],
+  "requests": [],
+  "keyPerRequest": [],
+  "userKeyMarkedRejected": 0,
+  "gateBlockedForMs": null
+}

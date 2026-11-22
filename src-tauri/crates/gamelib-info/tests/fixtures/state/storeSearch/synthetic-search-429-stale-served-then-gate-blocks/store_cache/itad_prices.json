@@ -1,0 +1,33 @@
+{
+	"search:US:d0960501f8971be812f2e5494426e08c": {
+		"data": {
+			"results": [
+				{
+					"gameId": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+					"title": "Portal",
+					"thumb": "https://a/300.jpg",
+					"cheapestPrice": "9.99",
+					"currencyCode": "USD",
+					"buyUrl": "https://itad.link/portal"
+				}
+			],
+			"pricedCountry": "US"
+		},
+		"fetchedAt": 1795341600000
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"search:US:d0960501f8971be812f2e5494426e08c": "Sun Nov 22 2026 11:50:00 GMT+0000 (Coordinated Universal Time)",
+		"index": "Sun Nov 22 2026 11:50:00 GMT+0000 (Coordinated Universal Time)"
+	},
+	"index": {
+		"data": [
+			"search:US:d0960501f8971be812f2e5494426e08c"
+		],
+		"fetchedAt": 1795341600000
+	}
+}
