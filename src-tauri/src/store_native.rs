@@ -41,7 +41,7 @@ use std::sync::{Arc, OnceLock};
 
 use gamelib_core::emitter::FrontendEmitter;
 use gamelib_store::engine::ReadOnlyReason;
-use gamelib_store::host::{ApplyError, OpSummary, Origin, StoreChange, StoreHost};
+use gamelib_store::host::{ApplyError, OpSummary, Origin, Store, StoreChange, StoreHost};
 use gamelib_store::json::Json;
 use gamelib_store::ops::Op;
 use gamelib_store::table::{row_for_key, table, TableRow};
@@ -150,6 +150,14 @@ pub(crate) struct StoreReads {
 }
 
 impl StoreReads {
+    /// Whether Rust owns the store files this boot moved (`GAMELIB_STORE=rust` with a home
+    /// directory). Otherwise every renderer store call is forwarded to the sidecar.
+    fn rust_mode(&self) -> bool {
+        self.config
+            .as_ref()
+            .is_some_and(|c| c.mode == StoreMode::Rust)
+    }
+
     /// The configuration when Rust answers `store` itself; `None` when the sidecar does. A store no
     /// file backs is answered by Rust (empty) unless the mode is `ts`.
     fn owner_of(&self, store: &ResolvedStore) -> Option<&ReadConfig> {
@@ -304,6 +312,24 @@ pub(crate) const STORE_SET_CHANNEL: &str = "storeSet";
 /// The sidecar's `storeSet` handler, renamed so only the shell can reach it (85-17).
 pub(crate) const STORE_TS_SET_CHANNEL: &str = "store:ts-set";
 
+/// The renderer's confirmed write (native invoke, slice `store`): `true` only once on disk.
+pub(crate) const STORE_SET_CHECKED_CHANNEL: &str = "sidecar:store-set-checked";
+
+/// The sidecar's confirmed-write handler, renamed (85-17).
+pub(crate) const STORE_TS_SET_CHECKED_CHANNEL: &str = "store:ts-set-checked";
+
+/// The renderer's fire-and-forget store delete (native send, slice `store`).
+pub(crate) const STORE_DELETE_CHANNEL: &str = "storeDelete";
+
+/// The sidecar's `storeDelete` handler, renamed (85-17).
+pub(crate) const STORE_TS_DELETE_CHANNEL: &str = "store:ts-delete";
+
+/// The renderer's store registration (native send, slice `store`).
+pub(crate) const STORE_NEW_CHANNEL: &str = "storeNew";
+
+/// The sidecar's `storeNew` handler, renamed (85-17).
+pub(crate) const STORE_TS_NEW_CHANNEL: &str = "store:ts-new";
+
 /// The renderer push that patches its snapshot (`STORE_CHANGED_CHANNEL`).
 pub(crate) const STORE_CHANGED_CHANNEL: &str = "storeChanged";
 
@@ -319,18 +345,22 @@ pub(crate) enum RendererWrite {
         key: String,
         value: Value,
     },
+    Delete {
+        store: String,
+        key: String,
+    },
 }
 
 impl RendererWrite {
     fn store(&self) -> &str {
         match self {
-            RendererWrite::Set { store, .. } => store,
+            RendererWrite::Set { store, .. } | RendererWrite::Delete { store, .. } => store,
         }
     }
 
     fn key(&self) -> &str {
         match self {
-            RendererWrite::Set { key, .. } => key,
+            RendererWrite::Set { key, .. } | RendererWrite::Delete { key, .. } => key,
         }
     }
 
@@ -340,13 +370,15 @@ impl RendererWrite {
             RendererWrite::Set { store, key, value } => {
                 vec![json!(store), json!(key), value.clone()]
             }
+            RendererWrite::Delete { store, key } => vec![json!(store), json!(key)],
         }
     }
 
-    /// The sidecar channel this write is forwarded to when TS owns the store.
+    /// The sidecar channel a fire-and-forget write is forwarded to when TS owns the store.
     fn ts_send_channel(&self) -> &'static str {
         match self {
             RendererWrite::Set { .. } => STORE_TS_SET_CHANNEL,
+            RendererWrite::Delete { .. } => STORE_TS_DELETE_CHANNEL,
         }
     }
 
@@ -359,6 +391,7 @@ impl RendererWrite {
                 key: key.clone(),
                 value: Json::from(value.clone()),
             },
+            RendererWrite::Delete { key, .. } => Op::Delete { key: key.clone() },
         }
     }
 }
@@ -384,6 +417,37 @@ pub(crate) fn parse_store_set(args: &[Value]) -> Result<RendererWrite, &'static 
         key,
         value: value.clone(),
     })
+}
+
+/// `storeDelete`'s args: `[storeName, keyPath]`.
+pub(crate) fn parse_store_delete(args: &[Value]) -> Result<RendererWrite, &'static str> {
+    let [name, key] = args else {
+        return Err("store-delete-args");
+    };
+    let store = bounded_string(name, STORE_NAME_MAX).ok_or("store-delete-args")?;
+    let key = bounded_string(key, KEY_PATH_MAX).ok_or("store-delete-args")?;
+    Ok(RendererWrite::Delete { store, key })
+}
+
+/// A validated `storeNew`: the name, and whether the renderer sent construction options (which are
+/// never used, T-27-03; only their presence is logged).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct StoreNew {
+    pub(crate) store: String,
+    pub(crate) options: Option<Value>,
+}
+
+/// `storeNew`'s args: `[storeName]` or `[storeName, options]`, options an object, or absent (a renderer
+/// `undefined` crosses as `null`).
+pub(crate) fn parse_store_new(args: &[Value]) -> Result<StoreNew, &'static str> {
+    let (name, options) = match args {
+        [name] => (name, None),
+        [name, Value::Null] => (name, None),
+        [name, options @ Value::Object(_)] => (name, Some(options.clone())),
+        _ => return Err("store-new-args"),
+    };
+    let store = bounded_string(name, STORE_NAME_MAX).ok_or("store-new-args")?;
+    Ok(StoreNew { store, options })
 }
 
 /// Why Rust refused a renderer write. The words are the log categories; none carries a name or a
@@ -423,8 +487,11 @@ pub(crate) enum WriteOutcome {
     /// On disk (or already held: a no-op is a success, as conf's was).
     Persisted,
     Refused(WriteRefusal),
-    /// TS owns the store; the write went to its renamed handler.
-    Forwarded,
+    /// TS owns the store; the write went to its renamed handler, which answered `persisted` (a
+    /// fire-and-forget forward has no answer and reports `false`).
+    Forwarded {
+        persisted: bool,
+    },
 }
 
 /// The policy a renderer write passes before anything is opened (T-85-43): the `__internal__`
@@ -452,22 +519,18 @@ pub(crate) fn apply_renderer_write(
     host: &StoreHost,
     reads: &StoreReads,
     write: &RendererWrite,
-    forward: &dyn Fn(&RendererWrite) -> Result<(), String>,
+    forward: &dyn Fn(&RendererWrite) -> Result<bool, String>,
 ) -> Result<WriteOutcome, String> {
-    let rust_mode = reads
-        .config
-        .as_ref()
-        .is_some_and(|c| c.mode == StoreMode::Rust);
-    if !rust_mode {
-        forward(write)?;
-        return Ok(WriteOutcome::Forwarded);
+    if !reads.rust_mode() {
+        let persisted = forward(write)?;
+        return Ok(WriteOutcome::Forwarded { persisted });
     }
     let Some(store) = resolve_renderer_store(write.store()) else {
         return Ok(WriteOutcome::Refused(WriteRefusal::UnknownStore));
     };
     let Some(config) = reads.owner_of(&store) else {
-        forward(write)?;
-        return Ok(WriteOutcome::Forwarded);
+        let persisted = forward(write)?;
+        return Ok(WriteOutcome::Forwarded { persisted });
     };
     if let Err(refusal) = check_write_policy(&store.name, write.key()) {
         return Ok(WriteOutcome::Refused(refusal));
@@ -480,13 +543,20 @@ pub(crate) fn apply_renderer_write(
     let Ok(opened) = host.open_row(row, path) else {
         return Ok(WriteOutcome::Refused(WriteRefusal::Io));
     };
-    Ok(match opened.apply_reporting(write.op(), Origin::Renderer) {
+    Ok(apply_to(&opened, write))
+}
+
+/// Applies a checked renderer write to an open store with `Origin::Renderer`. A store evicted while
+/// the write held it (a reset or an uninstall removed its file) refuses; a write that opens the store
+/// after the eviction writes over the now-missing file, as a sidecar frame queued after it does.
+fn apply_to(opened: &Store, write: &RendererWrite) -> WriteOutcome {
+    match opened.apply_reporting(write.op(), Origin::Renderer) {
         Ok(_) => WriteOutcome::Persisted,
         Err(ApplyError::ReadOnly(_)) => WriteOutcome::Refused(WriteRefusal::ReadOnly),
         Err(ApplyError::Evicted) => WriteOutcome::Refused(WriteRefusal::Evicted),
         Err(ApplyError::Rejected(_)) => WriteOutcome::Refused(WriteRefusal::Rejected),
         Err(ApplyError::Io(_)) => WriteOutcome::Refused(WriteRefusal::Io),
-    })
+    }
 }
 
 /// Logs a refused renderer write: the category into the shell log, the renderer's store name (cut
@@ -503,16 +573,138 @@ fn log_refusal(channel: &str, store: &str, refusal: WriteRefusal) {
 /// the sidecar dropped one (a send has no answer).
 pub(crate) fn run_send_write(ctx: &NativeCtx, channel: &str, write: &RendererWrite) {
     let sidecar = &ctx.store_reads.sidecar;
-    let forward = |w: &RendererWrite| -> Result<(), String> {
-        sidecar.send(w.ts_send_channel(), w.ts_args())
+    let forward = |w: &RendererWrite| -> Result<bool, String> {
+        sidecar.send(w.ts_send_channel(), w.ts_args())?;
+        Ok(false)
     };
     match apply_renderer_write(&ctx.store_host, &ctx.store_reads, write, &forward) {
         Ok(WriteOutcome::Refused(refusal)) => log_refusal(channel, write.store(), refusal),
-        Ok(WriteOutcome::Persisted | WriteOutcome::Forwarded) => {}
+        Ok(WriteOutcome::Persisted | WriteOutcome::Forwarded { .. }) => {}
         Err(forward_error) => crate::shell_log_detail(
             &format!("WARN: native {channel} could not forward a store write"),
             &forward_error,
         ),
+    }
+}
+
+/// The confirmed write on the caller's (blocking) thread: `true` only once the value is on disk (or
+/// TS answered `true` for a store it owns); `false` for any refusal, logged by category.
+pub(crate) fn set_checked_blocking(
+    host: &StoreHost,
+    reads: &StoreReads,
+    write: &RendererWrite,
+) -> Result<bool, String> {
+    let forward = |w: &RendererWrite| -> Result<bool, String> {
+        let answer = reads
+            .sidecar
+            .invoke(STORE_TS_SET_CHECKED_CHANNEL, w.ts_args())?;
+        Ok(answer == Value::Bool(true))
+    };
+    Ok(match apply_renderer_write(host, reads, write, &forward)? {
+        WriteOutcome::Persisted => true,
+        WriteOutcome::Forwarded { persisted } => persisted,
+        WriteOutcome::Refused(refusal) => {
+            log_refusal(STORE_SET_CHECKED_CHANNEL, write.store(), refusal);
+            false
+        }
+    })
+}
+
+/// `sidecar:store-set-checked`'s args, refused with the invalid-args marker (the old zod tuple).
+fn parse_store_set_checked(args: &[Value]) -> Result<RendererWrite, String> {
+    parse_store_set(args).map_err(|_| {
+        let (path, code) = match args.len() {
+            0..=2 => ("(args)", "too_small"),
+            3 => ("(args)", "invalid_type"),
+            _ => ("(args)", "too_big"),
+        };
+        invalid_args(STORE_SET_CHECKED_CHANNEL, &[path], &[code])
+    })
+}
+
+/// The `sidecar:store-set-checked` invoke handler. A refusal resolves `false`, never an error, as the
+/// sidecar's did; only bad args (the marker) or a failed forward reject.
+pub(crate) fn store_set_checked(ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        let write = parse_store_set_checked(&args)?;
+        tauri::async_runtime::spawn_blocking(move || {
+            set_checked_blocking(&ctx.store_host, &ctx.store_reads, &write).map(Value::Bool)
+        })
+        .await
+        .map_err(|e| format!("store set-checked task failed: {e}"))?
+    })
+}
+
+/// What a `storeNew` came to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum NewOutcome {
+    /// A typed store (constructed by the sidecar's `createStores`, opened by Rust at boot): nothing
+    /// to do, as before.
+    Typed,
+    /// A recognised cache store Rust owns, now open.
+    Opened,
+    /// TS owns it (or the mode is `ts`): forwarded to `store:ts-new`.
+    Forwarded,
+    /// Not a recognised cache name: no store, no file (WR-02, T-85-43).
+    Refused,
+}
+
+/// `storeNew` on the caller's thread. The renderer's options are never used (T-27-03): a recognised
+/// cache store is opened from the table's own row, lazily (a missing file is not created).
+pub(crate) fn store_new_blocking(
+    host: &StoreHost,
+    reads: &StoreReads,
+    new: &StoreNew,
+    forward: &dyn Fn(&StoreNew) -> Result<(), String>,
+) -> Result<NewOutcome, String> {
+    if !reads.rust_mode() {
+        forward(new)?;
+        return Ok(NewOutcome::Forwarded);
+    }
+    let name = new.store.as_str();
+    if table().iter().any(|r| r.ts_names.iter().any(|n| n == name))
+        && !policy().is_recognized_cache(name)
+    {
+        return Ok(NewOutcome::Typed);
+    }
+    if !is_plausible_cache_name(name) || !policy().is_recognized_cache(name) {
+        crate::shell_log_detail(
+            "WARN: native storeNew rejected an unrecognized store name",
+            &echo_channel(name),
+        );
+        return Ok(NewOutcome::Refused);
+    }
+    if new.options.is_some() {
+        crate::shell_log(
+            "native storeNew ignored renderer-supplied options; using the store table's row",
+        );
+    }
+    let key = format!("store_cache/{name}");
+    let (Some(row), Some(config)) = (row_for_key(&key), reads.config.as_ref()) else {
+        return Ok(NewOutcome::Refused);
+    };
+    if !is_rust_owned(row, config.mode, &config.ownership) {
+        forward(new)?;
+        return Ok(NewOutcome::Forwarded);
+    }
+    let path = config.user_data.join(&row.dir).join(format!("{name}.json"));
+    host.open_row(row, path)
+        .map_err(|e| format!("store open failed: {}", e.kind()))?;
+    Ok(NewOutcome::Opened)
+}
+
+/// The `storeNew` slice job.
+pub(crate) fn run_store_new(ctx: &NativeCtx, new: &StoreNew) {
+    let sidecar = &ctx.store_reads.sidecar;
+    let forward = |n: &StoreNew| -> Result<(), String> {
+        let mut args = vec![json!(n.store)];
+        if let Some(options) = &n.options {
+            args.push(options.clone());
+        }
+        sidecar.send(STORE_TS_NEW_CHANNEL, args)
+    };
+    if let Err(open_error) = store_new_blocking(&ctx.store_host, &ctx.store_reads, new, &forward) {
+        crate::shell_log_detail("WARN: native storeNew could not open a store", &open_error);
     }
 }
 
@@ -1188,7 +1380,7 @@ pub(crate) mod tests {
         }
     }
 
-    fn no_forward(_: &RendererWrite) -> Result<(), String> {
+    fn no_forward(_: &RendererWrite) -> Result<bool, String> {
         panic!("a Rust-owned store is never forwarded")
     }
 
@@ -1298,17 +1490,17 @@ pub(crate) mod tests {
         let rig = write_rig("gamelib-store-native-write-ts-");
         let reads = reads(&rig.home, StoreMode::Ts, RecordingProxy::new(json!({})));
         let forwarded = Mutex::new(Vec::new());
-        let forward = |w: &RendererWrite| -> Result<(), String> {
+        let forward = |w: &RendererWrite| -> Result<bool, String> {
             forwarded
                 .lock()
                 .unwrap()
                 .push((w.ts_send_channel(), w.ts_args()));
-            Ok(())
+            Ok(false)
         };
         // Unchecked under ts: TS's own guards decide, exactly as before this plan.
         let write = set("steamConfigStore", "refreshToken", json!("x"));
         let out = apply_renderer_write(&rig.host, &reads, &write, &forward).unwrap();
-        assert_eq!(out, WriteOutcome::Forwarded);
+        assert_eq!(out, WriteOutcome::Forwarded { persisted: false });
         assert_eq!(
             forwarded.lock().unwrap().as_slice(),
             &[(
@@ -1339,9 +1531,9 @@ pub(crate) mod tests {
             sidecar: RecordingProxy::new(json!({})),
         };
         let calls = Mutex::new(0);
-        let forward = |_: &RendererWrite| -> Result<(), String> {
+        let forward = |_: &RendererWrite| -> Result<bool, String> {
             *calls.lock().unwrap() += 1;
-            Ok(())
+            Ok(false)
         };
         let out = apply_renderer_write(
             &StoreHost::new(),
@@ -1350,7 +1542,7 @@ pub(crate) mod tests {
             &forward,
         )
         .unwrap();
-        assert_eq!(out, WriteOutcome::Forwarded);
+        assert_eq!(out, WriteOutcome::Forwarded { persisted: false });
         assert_eq!(*calls.lock().unwrap(), 1);
     }
 
@@ -1408,6 +1600,269 @@ pub(crate) mod tests {
             value: Some(Arc::new(Json::Bool(true))),
         };
         assert!(renderer_pushes(&native).is_empty());
+    }
+
+    #[test]
+    fn store_native_set_checked_is_true_only_once_on_disk_and_false_for_every_refusal() {
+        let rig = write_rig("gamelib-store-native-checked-");
+        write(
+            &rig.home,
+            "store/config.json",
+            "{\n\t\"theme\": \"dark\"\n}",
+        );
+        // A store one version above its chain opens read-only.
+        write(
+            &rig.home,
+            "store/timestamp.json",
+            r#"{"a":1,"__internal__":{"gamelib":{"schemaVersion":999}}}"#,
+        );
+        write(&rig.home, "store_cache/steam_library.json", "{}");
+        let reads = reads(&rig.home, StoreMode::Rust, RecordingProxy::new(json!(true)));
+
+        assert_eq!(
+            set_checked_blocking(
+                &rig.host,
+                &reads,
+                &set("configStore", "theme", json!("light"))
+            ),
+            Ok(true)
+        );
+        let text = fs::read_to_string(rig.home.root().join("store/config.json")).unwrap();
+        assert!(text.contains("\"theme\": \"light\""), "{text}");
+        // The same value again is a no-op, which is still a success.
+        assert_eq!(
+            set_checked_blocking(
+                &rig.host,
+                &reads,
+                &set("configStore", "theme", json!("light"))
+            ),
+            Ok(true)
+        );
+
+        let timestamp_before = fs::read(rig.home.root().join("store/timestamp.json")).unwrap();
+        for write in [
+            set("steamConfigStore", "refreshToken", json!("attacker")),
+            set("timestampStore", "__proto__.polluted", json!(1)),
+            set("timestampStore", "b", json!(2)),
+            set("notAStore", "b", json!(2)),
+        ] {
+            assert_eq!(
+                set_checked_blocking(&rig.host, &reads, &write),
+                Ok(false),
+                "{write:?}"
+            );
+        }
+        assert_eq!(
+            fs::read(rig.home.root().join("store/timestamp.json")).unwrap(),
+            timestamp_before
+        );
+
+        // An evicted store (its directory was removed under a write that held it) refuses.
+        assert_eq!(
+            set_checked_blocking(&rig.host, &reads, &set("steam_library", "k", json!(1))),
+            Ok(true)
+        );
+        let held = rig
+            .host
+            .open_row(
+                row_for_key("store_cache/steam_library").unwrap(),
+                rig.home.root().join("store_cache/steam_library.json"),
+            )
+            .unwrap();
+        rig.host.evict_path(&rig.home.root().join("store_cache"));
+        assert_eq!(
+            apply_to(&held, &set("steam_library", "k", json!(2))),
+            WriteOutcome::Refused(WriteRefusal::Evicted)
+        );
+        // A write that opens the store after the eviction writes over the now-missing file.
+        assert_eq!(
+            set_checked_blocking(&rig.host, &reads, &set("steam_library", "k", json!(3))),
+            Ok(true)
+        );
+    }
+
+    #[test]
+    fn store_native_store_delete_removes_the_key_and_pushes_deleted_with_its_rev() {
+        let rig = write_rig("gamelib-store-native-delete-");
+        write(
+            &rig.home,
+            "store/config.json",
+            "{\n\t\"theme\": \"dark\",\n\t\"language\": \"en\"\n}",
+        );
+        let reads = reads(&rig.home, StoreMode::Rust, RecordingProxy::new(json!({})));
+        let delete = parse_store_delete(&[json!("configStore"), json!("theme")]).unwrap();
+        assert_eq!(
+            apply_renderer_write(&rig.host, &reads, &delete, &no_forward),
+            Ok(WriteOutcome::Persisted)
+        );
+        delivered(&rig.host);
+        let text = fs::read_to_string(rig.home.root().join("store/config.json")).unwrap();
+        assert!(!text.contains("theme"), "{text}");
+        assert!(text.contains("language"), "{text}");
+        assert_eq!(
+            rig.pushes.0.lock().unwrap().as_slice(),
+            &[(
+                STORE_CHANGED_CHANNEL.to_string(),
+                vec![json!({"store": "configStore", "key": "theme", "deleted": true, "rev": 1})]
+            )]
+        );
+        assert_eq!(
+            rig.events.lock().unwrap().as_slice(),
+            &[json!({"store": "store/config", "rev": 1, "op": "changed", "key": "theme"})]
+        );
+    }
+
+    fn new_of(args: &[Value]) -> StoreNew {
+        parse_store_new(args).unwrap()
+    }
+
+    fn no_new_forward(_: &StoreNew) -> Result<(), String> {
+        panic!("a Rust-owned store is never forwarded")
+    }
+
+    #[test]
+    fn store_native_store_new_opens_a_recognised_cache_lazily_and_ignores_options() {
+        let rig = write_rig("gamelib-store-native-new-");
+        let reads = reads(&rig.home, StoreMode::Rust, RecordingProxy::new(json!({})));
+        // Hostile options: never a path, never a name.
+        let new = new_of(&[
+            json!("steam_library"),
+            json!({"cwd": "../../evil", "name": "pwned"}),
+        ]);
+        assert_eq!(
+            store_new_blocking(&rig.host, &reads, &new, &no_new_forward),
+            Ok(NewOutcome::Opened)
+        );
+        // Opened, not created: no file until a write, and nothing at the options' path.
+        assert!(!rig.home.root().join("store_cache").exists());
+        assert!(!rig.home.root().join("pwned.json").exists());
+        assert_eq!(
+            store_new_blocking(
+                &rig.host,
+                &reads,
+                &new_of(&[json!("configStore")]),
+                &no_new_forward
+            ),
+            Ok(NewOutcome::Typed)
+        );
+        for name in ["brand_new_cache", "../config", "a/b"] {
+            assert_eq!(
+                store_new_blocking(&rig.host, &reads, &new_of(&[json!(name)]), &no_new_forward),
+                Ok(NewOutcome::Refused),
+                "{name}"
+            );
+        }
+        assert!(!rig.home.root().join("store_cache").exists());
+    }
+
+    #[test]
+    fn store_native_ts_mode_forwards_each_write_handler_to_its_ts_channel_and_rust_pushes_nothing()
+    {
+        let rig = write_rig("gamelib-store-native-ts-all-");
+        let proxy = RecordingProxy::new(json!(true));
+        let reads = reads(&rig.home, StoreMode::Ts, Arc::clone(&proxy));
+        let ctx = {
+            let mut ctx = NativeCtx::for_tests(Arc::new(NullHost), None);
+            ctx.store_host = Arc::clone(&rig.host);
+            ctx.store_reads = reads;
+            ctx
+        };
+        run_send_write(
+            &ctx,
+            STORE_SET_CHANNEL,
+            &set("configStore", "theme", json!("x")),
+        );
+        run_send_write(
+            &ctx,
+            STORE_DELETE_CHANNEL,
+            &parse_store_delete(&[json!("configStore"), json!("theme")]).unwrap(),
+        );
+        run_store_new(
+            &ctx,
+            &new_of(&[json!("steam_library"), json!({"cwd": "x"})]),
+        );
+        let checked = set_checked_blocking(
+            &ctx.store_host,
+            &ctx.store_reads,
+            &set("configStore", "theme", json!("y")),
+        );
+        assert_eq!(checked, Ok(true), "TS's own answer is the result");
+        delivered(&rig.host);
+        assert_eq!(
+            proxy.calls.lock().unwrap().as_slice(),
+            &[
+                (
+                    STORE_TS_SET_CHANNEL.to_string(),
+                    vec![json!("configStore"), json!("theme"), json!("x")]
+                ),
+                (
+                    STORE_TS_DELETE_CHANNEL.to_string(),
+                    vec![json!("configStore"), json!("theme")]
+                ),
+                (
+                    STORE_TS_NEW_CHANNEL.to_string(),
+                    vec![json!("steam_library"), json!({"cwd": "x"})]
+                ),
+                (
+                    STORE_TS_SET_CHECKED_CHANNEL.to_string(),
+                    vec![json!("configStore"), json!("theme"), json!("y")]
+                ),
+            ]
+        );
+        assert!(rig.pushes.0.lock().unwrap().is_empty());
+        assert!(rig.events.lock().unwrap().is_empty());
+        assert!(!rig.home.root().join("store").exists());
+    }
+
+    #[test]
+    fn store_native_set_checked_handler_refuses_bad_args_with_the_marker() {
+        let ctx = Arc::new(NativeCtx::for_tests(Arc::new(NullHost), None));
+        for args in [
+            vec![],
+            vec![json!("configStore")],
+            vec![json!(1), json!("theme"), json!(1)],
+            vec![
+                json!("configStore"),
+                json!("theme"),
+                json!(1),
+                json!("extra"),
+            ],
+        ] {
+            let err =
+                tauri::async_runtime::block_on(store_set_checked(Arc::clone(&ctx), args.clone()))
+                    .unwrap_err();
+            assert!(err.starts_with(IPC_INVALID_ARGS_MARKER), "{args:?}: {err}");
+            assert!(err.contains(STORE_SET_CHECKED_CHANNEL));
+        }
+    }
+
+    #[test]
+    fn store_native_store_delete_and_new_args_are_shape_checked() {
+        assert!(parse_store_delete(&[json!("configStore"), json!("a")]).is_ok());
+        for args in [
+            vec![],
+            vec![json!("configStore")],
+            vec![json!("configStore"), json!("")],
+            vec![json!("configStore"), json!(1)],
+            vec![json!("configStore"), json!("a"), json!("extra")],
+        ] {
+            assert!(parse_store_delete(&args).is_err(), "{args:?}");
+        }
+        assert_eq!(new_of(&[json!("s")]).options, None);
+        assert_eq!(new_of(&[json!("s"), Value::Null]).options, None);
+        assert_eq!(
+            new_of(&[json!("s"), json!({"a": 1})]).options,
+            Some(json!({"a": 1}))
+        );
+        for args in [
+            vec![],
+            vec![json!("")],
+            vec![json!(1), json!({})],
+            vec![json!("s"), json!("not-an-object")],
+            vec![json!("s"), json!({}), json!("extra")],
+        ] {
+            assert!(parse_store_new(&args).is_err(), "{args:?}");
+        }
     }
 
     #[test]

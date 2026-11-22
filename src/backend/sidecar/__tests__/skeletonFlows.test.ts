@@ -527,7 +527,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
         'gsd-probe-2'
       ])
       await flush()
-      writeSend(input, 'del-1', 'storeDelete', ['configStore', 'theme'])
+      writeSend(input, 'del-1', 'store:ts-delete', ['configStore', 'theme'])
       await flush()
 
       writeInvoke(input, 'snapshot-del-1', 'store:ts-snapshot', [])
@@ -751,11 +751,11 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       const before = existsSync(cacheDir) ? readdirSync(cacheDir) : []
 
       const { input } = boot()
-      writeSend(input, 'new-junk-1', 'storeNew', [
+      writeSend(input, 'new-junk-1', 'store:ts-new', [
         'attacker_junk_store',
         undefined
       ])
-      writeSend(input, 'new-junk-2', 'storeNew', [
+      writeSend(input, 'new-junk-2', 'store:ts-new', [
         'aaaaaaaaaaaaaaaaaaaaaaaa',
         undefined
       ])

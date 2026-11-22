@@ -790,6 +790,7 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "getLogContent",
     "getUploadedLogFiles",
     "sidecar:store-fetch",
+    "sidecar:store-set-checked",
     "uploadLogFile",
 ];
 
@@ -799,6 +800,8 @@ pub(crate) const NATIVE_SEND_CHANNELS: &[&str] = &[
     "logInfo",
     "openExternalUrl",
     "showLogFileInFolder",
+    "storeDelete",
+    "storeNew",
     "storeSet",
 ];
 

@@ -1479,18 +1479,27 @@ export const STORE_SET_CHANNEL = 'storeSet' as const
  */
 export const STORE_TS_SET_CHANNEL = 'store:ts-set' as const
 
+/** The sidecar's `storeDelete` handler, renamed in Phase 85 (85-17); shell-only, like `STORE_TS_SET_CHANNEL`. */
+export const STORE_TS_DELETE_CHANNEL = 'store:ts-delete' as const
+
+/** The sidecar's `storeNew` handler, renamed in Phase 85 (85-17); shell-only, like `STORE_TS_SET_CHANNEL`. */
+export const STORE_TS_NEW_CHANNEL = 'store:ts-new' as const
+
+/** The sidecar's confirmed-write handler, renamed in Phase 85 (85-17); shell-only. */
+export const STORE_TS_SET_CHECKED_CHANNEL = 'store:ts-set-checked' as const
+
 /**
  * `send`-kind (fire-and-forget) channel name for a single-key store delete. ALREADY emitted
  * by `tauriTransport.ts`'s `snapshotDelete()` (`send('storeDelete', [storeName, key])`) —
- * must match that literal exactly. Same unlistened-frame risk as `STORE_SET_CHANNEL` until
- * plan 29-05 wires a listener.
+ * must match that literal exactly. A native channel since Phase 85 (85-17), like
+ * `STORE_SET_CHANNEL`; the sidecar's handler is `STORE_TS_DELETE_CHANNEL`.
  */
 export const STORE_DELETE_CHANNEL = 'storeDelete' as const
 
 /**
  * `send`-kind (fire-and-forget) channel name for registering a new store (mirrors
- * `misc.ts`'s `storeNew` / `tauriTransport.ts`'s `registerStore()`). Same unlistened-frame
- * risk as `STORE_SET_CHANNEL`/`STORE_DELETE_CHANNEL` until plan 29-05 wires a listener.
+ * `misc.ts`'s `storeNew` / `tauriTransport.ts`'s `registerStore()`). A native channel since
+ * Phase 85 (85-17); the sidecar's handler is `STORE_TS_NEW_CHANNEL`.
  */
 export const STORE_NEW_CHANNEL = 'storeNew' as const
 
@@ -1515,10 +1524,10 @@ export const STORE_TS_FETCH_CHANNEL = 'store:ts-fetch' as const
 /**
  * `invoke`-kind INTERNAL RPC channel, ridden over `SIDECAR_INVOKE`, for a CONFIRMED single-key
  * store write (Phase 64 plan 03). Unlike the fire-and-forget `STORE_SET_CHANNEL` it carries a
- * response: the sidecar resolves `true` only when the write was persisted, and `false` when any
- * write guard refused it or the write threw. It routes through the same `applyStoreWrite` choke
- * point as `storeSet`. A renderer channel (not in `sidecarInternalCallers`), so it is relayed
- * through the Rust shell's generated `RENDERER_CHANNELS` allow-list.
+ * response: `true` only when the write was persisted, and `false` when any write guard refused it
+ * or the write threw. Since Phase 85 (85-17) it is a NATIVE channel: the Rust shell applies it
+ * through `StoreHost` behind the same policy; the sidecar's handler is
+ * `STORE_TS_SET_CHECKED_CHANNEL`, which only the shell can reach.
  */
 export const STORE_SET_CHECKED_CHANNEL = 'sidecar:store-set-checked' as const
 

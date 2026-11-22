@@ -217,6 +217,84 @@
         ["s", "a", 1, "extra"]
       ]
     },
+    "sidecar:store-set-checked": {
+      "kind": "invoke",
+      "slice": "store",
+      "args": [
+        {
+          "name": "storeName",
+          "type": "string",
+          "maxLength": 128,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "keyPath",
+          "type": "string",
+          "maxLength": 512,
+          "maxLengthUnit": "utf16"
+        },
+        { "name": "value", "type": "JSON" }
+      ],
+      "returns": "boolean",
+      "valid": [
+        ["configStore", "theme", "dracula"],
+        ["configStore", "customThemes", []]
+      ],
+      "invalid": [
+        [],
+        ["configStore"],
+        ["", "theme", 1],
+        [1, "theme", 1],
+        ["configStore", "theme", 1, "extra"]
+      ]
+    },
+    "storeDelete": {
+      "kind": "send",
+      "slice": "store",
+      "args": [
+        {
+          "name": "storeName",
+          "type": "string",
+          "maxLength": 128,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "keyPath",
+          "type": "string",
+          "maxLength": 512,
+          "maxLengthUnit": "utf16"
+        }
+      ],
+      "returns": "void",
+      "valid": [["configStore", "defaultSettings.theme"]],
+      "invalid": [
+        [],
+        ["configStore"],
+        ["configStore", ""],
+        ["configStore", 1],
+        ["configStore", "a", "extra"]
+      ]
+    },
+    "storeNew": {
+      "kind": "send",
+      "slice": "store",
+      "args": [
+        {
+          "name": "storeName",
+          "type": "string",
+          "maxLength": 128,
+          "maxLengthUnit": "utf16"
+        },
+        { "name": "options", "type": "{ [key]: JSON } | undefined (ignored)" }
+      ],
+      "returns": "void",
+      "valid": [
+        ["timestampStore", { "cwd": "store_cache", "name": "x" }],
+        ["timestampStore", null],
+        ["timestampStore"]
+      ],
+      "invalid": [[], [""], [1, {}], ["s", "not-an-object"], ["s", {}, "extra"]]
+    },
     "getHeroicVersion": {
       "kind": "invoke",
       "slice": "app-shell",

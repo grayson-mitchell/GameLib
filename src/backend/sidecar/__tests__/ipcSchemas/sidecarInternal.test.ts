@@ -31,8 +31,8 @@ const invokeTable: FixtureTable<typeof sidecarInternalInvokeArgs> = {
     valid: [['gogLibraryStore'], ['timestampStore']],
     invalid: [[], [''], [1], ['x'.repeat(129)]]
   },
-  // Phase 64 plan 03: renderer-invoked confirmed write [store, key, json value]
-  'sidecar:store-set-checked': {
+  // Phase 64 plan 03 / 85-17: the confirmed write store_native.rs forwards [store, key, json value]
+  'store:ts-set-checked': {
     valid: [
       ['configStore', 'theme', 'dracula'],
       ['configStore', 'customThemes', []]
@@ -130,12 +130,13 @@ const sendTable: FixtureTable<typeof sidecarInternalSendArgs> = {
       ['s', '', 1]
     ]
   },
-  storeDelete: {
+  // 85-17: store_native.rs forwards the renderer's storeDelete args unchanged
+  'store:ts-delete': {
     valid: [['configStore', 'defaultSettings.theme']],
     invalid: [[], ['configStore'], ['configStore', ''], ['configStore', 1]]
   },
-  // tauriTransport.ts: send(STORE_NEW_CHANNEL, [storeName, options])
-  storeNew: {
+  // 85-17: store_native.rs forwards [storeName] or [storeName, options]
+  'store:ts-new': {
     valid: [
       ['timestampStore', { cwd: 'store_cache', name: 'x' }],
       ['timestampStore', undefined],
@@ -269,8 +270,11 @@ describe('sidecarInternal schemas', () => {
       'store:ts-snapshot',
       // 85-16: the renamed fetch the shell forwards to; the renderer's name is native now.
       'store:ts-fetch',
-      // 85-17: the renamed write the shell forwards to; the renderer's storeSet is native now.
+      // 85-17: the renamed writes the shell forwards to; the renderer's channels are native now.
       'store:ts-set',
+      'store:ts-set-checked',
+      'store:ts-delete',
+      'store:ts-new',
       'handleProtocolUrl',
       'shellWindowFocused',
       'depotCdnToken',

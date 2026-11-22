@@ -41,14 +41,15 @@ import {
 } from 'common/types/storePolicy'
 import {
   STORE_TS_SET_CHANNEL,
-  STORE_DELETE_CHANNEL,
-  STORE_NEW_CHANNEL,
-  STORE_SET_CHECKED_CHANNEL,
+  STORE_TS_DELETE_CHANNEL,
+  STORE_TS_NEW_CHANNEL,
+  STORE_TS_SET_CHECKED_CHANNEL,
   STORE_CHANGED_CHANNEL,
   STORE_MIRROR_EVENT_CHANNEL,
   type StoreChangedPayload
 } from 'common/types/sidecarTransport'
 import { isStoreMirrorEvent } from '../stores/mirrorCell'
+import { isRustOwnedStoreName, type StoreMode } from '../stores/storeOwnership'
 
 /** Minimal shape both a registered typed store and a raw cache-backed `Store` satisfy. */
 interface WritableStoreBackend {
@@ -243,7 +244,7 @@ export function applyStoreWrite(
     return false
   }
 
-  pushStoreChanged(push, {
+  pushStoreChanged(push, root.storeMode, {
     store: storeName,
     key,
     value,
@@ -267,8 +268,16 @@ export function applyStoreWrite(
  */
 function pushStoreChanged(
   push: PushFrontendMessage,
+  storeMode: StoreMode,
   payload: StoreChangedPayload
 ): void {
+  // Phase 85 (85-17): ONE PUSH SOURCE PER STORE. Under `rust` the shell announces every change of a
+  // store it owns to the renderer itself, whoever made it (this sidecar's mirror frames included),
+  // in its rev order and through the same allow-list. A second push from here would arrive with no
+  // rev, on another route, so the renderer could apply it over a newer value. Under `ts`, and for
+  // a store TS still owns, nothing changed: this is still the one push site.
+  if (isRustOwnedStoreName(payload.store, storeMode)) return
+
   // SECRET-LEAK GUARD — load-bearing for the sidecar-initiated producer, redundant for
   // `applyStoreWrite`.
   //
@@ -321,7 +330,7 @@ export function registerStoreWriteHandlers(deps: {
   // that already owns this channel. Bound on every call because the channel is per root;
   // notifications raised before this call are still dropped (the channel starts unbound).
   deps.root.changes.bind((payload) =>
-    pushStoreChanged(deps.pushFrontendMessage, payload)
+    pushStoreChanged(deps.pushFrontendMessage, deps.root.storeMode, payload)
   )
   // `send`-kind (fire-and-forget) registrations: unlike an `invoke` channel there is no
   // response frame and no promise to reject on the renderer side — which is exactly why
@@ -348,9 +357,10 @@ export function registerStoreWriteHandlers(deps: {
 
   // Phase 64 plan 03: the CONFIRMED write. Same choke point as `storeSet`, but an `invoke`
   // channel, so the renderer awaits whether the write reached disk. A refusal is `false`, not a
-  // rejected promise: every guard already logged its own stderr line.
+  // rejected promise: every guard already logged its own stderr line. 85-17: like the three sends
+  // below, the renderer's channel is native now and this is its shell-only `store:ts-*` name.
   deps.ipc.handle(
-    STORE_SET_CHECKED_CHANNEL,
+    STORE_TS_SET_CHECKED_CHANNEL,
     (
       _event: unknown,
       storeName: unknown,
@@ -359,7 +369,7 @@ export function registerStoreWriteHandlers(deps: {
     ): Promise<boolean> => {
       if (typeof storeName !== 'string' || typeof key !== 'string') {
         process.stderr.write(
-          '[storeWriteHandlers] storeSetChecked rejected a non-string store name or key\n'
+          '[storeWriteHandlers] store:ts-set-checked rejected a non-string store name or key\n'
         )
         return Promise.resolve(false)
       }
@@ -371,11 +381,11 @@ export function registerStoreWriteHandlers(deps: {
   )
 
   deps.ipc.on(
-    STORE_DELETE_CHANNEL,
+    STORE_TS_DELETE_CHANNEL,
     (_event: unknown, storeName: unknown, key: unknown) => {
       if (typeof storeName !== 'string' || typeof key !== 'string') {
         process.stderr.write(
-          '[storeWriteHandlers] storeDelete rejected a non-string store name or key\n'
+          '[storeWriteHandlers] store:ts-delete rejected a non-string store name or key\n'
         )
         return
       }
@@ -392,7 +402,7 @@ export function registerStoreWriteHandlers(deps: {
   // typed store, or constructs a permitted dynamic cache store using the hardcoded shape
   // below, ignoring `options` except to log a mismatch diagnostic.
   deps.ipc.on(
-    STORE_NEW_CHANNEL,
+    STORE_TS_NEW_CHANNEL,
     (_event: unknown, storeName: unknown, options: unknown) => {
       if (typeof storeName !== 'string') {
         process.stderr.write(

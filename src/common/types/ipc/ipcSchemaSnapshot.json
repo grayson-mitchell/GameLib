@@ -6974,61 +6974,26 @@
     {
       "channel": "sidecar:store-set-checked",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 512
-          },
-          {
-            "$ref": "#/$defs/__schema0"
-          }
-        ],
-        "items": false,
-        "minItems": 3,
-        "maxItems": 3,
-        "$defs": {
-          "__schema0": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "number"
-              },
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "$ref": "#/$defs/__schema0"
-                }
-              },
-              {
-                "type": "object",
-                "propertyNames": {
-                  "type": "string"
-                },
-                "additionalProperties": {
-                  "$ref": "#/$defs/__schema0"
-                }
-              }
-            ]
-          }
+      "owner": "native",
+      "args": [
+        {
+          "name": "storeName",
+          "type": "string",
+          "maxLength": 128,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "keyPath",
+          "type": "string",
+          "maxLength": 512,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "value",
+          "type": "JSON"
         }
-      }
+      ],
+      "returns": "boolean"
     },
     {
       "channel": "steamAdoptionOpenSteam",
@@ -7483,25 +7448,22 @@
     {
       "channel": "storeDelete",
       "kind": "send",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 512
-          }
-        ],
-        "items": false,
-        "minItems": 2,
-        "maxItems": 2
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "storeName",
+          "type": "string",
+          "maxLength": 128,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "keyPath",
+          "type": "string",
+          "maxLength": 512,
+          "maxLengthUnit": "utf16"
+        }
+      ],
+      "returns": "void"
     },
     {
       "channel": "storeEmbedBack",
@@ -7698,69 +7660,20 @@
     {
       "channel": "storeNew",
       "kind": "send",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          {
-            "anyOf": [
-              {
-                "type": "object",
-                "propertyNames": {
-                  "type": "string"
-                },
-                "additionalProperties": {
-                  "$ref": "#/$defs/__schema0"
-                }
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 2,
-        "$defs": {
-          "__schema0": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "number"
-              },
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "$ref": "#/$defs/__schema0"
-                }
-              },
-              {
-                "type": "object",
-                "propertyNames": {
-                  "type": "string"
-                },
-                "additionalProperties": {
-                  "$ref": "#/$defs/__schema0"
-                }
-              }
-            ]
-          }
+      "owner": "native",
+      "args": [
+        {
+          "name": "storeName",
+          "type": "string",
+          "maxLength": 128,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "options",
+          "type": "{ [key]: JSON } | undefined (ignored)"
         }
-      }
+      ],
+      "returns": "void"
     },
     {
       "channel": "storeSet",

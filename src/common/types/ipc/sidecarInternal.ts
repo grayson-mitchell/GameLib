@@ -199,8 +199,9 @@ export const sidecarInternalInvokeArgs = {
   // 85-16: the old renderer fetch, renamed: the shell forwards `sidecar:store-fetch` here for a
   // store TS still answers (GAMELIB_STORE=ts, or a row Rust never opens).
   'store:ts-fetch': z.tuple([storeName]),
-  // Phase 64 plan 03: a confirmed write; resolves true only once persisted (renderer-invoked).
-  'sidecar:store-set-checked': z.tuple([storeName, keyPath, z.json()]),
+  // Phase 64 plan 03: a confirmed write; resolves true only once persisted. 85-17: renamed from the
+  // renderer's `sidecar:store-set-checked` (native now); the shell forwards to it for a store TS owns.
+  'store:ts-set-checked': z.tuple([storeName, keyPath, z.json()]),
   // The `gamelib://` prefix check stays in bootstrap.ts (D-05).
   handleProtocolUrl: z.tuple([nonEmptyString(8192)]),
   // Shell-originated: the Rust depot job asks Node for a CDN token / manifest request code.
@@ -216,9 +217,13 @@ export const sidecarInternalSendArgs = {
   // store TS still owns (GAMELIB_STORE=ts, or a row Rust never opens). The value is any JSON value;
   // `storePolicy.ts` `isWritableStoreField` / `isSafeKeyPath` own the field policy, not this schema.
   'store:ts-set': z.tuple([storeName, keyPath, z.json()]),
-  storeDelete: z.tuple([storeName, keyPath]),
-  // The handler ignores `options` (T-27-03) beyond a mismatch log.
-  storeNew: z.tuple([storeName, optionalArg(z.record(z.string(), z.json()))]),
+  // 85-17: renamed from the renderer's `storeDelete` and `storeNew` (native now); the shell forwards
+  // to them for a store TS owns. The `storeNew` handler ignores `options` (T-27-03) beyond a log.
+  'store:ts-delete': z.tuple([storeName, keyPath]),
+  'store:ts-new': z.tuple([
+    storeName,
+    optionalArg(z.record(z.string(), z.json()))
+  ]),
   // Shell-originated: Rust depot job progress events.
   depotJobEvent: z.tuple([depotJobEvent]),
   // Shell-originated: the answer to one sidecar store frame (Phase 85).
@@ -232,6 +237,9 @@ export const sidecarInternalCallers = {
   'store:ts-snapshot': 'shell',
   'store:ts-fetch': 'shell',
   'store:ts-set': 'shell',
+  'store:ts-set-checked': 'shell',
+  'store:ts-delete': 'shell',
+  'store:ts-new': 'shell',
   handleProtocolUrl: 'shell',
   shellWindowFocused: 'shell',
   depotCdnToken: 'shell',

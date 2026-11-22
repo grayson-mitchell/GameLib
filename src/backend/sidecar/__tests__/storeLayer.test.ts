@@ -83,7 +83,7 @@ import {
   STORE_SNAPSHOT_CHANNEL,
   STORE_TS_FETCH_CHANNEL,
   STORE_TS_SET_CHANNEL,
-  STORE_SET_CHECKED_CHANNEL
+  STORE_TS_SET_CHECKED_CHANNEL
 } from 'common/types/sidecarTransport'
 
 // `registerHandlers()` registers every invoke handler (including the
@@ -167,10 +167,10 @@ async function invokeStoreSetChecked(
   key: string,
   value: unknown
 ): Promise<boolean> {
-  const handler = bootServices.host.ipc.getHandler(STORE_SET_CHECKED_CHANNEL)
+  const handler = bootServices.host.ipc.getHandler(STORE_TS_SET_CHECKED_CHANNEL)
   if (!handler) {
     throw new Error(
-      `${STORE_SET_CHECKED_CHANNEL} handler was not registered by ../handlers`
+      `${STORE_TS_SET_CHECKED_CHANNEL} handler was not registered by ../handlers`
     )
   }
   return (await handler(undefined, storeName, key, value)) as boolean
@@ -622,7 +622,7 @@ describe('sidecar:store-set-checked (confirmed write)', () => {
 
   it('resolves false for non-string arguments', async () => {
     const handler = defined(
-      bootServices.host.ipc.getHandler(STORE_SET_CHECKED_CHANNEL),
+      bootServices.host.ipc.getHandler(STORE_TS_SET_CHECKED_CHANNEL),
       'checked handler'
     )
     await expect(handler(undefined, 1, 'theme', 'x')).resolves.toBe(false)

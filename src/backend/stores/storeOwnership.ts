@@ -52,6 +52,7 @@ interface TableRowShape {
   name: string | null
   family: string
   dotPaths: boolean
+  tsNames?: readonly string[]
 }
 
 interface OwnershipShape {
@@ -146,6 +147,21 @@ export function isRustOwned(
   return Object.hasOwn(ownership.families, row.family)
     ? ownership.families[row.family] === true
     : false
+}
+
+/**
+ * Whether Rust owns the file a TS store NAME writes (85-17): a typed store's name or a cache store's
+ * file name, resolved through the table's `tsNames`, else as a runtime `store_cache/<name>`. Under
+ * `rust` the shell announces every change of such a store to the renderer itself (one push source
+ * per store), so the sidecar must not push it too.
+ */
+export function isRustOwnedStoreName(
+  storeName: string,
+  mode: StoreMode,
+  ownership: OwnershipShape = ownershipFile
+): boolean {
+  const row = ROWS.find((r) => r.tsNames?.includes(storeName) === true)
+  return isRustOwned(row?.key ?? `${CACHE_PREFIX}${storeName}`, mode, ownership)
 }
 
 type BootReadOnlyReason = 'newer' | 'failed'

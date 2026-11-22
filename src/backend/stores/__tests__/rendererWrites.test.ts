@@ -12,15 +12,21 @@ import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import {
+  STORE_CHANGED_CHANNEL,
   STORE_MIRROR_EVENT_CHANNEL,
-  STORE_TS_SET_CHANNEL
+  STORE_TS_DELETE_CHANNEL,
+  STORE_TS_NEW_CHANNEL,
+  STORE_TS_SET_CHANNEL,
+  STORE_TS_SET_CHECKED_CHANNEL
 } from 'common/types/sidecarTransport'
 import { sidecarInternalSendArgs } from 'common/types/ipc/sidecarInternal'
+import { createKvsStores } from 'backend/constants/key_value_stores'
+import CacheStore from '../../cache'
 import Store from '../../store_backend'
 import { registerStoreWriteHandlers } from '../../sidecar/storeWriteHandlers'
 import { createStoreRegistry } from '../storeRegistry'
 import type { StoreFrame } from '../storeFrames'
-import type { StoreMode } from '../storeOwnership'
+import { isRustOwnedStoreName, type StoreMode } from '../storeOwnership'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 
 const TRACER_KEY = 'store_cache/wikigameinfo'
@@ -209,9 +215,80 @@ describe('a renderer write Rust applied reaches TS readers as a changed event', 
     }
   })
 
-  it('the old storeSet handler answers only under its shell-only name', () => {
+  it('the old write handlers answer only under their shell-only names', () => {
     const { listeners } = layer('rust')
-    expect(listeners.has('storeSet')).toBe(false)
-    expect(listeners.has(STORE_TS_SET_CHANNEL)).toBe(true)
+    for (const renderer of [
+      'storeSet',
+      'storeDelete',
+      'storeNew',
+      'sidecar:store-set-checked'
+    ]) {
+      expect(listeners.has(renderer)).toBe(false)
+    }
+    for (const shellOnly of [
+      STORE_TS_SET_CHANNEL,
+      STORE_TS_DELETE_CHANNEL,
+      STORE_TS_NEW_CHANNEL,
+      STORE_TS_SET_CHECKED_CHANNEL
+    ]) {
+      expect(listeners.has(shellOnly)).toBe(true)
+    }
+  })
+})
+
+/**
+ * One push source per store (85-17): under `rust` the shell announces every change of a store it
+ * owns, so the sidecar's own writes on such a store push nothing; under `ts` (D-01) the sidecar is
+ * still the renderer's only pusher, exactly as before.
+ */
+describe('the sidecar pushes storeChanged only for stores Rust does not own', () => {
+  const changedPushes = (pushes: [string, unknown][]) =>
+    pushes.filter(([channel]) => channel === STORE_CHANGED_CHANNEL)
+
+  it('under rust a typed store and a cache store Rust owns push nothing from TS', () => {
+    const { root, pushes } = layer('rust')
+    const { tsStore } = createKvsStores({
+      registry: createStoreRegistry(),
+      root
+    })
+    tsStore.set('480', { firstPlayed: 'x', lastPlayed: 'x', totalPlayed: 1 })
+    tsStore.delete('480')
+    const cache = new CacheStore<unknown>('wikigameinfo', null, {
+      root,
+      kind: 'cache'
+    })
+    cache.set('Game', { a: 1 })
+    cache.delete('Game')
+    expect(changedPushes(pushes)).toEqual([])
+  })
+
+  it('under ts the same writes push from TS as before', () => {
+    const { root, pushes } = layer('ts')
+    const { tsStore } = createKvsStores({
+      registry: createStoreRegistry(),
+      root
+    })
+    tsStore.set('480', { firstPlayed: 'x', lastPlayed: 'x', totalPlayed: 1 })
+    const cache = new CacheStore<unknown>('wikigameinfo', null, {
+      root,
+      kind: 'cache'
+    })
+    cache.set('Game', { a: 1 })
+    const stores = changedPushes(pushes).map(
+      ([, payload]) => (payload as { store: string }).store
+    )
+    expect(stores).toContain('timestampStore')
+    expect(stores).toContain('wikigameinfo')
+  })
+
+  it('a store TS still owns under rust (the excluded migrations store) keeps its TS push', () => {
+    expect(isRustOwnedStoreName('migrationsStore', 'rust')).toBe(false)
+    expect(isRustOwnedStoreName('timestampStore', 'rust')).toBe(true)
+    expect(isRustOwnedStoreName('steamBottleConfigStore', 'rust')).toBe(true)
+    expect(isRustOwnedStoreName('wikigameinfo', 'rust')).toBe(true)
+    expect(isRustOwnedStoreName('timestampStore', 'ts')).toBe(false)
+    // An unknown or unrecognised name is never Rust's.
+    expect(isRustOwnedStoreName('brand_new_cache', 'rust')).toBe(false)
+    expect(isRustOwnedStoreName('__proto__', 'rust')).toBe(false)
   })
 })

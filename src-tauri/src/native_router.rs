@@ -128,9 +128,11 @@ pub(crate) enum SendPayload {
     },
     /// `showLogFileInFolder`: a typed log destination, never a path.
     Reveal(LogTarget),
-    /// `storeSet` (85-17): a renderer store write, its shape checked; the policy runs on the slice
-    /// worker.
+    /// `storeSet` / `storeDelete` (85-17): a renderer store write, its shape checked; the policy
+    /// runs on the slice worker.
     StoreWrite(store_native::RendererWrite),
+    /// `storeNew` (85-17): a store registration; the renderer's options are never used.
+    StoreNew(store_native::StoreNew),
 }
 
 /// A native send validator: positional args in, the validated payload or a fixed category literal
@@ -283,8 +285,15 @@ fn run_send_job(ctx: &Arc<NativeCtx>, job: NativeSendJob) -> Result<(), String> 
             log_dispatch::show_log_file(ctx, &target);
             Ok(())
         }
-        (channel @ store_native::STORE_SET_CHANNEL, SendPayload::StoreWrite(write)) => {
+        (
+            channel @ (store_native::STORE_SET_CHANNEL | store_native::STORE_DELETE_CHANNEL),
+            SendPayload::StoreWrite(write),
+        ) => {
             store_native::run_send_write(ctx, channel, &write);
+            Ok(())
+        }
+        (store_native::STORE_NEW_CHANNEL, SendPayload::StoreNew(new)) => {
+            store_native::run_store_new(ctx, &new);
             Ok(())
         }
         (other, _) => Err(format!(
@@ -346,12 +355,33 @@ impl NativeRouter {
         );
         // Phase 85 (85-16): the renderer's lazy store fetch, answered from StoreHost (slice `store`).
         invoke.insert(store_native::STORE_FETCH_CHANNEL, store_native::store_fetch);
-        // Phase 85 (85-17): the renderer's store writes, applied by Rust through StoreHost.
+        // Phase 85 (85-17): the renderer's store writes, applied by Rust through StoreHost. The
+        // confirmed write is an invoke on a blocking thread; the sends run on the store slice worker.
+        invoke.insert(
+            store_native::STORE_SET_CHECKED_CHANNEL,
+            store_native::store_set_checked,
+        );
         send.insert(
             store_native::STORE_SET_CHANNEL,
             SendRoute {
                 slice: STORE_SLICE,
                 validate: |args| store_native::parse_store_set(args).map(SendPayload::StoreWrite),
+            },
+        );
+        send.insert(
+            store_native::STORE_DELETE_CHANNEL,
+            SendRoute {
+                slice: STORE_SLICE,
+                validate: |args| {
+                    store_native::parse_store_delete(args).map(SendPayload::StoreWrite)
+                },
+            },
+        );
+        send.insert(
+            store_native::STORE_NEW_CHANNEL,
+            SendRoute {
+                slice: STORE_SLICE,
+                validate: |args| store_native::parse_store_new(args).map(SendPayload::StoreNew),
             },
         );
         let mut queues: HashMap<&'static str, SliceQueue> = HashMap::new();

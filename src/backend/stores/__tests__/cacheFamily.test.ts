@@ -21,7 +21,7 @@ import { join } from 'path'
 import ownershipFile from 'common/types/ipc/storeOwnership.json'
 import tableFile from 'common/types/ipc/storeTable.json'
 import {
-  STORE_NEW_CHANNEL,
+  STORE_TS_NEW_CHANNEL,
   STORE_TS_SET_CHANNEL
 } from 'common/types/sidecarTransport'
 import CacheStore from '../../cache'
@@ -339,7 +339,7 @@ describe('runtime cache stores built by storeNew', () => {
     families['user-state'] = true
     const frames: StoreFrame[] = []
     const { root, listeners } = layer(frames)
-    listeners.get(STORE_NEW_CHANNEL)?.(undefined, 'steam_library')
+    listeners.get(STORE_TS_NEW_CHANNEL)?.(undefined, 'steam_library')
     const cell = root.mirrors.cellFor({
       path: libraryPath(),
       storeKey: 'store_cache/steam_library',
@@ -370,7 +370,7 @@ describe('runtime cache stores built by storeNew', () => {
     families['user-state'] = false
     const frames: StoreFrame[] = []
     const { listeners } = layer(frames)
-    listeners.get(STORE_NEW_CHANNEL)?.(undefined, 'steam_library')
+    listeners.get(STORE_TS_NEW_CHANNEL)?.(undefined, 'steam_library')
     listeners.get(STORE_TS_SET_CHANNEL)?.(undefined, 'steam_library', 'k', 1)
     expect(frames).toEqual([])
     expect(JSON.parse(readFileSync(libraryPath(), 'utf8'))).toMatchObject({
@@ -385,7 +385,7 @@ describe('runtime cache stores built by storeNew', () => {
       .mockImplementation(() => true)
     const frames: StoreFrame[] = []
     const { listeners } = layer(frames)
-    listeners.get(STORE_NEW_CHANNEL)?.(undefined, 'brand_new_cache')
+    listeners.get(STORE_TS_NEW_CHANNEL)?.(undefined, 'brand_new_cache')
     listeners.get(STORE_TS_SET_CHANNEL)?.(undefined, 'brand_new_cache', 'k', 1)
     expect(frames).toEqual([])
     expect(

@@ -34,6 +34,13 @@ export interface NativeAsync {
   'sidecar:store-fetch': (
     storeName: string
   ) => Promise<{ values: Record<string, unknown>; rev?: number }>
+  // Phase 85 (85-17): the renderer's confirmed store write, applied by Rust; `true` only once on
+  // disk, `false` for any refusal.
+  'sidecar:store-set-checked': (
+    storeName: string,
+    keyPath: string,
+    value: unknown
+  ) => Promise<boolean>
 }
 
 export interface NativeSync {
@@ -44,4 +51,7 @@ export interface NativeSync {
   // Phase 85 (85-17): the renderer's store write, applied by Rust through the StoreHost (a store TS
   // still owns is forwarded to the sidecar's shell-only `store:ts-set`).
   storeSet: (storeName: string, keyPath: string, value: unknown) => void
+  storeDelete: (storeName: string, keyPath: string) => void
+  // The options are never used (T-27-03): a recognised cache store opens from the store table's row.
+  storeNew: (storeName: string, options?: Record<string, unknown>) => void
 }
