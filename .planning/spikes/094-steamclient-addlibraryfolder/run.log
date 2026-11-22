@@ -1,0 +1,128 @@
+{"step":"slots","add":77,"remove":80,"guard":true}
+{"step":"AddLibraryFolder","t":1795286901,"path":"/Users/graysonmitchell/GameLibSpike094/Lib","ret":2}
+{"step":"folders","count":3}
+{"step":"folder","index":0,"path":"/Users/graysonmitchell/Library/Application Support/Steam"}
+{"step":"folder","index":1,"path":"/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps"}
+{"step":"folder","index":2,"path":"/Users/graysonmitchell/GameLibSpike094/Lib"}
+{"step":"AddLibraryFolder","t":1795286913,"path":"/Users/graysonmitchell/GameLibSpike094/Lib","ret":2}
+{"step":"folders","count":3}
+{"step":"folder","index":0,"path":"/Users/graysonmitchell/Library/Application Support/Steam"}
+{"step":"folder","index":1,"path":"/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps"}
+{"step":"folder","index":2,"path":"/Users/graysonmitchell/GameLibSpike094/Lib"}
+{"step":"AddLibraryFolder","t":1795286913,"path":"/Users/graysonmitchell/GameLibSpike094/Lib/","ret":2}
+{"step":"folders","count":3}
+{"step":"folder","index":0,"path":"/Users/graysonmitchell/Library/Application Support/Steam"}
+{"step":"folder","index":1,"path":"/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps"}
+{"step":"folder","index":2,"path":"/Users/graysonmitchell/GameLibSpike094/Lib"}
+{"step":"AddLibraryFolder","t":1795286913,"path":"/Users/graysonmitchell/GameLibSpike094/DoesNotExist","ret":-1}
+{"step":"folders","count":3}
+{"step":"folder","index":0,"path":"/Users/graysonmitchell/Library/Application Support/Steam"}
+{"step":"folder","index":1,"path":"/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps"}
+{"step":"folder","index":2,"path":"/Users/graysonmitchell/GameLibSpike094/Lib"}
+{"step":"AddLibraryFolder","t":1795286913,"path":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/nested","ret":-1}
+{"step":"folders","count":3}
+{"step":"folder","index":0,"path":"/Users/graysonmitchell/Library/Application Support/Steam"}
+{"step":"folder","index":1,"path":"/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps"}
+{"step":"folder","index":2,"path":"/Users/graysonmitchell/GameLibSpike094/Lib"}
+{"step":"AddLibraryFolder","t":1795286913,"path":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/inside","ret":-1}
+{"step":"folders","count":3}
+{"step":"folder","index":0,"path":"/Users/graysonmitchell/Library/Application Support/Steam"}
+{"step":"folder","index":1,"path":"/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps"}
+{"step":"folder","index":2,"path":"/Users/graysonmitchell/GameLibSpike094/Lib"}
+{"step":"AddLibraryFolder","t":1795286913,"path":"/Users/graysonmitchell/GameLibSpike094/HasFiles","ret":3}
+{"step":"folders","count":4}
+{"step":"folder","index":0,"path":"/Users/graysonmitchell/Library/Application Support/Steam"}
+{"step":"folder","index":1,"path":"/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps"}
+{"step":"folder","index":2,"path":"/Users/graysonmitchell/GameLibSpike094/Lib"}
+{"step":"folder","index":3,"path":"/Users/graysonmitchell/GameLibSpike094/HasFiles"}
+{"step":"AddLibraryFolder","t":1795286913,"path":"relative/path","ret":-1}
+{"step":"folders","count":4}
+{"step":"folder","index":0,"path":"/Users/graysonmitchell/Library/Application Support/Steam"}
+{"step":"folder","index":1,"path":"/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps"}
+{"step":"folder","index":2,"path":"/Users/graysonmitchell/GameLibSpike094/Lib"}
+{"step":"folder","index":3,"path":"/Users/graysonmitchell/GameLibSpike094/HasFiles"}
+{"step":"slots","add":77,"remove":80,"guard":true}
+{"step":"AddLibraryFolder","t":1795286921,"path":"/Users/graysonmitchell/GameLibSpike094","ret":4}
+{"step":"RemoveLibraryFolder","t":1795286929,"index":4,"b1":0,"b2":0,"ret":0}
+{"step":"folders","count":-1}
+{"step":"RemoveLibraryFolder","t":1795286929,"index":3,"b1":0,"b2":0,"ret":7}
+{"step":"folders","count":-1}
+{"step":"slots","add":77,"remove":80,"guard":true}
+{"step":"rawfolders","count":5}
+{"step":"raw","index":0,"ret":56,"path":"/Users/graysonmitchell/Library/Application Support/Steam"}
+{"step":"raw","index":1,"ret":59,"path":"/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps"}
+{"step":"raw","index":2,"ret":42,"path":"/Users/graysonmitchell/GameLibSpike094/Lib"}
+{"step":"raw","index":3,"ret":47,"path":"/Users/graysonmitchell/GameLibSpike094/HasFiles"}
+{"step":"raw","index":4,"ret":0,"path":""}
+{"step":"RemoveLibraryFolder","t":1795286962,"index":3,"b1":0,"b2":0,"ret":0}
+{"step":"rawfolders","count":5}
+{"step":"raw","index":0,"ret":56,"path":"/Users/graysonmitchell/Library/Application Support/Steam"}
+{"step":"raw","index":1,"ret":59,"path":"/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps"}
+{"step":"raw","index":2,"ret":42,"path":"/Users/graysonmitchell/GameLibSpike094/Lib"}
+{"step":"raw","index":3,"ret":0,"path":""}
+{"step":"raw","index":4,"ret":0,"path":""}
+{"step":"AddLibraryFolder","t":1795286971,"path":"/Users/graysonmitchell/GameLibSpike094/HasFiles","ret":4}
+{"step":"rawfolders","count":5}
+{"step":"raw","index":0,"ret":56,"path":"/Users/graysonmitchell/Library/Application Support/Steam"}
+{"step":"raw","index":1,"ret":59,"path":"/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps"}
+{"step":"raw","index":2,"ret":42,"path":"/Users/graysonmitchell/GameLibSpike094/Lib"}
+{"step":"raw","index":3,"ret":0,"path":""}
+{"step":"raw","index":4,"ret":47,"path":"/Users/graysonmitchell/GameLibSpike094/HasFiles"}
+{"step":"RemoveLibraryFolder","t":1795286980,"index":4,"b1":0,"b2":0,"ret":0}
+{"step":"CanMoveApp","t":1795286982,"appId":264160,"ret":0,"out":0,"slot":67}
+{"step":"MoveApp","t":1795286982,"appId":264160,"folder":2,"EAppUpdateError":0,"slot":68}
+{"step":"GetMoveAppProgress","t":1795286982,"appId":264160,"ret":1,"a":118009358,"b":0,"c":0}
+{"step":"status","t":1795286982,"appId":264160,"installState":32772,"upToDate":1,"libraryFolder":0,"installDirRet":82,"installDir":"/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286983,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286983,"appId":264160,"installState":38,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286984,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286984,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286985,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286985,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286986,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286986,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286988,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286988,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286989,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286989,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286990,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286990,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286991,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286991,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286992,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286992,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286993,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286993,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286994,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286994,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286995,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286995,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286996,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286996,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286997,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286997,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286998,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286998,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795286999,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795286999,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795287001,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795287001,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795287002,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795287002,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"GetMoveAppProgress","t":1795287003,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"status","t":1795287003,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"status","t":1795287011,"appId":264160,"installState":46,"upToDate":0,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+{"step":"StartValidatingApp","t":1795287107,"appId":264160,"ret":1,"slot":27}
+t:1795287107,"appId":264160,"installState":302,"upToDate":0
+{"step":"status","t":1795287129,"appId":264160,"installState":4,"upToDate":1,"libraryFolder":2,"installDirRet":68,"installDir":"/Users/graysonmitchell/GameLibSpike094/Lib/steamapps/common/WazHack","getterSlot":43
+operator: launch pass, Storage pane lists Lib with WazHack, windows not watched
+{"step":"MoveApp","t":1795318591,"appId":264160,"folder":0,"EAppUpdateError":0,"slot":68}
+t+1 state=32772 folder=2
+t+2 state=4 folder=0
+{"step":"RemoveLibraryFolder","t":1795318599,"index":2,"b1":0,"b2":0,"ret":0}
+{"step":"rawfolders","count":5}
+{"step":"raw","index":0,"ret":56,"path":"/Users/graysonmitchell/Library/Application Support/Steam"}
+{"step":"raw","index":1,"ret":59,"path":"/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps"}
+{"step":"raw","index":2,"ret":0,"path":""}
+{"step":"raw","index":3,"ret":0,"path":""}
+{"step":"raw","index":4,"ret":0,"path":""}

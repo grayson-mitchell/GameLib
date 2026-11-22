@@ -146,6 +146,7 @@
     ".planning/spikes/090-steamclient-moveapp/README.md",
     ".planning/spikes/091-steamclient-validate-repair/README.md",
     ".planning/spikes/092-store-mirror-protocol/README.md",
-    ".planning/spikes/093-store-boot-durability-costs/README.md"
+    ".planning/spikes/093-store-boot-durability-costs/README.md",
+    ".planning/spikes/094-steamclient-addlibraryfolder/README.md"
   ]
 }
