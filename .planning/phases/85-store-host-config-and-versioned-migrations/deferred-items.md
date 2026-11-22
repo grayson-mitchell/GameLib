@@ -27,3 +27,4 @@
   `d029be2cf` (`fix(85-02): redact live paste links from the store corpus`, committed by another session
   while 85-16 ran). 85-16 never touched `meta/harvestStoreCorpus.ts`. The owner of that fix should drop the
   export or tag it `@public`.
+  **Resolved:** the orchestrator dropped the export; `pnpm find-deadcode` passes.

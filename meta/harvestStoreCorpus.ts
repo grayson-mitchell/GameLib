@@ -206,7 +206,7 @@ export const GAMEKEY_PREFIX_RE = /^[A-Za-z0-9]{16}:/
  */
 export const PASTE_URL_RE =
   /^https?:\/\/(?:www\.)?(?:dpaste\.com|dpaste\.org|pastebin\.com|0x0\.st|termbin\.com|hastebin\.com)\//i
-export const PASTE_PLACEHOLDER_PREFIX = 'https://paste.invalid/PASTEREDACTED'
+const PASTE_PLACEHOLDER_PREFIX = 'https://paste.invalid/PASTEREDACTED'
 
 const CIPHERTEXT_PREFIX_RE = /^(steam|humble):v1:/
 const JWT_RE = /^eyJ[A-Za-z0-9_-]{10,}/
