@@ -3,7 +3,7 @@
  * and 05, D-01/D-03/D-04/D-08, REQ-34.2-01/REQ-34.2-03/REQ-34.2-08/
  * REQ-34.2-09/REQ-34.2-10/REQ-34.2-14).
  *
- * Registers the 18 game-details/settings/override channels (15 invoke + 3
+ * Registers the 17 game-details/settings/override channels (14 invoke + 3
  * send) the game-details page and its settings/override affordances depend
  * on, onto platformApi's `ipcMain` recorder, importing the REAL
  * `backend/gamedetails/dispatch.ts`/`backend/gamedetails/overrides.ts`
@@ -12,7 +12,7 @@
  * objective — prove the real logic runs behind the new transport, not a
  * reimplementation, so the Electron and Tauri builds cannot drift apart):
  *
- *   invoke (15, `ipcMain.handle`):
+ *   invoke (14, `ipcMain.handle`):
  *     - `getInstallInfo` -> `gamedetails/dispatch` (`main.ts:842`) — arrived
  *       LATE (F-34.5-G6-10, plan 34.5-43): it is a real preload channel that
  *       was registered ONLY on the Electron side until this port. Its 4th
@@ -35,9 +35,8 @@
  *     - `getAvailableCyberpunkMods` -> `gamedetails/dispatch` (`main.ts:1517-1519`)
  *     - `setCyberpunkModConfig` -> `gamedetails/dispatch` (`main.ts:1520-1522`) —
  *       INVOKE despite feeling fire-and-forget
- *     - `getGameMetadataOverride` -> `game_overrides`'s `getGameOverrides`,
- *       an already-clean pass-through, never extracted (`main.ts:1449-1451`)
- *     - (Phase 86, 86-10) `getAllGameOverrides` is now a native `info` channel.
+ *     - (Phase 86, 86-10) `getGameMetadataOverride` and `getAllGameOverrides` are
+ *       native `info` channels, served by Rust from the StoreHost.
  *
  *   send (3, `ipcMain.on`, Plan 05):
  *     - `setGameMetadataOverride` -> `gamedetails/overrides` (`main.ts:1445-1447`)
@@ -124,7 +123,6 @@ import {
 import type { GameDetailsDeps } from '../gamedetails/dispatch'
 import { setGameMetadataOverride } from '../gamedetails/overrides'
 import type { MiscRuntimeSlice } from '../miscRuntime'
-import { getGameOverrides } from '../game_overrides'
 import type { MoveGameArgs, InstallPlatform, Runner } from 'common/types'
 import type { SideloadGameInfo } from 'common/types/sideload'
 
@@ -142,13 +140,13 @@ export interface GameDetailsFlowDeps
 }
 
 /**
- * Registers the 18 game-details/settings/override channels (15 invoke + 3
+ * Registers the 17 game-details/settings/override channels (14 invoke + 3
  * send). Called once from `handlers.ts` — this module owns no side effects
  * at import time beyond the imports above; the caller decides when
  * registration onto the handler registry happens.
  */
 export function registerGameDetailsFlows(deps: GameDetailsFlowDeps): void {
-  // ── invoke (15) ───────────────────────────────────────────────────────
+  // ── invoke (14) ───────────────────────────────────────────────────────
 
   deps.ipc.handle('getGameInfo', async (_event: unknown, ...args: unknown[]) =>
     getGameInfo(deps, args[0] as string, args[1] as Runner)
@@ -240,16 +238,9 @@ export function registerGameDetailsFlows(deps: GameDetailsFlowDeps): void {
       )
   )
 
-  // Already-clean pass-through to game_overrides/index.ts, never extracted
-  // into gamedetails/dispatch.ts (main.ts:1449-1451).
-  deps.ipc.handle(
-    'getGameMetadataOverride',
-    async (_event: unknown, ...args: unknown[]) =>
-      getGameOverrides(deps, args[0] as string)
-  )
-
-  // Phase 86 (86-10, D-17): `getAllGameOverrides` is a native `info` channel served by Rust from
-  // the StoreHost, so it is no longer registered here and has exactly one owner.
+  // Phase 86 (86-10, D-17): `getGameMetadataOverride` and `getAllGameOverrides` are native `info`
+  // channels served by Rust from the StoreHost, so they are no longer registered here and each has
+  // exactly one owner.
 
   // ── send (3) ──────────────────────────────────────────────────────────
 

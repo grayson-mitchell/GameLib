@@ -148,6 +148,10 @@ pub(crate) enum RustInvokeChannel {
     SteampollUninstallStop,
     InfoRecentAdd,
     InfoRecentRemove,
+    InfoOverridesGet,
+    InfoOverridesGetAll,
+    InfoOverridesSet,
+    InfoOverridesAttach,
 }
 
 impl RustInvokeChannel {
@@ -277,6 +281,10 @@ impl RustInvokeChannel {
         RustInvokeChannel::SteampollUninstallStop,
         RustInvokeChannel::InfoRecentAdd,
         RustInvokeChannel::InfoRecentRemove,
+        RustInvokeChannel::InfoOverridesGet,
+        RustInvokeChannel::InfoOverridesGetAll,
+        RustInvokeChannel::InfoOverridesSet,
+        RustInvokeChannel::InfoOverridesAttach,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -406,6 +414,10 @@ impl RustInvokeChannel {
             "steampoll_uninstall_stop" => Some(RustInvokeChannel::SteampollUninstallStop),
             "info_recent_add" => Some(RustInvokeChannel::InfoRecentAdd),
             "info_recent_remove" => Some(RustInvokeChannel::InfoRecentRemove),
+            "info_overrides_get" => Some(RustInvokeChannel::InfoOverridesGet),
+            "info_overrides_get_all" => Some(RustInvokeChannel::InfoOverridesGetAll),
+            "info_overrides_set" => Some(RustInvokeChannel::InfoOverridesSet),
+            "info_overrides_attach" => Some(RustInvokeChannel::InfoOverridesAttach),
             _ => None,
         }
     }
@@ -537,6 +549,10 @@ impl RustInvokeChannel {
             RustInvokeChannel::SteampollUninstallStop => "steampoll_uninstall_stop",
             RustInvokeChannel::InfoRecentAdd => "info_recent_add",
             RustInvokeChannel::InfoRecentRemove => "info_recent_remove",
+            RustInvokeChannel::InfoOverridesGet => "info_overrides_get",
+            RustInvokeChannel::InfoOverridesGetAll => "info_overrides_get_all",
+            RustInvokeChannel::InfoOverridesSet => "info_overrides_set",
+            RustInvokeChannel::InfoOverridesAttach => "info_overrides_attach",
         }
     }
 }
@@ -795,6 +811,7 @@ pub(crate) fn is_renderer_channel(name: &str) -> bool {
 pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "deleteUploadedLogFile",
     "getAllGameOverrides",
+    "getGameMetadataOverride",
     "getHeroicVersion",
     "getLogContent",
     "getUploadedLogFiles",
@@ -2811,5 +2828,65 @@ impl InfoRecentRemoveArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "info_recent_remove:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "info_recent_remove:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoOverridesGetArgs {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+}
+
+impl InfoOverridesGetArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "info_overrides_get:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "info_overrides_get:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct InfoOverridesGetAllArgs;
+
+impl InfoOverridesGetAllArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoOverridesSetArgs {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    #[serde(rename = "overrideData")]
+    pub(crate) override_data: InfoOverridesSetArgsOverrideData,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoOverridesSetArgsOverrideData {
+    #[serde(default)]
+    pub(crate) title: Option<String>,
+    #[serde(default)]
+    pub(crate) art_cover: Option<String>,
+    #[serde(default)]
+    pub(crate) art_square: Option<String>,
+}
+
+impl InfoOverridesSetArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "info_overrides_set:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "info_overrides_set:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoOverridesAttachArgs {
+    #[serde(rename = "gameInfo")]
+    pub(crate) game_info: Value,
+}
+
+impl InfoOverridesAttachArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "info_overrides_attach:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "info_overrides_attach:bad-args".to_string())
     }
 }

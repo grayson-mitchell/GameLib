@@ -90,13 +90,12 @@ impl OverrideArgs {
     }
 }
 
-/// `{appName, override}`: the game a write targets and what it gets. Unknown fields are rejected.
+/// `{appName, overrideData}`: the game a write targets and what it gets. Unknown fields are rejected.
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct SetArgs {
     pub app_name: String,
-    #[serde(rename = "override")]
-    pub r#override: OverrideArgs,
+    pub override_data: OverrideArgs,
 }
 
 /// `{gameInfo}`: the game object an attach decorates. Unknown fields are rejected.
@@ -169,18 +168,18 @@ pub fn set(ctx: &InfoCtx, args: SetArgs) -> Result<bool, String> {
     let Some(store) = open(ctx) else {
         return Ok(false);
     };
-    // A map that is not an object is corrupt: the TS write would throw on it or build on it
-    // unpredictably, so nothing is written (todo 2026-11-22-overrides-corrupt-map-write).
+    // A map that is not an object is corrupt: the TS write would throw on it (null) or build on it
+    // unpredictably (a string, a number, an array), so nothing is written and the answer is `false`.
     let Json::Obj(mut map) = stored(&store) else {
         return Ok(false);
     };
-    if args.r#override.is_empty() {
+    if args.override_data.is_empty() {
         map.remove(&args.app_name);
         if remove_images_for(&ctx.paths.user_data, &args.app_name).is_err() {
             return Ok(false);
         }
     } else {
-        map.insert_js(args.app_name, args.r#override.to_entry());
+        map.insert_js(args.app_name, args.override_data.to_entry());
     }
     Ok(store.set(MAP_KEY, Json::Obj(map)).is_ok())
 }
@@ -291,13 +290,13 @@ mod tests {
     #[test]
     fn args_reject_unknown_and_misspelled_fields() {
         let set = |text: &str| serde_json::from_str::<SetArgs>(text);
-        assert!(set(r#"{"appName":"a","override":{"title":"T"}}"#).is_ok());
-        assert!(set(r#"{"appName":"a","override":{}}"#).is_ok());
+        assert!(set(r#"{"appName":"a","overrideData":{"title":"T"}}"#).is_ok());
+        assert!(set(r#"{"appName":"a","overrideData":{}}"#).is_ok());
         assert!(set(r#"{"appName":"a"}"#).is_err());
-        assert!(set(r#"{"appName":"a","override":{},"x":1}"#).is_err());
-        assert!(set(r#"{"appName":"a","override":{"x":1}}"#).is_err());
-        assert!(set(r#"{"app_name":"a","override":{}}"#).is_err());
-        assert!(set(r#"{"appName":"a","override":{"title":1}}"#).is_err());
+        assert!(set(r#"{"appName":"a","overrideData":{},"x":1}"#).is_err());
+        assert!(set(r#"{"appName":"a","overrideData":{"x":1}}"#).is_err());
+        assert!(set(r#"{"app_name":"a","overrideData":{}}"#).is_err());
+        assert!(set(r#"{"appName":"a","overrideData":{"title":1}}"#).is_err());
         let get = |text: &str| serde_json::from_str::<GetArgs>(text);
         assert!(get(r#"{"appName":"a"}"#).is_ok());
         assert!(get(r#"{"appName":"a","x":1}"#).is_err());

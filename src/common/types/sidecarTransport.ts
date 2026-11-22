@@ -943,6 +943,33 @@ export const RUST_INFO_RECENT_ADD = 'info_recent_add' as const
 export const RUST_INFO_RECENT_REMOVE = 'info_recent_remove' as const
 
 /**
+ * Phase 86 (SVC-01): the per-game metadata overrides, `store/game-overrides.json`'s `overrides` key,
+ * served by `gamelib-info`. Not reachable from a TS caller until 86-11 turns `game_overrides` into
+ * forwarding shims (D-29 row 7: a Rust write must not race the TS writer).
+ *
+ * `info_overrides_get`: args `{ appName }`. Resolves the stored override or `null`.
+ */
+export const RUST_INFO_OVERRIDES_GET = 'info_overrides_get' as const
+
+/** `info_overrides_get_all`: args none. Resolves the whole `{ [appName]: override }` map (`{}` when none). */
+export const RUST_INFO_OVERRIDES_GET_ALL = 'info_overrides_get_all' as const
+
+/**
+ * `info_overrides_set`: args `{ appName, overrideData: { title?, art_cover?, art_square? } }` (`overrideData`, not
+ * `override`: that is a reserved word in the generated Rust args struct). An
+ * override with every field empty removes the entry and the game's `<appName>-*` images. Resolves
+ * the boolean `setGameOverrides` returned (`false` when the store could not be read or written). The
+ * caller writes the TS log lines from it: the crate has no logger.
+ */
+export const RUST_INFO_OVERRIDES_SET = 'info_overrides_set' as const
+
+/**
+ * `info_overrides_attach`: args `{ gameInfo }`. Resolves that game object with `overrides` added
+ * when one is stored for its `app_name`, else the object unchanged.
+ */
+export const RUST_INFO_OVERRIDES_ATTACH = 'info_overrides_attach' as const
+
+/**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
  * the macOS bridge helper loads: the GameLib cache, else a snapshot of the Steam client's own copy
  * when it already hashes to the pin, else a fetch from Valve's client-update CDN (sha2vz, VZ decode,
@@ -1264,7 +1291,11 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_STEAMPOLL_UNINSTALL_START,
   RUST_STEAMPOLL_UNINSTALL_STOP,
   RUST_INFO_RECENT_ADD,
-  RUST_INFO_RECENT_REMOVE
+  RUST_INFO_RECENT_REMOVE,
+  RUST_INFO_OVERRIDES_GET,
+  RUST_INFO_OVERRIDES_GET_ALL,
+  RUST_INFO_OVERRIDES_SET,
+  RUST_INFO_OVERRIDES_ATTACH
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
@@ -1382,7 +1413,11 @@ export const RUST_STEAMCM_CHANNELS = [
 /** Phase 86: the Rust leaf information channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
 export const RUST_INFO_CHANNELS = [
   RUST_INFO_RECENT_ADD,
-  RUST_INFO_RECENT_REMOVE
+  RUST_INFO_RECENT_REMOVE,
+  RUST_INFO_OVERRIDES_GET,
+  RUST_INFO_OVERRIDES_GET_ALL,
+  RUST_INFO_OVERRIDES_SET,
+  RUST_INFO_OVERRIDES_ATTACH
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */

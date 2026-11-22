@@ -110,10 +110,6 @@ const asyncTable: FixtureTable<typeof gameDetailsAsyncArgs> = {
       [{ appName: 'a', path: '/p', runner: 'gog', extra: 1 }]
     ]
   },
-  getGameMetadataOverride: {
-    valid: [['a']],
-    invalid: [[''], [], [5]]
-  },
   isGameAvailable: {
     valid: [[{ appName: 'a', runner: 'steam' }]],
     invalid: [

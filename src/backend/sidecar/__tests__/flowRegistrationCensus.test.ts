@@ -96,8 +96,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Phase 34.6 Plan 08 (2026-08-24): new module — the 8 EOS overlay channels ported
   // byte-equivalently from eos_overlay/ipc_handler.ts (all invoke-kind, D-09).
   'eosOverlayFlowRegistration.ts': { invoke: 8, send: 0 },
-  // Phase 86 Plan 10 (D-17): invoke 16 -> 15 -- `getAllGameOverrides` is a native `info` channel.
-  'gameDetailsFlowRegistration.ts': { invoke: 15, send: 3 },
+  // Phase 86 Plan 10 (D-17): invoke 16 -> 14 -- `getAllGameOverrides` and
+  // `getGameMetadataOverride` are native `info` channels.
+  'gameDetailsFlowRegistration.ts': { invoke: 14, send: 3 },
   'humbleFlowRegistration.ts': { invoke: 15, send: 1 },
   // Phase 40 Plan 03 (D-11): invoke 4 -> 3, send 2 -> 1 -- `humbleGetLoginUserAgent`
   // (invoke-kind) and `humbleLoginNavigated` (send-kind) removed after a four-surface sweep

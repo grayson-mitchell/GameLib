@@ -29,8 +29,10 @@ use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each slice adds its own.
 pub const OPS: &[&str] = &[
+    "info_overrides_attach",
     "info_overrides_get",
     "info_overrides_get_all",
+    "info_overrides_set",
     "info_recent_add",
     "info_recent_remove",
 ];
@@ -47,6 +49,7 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, 
 /// Each slice adds its arms here, in step with `OPS`.
 async fn route(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, String> {
     match op {
+        "info_overrides_attach" => overrides::attach(ctx, decode(op, args)?),
         "info_overrides_get" => Ok(overrides::get(ctx, &decode(op, args)?).to_value()),
         "info_overrides_get_all" => {
             if !args.is_empty() {
@@ -54,6 +57,7 @@ async fn route(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, String>
             }
             Ok(overrides::get_all(ctx).to_value())
         }
+        "info_overrides_set" => overrides::set(ctx, decode(op, args)?).map(Value::Bool),
         "info_recent_add" => recent::add(ctx, decode(op, args)?).map(|()| Value::Null),
         "info_recent_remove" => recent::remove(ctx, decode(op, args)?).map(|()| Value::Null),
         _ => Err(format!("unknown op: {op}")),

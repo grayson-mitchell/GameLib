@@ -58,6 +58,10 @@ import {
   RUST_STEAMPOLL_STATUS,
   RUST_STEAMPOLL_UNINSTALL_START,
   RUST_STEAMPOLL_UNINSTALL_STOP,
+  RUST_INFO_OVERRIDES_ATTACH,
+  RUST_INFO_OVERRIDES_GET,
+  RUST_INFO_OVERRIDES_GET_ALL,
+  RUST_INFO_OVERRIDES_SET,
   RUST_INFO_RECENT_ADD,
   RUST_INFO_RECENT_REMOVE,
   RUST_STEAMCM_ANON_CLOSE,
@@ -681,6 +685,34 @@ export const rustInvokeArgs = {
   ]),
   [RUST_INFO_RECENT_REMOVE]: z.tuple([
     z.object({ appName: z.string() }).strict()
+  ]),
+  // Phase 86 (SVC-01): per-game overrides. The crate re-validates every arg (deny_unknown_fields,
+  // appName 1 to 1024 UTF-16 units). `gameInfo` is an opaque value: the crate only reads its
+  // `app_name` and hands the object back with `overrides` added.
+  [RUST_INFO_OVERRIDES_GET]: z.tuple([
+    z.object({ appName: z.string() }).strict()
+  ]),
+  [RUST_INFO_OVERRIDES_GET_ALL]: empty,
+  [RUST_INFO_OVERRIDES_SET]: z.tuple([
+    z
+      .object({
+        appName: z.string(),
+        overrideData: z
+          .object({
+            title: z.string().optional(),
+            art_cover: z.string().optional(),
+            art_square: z.string().optional()
+          })
+          .strict()
+      })
+      .strict()
+  ]),
+  [RUST_INFO_OVERRIDES_ATTACH]: z.tuple([
+    z
+      .object({
+        gameInfo: z.unknown().meta({ title: 'gameInfo', 'x-rust-value': true })
+      })
+      .strict()
   ]),
   [RUST_STEAM_API_PIN_RESOLVE]: empty
 } satisfies Record<RustInvokeChannel, z.ZodTuple>

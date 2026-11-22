@@ -1354,20 +1354,16 @@
     {
       "channel": "getGameMetadataOverride",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 4096
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "appName",
+          "type": "string",
+          "maxLength": 256,
+          "maxLengthUnit": "utf16"
+        }
+      ],
+      "returns": "{ title?, art_cover?, art_square? } | null"
     },
     {
       "channel": "getGameOverride",

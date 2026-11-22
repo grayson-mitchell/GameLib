@@ -481,11 +481,12 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 123 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 129 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
     // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(125)
+    // Phase 86 plan 10: 125 -> 129, the four info_overrides_* ops.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(129)
     expect(router).not.toContain('_ =>')
   })
 
@@ -842,7 +843,17 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // `info_dispatch::tests` drives the arm's validation against a FakeHome host.
       // NOT ATTEMPTED here: a live rustInvoke round trip (no TS caller until 86-09).
       'info_recent_add',
-      'info_recent_remove'
+      'info_recent_remove',
+
+      // Phase 86 plan 10 -- per-game overrides, pass-through arms into `gamelib-info`. PROVEN:
+      // `golden_overrides.rs` replays every 86-04 TS golden against the crate's ops (results, image
+      // listings and store bytes), and `info_dispatch::tests` drives the arms' validation against a
+      // FakeHome host. NOT ATTEMPTED here: a live rustInvoke round trip (no TS caller until 86-11,
+      // D-29 row 7).
+      'info_overrides_attach',
+      'info_overrides_get',
+      'info_overrides_get_all',
+      'info_overrides_set'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

@@ -20,8 +20,8 @@ use serde_json::{json, Value};
 /// alone cannot lower the bar.
 const FLOOR: usize = 9;
 
-/// The case ops this build replays. `set` and `attach` join in the plan's second task.
-const REPLAYED: &[&str] = &["get", "getAll"];
+/// Every case op the TS oracle drives; a case with an op not listed here fails the replay.
+const REPLAYED: &[&str] = &["get", "getAll", "set", "attach"];
 
 fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
@@ -132,6 +132,16 @@ fn run_op(ctx: &InfoCtx, op: &Value) -> Result<Value, String> {
             ctx,
         ),
         "getAll" => dispatch_sync("info_overrides_get_all", &[], ctx),
+        "set" => dispatch_sync(
+            "info_overrides_set",
+            &[json!({ "appName": op["appName"], "overrideData": op["override"] })],
+            ctx,
+        ),
+        "attach" => dispatch_sync(
+            "info_overrides_attach",
+            &[json!({ "gameInfo": op["game"] })],
+            ctx,
+        ),
         other => panic!("unknown case op {other}"),
     }
 }
@@ -168,6 +178,35 @@ fn check_manifest(
         return Err(format!("expected/ folders {have:?} != case ids {ids:?}"));
     }
     Ok(())
+}
+
+/// Cases where the TS oracle rewrote the file although the map did not change. The oracle's store
+/// sink applies every frame as a write, so it stamps `__internal__.gamelib.schemaVersion` onto an
+/// unstamped before-file; the StoreHost never writes a `set` of the value a key already holds, so
+/// Rust leaves the before-file as it was. The result, the image listing and the map are identical;
+/// only the stamp differs (see `assert_no_op_rewrite`).
+const NO_OP_REWRITES: &[&str] = &["set-empty-for-absent-entry-still-removes-images"];
+
+/// The Rust file is the before-file byte for byte, and the TS golden is that file plus nothing but
+/// the `__internal__` stamp.
+fn assert_no_op_rewrite(
+    id: &str,
+    rel: &str,
+    golden: &[u8],
+    before: &BTreeMap<String, Vec<u8>>,
+    got: &[u8],
+) {
+    assert!(
+        before[rel] == got,
+        "{id}: the StoreHost rewrote {rel} for a set that changed nothing"
+    );
+    let mut golden: Value = serde_json::from_slice(golden).unwrap();
+    golden.as_object_mut().unwrap().remove("__internal__");
+    let unstamped: Value = serde_json::from_slice(&before[rel]).unwrap();
+    assert_eq!(
+        golden, unstamped,
+        "{id}: the TS golden differs by more than the stamp"
+    );
 }
 
 fn golden_dir() -> PathBuf {
@@ -211,15 +250,21 @@ fn an_empty_case_list_fails_the_manifest_guard() {
 
 #[test]
 fn the_override_ops_are_in_the_sorted_op_table() {
-    assert!(OPS.contains(&"info_overrides_get"));
-    assert!(OPS.contains(&"info_overrides_get_all"));
+    for op in [
+        "info_overrides_attach",
+        "info_overrides_get",
+        "info_overrides_get_all",
+        "info_overrides_set",
+    ] {
+        assert!(OPS.contains(&op), "{op}");
+    }
     let mut sorted = OPS.to_vec();
     sorted.sort_unstable();
     assert_eq!(OPS, sorted.as_slice());
 }
 
 #[test]
-fn every_replayed_golden_case_matches_the_ts_results_images_and_bytes() {
+fn every_golden_case_matches_the_ts_results_images_and_bytes() {
     let cases = read_json(&golden_dir().join("cases.json"));
     let cases: Vec<&Value> = cases
         .as_array()
@@ -231,6 +276,7 @@ fn every_replayed_golden_case_matches_the_ts_results_images_and_bytes() {
     for case in cases {
         let id = case["id"].as_str().unwrap();
         let before_dir = fixtures().join("state/overrides").join(id);
+        let before = tree(&before_dir);
         let p = profile(Some(&before_dir));
         let got_results: Vec<Value> = case["ops"]
             .as_array()
@@ -253,6 +299,10 @@ fn every_replayed_golden_case_matches_the_ts_results_images_and_bytes() {
             "{id}: files left behind"
         );
         for (rel, bytes) in &want {
+            if NO_OP_REWRITES.contains(&id) && rel.ends_with("game-overrides.json") {
+                assert_no_op_rewrite(id, rel, bytes, &before, &got[rel]);
+                continue;
+            }
             assert!(
                 got[rel] == *bytes,
                 "{id}: {rel} differs from the TS golden\n--- want\n{}\n--- got\n{}",
@@ -301,4 +351,247 @@ fn bad_read_args_are_rejected_with_a_fixed_literal() {
         "info_overrides_get_all:bad-args"
     );
     assert!(tree(&p.user_data).is_empty(), "a rejected op wrote a file");
+}
+
+fn set(ctx: &InfoCtx, app_name: &str, override_data: Value) -> Result<Value, String> {
+    dispatch_sync(
+        "info_overrides_set",
+        &[json!({ "appName": app_name, "overrideData": override_data })],
+        ctx,
+    )
+}
+
+fn stored_map(user_data: &Path) -> Value {
+    let bytes = std::fs::read(user_data.join("store/game-overrides.json")).unwrap();
+    serde_json::from_slice::<Value>(&bytes).unwrap()["overrides"].clone()
+}
+
+/// SVC-01 idempotency edge: setting the same override twice leaves the same bytes.
+#[test]
+fn setting_the_same_override_twice_leaves_identical_bytes() {
+    let p = profile(None);
+    let data = json!({ "title": "Renamed", "art_cover": "/img/a-1.png" });
+    assert_eq!(set(&p.ctx, "a", data.clone()), Ok(json!(true)));
+    let once = tree(&p.user_data);
+    assert_eq!(set(&p.ctx, "a", data), Ok(json!(true)));
+    assert_eq!(tree(&p.user_data), once, "the second set changed the file");
+}
+
+/// SVC-01 concurrency edge: two sets for different games, on separate threads against one host, are
+/// each a read-modify-write of the whole map. Without the crate's Mutex one is lost to the other's
+/// stale read.
+#[test]
+fn two_concurrent_sets_for_different_games_both_persist() {
+    for round in 0..100 {
+        let p = Arc::new(profile(None));
+        let barrier = Arc::new(std::sync::Barrier::new(2));
+        let threads: Vec<_> = ["alpha", "beta"]
+            .into_iter()
+            .map(|game| {
+                let (p, barrier) = (Arc::clone(&p), Arc::clone(&barrier));
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    set(&p.ctx, game, json!({ "title": game }))
+                })
+            })
+            .collect();
+        for t in threads {
+            assert_eq!(t.join().unwrap(), Ok(json!(true)), "round {round}");
+        }
+        let map = stored_map(&p.user_data);
+        assert_eq!(
+            map["alpha"]["title"], "alpha",
+            "round {round}: a set was lost"
+        );
+        assert_eq!(
+            map["beta"]["title"], "beta",
+            "round {round}: a set was lost"
+        );
+    }
+}
+
+#[test]
+fn many_concurrent_sets_all_land() {
+    let p = Arc::new(profile(None));
+    let threads: Vec<_> = (0..16)
+        .map(|i| {
+            let p = Arc::clone(&p);
+            std::thread::spawn(move || {
+                set(
+                    &p.ctx,
+                    &format!("g{i}"),
+                    json!({ "title": format!("T{i}") }),
+                )
+                .unwrap();
+            })
+        })
+        .collect();
+    for t in threads {
+        t.join().unwrap();
+    }
+    assert_eq!(stored_map(&p.user_data).as_object().unwrap().len(), 16);
+}
+
+/// T-86-19: clearing an override reaches nothing but `<appName>-*` entries of the images folder: a
+/// sibling name, an unrelated file, a file named exactly like the game, and (on unix) a symlink out
+/// of the folder, whose target survives.
+#[test]
+fn clearing_an_override_removes_only_its_own_images() {
+    let before = fixtures().join("state/overrides/set-empty-removes-entry-and-images");
+    let p = profile(Some(&before));
+    let images = p.user_data.join("game_overrides_images");
+    std::fs::write(images.join("app1"), b"exact").unwrap();
+    std::fs::write(images.join("app1.png"), b"dot").unwrap();
+    let outside = p.user_data.join("outside");
+    std::fs::create_dir(&outside).unwrap();
+    std::fs::write(outside.join("precious.txt"), b"keep").unwrap();
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(&outside, images.join("app1-dirlink")).unwrap();
+        std::os::unix::fs::symlink(outside.join("precious.txt"), images.join("app1-filelink"))
+            .unwrap();
+    }
+    assert_eq!(set(&p.ctx, "app1", json!({})), Ok(json!(true)));
+    assert_eq!(
+        images_listing(&p.user_data),
+        ["app1", "app1.png", "app1x-1.png", "other-1.png"]
+    );
+    assert_eq!(
+        std::fs::read(outside.join("precious.txt")).unwrap(),
+        b"keep"
+    );
+    assert!(stored_map(&p.user_data).get("app1").is_none());
+}
+
+fn images_listing(user_data: &Path) -> Vec<String> {
+    images(user_data)
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|n| n.as_str().unwrap().to_string())
+        .collect()
+}
+
+/// An appName is only ever compared with directory entry names: a path-shaped one reaches nothing
+/// outside the folder, and one with a glob or a separator matches only a name that really starts
+/// with it.
+#[test]
+fn a_path_shaped_app_name_cannot_reach_beyond_the_images_folder() {
+    let p = profile(None);
+    let images = p.user_data.join("game_overrides_images");
+    std::fs::create_dir_all(&images).unwrap();
+    std::fs::write(images.join("a-1.png"), b"x").unwrap();
+    let victim = p.user_data.join("victim.txt");
+    std::fs::write(&victim, b"keep").unwrap();
+    for name in ["../victim.txt", "..", "../", "*", "a/../..", "/"] {
+        assert_eq!(set(&p.ctx, name, json!({})), Ok(json!(true)), "{name}");
+    }
+    assert_eq!(std::fs::read(&victim).unwrap(), b"keep");
+    assert_eq!(images_listing(&p.user_data), ["a-1.png"]);
+}
+
+#[test]
+fn an_unreadable_images_folder_fails_the_set_and_keeps_the_entry() {
+    // A file where the folder should be: `read_dir` fails, TS's `readdirSync` threw into its catch.
+    let before = fixtures().join("state/overrides/get-present");
+    let p = profile(Some(&before));
+    std::fs::write(p.user_data.join("game_overrides_images"), b"not a folder").unwrap();
+    let bytes = tree(&p.user_data);
+    assert_eq!(set(&p.ctx, "app1", json!({})), Ok(json!(false)));
+    assert_eq!(tree(&p.user_data), bytes, "a failed set wrote something");
+}
+
+#[test]
+fn a_corrupt_overrides_value_is_never_written_over() {
+    let p = profile(None);
+    std::fs::create_dir_all(p.user_data.join("store")).unwrap();
+    std::fs::write(
+        p.user_data.join("store/game-overrides.json"),
+        br#"{"overrides":["not","a","map"]}"#,
+    )
+    .unwrap();
+    let bytes = tree(&p.user_data);
+    assert_eq!(set(&p.ctx, "a", json!({ "title": "T" })), Ok(json!(false)));
+    assert_eq!(tree(&p.user_data), bytes);
+    // The reads answer what the TS reads did: the stored value, and null for an entry.
+    assert_eq!(
+        dispatch_sync("info_overrides_get_all", &[], &p.ctx),
+        Ok(json!(["not", "a", "map"]))
+    );
+    assert_eq!(
+        dispatch_sync("info_overrides_get", &[json!({ "appName": "a" })], &p.ctx),
+        Ok(Value::Null)
+    );
+}
+
+#[test]
+fn an_empty_string_field_is_stored_when_another_field_is_set() {
+    let p = profile(None);
+    assert_eq!(
+        set(&p.ctx, "a", json!({ "title": "", "art_cover": "/c.png" })),
+        Ok(json!(true))
+    );
+    assert_eq!(
+        stored_map(&p.user_data)["a"],
+        json!({ "title": "", "art_cover": "/c.png" })
+    );
+}
+
+#[test]
+fn bad_set_and_attach_args_are_rejected_with_a_fixed_literal_and_write_nothing() {
+    let p = profile(None);
+    for bad in [
+        json!({ "appName": "a" }),
+        json!({ "appName": "", "overrideData": {} }),
+        json!({ "appName": "x".repeat(1025), "overrideData": {} }),
+        json!({ "appName": "a", "overrideData": { "title": 1 } }),
+        json!({ "appName": "a", "overrideData": { "other": "x" } }),
+        json!({ "appName": "a", "overrideData": {}, "extra": 1 }),
+        json!({ "appName": "a", "override": {} }),
+        json!("a"),
+    ] {
+        assert_eq!(
+            dispatch_sync("info_overrides_set", std::slice::from_ref(&bad), &p.ctx).unwrap_err(),
+            "info_overrides_set:bad-args",
+            "{bad}"
+        );
+    }
+    for bad in [json!({}), json!({ "gameInfo": {}, "extra": 1 }), json!("a")] {
+        assert_eq!(
+            dispatch_sync("info_overrides_attach", std::slice::from_ref(&bad), &p.ctx).unwrap_err(),
+            "info_overrides_attach:bad-args",
+            "{bad}"
+        );
+    }
+    assert_eq!(
+        dispatch_sync("info_overrides_set", &[], &p.ctx).unwrap_err(),
+        "info_overrides_set:bad-args"
+    );
+    assert!(tree(&p.user_data).is_empty(), "a rejected op wrote a file");
+}
+
+#[test]
+fn attach_hands_back_anything_it_cannot_decorate_unchanged() {
+    let before = fixtures().join("state/overrides/get-present");
+    let p = profile(Some(&before));
+    let attach = |game: Value| {
+        dispatch_sync(
+            "info_overrides_attach",
+            &[json!({ "gameInfo": game })],
+            &p.ctx,
+        )
+        .unwrap()
+    };
+    // No `app_name`, a non-string one, and a value that is not an object at all.
+    for game in [
+        json!({ "title": "T" }),
+        json!({ "app_name": 7 }),
+        json!([1]),
+        json!(null),
+    ] {
+        assert_eq!(attach(game.clone()), game);
+    }
+    // A stored `overrides` key on the game is replaced, as the object spread does.
+    let got = attach(json!({ "app_name": "app1", "overrides": { "stale": true } }));
+    assert_eq!(got["overrides"], json!({ "title": "My Title" }));
 }

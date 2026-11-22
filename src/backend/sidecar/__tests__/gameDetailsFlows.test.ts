@@ -45,10 +45,10 @@
  * Because `backend/store_backend` resolves to the REAL `store_backend.ts` (not a mock
  * class), `game_overrides/stores.ts`'s `gameOverridesStore` is a
  * REAL, disk-backed `TypeCheckedStoreBackend` for this suite — the
- * `getGameMetadataOverride`/`getAllGameOverrides` tests below write through
- * it directly, proving the Phase 29 store registration
- * (`storeRegistration.ts:99`) is genuinely sufficient with zero new
- * plumbing, rather than asserting against a mock.
+ * `setGameMetadataOverride` tests below read it back directly, proving the
+ * Phase 29 store registration (`storeRegistration.ts:99`) is genuinely
+ * sufficient with zero new plumbing, rather than asserting against a mock.
+ * (Phase 86: the two override READ channels are native Rust `info` channels now.)
  *
  * Mocked only at the boundaries this plan's own module docstring names:
  *   - `backend/storeManagers` (`libraryManagerMap`) — six scriptable
@@ -74,10 +74,8 @@
  *     `bootstrap.ts`'s own call into this module never touches the real
  *     `electron` `net` surface.
  *   - `backend/game_overrides` is intentionally NOT mocked — see the
- *     `getGameMetadataOverride`/`getAllGameOverrides` note above; this is
- *     the one already-clean pass-through pair this plan's own module
- *     docstring calls out as never having been extracted, and the REAL
- *     store is the only way to prove it.
+ *     store note above; the REAL store is the only way to prove the
+ *     `setGameMetadataOverride` write lands.
  *   - `backend/storeManagers/legendary/user`'s `LegendaryUser` — a narrow
  *     `{ getUserInfo: jest.fn() }` stub; `readConfig('user')`'s real call
  *     target.
@@ -436,7 +434,7 @@ async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
 }
 
-const ALL_14_CHANNELS: [string, unknown[]][] = [
+const ALL_13_CHANNELS: [string, unknown[]][] = [
   ['getGameInfo', ['app-1', 'legendary']],
   ['getExtraInfo', ['app-1', 'legendary']],
   ['getGameSettings', ['app-1', 'legendary']],
@@ -452,8 +450,7 @@ const ALL_14_CHANNELS: [string, unknown[]][] = [
   ['getGameOverride', []],
   ['getGameSdl', ['app-1']],
   ['getAvailableCyberpunkMods', []],
-  ['setCyberpunkModConfig', [{ enabled: true, modsToLoad: [] }]],
-  ['getGameMetadataOverride', ['app-1']]
+  ['setCyberpunkModConfig', [{ enabled: true, modsToLoad: [] }]]
 ]
 
 describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
@@ -950,22 +947,9 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
 
   // ── REQ-34.2-08: the two already-clean game_overrides pass-throughs, real store ─
 
-  it('REQ-34.2-08 getGameMetadataOverride reads the REAL, already-registered gameOverridesStore — zero new plumbing', async () => {
-    gameOverridesStore.set('overrides', {
-      'override-app': { title: 'Custom Title' }
-    })
-
-    const { input, frames } = boot()
-    writeInvoke(input, 'gmo-1', 'getGameMetadataOverride', ['override-app'])
-    await flush()
-
-    const response = findResponse(frames, 'gmo-1')
-    expect(response?.ok).toBe(true)
-    expect(response?.result).toEqual({ title: 'Custom Title' })
-  })
-
-  it('Phase 86 (D-17) getAllGameOverrides is a native `info` channel: the sidecar no longer registers it', () => {
+  it('Phase 86 (D-17) getGameMetadataOverride and getAllGameOverrides are native `info` channels: the sidecar no longer registers them', () => {
     boot()
+    expect(handlerRegistry.has('getGameMetadataOverride')).toBe(false)
     expect(handlerRegistry.has('getAllGameOverrides')).toBe(false)
   })
 
@@ -994,21 +978,21 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     expect(response?.error).toContain(UNPORTED_CHANNEL_MARKER)
   })
 
-  it('REQ-34.2-14 none of the 14 sidecar-owned ported channels return UNPORTED_CHANNEL_MARKER', async () => {
+  it('REQ-34.2-14 none of the 13 sidecar-owned ported channels return UNPORTED_CHANNEL_MARKER', async () => {
     const { input, frames } = boot()
-    ALL_14_CHANNELS.forEach(([channel, args], index) => {
+    ALL_13_CHANNELS.forEach(([channel, args], index) => {
       writeInvoke(input, `all15-${index}`, channel, args)
     })
     await flush()
 
-    for (let index = 0; index < ALL_14_CHANNELS.length; index++) {
-      const [channel] = defined(ALL_14_CHANNELS[index], 'ALL_14_CHANNELS entry')
+    for (let index = 0; index < ALL_13_CHANNELS.length; index++) {
+      const [channel] = defined(ALL_13_CHANNELS[index], 'ALL_13_CHANNELS entry')
       const response = findResponse(frames, `all15-${index}`)
       expect(response).toBeDefined()
       expect(String(response?.error ?? '')).not.toContain(
         UNPORTED_CHANNEL_MARKER
       )
-      // Every one of the 14 must have actually been dispatched (present in
+      // Every one of the 13 must have actually been dispatched (present in
       // the handler registry), not merely "didn't error" by coincidence.
       expect(handlerRegistry.has(channel)).toBe(true)
     }
@@ -1092,21 +1076,16 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
     expect(pushFrame?.args?.[0]).toMatchObject({ Y: { title: 'Pushed Title' } })
   })
 
-  it('REQ-34.2-08 setGameMetadataOverride (send) with every field empty deletes the entry — a subsequent getGameMetadataOverride invoke returns null', async () => {
+  it('REQ-34.2-08 setGameMetadataOverride (send) with every field empty deletes the entry from the store', async () => {
     gameOverridesStore.set('overrides', { Z: { title: 'Stale' } })
 
-    const { input, frames } = boot()
+    const { input } = boot()
     writeSend(input, 'sgmo-del-1', 'setGameMetadataOverride', [
       { appName: 'Z' }
     ])
     await flush()
 
-    writeInvoke(input, 'gmo-del-1', 'getGameMetadataOverride', ['Z'])
-    await flush()
-
-    const response = findResponse(frames, 'gmo-del-1')
-    expect(response?.ok).toBe(true)
-    expect(response?.result).toBeNull()
+    expect(gameOverridesStore.get('overrides', {})).toEqual({})
   })
 
   // ── REQ-34.2-09: addNewApp ────────────────────────────────────────────────

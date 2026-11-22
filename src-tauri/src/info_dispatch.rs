@@ -152,6 +152,45 @@ pub(crate) fn rpc_info_recent_remove(args: &[Value]) -> Result<Value, String> {
     recent_remove_with(installed("info_recent_remove")?, args)
 }
 
+/// The `info_overrides_*` ops: validated by the generated args struct, then the crate (which
+/// validates again with its own `deny_unknown_fields` structs and bounds `appName`). The set and
+/// attach ops are reachable only from the TS shims 86-11 adds (D-29 row 7).
+fn overrides_get_with(ctx: &InfoCtx, args: &[Value]) -> Result<Value, String> {
+    InfoOverridesGetArgs::from_args(args)?;
+    gamelib_info::dispatch_sync("info_overrides_get", args, ctx)
+}
+
+fn overrides_get_all_with(ctx: &InfoCtx, args: &[Value]) -> Result<Value, String> {
+    InfoOverridesGetAllArgs::from_args(args)?;
+    gamelib_info::dispatch_sync("info_overrides_get_all", args, ctx)
+}
+
+fn overrides_set_with(ctx: &InfoCtx, args: &[Value]) -> Result<Value, String> {
+    InfoOverridesSetArgs::from_args(args)?;
+    gamelib_info::dispatch_sync("info_overrides_set", args, ctx)
+}
+
+fn overrides_attach_with(ctx: &InfoCtx, args: &[Value]) -> Result<Value, String> {
+    InfoOverridesAttachArgs::from_args(args)?;
+    gamelib_info::dispatch_sync("info_overrides_attach", args, ctx)
+}
+
+pub(crate) fn rpc_info_overrides_get(args: &[Value]) -> Result<Value, String> {
+    overrides_get_with(installed("info_overrides_get")?, args)
+}
+
+pub(crate) fn rpc_info_overrides_get_all(args: &[Value]) -> Result<Value, String> {
+    overrides_get_all_with(installed("info_overrides_get_all")?, args)
+}
+
+pub(crate) fn rpc_info_overrides_set(args: &[Value]) -> Result<Value, String> {
+    overrides_set_with(installed("info_overrides_set")?, args)
+}
+
+pub(crate) fn rpc_info_overrides_attach(args: &[Value]) -> Result<Value, String> {
+    overrides_attach_with(installed("info_overrides_attach")?, args)
+}
+
 /// What a rejected `removeRecent` argument looks like: the JSON path and the zod-vocabulary code.
 /// Fixed literals only, never the renderer's value (T-86-15).
 type Rejection = (&'static str, &'static str);
@@ -715,6 +754,91 @@ mod tests {
             );
             assert!(!error.contains("SECRET"), "{error}");
         }
+    }
+
+    #[test]
+    fn rpc_set_writes_the_ts_golden_bytes_and_returns_true() {
+        let golden = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("crates/gamelib-info/tests/fixtures/golden/overrides/expected/set-title-added")
+            .join("after/store/game-overrides.json");
+        let home = FakeHome::new("info-dispatch-");
+        let ctx = overrides_ctx(&home, "set-title-added");
+        let args = [json!({ "appName": "app3", "overrideData": { "title": "Renamed Game" } })];
+        assert_eq!(overrides_set_with(&ctx, &args), Ok(json!(true)));
+        let written =
+            std::fs::read(home.root().join("userData/store/game-overrides.json")).unwrap();
+        assert_eq!(written, std::fs::read(golden).unwrap());
+        // The read ops see the write through the one host.
+        assert_eq!(
+            overrides_get_with(&ctx, &[json!({ "appName": "app3" })]),
+            Ok(json!({ "title": "Renamed Game" }))
+        );
+        assert_eq!(
+            overrides_get_all_with(&ctx, &[])
+                .unwrap()
+                .as_object()
+                .unwrap()
+                .len(),
+            3
+        );
+    }
+
+    #[test]
+    fn rpc_attach_adds_the_override_or_returns_the_game_unchanged() {
+        let home = FakeHome::new("info-dispatch-");
+        let ctx = overrides_ctx(&home, "get-present");
+        let with = overrides_attach_with(
+            &ctx,
+            &[json!({ "gameInfo": { "app_name": "app2", "title": "Game 2" } })],
+        )
+        .unwrap();
+        assert_eq!(with["overrides"]["title"], "Other");
+        assert_eq!(with["title"], "Game 2");
+        let game = json!({ "app_name": "app7", "title": "Game 7" });
+        assert_eq!(
+            overrides_attach_with(&ctx, &[json!({ "gameInfo": game })]),
+            Ok(game)
+        );
+    }
+
+    #[test]
+    fn the_override_rpc_ops_reject_bad_args_before_the_crate_and_answer_not_ready() {
+        let home = FakeHome::new("info-dispatch-");
+        let ctx = test_ctx(&home, None);
+        assert_eq!(
+            overrides_set_with(&ctx, &[json!({ "appName": "a" })]),
+            Err("info_overrides_set:bad-args".to_string())
+        );
+        // Unknown fields reach the crate's `deny_unknown_fields` struct, which rejects them alike.
+        assert_eq!(
+            overrides_set_with(
+                &ctx,
+                &[json!({ "appName": "a", "overrideData": {}, "x": 1 })]
+            ),
+            Err("info_overrides_set:bad-args".to_string())
+        );
+        assert_eq!(
+            overrides_get_with(&ctx, &[json!({ "appName": 1 })]),
+            Err("info_overrides_get:bad-args".to_string())
+        );
+        assert_eq!(
+            overrides_attach_with(&ctx, &[]),
+            Err("info_overrides_attach:bad-args".to_string())
+        );
+        assert!(!home
+            .root()
+            .join("userData/store/game-overrides.json")
+            .exists());
+        // No test installs the global context, so these are the pre-install answers.
+        assert!(info_ctx().is_none());
+        assert_eq!(
+            rpc_info_overrides_set(&[json!({ "appName": "a", "overrideData": {} })]),
+            Err("info_overrides_set:not-ready".to_string())
+        );
+        assert_eq!(
+            rpc_info_overrides_get_all(&[]),
+            Err("info_overrides_get_all:not-ready".to_string())
+        );
     }
 
     /// A host that does nothing: `remove_recent` never reaches the native host.

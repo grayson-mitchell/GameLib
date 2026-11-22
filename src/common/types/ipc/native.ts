@@ -48,6 +48,9 @@ export interface NativeAsync {
   // Phase 86 (86-10, D-17): every stored per-game metadata override, read by the Rust `info` slice
   // from the StoreHost (`gamelib-info`'s `info_overrides_get_all`).
   getAllGameOverrides: () => Promise<Record<string, MetadataOverride>>
+  // Phase 86 (86-10, D-17): one game's stored override or `null`, read by the Rust `info` slice
+  // (`info_overrides_get`). The appName is 1 to 256 UTF-16 units.
+  getGameMetadataOverride: (appName: string) => Promise<MetadataOverride | null>
 }
 
 export interface NativeSync {
