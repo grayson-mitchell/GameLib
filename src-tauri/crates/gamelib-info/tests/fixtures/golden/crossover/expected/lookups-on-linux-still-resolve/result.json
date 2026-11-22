@@ -1,0 +1,79 @@
+{
+  "ops": [
+    {
+      "op": "codeweavers",
+      "game": "1245620",
+      "result": {
+        "macRating": 5,
+        "linuxRating": null,
+        "slug": "elden-ring"
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "codeweavers",
+      "game": "292030",
+      "result": {
+        "macRating": 3,
+        "linuxRating": null,
+        "slug": "the-witcher-3-wild-hunt"
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "codeweavers",
+      "game": "9999991",
+      "result": {
+        "macRating": 5,
+        "linuxRating": null,
+        "slug": "hades"
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "codeweavers",
+      "game": "9999992",
+      "result": {
+        "macRating": null,
+        "linuxRating": null,
+        "slug": ""
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "codeweavers",
+      "game": "gog-1",
+      "result": {
+        "macRating": 5,
+        "linuxRating": null,
+        "slug": "chrono-trigger"
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "codeweavers",
+      "game": "epic-1",
+      "result": {
+        "macRating": 2,
+        "linuxRating": null,
+        "slug": "age-of-empires-ii-definitive-edition"
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "resolver",
+      "result": {
+        "steam:1245620": 5,
+        "steam:292030": 3,
+        "steam:9999991": 5,
+        "steam:9999992": null,
+        "gog:gog-1": 5,
+        "legendary:epic-1": 2,
+        "nile:nile-1": 1,
+        "sideload:side-1": null
+      },
+      "requestsMade": 0
+    }
+  ],
+  "requests": []
+}

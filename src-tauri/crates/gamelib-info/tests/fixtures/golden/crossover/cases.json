@@ -1,0 +1,829 @@
+[
+  {
+    "id": "live-fresh-fetch-mac",
+    "note": "No cache: the live gz index is fetched, validated and stored; then every lookup, the batch resolver and the rating map run over it. Live.",
+    "platform": "mac",
+    "live": true,
+    "library": [
+      {
+        "runner": "steam",
+        "app_name": "1245620",
+        "title": "Elden Ring"
+      },
+      {
+        "runner": "steam",
+        "app_name": "292030",
+        "title": "The Witcher 3: Wild Hunt"
+      },
+      {
+        "runner": "steam",
+        "app_name": "9999991",
+        "title": "Hades"
+      },
+      {
+        "runner": "steam",
+        "app_name": "9999992",
+        "title": "No Such Game Anywhere"
+      },
+      {
+        "runner": "gog",
+        "app_name": "gog-1",
+        "title": "Chrono Trigger"
+      },
+      {
+        "runner": "legendary",
+        "app_name": "epic-1",
+        "title": "Age of Empires II: Definitive Edition"
+      },
+      {
+        "runner": "nile",
+        "app_name": "nile-1",
+        "title": "Anno 1602 - Konigs Edition"
+      },
+      {
+        "runner": "sideload",
+        "app_name": "side-1",
+        "title": "Totally Unknown Sideload"
+      }
+    ],
+    "ops": [
+      {
+        "op": "has",
+        "game": {
+          "runner": "steam",
+          "app_name": "1245620",
+          "title": "Elden Ring"
+        }
+      },
+      {
+        "op": "load"
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "steam",
+          "app_name": "1245620",
+          "title": "Elden Ring"
+        }
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "steam",
+          "app_name": "292030",
+          "title": "The Witcher 3: Wild Hunt"
+        }
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "steam",
+          "app_name": "9999991",
+          "title": "Hades"
+        }
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "steam",
+          "app_name": "9999992",
+          "title": "No Such Game Anywhere"
+        }
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "gog",
+          "app_name": "gog-1",
+          "title": "Chrono Trigger"
+        }
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "legendary",
+          "app_name": "epic-1",
+          "title": "Age of Empires II: Definitive Edition"
+        }
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "nile",
+          "app_name": "nile-1",
+          "title": "Anno 1602 - Konigs Edition"
+        }
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "sideload",
+          "app_name": "side-1",
+          "title": "Totally Unknown Sideload"
+        }
+      },
+      {
+        "op": "has",
+        "game": {
+          "runner": "steam",
+          "app_name": "1245620",
+          "title": "Elden Ring"
+        }
+      },
+      {
+        "op": "has",
+        "game": {
+          "runner": "steam",
+          "app_name": "9999992",
+          "title": "No Such Game Anywhere"
+        }
+      },
+      {
+        "op": "resolver",
+        "games": [
+          {
+            "runner": "steam",
+            "app_name": "1245620",
+            "title": "Elden Ring"
+          },
+          {
+            "runner": "steam",
+            "app_name": "292030",
+            "title": "The Witcher 3: Wild Hunt"
+          },
+          {
+            "runner": "steam",
+            "app_name": "9999991",
+            "title": "Hades"
+          },
+          {
+            "runner": "steam",
+            "app_name": "9999992",
+            "title": "No Such Game Anywhere"
+          },
+          {
+            "runner": "gog",
+            "app_name": "gog-1",
+            "title": "Chrono Trigger"
+          },
+          {
+            "runner": "legendary",
+            "app_name": "epic-1",
+            "title": "Age of Empires II: Definitive Edition"
+          },
+          {
+            "runner": "nile",
+            "app_name": "nile-1",
+            "title": "Anno 1602 - Konigs Edition"
+          },
+          {
+            "runner": "sideload",
+            "app_name": "side-1",
+            "title": "Totally Unknown Sideload"
+          }
+        ]
+      },
+      {
+        "op": "ratingMap"
+      }
+    ]
+  },
+  {
+    "id": "second-fetch-within-24h-no-request",
+    "note": "A second load inside the 24 h TTL returns the stored index with no request (idempotency edge). Live first fetch.",
+    "platform": "mac",
+    "live": true,
+    "ops": [
+      {
+        "op": "load"
+      },
+      {
+        "op": "advance",
+        "minutes": 60
+      },
+      {
+        "op": "load"
+      }
+    ]
+  },
+  {
+    "id": "cache-fresh-no-request",
+    "note": "A cache fetched 60 minutes ago is served with no request at all.",
+    "platform": "mac",
+    "cache": {
+      "index": "live",
+      "ageMinutes": 60
+    },
+    "library": [
+      {
+        "runner": "steam",
+        "app_name": "1245620",
+        "title": "Elden Ring"
+      },
+      {
+        "runner": "steam",
+        "app_name": "292030",
+        "title": "The Witcher 3: Wild Hunt"
+      },
+      {
+        "runner": "steam",
+        "app_name": "9999991",
+        "title": "Hades"
+      },
+      {
+        "runner": "steam",
+        "app_name": "9999992",
+        "title": "No Such Game Anywhere"
+      },
+      {
+        "runner": "gog",
+        "app_name": "gog-1",
+        "title": "Chrono Trigger"
+      },
+      {
+        "runner": "legendary",
+        "app_name": "epic-1",
+        "title": "Age of Empires II: Definitive Edition"
+      },
+      {
+        "runner": "nile",
+        "app_name": "nile-1",
+        "title": "Anno 1602 - Konigs Edition"
+      },
+      {
+        "runner": "sideload",
+        "app_name": "side-1",
+        "title": "Totally Unknown Sideload"
+      }
+    ],
+    "ops": [
+      {
+        "op": "has",
+        "game": {
+          "runner": "steam",
+          "app_name": "1245620",
+          "title": "Elden Ring"
+        }
+      },
+      {
+        "op": "load"
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "steam",
+          "app_name": "1245620",
+          "title": "Elden Ring"
+        }
+      },
+      {
+        "op": "ratingMap"
+      }
+    ]
+  },
+  {
+    "id": "cache-stale-refetch",
+    "note": "A cache older than 24 h (25 h) is refetched live and replaced. Live.",
+    "platform": "mac",
+    "live": true,
+    "cache": {
+      "index": "old",
+      "ageMinutes": 1500
+    },
+    "ops": [
+      {
+        "op": "load"
+      }
+    ]
+  },
+  {
+    "id": "fetch-failure-last-good-kept-then-backoff",
+    "note": "A 500 on a stale cache keeps the last good bytes; a second load inside the 5 minute back-off makes no request; after 6 minutes the request is retried (and fails again).",
+    "platform": "mac",
+    "cache": {
+      "index": "old",
+      "ageMinutes": 1500
+    },
+    "ops": [
+      {
+        "op": "load"
+      },
+      {
+        "op": "load"
+      },
+      {
+        "op": "advance",
+        "minutes": 6
+      },
+      {
+        "op": "load"
+      }
+    ],
+    "synthetic": [
+      {
+        "status": 500,
+        "text": "{\"message\":\"Server Error\"}"
+      }
+    ]
+  },
+  {
+    "id": "backoff-expires-then-recovers",
+    "note": "A failed refresh, then after the back-off the retry succeeds with the live gz bytes and the store is replaced.",
+    "platform": "mac",
+    "cache": {
+      "index": "old",
+      "ageMinutes": 1500
+    },
+    "ops": [
+      {
+        "op": "load"
+      },
+      {
+        "op": "advance",
+        "minutes": 6
+      },
+      {
+        "op": "load"
+      }
+    ],
+    "synthetic": [
+      {
+        "status": 500,
+        "text": "{}"
+      },
+      {
+        "rawLive": true
+      }
+    ]
+  },
+  {
+    "id": "fetch-failure-no-cache-bundled-used",
+    "note": "No cache and a transport failure: the bundled snapshot (the recorded gz bytes) is used and written into the store with fetchedAt now.",
+    "platform": "mac",
+    "bundled": "live",
+    "library": [
+      {
+        "runner": "steam",
+        "app_name": "1245620",
+        "title": "Elden Ring"
+      },
+      {
+        "runner": "steam",
+        "app_name": "292030",
+        "title": "The Witcher 3: Wild Hunt"
+      },
+      {
+        "runner": "steam",
+        "app_name": "9999991",
+        "title": "Hades"
+      },
+      {
+        "runner": "steam",
+        "app_name": "9999992",
+        "title": "No Such Game Anywhere"
+      },
+      {
+        "runner": "gog",
+        "app_name": "gog-1",
+        "title": "Chrono Trigger"
+      },
+      {
+        "runner": "legendary",
+        "app_name": "epic-1",
+        "title": "Age of Empires II: Definitive Edition"
+      },
+      {
+        "runner": "nile",
+        "app_name": "nile-1",
+        "title": "Anno 1602 - Konigs Edition"
+      },
+      {
+        "runner": "sideload",
+        "app_name": "side-1",
+        "title": "Totally Unknown Sideload"
+      }
+    ],
+    "ops": [
+      {
+        "op": "has",
+        "game": {
+          "runner": "steam",
+          "app_name": "1245620",
+          "title": "Elden Ring"
+        }
+      },
+      {
+        "op": "load"
+      },
+      {
+        "op": "has",
+        "game": {
+          "runner": "steam",
+          "app_name": "1245620",
+          "title": "Elden Ring"
+        }
+      },
+      {
+        "op": "ratingMap"
+      }
+    ],
+    "synthetic": [
+      {
+        "networkError": true
+      }
+    ]
+  },
+  {
+    "id": "fetch-failure-no-cache-no-bundled",
+    "note": "No cache, no bundled snapshot, a transport failure: null, nothing stored; lookups report unavailable.",
+    "platform": "mac",
+    "ops": [
+      {
+        "op": "load"
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "steam",
+          "app_name": "1245620",
+          "title": "Elden Ring"
+        }
+      },
+      {
+        "op": "has",
+        "game": {
+          "runner": "steam",
+          "app_name": "1245620",
+          "title": "Elden Ring"
+        }
+      }
+    ],
+    "synthetic": [
+      {
+        "networkError": true
+      }
+    ]
+  },
+  {
+    "id": "fetch-failure-bundled-invalid",
+    "note": "No cache, a 500 and a bundled snapshot that fails the schema (version 2): cold start, null.",
+    "platform": "mac",
+    "bundled": "invalid",
+    "ops": [
+      {
+        "op": "load"
+      }
+    ],
+    "synthetic": [
+      {
+        "status": 500,
+        "text": "{}"
+      }
+    ]
+  },
+  {
+    "id": "schema-version-2-keeps-last-good",
+    "note": "A version 2 payload is rejected; the previous cache bytes stay unchanged.",
+    "platform": "mac",
+    "cache": {
+      "index": "old",
+      "ageMinutes": 1500
+    },
+    "ops": [
+      {
+        "op": "load"
+      }
+    ],
+    "synthetic": [
+      {
+        "mutate": "version-2"
+      }
+    ]
+  },
+  {
+    "id": "schema-rating-6-keeps-last-good",
+    "note": "A rating of 6 is rejected; the previous cache bytes stay unchanged.",
+    "platform": "mac",
+    "cache": {
+      "index": "old",
+      "ageMinutes": 1500
+    },
+    "ops": [
+      {
+        "op": "load"
+      }
+    ],
+    "synthetic": [
+      {
+        "mutate": "rating-6"
+      }
+    ]
+  },
+  {
+    "id": "schema-too-few-entries-keeps-last-good",
+    "note": "A payload of 999 entries (under the 1000 floor) is rejected; the previous cache bytes stay unchanged.",
+    "platform": "mac",
+    "cache": {
+      "index": "old",
+      "ageMinutes": 1500
+    },
+    "ops": [
+      {
+        "op": "load"
+      }
+    ],
+    "synthetic": [
+      {
+        "mutate": "entries-999"
+      }
+    ]
+  },
+  {
+    "id": "schema-bad-generated-at-keeps-last-good",
+    "note": "A generatedAt that is not an ISO datetime is rejected; the previous cache bytes stay unchanged.",
+    "platform": "mac",
+    "cache": {
+      "index": "old",
+      "ageMinutes": 1500
+    },
+    "ops": [
+      {
+        "op": "load"
+      }
+    ],
+    "synthetic": [
+      {
+        "mutate": "generatedAt-garbage"
+      }
+    ]
+  },
+  {
+    "id": "payload-over-5mb-keeps-last-good",
+    "note": "A body of 5 MiB + 1 bytes exceeds maxContentLength: the request fails and the last good stays.",
+    "platform": "mac",
+    "cache": {
+      "index": "old",
+      "ageMinutes": 1500
+    },
+    "ops": [
+      {
+        "op": "load"
+      }
+    ],
+    "synthetic": [
+      {
+        "zeroBytes": 5242881
+      }
+    ]
+  },
+  {
+    "id": "not-gzip-keeps-last-good",
+    "note": "A 200 whose body is not gzip: gunzip throws, the last good stays.",
+    "platform": "mac",
+    "cache": {
+      "index": "old",
+      "ageMinutes": 1500
+    },
+    "ops": [
+      {
+        "op": "load"
+      }
+    ],
+    "synthetic": [
+      {
+        "text": "this is not a gzip stream"
+      }
+    ]
+  },
+  {
+    "id": "non-https-url-rejected",
+    "note": "A descriptor with an http URL is refused before the cache chain runs: it throws and makes no request, even with a fresh cache.",
+    "platform": "mac",
+    "cache": {
+      "index": "live",
+      "ageMinutes": 60
+    },
+    "ops": [
+      {
+        "op": "load",
+        "url": "http://example.invalid/crossover-index.json.gz"
+      }
+    ]
+  },
+  {
+    "id": "rating-map-linux-empty",
+    "note": "On linux the rating map is empty and the index is never consulted.",
+    "platform": "linux",
+    "cache": {
+      "index": "live",
+      "ageMinutes": 60
+    },
+    "library": [
+      {
+        "runner": "steam",
+        "app_name": "1245620",
+        "title": "Elden Ring"
+      },
+      {
+        "runner": "steam",
+        "app_name": "292030",
+        "title": "The Witcher 3: Wild Hunt"
+      },
+      {
+        "runner": "steam",
+        "app_name": "9999991",
+        "title": "Hades"
+      },
+      {
+        "runner": "steam",
+        "app_name": "9999992",
+        "title": "No Such Game Anywhere"
+      },
+      {
+        "runner": "gog",
+        "app_name": "gog-1",
+        "title": "Chrono Trigger"
+      },
+      {
+        "runner": "legendary",
+        "app_name": "epic-1",
+        "title": "Age of Empires II: Definitive Edition"
+      },
+      {
+        "runner": "nile",
+        "app_name": "nile-1",
+        "title": "Anno 1602 - Konigs Edition"
+      },
+      {
+        "runner": "sideload",
+        "app_name": "side-1",
+        "title": "Totally Unknown Sideload"
+      }
+    ],
+    "ops": [
+      {
+        "op": "ratingMap"
+      }
+    ]
+  },
+  {
+    "id": "rating-map-windows-empty",
+    "note": "On windows the rating map is empty and the index is never consulted.",
+    "platform": "windows",
+    "cache": {
+      "index": "live",
+      "ageMinutes": 60
+    },
+    "library": [
+      {
+        "runner": "steam",
+        "app_name": "1245620",
+        "title": "Elden Ring"
+      },
+      {
+        "runner": "steam",
+        "app_name": "292030",
+        "title": "The Witcher 3: Wild Hunt"
+      },
+      {
+        "runner": "steam",
+        "app_name": "9999991",
+        "title": "Hades"
+      },
+      {
+        "runner": "steam",
+        "app_name": "9999992",
+        "title": "No Such Game Anywhere"
+      },
+      {
+        "runner": "gog",
+        "app_name": "gog-1",
+        "title": "Chrono Trigger"
+      },
+      {
+        "runner": "legendary",
+        "app_name": "epic-1",
+        "title": "Age of Empires II: Definitive Edition"
+      },
+      {
+        "runner": "nile",
+        "app_name": "nile-1",
+        "title": "Anno 1602 - Konigs Edition"
+      },
+      {
+        "runner": "sideload",
+        "app_name": "side-1",
+        "title": "Totally Unknown Sideload"
+      }
+    ],
+    "ops": [
+      {
+        "op": "ratingMap"
+      }
+    ]
+  },
+  {
+    "id": "lookups-on-linux-still-resolve",
+    "note": "The lookups are not platform gated, only the rating map is: the same codeweavers results on linux.",
+    "platform": "linux",
+    "cache": {
+      "index": "live",
+      "ageMinutes": 60
+    },
+    "ops": [
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "steam",
+          "app_name": "1245620",
+          "title": "Elden Ring"
+        }
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "steam",
+          "app_name": "292030",
+          "title": "The Witcher 3: Wild Hunt"
+        }
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "steam",
+          "app_name": "9999991",
+          "title": "Hades"
+        }
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "steam",
+          "app_name": "9999992",
+          "title": "No Such Game Anywhere"
+        }
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "gog",
+          "app_name": "gog-1",
+          "title": "Chrono Trigger"
+        }
+      },
+      {
+        "op": "codeweavers",
+        "game": {
+          "runner": "legendary",
+          "app_name": "epic-1",
+          "title": "Age of Empires II: Definitive Edition"
+        }
+      },
+      {
+        "op": "resolver",
+        "games": [
+          {
+            "runner": "steam",
+            "app_name": "1245620",
+            "title": "Elden Ring"
+          },
+          {
+            "runner": "steam",
+            "app_name": "292030",
+            "title": "The Witcher 3: Wild Hunt"
+          },
+          {
+            "runner": "steam",
+            "app_name": "9999991",
+            "title": "Hades"
+          },
+          {
+            "runner": "steam",
+            "app_name": "9999992",
+            "title": "No Such Game Anywhere"
+          },
+          {
+            "runner": "gog",
+            "app_name": "gog-1",
+            "title": "Chrono Trigger"
+          },
+          {
+            "runner": "legendary",
+            "app_name": "epic-1",
+            "title": "Age of Empires II: Definitive Edition"
+          },
+          {
+            "runner": "nile",
+            "app_name": "nile-1",
+            "title": "Anno 1602 - Konigs Edition"
+          },
+          {
+            "runner": "sideload",
+            "app_name": "side-1",
+            "title": "Totally Unknown Sideload"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,42 @@
+{
+  "ops": [
+    {
+      "op": "has",
+      "game": "1245620",
+      "result": false,
+      "requestsMade": 0
+    },
+    {
+      "op": "load",
+      "result": {
+        "generatedAt": "2026-11-21T14:04:59.908Z",
+        "entryCount": 2469,
+        "sha256": "a9c2197e216aa2c02c207589b88723130907c08c6ab1d9999f3ad6316a57d42a"
+      },
+      "requestsMade": 1
+    },
+    {
+      "op": "has",
+      "game": "1245620",
+      "result": true,
+      "requestsMade": 0
+    },
+    {
+      "op": "ratingMap",
+      "result": {
+        "292030": 3,
+        "1245620": 5,
+        "9999991": 5,
+        "9999992": null,
+        "gog-1": 5,
+        "epic-1": 2,
+        "nile-1": 1,
+        "side-1": null
+      },
+      "requestsMade": 0
+    }
+  ],
+  "requests": [
+    "GET https://github.com/grayson-mitchell/GameLib/releases/download/crossover-index/crossover-index.json.gz"
+  ]
+}

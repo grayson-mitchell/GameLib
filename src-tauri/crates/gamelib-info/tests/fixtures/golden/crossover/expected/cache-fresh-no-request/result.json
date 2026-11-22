@@ -1,0 +1,44 @@
+{
+  "ops": [
+    {
+      "op": "has",
+      "game": "1245620",
+      "result": true,
+      "requestsMade": 0
+    },
+    {
+      "op": "load",
+      "result": {
+        "generatedAt": "2026-11-21T14:04:59.908Z",
+        "entryCount": 2469,
+        "sha256": "eec9ee0a55ab8578ba2eeeb6a9b9df30b68e1e932f6bf26ac45c872fb822af80"
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "codeweavers",
+      "game": "1245620",
+      "result": {
+        "macRating": 5,
+        "linuxRating": null,
+        "slug": "elden-ring"
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "ratingMap",
+      "result": {
+        "292030": 3,
+        "1245620": 5,
+        "9999991": 5,
+        "9999992": null,
+        "gog-1": 5,
+        "epic-1": 2,
+        "nile-1": 1,
+        "side-1": null
+      },
+      "requestsMade": 0
+    }
+  ],
+  "requests": []
+}

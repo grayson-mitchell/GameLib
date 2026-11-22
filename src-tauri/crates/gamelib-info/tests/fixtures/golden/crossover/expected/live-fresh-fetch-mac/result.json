@@ -1,0 +1,142 @@
+{
+  "ops": [
+    {
+      "op": "has",
+      "game": "1245620",
+      "result": false,
+      "requestsMade": 0
+    },
+    {
+      "op": "load",
+      "result": {
+        "generatedAt": "2026-11-21T14:04:59.908Z",
+        "entryCount": 2469,
+        "sha256": "a9c2197e216aa2c02c207589b88723130907c08c6ab1d9999f3ad6316a57d42a"
+      },
+      "requestsMade": 1
+    },
+    {
+      "op": "codeweavers",
+      "game": "1245620",
+      "result": {
+        "macRating": 5,
+        "linuxRating": null,
+        "slug": "elden-ring"
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "codeweavers",
+      "game": "292030",
+      "result": {
+        "macRating": 3,
+        "linuxRating": null,
+        "slug": "the-witcher-3-wild-hunt"
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "codeweavers",
+      "game": "9999991",
+      "result": {
+        "macRating": 5,
+        "linuxRating": null,
+        "slug": "hades"
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "codeweavers",
+      "game": "9999992",
+      "result": {
+        "macRating": null,
+        "linuxRating": null,
+        "slug": ""
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "codeweavers",
+      "game": "gog-1",
+      "result": {
+        "macRating": 5,
+        "linuxRating": null,
+        "slug": "chrono-trigger"
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "codeweavers",
+      "game": "epic-1",
+      "result": {
+        "macRating": 2,
+        "linuxRating": null,
+        "slug": "age-of-empires-ii-definitive-edition"
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "codeweavers",
+      "game": "nile-1",
+      "result": {
+        "macRating": 1,
+        "linuxRating": null,
+        "slug": "anno-1602-konigs-edition"
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "codeweavers",
+      "game": "side-1",
+      "result": {
+        "macRating": null,
+        "linuxRating": null,
+        "slug": ""
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "has",
+      "game": "1245620",
+      "result": true,
+      "requestsMade": 0
+    },
+    {
+      "op": "has",
+      "game": "9999992",
+      "result": false,
+      "requestsMade": 0
+    },
+    {
+      "op": "resolver",
+      "result": {
+        "steam:1245620": 5,
+        "steam:292030": 3,
+        "steam:9999991": 5,
+        "steam:9999992": null,
+        "gog:gog-1": 5,
+        "legendary:epic-1": 2,
+        "nile:nile-1": 1,
+        "sideload:side-1": null
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "ratingMap",
+      "result": {
+        "292030": 3,
+        "1245620": 5,
+        "9999991": 5,
+        "9999992": null,
+        "gog-1": 5,
+        "epic-1": 2,
+        "nile-1": 1,
+        "side-1": null
+      },
+      "requestsMade": 0
+    }
+  ],
+  "requests": [
+    "GET https://github.com/grayson-mitchell/GameLib/releases/download/crossover-index/crossover-index.json.gz"
+  ]
+}

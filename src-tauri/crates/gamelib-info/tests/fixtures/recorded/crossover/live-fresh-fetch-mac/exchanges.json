@@ -1,0 +1,43 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://github.com/grayson-mitchell/GameLib/releases/download/crossover-index/crossover-index.json.gz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "last-modified": "Sat, 21 Nov 2026 14:05:02 GMT",
+        "etag": "\"0x8DF47D86FDCD2FE\"",
+        "server": "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0",
+        "x-ms-request-id": "bb7bf9c4-c01e-001a-73d7-79808a000000",
+        "x-ms-version": "2018-11-09",
+        "x-ms-creation-time": "Sat, 21 Nov 2026 14:05:02 GMT",
+        "x-ms-blob-content-md5": "7vToEzbNzV3QAg++z1aIAw==",
+        "x-ms-lease-status": "unlocked",
+        "x-ms-lease-state": "available",
+        "x-ms-blob-type": "BlockBlob",
+        "x-ms-server-encrypted": "true",
+        "x-ms-access-tier": "Hot",
+        "x-ms-access-tier-inferred": "true",
+        "via": "1.1 varnish, 1.1 varnish",
+        "accept-ranges": "bytes",
+        "age": "147",
+        "date": "Sun, 22 Nov 2026 10:02:41 GMT",
+        "x-served-by": "cache-iad-kcgs7200066-IAD, cache-wlg10425-WLG",
+        "x-cache": "HIT, HIT",
+        "x-cache-hits": "4, 0",
+        "x-timer": "S1795341761.494930,VS0,VE1",
+        "content-disposition": "attachment; filename=crossover-index.json.gz",
+        "content-type": "application/octet-stream"
+      },
+      "bodyFile": "body-1.bin"
+    }
+  }
+]

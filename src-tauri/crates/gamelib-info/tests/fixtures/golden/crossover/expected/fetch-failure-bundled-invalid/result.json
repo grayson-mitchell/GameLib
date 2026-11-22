@@ -1,0 +1,12 @@
+{
+  "ops": [
+    {
+      "op": "load",
+      "result": null,
+      "requestsMade": 1
+    }
+  ],
+  "requests": [
+    "GET https://github.com/grayson-mitchell/GameLib/releases/download/crossover-index/crossover-index.json.gz"
+  ]
+}

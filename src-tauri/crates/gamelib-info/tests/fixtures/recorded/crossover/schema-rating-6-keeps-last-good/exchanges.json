@@ -1,0 +1,21 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://github.com/grayson-mitchell/GameLib/releases/download/crossover-index/crossover-index.json.gz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/octet-stream"
+      },
+      "bodyFile": "body-1.bin"
+    },
+    "synthetic": true
+  }
+]

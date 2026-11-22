@@ -1,0 +1,40 @@
+{
+  "ops": [
+    {
+      "op": "load",
+      "result": {
+        "generatedAt": "2026-11-01T00:00:00.000Z",
+        "entryCount": 1000,
+        "sha256": "73f2b5873b57c3107d4e188b9142610a0d798e322e80c4c72828f107570e4cb2"
+      },
+      "requestsMade": 1
+    },
+    {
+      "op": "load",
+      "result": {
+        "generatedAt": "2026-11-01T00:00:00.000Z",
+        "entryCount": 1000,
+        "sha256": "73f2b5873b57c3107d4e188b9142610a0d798e322e80c4c72828f107570e4cb2"
+      },
+      "requestsMade": 0
+    },
+    {
+      "op": "advance",
+      "minutes": 6,
+      "requestsMade": 0
+    },
+    {
+      "op": "load",
+      "result": {
+        "generatedAt": "2026-11-01T00:00:00.000Z",
+        "entryCount": 1000,
+        "sha256": "73f2b5873b57c3107d4e188b9142610a0d798e322e80c4c72828f107570e4cb2"
+      },
+      "requestsMade": 1
+    }
+  ],
+  "requests": [
+    "GET https://github.com/grayson-mitchell/GameLib/releases/download/crossover-index/crossover-index.json.gz",
+    "GET https://github.com/grayson-mitchell/GameLib/releases/download/crossover-index/crossover-index.json.gz"
+  ]
+}

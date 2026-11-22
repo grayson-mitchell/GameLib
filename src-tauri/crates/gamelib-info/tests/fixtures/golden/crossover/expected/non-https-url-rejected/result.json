@@ -1,0 +1,10 @@
+{
+  "ops": [
+    {
+      "op": "load",
+      "error": "IndexDescriptor 'index' url must be https",
+      "requestsMade": 0
+    }
+  ],
+  "requests": []
+}

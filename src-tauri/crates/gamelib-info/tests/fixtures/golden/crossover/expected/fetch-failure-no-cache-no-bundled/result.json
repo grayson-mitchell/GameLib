@@ -1,0 +1,24 @@
+{
+  "ops": [
+    {
+      "op": "load",
+      "result": null,
+      "requestsMade": 1
+    },
+    {
+      "op": "codeweavers",
+      "game": "1245620",
+      "result": null,
+      "requestsMade": 0
+    },
+    {
+      "op": "has",
+      "game": "1245620",
+      "result": false,
+      "requestsMade": 0
+    }
+  ],
+  "requests": [
+    "GET https://github.com/grayson-mitchell/GameLib/releases/download/crossover-index/crossover-index.json.gz"
+  ]
+}

@@ -1,0 +1,5598 @@
+{
+	"index": {
+		"data": {
+			"version": 1,
+			"generatedAt": "2026-11-01T00:00:00.000Z",
+			"entries": [
+				{
+					"name": ".hack//G.U. Last Recode",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "525480"
+				},
+				{
+					"name": "#1 Classic Solitaire",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "#KILLALLZOMBIES",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "303720"
+				},
+				{
+					"name": "007 Nightfire",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "1... 2... 3... KICK IT! (Drop That Beat Like an Ugly Baby)",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "15540"
+				},
+				{
+					"name": "10 Days Under The Sea",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "10 Talismans",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "100% Orange Juice",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "282800"
+				},
+				{
+					"name": "1001 Nights: The Adventures of Sindbad",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "100ft Robot Golf",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "368000"
+				},
+				{
+					"name": "101 Kids Brainy Games",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "11th Hour, The (1995)",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "255940"
+				},
+				{
+					"name": "123 Free Solitaire",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "140",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "242820"
+				},
+				{
+					"name": "15 Days",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "342990"
+				},
+				{
+					"name": "18 Wheels of Steel: Across America",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "18 Wheels of Steel: American Long Haul",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "18 Wheels of Steel: Convoy",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "18 Wheels of Steel: Extreme Trucker 2",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "18 Wheels of Steel: Haulin'",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "1849",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "290970"
+				},
+				{
+					"name": "1912: Titanic Mystery",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "1979 Revolution: Black Friday",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "388320"
+				},
+				{
+					"name": "198X",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1086010"
+				},
+				{
+					"name": "2 Tasty",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "3 Cards to Dead Time",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "3 Cards to Midnight",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "3 Days - Amulet Secret",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "3 Days: Zoo Mystery",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "3 Stars of Destiny",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "3 Stars of Destiny Strategy Guide",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "300 Heroes",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "3D Block Kuzusi",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "3D Knifflis: The Whole World in 3D!",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "3Tones",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "4 Elements",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "47000"
+				},
+				{
+					"name": "5 Spots",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "555",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "60 Seconds!",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "368360"
+				},
+				{
+					"name": "7 Artifacts",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "7 Billion Humans",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "792100"
+				},
+				{
+					"name": "7 Wonders II",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "15900"
+				},
+				{
+					"name": "7 Wonders: Treasures of Seven",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "16300"
+				},
+				{
+					"name": "7.62 High Calibre",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "7th Legion",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "8-bit Armies",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "427250"
+				},
+				{
+					"name": "8-Bit Invaders!",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "531680"
+				},
+				{
+					"name": "8Bit Killer",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "911 Operator",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "503560"
+				},
+				{
+					"name": "9th Company: Roots of Terror",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "12480"
+				},
+				{
+					"name": "A Didry of Little Avidtor",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "A Fistful of Gun",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "229810"
+				},
+				{
+					"name": "A Force More Powerful",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "A Game of Thrones: Genesis",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "330840"
+				},
+				{
+					"name": "A Hat in Time",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "253230"
+				},
+				{
+					"name": "A New Beginning: Final Cut",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "A Plague Tale - Innocence",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "752590"
+				},
+				{
+					"name": "A Story About My Uncle",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "278360"
+				},
+				{
+					"name": "A Stroke of Fate: Operation Valkyrie",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "10240"
+				},
+				{
+					"name": "A Way Out",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "1222700"
+				},
+				{
+					"name": "A.I.M Racing",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "AaaAAA!!!  A Reckless Disregard for Gravity",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "15520"
+				},
+				{
+					"name": "Aarklash: Legacy",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "222640"
+				},
+				{
+					"name": "Abzu",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "384190"
+				},
+				{
+					"name": "Acceleration of Suguri X-Edition",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Ace Combat Assault Horizon",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "228400"
+				},
+				{
+					"name": "Ace Online",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Aces High",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Aces Wild: Manic Brawling Action!",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "269230"
+				},
+				{
+					"name": "AceSpeeder2",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Across Lite",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Act of Aggression",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "318020"
+				},
+				{
+					"name": "Act of War - Direct Action",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Adorable Adventures",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3840230"
+				},
+				{
+					"name": "Advent Rising",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3800"
+				},
+				{
+					"name": "Adventure Park",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "256050"
+				},
+				{
+					"name": "Adventures of Sherlock Holmes: Secret of the Silver Earring / The Case of the Silver Earring",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Africa Corps Desert Storm",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Agatha Christie: 4:50 from Paddington",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Age of Chivalry",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "17510"
+				},
+				{
+					"name": "Age of Conan: Unchained",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Age of Decadence",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "230070"
+				},
+				{
+					"name": "Age of Empires",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Age of Empires II",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Age of Empires II HD",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "221380"
+				},
+				{
+					"name": "Age of Empires II: Definitive Edition",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "813780"
+				},
+				{
+					"name": "Age of Empires III",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "105450"
+				},
+				{
+					"name": "Age of Empires III: Definitive Edition",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "933110"
+				},
+				{
+					"name": "Age of Empires IV: Anniversary Edition",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "1466860"
+				},
+				{
+					"name": "Age of Empires: Definitive Edition",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "1017900"
+				},
+				{
+					"name": "Age of Mythology: Extended Edition",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "266840"
+				},
+				{
+					"name": "Age Of Mythology: Gold Edition",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Age of Mythology: Retold",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1934680"
+				},
+				{
+					"name": "Age of Pirates: Caribbean Tales",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Age of Wonders",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Age of Wonders 2",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Age of Wonders 3",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "226840"
+				},
+				{
+					"name": "Age of Wonders 4",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1669000"
+				},
+				{
+					"name": "Age of Wonders: Shadow Magic",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "61520"
+				},
+				{
+					"name": "AGON The Lost Sword of Toledo",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "AGON The Lost Sword of Toledo",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "410130"
+				},
+				{
+					"name": "Agony",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "487720"
+				},
+				{
+					"name": "ai to yuuki to kasiwamochi",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Airline Tycoon 2",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "AirMech",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "206500"
+				},
+				{
+					"name": "Airport Control Simulator",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Airport Madness: World Edition",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "369290"
+				},
+				{
+					"name": "Airport Mania: First Flight",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Airship Dragoon",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Airstrike - Eagles of World War II",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Akeyoru",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Al Emmo and the Lost Dutchman's Mine",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Alan Wake",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "108710"
+				},
+				{
+					"name": "Alan Wake’s American Nightmare",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "202750"
+				},
+				{
+					"name": "Alexander the Great",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Alfa: Antiterror",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Alice: Madness Returns",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "19680"
+				},
+				{
+					"name": "Alien Arena",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Alien Arena (Code Red)",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Alien Breed + Tower Assault",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Alien Breed 2: Assault",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "22650"
+				},
+				{
+					"name": "Alien Breed: Impact",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "22610"
+				},
+				{
+					"name": "Alien nations",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Alien Shooter 2: Conscription",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "211010"
+				},
+				{
+					"name": "Alien Shooter 2: Reloaded",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Alien Swarm",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "630"
+				},
+				{
+					"name": "Alien Terminator",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Aliens Fireteam Elite",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1549970"
+				},
+				{
+					"name": "Aliens vs. Predator",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "10680"
+				},
+				{
+					"name": "Aliens: Colonial Marines",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "49540"
+				},
+				{
+					"name": "Alliance of Valiant Arms",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "102700"
+				},
+				{
+					"name": "Alone in the Dark (2024)",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1310410"
+				},
+				{
+					"name": "Along the Edge",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "504390"
+				},
+				{
+					"name": "Alpha Prime",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Alpha Protocol",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "34010"
+				},
+				{
+					"name": "Alter Ego",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "63110"
+				},
+				{
+					"name": "Amazing Adventures Around the World",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "3530"
+				},
+				{
+					"name": "Amazing Adventures The Lost Tomb",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "3510"
+				},
+				{
+					"name": "America's Army 3",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "13140"
+				},
+				{
+					"name": "America's Army: Proving Grounds",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "203290"
+				},
+				{
+					"name": "American Conquest + Fight Back",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "American Hero Unrated",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "American Lowriders",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Amerzone",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Amid Evil",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "673130"
+				},
+				{
+					"name": "Amnesia: A Machine for Pigs",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "239200"
+				},
+				{
+					"name": "Amnesia: Memories",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "359390"
+				},
+				{
+					"name": "Amnesia: The Dark Descent",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "57300"
+				},
+				{
+					"name": "Among Us",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "945360"
+				},
+				{
+					"name": "Anachronox",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "242940"
+				},
+				{
+					"name": "Anarchy Arcade",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "266430"
+				},
+				{
+					"name": "Anarchy Online",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "396280"
+				},
+				{
+					"name": "Ancestors: The Humankind Odyssey",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "536270"
+				},
+				{
+					"name": "Angels Online",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Angry Birds Rio",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Animal Well",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "813230"
+				},
+				{
+					"name": "Ankh 2: Heart of Osiris",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "12440"
+				},
+				{
+					"name": "Ankh 3: Battle of the Gods",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "12450"
+				},
+				{
+					"name": "Anno 1404: Dawn of Discovery",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Anno 1503",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Anno 1602 - Königs Edition",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Anno 1602 A.D.",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Anno 1701",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Anno 1701: Gold Edition",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Anno 1800",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "916440"
+				},
+				{
+					"name": "Anno 2070",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "48240"
+				},
+				{
+					"name": "Anomaly: Warzone Earth",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "91200"
+				},
+				{
+					"name": "Another World 15th Anniversary Edition",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Antichamber",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "219890"
+				},
+				{
+					"name": "Anzio Lite",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Apache Longbow",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "APB Reloaded",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "113400"
+				},
+				{
+					"name": "Apsulov: End of Gods",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "960980"
+				},
+				{
+					"name": "Aquadelic GT",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "AquaNox",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Aquanox 2: Revelation",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Aquaria",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Arc Games Client",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Arcade Paradise",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1388870"
+				},
+				{
+					"name": "Arcanum: Of Steamworks and Magick Obscura",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Archvale",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1296360"
+				},
+				{
+					"name": "Arena Chess GUI",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Arizona Sunshine",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "342180"
+				},
+				{
+					"name": "Arkanoid - Eternal Battle",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "1717270"
+				},
+				{
+					"name": "ARMA 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "33900"
+				},
+				{
+					"name": "Arma 3",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "107410"
+				},
+				{
+					"name": "ARMA II: Operation Arrowhead",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "4639"
+				},
+				{
+					"name": "ARMA: Cold War Assault",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "65790"
+				},
+				{
+					"name": "Armada 2526",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "46790"
+				},
+				{
+					"name": "Armed and Dangerous",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "ARMORED CORE VI FIRES OF RUBICON",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1888160"
+				},
+				{
+					"name": "Armored Fist 3",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "32710"
+				},
+				{
+					"name": "Armored Warfare",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Armored Warfare",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "443110"
+				},
+				{
+					"name": "Army Men 2",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Army Men 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "549170"
+				},
+				{
+					"name": "Army Men: Toys in Space",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Arx Fatalis",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "1700"
+				},
+				{
+					"name": "Ascendant",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Ashen",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "649950"
+				},
+				{
+					"name": "Asheron's Call",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Asheron's Call: Throne of Destiny",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Assassin's Creed",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "15100"
+				},
+				{
+					"name": "Assassin's Creed Brotherhood",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "48190"
+				},
+				{
+					"name": "Assassin's Creed II",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "33230"
+				},
+				{
+					"name": "Assassin's Creed III",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "208480"
+				},
+				{
+					"name": "Assassin's Creed IV: Black Flag",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "242050"
+				},
+				{
+					"name": "Assassin's Creed Revelations",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "201870"
+				},
+				{
+					"name": "Assassin's Creed Rogue",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "311560"
+				},
+				{
+					"name": "Assassin’s Creed® Liberation HD",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "260210"
+				},
+				{
+					"name": "Assetto Corsa",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "244210"
+				},
+				{
+					"name": "Astroneer",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "361420"
+				},
+				{
+					"name": "Astropop",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3340"
+				},
+				{
+					"name": "Atari800",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Atlantic Fleet",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "420440"
+				},
+				{
+					"name": "Atlantis - Pearls of the Deep",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "521280"
+				},
+				{
+					"name": "Atlas Reactor",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "402570"
+				},
+				{
+					"name": "Atom Zombie Smasher",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "55040"
+				},
+				{
+					"name": "Atomica (and Atomica Deluxe)",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Audiosurf",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "12900"
+				},
+				{
+					"name": "Auto Age: Standoff",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "458680"
+				},
+				{
+					"name": "Autonauts",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "979120"
+				},
+				{
+					"name": "Aven Colony",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "484900"
+				},
+				{
+					"name": "Aveyond: Rhen's Quest",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Avicii Invector",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "986800"
+				},
+				{
+					"name": "Awesomenauts",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "204300"
+				},
+				{
+					"name": "Axe Cop",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1193300"
+				},
+				{
+					"name": "Axel & Pixel",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "8970"
+				},
+				{
+					"name": "B-17 Flying Fortress : The Mighty 8th Redux",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "2000800"
+				},
+				{
+					"name": "B-17 Flying Fortress: The Mighty 8th",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Back to the Future Episode 1: It's About Time",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "31290"
+				},
+				{
+					"name": "Backpack Battles",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2427700"
+				},
+				{
+					"name": "Bad Rats",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "34900"
+				},
+				{
+					"name": "Badlanders",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "BAHN - Train Simulator",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Balatro",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2379780"
+				},
+				{
+					"name": "Baldur's Gate",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Baldur's Gate 3",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1086940"
+				},
+				{
+					"name": "Baldur's Gate II: Shadows of Amn",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Baldur's Gate II: Throne of Bhaal",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Baldur's Gate: Enhanced Edition",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "228280"
+				},
+				{
+					"name": "Baldur's Gate: Tales of the Sword Coast",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Ball Prince",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Banana",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2923300"
+				},
+				{
+					"name": "Bang Bang Racing",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "207020"
+				},
+				{
+					"name": "Banished",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "242920"
+				},
+				{
+					"name": "Baseball Mogul 2012",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Baseball Mogul 2013",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Baseball Mogul 2014",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Baseball Mogul 2015",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Baseball Mogul 2016",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Baseball Mogul 2017",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Baseball Mogul 2026",
+					"rating": 5,
+					"label": "gold"
+				},
+				{
+					"name": "Baseball Mogul Diamond",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Bastion",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "107100"
+				},
+				{
+					"name": "Batman: Arkham Asylum",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "35140"
+				},
+				{
+					"name": "Batman: Arkham City",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "200260"
+				},
+				{
+					"name": "Batman: Arkham Knight",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "208650"
+				},
+				{
+					"name": "Batman: Arkham Origins",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "209000"
+				},
+				{
+					"name": "Battle Islands",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "305260"
+				},
+				{
+					"name": "Battle of the Immortals",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "BATTLE PIXELS",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "434500"
+				},
+				{
+					"name": "Battle Realms Complete",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Battle Riders",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "418060"
+				},
+				{
+					"name": "Battle.net Desktop App",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Battle.net Desktop App China",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "BattleBlock Theater",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "238460"
+				},
+				{
+					"name": "Battlefield 1",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "1238840"
+				},
+				{
+					"name": "Battlefield 1942",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Battlefield 1942: Secret Weapons",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Battlefield 1942: The Road to Rome",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Battlefield 2",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Battlefield 2 Special Forces",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Battlefield 2142",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Battlefield Bad Company 2",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "24960"
+				},
+				{
+					"name": "Battlefield V",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "1238810"
+				},
+				{
+					"name": "Battlefield Vietnam",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Battlerite",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "504370"
+				},
+				{
+					"name": "Battlestar Galactica Deadlock",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "544610"
+				},
+				{
+					"name": "Battlestar Galactica: Scattered Hopes",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2535950"
+				},
+				{
+					"name": "Battlestations: Midway",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "6870"
+				},
+				{
+					"name": "BeamNG",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "284160"
+				},
+				{
+					"name": "Bear and Breakfast",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "1136370"
+				},
+				{
+					"name": "Becastled",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "1330460"
+				},
+				{
+					"name": "BeebEm",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Bejeweled 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3300"
+				},
+				{
+					"name": "Bejeweled 3",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "78000"
+				},
+				{
+					"name": "Bejeweled Twist",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3560"
+				},
+				{
+					"name": "Ben There, Dan That!",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Beneath a Steel Sky",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Besiege",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "346010"
+				},
+				{
+					"name": "Betrayer",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Beyond Divinity",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "219760"
+				},
+				{
+					"name": "Beyond Good and Evil",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "15130"
+				},
+				{
+					"name": "Big Fish Games Manager",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Big Money! Deluxe",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3360"
+				},
+				{
+					"name": "Binary Domain",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "203750"
+				},
+				{
+					"name": "BioMutant",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "597820"
+				},
+				{
+					"name": "Bionic Commando",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "21670"
+				},
+				{
+					"name": "Bionic Commando Rearmed",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "BioShock",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "7670"
+				},
+				{
+					"name": "BioShock 2",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "8850"
+				},
+				{
+					"name": "BioShock Infinite",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "8870"
+				},
+				{
+					"name": "BioShock™ Remastered",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "409710"
+				},
+				{
+					"name": "BIT.TRIP BEAT",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "63700"
+				},
+				{
+					"name": "BIT.TRIP RUNNER",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "63710"
+				},
+				{
+					"name": "BizHawk",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Black Book",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1138660"
+				},
+				{
+					"name": "Black Desert Online",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Black Market HD",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Black Mesa",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "362890"
+				},
+				{
+					"name": "Black Mirror",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Black Mirror II",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Black Mirror III",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Black Mirror III",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "286480"
+				},
+				{
+					"name": "Blacklight: Retribution",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "209870"
+				},
+				{
+					"name": "BlackSite: Area 51",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "BLACKTAIL",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1532690"
+				},
+				{
+					"name": "Blackthorne",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Blackwell Deception",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "80360"
+				},
+				{
+					"name": "Blade Runner",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Blades of Time",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "208670"
+				},
+				{
+					"name": "Bleak Faith: Forsaken",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1173220"
+				},
+				{
+					"name": "Blitzkrieg 2",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Blockade 3D",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "302830"
+				},
+				{
+					"name": "Blood & Gold Caribbean",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Blood & Gold Caribbean",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "413710"
+				},
+				{
+					"name": "Blood Bowl 2",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "236690"
+				},
+				{
+					"name": "Blood Bowl Chaos Edition",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "216890"
+				},
+				{
+					"name": "Blood Oath",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Blood Omen 2: Legacy of Kain",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Blood West",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1587130"
+				},
+				{
+					"name": "Blood: One Unit Whole Blood",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "299030"
+				},
+				{
+					"name": "Bloodstained: Ritual of the Night",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "692850"
+				},
+				{
+					"name": "Bloody Good Time",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2450"
+				},
+				{
+					"name": "BLUE WISH RESURRECTION PLUS",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Blur",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "42640"
+				},
+				{
+					"name": "BMW M3 Challenge",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "boku to kimi no natuyasumi",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Bomb Rush Cyberfunk",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1353230"
+				},
+				{
+					"name": "Bomber Crew",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Bonanza Classic [Free version]",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Book of Demons",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "449960"
+				},
+				{
+					"name": "Bookworm Adventures Deluxe",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3470"
+				},
+				{
+					"name": "Bookworm Adventures: Volume 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3630"
+				},
+				{
+					"name": "Bookworm Deluxe",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "3370"
+				},
+				{
+					"name": "Boomerang X",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1170060"
+				},
+				{
+					"name": "Boot Fighter Windom XP SP-2 Ver.1.031",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Borderlands",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "8980"
+				},
+				{
+					"name": "Borderlands 2",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "49520"
+				},
+				{
+					"name": "Borderlands 3",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "397540"
+				},
+				{
+					"name": "Bounce!",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Bound By Flame",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "243930"
+				},
+				{
+					"name": "BPM: Bullets per Minute",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1286350"
+				},
+				{
+					"name": "Braid",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "26800"
+				},
+				{
+					"name": "Brainiversity 2",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Breakers Special Max",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Breathedge",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "738520"
+				},
+				{
+					"name": "Bridge Base Online",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Bridge Buff",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Bridge It",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Bridge Master 2000",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Bright Memory",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "955050"
+				},
+				{
+					"name": "Bright Memory: Infinite",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1178830"
+				},
+				{
+					"name": "Broforce",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "274190"
+				},
+				{
+					"name": "Broken Sword 2.5: The Return Of The Templars",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Broken Sword 3: The Sleeping Dragon",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "33610"
+				},
+				{
+					"name": "Broken Sword 4: The Angel of Death",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Broken Sword 5: The Serpent's curse",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "262940"
+				},
+				{
+					"name": "Broken Sword: Director's Cut",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "57640"
+				},
+				{
+					"name": "Broken Sword: Shadow of the Templars",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Brotato",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1942280"
+				},
+				{
+					"name": "Brothers - A Tale of Two Sons",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "225080"
+				},
+				{
+					"name": "Brothers in Arms: Earned in Blood",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "19800"
+				},
+				{
+					"name": "Brothers in Arms: Hell's Highway",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "15390"
+				},
+				{
+					"name": "Brothers in Arms: Road to Hill 30",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "15190"
+				},
+				{
+					"name": "Build-A-Lot 3: Passport to Europe",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Bullet Candy",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "6600"
+				},
+				{
+					"name": "Bulletstorm",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "99810"
+				},
+				{
+					"name": "Bully: Scholarship Edition",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "12200"
+				},
+				{
+					"name": "Burnout Paradise: The Ultimate Box",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "24740"
+				},
+				{
+					"name": "Bus Driver",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Bye",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "BYOND (Build Your Own Net Dream)",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "BZFlag",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Caesar",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Caesar 2",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Caesar III",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "517790"
+				},
+				{
+					"name": "Caesar IV",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Cairn",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1588550"
+				},
+				{
+					"name": "Cake Poker",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Caladrius Blaze",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "386770"
+				},
+				{
+					"name": "Call of Cthulhu: Dark Corners of the Earth",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Call of Duty 2",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "2630"
+				},
+				{
+					"name": "Call of Duty 4: Modern Warfare",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "7940"
+				},
+				{
+					"name": "Call of Duty: Black Ops",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "42700"
+				},
+				{
+					"name": "Call of Duty: Ghosts",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "209160"
+				},
+				{
+					"name": "Call of Duty: Modern Warfare 2",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "10180"
+				},
+				{
+					"name": "Call of Duty: United Offensive",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2640"
+				},
+				{
+					"name": "Call of Duty: World at War",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "10090"
+				},
+				{
+					"name": "Call of Duty®: Modern Warfare® 3",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "115300"
+				},
+				{
+					"name": "Call of Juarez",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3020"
+				},
+				{
+					"name": "Call of Juarez 2: Bound in Blood",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "21980"
+				},
+				{
+					"name": "Call of Juarez Gunslinger",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "204450"
+				},
+				{
+					"name": "Call To Power 2",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Campaign Cartographer 3+",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Cannon Smash",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Capitalism 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "638200"
+				},
+				{
+					"name": "Capitalism Plus",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Captain of Industry",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1594320"
+				},
+				{
+					"name": "Car Mechanic Simulator 2018",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "645630"
+				},
+				{
+					"name": "Carcassonne - Tiles & Tactics",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "598810"
+				},
+				{
+					"name": "Cargo! The Quest for Gravity",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "41740"
+				},
+				{
+					"name": "Caribbean!",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Carnivores: Dinosaur Hunter Reborn",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "293520"
+				},
+				{
+					"name": "Carrier Deck",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "580720"
+				},
+				{
+					"name": "Castle Crashers",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "204360"
+				},
+				{
+					"name": "Castle In The Darkness",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "262960"
+				},
+				{
+					"name": "Castle of Illusion",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "227600"
+				},
+				{
+					"name": "Castle:  Never Judge a Book by Its Cover",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Castlevania: Lords of Shadow - Mirror of Fate HD",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "282530"
+				},
+				{
+					"name": "Castlevania: Lords of Shadow - Ultimate Edition",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "234080"
+				},
+				{
+					"name": "Castlevania: Lords of Shadow 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "239250"
+				},
+				{
+					"name": "Cat Quest III",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2305840"
+				},
+				{
+					"name": "Cats Hidden in Paris",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Cave Story",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "CAYNE",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Ceville",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "23460"
+				},
+				{
+					"name": "Chained Together",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2567870"
+				},
+				{
+					"name": "Champions Online",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "9880"
+				},
+				{
+					"name": "Championsheep Rally",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Championship Manager 01/02",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Championship Manager 2010",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "CHANGE: A Homeless Survival Experience",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "926140"
+				},
+				{
+					"name": "Chantelise",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "70420"
+				},
+				{
+					"name": "Chants of Sennaar",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1931770"
+				},
+				{
+					"name": "Chaos on Deponia",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Chaser",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "39670"
+				},
+				{
+					"name": "Child of Light",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "256290"
+				},
+				{
+					"name": "Chinese Paladin 4",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "681820"
+				},
+				{
+					"name": "Chinese Paladin 5",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "681830"
+				},
+				{
+					"name": "Chinese Paladin 5 Prequel",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "681840"
+				},
+				{
+					"name": "Chinese Paladin: Sword and Fairy",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "695630"
+				},
+				{
+					"name": "Chip's Challenge",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "346850"
+				},
+				{
+					"name": "Chip's Challenge 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "348300"
+				},
+				{
+					"name": "Chivalry: Medieval Warfare",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "219640"
+				},
+				{
+					"name": "Cho Ren Sha 68k",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "cho rensya",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Chower Defence 2 Prototype",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Chrono Ark",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1188930"
+				},
+				{
+					"name": "CHRONO TRIGGER®",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "613830"
+				},
+				{
+					"name": "Chummer 5a",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Chuzzle Deluxe",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3310"
+				},
+				{
+					"name": "Cinders",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Circle Hostel",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "circuitous followers",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Cities In Motion 2",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "225420"
+				},
+				{
+					"name": "Cities XL 2012",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "201760"
+				},
+				{
+					"name": "Cities XL Platinum",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "231140"
+				},
+				{
+					"name": "Cities: Skylines",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "255710"
+				},
+				{
+					"name": "Cities: Skylines II",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "949230"
+				},
+				{
+					"name": "Citizen Sleeper",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1578650"
+				},
+				{
+					"name": "Citra",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "City Life 2008 Edition",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "CivCity Rome",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3980"
+				},
+				{
+					"name": "Civilization",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Civilization II",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Civilization III: Complete",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3910"
+				},
+				{
+					"name": "Civilization III: Complete",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Civilization III: Conquests",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Civilization III: Play the World",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Civilization IV",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3900"
+				},
+				{
+					"name": "Civilization IV: Beyond the Sword",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Civilization IV: Colonization",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "16810"
+				},
+				{
+					"name": "Civilization V",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "8930"
+				},
+				{
+					"name": "Clair Obscur: Expedition 33",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1903340"
+				},
+				{
+					"name": "ClearView Flight Simulator",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Clickteam Fusion 2.5 Free Edition",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Clive Barcher's Jericho",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "11420"
+				},
+				{
+					"name": "Clive Barker’s Undying",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Cloud",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Clue/Cluedo: The Classic Mystery Game",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "794800"
+				},
+				{
+					"name": "Clutter IV",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "CnCNet Yuri's Revenge Online (EA-App)",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "CnCNet Yuri's Revenge Online (Steam)",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Code of Honor 2 Conspiracy Island",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Code of Honor 3 - Desperate Measures",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Code of Honor: French Legion",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Codename: Gordon",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "92"
+				},
+				{
+					"name": "Cogs",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "26500"
+				},
+				{
+					"name": "Cold Waters",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "541210"
+				},
+				{
+					"name": "Colin McRae Rally 04",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Colin McRae Rally 2.0",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Colin McRae Rally 2005",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Colin McRae: DiRT 2",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Colin McRae: DiRT 3",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "321040"
+				},
+				{
+					"name": "Coloring Game",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1026820"
+				},
+				{
+					"name": "Coloring Game 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1216200"
+				},
+				{
+					"name": "Coloring Game 3",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1275640"
+				},
+				{
+					"name": "Coloring Game 4",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1554790"
+				},
+				{
+					"name": "Coloring Game 5",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3001970"
+				},
+				{
+					"name": "Coloring Game: Little City",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1132190"
+				},
+				{
+					"name": "Combat Arms",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "212180"
+				},
+				{
+					"name": "Command & Conquer 3: Tiberium Wars",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "24790"
+				},
+				{
+					"name": "Command & Conquer Gold",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Command & Conquer Tiberian Dawn Redux",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Command & Conquer: Red Alert",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Command & Conquer: Red Alert",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2229840"
+				},
+				{
+					"name": "Command & Conquer: Red Alert 2",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Command & Conquer: Red Alert 2; Yuri's Revenge",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "2229850"
+				},
+				{
+					"name": "Command & Conquer: Red Alert 3 - Uprising",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Command & Conquer: The First Decade",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Command & Conquer: Tiberian Sun",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Commander Keen",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "9180"
+				},
+				{
+					"name": "Commandos 2: Men of Courage",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Commandos 3: Destination Berlin",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Commandos Behind Enemy Lines / Beyond the Call of Duty",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Commandos: Behind Enemy Lines",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Commandos: Beyond the Call of Duty",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "6810"
+				},
+				{
+					"name": "Commandos: Strike Force",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Company of Heroes",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "4560"
+				},
+				{
+					"name": "Company of Heroes 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "231430"
+				},
+				{
+					"name": "Conan Exiles",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "440900"
+				},
+				{
+					"name": "Conquest: Frontier Wars",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Conquests of Camelot: The Search for the Grail",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Conquests of the Longbow: The Legend of Robin Hood",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Contagion",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "238430"
+				},
+				{
+					"name": "Content Warning",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2881650"
+				},
+				{
+					"name": "Continuum",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Cook, Serve, Delicious! 3?!",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1000030"
+				},
+				{
+					"name": "Cookie Clicker",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1454400"
+				},
+				{
+					"name": "Coral Island",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1158160"
+				},
+				{
+					"name": "Core Keeper",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "1621690"
+				},
+				{
+					"name": "CosmicBreak",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Cosmonautica",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "320340"
+				},
+				{
+					"name": "Cossacks II: Napoleonic Wars",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "4890"
+				},
+				{
+					"name": "Cossacks: Back to War",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Cossacks: Back to War",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "4850"
+				},
+				{
+					"name": "Cossacks: European wars",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Cossacks: The Art of War",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Counter-Strike",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "10"
+				},
+				{
+					"name": "Counter-Strike 2",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "730"
+				},
+				{
+					"name": "Counter-Strike Nexon: Studio",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "273110"
+				},
+				{
+					"name": "Counter-Strike: Condition Zero",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "80"
+				},
+				{
+					"name": "Counter-Strike: Source",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "240"
+				},
+				{
+					"name": "Crab Champions",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "774801"
+				},
+				{
+					"name": "Crab God",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "2289390"
+				},
+				{
+					"name": "Cradle of Persia",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Cradle of Persia",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "38180"
+				},
+				{
+					"name": "Cradle of Rome",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Craft The World",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "248390"
+				},
+				{
+					"name": "Crayon Physics Deluxe",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Crazy Machines 2",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "18400"
+				},
+				{
+					"name": "Crazy Machines 3",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "351920"
+				},
+				{
+					"name": "Crazy Taxi",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "71230"
+				},
+				{
+					"name": "Creaks",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "956030"
+				},
+				{
+					"name": "Creatures 3",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Creeper World",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Creeper World 4",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "848480"
+				},
+				{
+					"name": "Cresteaju",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Crime Scene Cleaner",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1040200"
+				},
+				{
+					"name": "Criminal Minds",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Crimsonland",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Crossout",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "386180"
+				},
+				{
+					"name": "Crow Country",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1996010"
+				},
+				{
+					"name": "Crow's staccato mark",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Crowfall",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Crusader Kings II",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "203770"
+				},
+				{
+					"name": "Crusader Kings II",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Crusader Kings III",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1158310"
+				},
+				{
+					"name": "Crysis",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "17300"
+				},
+				{
+					"name": "Crysis 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "108800"
+				},
+				{
+					"name": "Crysis Remastered",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1715130"
+				},
+				{
+					"name": "Crysis Warhead",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "17330"
+				},
+				{
+					"name": "CSI: 3 Dimensions of Murder",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "CSI: Crime Scene Investigation",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "CSI: Dark Motives",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Cube 2 Sauerbraten",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Cube World",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Cube World Test",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Culpa Innata",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "12310"
+				},
+				{
+					"name": "Cult of the Lamb",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "1313140"
+				},
+				{
+					"name": "Cultures",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Cultures 2: The Gates of Asgard",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Cuphead",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "268910"
+				},
+				{
+					"name": "CurseForge Desktop app",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Cute Things Dying Violently",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Cyberpunk 2077",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1091500"
+				},
+				{
+					"name": "Dagon: by H. P. Lovecraft",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1481400"
+				},
+				{
+					"name": "Danganronpa 2: Goodbye Despair",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "413420"
+				},
+				{
+					"name": "Dangerous Waters",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1600"
+				},
+				{
+					"name": "Danjon Rulet",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Dark Age of Camelot",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Dark Ages",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Dark Fall 2: Lights Out",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Dark Fall: The Journal",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Dark Forester",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "349450"
+				},
+				{
+					"name": "Dark Messiah: Might and Magic",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "2100"
+				},
+				{
+					"name": "Dark Reign",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Dark Sector",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "29900"
+				},
+				{
+					"name": "Dark Smash",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Dark Souls II",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "236430"
+				},
+				{
+					"name": "Dark Souls II: Scholar of the First Sin",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "335300"
+				},
+				{
+					"name": "Dark Souls III",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "374320"
+				},
+				{
+					"name": "Dark Souls Remastered",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "570940"
+				},
+				{
+					"name": "Dark Souls™: Prepare To Die™ Edition",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "211420"
+				},
+				{
+					"name": "Dark Void Zero",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Darkest Dungeon",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "262060"
+				},
+				{
+					"name": "Darkest Hour (A Hearts of Iron Game)",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "73170"
+				},
+				{
+					"name": "Darksiders",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "50620"
+				},
+				{
+					"name": "Darksiders II",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "50650"
+				},
+				{
+					"name": "Darksiders II Deathinitive Edition",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "388410"
+				},
+				{
+					"name": "Darksiders: Genesis",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "710920"
+				},
+				{
+					"name": "Darkspore",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "99890"
+				},
+				{
+					"name": "DarkStar One",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "12330"
+				},
+				{
+					"name": "Darkstone",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Darwinia",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1500"
+				},
+				{
+					"name": "Day of Defeat",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "30"
+				},
+				{
+					"name": "Day of Defeat: Source",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "300"
+				},
+				{
+					"name": "Day of the Tentacle Remastered",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "388210"
+				},
+				{
+					"name": "Dayz",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "221100"
+				},
+				{
+					"name": "DC Universe Online",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "24200"
+				},
+				{
+					"name": "DCS World",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "223750"
+				},
+				{
+					"name": "Dead Island",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "91310"
+				},
+				{
+					"name": "Dead Island Riptide",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "216250"
+				},
+				{
+					"name": "Dead Rising 2",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "45740"
+				},
+				{
+					"name": "Dead Space",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "17470"
+				},
+				{
+					"name": "Deadlight",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "211400"
+				},
+				{
+					"name": "Dear Esther",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "203810"
+				},
+				{
+					"name": "Death From Above",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2300160"
+				},
+				{
+					"name": "Death in the Water 2",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "1338840"
+				},
+				{
+					"name": "Death Must Die",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2334730"
+				},
+				{
+					"name": "Death Stranding: Director's Cut",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1850570"
+				},
+				{
+					"name": "Death to Spies",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Death to Spies",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "9800"
+				},
+				{
+					"name": "Death to Spies: Moment of Truth",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "34410"
+				},
+				{
+					"name": "Death's Door",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "894020"
+				},
+				{
+					"name": "Decisive Campaigns: Barbarossa",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "454530"
+				},
+				{
+					"name": "Decisive Campaigns: The blitzkrieg from Warsaw to Paris",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "337760"
+				},
+				{
+					"name": "Deep Rock Galactic",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "548430"
+				},
+				{
+					"name": "Deep Rock Galactic: Survivor",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2321470"
+				},
+				{
+					"name": "DEFCON",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1520"
+				},
+				{
+					"name": "Defense Grid: The Awakening",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "18500"
+				},
+				{
+					"name": "Defiance",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "224600"
+				},
+				{
+					"name": "Defiance 2050",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "743090"
+				},
+				{
+					"name": "Definitely Not Fried Chicken",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1036240"
+				},
+				{
+					"name": "Deliver Us The Moon",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "428660"
+				},
+				{
+					"name": "Delta Force",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "32620"
+				},
+				{
+					"name": "Delta Force 2",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "32630"
+				},
+				{
+					"name": "Delta Force Black Hawk Down",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "32670"
+				},
+				{
+					"name": "Delta Force Land Warrior",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "32640"
+				},
+				{
+					"name": "Delta Force Taskforce Dagger",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "32650"
+				},
+				{
+					"name": "Delta Force Xtreme",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Delta Force Xtreme",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "32660"
+				},
+				{
+					"name": "Deltarune",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Democracy 4",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Demon Slayer -Kimetsu no Yaiba- The Hinokami Chronicles 2",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "2928600"
+				},
+				{
+					"name": "Deponia",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "214340"
+				},
+				{
+					"name": "Derelict",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Descent 3",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Desperados",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Desperados",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "260730"
+				},
+				{
+					"name": "Desperados 2: Cooper's Revenge",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "9710"
+				},
+				{
+					"name": "Desperados 3: Helldorado",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "18470"
+				},
+				{
+					"name": "Destroyer: The U-Boat Hunter",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1272010"
+				},
+				{
+					"name": "Desura",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Deus Ex: Human Revolution",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "28050"
+				},
+				{
+					"name": "Deus Ex: Human Revolution",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "238010"
+				},
+				{
+					"name": "Deus Ex: Invisible War",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "6920"
+				},
+				{
+					"name": "Devil's Tuning Fork",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Diablo",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Diablo II",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Diablo II: Lord of Destruction (2001)",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Diablo II: Resurrected",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Diablo III",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Diablo Immortal",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Diablo IV",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Diablo IV",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2344520"
+				},
+				{
+					"name": "Digital Paintball 2",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Dimension Jump",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "564750"
+				},
+				{
+					"name": "Diplomacy is Not an Option",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1272320"
+				},
+				{
+					"name": "Dirty Split",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Disciples - Sacred Lands Gold Edition",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "281450"
+				},
+				{
+					"name": "Disciples II",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Disciples II: Rise of the Elves",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "1630"
+				},
+				{
+					"name": "Disciples III: Renaissance",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Disco Elysium",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "632470"
+				},
+				{
+					"name": "Disgaea",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "405900"
+				},
+				{
+					"name": "Dishonored",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "205100"
+				},
+				{
+					"name": "Dishonored 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "403640"
+				},
+				{
+					"name": "Divine Divinity",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Divine Divinity",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "214170"
+				},
+				{
+					"name": "Divinity II: Developer's Cut",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "219780"
+				},
+				{
+					"name": "Divinity II: Ego Draconis",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Divinity: Original Sin II",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "435150"
+				},
+				{
+					"name": "Doctor Who: The Eternity Clock",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "217080"
+				},
+				{
+					"name": "Dokachan Onigokko",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Doki Doki Literature Club",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Doki Doki Literature Club Plus!",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1388880"
+				},
+				{
+					"name": "Don't Starve",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Doodle Derby",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "916180"
+				},
+				{
+					"name": "DOOM (2016)",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "379720"
+				},
+				{
+					"name": "Doom + Doom II",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2280"
+				},
+				{
+					"name": "DOOM 3",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "9050"
+				},
+				{
+					"name": "DOOM 3: Resurrection of Evil",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "9070"
+				},
+				{
+					"name": "DOOM 64",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1148590"
+				},
+				{
+					"name": "DOOM II: Hell on Earth",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2300"
+				},
+				{
+					"name": "Dorfromantik",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "1455840"
+				},
+				{
+					"name": "DoriPara Extra",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "DOSBox",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "DOSBox-X",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "DOSShell",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Dota 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "570"
+				},
+				{
+					"name": "Double Dragon Neon",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "252350"
+				},
+				{
+					"name": "Downwell",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "360740"
+				},
+				{
+					"name": "Dracula 3: The Path of the Dragon",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Dragon Age II",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "47900"
+				},
+				{
+					"name": "Dragon Age: Origins",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "17450"
+				},
+				{
+					"name": "Dragon Age: Origins",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "47730"
+				},
+				{
+					"name": "Dragon Age: Origins - Ultimate Edition",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "47810"
+				},
+				{
+					"name": "Dragon Ball XenoVerse",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "323470"
+				},
+				{
+					"name": "DRAGON BALL Z: KAKAROT",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "851850"
+				},
+				{
+					"name": "Dragon Oath",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "DRAGON QUEST III HD-2D Remake",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2701660"
+				},
+				{
+					"name": "DRAGON QUEST MONSTERS: The Dark Prince",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "2175540"
+				},
+				{
+					"name": "Dragon Saga (Dragonica)",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Dragon Saga (Dragonica)",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "381990"
+				},
+				{
+					"name": "Dragon's Dogma 2",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "2054970"
+				},
+				{
+					"name": "Dragon's Dogma: Dark Arisen",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "367500"
+				},
+				{
+					"name": "DragonSky",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "DragonStone",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Drakensang Online",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Drawn: The Painted Tower",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Drawn: The Painted Tower",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "51060"
+				},
+				{
+					"name": "Dread Hunger",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1418630"
+				},
+				{
+					"name": "Dreamfall: The Longest Journey",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "6300"
+				},
+				{
+					"name": "Dreaming Sarah",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "296870"
+				},
+				{
+					"name": "Driftmoon",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Driftmoon",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "263380"
+				},
+				{
+					"name": "Driver: Parallel Lines",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Drunken Robot Pornography",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "209060"
+				},
+				{
+					"name": "Ducati World Championship",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "6270"
+				},
+				{
+					"name": "Duck Game",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "312530"
+				},
+				{
+					"name": "Ducktales: Remastered",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "237630"
+				},
+				{
+					"name": "Duelyst",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "291410"
+				},
+				{
+					"name": "Duke Nukem Forever",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "57900"
+				},
+				{
+					"name": "Dune 2000",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Dune: Spice Wars",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1605220"
+				},
+				{
+					"name": "Dungeon Keeper",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Dungeon Keeper 2",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Dungeon Seeker",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Dungeon Siege",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Dungeon Siege II",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "39200"
+				},
+				{
+					"name": "Dungeon Siege III",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "901638"
+				},
+				{
+					"name": "Dungeon Siege III",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Dungeons & Dragons Neverwinter",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Dungeons & Dragons Neverwinter",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "109600"
+				},
+				{
+					"name": "Dungeons & Dragons Online",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "206480"
+				},
+				{
+					"name": "Dungeons & Dragons: Dragonshard",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Dungeons of Hinterberg",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1983260"
+				},
+				{
+					"name": "Durbbing Girls Revival Fest. Episode 1",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Durbbing Girls Revival Fest. Episode 2",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Durbbing Girls Revival Fest. Episode 3",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Dwarf Fortress",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Dwarf Fortress",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "975370"
+				},
+				{
+					"name": "Dying Light",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "239140"
+				},
+				{
+					"name": "Dynasty Warriors Online",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "DYNASTY WARRIORS: ORIGINS",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "2384580"
+				},
+				{
+					"name": "Dynatanks",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Dyson Sphere Program",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1366540"
+				},
+				{
+					"name": "Dystopia",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "17580"
+				},
+				{
+					"name": "EA App",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "EA App for Steam",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "EA Sports Cricket 07 (2007)",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Eador: Genesis",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Eador: Masters of the Broken World",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "232050"
+				},
+				{
+					"name": "Earth 2140",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "253860"
+				},
+				{
+					"name": "Earth 2150",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "253880"
+				},
+				{
+					"name": "Earth 2160",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Earth 2160",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1900"
+				},
+				{
+					"name": "East India Company",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Eclosion",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "EDELWEISS",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Eden Eternal",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Eden's Aegis",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Edge of Eternity",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "269190"
+				},
+				{
+					"name": "Eets",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "6100"
+				},
+				{
+					"name": "Elden Ring",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1245620"
+				},
+				{
+					"name": "Elderborn",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "727850"
+				},
+				{
+					"name": "Electrician Simulator",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1080020"
+				},
+				{
+					"name": "ELEX",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "411300"
+				},
+				{
+					"name": "Elite Dangerous",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "359320"
+				},
+				{
+					"name": "Ember Knights",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1135230"
+				},
+				{
+					"name": "Emberward",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "2459550"
+				},
+				{
+					"name": "EMBLEM OF RED ReSHUFFLE",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Emperor: Rise of the Middle Kingdom",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Empire Earth II",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Empire Earth III",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Empire: Total War",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "10500"
+				},
+				{
+					"name": "Enderal: Forgotten Stories",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "933480"
+				},
+				{
+					"name": "Endless Space",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "208140"
+				},
+				{
+					"name": "Endzone - A World Apart",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "933820"
+				},
+				{
+					"name": "Enemy Engaged: Apache vs. Havok",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Enemy Engaged: Comanche vs. Hokum",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Enemy Nations",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Enemy Territory: Quake Wars",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "10010"
+				},
+				{
+					"name": "Enlisted",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Enshrouded",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "1203620"
+				},
+				{
+					"name": "Entropia Universe",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Epic Games Store",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "ePSXe",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Eternal Return",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "1049590"
+				},
+				{
+					"name": "Ether One",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "265950"
+				},
+				{
+					"name": "Etherborn",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "812160"
+				},
+				{
+					"name": "Etherlords",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Etherlords 2",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Eufloria",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "221180"
+				},
+				{
+					"name": "Euro Truck Simulator",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "232010"
+				},
+				{
+					"name": "Euro Truck Simulator 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "227300"
+				},
+				{
+					"name": "Europa Universalis: Rome Gold",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "EVE Fitting Tool",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "EVE Online",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "8500"
+				},
+				{
+					"name": "EVE Online",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "EVE Online 64-bit",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "EVEMon",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Everdream Valley",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1403650"
+				},
+				{
+					"name": "Everest Poker",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "EverQuest",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "205710"
+				},
+				{
+					"name": "EverQuest II",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "201230"
+				},
+				{
+					"name": "Evil Dead:  Regeneration",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Evil Genius",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3720"
+				},
+				{
+					"name": "Evil West",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1065310"
+				},
+				{
+					"name": "Evoland",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "233470"
+				},
+				{
+					"name": "Evoland 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "359310"
+				},
+				{
+					"name": "Evolva",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "eXceed2nd-VAMPIRE REX-",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "eXceed3rd-JADE PENETRATE-",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Expendabros",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "312990"
+				},
+				{
+					"name": "eXtreme Gammon",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Eye of the Kraken",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "F-16 Multirole Fighter",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "32720"
+				},
+				{
+					"name": "F-22 Lightning 3",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "32730"
+				},
+				{
+					"name": "F.E.A.R. 2: Project Origin",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "16450"
+				},
+				{
+					"name": "F.E.A.R. 3",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "21100"
+				},
+				{
+					"name": "F.E.A.R.: First Encounter Assault Recon",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "21090"
+				},
+				{
+					"name": "F1 Manager 2024",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "2591280"
+				},
+				{
+					"name": "F1® Manager 2022",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1708520"
+				},
+				{
+					"name": "F1® Manager 2023",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2287220"
+				},
+				{
+					"name": "Fable Anniversary",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "288470"
+				},
+				{
+					"name": "Fable: The Lost Chapters",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "204030"
+				},
+				{
+					"name": "Faces of War",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Factory Town",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "860890"
+				},
+				{
+					"name": "Faerie Solitaire",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "38600"
+				},
+				{
+					"name": "Fahrenheit",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Fahrenheit: Indigo Prophecy Remastered",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "312840"
+				},
+				{
+					"name": "Fairy Bloom Freesia",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "214590"
+				},
+				{
+					"name": "Fairy Maker",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Fallen City",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Fallen Earth",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "113420"
+				},
+				{
+					"name": "Fallout",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "38400"
+				},
+				{
+					"name": "Fallout 2",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "38410"
+				},
+				{
+					"name": "Fallout 3: Game of the Year Edition",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "22370"
+				},
+				{
+					"name": "Fallout 4",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "377160"
+				},
+				{
+					"name": "Fallout 76",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1151340"
+				},
+				{
+					"name": "Fallout Ressurection",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Fallout Shelter",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Fallout Shelter",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "588430"
+				},
+				{
+					"name": "Fallout Tactics: Brotherhood of Steel",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "38420"
+				},
+				{
+					"name": "Fallout: New Vegas",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "22380"
+				},
+				{
+					"name": "Fantasy Grounds",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Fantasy Wars",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Far Cry",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Far Cry",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "13520"
+				},
+				{
+					"name": "Far Cry 2",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "19900"
+				},
+				{
+					"name": "Far Cry 3",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "220240"
+				},
+				{
+					"name": "Farm Frenzy 3",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Farm Frenzy 3",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "38150"
+				},
+				{
+					"name": "Farm Frenzy 3: Ice Age",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Farm Frenzy: Gone Fishing",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Farming Simulator 19",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "787860"
+				},
+				{
+					"name": "Farming Simulator 2013",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "220260"
+				},
+				{
+					"name": "Farming Simulator 2015",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "313160"
+				},
+				{
+					"name": "Farming Simulator 2017",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "447020"
+				},
+				{
+					"name": "FeralHeart",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Fever Games",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Fields of Mistria",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "2142790"
+				},
+				{
+					"name": "Fiesta Online",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Fiesta Online",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "280620"
+				},
+				{
+					"name": "FIFA 07",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "FIFA 08",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "FIFA 10",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "FIFA 11",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Fights in Tight Spaces",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1265820"
+				},
+				{
+					"name": "Final Fantasy III (3D Remake)",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "239120"
+				},
+				{
+					"name": "Final Fantasy IV (3D Remake)",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "312750"
+				},
+				{
+					"name": "FINAL FANTASY IX",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "377840"
+				},
+				{
+					"name": "FINAL FANTASY V (Old ver.)",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "382890"
+				},
+				{
+					"name": "FINAL FANTASY VI",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1173820"
+				},
+				{
+					"name": "FINAL FANTASY VII (2013)",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "39140"
+				},
+				{
+					"name": "FINAL FANTASY VIII",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "39150"
+				},
+				{
+					"name": "FINAL FANTASY XII THE ZODIAC AGE",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "595520"
+				},
+				{
+					"name": "FINAL FANTASY XIII",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "292120"
+				},
+				{
+					"name": "FINAL FANTASY XIII-2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "292140"
+				},
+				{
+					"name": "FINAL FANTASY XIV Online",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "39210"
+				},
+				{
+					"name": "FINAL FANTASY XV WINDOWS EDITION",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "637650"
+				},
+				{
+					"name": "Fireburst",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "207190"
+				},
+				{
+					"name": "Firestarter",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Firewatch",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "383870"
+				},
+				{
+					"name": "Five Nights at Freddy's",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "319510"
+				},
+				{
+					"name": "Five Nights at Freddy's 2",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "332800"
+				},
+				{
+					"name": "Five Nights at Freddy's 3",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "354140"
+				},
+				{
+					"name": "Flashback (2013)",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "FLASHOUT 3D: Enhanced Edition",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "FlatOut",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "6220"
+				},
+				{
+					"name": "FlatOut 2",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "2990"
+				},
+				{
+					"name": "FlatOut 3: Chaos & Destruction",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "201510"
+				},
+				{
+					"name": "FlatOut: Ultimate Carnage",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "12360"
+				},
+				{
+					"name": "Flight of the Amazon Queen",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Flopzilla",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Flower",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "966330"
+				},
+				{
+					"name": "Flower Tales",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Football Mogul 17",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Football Mogul 2011",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Football Mogul 2013",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Football Mogul 2014",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "For the Glory",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "For The King",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "527230"
+				},
+				{
+					"name": "For The King II",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "1676840"
+				},
+				{
+					"name": "Forager",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "751780"
+				},
+				{
+					"name": "Forgotten Realms: Demon Stone",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Forsaken World",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Foundation",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "690830"
+				},
+				{
+					"name": "Foxhole",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "505460"
+				},
+				{
+					"name": "Fractal Terrains Pro",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Freddy Pharkas Frontier Pharmacist",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Freeciv 2.x",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Freedom Force",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Freedom Force vs. the Third Reich",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "FreeSpace 2",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Freestyle2: Street Basketball",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "339610"
+				},
+				{
+					"name": "Freight Yard Manager",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Front Office Football Eight",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "547900"
+				},
+				{
+					"name": "Front Office Football Seven",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Frontline Tactics",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "218310"
+				},
+				{
+					"name": "Frontlines: Fuel of War",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "9460"
+				},
+				{
+					"name": "Frostpunk",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "323190"
+				},
+				{
+					"name": "Full Metal Sergeant 2",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "3130170"
+				},
+				{
+					"name": "Full Pipe",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "4600"
+				},
+				{
+					"name": "Furcadia",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Future Pinball 1.9.20081225",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "G-Police",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Gabriel Knight 2: The Beast Within",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "GABRIEL KNIGHT: SINS OF THE FATHERS",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Gadget Trial",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Galactic Assault: Prisoner of Power",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Galactic Civilizations",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "214150"
+				},
+				{
+					"name": "Galactic Civilizations II: Ultimate Edition",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "202200"
+				},
+				{
+					"name": "GameFly",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "GameLoop",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "GameMaker: Studio",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "GameRanger",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "GamersGate Installer",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Gang Garrison 2",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "Gangland",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Garena Plus",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Garfield Kart",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "362930"
+				},
+				{
+					"name": "Garry's Mod",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "4000"
+				},
+				{
+					"name": "Gary Grigsby's War in the East: The German-Soviet War 1941-1945",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "370540"
+				},
+				{
+					"name": "Gates of Andaron",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Gauntlet (2014)",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "258970"
+				},
+				{
+					"name": "Gemini Rue",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "80310"
+				},
+				{
+					"name": "Gemporium: A Cute Mining Sim",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "2836100"
+				},
+				{
+					"name": "Genshin Impact",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "Genshin Impact China Edition",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Geometry Dash",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "322170"
+				},
+				{
+					"name": "Geometry Wars",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "8400"
+				},
+				{
+					"name": "Ghost Master",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "6200"
+				},
+				{
+					"name": "Ghost of a Tale",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "417290"
+				},
+				{
+					"name": "Ghostrunner",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1139900"
+				},
+				{
+					"name": "Ghostrunner 2",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "2144740"
+				},
+				{
+					"name": "Ghostwire: Tokyo",
+					"rating": 3,
+					"label": "unbronze",
+					"steamid": "1475810"
+				},
+				{
+					"name": "Giana Sisters: Twisted Dreams",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "223220"
+				},
+				{
+					"name": "GirlsBand",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Gish",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Give my love to Turgenev!",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Global Agenda: Free Agent",
+					"rating": 1,
+					"label": "knownnottowork",
+					"steamid": "17020"
+				},
+				{
+					"name": "GMATPrep v2",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Go 4 Value [Free version]",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Goat Simulator",
+					"rating": 4,
+					"label": "unsilver",
+					"steamid": "265930"
+				},
+				{
+					"name": "Goat Simulator 3",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "850190"
+				},
+				{
+					"name": "Gobliiins Trilogy",
+					"rating": 5,
+					"label": "ungold"
+				},
+				{
+					"name": "God hand with the crown",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "God Knows",
+					"rating": 4,
+					"label": "unsilver"
+				},
+				{
+					"name": "God of War",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "1593500"
+				},
+				{
+					"name": "GOG downloader",
+					"rating": 1,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "good bye to you test 2",
+					"rating": 3,
+					"label": "unbronze"
+				},
+				{
+					"name": "Gorogoa",
+					"rating": 5,
+					"label": "ungold",
+					"steamid": "557600"
+				},
+				{
+					"name": "Gothic",
+					"rating": 2,
+					"label": "knownnottowork"
+				},
+				{
+					"name": "Gothic 2",
+					"rating": 2,
+					"label": "knownnottowork",
+					"steamid": "39510"
+				},
+				{
+					"name": "Gothic 3",
+					"rating": 3,
+					"label": "unbronze"
+				}
+			]
+		},
+		"fetchedAt": 1795258800000
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"index": "Sat Nov 21 2026 11:00:00 GMT+0000 (Coordinated Universal Time)"
+	}
+}

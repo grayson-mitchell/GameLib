@@ -123,6 +123,42 @@ export function mockPlatform(platform: OraclePlatform): () => void {
   }
 }
 
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec'
+]
+const pad2 = (n: number): string => String(n).padStart(2, '0')
+
+/** `Date()` as `TZ=UTC` prints it: `Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)`. */
+export function utcDateString(ms: number): string {
+  const d = new Date(ms)
+  return `${DAYS[d.getUTCDay()]} ${MONTHS[d.getUTCMonth()]} ${pad2(d.getUTCDate())} ${d.getUTCFullYear()} ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}:${pad2(d.getUTCSeconds())} GMT+0000 (Coordinated Universal Time)`
+}
+
+/**
+ * A `CacheStore` stamps each entry with `Date()`, a string in the process's local zone. This
+ * rewrites every such stamp in a captured file to its UTC rendering (what `TZ=UTC` prints and what
+ * the Rust store writes), so a golden is the same on every machine.
+ */
+export function normaliseDates(bytes: Buffer): Buffer {
+  const text = bytes.toString('utf8')
+  const pattern =
+    /[A-Z][a-z]{2} [A-Z][a-z]{2} \d{2} \d{4} \d{2}:\d{2}:\d{2} GMT[+-]\d{4} \([^)]*\)/g
+  const out = text.replace(pattern, (stamp) => utcDateString(Date.parse(stamp)))
+  return out === text ? bytes : Buffer.from(out, 'utf8')
+}
+
 /** The bytes the oracle records, keyed by path relative to the case's `expected/<case>/` folder. */
 export interface GoldenCapture {
   result: unknown

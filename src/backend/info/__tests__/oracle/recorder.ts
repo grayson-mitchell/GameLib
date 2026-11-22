@@ -70,6 +70,8 @@ export interface SyntheticResponse {
   status: number
   headers?: Record<string, string>
   body: string
+  /** Binary body, base64. Wins over `body` (a gzip payload does not survive a utf8 string). */
+  bodyBase64?: string
   /**
    * The TS sees a transport failure (no response at all). Recorded as an exchange with
    * `status: 0` and `networkError: true`; the TS gets an AxiosError with no `response`.
@@ -198,6 +200,16 @@ function respond(
   if (config.responseType === 'stream') {
     throw new Error(
       'oracle recorder: responseType "stream" is not supported; record the body as a buffer'
+    )
+  }
+  // The real http adapter counts the decoded bytes against `maxContentLength` and aborts the
+  // request: a caller that sets a cap sees an ERR_BAD_RESPONSE with no response.
+  const cap = config.maxContentLength
+  if (typeof cap === 'number' && cap > -1 && body.length > cap) {
+    throw new AxiosError(
+      `maxContentLength size of ${cap} exceeded`,
+      AxiosError.ERR_BAD_RESPONSE,
+      config
     )
   }
   const data: unknown =
@@ -405,7 +417,9 @@ export function installRecorder(options: RecorderOptions): Recorder {
       const response = {
         status: synthetic.status,
         headers: redactHeaders(synthetic.headers ?? {}),
-        body: Buffer.from(synthetic.body, 'utf8')
+        body: synthetic.bodyBase64
+          ? Buffer.from(synthetic.bodyBase64, 'base64')
+          : Buffer.from(synthetic.body, 'utf8')
       }
       store(request, response, { synthetic: true })
       return respond(config, response.status, response.headers, response.body)
