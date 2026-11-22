@@ -206,12 +206,11 @@ jest.mock('../../storeManagers/legendary/user', () => ({
   LegendaryUser: { getUserInfo: jest.fn() }
 }))
 
-// ── discounts/fetchDiscounts — getGogDiscounts's Plan 34.6-09 extraction
-// out of discounts/index.ts's previously-inline addHandler body. Mocked
-// here because this suite tests the
-// channel-routing, not fetchDiscounts.ts's own GOG-catalog-fetching body ───
+// ── info/discounts — getGogDiscounts's resolver. The catalog fetch is Rust now (86-18); this suite
+// tests the channel routing (the registration forwards its three positional arguments), not the
+// resolver's own token read, which `info/__tests__/discounts.test.ts` covers. ───
 const mockGetGogDiscounts = jest.fn()
-jest.mock('../../discounts/fetchDiscounts', () => ({
+jest.mock('../../info/discounts', () => ({
   getGogDiscounts: (...args: unknown[]) => mockGetGogDiscounts(...args)
 }))
 
@@ -769,7 +768,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
   // registration in Phase 86 Plan 15 (D-17): they are native `info` channels now, and their
   // behaviour is pinned by the Rust golden_steamgrid test and the native manifest vectors.
   describe('REQ-34.6-08 getGogDiscounts (invoke)', () => {
-    it('REQ-34.6-08 getGogDiscounts delegates to fetchDiscounts.ts’s getGogDiscounts(deps, locale, hideOwned, wishlistOnly)', async () => {
+    it('REQ-34.6-08 getGogDiscounts delegates to info/discounts.ts’s getGogDiscounts(deps, locale, hideOwned, wishlistOnly)', async () => {
       const locale = {
         countryCode: 'US',
         locale: 'en-US',
@@ -790,7 +789,8 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       expect(mockGetGogDiscounts).toHaveBeenCalledWith(
         expect.objectContaining({
           stores: expect.anything(),
-          libraryManagers: expect.anything()
+          libraryManagers: expect.anything(),
+          requestRustInvoke: expect.any(Function)
         }),
         locale,
         true,

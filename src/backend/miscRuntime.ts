@@ -20,15 +20,23 @@ import {
   createMacArchPromptChain,
   type MacArchPromptChain
 } from './macArch/recovery'
+import type { RustInvokeDeps } from './host/rustInvokeDeps'
 
 export interface MiscRuntime {
   /** The `metadataChanged` push of a game-metadata override write. */
   metadataOverrides: MetadataOverrides
   /** Serialises the Mac Windows-reinstall dialogs. */
   macArchPrompts: MacArchPromptChain
+  /**
+   * The sidecar -> Rust request leg of this boot (86-18). It rides here only because the enrichment
+   * registration, which `sidecar/handlers.ts` feeds with this bundle, has no other member that holds
+   * it, and the GOG discounts resolver (`info/discounts.ts`) needs it. OWED: once `handlers.ts` can
+   * pass `requestRustInvoke` to `registerEnrichmentFlows` directly, take it off this bundle.
+   */
+  requestRustInvoke: RustInvokeDeps['requestRustInvoke']
 }
 
-export interface MiscRuntimeDeps {
+export interface MiscRuntimeDeps extends RustInvokeDeps {
   /** Pushes `metadataChanged` to the renderer; absent in a test that does not observe it. */
   metadataChanged?: MetadataChangedNotifier
 }
@@ -38,7 +46,8 @@ export function createMiscRuntime(deps: MiscRuntimeDeps): MiscRuntime {
     metadataOverrides: createMetadataOverrides({
       notify: deps.metadataChanged
     }),
-    macArchPrompts: createMacArchPromptChain()
+    macArchPrompts: createMacArchPromptChain(),
+    requestRustInvoke: deps.requestRustInvoke
   }
 }
 

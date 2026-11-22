@@ -997,6 +997,17 @@ export const RUST_INFO_ANTICHEAT_STATUS = 'info_anticheat_status' as const
 export const RUST_INFO_ANTICHEAT_DOWNLOAD = 'info_anticheat_download' as const
 
 /**
+ * Phase 86 (SVC-01, 86-18): the GOG catalog discounts, served by `gamelib-info` `discounts`. Args
+ * `{ locale: { countryCode, locale, currencyCode }, hideOwned, wishlistOnly, token }`, where `token`
+ * is the GOG access token the caller collected (or `null`): it comes from the `gogdl` child process,
+ * which stays TypeScript until phase 92 (D-24), and is used for the one call only, never logged.
+ * Resolves the product list as the catalog sent it, pages 1 to 30 merged in page order and
+ * deduplicated by id; rejects with the text of what failed (`Request failed with status code 500`).
+ * A flag with a `null` token resets both flags in Rust, as the TS did.
+ */
+export const RUST_INFO_GOG_DISCOUNTS = 'info_gog_discounts' as const
+
+/**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
  * the macOS bridge helper loads: the GameLib cache, else a snapshot of the Steam client's own copy
  * when it already hashes to the pin, else a fetch from Valve's client-update CDN (sha2vz, VZ decode,
@@ -1325,7 +1336,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_INFO_OVERRIDES_ATTACH,
   RUST_INFO_ANTICHEAT_INFO,
   RUST_INFO_ANTICHEAT_STATUS,
-  RUST_INFO_ANTICHEAT_DOWNLOAD
+  RUST_INFO_ANTICHEAT_DOWNLOAD,
+  RUST_INFO_GOG_DISCOUNTS
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
@@ -1450,7 +1462,8 @@ export const RUST_INFO_CHANNELS = [
   RUST_INFO_OVERRIDES_ATTACH,
   RUST_INFO_ANTICHEAT_INFO,
   RUST_INFO_ANTICHEAT_STATUS,
-  RUST_INFO_ANTICHEAT_DOWNLOAD
+  RUST_INFO_ANTICHEAT_DOWNLOAD,
+  RUST_INFO_GOG_DISCOUNTS
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */

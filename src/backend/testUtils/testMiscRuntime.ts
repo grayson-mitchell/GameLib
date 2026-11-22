@@ -6,6 +6,12 @@
  */
 import type { MiscRuntime, MiscRuntimeDeps } from '../miscRuntime'
 
+/** A transport that was not wired for this test: any call rejects instead of reaching Rust. */
+const unwiredRustInvoke = (() =>
+  Promise.reject(
+    new Error('requestRustInvoke is not wired for this test')
+  )) as unknown as MiscRuntimeDeps['requestRustInvoke']
+
 export function createTestMiscRuntime(
   opts: Partial<MiscRuntimeDeps> = {}
 ): MiscRuntime {
@@ -13,5 +19,8 @@ export function createTestMiscRuntime(
   const { createMiscRuntime } =
     require('../miscRuntime') as typeof import('../miscRuntime')
   /* eslint-enable @typescript-eslint/no-require-imports */
-  return createMiscRuntime({ metadataChanged: opts.metadataChanged })
+  return createMiscRuntime({
+    metadataChanged: opts.metadataChanged,
+    requestRustInvoke: opts.requestRustInvoke ?? unwiredRustInvoke
+  })
 }

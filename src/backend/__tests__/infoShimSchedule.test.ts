@@ -160,6 +160,20 @@ const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_INFO_ANTICHEAT_INFO',
     callers: ANTICHEAT_CALLERS,
     deletedBy: 88
+  },
+  // 86-18, GOG discounts: a RESOLVER (D-24), not a shim. The catalog fetch is Rust; the one input
+  // Rust cannot gather is the GOG access token, which needs the `gogdl` child process, so the
+  // resolver reads it (`const token`, only when a flag asks for the account filters) and makes the
+  // one call. `getGogDiscounts` stays TS-registered for that reason, and phase 92 ports GOG's
+  // `gogdl` auth, after which Rust reads the token itself and the registration goes native.
+  {
+    name: 'getGogDiscounts',
+    file: 'src/backend/info/discounts.ts',
+    shape: 'resolver',
+    inputs: ['token'],
+    channel: 'RUST_INFO_GOG_DISCOUNTS',
+    callers: ['src/backend/sidecar/enrichmentFlowRegistration.ts'],
+    deletedBy: 92
   }
 ]
 

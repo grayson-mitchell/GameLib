@@ -1828,6 +1828,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         state.services.miscRuntime =
           prebuilt.miscRuntime ??
           createMiscRuntime({
+            requestRustInvoke: host.requestRustInvoke,
             metadataChanged: (overrides) => {
               try {
                 host.pushFrontendMessage('metadataChanged', overrides)

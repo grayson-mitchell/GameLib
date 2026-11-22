@@ -61,6 +61,7 @@ import {
   RUST_INFO_ANTICHEAT_DOWNLOAD,
   RUST_INFO_ANTICHEAT_INFO,
   RUST_INFO_ANTICHEAT_STATUS,
+  RUST_INFO_GOG_DISCOUNTS,
   RUST_INFO_OVERRIDES_ATTACH,
   RUST_INFO_OVERRIDES_GET,
   RUST_INFO_OVERRIDES_GET_ALL,
@@ -727,6 +728,25 @@ export const rustInvokeArgs = {
     z.object({ latestFileHash: z.string().optional() }).strict()
   ]),
   [RUST_INFO_ANTICHEAT_DOWNLOAD]: z.tuple([z.object({}).strict()]),
+  // Phase 86 (SVC-01): GOG discounts. The crate re-validates every arg (deny_unknown_fields; each
+  // locale part is at most 32 UTF-16 units). `token` is the GOG access token or null; it is never
+  // logged.
+  [RUST_INFO_GOG_DISCOUNTS]: z.tuple([
+    z
+      .object({
+        locale: z
+          .object({
+            countryCode: z.string(),
+            locale: z.string(),
+            currencyCode: z.string()
+          })
+          .strict(),
+        hideOwned: z.boolean(),
+        wishlistOnly: z.boolean(),
+        token: z.string().nullable()
+      })
+      .strict()
+  ]),
   [RUST_STEAM_API_PIN_RESOLVE]: empty
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 

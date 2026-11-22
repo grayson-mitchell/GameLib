@@ -155,6 +155,7 @@ pub(crate) enum RustInvokeChannel {
     InfoAnticheatInfo,
     InfoAnticheatStatus,
     InfoAnticheatDownload,
+    InfoGogDiscounts,
 }
 
 impl RustInvokeChannel {
@@ -291,6 +292,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::InfoAnticheatInfo,
         RustInvokeChannel::InfoAnticheatStatus,
         RustInvokeChannel::InfoAnticheatDownload,
+        RustInvokeChannel::InfoGogDiscounts,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -427,6 +429,7 @@ impl RustInvokeChannel {
             "info_anticheat_info" => Some(RustInvokeChannel::InfoAnticheatInfo),
             "info_anticheat_status" => Some(RustInvokeChannel::InfoAnticheatStatus),
             "info_anticheat_download" => Some(RustInvokeChannel::InfoAnticheatDownload),
+            "info_gog_discounts" => Some(RustInvokeChannel::InfoGogDiscounts),
             _ => None,
         }
     }
@@ -565,6 +568,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::InfoAnticheatInfo => "info_anticheat_info",
             RustInvokeChannel::InfoAnticheatStatus => "info_anticheat_status",
             RustInvokeChannel::InfoAnticheatDownload => "info_anticheat_download",
+            RustInvokeChannel::InfoGogDiscounts => "info_gog_discounts",
         }
     }
 }
@@ -2949,5 +2953,31 @@ impl InfoAnticheatDownloadArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "info_anticheat_download:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "info_anticheat_download:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoGogDiscountsArgs {
+    pub(crate) locale: InfoGogDiscountsArgsLocale,
+    #[serde(rename = "hideOwned")]
+    pub(crate) hide_owned: bool,
+    #[serde(rename = "wishlistOnly")]
+    pub(crate) wishlist_only: bool,
+    pub(crate) token: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoGogDiscountsArgsLocale {
+    #[serde(rename = "countryCode")]
+    pub(crate) country_code: String,
+    pub(crate) locale: String,
+    #[serde(rename = "currencyCode")]
+    pub(crate) currency_code: String,
+}
+
+impl InfoGogDiscountsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "info_gog_discounts:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "info_gog_discounts:bad-args".to_string())
     }
 }

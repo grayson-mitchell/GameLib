@@ -20,7 +20,7 @@ use std::path::Path;
 
 use gamelib_core::clock::SystemClock;
 use gamelib_core::emitter::FrontendEmitter;
-use gamelib_info::ctx::{InfoCtx, InfoPaths, Platform};
+use gamelib_info::ctx::{InfoCtx, InfoLog, InfoPaths, Platform};
 use gamelib_info::http::ReqwestHttp;
 use gamelib_info::recent::RecentSink;
 use gamelib_store::json::Json;
@@ -101,6 +101,17 @@ impl RecentSink for TrayRecentSink {
     }
 }
 
+/// The crate's diagnostic lines (86-18), into `gamelib.log`. A line is fixed text plus a page number, a
+/// status code or a transport category, never a URL, a key or a token (see [`InfoLog`]), so it is a
+/// category in the sense of the shell's log gate.
+struct ShellInfoLog;
+
+impl InfoLog for ShellInfoLog {
+    fn line(&self, text: &str) {
+        shell_log(text);
+    }
+}
+
 /// The IsThereAnyDeal key compiled into this build (D-25): `option_env!("ITAD_API_KEY")`, with
 /// `cargo:rerun-if-env-changed=ITAD_API_KEY` in build.rs so a changed key rebuilds the shell. A
 /// release build gets it from the workflow's secret; a dev or PR build has none.
@@ -150,6 +161,7 @@ pub(crate) fn install(app: &AppHandle, user_data: &Path) {
     );
     ctx.recent_sink = Some(Arc::new(TrayRecentSink::for_app(app)));
     ctx.secrets = Some(info_secrets::secret_source());
+    ctx.log = Some(Arc::new(ShellInfoLog));
     let (baked, env) = (baked_itad_key(), env_itad_key());
     shell_log(&format!(
         "itad key source: {}",
@@ -284,6 +296,19 @@ pub(crate) fn rpc_info_anticheat_status(args: &[Value]) -> Result<Value, String>
 
 pub(crate) fn rpc_info_anticheat_download(args: &[Value]) -> Result<Value, String> {
     anticheat_download_with(installed("info_anticheat_download")?, args)
+}
+
+/// `info_gog_discounts`: validated by the generated args struct, then the crate (which validates again
+/// with its own `deny_unknown_fields` structs and bounds the locale). The one caller is the TS resolver
+/// `getGogDiscounts` (86-18, D-24), which collects the GOG token. Nothing here formats an argument:
+/// the token is in `args` and stays there.
+fn gog_discounts_with(ctx: &InfoCtx, args: &[Value]) -> Result<Value, String> {
+    InfoGogDiscountsArgs::from_args(args)?;
+    gamelib_info::dispatch_sync("info_gog_discounts", args, ctx)
+}
+
+pub(crate) fn rpc_info_gog_discounts(args: &[Value]) -> Result<Value, String> {
+    gog_discounts_with(installed("info_gog_discounts")?, args)
 }
 
 /// What a rejected `removeRecent` argument looks like: the JSON path and the zod-vocabulary code.
@@ -2174,6 +2199,84 @@ mod tests {
             rpc_info_anticheat_download(&[json!({})]),
             Err("info_anticheat_download:not-ready".to_string())
         );
+    }
+
+    #[test]
+    fn the_gog_discounts_rpc_op_validates_first_runs_the_crate_and_never_logs_the_token() {
+        let home = FakeHome::new("info-dispatch-");
+        let mut ctx = test_ctx(&home, None);
+        let canned = Arc::new(CannedCatalog(Mutex::new(Vec::new())));
+        ctx.http = canned.clone();
+        let lines = Arc::new(KeptLines(Mutex::new(Vec::new())));
+        ctx.log = Some(lines.clone());
+        let locale = json!({ "countryCode": "US", "locale": "en-US", "currencyCode": "USD" });
+        for bad in [
+            vec![],
+            vec![json!({})],
+            vec![json!({ "locale": locale, "hideOwned": 1, "wishlistOnly": false, "token": null })],
+            vec![
+                json!({ "locale": locale, "hideOwned": false, "wishlistOnly": false, "token": 5 }),
+            ],
+        ] {
+            assert_eq!(
+                gog_discounts_with(&ctx, &bad),
+                Err("info_gog_discounts:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+        assert!(canned.0.lock().unwrap().is_empty());
+        // A good call: one request, the token in the header and nowhere else.
+        let answer = gog_discounts_with(
+            &ctx,
+            &[json!({
+                "locale": locale, "hideOwned": true, "wishlistOnly": false, "token": "TOKEN-VALUE"
+            })],
+        );
+        assert_eq!(answer, Ok(json!([{ "id": "1", "title": "Game" }])));
+        let seen = canned.0.lock().unwrap();
+        assert_eq!(seen.len(), 1);
+        assert!(!seen[0].url.contains("TOKEN-VALUE"));
+        assert!(seen[0]
+            .headers
+            .iter()
+            .any(|(k, v)| k == "Authorization" && v == "Bearer TOKEN-VALUE"));
+        assert!(lines
+            .0
+            .lock()
+            .unwrap()
+            .iter()
+            .all(|l| !l.contains("TOKEN-VALUE")));
+        // No test installs the global context, so this is the pre-install answer.
+        assert!(info_ctx().is_none());
+        assert_eq!(
+            rpc_info_gog_discounts(&[json!({})]),
+            Err("info_gog_discounts:not-ready".to_string())
+        );
+    }
+
+    /// One catalog page with one product; remembers the request.
+    struct CannedCatalog(Mutex<Vec<gamelib_info::http::Request>>);
+
+    impl gamelib_info::http::Http for CannedCatalog {
+        fn send(&self, request: gamelib_info::http::Request) -> gamelib_info::http::HttpFuture<'_> {
+            self.0.lock().unwrap().push(request);
+            Box::pin(async {
+                Ok(gamelib_info::http::Response {
+                    status: 200,
+                    headers: Vec::new(),
+                    body: br#"{"pages":1,"productCount":1,"products":[{"id":"1","title":"Game"}]}"#
+                        .to_vec(),
+                })
+            })
+        }
+    }
+
+    struct KeptLines(Mutex<Vec<String>>);
+
+    impl InfoLog for KeptLines {
+        fn line(&self, text: &str) {
+            self.0.lock().unwrap().push(text.to_string());
+        }
     }
 
     #[test]

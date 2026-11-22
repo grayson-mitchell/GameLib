@@ -32,6 +32,13 @@ pub struct InfoPaths {
     pub public_dir: Option<PathBuf>,
 }
 
+/// Where an op's diagnostic lines go (`gamelib.log` in the shell). The crate has no logger of its own.
+/// A line is fixed text plus at most a page number, a status code or one of the transport categories:
+/// never a URL, a key, a token or any text a server sent.
+pub trait InfoLog: Send + Sync {
+    fn line(&self, text: &str);
+}
+
 /// Everything an op needs from outside the crate. Fields are public so the shell can fill the ones
 /// a later slice adds; [`InfoCtx::new`] gives each a neutral default.
 pub struct InfoCtx {
@@ -63,6 +70,8 @@ pub struct InfoCtx {
     /// The ITAD rate-limit gate and single-flight (86-16): in-memory session state, like the key's
     /// `rejected` flag, so a restart forgets a block.
     pub itad_gate: ItadGate,
+    /// Where [`InfoCtx::note`] writes; `None` in the CLI and in tests that do not read it (86-18).
+    pub log: Option<Arc<dyn InfoLog>>,
 }
 
 impl InfoCtx {
@@ -90,6 +99,14 @@ impl InfoCtx {
             itad_key: ItadKey::new(),
             sgdb_key: SgdbKey::new(),
             itad_gate: ItadGate::new(),
+            log: None,
+        }
+    }
+
+    /// Writes one diagnostic line to the installed [`InfoLog`], if any.
+    pub fn note(&self, text: &str) {
+        if let Some(log) = &self.log {
+            log.line(text);
         }
     }
 
