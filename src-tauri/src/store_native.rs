@@ -363,7 +363,9 @@ fn check_write_policy(store: &str, key: &str) -> Result<(), WriteRefusal> {
     if key.split('.').next() == Some(gamelib_store::envelope::RESERVED_KEY) {
         return Err(WriteRefusal::ReservedKey);
     }
-    if !is_safe_key_path(key) {
+    // An empty segment (`a..b`, `.x`, `x.`) is refused by the sidecar frame parser too, so a key the
+    // renderer wrote would reach the sidecar mirror as a `changed` event its validator drops (B-WR-06).
+    if !is_safe_key_path(key) || key.split('.').any(str::is_empty) {
         return Err(WriteRefusal::KeyPath);
     }
     if !is_writable_store_field(store, key) {
@@ -1160,6 +1162,12 @@ pub(crate) mod tests {
                 set("timestampStore", "a.constructor", json!(1)),
                 WriteRefusal::KeyPath,
             ),
+            (
+                set("timestampStore", "a..b", json!(1)),
+                WriteRefusal::KeyPath,
+            ),
+            (set("timestampStore", ".x", json!(1)), WriteRefusal::KeyPath),
+            (set("timestampStore", "x.", json!(1)), WriteRefusal::KeyPath),
             (
                 set("configStore", "__internal__.migrations", json!(1)),
                 WriteRefusal::ReservedKey,
