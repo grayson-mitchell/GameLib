@@ -15,9 +15,9 @@
  * `["legendary-move-global-config-folder"]`, as do the generated v0.8, v0.9 and v0.10 corpus
  * profiles. So every supported upgrade source already has it applied. The only remaining reach is
  * a fresh install on a machine with a pre-existing system-wide legendary config
- * (`~/.config/legendary`, or `<appData>/legendary` on Linux), and that user can sign in to Epic
- * again. So the migration was deleted rather than ported, together with `MigrationSystem`
- * (`migration/index.ts`, `migration/stores.ts`) and the `migrationsStore` mirror.
+ * (`~/.config/legendary`, or `<appData>/legendary` on Linux), and that user can simply
+ * sign in to Epic again. So the migration was deleted rather than ported, together with
+ * `MigrationSystem` (`migration/index.ts`, `migration/stores.ts`) and the `migrationsStore` mirror.
  *
  * D-07: `store/migrations.json` stays on disk. Rust never opens it (`store_boot_never_opens_
  * migrations_json`), and nothing deletes it, so a downgraded v0.10 still sees the id applied.
