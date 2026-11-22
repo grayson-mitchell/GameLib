@@ -586,11 +586,9 @@ fn shell_log(message: &str) {
 /// The log half of [`shell_log`], with the logger passed in so a test can use its own.
 fn shell_log_to(logger: Option<&gamelib_log::writer::Logger>, message: &str) {
     if let Some(logger) = logger {
-        logger.log(
-            gamelib_log::Prefix::Shell,
-            shell_log_level(message),
-            &gamelib_log::sanitize::escape_line_breaks(message),
-        );
+        // `Logger::log` escapes CR and LF itself (IN-07), so a message carrying external text cannot
+        // forge a second line.
+        logger.log(gamelib_log::Prefix::Shell, shell_log_level(message), message);
     }
 }
 

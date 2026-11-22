@@ -22,7 +22,7 @@ use crate::format::{format_line, normalise_chunk};
 use crate::frame::LOG_ENTRY_MAX_UTF16;
 use crate::limiter::{RateLimiter, Summary};
 use crate::prefix::{Level, Prefix};
-use crate::sanitize::truncate_utf16;
+use crate::sanitize::{escape_line_breaks, truncate_utf16};
 
 /// Ingest capacity. Past it a caller's entry is dropped and counted, never waited for.
 const CHANNEL_CAPACITY: usize = 4096;
@@ -149,8 +149,18 @@ impl Logger {
         }
     }
 
-    /// Stamps the entry with the clock and local offset now.
+    /// The native-origin entry, stamped with the clock and local offset now. CR and LF in `msg` are
+    /// escaped ([`escape_line_breaks`]) so text the shell did not author (a sidecar error, a
+    /// server-echoed crate message) cannot forge a second line. This is the safe default; only
+    /// [`Logger::log_body`] writes a body verbatim.
     pub fn log(&self, prefix: Prefix, level: Level, msg: &str) {
+        self.log_body(prefix, level, &escape_line_breaks(msg));
+    }
+
+    /// Like [`Logger::log`] but VERBATIM: `msg` is written as given, line breaks included. For a body
+    /// that is already sanitised and multi-line on purpose (the renderer's object form,
+    /// `sanitize::renderer_body`); never for text the shell did not author.
+    pub fn log_body(&self, prefix: Prefix, level: Level, msg: &str) {
         let ts = self.clock.now_ms();
         let tz = self.tz.offset_minutes(ts);
         self.submit_line(ts, tz, level, prefix, msg);
@@ -724,6 +734,22 @@ mod tests {
         let body = read(&general);
         assert!(body.contains("one\n") && body.contains("two\n"));
         assert!(!body.contains("last launch"));
+    }
+
+    #[test]
+    fn log_escapes_line_breaks_by_default_and_log_body_keeps_a_sanitised_body_verbatim() {
+        let home = FakeHome::new("gamelib-log-");
+        let general = path(&home, &["gamelib.log"]);
+        let logger = Logger::start(config(&home));
+        // Native text the shell did not author: a break in it must not start a second log line (WR-02).
+        logger.log(Prefix::Backend, Level::Error, "one\r\n[forged line] two");
+        // A renderer object body is multi-line on purpose and is already sanitised.
+        logger.log_body(Prefix::Frontend, Level::Info, "{\n  \"a\": 1\n}");
+        assert!(logger.flush(GENEROUS));
+        let body = read(&general);
+        assert!(body.contains("one\\r\\n[forged line] two\n"), "{body:?}");
+        assert!(!body.contains("\n[forged line]"), "{body:?}");
+        assert!(body.contains("{\n  \"a\": 1\n}\n"), "{body:?}");
     }
 
     #[test]

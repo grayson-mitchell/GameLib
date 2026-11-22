@@ -50,7 +50,8 @@ pub(crate) fn parse_log_info(args: &[Value]) -> Result<SendPayload, &'static str
 
 /// Write one sanitised renderer line through `logger`.
 fn write_renderer_log(logger: &Logger, level: Level, message: &RendererMessage) {
-    logger.log(Prefix::Frontend, level, &renderer_body(message));
+    // `renderer_body` has already escaped every string; its object form is multi-line on purpose.
+    logger.log_body(Prefix::Frontend, level, &renderer_body(message));
 }
 
 /// Write one renderer log line through the process-wide native writer. Does nothing when the
