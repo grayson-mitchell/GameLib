@@ -577,10 +577,11 @@ mod replay {
                 return fail(&mut st, message);
             }
             let exchange = &mut st.exchanges[index];
+            // The request was made and matched, so it is consumed whether or not its answer fits.
+            exchange.consumed = true;
             if exchange.response_body.len() > request.max_body {
                 return Err(HttpError::TooLarge);
             }
-            exchange.consumed = true;
             if exchange.network_error {
                 return Err(HttpError::Network("Network Error".to_string()));
             }

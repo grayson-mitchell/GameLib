@@ -32,14 +32,9 @@ const FLOOR: usize = 12;
 /// The instant every case starts at (the oracle's `ORACLE_NOW`): 2026-11-22T12:00:00Z.
 const ORACLE_NOW: u64 = 1_795_348_800_000;
 
-/// The cases this file replays. Every case in `cases.json` must be listed, so a new case cannot be
-/// quietly skipped (see `every_recorded_case_is_replayed`).
-const REPLAYED_CASES: &[&str] = &[
-    "live-fresh-fetch-mac",
-    "cache-fresh-no-request",
-    "rating-map-linux-empty",
-    "rating-map-windows-empty",
-];
+/// The cases the oracle recorded that this file must replay, so a case added to `cases.json` and not
+/// replayed cannot go unnoticed (86-06 recorded 19).
+const REPLAYED_FLOOR: usize = 19;
 
 fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
@@ -410,6 +405,13 @@ async fn replay_case(case: &Value) {
     let requests = run.tap.seen.lock().unwrap().clone();
     assert_eq!(json!(requests), want["requests"], "{id}: requests");
     run.replay.finish().unwrap_or_else(|e| panic!("{id}: {e}"));
+    // A diagnostic line is fixed text: never a URL, a path or anything the server sent.
+    for line in &lines {
+        assert!(
+            !line.contains("://") && !line.contains("github") && !line.contains("userData"),
+            "{id}: a log line carries more than fixed text: {line}"
+        );
+    }
 
     // The bytes of every file the case left (the bundled snapshot is an input, not a result).
     let want_files = tree(&expected.join("after"));
@@ -431,17 +433,112 @@ async fn replay_case(case: &Value) {
 }
 
 #[tokio::test]
-async fn every_replayed_case_matches_the_ts_results_requests_and_cache_bytes() {
+async fn every_recorded_case_matches_the_ts_results_requests_and_cache_bytes() {
     let cases = read_json(&golden_dir().join("cases.json"));
     let cases = cases.as_array().unwrap();
-    let mut replayed = 0;
-    for id in REPLAYED_CASES {
-        let case = cases
-            .iter()
-            .find(|c| c["id"] == *id)
-            .unwrap_or_else(|| panic!("no case {id}"));
+    assert!(
+        cases.len() >= REPLAYED_FLOOR,
+        "{} cases, below the floor of {REPLAYED_FLOOR}",
+        cases.len()
+    );
+    for case in cases {
         replay_case(case).await;
-        replayed += 1;
     }
-    assert_eq!(replayed, REPLAYED_CASES.len());
+}
+
+fn case_named<'a>(cases: &'a [Value], id: &str) -> &'a Value {
+    cases
+        .iter()
+        .find(|c| c["id"] == id)
+        .unwrap_or_else(|| panic!("no case {id}"))
+}
+
+#[tokio::test]
+async fn a_second_rating_map_inside_24_hours_makes_no_request() {
+    // The SVC-01 idempotency edge: the first call fetches the live index, the second (and a lookup) read
+    // the stored copy and the memoized maps.
+    let cases = read_json(&golden_dir().join("cases.json"));
+    let case = case_named(cases.as_array().unwrap(), "live-fresh-fetch-mac");
+    let run = case_run(case);
+    let library = case["library"].as_array().unwrap().clone();
+    let args = rating_map_args(&library);
+    let first = dispatch(
+        "info_crossover_rating_map",
+        std::slice::from_ref(&args),
+        &run.ctx,
+    )
+    .await
+    .unwrap();
+    assert_eq!(run.tap.count(), 1);
+    run.clock.0.fetch_add(60 * 60_000, Ordering::SeqCst);
+    let second = dispatch("info_crossover_rating_map", &[args], &run.ctx)
+        .await
+        .unwrap();
+    assert_eq!(run.tap.count(), 1, "the second pass made a request");
+    assert_eq!(first, second);
+    assert_eq!(first["1245620"], json!(5));
+    run.replay.finish().unwrap();
+}
+
+#[tokio::test]
+async fn a_cold_start_with_no_public_dir_at_all_answers_unavailable_not_an_error() {
+    let cases = read_json(&golden_dir().join("cases.json"));
+    let case = case_named(
+        cases.as_array().unwrap(),
+        "fetch-failure-no-cache-no-bundled",
+    );
+    let mut run = case_run(case);
+    run.ctx.paths.public_dir = None;
+    let loaded = crossover::fetcher::load_index(&run.ctx, crossover::INDEX_URL)
+        .await
+        .unwrap();
+    assert!(loaded.is_none());
+    let info = crossover::codeweavers_for(
+        &run.ctx,
+        &GameRef {
+            runner: "steam",
+            app_name: "1245620",
+            title: "Elden Ring",
+        },
+    )
+    .await;
+    // The second lookup is inside the back-off, so it asks nothing and finds no index.
+    assert!(info.is_none());
+    assert_eq!(run.tap.count(), 1);
+    assert!(!crossover::index_has(
+        &run.ctx,
+        &GameRef {
+            runner: "steam",
+            app_name: "1245620",
+            title: "Elden Ring",
+        },
+    ));
+    run.replay.finish().unwrap();
+}
+
+#[tokio::test]
+async fn a_bundled_snapshot_is_what_a_failed_first_fetch_serves_and_it_survives_a_restart() {
+    // The WR-01 case end to end: no cache, a transport failure, the bundled gz used, and the stored copy
+    // then answers the synchronous probe without any load, on a fresh context over the same files.
+    let cases = read_json(&golden_dir().join("cases.json"));
+    let case = case_named(
+        cases.as_array().unwrap(),
+        "fetch-failure-no-cache-bundled-used",
+    );
+    let run = case_run(case);
+    let elden = GameRef {
+        runner: "steam",
+        app_name: "1245620",
+        title: "Elden Ring",
+    };
+    assert!(!crossover::index_has(&run.ctx, &elden));
+    let loaded = crossover::fetcher::load_index(&run.ctx, crossover::INDEX_URL)
+        .await
+        .unwrap()
+        .expect("the bundled snapshot");
+    assert_eq!(loaded.index.entries.len(), 2469);
+    assert!(crossover::index_has(&run.ctx, &elden));
+    let stored = crossover::fetcher::read_cached(&run.ctx).expect("persisted");
+    assert_eq!(stored.fetched_at, Some(ORACLE_NOW as f64));
+    run.replay.finish().unwrap();
 }

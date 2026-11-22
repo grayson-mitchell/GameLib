@@ -228,3 +228,144 @@ pub async fn index_resolver(ctx: &InfoCtx) -> Resolver {
         Ok(None) | Err(_) => Resolver(None),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::schema::Entry;
+    use super::*;
+
+    fn index(generated_at: &str, entries: &[(&str, u8, Option<&str>)]) -> Index {
+        Index {
+            generated_at: generated_at.to_string(),
+            entries: entries
+                .iter()
+                .map(|(name, rating, steamid)| Entry {
+                    name: (*name).to_string(),
+                    rating: *rating,
+                    steamid: steamid.map(str::to_string),
+                })
+                .collect(),
+        }
+    }
+
+    fn game<'a>(runner: &'a str, app_name: &'a str, title: &'a str) -> GameRef<'a> {
+        GameRef {
+            runner,
+            app_name,
+            title,
+        }
+    }
+
+    fn sample() -> IndexMaps {
+        IndexMaps::build(&index(
+            "2026-11-21T00:00:00Z",
+            &[
+                ("Elden Ring", 5, Some("1245620")),
+                ("Hades", 5, Some("1145360")),
+                ("Quake II", 4, None),
+                ("Same Name", 2, None),
+                ("Same Name", 3, None),
+                ("Dup Id A", 1, Some("77")),
+                ("Dup Id B", 4, Some("77")),
+                ("Blank Id", 3, Some("")),
+            ],
+        ))
+    }
+
+    #[test]
+    fn a_steam_app_id_join_wins_over_the_title_and_only_for_a_steam_runner() {
+        let maps = sample();
+        // The id decides even when the title says something else.
+        assert_eq!(
+            maps.rating(&game("steam", "1245620", "Wrong Title")),
+            Some(5)
+        );
+        // A GOG game whose app_name equals a Steam id is not an id join; it falls to the name.
+        assert_eq!(
+            maps.rating(&game("gog", "1245620", "Nothing Like It")),
+            None
+        );
+        assert_eq!(maps.rating(&game("gog", "gog-1", "Elden Ring")), Some(5));
+    }
+
+    #[test]
+    fn a_steam_id_miss_falls_through_to_the_normalized_title() {
+        let maps = sample();
+        assert_eq!(maps.rating(&game("steam", "999", "Elden Ring")), Some(5));
+        assert_eq!(maps.rating(&game("steam", "999", "Quake 2")), None);
+        assert_eq!(maps.rating(&game("steam", "999", "QUAKE  II")), Some(4));
+        assert_eq!(
+            maps.rating(&game("legendary", "e", "Hades (Deluxe Edition)")),
+            Some(5)
+        );
+        assert_eq!(maps.rating(&game("sideload", "s", "Unknown")), None);
+    }
+
+    #[test]
+    fn the_first_entry_wins_a_collision_and_an_empty_id_is_not_indexed() {
+        let maps = sample();
+        assert_eq!(maps.rating(&game("sideload", "x", "Same Name")), Some(2));
+        assert_eq!(maps.rating(&game("steam", "77", "None")), Some(1));
+        assert_eq!(maps.rating(&game("steam", "", "None")), None);
+    }
+
+    #[test]
+    fn a_name_that_is_not_a_runner_finds_nothing_and_is_not_eligible() {
+        let maps = sample();
+        assert_eq!(maps.rating(&game("humble", "1245620", "Elden Ring")), None);
+        assert!(!is_eligible("humble"));
+        for runner in ["steam", "gog", "legendary", "nile", "sideload"] {
+            assert!(is_eligible(runner), "{runner}");
+        }
+    }
+
+    #[test]
+    fn the_maps_are_rebuilt_only_when_generated_at_changes() {
+        let state = CrossoverState::new();
+        let first = index("2026-11-21T00:00:00Z", &[("A", 1, None)]);
+        let a = state.maps_for(&first);
+        assert!(Arc::ptr_eq(&a, &state.maps_for(&first)));
+        // The memo is keyed on `generatedAt` alone, as in the TS: the same stamp reuses the maps.
+        let same_stamp = index("2026-11-21T00:00:00Z", &[("B", 2, None)]);
+        assert!(Arc::ptr_eq(&a, &state.maps_for(&same_stamp)));
+        // A new stamp rebuilds them.
+        let next = index("2026-11-22T00:00:00Z", &[("B", 2, None)]);
+        let b = state.maps_for(&next);
+        assert!(!Arc::ptr_eq(&a, &b));
+        assert_eq!(
+            b.rating(&game("sideload", "s", "B")),
+            Some(2),
+            "the rebuilt maps hold the new entries"
+        );
+    }
+
+    #[test]
+    fn the_failure_back_off_is_state_that_clears_on_success() {
+        let state = CrossoverState::new();
+        assert_eq!(state.last_failure_ms(), None);
+        state.record_failure(1234);
+        assert_eq!(state.last_failure_ms(), Some(1234));
+        state.clear_failure();
+        assert_eq!(state.last_failure_ms(), None);
+    }
+
+    #[test]
+    fn a_hit_carries_the_slug_and_a_miss_the_empty_marker() {
+        let hit = CodeweaversInfo {
+            mac_rating: Some(5),
+            slug: slugify("Baldur's Gate 3"),
+        };
+        assert_eq!(
+            hit.to_value(),
+            json!({ "macRating": 5, "linuxRating": null, "slug": "baldurs-gate-3" })
+        );
+        let miss = CodeweaversInfo {
+            mac_rating: None,
+            slug: String::new(),
+        };
+        assert_eq!(
+            miss.to_value(),
+            json!({ "macRating": null, "linuxRating": null, "slug": "" })
+        );
+    }
+}

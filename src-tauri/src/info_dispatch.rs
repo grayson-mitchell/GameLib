@@ -141,6 +141,31 @@ fn itad_key_source_word(env: &Option<String>, baked: &Option<String>) -> &'stati
     }
 }
 
+/// The directory the bundled `public` assets sit in (A5, 86-19): the SAME app root the sidecar is handed
+/// as `GAMELIB_APP_ROOT` (a debug build: the repository root, honouring a pre-set `GAMELIB_APP_ROOT`; a
+/// release build: the resource directory) joined with `public`, as the sidecar's own `publicDir`
+/// is. The CrossOver index's cold-start snapshot is read from there. `resource_dir()` alone would miss it
+/// in a dev run, where the assets are in the repository and not beside the executable.
+fn bundled_public_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
+    // The same build-profile gate as `sidecar::use_dev_sidecar`.
+    let root = if cfg!(debug_assertions) {
+        resolve_dev_app_root()
+    } else {
+        resolve_packaged_app_root(app)
+    };
+    public_dir_under(&root)
+}
+
+/// `<root>/public`, or `None` for an empty root (what `app_root_env_value` yields when the root cannot
+/// be resolved, which the sidecar treats as unset).
+fn public_dir_under(root: &str) -> Option<std::path::PathBuf> {
+    if root.is_empty() {
+        None
+    } else {
+        Some(Path::new(root).join("public"))
+    }
+}
+
 /// Builds the one context and stores it. Called from `run_setup` after the store host opened and
 /// before the sidecar is spawned. A second call is ignored (the first context stays).
 pub(crate) fn install(app: &AppHandle, user_data: &Path) {
@@ -153,7 +178,7 @@ pub(crate) fn install(app: &AppHandle, user_data: &Path) {
             app_folder: user_data.to_path_buf(),
             user_data: user_data.to_path_buf(),
             temp: std::env::temp_dir(),
-            public_dir: app.path().resource_dir().ok(),
+            public_dir: bundled_public_dir(app),
         },
         native_handlers::app_version().to_string(),
         gamelib_core::shutdown::global().clone(),
@@ -2264,6 +2289,25 @@ mod tests {
             rpc_info_gog_discounts(&[json!({})]),
             Err("info_gog_discounts:not-ready".to_string())
         );
+    }
+
+    #[test]
+    fn the_bundled_public_dir_is_the_app_root_the_sidecar_gets_plus_public() {
+        assert_eq!(
+            public_dir_under("/Users/someone/Projects/GameLib"),
+            Some(Path::new("/Users/someone/Projects/GameLib").join("public"))
+        );
+        // A path with a space survives, as `app_root_env_value` leaves it unquoted.
+        assert_eq!(
+            public_dir_under("/Applications/Game Lib.app/Contents/Resources"),
+            Some(Path::new("/Applications/Game Lib.app/Contents/Resources").join("public"))
+        );
+        // An unresolved root is the empty string, which means "no bundled directory", not `./public`.
+        assert_eq!(
+            public_dir_under(&app_root_env_value(Err("x".to_string()))),
+            None
+        );
+        assert_eq!(public_dir_under(""), None);
     }
 
     #[test]

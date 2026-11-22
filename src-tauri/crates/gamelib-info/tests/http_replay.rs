@@ -293,6 +293,23 @@ async fn a_network_error_exchange_matches_is_consumed_and_fails_as_a_transport_e
 }
 
 #[tokio::test]
+async fn a_recorded_answer_over_the_request_cap_is_too_large_and_the_exchange_is_consumed() {
+    // The CrossOver index's 5 MiB cap (86-19): the request was made and matched, so the replay finishes
+    // clean, and the caller sees the transport's `TooLarge`.
+    let (_dir, r) = replay(one_exchange());
+    let err = r.send(matching_request().max_body(4)).await.unwrap_err();
+    assert_eq!(err, HttpError::TooLarge);
+    r.finish().unwrap();
+    // A body exactly at the cap is served.
+    let (_dir, r) = replay(one_exchange());
+    let resp = r
+        .send(matching_request().max_body(b"{\"ok\":true}".len()))
+        .await
+        .unwrap();
+    assert_eq!(resp.status, 200);
+}
+
+#[tokio::test]
 async fn replay_fails_on_a_body_that_differs() {
     let exchanges = json!([{
         "id": "post",
