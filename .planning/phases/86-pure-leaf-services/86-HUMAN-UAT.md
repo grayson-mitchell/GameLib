@@ -1,17 +1,18 @@
 ---
-status: pending
+status: partial
 phase: 86-pure-leaf-services
 source: [86-CONTEXT.md D-14 D-15 D-16 D-21 D-22]
 authored_by: 86-02
 run_by: 86-26
-started:
-updated:
+started: 2026-11-22T19:03:45Z
+updated: 2026-11-23
 ---
 
 This is the live macOS gate contract for SVC-01 (the pure leaf services, the wiki and anticheat info, store search and
 discounts, SteamGridDB artwork and recent games, run in the Rust shell with the same behaviour, the same files and the same
 Keychain keys). It was authored by plan 86-02 before any Phase 86 code plan runs and is run by plan 86-26, never by its
-author (live-gate-contract-authoring standing rule D-E). Nothing in this file has been run.
+author (live-gate-contract-authoring standing rule D-E). Nothing in this file was run at authoring. Plan 86-26 ran it on
+2026-11-22/23 (UTC; 2026-11-23 local) on the signed v0.11.0 and v0.12.0 builds; the results are under `## Tests`.
 
 Every item below was written against the tree at authoring time (HEAD `afb0a4912`), in which no Phase 86 port exists yet.
 Each row whose emitter does not exist yet is CONDITIONAL and names 86-26 Task 1 as its re-check. The gate is macOS only:
@@ -320,25 +321,26 @@ Task 1 re-check confirms the push still exists.
 
 ## Current Test
 
-[pending: 0 of 4 scored; Task 1 re-check done (no row IMPOSSIBLE, Gate item 4: pending); awaiting the operator (Task 2)]
+[complete: 4 of 4 scored by 86-26 Task 3 on 2026-11-23: 3 pass, 1 issue (item 1, the GOG page's PCGamingWiki and
+HowLongToBeat info, the pre-existing PCGamingWiki cargoquery refusal); see `## Run record` and `## Closing inventory`]
 
 ## Tests
 
 ### 1. Game page info
 expected: On the signed Phase 86 build, a Steam, an Epic and a GOG game page each show the PCGamingWiki and HowLongToBeat info, the AppleGamingWiki block and the CrossOver rating as they did on the 85 build (same fields, same values), at least one of the three after the wiki block's Refresh control forces a fresh fetch (`store_cache/wikigameinfo.json` changes), the Epic page of a title the runner picked from MacAnticheatData (`areweanticheatyet.json`) shows its anticheat badge, and the Steam and GOG pages show none; ProtonDB and Steam Deck rows are absent as before (D-30).
-result: pending
+result: issue — launch 2 (2026-11-22T19:19:50Z), `gamelib-launch-2.log`, `notes.log` launch 2 section. Epic: **ARK: Survival Evolved** showed the PCGamingWiki ratings, HowLongToBeat, the AppleGamingWiki block with CrossOver `unrated`, and the anticheat badge (cache `fetchStatus` pcgamingwiki `ok`, howlongtobeat `ok`). Steam: **Ara: History Untold** showed ratings, HowLongToBeat and CrossOver `unrated` (`ok`/`ok`). GOG: **Alan Wake** showed the CrossOver rating (4 stars) but the "Couldn't load extra info" empty state in place of PCGamingWiki and HowLongToBeat: the log has `pcgamingwiki lookup failed (shape)` then `hltb gog page does not match` / `no hltb data available`, and the cache entry holds `fetchStatus` pcgamingwiki `error`, howlongtobeat `notfound`, with applegamingwiki and codeweavers present. The operator clicked Retry (the empty state's refresh control, `refreshWikiInfo`): four forced refetches at 08:26:21 to 08:26:30 local, each `getting wiki data` with no `using cached wiki data`, each the same failure; the last rewrote Alan Wake's cache timestamp (19:26:31Z). `store_cache/wikigameinfo.json` sha256 `0cd5829c...` before launch 2, `5537f021...` after; none of the three titles was in the cache before (the P3 copy holds 2 titles), so all three pages were fresh Rust fetches. The GOG gap is the pre-existing PCGamingWiki `permissiondenied` answer to the cargo query (`.planning/todos/pending/2026-11-22-pcgw-cargoquery-permissiondenied-gog-lookup.md`): the 85 build's TS fails the same way for every GOG title and golden `live-gog-linux` pins it, so the port reproducing it is the as-before behaviour that todo requires, not a Phase 86 regression; the 85 build's Alan Wake page itself was not viewed in this session. Still, the GOG page does not show PCGamingWiki or HowLongToBeat info, so the expected text is not fully met. No Refresh was clicked inside a populated AppleGamingWiki block; the forced path was exercised only through the empty state's Retry. Anticheat: `areweanticheatyet.json` sha256 `93f110e0...` at the pick and at launch 2's quit (F8 holds); no badge was reported on the Steam or GOG page, whose absence is the structural guarantee of Test 4 (no Epic namespace); no anticheat download WARN. ProtonDB and Steam Deck rows absent as before (D-30). Failure lines in launch 2: the 5 `pcgamingwiki lookup failed (shape)` above and nothing else from L1/L1a; `[dev-secret-vault]` 0; L5 0.
 
 ### 2. Store search and discounts
 expected: On the signed Phase 86 build, a Store Search query for a term not searched before returns results with badges and prices (`store_cache/itad_prices.json` changes), the Discounts screen lists deals with prices (the GOG deals and, with the ITAD key, the ITAD ones), and Settings, Advanced shows the ITAD key as saved (placeholder reading "Key saved") when the key is set, with no "unavailable" text.
-result: pending
+result: pass — launch 2 (2026-11-22T19:19:50Z), `gamelib-launch-2.log`, `notes.log` launch 2 section and its follow-up line. Store Search: a query for a term not searched before returned 20 results with prices; `store_cache/itad_prices.json` sha256 `d40307a8...` before launch 2, `47a1de43...` after; `keyring info_secret_get account=itad-api-key outcome=found` at 08:27:39 local. Discounts: the GOG deals and the ITAD deals both listed with prices. Settings, Advanced: the ITAD key field shows the key as saved, no "unavailable" text. No `itad <channel> failed (` and no `gog discounts:` failure line in launch 2. Ownership badges were not separately reported by the operator; they render only on results the user owns (`resolveStoreSearchBadges`), so a 20-result query need not show one. The boot line `itad key source: baked` (all three launches) describes the built-in key only, by design (`info_dispatch.rs` `itad_key_source_word`; the user's Keychain key is not read at boot and wins per request, `gamelib-info/src/secrets.rs:294`), so it does not contradict the user key being found and used.
 
 ### 3. Artwork and recent games
 expected: On the signed Phase 86 build, the SteamGridDB picker (opened from a game's edit dialog) returns covers or heroes for a searched title with the SteamGridDB key set, and launching an installed non-Steam game puts it first in the tray's recent list and in the Library's recent row, and its last played updates, without restarting GameLib.
-result: pending
+result: pass — launch 3 (2026-11-22T19:28:53Z), `gamelib-launch-3.log`, `keychain-3.log`, `notes.log` launch 3 section. The SteamGridDB picker, opened from a game's edit dialog, returned covers and heroes for the searched title (operator; the tile counts were not recorded), closed without applying (`store/game-overrides.json` still sha256 `21aa549b...` after the run); `keyring info_secret_get account=steamgrid-api-key outcome=found` at 08:29:51 local. **SOMA** (Epic, `Emu`, runner legendary, non-Steam) launched at 08:30:58 (`Launching SOMA (Emu)`), reached its menu and was quit. Without restarting GameLib: the tray's recent list showed SOMA first, the Library's recent row showed SOMA, and its last played updated. With the app closed: `games.recent[0]` = SOMA (moved up from index 20; length 52, first was Balrum), `store/timestamp.json` sha256 `da16f6f8...` before launch 3, `2201b14d...` after. `keychain-3.log` 0 `displaying keychain prompt`. Operator decision at close: keep everything (the P5 Balrum override, SOMA's recent entry and played time); no restore from `profile-before/`. Closing inventory taken 2026-11-22T19:37:35Z: 20 entries in `$S` (16 files, 2 profile copies of 32500 and 32499 files, 5.6G each); full listing under `## Closing inventory`.
 
 ### 4. Upgrade with no data change
 expected: After the signed Phase 86 build is installed over the signed Phase 85 build (matching identities), launch 1 leaves `games.recent`, `store/game-overrides.json` and `game_overrides_images/` byte-equal to the P4 record, and `keychain-1.log` holds zero SecurityAgent prompt events for a GameLib process in a launch where the ITAD and SteamGridDB keys were both read.
-result: pending
+result: pass — launch 1 (2026-11-22T19:17:03Z), `keychain-1.log`, `gamelib-launch-1.log`, `item4-baseline.txt`. Build: v0.12.0 dmg installed over v0.11.0 at `/Applications/GameLib.app`; `codesign -dv` reads `com.gamelib.shell`, CDHash `06c8dcf0...`, Developer ID Application `grayson mitchell (S7U223QWXJ)`, TeamIdentifier `S7U223QWXJ`; `spctl` accepted, `source=Notarized Developer ID` (identities match per `## Signed builds (D-15)`). Keychain: the capture ran 08:17:05 to 08:19:42 local, covering the whole launch (app log 08:17:24 to `exit finished in 51 ms` at 08:19:24); 0 SecurityAgent prompt events for a GameLib process (0 `displaying keychain prompt`, 0 events from process SecurityAgent; the only GameLib lines are 3 securityd housekeeping events from gamelib-shell pid 13443). Both keys were read in that launch: `keyring info_secret_get account=steamgrid-api-key outcome=found` and `keyring info_secret_get account=itad-api-key outcome=found` at 08:17:54 (L2 as amended), and the operator saw no Keychain dialog and both key fields as saved. P4 compared with the app closed after launch 1: `games.recent` value sha256 `4c7eb5ac...` before and after, `cmp` equal (52 entries); `store/game-overrides.json` sha256 `21aa549b...` before and after (one override, the P5 Balrum cover chosen in the SteamGridDB picker, stored as URLs); `game_overrides_images/` absent before and after. That artwork-file half is vacuous but consistent, not blocked: the seeded override stores remote URLs, so no image file exists to compare. `[dev-secret-vault]` 0 lines, positive control `info secret source: keyring` present; `store frame rejected` / `refused a store write` 0; `store boot: 106 opened, 6 adopted, 0 migrated, 0 read-only, 0 start-empty, 0 deferred` present. P6 after P5: `steamgrid-api-key` found, `itad-api-key` found (the operator set both in P5, so neither half is blocked); P5's `keychain-p5.log` 0 prompts.
 
 ## Run order
 
@@ -359,11 +361,69 @@ P1, P2, P5 (seed on the 85 build, quit, P2 again), P3, P4, P6 on the 85 build. I
    `store/timestamp.json` (nothing else in those two files is changed by this session), then
    `shasum -a 256` of both against the `profile-before` copies.
 
+## Run record
+
+Run by plan 86-26 (Task 2 with the operator, Task 3 scoring) on 2026-11-22 19:03Z to 19:37Z (2026-11-23 local, UTC+13).
+`$S` is `gamelib-gate-86-2026-11-22T19:03:45Z` under the session's Claude scratchpad in `/private/tmp` (see
+`## Pre-run re-check`, P1). Times in the results are UTC where marked `Z`, otherwise the local clock `gamelib.log` writes.
+
+- **P5 (85 build):** the operator set a SteamGridDB key and an ITAD key in Settings, Advanced, and set a cover override on
+  Balrum (GOG `1769415595`) from the SteamGridDB picker. `games.recent` already held 52 entries. After P5:
+  `store/game-overrides.json` holds 1 override (URL artwork), `game_overrides_images/` still absent, both Keychain slots
+  found, `keychain-p5.log` 0 prompts.
+- **P3:** `profile-before/` taken after P5 (it holds `store/game-overrides.json` at sha256 `21aa549b...`; 32500 files).
+  **P4:** `item4-baseline.txt` at 19:13:32Z. **P6:** both slots found.
+- **Install:** `GameLib_0.12.0_aarch64.dmg` (sha256 `e8699ad2...2f9`) over the 0.11.0 app at 19:17:03Z, before
+  `keychain-1.log` started (F7).
+- **Launches:** each delimited in `notes.log` (`=== GATE LAUNCH 1/2/3 ===`), each with its own Keychain capture started
+  before the launch and stopped after the quit, each log archived before the next launch (`gamelib-launch-N.log`).
+- **Evidence-capture deviations, recorded rather than hidden:** (1) the per-launch instance count was not written to
+  `shell-pid-N.txt`. The substitute evidence is that each `gamelib-launch-N.log` holds exactly one `reaper started` and one
+  `store boot:` line, and each `keychain-N.log` names a single gamelib-shell pid (13443, 14993, 23839), so each launch was one
+  instance. (2) The pre-existing log before launch 1 was archived as `gamelib-seed-p5.log` (the 85 build's P5 log), not
+  `preexisting-gamelib.log`; `gamelib-launch-1.log.old` is byte-equal to it. No `.old` was archived after launches 2 and 3
+  because each was archived as `gamelib-launch-N.log` before the next launch rotated it.
+- **Observed outside the four items:** each 0.12.0 launch logs `[Backend] Epic is Offline right now, cannot update game
+  list!` (from `isEpicServiceOffline`, the Epic status API check) and the 85 build's P5 log does not. Neither that function nor
+  the legendary library refresh changed between the two signed builds' commits (`ffb8573d2`, `7c50262f4`), and the Epic store
+  embed and the ARK page loaded in launch 2, so it reads as the Epic status page's state at the time, not a Phase 86 change.
+  Not scored; recorded for the verifier.
+- **Restore:** none. The operator kept the seeded override, SOMA's recent entry and its played time.
+
+## Closing inventory
+
+Taken 2026-11-22T19:37:35Z with `ls -la "$S/"` and `wc -l "$S"/*` (paths reduced to `$S`):
+
+| Entry | Bytes | Lines |
+|---|---|---|
+| `gamelib-launch-1.log` | 31690 | 231 |
+| `gamelib-launch-1.log.old` | 31108 | 219 |
+| `gamelib-launch-2.log` | 49160 | 330 |
+| `gamelib-launch-3.log` | 31512 | 217 |
+| `gamelib-seed-p5.log` | 31108 | 219 |
+| `item4-baseline.txt` | 382 | 4 |
+| `item4-recent.after1.txt` | 3378 | 1 |
+| `item4-recent.before.txt` | 3378 | 1 |
+| `keychain-1.log` | 4667889 | 18649 |
+| `keychain-2.log` | 934144 | 3938 |
+| `keychain-3.log` | 545741 | 2224 |
+| `keychain-p5.log` | 2388576 | 9483 |
+| `keychain-{1,2,3,p5}.pid` | 6, 6, 6, 5 | 1 each |
+| `notes.log` | 2783 | 27 |
+| `recent.before3.txt` | 3378 | 1 |
+| `profile-before/` (mode 0700) | 5.6G | 32500 files |
+| `profile-preseed/` (mode 0700) | 5.6G | 32499 files |
+
+The captures were NOT deleted: the two profile copies are the operator's only restore path, and the phase verifier may want
+the logs. They remain under `$S` in this session's scratchpad in `/private/tmp` (the parent directory is mode 0700; the
+`gamelib-*.log` files are 0600). They hold account data (the full profile, game titles, local paths) and are never
+committed. Delete `$S` once Phase 86 is verified.
+
 ## Summary
 
 total: 4
-passed: 0
-issues: 0
-pending: 4
+passed: 3
+issues: 1
+pending: 0
 skipped: 0
 blocked: 0
