@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 86-15-PLAN.md
-last_updated: "2026-11-22T12:34:21.347Z"
+stopped_at: Completed 86-16-PLAN.md
+last_updated: "2026-11-22T13:08:01.387Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 86 execution started
-state_head: c3001289a217ebfe3947950e506e1b613ad1850b
+state_head: 1a01ae3f852c382cebfc52d94bf43d67d583be11
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 86 (Pure leaf services) — EXECUTING
-Plan: 15 of 26
+Plan: 16 of 26
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 86 execution started
 Progress: [██████████] 100%
@@ -399,6 +399,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 86 P13 | 30min | 2 tasks | 12 files |
 | Phase 86 P14 | ~60min | 3 tasks | 9 files |
 | Phase 86 P15 | not measured | 3 tasks | 46 files |
+| Phase 86 P16 | 80min | 3 tasks | 27 files |
 
 ## Accumulated Context
 
@@ -790,6 +791,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 86]: 86-13: the anticheat download callback carries its own .catch because runOnceWhenOnline drops the callback's return; shims resolve unknown and callers cast
 - [Phase 86]: 86-14: key owners live in InfoCtx (itad_key, sgdb_key); get memoises a failed read 120 s; migration clears mirror then document, trims and never clears on whitespace
 - [Phase 86]: 86-15: Replay treats a secret header recorded as the bare word REDACTED as matched by any non-empty value; SteamGridDB setApiKey surfaces a failed keyring write (TS swallowed it); the boot plaintext migration is crate-owned bounded work (registrant info-sgdb-migrate, 10 s wait)
+- [Phase 86]: 86-16: the five ITAD renderer channels are native info channels over gamelib_info::itad; Replay gained networkError and REDACTED query-key matching
+- [Phase 86]: 86-16: localeCompare is an ICU-root subset (itad/collate.rs), not ICU; the limits are filed as a todo
+- [Phase 86]: 86-16: itad setApiKey surfaces a Keychain write failure as a fixed category (TS swallowed it); the crate has no logger so run_itad_op logs category-only lines
 
 ### Pending Todos
 
@@ -1059,8 +1063,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T12:34:19.627Z
-Stopped at: Completed 86-15-PLAN.md
+Last session: 2026-11-22T13:07:59.658Z
+Stopped at: Completed 86-16-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

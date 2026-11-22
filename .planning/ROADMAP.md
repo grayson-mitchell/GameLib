@@ -562,7 +562,7 @@ Plans:
   3. Recorded fixtures exist for each previously untested directory before it is ported
   4. Each ported slice's TypeScript and sidecar registrations are deleted in this phase (the delete gate per slice passes)
 
-**Plans:** 15/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
+**Plans:** 16/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
 
 Plans:
 **Wave 1**
@@ -601,7 +601,7 @@ Plans:
 - [x] 86-15-PLAN.md — SteamGridDB in Rust (five native channels); migration to Rust boot; TS slice and secret store deleted
 
 **Wave 11** *(blocked on Wave 10 completion)*
-- [ ] 86-16-PLAN.md — ITAD store search, deals, Steam gids and key status native in Rust
+- [x] 86-16-PLAN.md — ITAD store search, deals, Steam gids and key status native in Rust
 
 **Wave 12** *(blocked on Wave 11 completion)*
 - [ ] 86-17-PLAN.md — ITAD TS deleted; shared coverage file; cache rows kept; sidecar key bake removed
