@@ -13,9 +13,12 @@
 
 pub mod cache_view;
 pub mod ctx;
+pub mod http;
+pub mod secrets;
 
 use ctx::InfoCtx;
 use serde_json::Value;
+use std::future::Future;
 use std::sync::OnceLock;
 use tokio::runtime::{Builder, Handle, Runtime};
 
@@ -24,9 +27,26 @@ pub const OPS: &[&str] = &[];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
 /// shutdown, a wrong thread or a panic (`<op>:panic`).
-pub async fn dispatch(op: &str, _args: &[Value], _ctx: &InfoCtx) -> Result<Value, String> {
-    // Each slice adds its arms here, in step with `OPS`.
+pub async fn dispatch(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, String> {
+    let Some(name) = OPS.iter().copied().find(|o| *o == op) else {
+        return Err(format!("unknown op: {op}"));
+    };
+    guarded(name, ctx, route(name, args, ctx)).await
+}
+
+/// Each slice adds its arms here, in step with `OPS`.
+async fn route(op: &str, _args: &[Value], _ctx: &InfoCtx) -> Result<Value, String> {
     Err(format!("unknown op: {op}"))
+}
+
+/// The op wrapper (D-20): `work` runs holding a `Shutdown` registrant for exactly its lifetime and
+/// is raced against the shutdown token, answering `<op>:shutdown` when cancelled and `<op>:panic`
+/// when it panics.
+pub async fn guarded<F>(_op: &str, _ctx: &InfoCtx, work: F) -> Result<Value, String>
+where
+    F: Future<Output = Result<Value, String>>,
+{
+    work.await
 }
 
 /// The crate-owned runtime the synchronous entry point blocks on. Two workers, like

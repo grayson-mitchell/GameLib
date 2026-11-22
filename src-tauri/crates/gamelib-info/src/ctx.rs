@@ -8,6 +8,9 @@ use gamelib_core::clock::Clock;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_store::host::StoreHost;
 
+use crate::http::Http;
+use crate::secrets::{SecretSource, Slot};
+
 /// The platform the app runs on, as the shell reports it (the crate never asks the OS).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Platform {
@@ -39,6 +42,15 @@ pub struct InfoCtx {
     pub app_version: String,
     /// In-flight ops hold a registrant of this and race its token (D-20).
     pub shutdown: Shutdown,
+    pub http: Arc<dyn Http>,
+    /// The Keychain-backed source the shell installs (86-14); `None` until then, and in the CLI
+    /// unless it passes its environment source. An op that needs a key and finds `None` answers
+    /// `<op>:no-secret-source`.
+    pub secrets: Option<Arc<dyn SecretSource>>,
+    /// The ITAD key compiled into the build (`option_env!("ITAD_API_KEY")` in the shell).
+    pub itad_baked_key: Option<String>,
+    /// The ITAD key from `GAMELIB_ITAD_API_KEY`, read once by the shell at boot.
+    pub itad_env_key: Option<String>,
 }
 
 impl InfoCtx {
@@ -49,6 +61,7 @@ impl InfoCtx {
         paths: InfoPaths,
         app_version: String,
         shutdown: Shutdown,
+        http: Arc<dyn Http>,
     ) -> InfoCtx {
         InfoCtx {
             host,
@@ -57,6 +70,19 @@ impl InfoCtx {
             paths,
             app_version,
             shutdown,
+            http,
+            secrets: None,
+            itad_baked_key: None,
+            itad_env_key: None,
+        }
+    }
+
+    /// The stored key for `slot`, for op `op`. `Err("<op>:no-secret-source")` when no source is
+    /// installed; `Ok(None)` when the slot is empty. The error never names a value.
+    pub fn secret(&self, op: &str, slot: Slot) -> Result<Option<String>, String> {
+        match &self.secrets {
+            Some(source) => source.get(slot).map_err(|e| format!("{op}:secret-{e}")),
+            None => Err(format!("{op}:no-secret-source")),
         }
     }
 }
