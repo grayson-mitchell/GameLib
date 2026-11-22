@@ -455,6 +455,9 @@ impl NativeRouter {
         // ITAD caches with the key from the Keychain owner. The sidecar no longer registers
         // `searchStores`.
         invoke.insert("searchStores", info_dispatch::search_stores);
+        // Phase 86 (86-22, D-17): the game page's wiki block, computed by the `info` slice over the
+        // `wikigameinfo` cache. The sidecar no longer registers `getWikiGameInfo`.
+        invoke.insert("getWikiGameInfo", info_dispatch::get_wiki_game_info);
         // Phase 86 (86-16, D-17): the deal list for one game and the Steam app id to ITAD game id
         // lookup, run by the same `info` slice. The sidecar no longer registers them.
         invoke.insert("getStoreSearchDeals", info_dispatch::get_store_search_deals);
@@ -826,6 +829,7 @@ mod tests {
             "steamgriddb.searchGame",
             "steamgriddb.setApiKey",
             "searchStores",
+            "getWikiGameInfo",
             "getStoreSearchDeals",
             "getItadSteamGids",
             "itad.getKeyStatus",

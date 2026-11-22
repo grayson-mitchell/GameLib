@@ -2098,40 +2098,33 @@
     {
       "channel": "getWikiGameInfo",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "maxLength": 1024
-          },
-          {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256
-          },
-          {
-            "type": "string",
-            "enum": [
-              "legendary",
-              "gog",
-              "sideload",
-              "nile",
-              "steam"
-            ]
-          },
-          {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          }
-        ],
-        "items": false,
-        "minItems": 3,
-        "maxItems": 4
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "title",
+          "type": "string",
+          "maxLength": 1024,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "appName",
+          "type": "string",
+          "maxLength": 256,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "runner",
+          "type": "string",
+          "pattern": "^(legendary|gog|sideload|nile|steam)$"
+        },
+        {
+          "name": "forceRefresh",
+          "type": "boolean",
+          "optional": true,
+          "nullable": true
+        }
+      ],
+      "returns": "WikiInfo | null"
     },
     {
       "channel": "hasExecutable",

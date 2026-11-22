@@ -6,7 +6,12 @@
  * The keys below must equal the manifest's channels by kind (`ipcDomainCensus` test (e)): invoke
  * channels in `NativeAsync`, send channels in `NativeSync`.
  */
-import type { AntiCheatInfo, UploadedLogData } from '../../types'
+import type {
+  AntiCheatInfo,
+  Runner,
+  UploadedLogData,
+  WikiInfo
+} from '../../types'
 import type { StoreSearchDeal, StoreSearchResponse } from '../storeSearch'
 import type { GetLogFileArgs } from './logger'
 import type { MetadataOverride } from './gameDetails'
@@ -84,6 +89,18 @@ export interface NativeAsync {
   'steamgriddb.getHeroes': (
     query: SteamGridQuery
   ) => Promise<Array<{ id: number; url: string; thumb: string }>>
+  // Phase 86 (86-22, D-17, D-23): the game page's wiki block, computed by the Rust `info` slice
+  // (`info_wiki_get`): the 30 day `wikigameinfo` cache, the stale rules and the sources (PCGamingWiki,
+  // GamesDB, AppleGamingWiki, umu, the CrossOver index, HowLongToBeat, ProtonDB, the Steam Deck report).
+  // The title is the renderer's own (0 to 1024 UTF-16 units; the TS read it off the resolved game), the
+  // app name 1 to 256 units, the runner one of the five names, `forceRefresh` absent, null or a boolean.
+  // `null` when the lookup failed (a failure is logged, never thrown).
+  getWikiGameInfo: (
+    title: string,
+    appName: string,
+    runner: Runner,
+    forceRefresh?: boolean | null
+  ) => Promise<WikiInfo | null>
   // Phase 86 (86-16, D-17): the IsThereAnyDeal store search, run by the Rust `info` slice
   // (`info_itad_search`) over the `itad_prices` cache. The term is 0 to 256 UTF-16 units and the
   // country absent, null or 0 to 16 units (anything but two upper-case letters prices as US). A

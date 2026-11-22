@@ -268,9 +268,6 @@ type ManagerMock = Record<'getGame' | 'getListOfGames', jest.Mock>
 // handles the cases configure or inspect are rebound from that registry in
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset.
-let wikiGameInfoStore: ReturnType<
-  typeof import('../../wiki_game_info/stores').createWikiGameInfoStores
->['wikiGameInfoStore']
 let configStore: ReturnType<
   typeof import('../../constants/key_value_stores').createKvsStores
 >['configStore']
@@ -290,10 +287,6 @@ function freshRegistry(): void {
   require('../bootstrap')
   const { createGlobalConfig } = require('backend/config')
   const { libraryManagerMap } = require('backend/storeManagers')
-  ;({ wikiGameInfoStore } =
-    require('../../wiki_game_info/stores').createWikiGameInfoStores({
-      root: testRoot
-    }))
   ;({ configStore } =
     require('../../constants/key_value_stores').createKvsStores({
       registry: createStoreRegistry(),
@@ -649,67 +642,13 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
   // `gamelib-info`'s `golden_recent` and the shell's `info_dispatch` tests; its single owner by
   // `nativeChannelOwnership.test.ts`.
 
-  // ── REQ-34.2-11: getWikiGameInfo resolves via getGame(appName, runner);
-  // the title argument is intentionally ignored ────────────────────────────
-  describe('REQ-34.2-11 getWikiGameInfo (invoke)', () => {
-    it('REQ-34.2-11 resolves the game through getGame(appName, runner) and returns the wiki payload, ignoring a deliberately wrong title argument', async () => {
-      const realTitle = 'The Real Game Title'
-      const cachedPayload = {
-        pcgamingwiki: null,
-        applegamingwiki: null,
-        codeweavers: {
-          macRating: null,
-          linuxRating: null,
-          slug: 'the-real-game-title'
-        },
-        howlongtobeat: null,
-        gamesdb: null,
-        steamInfo: null,
-        umuId: null,
-        // Load-bearing, and NOT incidental fixture noise. `getWikiGameInfo`'s
-        // `staleWikiFetch` guard (quick task 260822-rc8) treats a cached entry with NO
-        // `fetchStatus` as a 403-era entry and re-fetches it, which would make this
-        // suite's "the cache hit resolved everything" assertion below fail for a reason
-        // that has nothing to do with the cache KEY this test is actually about. A
-        // successful outcome keeps the entry a genuine cache hit.
-        fetchStatus: {
-          pcgamingwiki: 'ok' as const,
-          howlongtobeat: 'ok' as const
-        }
-      }
-      // Cache is keyed by the GAME's OWN title (from getGameInfo()), never
-      // by the invoke's `title` argument — pre-populating it under the REAL
-      // title and then passing a WRONG title argument proves the cache
-      // lookup (and therefore the whole resolution) used getGame()'s
-      // result, not the ignored argument.
-      wikiGameInfoStore.set(realTitle, cachedPayload)
-
-      legendaryManager.getGame.mockReturnValue({
-        getGameInfo: () => ({
-          app_name: 'wiki-app-1',
-          title: realTitle,
-          runner: 'legendary'
-        })
-      })
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'gwgi-1', 'getWikiGameInfo', [
-        'A Completely Wrong Title',
-        'wiki-app-1',
-        'legendary',
-        false
-      ])
-      await flush()
-
-      const response = findResponse(frames, 'gwgi-1')
-      expect(response?.ok).toBe(true)
-      expect(response?.result).toEqual(cachedPayload)
-      expect(legendaryManager.getGame).toHaveBeenCalledWith('wiki-app-1')
-      // No provider fetch ever happened — the cache hit resolved everything,
-      // which is only possible if the lookup key was the REAL title, not
-      // the wrong one passed as the `title` argument.
-      expect(mockAxiosGet).not.toHaveBeenCalled()
-    })
+  // ── Phase 86 (86-22, D-17, D-23): `getWikiGameInfo` is a native `info` channel served by Rust
+  // (`info_wiki_get`). The cache key, the stale rules, the sources and the result bytes are pinned by
+  // `gamelib-info`'s `golden_wiki.rs` (all 31 wiki goldens) and the argument bounds by the native
+  // manifest vectors, so the sidecar no longer registers it.
+  it('Phase 86 (D-17) getWikiGameInfo is a native `info` channel: the sidecar no longer registers it', () => {
+    boot()
+    expect(handlerRegistry.has('getWikiGameInfo')).toBe(false)
   })
 
   // ── Phase 86 (86-12, D-17): the anticheat lookup is a native `info` channel ───────────────────
@@ -778,9 +717,9 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
   // ── REQ-34.2-14 / SEAM Invariant B ──────────────────────────────────────────
   describe('REQ-34.2-14/SEAM Invariant B', () => {
     const ALL_7_CHANNELS: [string, unknown[]][] = [
-      ['getWikiGameInfo', ['t', 'app-x', 'legendary', false]],
       ['getKnownFixes', ['app-x', 'gog']],
       ['getCrossoverIndex', []]
+      // `getWikiGameInfo` left this list in Phase 86 Plan 22 (D-17): it is a native `info` channel.
       // `removeRecent` left this list in Phase 86 Plan 08 (D-17): it is a native `info` channel.
       // `searchStores`, `getStoreSearchDeals` and `getItadSteamGids` left it in Phase 86 Plan 16 (D-17),
       // for the same reason.

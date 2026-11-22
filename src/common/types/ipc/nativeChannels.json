@@ -612,6 +612,59 @@
         ]
       ]
     },
+    "getWikiGameInfo": {
+      "kind": "invoke",
+      "slice": "info",
+      "args": [
+        {
+          "name": "title",
+          "type": "string",
+          "maxLength": 1024,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "appName",
+          "type": "string",
+          "maxLength": 256,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "runner",
+          "type": "string",
+          "pattern": "^(legendary|gog|sideload|nile|steam)$"
+        },
+        {
+          "name": "forceRefresh",
+          "type": "boolean",
+          "optional": true,
+          "nullable": true
+        }
+      ],
+      "returns": "WikiInfo | null",
+      "valid": [
+        ["Portal 2", "620", "steam"],
+        ["t", "a", "gog", true],
+        ["", "a", "legendary", false],
+        ["t", "a", "nile", null],
+        ["t", "a", "sideload"]
+      ],
+      "invalid": [
+        [],
+        ["t"],
+        ["t", "a"],
+        ["t", "a", "epic"],
+        ["t", "a", "GOG"],
+        ["t", "", "gog"],
+        ["t", "x", "gog", "yes"],
+        ["t", "a", "gog", 1],
+        ["t", "a", "gog", {}],
+        ["t", "a", "gog", true, "x"],
+        [1, "a", "gog"],
+        [null, "a", "gog"],
+        ["t", 1, "gog"],
+        ["t", "a", 1]
+      ]
+    },
     "searchStores": {
       "kind": "invoke",
       "slice": "info",

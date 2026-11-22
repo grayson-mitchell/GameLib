@@ -61,6 +61,8 @@ pub const OPS: &[&str] = &[
     "info_steamgrid_search",
     "info_steamgrid_set_key",
     "info_umu_get",
+    "info_wiki_cache_clear",
+    "info_wiki_get",
 ];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
@@ -104,6 +106,13 @@ async fn route(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, String>
         "info_steamgrid_search" => steamgrid::search_game(ctx, decode(op, args)?).await,
         "info_steamgrid_set_key" => steamgrid::set_api_key(ctx, decode(op, args)?),
         "info_umu_get" => umu::get(ctx, decode(op, args)?).await,
+        "info_wiki_cache_clear" => {
+            if !args.is_empty() {
+                return Err(format!("{op}:bad-args"));
+            }
+            wiki::clear_cache(ctx).map(|()| Value::Null)
+        }
+        "info_wiki_get" => wiki::get(ctx, decode(op, args)?).await,
         _ => Err(format!("unknown op: {op}")),
     }
 }

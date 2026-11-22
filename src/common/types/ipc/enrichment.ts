@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import type { GamelibFixStatus, KnowFixesInfo, WikiInfo } from '../../types'
+import type { GamelibFixStatus, KnowFixesInfo } from '../../types'
 import type { CatalogProduct } from '../discounts'
 import type { RunsForMeState } from '../../runsForMe'
 import {
@@ -35,19 +35,13 @@ export const enrichmentAsyncArgs = {
   setRunsForMe: z.tuple([runsForMePayload]),
   // Phase 19 (Plan 06): bulk CrossOver-rating resolver (D-11/D-16).
   getCrossoverIndex: noArgs,
-  getWikiGameInfo: z.tuple([
-    z.string().max(1024),
-    appName,
-    runnerArg(),
-    optionalArg(z.boolean())
-  ]),
   getGogDiscounts: z.tuple([
     localeSettings,
     optionalArg(z.boolean()),
     optionalArg(z.boolean())
   ])
   // Phase 86 (86-15, D-17): the five `steamgriddb.*` channels are native `info` channels
-  // (`nativeChannels.json`); their bounds live in the Rust decode. So are the five ITAD channels (86-16): `searchStores`, `getStoreSearchDeals`, `getItadSteamGids`,
+  // (`nativeChannels.json`), and so is `getWikiGameInfo` (86-22); their bounds live in the Rust decode. So are the five ITAD channels (86-16): `searchStores`, `getStoreSearchDeals`, `getItadSteamGids`,
   // `itad.getKeyStatus` and `itad.setApiKey`.
 }
 
@@ -59,7 +53,6 @@ interface EnrichmentAsyncReturns {
   // `number` = matched rating, `null` = eligible & consulted with no record, key-absent =
   // never looked up (ineligible under the D-02 gate).
   getCrossoverIndex: Promise<Record<string, number | null>>
-  getWikiGameInfo: Promise<WikiInfo | null>
   getGogDiscounts: Promise<CatalogProduct[]>
 }
 

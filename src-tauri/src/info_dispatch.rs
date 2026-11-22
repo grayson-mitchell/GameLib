@@ -527,6 +527,76 @@ pub(crate) fn get_anticheat_info(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> Nati
     })
 }
 
+/// What `getWikiGameInfo` decodes: the renderer's title, the app name, the runner name and an optional
+/// force-refresh flag.
+type WikiArgs<'a> = (&'a str, &'a str, &'a str, Option<bool>);
+
+/// Decodes the arguments of `getWikiGameInfo` (the zod tuple it replaces): a title of 0 to
+/// [`gamelib_info::wiki::TITLE_MAX_UTF16`] UTF-16 code units, an app name of 1 to
+/// [`gamelib_info::wiki::APP_NAME_MAX_UTF16`], one of the five runner names, and a trailing
+/// `forceRefresh` that is absent, `null` or a boolean. A fifth argument is refused.
+fn parse_get_wiki_game_info(args: &[Value]) -> Result<WikiArgs<'_>, Rejection> {
+    let (title, app_name, runner, force) = match args {
+        [title, app_name, runner] => (title, app_name, runner, None),
+        [title, app_name, runner, force] => (title, app_name, runner, Some(force)),
+        _ => return Err(("(args)", "invalid_type")),
+    };
+    let Value::String(title) = title else {
+        return Err(("0", "invalid_type"));
+    };
+    if title.encode_utf16().count() > gamelib_info::wiki::TITLE_MAX_UTF16 {
+        return Err(("0", "too_big"));
+    }
+    let Value::String(app_name) = app_name else {
+        return Err(("1", "invalid_type"));
+    };
+    if app_name.is_empty() {
+        return Err(("1", "too_small"));
+    }
+    if app_name.encode_utf16().count() > gamelib_info::wiki::APP_NAME_MAX_UTF16 {
+        return Err(("1", "too_big"));
+    }
+    let Value::String(runner) = runner else {
+        return Err(("2", "invalid_type"));
+    };
+    if gamelib_info::runner_caps::caps(runner).is_none() {
+        return Err(("2", "invalid_value"));
+    }
+    let force_refresh = match force {
+        None | Some(Value::Null) => None,
+        Some(Value::Bool(flag)) => Some(*flag),
+        Some(_) => return Err(("3", "invalid_type")),
+    };
+    Ok((title, app_name, runner, force_refresh))
+}
+
+/// The native `getWikiGameInfo` handler (slice `info`, D-17, D-23): the game page's wiki block, computed
+/// by `info_wiki_get` with the renderer's own title. Validated before the context is looked at, like
+/// the other `info` channels; the answer is the lookup's object or `null` (a failed lookup is a logged
+/// line, never an error).
+pub(crate) fn get_wiki_game_info(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        let (title, app_name, runner, force_refresh) = parse_get_wiki_game_info(&args)
+            .map_err(|(path, code)| invalid_args("getWikiGameInfo", &[path], &[code]))?;
+        let mut op_args = serde_json::json!({
+            "title": title,
+            "appName": app_name,
+            "runner": runner,
+        });
+        if let Some(flag) = force_refresh {
+            op_args["forceRefresh"] = Value::Bool(flag);
+        }
+        let info = info_ctx().ok_or_else(|| "getWikiGameInfo: not ready".to_string())?;
+        run_info_op(
+            Arc::clone(info),
+            "info_wiki_get",
+            vec![op_args],
+            "getWikiGameInfo: the lookup did not finish",
+        )
+        .await
+    })
+}
+
 /// Decodes the one `query` argument of `steamgriddb.searchGame`: exactly one string of 0 to
 /// [`gamelib_info::steamgrid::TEXT_MAX_UTF16`] UTF-16 code units (the zod bound it replaces).
 fn parse_steamgrid_search(args: &[Value]) -> Result<&str, Rejection> {
@@ -1454,6 +1524,114 @@ mod tests {
     }
 
     #[test]
+    fn get_wiki_game_info_accepts_three_or_four_arguments_and_bounds_each() {
+        assert_eq!(
+            parse_get_wiki_game_info(&[json!("Portal 2"), json!("620"), json!("steam")]),
+            Ok(("Portal 2", "620", "steam", None))
+        );
+        assert_eq!(
+            parse_get_wiki_game_info(&[json!(""), json!("a"), json!("gog"), json!(true)]),
+            Ok(("", "a", "gog", Some(true)))
+        );
+        assert_eq!(
+            parse_get_wiki_game_info(&[json!("t"), json!("a"), json!("nile"), json!(null)]),
+            Ok(("t", "a", "nile", None))
+        );
+        // The bounds are inclusive: 1024 title units, 256 app name units.
+        assert!(parse_get_wiki_game_info(&[
+            json!("x".repeat(1024)),
+            json!("y".repeat(256)),
+            json!("sideload"),
+        ])
+        .is_ok());
+        for (args, want) in [
+            (vec![], ("(args)", "invalid_type")),
+            (vec![json!("t")], ("(args)", "invalid_type")),
+            (vec![json!("t"), json!("a")], ("(args)", "invalid_type")),
+            (
+                vec![json!("t"), json!("a"), json!("gog"), json!(true), json!(1)],
+                ("(args)", "invalid_type"),
+            ),
+            (
+                vec![json!(1), json!("a"), json!("gog")],
+                ("0", "invalid_type"),
+            ),
+            (
+                vec![json!("x".repeat(1025)), json!("a"), json!("gog")],
+                ("0", "too_big"),
+            ),
+            (
+                vec![json!("t"), json!(""), json!("gog")],
+                ("1", "too_small"),
+            ),
+            (
+                vec![json!("t"), json!("y".repeat(257)), json!("gog")],
+                ("1", "too_big"),
+            ),
+            // Two UTF-16 units per astral character: 129 of them are 258 units.
+            (
+                vec![json!("t"), json!("\u{1F3AE}".repeat(129)), json!("gog")],
+                ("1", "too_big"),
+            ),
+            (
+                vec![json!("t"), json!("a"), json!(1)],
+                ("2", "invalid_type"),
+            ),
+            (
+                vec![json!("t"), json!("a"), json!("epic")],
+                ("2", "invalid_value"),
+            ),
+            (
+                vec![json!("t"), json!("a"), json!("GOG")],
+                ("2", "invalid_value"),
+            ),
+            (
+                vec![json!("t"), json!("a"), json!("gog"), json!("yes")],
+                ("3", "invalid_type"),
+            ),
+            (
+                vec![json!("t"), json!("a"), json!("gog"), json!(1)],
+                ("3", "invalid_type"),
+            ),
+        ] {
+            assert_eq!(parse_get_wiki_game_info(&args), Err(want), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn the_wiki_handler_validates_first_and_answers_not_ready_before_install() {
+        assert!(info_ctx().is_none());
+        let router_ctx = Arc::new(crate::native_router::NativeCtx::for_tests(
+            Arc::new(NoHost),
+            None,
+        ));
+        let not_ready = tauri::async_runtime::block_on(get_wiki_game_info(
+            Arc::clone(&router_ctx),
+            vec![json!("t"), json!("a"), json!("gog")],
+        ));
+        assert_eq!(not_ready, Err("getWikiGameInfo: not ready".to_string()));
+        let secret = "SECRET-TITLE-".repeat(100);
+        for bad in [
+            tauri::async_runtime::block_on(get_wiki_game_info(
+                Arc::clone(&router_ctx),
+                vec![json!(secret), json!("a"), json!("gog")],
+            )),
+            tauri::async_runtime::block_on(get_wiki_game_info(
+                Arc::clone(&router_ctx),
+                vec![json!("t"), json!("a"), json!("SECRET-RUNNER")],
+            )),
+            tauri::async_runtime::block_on(get_wiki_game_info(router_ctx, vec![])),
+        ] {
+            let error = bad.unwrap_err();
+            assert!(
+                error.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+                "{error}"
+            );
+            assert!(!error.contains("SECRET"), "{error}");
+        }
+    }
+
+    #[test]
     fn the_migration_log_line_carries_the_outcome_word_only() {
         assert_eq!(
             sgdb_migration_line("migrated"),
@@ -2089,6 +2267,63 @@ mod tests {
         assert_eq!(
             seen[1].url,
             "https://api.isthereanydeal.com/games/prices/v3?country=US&key=test-env-key"
+        );
+    }
+
+    /// A clock fixed at the wiki oracle's instant, 2026-11-22T12:00:00Z.
+    struct OracleClock;
+
+    impl gamelib_core::clock::Clock for OracleClock {
+        fn now_ms(&self) -> u64 {
+            1_795_348_800_000
+        }
+    }
+
+    /// An `InfoCtx` whose profile holds the wiki cache of the `cache-fresh-windows-no-request` golden
+    /// (one entry, "Zzqx Qvbnm", 60 minutes old at the oracle's instant).
+    fn wiki_ctx(home: &FakeHome, canned: Arc<Canned>) -> InfoCtx {
+        let mut ctx = test_ctx(home, None);
+        let cache = ctx.paths.user_data.join("store_cache");
+        std::fs::create_dir_all(&cache).unwrap();
+        let from = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("crates/gamelib-info/tests/fixtures/state/wiki/cache-fresh-windows-no-request")
+            .join("store_cache/wikigameinfo.json");
+        std::fs::copy(from, cache.join("wikigameinfo.json")).unwrap();
+        ctx.clock = Arc::new(OracleClock);
+        ctx.http = canned;
+        ctx
+    }
+
+    #[test]
+    fn the_wiki_lookup_serves_a_fresh_cached_entry_through_the_blocking_pool_and_force_refresh_asks_again(
+    ) {
+        let home = FakeHome::new("info-dispatch-");
+        let canned = Arc::new(Canned(Mutex::new(Vec::new())));
+        let info = Arc::new(wiki_ctx(&home, canned.clone()));
+        let args = json!({ "title": "Zzqx Qvbnm", "appName": "app", "runner": "legendary" });
+        let served = tauri::async_runtime::block_on(run_info_op(
+            Arc::clone(&info),
+            "info_wiki_get",
+            vec![args.clone()],
+            "x",
+        ))
+        .unwrap();
+        assert_eq!(served["fetchStatus"]["pcgamingwiki"], "notfound");
+        assert_eq!(served["gamesdb"], json!({ "steamID": "" }));
+        assert!(
+            canned.0.lock().unwrap().is_empty(),
+            "a fresh entry is served with no request"
+        );
+
+        let mut forced = args;
+        forced["forceRefresh"] = json!(true);
+        let again =
+            tauri::async_runtime::block_on(run_info_op(info, "info_wiki_get", vec![forced], "x"))
+                .unwrap();
+        assert!(again.is_object() || again.is_null(), "{again}");
+        assert!(
+            !canned.0.lock().unwrap().is_empty(),
+            "forceRefresh reaches the sources"
         );
     }
 

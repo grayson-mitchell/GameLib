@@ -9,12 +9,9 @@
  * own objective — prove the real logic runs behind the new transport, not a
  * reimplementation, so the Electron and Tauri builds cannot drift apart):
  *
- *   invoke (7, `ipcMain.handle`, all confirmed `addHandler` in their current
+ *   invoke (`ipcMain.handle`, all confirmed `addHandler` in their current
  *   Electron homes):
- *     - `getWikiGameInfo` -> `wiki_game_info/wiki_game_info.ts`'s
- *       `getWikiGameInfo(game, forceRefresh)`, `game` resolved via
- *       `backend/utils`'s `deps.managers.library[runner].getGame(appName)`
- *       (`wiki_game_info/ipc_handler.ts:5`)
+ *     - (Phase 86, 86-22) `getWikiGameInfo` is now a native `info` channel.
  *     - (Phase 86, 86-12) `getAnticheatInfo` is now a native `info` channel.
  *     - `getKnownFixes` -> `backend/knownFixes.ts`'s
  *       `readKnownFixes(appName, runner)` (Plan 34.2-03 extraction;
@@ -38,11 +35,9 @@
  * call for that exact channel before being written: every one of the seven
  * is INVOKE.
  *
- * `getWikiGameInfo` note: the `title` argument is accepted and INTENTIONALLY
- * IGNORED, exactly as `wiki_game_info/ipc_handler.ts:5` does today — the
- * game's real title is read off the resolved `Game` via `getGameInfo()`
- * inside `getWikiGameInfo` itself. This is not a bug in this registration;
- * it reproduces the existing Electron contract byte-for-byte.
+ * `getWikiGameInfo` (Phase 86, 86-22, D-17, D-23): served natively by the Rust `info` slice. The TS read
+ * the title off the resolved `Game` and ignored the renderer's; Rust uses the renderer's own (the two
+ * are the same text for every game the renderer shows).
  *
  * `getAnticheatInfo` (Phase 86, 86-12, D-17): served natively by the Rust `info` slice, so it is not
  * registered here. Its D-07 declaration rider (null for every Steam title on every platform, as the
@@ -120,7 +115,6 @@ import type { MiscRuntimeSlice } from 'backend/miscRuntime'
 import type { FrontendMessageDeps } from '../host/frontendMessage'
 import type { AppInfo } from '../process/context'
 import type { IpcRegistry } from './ipcRegistry'
-import { getWikiGameInfo } from '../wiki_game_info/wiki_game_info'
 import { readGamelibFixStatus, readKnownFixes } from '../knownFixes'
 import { getCrossoverIndex } from '../info/crossover'
 import { getRunsForMeMap, setRunsForMeByUser } from '../runsForMe'
@@ -180,34 +174,15 @@ const RUNS_FOR_ME_RUNNERS: readonly string[] = Object.freeze([
 ] as const)
 
 /**
- * Registers the 7 enrichment channels. Called once from `handlers.ts`
+ * Registers the 6 enrichment channels. Called once from `handlers.ts`
  * — this module owns no side effects at import time beyond the imports
  * above; the caller decides when registration onto the handler registry
  * happens.
  */
 export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
-  // The `title` argument is accepted and intentionally IGNORED — see the
-  // module docstring above. `getWikiGameInfo` re-derives the title off the
-  // resolved `Game` itself.
-  deps.ipc.handle(
-    'getWikiGameInfo',
-    async (_event: unknown, ...args: unknown[]) => {
-      const appName = args[1] as string
-      const runner = args[2] as Runner
-      const forceRefresh = (args[3] as boolean | null | undefined) ?? undefined
-      const game = deps.managers.library[runner].getGame(appName)
-      return getWikiGameInfo(
-        {
-          libraryManagers: deps.managers.library,
-          stores: deps.stores,
-          infoCaches: deps.infoCaches,
-          appRuntime: deps.appRuntime
-        },
-        game,
-        forceRefresh
-      )
-    }
-  )
+  // Phase 86 (86-22, D-17): `getWikiGameInfo` is a native `info` channel served by Rust
+  // (`info_wiki_get`, `nativeChannels.json`), so it is no longer registered here and has one owner. The
+  // TS `wiki_game_info.ts` stays only for the non-Steam shortcut resolver and `clearCache` until 86-23/24.
 
   // Phase 86 (86-12, D-17): `getAnticheatInfo` is a native `info` channel served by Rust from
   // `<appFolder>/areweanticheatyet.json`, so it is no longer registered here and has one owner. The

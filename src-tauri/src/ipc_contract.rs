@@ -842,6 +842,7 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "getLogContent",
     "getStoreSearchDeals",
     "getUploadedLogFiles",
+    "getWikiGameInfo",
     "itad.getKeyStatus",
     "itad.setApiKey",
     "removeRecent",
