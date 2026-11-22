@@ -144,6 +144,7 @@ describe('Nord Light uses only the official Nord palette', () => {
       'src/frontend/styles/_buttons.scss',
       'src/frontend/components/UI/NavShell/components/NavTabs/index.scss',
       'src/frontend/components/UI/NavShell/components/FilterFocusRow/index.scss',
+      'src/frontend/components/UI/NavShell/components/FilterFacetGroup/index.scss',
       'src/frontend/screens/Library/components/LibrarySignInNotice/index.scss'
     ]) {
       expect(files).toContain(expected)
@@ -318,6 +319,37 @@ describe('Nord Light is Frost-forward (261122-rz8)', () => {
       expiredIcon:
         collapse(cssBlock(notice, 'body.nord-light &')) ===
         'color: var(--navbar-inactive);'
+    }
+    expect(
+      Object.entries(checks)
+        .filter(([, ok]) => !ok)
+        .map(([name]) => name)
+    ).toEqual([])
+  })
+
+  it('tier-2 and tab chrome on the Frost bar are re-paired', () => {
+    const navShell = join(FRONTEND_ROOT, 'components/UI/NavShell/components')
+    const navTabs = collapse(readStripped(join(navShell, 'NavTabs/index.scss')))
+    const facets = collapse(
+      readStripped(join(navShell, 'FilterFacetGroup/index.scss'))
+    )
+    const checks: Record<string, boolean> = {
+      tabHover:
+        /&:hover \{[^}]*body\.nord-light & \{ color: var\(--navbar-inactive\); \}/.test(
+          navTabs
+        ),
+      tabFocusRing:
+        /&:focus-visible \{[^}]*body\.nord-light & \{ outline-color: var\(--navbar-inactive\); \}/.test(
+          navTabs
+        ),
+      facetBox:
+        /\.FilterFacetRow__box \{[^}]*body\.nord-light & \{ border-color: var\(--navbar-inactive, var\(--navbar-accent\)\); \}/.test(
+          facets
+        ),
+      facetCount:
+        /\.FilterFacetRow__count \{[^}]*body\.nord-light & \{ color: var\(--navbar-inactive, var\(--navbar-accent\)\); \}/.test(
+          facets
+        )
     }
     expect(
       Object.entries(checks)
