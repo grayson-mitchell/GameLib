@@ -11,7 +11,7 @@ One row per finding in `85-REVIEW.md`. Every finding starts as `open`. `open` me
 
 Reconciled 2026-11-22 against `85-REVIEW-FIX.md` (iteration 1, scope critical_warning): 19 fixed, 2 skipped. B-WR-10 is a necessity finding, out of that scope, and stays `open` with the 21 info findings.
 
-Round 2 (review committed after the fixes; round 1 is at `5714cafea`) verified 16 of the 19 fixes and added seven `D-` rows, all `open`. D-WR-01, D-WR-02 and D-WR-03 reopen B-WR-02, B-WR-03 and C-WR-06.
+Round 2 (review committed after the fixes; round 1 is at `5714cafea`) verified 16 of the 19 fixes and added seven `D-` rows, all `open`. D-WR-01, D-WR-02 and D-WR-03 reopen B-WR-02, B-WR-03 and C-WR-06; all three were fixed in round-2 fix iteration 2 (`85-REVIEW-FIX.md`). The D-IN rows stay `open`.
 
 | ID | Severity | Finding | Disposition |
 |---|---|---|---|
@@ -58,9 +58,9 @@ Round 2 (review committed after the fixes; round 1 is at `5714cafea`) verified 1
 | C-IN-05 | info | Necessity: `tsEntries` is always `[]` | open |
 | C-IN-06 | info | Necessity: `StoreOptions` still carries options the mirror ignores | open |
 | C-IN-07 | info | `public/changelog.json` is internally inconsistent | open |
-| D-WR-01 | warning | The post-children store wait does not wait for the sidecar's reader, so late frames are still missed (reopens B-WR-02) | open |
-| D-WR-02 | warning | The capped `GAMELIB_STORE_BOOT` drops the core stores first, and the `truncated` marker has no reader (reopens B-WR-03) | open |
-| D-WR-03 | warning | `hydrateStoreSnapshot` now returns before the re-fetch it defers to has landed (reopens C-WR-06) | open |
+| D-WR-01 | warning | The post-children store wait does not wait for the sidecar's reader, so late frames are still missed (reopens B-WR-02) | fixed (f7f154b01) |
+| D-WR-02 | warning | The capped `GAMELIB_STORE_BOOT` drops the core stores first, and the `truncated` marker has no reader (reopens B-WR-03) | fixed (4c27efe9d) |
+| D-WR-03 | warning | `hydrateStoreSnapshot` now returns before the re-fetch it defers to has landed (reopens C-WR-06) | fixed (efe601a78) |
 | D-IN-01 | info | The store slice's queue is now owned by the context its own worker holds, so the worker thread can never end | open |
 | D-IN-02 | info | The Rust game-config name rule is now closed, and the TS rule is still the old deny list | open |
 | D-IN-03 | info | The temp-collision test can pass without colliding | open |
