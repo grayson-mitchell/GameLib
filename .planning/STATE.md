@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 86-21-PLAN.md
-last_updated: "2026-11-22T14:50:54.223Z"
+stopped_at: Completed 86-22-PLAN.md
+last_updated: "2026-11-22T15:12:59.092Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 86 execution started
-state_head: c80fc7f5411f724a83c55439a24d1df79b0a5a1e
+state_head: df3cc46f6061fe407441d27bf8322eba39feffaf
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 86 (Pure leaf services) — EXECUTING
-Plan: 21 of 26
+Plan: 22 of 26
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 86 execution started
 Progress: [██████████] 100%
@@ -405,6 +405,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 86 P19 | 25min | 3 tasks | 31 files |
 | Phase 86 P20 | 25min | 3 tasks | 30 files |
 | Phase 86 P21 | 55min | 3 tasks | 13 files |
+| Phase 86 P22 | 2h 10m | 3 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -805,6 +806,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 86]: 86-20: JS \s is spelled out as the exact WhiteSpace plus LineTerminator set (BOM in, NEL out) and proved over every UTF-16 code unit; the regex crate joins gamelib-info with no Unicode table feature so a stray \s or \d fails to compile
 - [Phase 86]: 86-20: umu sends no User-Agent (the recorded TS request carries none and the endpoint answers 200 without one); a non-list umu answer rejects with info_umu_get:bad-response as the TS threw
 - [Phase 86]: 86-21: HLTB credentials are an in-memory per-InfoCtx HltbState with one shared in-flight handshake; Accept-Encoding is not sent (Pitfall 3); Replay serves a rustOnly exchange before its tsOnly twin; gamesdb::get and hltb::get return Err exactly where the TS rejected outside its try (whole wiki lookup null)
+- [Phase 86]: 86-22: the wiki cache entry is built as an ordered Json object, not a serde Value (which sorts keys), so the wikigameinfo bytes equal the TS goldens; codeweavers is {macRating, linuxRating, slug}
+- [Phase 86]: 86-22: the five wiki sources run in one tokio join and a GamesDB or umu Err is mapped to the whole-lookup null only afterwards, as Promise.all left the others running; HowLongToBeat takes the raw title
+- [Phase 86]: 86-22: wiki drift cases run for every golden platform and are held in Whole mode against the golden result, so a Rust-only 403 empties a part and fails naming the paths; the live run passed all 8
 
 ### Pending Todos
 
@@ -1074,8 +1078,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T14:50:52.494Z
-Stopped at: Completed 86-21-PLAN.md
+Last session: 2026-11-22T15:12:57.359Z
+Stopped at: Completed 86-22-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

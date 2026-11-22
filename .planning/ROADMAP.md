@@ -562,7 +562,7 @@ Plans:
   3. Recorded fixtures exist for each previously untested directory before it is ported
   4. Each ported slice's TypeScript and sidecar registrations are deleted in this phase (the delete gate per slice passes)
 
-**Plans:** 21/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
+**Plans:** 22/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
 
 Plans:
 **Wave 1**
@@ -619,7 +619,7 @@ Plans:
 - [x] 86-21-PLAN.md — HowLongToBeat, GamesDB and the two D-23 GOG GETs in Rust
 
 **Wave 17** *(blocked on Wave 16 completion)*
-- [ ] 86-22-PLAN.md — Wiki aggregator in Rust; `getWikiGameInfo` native; one live drift run (Pitfall 11)
+- [x] 86-22-PLAN.md — Wiki aggregator in Rust; `getWikiGameInfo` native; one live drift run (Pitfall 11)
 
 **Wave 18** *(blocked on Wave 17 completion)*
 - [ ] 86-23-PLAN.md — umu shims, nonesteamgame wiki resolver, clear-cache shim; HLTB type moved to common
