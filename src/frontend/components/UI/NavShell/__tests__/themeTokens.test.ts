@@ -1348,8 +1348,12 @@ describe('Library sign-in row text contrast in every theme (F-49-R1-6)', () => {
     // of 4.5 matters, not the exact ratio a pixel capture would give.
     const OLD_ROW_COLOR = 'var(--text-default)'
     const background = declsAtDepthZero(rowBody, 'background')[0] ?? ''
+    // The live verdict was given on the pre-261122-qwk nord-light palette,
+    // which gamelib-light keeps verbatim. Since 261122-rz8, nord-light's banner
+    // is nord9, and the body text token nord0 reads 4.64:1 there, so nord-light
+    // no longer reproduces it.
     const expected = [
-      ['body.nord-light', 'fail'],
+      ['body.gamelib-light', 'fail'],
       ['body.midnightMirage', 'pass'],
       ['body.gruvbox_dark', 'pass'],
       ['body.dracula', 'pass']

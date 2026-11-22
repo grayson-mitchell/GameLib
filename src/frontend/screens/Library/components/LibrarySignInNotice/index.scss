@@ -104,9 +104,9 @@
   &__row--expired > svg {
     color: var(--status-danger, orange);
 
-    // nord-light (and gamelib-light, its verbatim copy) are the themes whose
-    // banner is a mid grey (#4c566a), and
-    // the global `--status-danger` (#f97881) is 2.82:1 on it against the 3:1
+    // gamelib-light (the pre-261122-qwk nord-light) is the theme whose banner
+    // is a mid grey (#4c566a); nord-light's banner is now Frost nord9. The
+    // global `--status-danger` (#f97881) is 2.82:1 on it against the 3:1
     // non-text floor; the other nine themes read 3.50 (dracula) to 7.25. A
     // lighter tint of the same red clears it at 4.35:1. A theme-scoped
     // override rather than a token change, following the NavTabs and
@@ -114,14 +114,15 @@
     // many unmeasured surfaces, and nord-light declares no light red token
     // (`--danger` #bf616a is 1.80:1 here). Gated for all 10 themes in
     // `themeTokens.test.ts`.
-    // 261122-qwk: nord-light is now palette-only, so its icon is nord13
-    // (#ebcb8b), 4.72:1 on the nord3 banner; no palette red clears 3:1 there
-    // (nord11 1.80, nord12 2.59) and yellow is Nord's attention colour.
+    // 261122-rz8: nord-light's banner is Frost nord9, where nord0 via
+    // --navbar-inactive reads 4.64:1 and no Aurora colour reaches 3:1
+    // (nord11 1.52, nord12 1.06, nord13 1.72, nord14 1.32, nord15 1.05). It is
+    // a token so custom copies on the old nord3 banner keep 6.40:1.
     // gamelib-light keeps the #ffb3b8 tint below.
     // NOT LIVE-VERIFIED: contrast arithmetic; the operator's next nord-light
     // look owes the appearance.
     body.nord-light & {
-      color: #ebcb8b;
+      color: var(--navbar-inactive);
     }
     // gamelib-light is the pre-261122-qwk nord-light, so it carries the same
     // override with the same value.
