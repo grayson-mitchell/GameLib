@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
-stopped_at: Completed 85-20-PLAN.md
-last_updated: "2026-11-22T05:01:26.595Z"
+stopped_at: Completed 85-21-PLAN.md
+last_updated: "2026-11-22T05:55:04.406Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 441e09a5eee1b928b3cfe4319fabd82b54fe81c5
+state_head: 6a3a77f1ed95212df23333788f48a9d76e612826
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 20 of 25
+Plan: 21 of 25
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
@@ -379,6 +379,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 85 P17 | 42 min | 3 tasks | 22 files |
 | Phase 85 P19 | 2h 18m | 3 tasks | 10 files |
 | Phase 85 P20 | 1h 24min | 3 tasks | 1 files |
+| Phase 85 P21 | 50min | 2 tasks | 102 files |
 
 ## Accumulated Context
 
@@ -737,6 +738,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: 85-19: version bumped to 0.11.0 so the Phase 85 build sorts above the v0.10.0 baseline
 - [Phase 85]: 85-20: Required literals row store write failed was IMPOSSIBLE (no emitter); run stopped; orchestrator applied A1 (refused a store write: write failed, renderer writes) and A3 (narrowed P2 pgrep)
 - [Phase 85]: 85-20: live gate scored 6 pass, 2 issue; SC3 proven (zero Keychain prompts across signed v0.10.0 -> v0.11.0); item 2 issue is precondition context (Humble/Epic never signed in on v0.10.0); item 3 GOG offline emptying is a todo, not a block on 85-21
+- [Phase 85]: 85-21: store/migrations keeps its store-table row as an excluded no-TS-store row (D-07 record; corpus tableKey); the excluded-family rule stays
+- [Phase 85]: 85-21: every TS store is a mirror; GameLibStore accepts any resolvable store key but the excluded row (isMirrorStoreKey); the recognised-cache list decides only Rust ownership and the TS push filter
+- [Phase 85]: 85-21: with no home directory the shell's store reads and writes are errors, not sidecar forwards; the store:ts-* channels and applyStoreWrite are gone
 
 ### Pending Todos
 
@@ -1003,8 +1007,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T05:01:24.847Z
-Stopped at: Completed 85-20-PLAN.md
+Last session: 2026-11-22T05:55:02.763Z
+Stopped at: Completed 85-21-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
