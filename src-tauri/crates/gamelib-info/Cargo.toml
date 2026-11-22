@@ -38,6 +38,10 @@ flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 # NFKD for the CrossOver matching key and the CodeWeavers slug (`String.prototype.normalize('NFKD')`).
 # The version gamelib-safety already locks.
 unicode-normalization = "0.1"
+# The wiki wikitext patterns (86-20): every pattern spells its JS semantics out (`.`, `\s`, `\d`), so no
+# Unicode table feature is needed (and a stray `\s` or `\d` fails to compile rather than quietly matching
+# the Rust set). The version the lockfile already holds (a transitive dependency).
+regex = { version = "1", default-features = false, features = ["std", "perf"] }
 # Fixed-offset civil time only (the cache timestamps): no tz database is read.
 jiff = { version = "0.2", default-features = false, features = ["std"] }
 

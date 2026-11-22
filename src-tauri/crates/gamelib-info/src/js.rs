@@ -66,6 +66,41 @@ pub fn to_js_text(value: &Value) -> String {
     }
 }
 
+/// A JS `TypeError`: a property read on `undefined` or `null`. The sources catch it with the rest of
+/// what a failed lookup throws.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TypeError;
+
+/// `value.key` over a parsed JSON answer, where `None` is `undefined`. Reading a property of `undefined`
+/// or `null` throws; any other value without that key reads as `undefined` (`None`). A text, number or
+/// boolean has no such own property either (the TS never reads a prototype member through this).
+pub fn prop<'a>(value: Option<&'a Value>, key: &str) -> Result<Option<&'a Value>, TypeError> {
+    match value {
+        None | Some(Value::Null) => Err(TypeError),
+        Some(Value::Object(map)) => Ok(map.get(key)),
+        Some(_) => Ok(None),
+    }
+}
+
+/// `value?.key`: `undefined` or `null` read as `undefined` instead of throwing.
+pub fn opt_prop<'a>(value: Option<&'a Value>, key: &str) -> Result<Option<&'a Value>, TypeError> {
+    match value {
+        None | Some(Value::Null) => Ok(None),
+        other => prop(other, key),
+    }
+}
+
+/// `value[index]`, which throws on `undefined` and `null` like [`prop`]: an array's element, an
+/// object's `"<index>"` key, and `undefined` for anything else.
+pub fn index(value: Option<&Value>, index: usize) -> Result<Option<&Value>, TypeError> {
+    match value {
+        None | Some(Value::Null) => Err(TypeError),
+        Some(Value::Array(items)) => Ok(items.get(index)),
+        Some(Value::Object(map)) => Ok(map.get(&index.to_string())),
+        Some(_) => Ok(None),
+    }
+}
+
 /// The characters `removeSpecialcharacters` deletes: the class of
 /// `/[:|/|*|?|<|>|\\|&|{|}|%|$|@|`|!|™|+|'|"|®]/gi`, where every `|` is a literal member (so `|` itself
 /// is deleted). The `i` flag changes nothing: none of the members has a case.
@@ -143,6 +178,33 @@ mod tests {
         ] {
             assert_eq!(to_js_text(&value), want, "{value}");
         }
+    }
+
+    #[test]
+    fn property_reads_throw_on_undefined_and_null_only() {
+        let data = json!({ "a": { "b": [ { "c": 1 } ] }, "n": null, "s": "text" });
+        let root = Some(&data);
+        assert_eq!(prop(root, "a").unwrap(), data.get("a"));
+        assert_eq!(prop(root, "missing").unwrap(), None);
+        // `data.missing.x` throws; `data.n.x` throws; `data.missing?.x` and `data.n?.x` do not.
+        assert_eq!(prop(prop(root, "missing").unwrap(), "x"), Err(TypeError));
+        assert_eq!(prop(prop(root, "n").unwrap(), "x"), Err(TypeError));
+        assert_eq!(opt_prop(prop(root, "missing").unwrap(), "x"), Ok(None));
+        assert_eq!(opt_prop(prop(root, "n").unwrap(), "x"), Ok(None));
+        // A text has no own `x`.
+        assert_eq!(prop(prop(root, "s").unwrap(), "x"), Ok(None));
+        // `a.b[0].c`, and `[0]` of an empty list is undefined while `[0]` of undefined throws.
+        let b = prop(prop(root, "a").unwrap(), "b").unwrap();
+        assert_eq!(
+            opt_prop(index(b, 0).unwrap(), "c").unwrap(),
+            Some(&json!(1))
+        );
+        assert_eq!(index(b, 1).unwrap(), None);
+        assert_eq!(index(prop(root, "missing").unwrap(), 0), Err(TypeError));
+        let empty = json!([]);
+        assert_eq!(index(Some(&empty), 0).unwrap(), None);
+        let object = json!({ "0": "zero" });
+        assert_eq!(index(Some(&object), 0).unwrap(), Some(&json!("zero")));
     }
 
     // Vectors from `removeSpecialcharacters` in node 22.
