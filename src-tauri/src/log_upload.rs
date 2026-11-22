@@ -657,6 +657,7 @@ mod tests {
             paste,
             app_version: "9.9.9".to_string(),
             store_reads: NativeCtx::for_tests(Arc::new(NoHost), None).store_reads,
+            store_queue: Default::default(),
         });
         Rig {
             _home: home,

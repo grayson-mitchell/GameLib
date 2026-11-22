@@ -72,6 +72,9 @@ pub(crate) struct NativeCtx {
     /// The renderer's store reads and writes (85-16, 85-17): the user-data directory the boot opened
     /// its stores under.
     pub(crate) store_reads: store_native::StoreReads,
+    /// The store slice's queue, set once by [`NativeRouter`]: the confirmed write goes through it so
+    /// it is applied in send order with the fire-and-forget writes (B-WR-08). Empty until then.
+    pub(crate) store_queue: std::sync::OnceLock<SliceQueue>,
 }
 
 #[cfg(test)]
@@ -91,6 +94,7 @@ impl NativeCtx {
             paste: Arc::new(log_upload::OfflinePaste),
             app_version: "0.0.0-test".to_string(),
             store_reads: store_native::StoreReads { config: None },
+            store_queue: Default::default(),
         }
     }
 }
@@ -120,7 +124,46 @@ pub(crate) enum SendPayload {
     StoreWrite(store_native::RendererWrite),
     /// `storeNew` (85-17): a store registration; the renderer's options are never used.
     StoreNew(store_native::StoreNew),
+    /// `sidecar:store-set-checked` (B-WR-08): a confirmed write queued behind the earlier sends,
+    /// answered through its reply slot. Built by the invoke handler, never by a send validator.
+    StoreChecked(store_native::RendererWrite, CheckedReply),
 }
+
+/// Where the store slice worker answers a confirmed write: a one-slot channel the invoke handler
+/// awaits.
+#[derive(Clone)]
+pub(crate) struct CheckedReply(
+    Arc<std::sync::Mutex<Option<tauri::async_runtime::Sender<Result<bool, String>>>>>,
+);
+
+impl CheckedReply {
+    pub(crate) fn new() -> (Self, tauri::async_runtime::Receiver<Result<bool, String>>) {
+        let (tx, rx) = tauri::async_runtime::channel(1);
+        (Self(Arc::new(std::sync::Mutex::new(Some(tx)))), rx)
+    }
+
+    /// Answers once; a second answer, or one nobody awaits, is dropped.
+    pub(crate) fn send(&self, result: Result<bool, String>) {
+        let taken = self.0.lock().unwrap_or_else(|e| e.into_inner()).take();
+        if let Some(tx) = taken {
+            let _ = tx.try_send(result);
+        }
+    }
+}
+
+impl std::fmt::Debug for CheckedReply {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("CheckedReply")
+    }
+}
+
+impl PartialEq for CheckedReply {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl Eq for CheckedReply {}
 
 /// A native send validator: positional args in, the validated payload or a fixed category literal
 /// out. It is pure and bounded, so it runs on the caller's (main) thread.
@@ -178,6 +221,7 @@ pub(crate) struct NativeSendJob {
 type QueuedJob = (NativeSendJob, Option<Registrant>);
 
 /// The FIFO hand-off to one slice's worker thread.
+#[derive(Clone)]
 pub(crate) struct SliceQueue {
     tx: Sender<QueuedJob>,
     /// Set for a slice whose jobs must not be lost at exit (B-WR-01): each enqueue holds a
@@ -318,6 +362,14 @@ fn run_send_job(ctx: &Arc<NativeCtx>, job: NativeSendJob) -> Result<(), String> 
             store_native::run_send_write(ctx, channel, &write);
             Ok(())
         }
+        (store_native::STORE_SET_CHECKED_CHANNEL, SendPayload::StoreChecked(write, reply)) => {
+            reply.send(store_native::set_checked_blocking(
+                &ctx.store_host,
+                &ctx.store_reads,
+                &write,
+            ));
+            Ok(())
+        }
         (store_native::STORE_NEW_CHANNEL, SendPayload::StoreNew(new)) => {
             store_native::run_store_new(ctx, &new);
             Ok(())
@@ -422,6 +474,9 @@ impl NativeRouter {
                     move |job| run_send_job(&worker_ctx, job),
                 ),
             );
+        }
+        if let Some(queue) = queues.get(STORE_SLICE) {
+            let _ = ctx.store_queue.set(queue.clone());
         }
         Self {
             ctx,

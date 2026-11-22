@@ -41,7 +41,9 @@ use gamelib_store::table::{row_for_key, table, TableRow};
 use serde_json::{json, Map, Value};
 
 use crate::ipc_contract::{StoreReadOnlyNoticeArgs, StoreReadOnlyNoticeArgsTsEntriesItemReason};
-use crate::native_router::{invalid_args, NativeCtx, NativeFuture};
+use crate::native_router::{
+    invalid_args, CheckedReply, NativeCtx, NativeFuture, NativeSendJob, SendPayload,
+};
 use crate::relay_commands::echo_channel;
 use crate::store_boot::is_rust_owned;
 use crate::store_policy::{
@@ -466,9 +468,27 @@ fn parse_store_set_checked(args: &[Value]) -> Result<RendererWrite, String> {
 
 /// The `sidecar:store-set-checked` invoke handler. A refusal resolves `false`, never an error, as the
 /// sidecar's did; only bad args (the marker) or a missing store directory reject.
+///
+/// The write is queued on the same `store` slice worker as `storeSet` and `storeDelete`, so a
+/// confirmed write and the fire-and-forget ones are applied in the order they were sent (B-WR-08);
+/// under the sidecar, Node's one thread ordered them. With no slice queue (a bare test context) it
+/// applies on a blocking thread.
 pub(crate) fn store_set_checked(ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
     Box::pin(async move {
         let write = parse_store_set_checked(&args)?;
+        if let Some(queue) = ctx.store_queue.get() {
+            let (reply, mut answer) = CheckedReply::new();
+            queue.enqueue(NativeSendJob {
+                channel: STORE_SET_CHECKED_CHANNEL,
+                payload: SendPayload::StoreChecked(write, reply),
+            })?;
+            // A job dropped unanswered (the exit drain started) closes the channel.
+            return answer
+                .recv()
+                .await
+                .ok_or_else(|| "store set-checked write was dropped at exit".to_string())?
+                .map(Value::Bool);
+        }
         tauri::async_runtime::spawn_blocking(move || {
             set_checked_blocking(&ctx.store_host, &ctx.store_reads, &write).map(Value::Bool)
         })
@@ -1133,6 +1153,60 @@ pub(crate) mod tests {
                 "valueJson": "\"light\""
             })]
         );
+    }
+
+    #[test]
+    fn store_native_a_confirmed_write_is_applied_in_send_order_with_the_sends_before_it() {
+        let rig = write_rig("gamelib-store-native-order-");
+        write(
+            &rig.home,
+            "store/config.json",
+            "{\n\t\"theme\": \"dark\"\n}",
+        );
+        let ctx = Arc::new(NativeCtx {
+            store_host: Arc::clone(&rig.host),
+            store_reads: StoreReads {
+                config: Some(ReadConfig {
+                    user_data: rig.home.root().to_path_buf(),
+                }),
+            },
+            ..NativeCtx::for_tests(Arc::new(NullHost), None)
+        });
+        let _router = crate::native_router::NativeRouter::with_shutdown(
+            Arc::clone(&ctx),
+            gamelib_core::shutdown::Shutdown::new(),
+        );
+        let queue = ctx
+            .store_queue
+            .get()
+            .expect("the router sets the store queue");
+        for round in 0..25 {
+            // A fire-and-forget write, then a confirmed one on the same key: the confirmed one was
+            // sent last, so it must be the value left behind.
+            queue
+                .enqueue(NativeSendJob {
+                    channel: STORE_SET_CHANNEL,
+                    payload: SendPayload::StoreWrite(set(
+                        "configStore",
+                        "theme",
+                        json!(format!("sent-{round}")),
+                    )),
+                })
+                .unwrap();
+            let args = vec![
+                json!("configStore"),
+                json!("theme"),
+                json!(format!("confirmed-{round}")),
+            ];
+            let done =
+                tauri::async_runtime::block_on(store_set_checked(Arc::clone(&ctx), args)).unwrap();
+            assert_eq!(done, Value::Bool(true));
+            let text = fs::read_to_string(rig.home.root().join("store/config.json")).unwrap();
+            assert!(
+                text.contains(&format!("\"theme\": \"confirmed-{round}\"")),
+                "round {round}: {text}"
+            );
+        }
     }
 
     #[test]

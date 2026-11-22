@@ -1909,6 +1909,7 @@ fn run_setup(
         store_reads: store_native::StoreReads {
             config: log_paths_user_data.map(|user_data| store_native::ReadConfig { user_data }),
         },
+        store_queue: Default::default(),
     })));
     let state = spawn_sidecar_state(app, store_boot_env.as_deref())?;
     start_single_instance_accept_loop(app, &state, primary_listener);
