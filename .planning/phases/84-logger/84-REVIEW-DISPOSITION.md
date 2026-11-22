@@ -111,8 +111,12 @@ findings:
     severity: info
     disposition: fixed
     title: "The settle-helper doc overstates the fatal path: the guard exits at its own 1,500 ms cap, not 2 s"
-open: 0
-total: 27
+  - id: IN-15
+    severity: info
+    disposition: open
+    title: "The IN-14 doc says the fatal entry still reaches stdout past a never-settling link; false when the stuck link is on the general log"
+open: 1
+total: 28
 recorded: 2026-11-22T00:00:00.000Z
 ---
 
@@ -147,6 +151,7 @@ recorded: 2026-11-22T00:00:00.000Z
 | WR-13 | warning | fixed | REVIEW-FIX r5: `2a3d6d6ed` |
 | IN-13 | info | fixed | REVIEW-FIX r5: `d3cdf6944` (doc-only) |
 | IN-14 | info | fixed | REVIEW-FIX r5: `d69f19327` (doc-only) |
+| IN-15 | info | open | REVIEW r6 |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
