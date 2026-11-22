@@ -562,7 +562,7 @@ Plans:
   3. Recorded fixtures exist for each previously untested directory before it is ported
   4. Each ported slice's TypeScript and sidecar registrations are deleted in this phase (the delete gate per slice passes)
 
-**Plans:** 17/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
+**Plans:** 18/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
 
 Plans:
 **Wave 1**
@@ -607,7 +607,7 @@ Plans:
 - [x] 86-17-PLAN.md — ITAD TS deleted; shared coverage file; cache rows kept; sidecar key bake removed
 
 **Wave 13** *(blocked on Wave 12 completion)*
-- [ ] 86-18-PLAN.md — GOG discounts in Rust behind the token resolver (D-24); TS fetcher deleted
+- [x] 86-18-PLAN.md — GOG discounts in Rust behind the token resolver (D-24); TS fetcher deleted
 
 **Wave 14** *(blocked on Wave 13 completion)*
 - [ ] 86-19-PLAN.md — CrossOver index in Rust; rating map behind the game-list resolver; shared runner table
