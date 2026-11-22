@@ -257,7 +257,99 @@ const CASES: &[Case] = &[
         mode: Mode::Subset,
         needs_env: None,
     },
+    // The wiki game info lookup (86-22, D-12, Pitfall 11): the whole aggregator over the live sources
+    // (PCGamingWiki, AppleGamingWiki, GamesDB, HowLongToBeat, gog.com, ProtonDB, the Steam Deck report, the
+    // CodeWeavers index and umu), asked for the three titles of the 86-06 goldens on every platform the
+    // goldens cover, each held against that golden's result. A source that answers Rust 403 where the TS
+    // got 200 empties its part of the result, which is a missing key path here (the golden's
+    // `pcgamingwiki`, `howlongtobeat`, `steamInfo` and so on). They need no key. The platform is a
+    // context parameter, so a run from one machine also asks the Linux-only sources.
+    wiki_case(
+        "wiki-steam-mac",
+        Platform::Mac,
+        STEAM_GAME,
+        "wiki/expected/live-steam-mac/result.json",
+    ),
+    wiki_case(
+        "wiki-steam-linux",
+        Platform::Linux,
+        STEAM_GAME,
+        "wiki/expected/live-steam-linux/result.json",
+    ),
+    wiki_case(
+        "wiki-steam-windows",
+        Platform::Windows,
+        STEAM_GAME,
+        "wiki/expected/live-steam-windows/result.json",
+    ),
+    wiki_case(
+        "wiki-epic-mac",
+        Platform::Mac,
+        EPIC_GAME,
+        "wiki/expected/live-epic-mac/result.json",
+    ),
+    wiki_case(
+        "wiki-epic-linux",
+        Platform::Linux,
+        EPIC_GAME,
+        "wiki/expected/live-epic-linux/result.json",
+    ),
+    wiki_case(
+        "wiki-gog-mac",
+        Platform::Mac,
+        GOG_GAME,
+        "wiki/expected/live-gog-mac/result.json",
+    ),
+    wiki_case(
+        "wiki-gog-linux",
+        Platform::Linux,
+        GOG_GAME,
+        "wiki/expected/live-gog-linux/result.json",
+    ),
+    // The umu id on its own (the Epic title's codename, lower-cased, against the `egs` store).
+    Case {
+        id: "wiki-umu",
+        slice: "wiki",
+        platform: Platform::Linux,
+        setup: &[],
+        op: "info_umu_get",
+        args: r#"[{"appName":"Ginger","runner":"legendary"}]"#,
+        read: Read::Answer,
+        golden: "wiki/expected/umu-hit-epic-codename-lower-cased/result.json",
+        pointer: "/ops/0/result",
+        mode: Mode::Whole,
+        needs_env: None,
+    },
 ];
+
+/// The three titles of the live 86-06 wiki goldens: Elden Ring on Steam, Cyberpunk 2077 on Epic (app name
+/// `Ginger`) and on GOG.
+const STEAM_GAME: &str = r#"[{"title":"Elden Ring","appName":"1245620","runner":"steam"}]"#;
+const EPIC_GAME: &str = r#"[{"title":"Cyberpunk 2077","appName":"Ginger","runner":"legendary"}]"#;
+const GOG_GAME: &str = r#"[{"title":"Cyberpunk 2077","appName":"1423049311","runner":"gog"}]"#;
+
+/// One wiki case: `info_wiki_get` over a fresh profile, held against the first op's result of the live
+/// golden at `golden` (the whole result object, every key path of it).
+const fn wiki_case(
+    id: &'static str,
+    platform: Platform,
+    args: &'static str,
+    golden: &'static str,
+) -> Case {
+    Case {
+        id,
+        slice: "wiki",
+        platform,
+        setup: &[],
+        op: "info_wiki_get",
+        args,
+        read: Read::Answer,
+        golden,
+        pointer: "/ops/0/result",
+        mode: Mode::Whole,
+        needs_env: None,
+    }
+}
 
 /// The fixed library of the CrossOver cases: two Steam games the index rates by Steam id and one title it
 /// does not have (the 86-06 live case's own games, so the golden holds a value for each).
@@ -946,6 +1038,115 @@ mod tests {
         let err = run_case(case, replay, no_keys(), "0.11.0", &golden_root()).unwrap_err();
         assert!(
             err.contains(".1245620 is null where the golden have number"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn the_wiki_cases_are_in_the_table_and_need_no_key() {
+        let cases: Vec<&Case> = CASES.iter().filter(|c| c.slice == "wiki").collect();
+        assert!(cases.len() >= 4, "a Steam, an Epic and a GOG title and umu");
+        assert!(cases.iter().all(|c| c.needs_env.is_none()));
+        for runner in ["steam", "legendary", "gog"] {
+            assert!(
+                cases
+                    .iter()
+                    .any(|c| c.op == "info_wiki_get" && c.args.contains(runner)),
+                "{runner}"
+            );
+        }
+        // Every platform the goldens cover is asked for the Steam title.
+        for platform in [Platform::Mac, Platform::Linux, Platform::Windows] {
+            assert!(cases
+                .iter()
+                .any(|c| c.platform == platform && c.args.contains("steam")));
+        }
+        assert!(cases.iter().any(|c| c.op == "info_umu_get"));
+        for case in cases {
+            assert_eq!(skip_reason(case, |_| None), None, "{}", case.id);
+        }
+    }
+
+    /// The wiki recording for every request but the CrossOver index asset, which has its own.
+    struct Routed {
+        index: Arc<Replay>,
+        wiki: Arc<Replay>,
+    }
+
+    impl Http for Routed {
+        fn send(&self, request: gamelib_info::http::Request) -> gamelib_info::http::HttpFuture<'_> {
+            if request.url.contains("/crossover-index/") {
+                self.index.send(request)
+            } else {
+                self.wiki.send(request)
+            }
+        }
+    }
+
+    #[test]
+    fn a_recorded_service_that_matches_the_golden_passes_every_wiki_case() {
+        for (case_id, recording) in [
+            ("wiki-steam-mac", "live-steam-mac"),
+            ("wiki-steam-linux", "live-steam-linux"),
+            ("wiki-steam-windows", "live-steam-windows"),
+            ("wiki-epic-mac", "live-epic-mac"),
+            ("wiki-epic-linux", "live-epic-linux"),
+            ("wiki-gog-mac", "live-gog-mac"),
+            ("wiki-gog-linux", "live-gog-linux"),
+        ] {
+            let case = CASES.iter().find(|c| c.id == case_id).unwrap();
+            let replay = recorded("wiki", recording);
+            // The macOS cases read the CrossOver index, which the TS oracle seeded into the profile
+            // instead of fetching: its live fetch is the crossover slice's recording.
+            let index = recorded("crossover", "live-fresh-fetch-mac");
+            let routed = Arc::new(Routed {
+                index: index.clone(),
+                wiki: replay.clone(),
+            });
+            let outcome = run_case(case, routed, no_keys(), "0.11.0", &golden_root());
+            assert_eq!(outcome, Ok(String::new()), "{case_id}");
+            // The GOG recordings hold the requests TS made and Rust does not, flagged `tsOnly`.
+            replay.finish().expect(case_id);
+            if case.platform == Platform::Mac {
+                index.finish().expect(case_id);
+            }
+        }
+    }
+
+    /// Answers every request with one status and an empty object.
+    struct Refusing(u16);
+
+    impl Http for Refusing {
+        fn send(
+            &self,
+            _request: gamelib_info::http::Request,
+        ) -> gamelib_info::http::HttpFuture<'_> {
+            let status = self.0;
+            Box::pin(async move {
+                Ok(gamelib_info::http::Response {
+                    status,
+                    headers: Vec::new(),
+                    body: b"{}".to_vec(),
+                })
+            })
+        }
+    }
+
+    /// Pitfall 11: sources that answer Rust 403 empty their part of the result, and that is a FAIL naming
+    /// the key paths the golden has and the live result lacks, not a pass.
+    #[test]
+    fn sources_that_answer_403_fail_the_wiki_case_with_the_missing_paths() {
+        let case = CASES.iter().find(|c| c.id == "wiki-steam-windows").unwrap();
+        let err = run_case(
+            case,
+            Arc::new(Refusing(403)),
+            no_keys(),
+            "0.11.0",
+            &golden_root(),
+        )
+        .unwrap_err();
+        assert!(
+            err.contains(".howlongtobeat is null where the golden have object"),
             "{err}"
         );
     }
