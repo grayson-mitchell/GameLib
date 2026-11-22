@@ -2,7 +2,7 @@
 phase: 85-store-host-config-and-versioned-migrations
 source: 85-REVIEW.md
 created: 2026-11-22
-findings: 50
+findings: 53
 ---
 
 # Phase 85: Code Review Disposition
@@ -14,6 +14,8 @@ Reconciled 2026-11-22 against `85-REVIEW-FIX.md` (iteration 1, scope critical_wa
 Round 2 (review committed after the fixes; round 1 is at `5714cafea`) verified 16 of the 19 fixes and added seven `D-` rows, all `open`. D-WR-01, D-WR-02 and D-WR-03 reopen B-WR-02, B-WR-03 and C-WR-06; all three were fixed in round-2 fix iteration 2 (`85-REVIEW-FIX.md`). The D-IN rows stay `open`.
 
 All 22 round-1 warnings were triaged in 85 UAT (Test 3, 2026-11-22): 19 fixed (B-WR-02, B-WR-03 and C-WR-06 completed in round 2), A-WR-03 won't fix, C-WR-01 and B-WR-10 deferred to todos. The info rows (round 1 and round 2) stay `open`; they were not part of that triage.
+
+Round 3 (`execute-phase` code-review gate, after the round-2 fixes) verified D-WR-01 and D-WR-02 and added the `E-` rows, all `open`. E-WR-01 reopens D-WR-03.
 
 | ID | Severity | Finding | Disposition |
 |---|---|---|---|
@@ -67,3 +69,6 @@ All 22 round-1 warnings were triaged in 85 UAT (Test 3, 2026-11-22): 19 fixed (B
 | D-IN-02 | info | The Rust game-config name rule is now closed, and the TS rule is still the old deny list | open |
 | D-IN-03 | info | The temp-collision test can pass without colliding | open |
 | D-IN-04 | info | The renderer still applies an empty-segment key to its own snapshot optimistically | open |
+| E-WR-01 | warning | `settleRefetches` returns while a queued second re-fetch is still starting, so the store can still be unhydrated at mount (reopens D-WR-03) | open |
+| E-IN-01 | info | The 5 s re-fetch bound is nested inside the caller's 8 s race, so a slow snapshot makes the bound unreachable (follows D-WR-03) | open |
+| E-IN-02 | info | `ReaderDone::mark` is not panic-safe, and a read error sets it with the pipe still open (follows D-WR-01) | open |
