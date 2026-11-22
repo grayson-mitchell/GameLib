@@ -1,6 +1,8 @@
 // Phase 84 plan 04: the per-target LogWriter facade. It writes no file; every assertion is on the
 // frames the process-wide forwarder hands to a captured transport.
 
+import { LOG_FLUSH_TIMEOUT_MS } from '../forwarder'
+
 import type {
   LogFrame,
   LogFrameBatch,
@@ -280,6 +282,87 @@ describe('LogWriter facade over the forwarder', () => {
     expect(entries).toHaveLength(2)
     expect(entries[0]).toMatchObject({ line: { level: 'INFO', msg: 'before' } })
     expect(entries[1]).toEqual({ raw: 'after\n' })
+  })
+
+  describe('flush waits for the writer-held Promise messages (WR-09)', () => {
+    /** True once `promise` has settled, checked after a few real macrotask turns. */
+    async function settledAfterTurns(promise: Promise<void>): Promise<boolean> {
+      let settled = false
+      void promise.then(() => {
+        settled = true
+      })
+      for (let i = 0; i < 5; i += 1) {
+        await new Promise<void>((resolve) => setImmediate(resolve))
+      }
+      return settled
+    }
+
+    it('a flush during a pending structured Promise message waits for it and for the write queued behind it', async () => {
+      const { index, LogWriter, frames } = load()
+      const w = new LogWriter(GAME, false)
+      let release: (v: string) => void = () => undefined
+      const slow = new Promise<string>((resolve) => {
+        release = resolve
+      })
+      void w.logInfo(slow)
+      void w.writeString('queued behind\n')
+      const flushing = index.flushLogForwarder()
+      expect(await settledAfterTurns(flushing)).toBe(false)
+      release('slow line')
+      await flushing
+      const entries = batchesFor(frames, 'game').flatMap((b) => b.entries)
+      expect(entries).toHaveLength(2)
+      expect(entries[0]).toMatchObject({
+        line: { level: 'INFO', msg: 'slow line' }
+      })
+      expect(entries[1]).toEqual({ raw: 'queued behind\n' })
+    })
+
+    it('a flush during a pending writeString(promise) waits for it and for the write queued behind it', async () => {
+      const { index, LogWriter, frames } = load()
+      const w = new LogWriter(GAME, false)
+      let release: (v: string) => void = () => undefined
+      const slow = new Promise<string>((resolve) => {
+        release = resolve
+      })
+      void w.writeString(slow)
+      void w.logInfo('queued behind')
+      const flushing = index.flushLogForwarder()
+      expect(await settledAfterTurns(flushing)).toBe(false)
+      release('slow chunk\n')
+      await flushing
+      const entries = batchesFor(frames, 'game').flatMap((b) => b.entries)
+      expect(entries).toHaveLength(2)
+      expect(entries[0]).toEqual({ raw: 'slow chunk\n' })
+      expect(entries[1]).toMatchObject({ line: { msg: 'queued behind' } })
+    })
+
+    it('a flush still resolves within its bound when the Promise message never settles', async () => {
+      jest.useFakeTimers()
+      try {
+        const { index, LogWriter, frames } = load()
+        const w = new LogWriter(GAME, false)
+        void w.logInfo(new Promise<string>(() => undefined))
+        void w.logInfo('stuck behind')
+        // Another writer's line is still handed to the transport.
+        void new LogWriter({ kind: 'runner', runner: 'steam' }, false).logInfo(
+          'other writer'
+        )
+        let flushed = false
+        const flushing = index.flushLogForwarder().then(() => {
+          flushed = true
+        })
+        await jest.advanceTimersByTimeAsync(LOG_FLUSH_TIMEOUT_MS - 1)
+        expect(flushed).toBe(false)
+        await jest.advanceTimersByTimeAsync(2)
+        await flushing
+        expect(flushed).toBe(true)
+        expect(batchesFor(frames, 'runner')).toHaveLength(1)
+        expect(batchesFor(frames, 'game')).toEqual([])
+      } finally {
+        jest.useRealTimers()
+      }
+    })
   })
 
   it('accepts a 255-byte appName and one with spaces', async () => {

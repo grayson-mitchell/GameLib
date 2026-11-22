@@ -253,6 +253,12 @@ export class LogForwarder {
   /** Per writer key: the tail of the chain of Promise-valued messages not yet enqueued. */
   readonly #chains = new Map<string, Promise<void>>()
   /**
+   * Links a target writer holds on its own chain (a Promise-valued message and the writes queued
+   * behind it, WR-09): `flush` waits on these exactly as it does on `#chains`. A link leaves the set
+   * when it settles, so the set holds only work in flight.
+   */
+  readonly #writerLinks = new Set<Promise<unknown>>()
+  /**
    * Targets whose rotation was claimed by an entry that never reached a frame (evicted, or its
    * Promise message rejected): the next entry enqueued for the target carries the rotation instead.
    * Instance state, not module state (moduleStateCensus).
@@ -326,6 +332,18 @@ export class LogForwarder {
   }
 
   /**
+   * Registers a pending link of a target writer's own chain, so `flush` waits for it (bounded, like
+   * the forwarder's own chains). Never throws; a link that rejects is still dropped from the set.
+   */
+  trackSettle(link: Promise<unknown>): void {
+    this.#writerLinks.add(link)
+    const drop = (): void => {
+      this.#writerLinks.delete(link)
+    }
+    link.then(drop, drop)
+  }
+
+  /**
    * Records that a rotation claimed for `target` did not reach a frame, so the next entry queued for
    * that target carries it (WR-05). A general target never rotates, so it owes nothing.
    */
@@ -393,13 +411,14 @@ export class LogForwarder {
 
   /**
    * Resolves once everything queued so far has been handed to the transport and its write callback
-   * has run. It always waits for the Promise-valued messages in flight first (bounded), so with no
-   * transport bound it returns after that chain wait, without a transport wait, and not at once: a
-   * message that never settles holds it for the whole timeout. The whole call, the wait on
-   * Promise-valued messages and the wait on the transport together, takes at most
-   * `LOG_FLUSH_TIMEOUT_MS` (one deadline taken at entry, WR-06), so a message that never settles
-   * cannot hold it longer, and the lines of other writers are still handed to the transport. Never
-   * rejects. The fatal `uncaughtException` guard awaits this before exiting, so it must not hang.
+   * has run. It always waits for the Promise-valued messages in flight first (bounded): those held
+   * in the forwarder's own chains and those a target writer holds on its own chain, with the writes
+   * queued behind them (`trackSettle`, WR-09). So with no transport bound it returns after that
+   * chain wait, without a transport wait, and not at once: a message that never settles holds it
+   * for the whole timeout. The whole call, the wait on Promise-valued messages and the wait on the
+   * transport together, takes at most `LOG_FLUSH_TIMEOUT_MS` (one deadline taken at entry, WR-06),
+   * so a message that never settles cannot hold it longer, and the lines of other writers are
+   * still handed to the transport. Never rejects. The fatal `uncaughtException` guard awaits this before exiting, so it must not hang.
    */
   async flush(): Promise<void> {
     const deadline = Date.now() + this.#flushTimeoutMs
@@ -428,9 +447,12 @@ export class LogForwarder {
     }
   }
 
-  /** Waits for the Promise-valued messages in flight, giving up at `deadline` (WR-06). */
+  /**
+   * Waits for the Promise-valued messages in flight, the forwarder's own and the target writers'
+   * (WR-09), giving up at `deadline` (WR-06).
+   */
   async #settleChains(deadline: number): Promise<void> {
-    while (this.#chains.size > 0) {
+    while (this.#chains.size > 0 || this.#writerLinks.size > 0) {
       const left = deadline - Date.now()
       if (left <= 0) return
       let timer: ReturnType<typeof setTimeout> | undefined
@@ -440,7 +462,9 @@ export class LogForwarder {
         timer.unref?.()
       })
       const timedOut = await Promise.race([
-        Promise.all([...this.#chains.values()]).then(() => false),
+        Promise.all([...this.#chains.values(), ...this.#writerLinks]).then(
+          () => false
+        ),
         expired
       ])
       clearTimeout(timer)

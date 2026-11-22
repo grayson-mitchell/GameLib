@@ -100,6 +100,15 @@ function oweLogRotation(target: LogFrameTarget): void {
   logForwarder.oweRotation(target)
 }
 
+/**
+ * Registers a pending link of a target writer's own chain with the forwarder, so `flush` (the fatal
+ * exit guard, `releaseOnStdinEof`) waits for a Promise-valued message the writer holds (WR-09).
+ * Bound at call time like `enqueueLogEntry`.
+ */
+function trackLogSettle(link: Promise<unknown>): void {
+  logForwarder.trackSettle(link)
+}
+
 /** Queues one structured line for a typed target (the facade's `logDebug|Info|Warning|Error`). */
 function logLine(
   target: LogFrameTarget,
@@ -200,6 +209,7 @@ export {
   bindLogTransport,
   enqueueLogEntry,
   oweLogRotation,
+  trackLogSettle,
   logLine,
   flushLogForwarder,
   initHeadless,

@@ -2,7 +2,13 @@ import { LogPrefix } from './constants'
 import { logTargetRefusal } from './forwarder'
 // Bound at call time, never at load: `./index` imports this file for its two constructors, so a
 // load-time use would meet a half-initialised module.
-import { enqueueLogEntry, logLine, logWarning, oweLogRotation } from './index'
+import {
+  enqueueLogEntry,
+  logLine,
+  logWarning,
+  oweLogRotation,
+  trackLogSettle
+} from './index'
 import { stringifyLogValue } from './stringifyLogValue'
 
 import type { LogFrameTarget } from 'common/types/sidecarTransport'
@@ -128,6 +134,8 @@ export default class LogWriter {
       this.#pending -= 1
     }
     this.#tail = link.then(done, done)
+    // The forwarder's flush must see this link too, or a fatal exit loses the held lines (WR-09).
+    trackLogSettle(this.#tail)
   }
 
   /** Sends one structured line (formatted by Rust from the call-time clock) for this target. */
