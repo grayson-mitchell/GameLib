@@ -5,7 +5,7 @@ slug: "pure-leaf-services"
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
 status: draft
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: "2026-11-22"
 ---
 
@@ -61,71 +61,71 @@ created: "2026-11-22"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 86-01-T1 | 86-01 | 1 | SVC-01 | T-86-01 | host API re-read recorded before slice work (D-29) | doc gate | `grep '## Host API re-read (D-29)' 86-VALIDATION.md (13+ statused rows)` | ❌ W0 | ⬜ pending |
-| 86-01-T2 | 86-01 | 1 | SVC-01 | — | ownership table amended (D-04, D-27) | doc gate | `grep '## Amendments' + the umu/macArch/runsForMe cells in 82-STATE-OWNERSHIP.md` | ✅ | ⬜ pending |
-| 86-01-T3 | 86-01 | 1 | SVC-01 | T-86-01 | operator approves the reconciliation | manual | `checkpoint:decision (blocking-human)` | — | ⬜ pending |
-| 86-02-T1 | 86-02 | 1 | SVC-01 | T-86-03 | four D-14 items UAT-shaped | uat parse | `node parseUatItemsWithStats 86-HUMAN-UAT.md (4 items, headingsSeen 0)` | ❌ W0 | ⬜ pending |
-| 86-02-T2 | 86-02 | 1 | SVC-01 | T-86-02 | reachability review, literals, capture standard | uat parse | `section greps + pnpm planning-gates` | ❌ W0 | ⬜ pending |
-| 86-03-T1 | 86-03 | 2 | SVC-01 | T-86-07 | no keyring/tauri in either crate (D-19) | unit + cli | `cd src-tauri && cargo test -p gamelib-info -p gamelib-info-cli; jest rustTestWorkflow cargoFeatures` | ❌ W0 | ⬜ pending |
-| 86-03-T2 | 86-03 | 2 | SVC-01 | — | CacheView TTL, dotted keys, UTC Date() | unit | `cargo test -p gamelib-info --test cache_view` | ❌ W0 | ⬜ pending |
-| 86-03-T3 | 86-03 | 2 | SVC-01 | T-86-04, T-86-05, T-86-07 | key never in error text; body cap; shutdown cancel | unit | `cargo test -p gamelib-info --features testing --test http_replay` | ❌ W0 | ⬜ pending |
-| 86-04-T1 | 86-04 | 2 | SVC-01 | T-86-08 | recent_games golden before Rust (SC3) | oracle | `pnpm exec jest --runTestsByPath src/backend/info/__tests__/oracle/recentGames.oracle.test.ts` | ❌ W0 | ⬜ pending |
-| 86-04-T2 | 86-04 | 2 | SVC-01 | T-86-09 | overrides and anticheat goldens (SC3) | oracle | `jest gameOverrides.oracle.test.ts anticheat.oracle.test.ts` | ❌ W0 | ⬜ pending |
-| 86-04-T3 | 86-04 | 2 | SVC-01 | T-86-08 | no secret in any fixture | guard | `jest src/backend/info/__tests__/fixtureRedaction.test.ts` | ❌ W0 | ⬜ pending |
-| 86-05-T1 | 86-05 | 2 | SVC-01 | T-86-10 | delete gate proven on images_cache (D-22) | delete gate | `jest infoPortComplete.test.ts appRuntime.test.ts diPhaseGates.test.ts; codecheck; find-deadcode` | ❌ W0 | ⬜ pending |
-| 86-05-T2 | 86-05 | 2 | SVC-01 | T-86-10 | shim/resolver shape and schedule (D-06, D-24) | delete gate | `jest infoShimSchedule.test.ts` | ❌ W0 | ⬜ pending |
-| 86-06-T1 | 86-06 | 3 | SVC-01 | T-86-11 | discounts recorded and golden | oracle | `jest discounts.oracle.test.ts fixtureRedaction.test.ts` | ❌ W0 | ⬜ pending |
-| 86-06-T2 | 86-06 | 3 | SVC-01 | T-86-11 | crossover recorded and golden | oracle | `jest crossover.oracle.test.ts` | ❌ W0 | ⬜ pending |
-| 86-06-T3 | 86-06 | 3 | SVC-01 | T-86-11, T-86-12 | wiki + umu recorded, D-23 tsOnly/rustOnly | oracle | `jest wiki.oracle.test.ts` | ❌ W0 | ⬜ pending |
-| 86-07-T1 | 86-07 | 3 | SVC-01 | T-86-14 | steamgrid synthetic goldens | oracle | `jest steamgrid.oracle.test.ts -t synthetic` | ❌ W0 | ⬜ pending |
-| 86-07-T2 | 86-07 | 3 | SVC-01 | T-86-14 | ITAD synthetic goldens | oracle | `jest storeSearch.oracle.test.ts -t synthetic` | ❌ W0 | ⬜ pending |
-| 86-07-T3 | 86-07 | 3 | SVC-01 | T-86-13 | operator records keyed cases; no key committed | manual + oracle | `checkpoint:human-action, then jest both oracles + fixtureRedaction offline` | ❌ W0 | ⬜ pending |
-| 86-08-T1 | 86-08 | 3 | SVC-01 | T-86-17 | recent add bytes = golden; Rust emit + tray (D-08) | golden + shell | `cargo test -p gamelib-info --features testing --test golden_recent; cargo test --bin gamelib-shell info_dispatch; pnpm check:ipc-contract` | ❌ W0 | ⬜ pending |
-| 86-08-T2 | 86-08 | 3 | SVC-01 | T-86-15, T-86-16 | removeRecent native, one owner, no lost update | contract | `cargo test --bin gamelib-shell native_manifest_vectors; jest nativeChannelOwnership ipcDomainCensus` | ✅ extend | ⬜ pending |
-| 86-08-T3 | 86-08 | 3 | SVC-01 | — | tray seed through the host (Pitfall 8) | unit | `cargo test --bin gamelib-shell tray::` | ✅ extend | ⬜ pending |
-| 86-09-T1 | 86-09 | 4 | SVC-01 | T-86-18 | addRecentGame shim forwards only | unit | `jest src/backend/info/__tests__/recentGames.test.ts` | ❌ W0 | ⬜ pending |
-| 86-09-T2 | 86-09 | 4 | SVC-01 | T-86-18 | recent TS + sidecar sniff deleted (SC4, D-08) | delete gate | `jest infoPortComplete infoShimSchedule tauriShellSource; cargo test --bin gamelib-shell tray::` | ✅ extend | ⬜ pending |
-| 86-10-T1 | 86-10 | 5 | SVC-01 | T-86-20 | getAllGameOverrides native = golden | golden + contract | `cargo test --test golden_overrides; native_manifest_vectors` | ❌ W0 | ⬜ pending |
-| 86-10-T2 | 86-10 | 5 | SVC-01 | T-86-19, T-86-20 | image cleanup confined to its dir | golden | `cargo test -p gamelib-info --features testing --test golden_overrides; overrides::` | ❌ W0 | ⬜ pending |
-| 86-11-T1 | 86-11 | 6 | SVC-01 | T-86-22 | async override shims, gamedetails awaits | unit | `jest gameOverrides.test.ts; jest src/backend/gamedetails` | ❌ W0 | ⬜ pending |
-| 86-11-T2 | 86-11 | 6 | SVC-01 | T-86-21 | overrides TS deleted, store row kept byte-identical | delete gate | `genStoreTable --check; git diff --quiet storeTable.json; jest storeTable storeKinds infoPortComplete` | ✅ extend | ⬜ pending |
-| 86-12-T1 | 86-12 | 7 | SVC-01 | T-86-25 | getAnticheatInfo native = golden | golden + contract | `cargo test --test golden_anticheat; native_manifest_vectors` | ❌ W0 | ⬜ pending |
-| 86-12-T2 | 86-12 | 7 | SVC-01 | T-86-23, T-86-24 | status/download, temp-then-rename, md-5 pinned | golden | `cargo test --test golden_anticheat anticheat::; jest cargoFeatures` | ❌ W0 | ⬜ pending |
-| 86-12-T3 | 86-12 | 7 | SVC-01 | — | drift command opt-in (D-12) | cli | `cargo test -p gamelib-info-cli; drift --list` | ❌ W0 | ⬜ pending |
-| 86-13-T1 | 86-13 | 8 | SVC-01 | T-86-26 | status before online wait (D-07, D-28) | unit | `jest anticheat.test.ts bootstrapWirings.test.ts sidecarRejectionGuard.test.ts` | ❌ W0 | ⬜ pending |
-| 86-13-T2 | 86-13 | 8 | SVC-01 | — | anticheat TS deleted (SC4) | delete gate | `jest infoPortComplete infoShimSchedule enrichmentFlows` | ✅ extend | ⬜ pending |
-| 86-14-T1 | 86-14 | 9 | SVC-01 | T-86-27, T-86-29 | keyring slots unchanged; owner semantics | unit | `cargo test --features testing --test secrets; cargo test --bin gamelib-shell info_secrets keyring` | ❌ W0 | ⬜ pending |
-| 86-14-T2 | 86-14 | 9 | SVC-01 | T-86-28 | dev vault only when dev; migration proof order | unit | `cargo test --test secrets; cargo test --bin gamelib-shell info_secrets` | ❌ W0 | ⬜ pending |
-| 86-14-T3 | 86-14 | 9 | SVC-01 | T-86-30 | baked ITAD key in the shell build (D-25) | meta | `jest --selectProjects Meta meta/__tests__/releaseItadKey.test.ts` | ❌ W0 | ⬜ pending |
-| 86-15-T1 | 86-15 | 10 | SVC-01 | T-86-31 | steamgrid search native = golden | golden + contract | `cargo test --test golden_steamgrid; native_manifest_vectors` | ❌ W0 | ⬜ pending |
-| 86-15-T2 | 86-15 | 10 | SVC-01 | T-86-32, T-86-33 | zod bounds in Rust decode | golden + contract | `cargo test --test golden_steamgrid steamgrid::; native_manifest_vectors` | ❌ W0 | ⬜ pending |
-| 86-15-T3 | 86-15 | 10 | SVC-01 | T-86-34 | migration moved to Rust boot; TS deleted | delete gate | `jest infoPortComplete diPhaseGates + sidecar tests; cargo test --bin gamelib-shell info_dispatch` | ✅ extend | ⬜ pending |
-| 86-16-T1 | 86-16 | 11 | SVC-01 | T-86-35 | searchStores native = golden; key never in errors | golden + contract | `cargo test --features testing --test golden_storeSearch; native_manifest_vectors` | ❌ W0 | ⬜ pending |
-| 86-16-T2 | 86-16 | 11 | SVC-01 | T-86-36, T-86-38 | single-flight; comparator; bounds | golden | `cargo test --test golden_storeSearch itad::` | ❌ W0 | ⬜ pending |
-| 86-16-T3 | 86-16 | 11 | SVC-01 | T-86-38 | key status = two booleans only | contract | `native_manifest_vectors; jest nativeChannelOwnership ipcDomainCensus` | ✅ extend | ⬜ pending |
-| 86-17-T1 | 86-17 | 12 | SVC-01 | — | one ITAD coverage file for TS and Rust | unit | `jest storeMapping.test.ts storeRegion.test.ts; cargo test -p gamelib-info itad::` | ✅ extend | ⬜ pending |
-| 86-17-T2 | 86-17 | 12 | SVC-01 | T-86-40 | storeSearch TS deleted; rows byte-identical | delete gate | `genStoreTable --check; git diff --quiet storeTable.json; jest storeTable storeKinds` | ✅ extend | ⬜ pending |
-| 86-17-T3 | 86-17 | 12 | SVC-01 | T-86-39, T-86-41 | bake only in shell; gate passes | meta + delete gate | `jest releaseItadKey buildSidecarSea infoPortComplete; pnpm build:sidecar` | ✅ extend | ⬜ pending |
-| 86-18-T1 | 86-18 | 13 | SVC-01 | T-86-42 | discounts = golden; resolver token only | golden + unit | `cargo test --features testing --test golden_discounts; jest src/backend/info/__tests__/discounts.test.ts` | ❌ W0 | ⬜ pending |
-| 86-18-T2 | 86-18 | 13 | SVC-01 | — | fetcher deleted; resolver scheduled (D-24) | delete gate | `jest infoPortComplete infoShimSchedule electronReachLedger` | ✅ extend | ⬜ pending |
-| 86-19-T1 | 86-19 | 14 | SVC-01 | T-86-47 | rating map via resolver; runner table drift | golden + unit | `jest runnerCapabilities.test.ts crossover.test.ts; cargo test --test golden_crossover` | ❌ W0 | ⬜ pending |
-| 86-19-T2 | 86-19 | 14 | SVC-01 | T-86-44, T-86-45, T-86-46 | schema bounds, caps, bundled path | golden | `cargo test --features testing --test golden_crossover crossover::; jest cargoFeatures` | ❌ W0 | ⬜ pending |
-| 86-19-T3 | 86-19 | 14 | SVC-01 | — | crossover drift cases | cli | `cargo test -p gamelib-info-cli; drift --list` | ✅ extend | ⬜ pending |
-| 86-20-T1 | 86-20 | 15 | SVC-01 | T-86-50 | umu = golden (D-04) | golden | `cargo test -p gamelib-info --features testing --test golden_umu` | ❌ W0 | ⬜ pending |
-| 86-20-T2 | 86-20 | 15 | SVC-01 | T-86-48 | JS regex parity (Pitfall 4); pcgw/agw = golden | vectors + golden | `cargo test --features testing --test regex_vectors --test golden_wiki_sources` | ❌ W0 | ⬜ pending |
-| 86-20-T3 | 86-20 | 15 | SVC-01 | T-86-49 | protondb/deck/slug = golden | golden | `cargo test --features testing --test golden_wiki_sources; wiki::` | ❌ W0 | ⬜ pending |
-| 86-21-T1 | 86-21 | 16 | SVC-01 | T-86-53 | gamesdb via D-23 GET, no GOG write | golden | `cargo test -p gamelib-info --features testing --test golden_wiki_sources` | ✅ extend | ⬜ pending |
-| 86-21-T2 | 86-21 | 16 | SVC-01 | T-86-51, T-86-52 | HLTB headers pinned; creds memory-only | golden | `cargo test --features testing --test golden_wiki_sources; wiki::` | ✅ extend | ⬜ pending |
-| 86-21-T3 | 86-21 | 16 | SVC-01 | T-86-53 | GOG HLTB via D-23 store link | golden | `cargo test --features testing --test golden_wiki_sources` | ✅ extend | ⬜ pending |
-| 86-22-T1 | 86-22 | 17 | SVC-01 | T-86-54, T-86-56 | aggregator = golden; native one owner | golden + contract | `cargo test --features testing --test golden_wiki; native_manifest_vectors` | ❌ W0 | ⬜ pending |
-| 86-22-T2 | 86-22 | 17 | SVC-01 | — | wiki get/clear ops | golden | `cargo test --test golden_wiki wiki::; check:ipc-contract` | ✅ extend | ⬜ pending |
-| 86-22-T3 | 86-22 | 17 | SVC-01 | T-86-52 | one live drift run (Pitfall 11) | opt-in live | `cargo run -p gamelib-info-cli -- drift (recorded in summary); drift --list` | ✅ extend | ⬜ pending |
-| 86-23-T1 | 86-23 | 18 | SVC-01 | T-86-57 | getUmuId shim forwards only | unit | `jest src/backend/info/__tests__/wiki.test.ts` | ❌ W0 | ⬜ pending |
-| 86-23-T2 | 86-23 | 18 | SVC-01 | T-86-57 | wiki resolver + clear shim scheduled | unit + gate | `jest wiki.test.ts infoShimSchedule.test.ts; codecheck; lint` | ✅ extend | ⬜ pending |
-| 86-24-T1 | 86-24 | 19 | SVC-01 | T-86-58 | wiki + crossover TS deleted; rows byte-identical | delete gate | `genStoreTable --check; git diff --quiet storeTable.json; codecheck; jest storeTable storeKinds createStores appRuntime` | ✅ extend | ⬜ pending |
-| 86-24-T2 | 86-24 | 19 | SVC-01 | T-86-59 | census agrees with the tree | census | `jest diPhaseGates bootSourceShape storeLayer shortcutsFlows enrichmentFlows; find-deadcode` | ✅ extend | ⬜ pending |
-| 86-24-T3 | 86-24 | 19 | SVC-01 | T-86-59 | oracle retired; nine describes pass (SC4) | delete gate | `jest infoPortComplete infoShimSchedule fixtureRedaction; cargo test -p gamelib-info --features testing` | ✅ extend | ⬜ pending |
-| 86-25-T1 | 86-25 | 20 | SVC-01 | T-86-62 | clean-worktree proof, SC4 sweep, drift run | phase proof | `full suite at P (see plan); grep '## Phase proof' '## SC4 sweep' '## Drift run'` | — | ⬜ pending |
+| 86-01-T1 | 86-01 | 1 | SVC-01 | T-86-01 | host API re-read recorded before slice work (D-29) | doc gate | `grep '## Host API re-read (D-29)' 86-VALIDATION.md (13+ statused rows)` | ❌ W0 | ✅ green |
+| 86-01-T2 | 86-01 | 1 | SVC-01 | — | ownership table amended (D-04, D-27) | doc gate | `grep '## Amendments' + the umu/macArch/runsForMe cells in 82-STATE-OWNERSHIP.md` | ✅ | ✅ green |
+| 86-01-T3 | 86-01 | 1 | SVC-01 | T-86-01 | operator approves the reconciliation | manual | `checkpoint:decision (blocking-human)` | — | ✅ green |
+| 86-02-T1 | 86-02 | 1 | SVC-01 | T-86-03 | four D-14 items UAT-shaped | uat parse | `node parseUatItemsWithStats 86-HUMAN-UAT.md (4 items, headingsSeen 0)` | ❌ W0 | ✅ green |
+| 86-02-T2 | 86-02 | 1 | SVC-01 | T-86-02 | reachability review, literals, capture standard | uat parse | `section greps + pnpm planning-gates` | ❌ W0 | ✅ green |
+| 86-03-T1 | 86-03 | 2 | SVC-01 | T-86-07 | no keyring/tauri in either crate (D-19) | unit + cli | `cd src-tauri && cargo test -p gamelib-info -p gamelib-info-cli; jest rustTestWorkflow cargoFeatures` | ❌ W0 | ✅ green |
+| 86-03-T2 | 86-03 | 2 | SVC-01 | — | CacheView TTL, dotted keys, UTC Date() | unit | `cargo test -p gamelib-info --test cache_view` | ❌ W0 | ✅ green |
+| 86-03-T3 | 86-03 | 2 | SVC-01 | T-86-04, T-86-05, T-86-07 | key never in error text; body cap; shutdown cancel | unit | `cargo test -p gamelib-info --features testing --test http_replay` | ❌ W0 | ✅ green |
+| 86-04-T1 | 86-04 | 2 | SVC-01 | T-86-08 | recent_games golden before Rust (SC3) | oracle | `pnpm exec jest --runTestsByPath src/backend/info/__tests__/oracle/recentGames.oracle.test.ts` | ❌ W0 | ✅ green |
+| 86-04-T2 | 86-04 | 2 | SVC-01 | T-86-09 | overrides and anticheat goldens (SC3) | oracle | `jest gameOverrides.oracle.test.ts anticheat.oracle.test.ts` | ❌ W0 | ✅ green |
+| 86-04-T3 | 86-04 | 2 | SVC-01 | T-86-08 | no secret in any fixture | guard | `jest src/backend/info/__tests__/fixtureRedaction.test.ts` | ❌ W0 | ✅ green |
+| 86-05-T1 | 86-05 | 2 | SVC-01 | T-86-10 | delete gate proven on images_cache (D-22) | delete gate | `jest infoPortComplete.test.ts appRuntime.test.ts diPhaseGates.test.ts; codecheck; find-deadcode` | ❌ W0 | ✅ green |
+| 86-05-T2 | 86-05 | 2 | SVC-01 | T-86-10 | shim/resolver shape and schedule (D-06, D-24) | delete gate | `jest infoShimSchedule.test.ts` | ❌ W0 | ✅ green |
+| 86-06-T1 | 86-06 | 3 | SVC-01 | T-86-11 | discounts recorded and golden | oracle | `jest discounts.oracle.test.ts fixtureRedaction.test.ts` | ❌ W0 | ✅ green |
+| 86-06-T2 | 86-06 | 3 | SVC-01 | T-86-11 | crossover recorded and golden | oracle | `jest crossover.oracle.test.ts` | ❌ W0 | ✅ green |
+| 86-06-T3 | 86-06 | 3 | SVC-01 | T-86-11, T-86-12 | wiki + umu recorded, D-23 tsOnly/rustOnly | oracle | `jest wiki.oracle.test.ts` | ❌ W0 | ✅ green |
+| 86-07-T1 | 86-07 | 3 | SVC-01 | T-86-14 | steamgrid synthetic goldens | oracle | `jest steamgrid.oracle.test.ts -t synthetic` | ❌ W0 | ✅ green |
+| 86-07-T2 | 86-07 | 3 | SVC-01 | T-86-14 | ITAD synthetic goldens | oracle | `jest storeSearch.oracle.test.ts -t synthetic` | ❌ W0 | ✅ green |
+| 86-07-T3 | 86-07 | 3 | SVC-01 | T-86-13 | operator records keyed cases; no key committed | manual + oracle | `checkpoint:human-action, then jest both oracles + fixtureRedaction offline` | ❌ W0 | ✅ green |
+| 86-08-T1 | 86-08 | 3 | SVC-01 | T-86-17 | recent add bytes = golden; Rust emit + tray (D-08) | golden + shell | `cargo test -p gamelib-info --features testing --test golden_recent; cargo test --bin gamelib-shell info_dispatch; pnpm check:ipc-contract` | ❌ W0 | ✅ green |
+| 86-08-T2 | 86-08 | 3 | SVC-01 | T-86-15, T-86-16 | removeRecent native, one owner, no lost update | contract | `cargo test --bin gamelib-shell native_manifest_vectors; jest nativeChannelOwnership ipcDomainCensus` | ✅ extend | ✅ green |
+| 86-08-T3 | 86-08 | 3 | SVC-01 | — | tray seed through the host (Pitfall 8) | unit | `cargo test --bin gamelib-shell tray::` | ✅ extend | ✅ green |
+| 86-09-T1 | 86-09 | 4 | SVC-01 | T-86-18 | addRecentGame shim forwards only | unit | `jest src/backend/info/__tests__/recentGames.test.ts` | ❌ W0 | ✅ green |
+| 86-09-T2 | 86-09 | 4 | SVC-01 | T-86-18 | recent TS + sidecar sniff deleted (SC4, D-08) | delete gate | `jest infoPortComplete infoShimSchedule tauriShellSource; cargo test --bin gamelib-shell tray::` | ✅ extend | ✅ green |
+| 86-10-T1 | 86-10 | 5 | SVC-01 | T-86-20 | getAllGameOverrides native = golden | golden + contract | `cargo test --test golden_overrides; native_manifest_vectors` | ❌ W0 | ✅ green |
+| 86-10-T2 | 86-10 | 5 | SVC-01 | T-86-19, T-86-20 | image cleanup confined to its dir | golden | `cargo test -p gamelib-info --features testing --test golden_overrides; overrides::` | ❌ W0 | ✅ green |
+| 86-11-T1 | 86-11 | 6 | SVC-01 | T-86-22 | async override shims, gamedetails awaits | unit | `jest gameOverrides.test.ts; jest src/backend/gamedetails` | ❌ W0 | ✅ green |
+| 86-11-T2 | 86-11 | 6 | SVC-01 | T-86-21 | overrides TS deleted, store row kept byte-identical | delete gate | `genStoreTable --check; git diff --quiet storeTable.json; jest storeTable storeKinds infoPortComplete` | ✅ extend | ✅ green |
+| 86-12-T1 | 86-12 | 7 | SVC-01 | T-86-25 | getAnticheatInfo native = golden | golden + contract | `cargo test --test golden_anticheat; native_manifest_vectors` | ❌ W0 | ✅ green |
+| 86-12-T2 | 86-12 | 7 | SVC-01 | T-86-23, T-86-24 | status/download, temp-then-rename, md-5 pinned | golden | `cargo test --test golden_anticheat anticheat::; jest cargoFeatures` | ❌ W0 | ✅ green |
+| 86-12-T3 | 86-12 | 7 | SVC-01 | — | drift command opt-in (D-12) | cli | `cargo test -p gamelib-info-cli; drift --list` | ❌ W0 | ✅ green |
+| 86-13-T1 | 86-13 | 8 | SVC-01 | T-86-26 | status before online wait (D-07, D-28) | unit | `jest anticheat.test.ts bootstrapWirings.test.ts sidecarRejectionGuard.test.ts` | ❌ W0 | ✅ green |
+| 86-13-T2 | 86-13 | 8 | SVC-01 | — | anticheat TS deleted (SC4) | delete gate | `jest infoPortComplete infoShimSchedule enrichmentFlows` | ✅ extend | ✅ green |
+| 86-14-T1 | 86-14 | 9 | SVC-01 | T-86-27, T-86-29 | keyring slots unchanged; owner semantics | unit | `cargo test --features testing --test secrets; cargo test --bin gamelib-shell info_secrets keyring` | ❌ W0 | ✅ green |
+| 86-14-T2 | 86-14 | 9 | SVC-01 | T-86-28 | dev vault only when dev; migration proof order | unit | `cargo test --test secrets; cargo test --bin gamelib-shell info_secrets` | ❌ W0 | ✅ green |
+| 86-14-T3 | 86-14 | 9 | SVC-01 | T-86-30 | baked ITAD key in the shell build (D-25) | meta | `jest --selectProjects Meta meta/__tests__/releaseItadKey.test.ts` | ❌ W0 | ✅ green |
+| 86-15-T1 | 86-15 | 10 | SVC-01 | T-86-31 | steamgrid search native = golden | golden + contract | `cargo test --test golden_steamgrid; native_manifest_vectors` | ❌ W0 | ✅ green |
+| 86-15-T2 | 86-15 | 10 | SVC-01 | T-86-32, T-86-33 | zod bounds in Rust decode | golden + contract | `cargo test --test golden_steamgrid steamgrid::; native_manifest_vectors` | ❌ W0 | ✅ green |
+| 86-15-T3 | 86-15 | 10 | SVC-01 | T-86-34 | migration moved to Rust boot; TS deleted | delete gate | `jest infoPortComplete diPhaseGates + sidecar tests; cargo test --bin gamelib-shell info_dispatch` | ✅ extend | ✅ green |
+| 86-16-T1 | 86-16 | 11 | SVC-01 | T-86-35 | searchStores native = golden; key never in errors | golden + contract | `cargo test --features testing --test golden_storeSearch; native_manifest_vectors` | ❌ W0 | ✅ green |
+| 86-16-T2 | 86-16 | 11 | SVC-01 | T-86-36, T-86-38 | single-flight; comparator; bounds | golden | `cargo test --test golden_storeSearch itad::` | ❌ W0 | ✅ green |
+| 86-16-T3 | 86-16 | 11 | SVC-01 | T-86-38 | key status = two booleans only | contract | `native_manifest_vectors; jest nativeChannelOwnership ipcDomainCensus` | ✅ extend | ✅ green |
+| 86-17-T1 | 86-17 | 12 | SVC-01 | — | one ITAD coverage file for TS and Rust | unit | `jest storeMapping.test.ts storeRegion.test.ts; cargo test -p gamelib-info itad::` | ✅ extend | ✅ green |
+| 86-17-T2 | 86-17 | 12 | SVC-01 | T-86-40 | storeSearch TS deleted; rows byte-identical | delete gate | `genStoreTable --check; git diff --quiet storeTable.json; jest storeTable storeKinds` | ✅ extend | ✅ green |
+| 86-17-T3 | 86-17 | 12 | SVC-01 | T-86-39, T-86-41 | bake only in shell; gate passes | meta + delete gate | `jest releaseItadKey buildSidecarSea infoPortComplete; pnpm build:sidecar` | ✅ extend | ✅ green |
+| 86-18-T1 | 86-18 | 13 | SVC-01 | T-86-42 | discounts = golden; resolver token only | golden + unit | `cargo test --features testing --test golden_discounts; jest src/backend/info/__tests__/discounts.test.ts` | ❌ W0 | ✅ green |
+| 86-18-T2 | 86-18 | 13 | SVC-01 | — | fetcher deleted; resolver scheduled (D-24) | delete gate | `jest infoPortComplete infoShimSchedule electronReachLedger` | ✅ extend | ✅ green |
+| 86-19-T1 | 86-19 | 14 | SVC-01 | T-86-47 | rating map via resolver; runner table drift | golden + unit | `jest runnerCapabilities.test.ts crossover.test.ts; cargo test --test golden_crossover` | ❌ W0 | ✅ green |
+| 86-19-T2 | 86-19 | 14 | SVC-01 | T-86-44, T-86-45, T-86-46 | schema bounds, caps, bundled path | golden | `cargo test --features testing --test golden_crossover crossover::; jest cargoFeatures` | ❌ W0 | ✅ green |
+| 86-19-T3 | 86-19 | 14 | SVC-01 | — | crossover drift cases | cli | `cargo test -p gamelib-info-cli; drift --list` | ✅ extend | ✅ green |
+| 86-20-T1 | 86-20 | 15 | SVC-01 | T-86-50 | umu = golden (D-04) | golden | `cargo test -p gamelib-info --features testing --test golden_umu` | ❌ W0 | ✅ green |
+| 86-20-T2 | 86-20 | 15 | SVC-01 | T-86-48 | JS regex parity (Pitfall 4); pcgw/agw = golden | vectors + golden | `cargo test --features testing --test regex_vectors --test golden_wiki_sources` | ❌ W0 | ✅ green |
+| 86-20-T3 | 86-20 | 15 | SVC-01 | T-86-49 | protondb/deck/slug = golden | golden | `cargo test --features testing --test golden_wiki_sources; wiki::` | ❌ W0 | ✅ green |
+| 86-21-T1 | 86-21 | 16 | SVC-01 | T-86-53 | gamesdb via D-23 GET, no GOG write | golden | `cargo test -p gamelib-info --features testing --test golden_wiki_sources` | ✅ extend | ✅ green |
+| 86-21-T2 | 86-21 | 16 | SVC-01 | T-86-51, T-86-52 | HLTB headers pinned; creds memory-only | golden | `cargo test --features testing --test golden_wiki_sources; wiki::` | ✅ extend | ✅ green |
+| 86-21-T3 | 86-21 | 16 | SVC-01 | T-86-53 | GOG HLTB via D-23 store link | golden | `cargo test --features testing --test golden_wiki_sources` | ✅ extend | ✅ green |
+| 86-22-T1 | 86-22 | 17 | SVC-01 | T-86-54, T-86-56 | aggregator = golden; native one owner | golden + contract | `cargo test --features testing --test golden_wiki; native_manifest_vectors` | ❌ W0 | ✅ green |
+| 86-22-T2 | 86-22 | 17 | SVC-01 | — | wiki get/clear ops | golden | `cargo test --test golden_wiki wiki::; check:ipc-contract` | ✅ extend | ✅ green |
+| 86-22-T3 | 86-22 | 17 | SVC-01 | T-86-52 | one live drift run (Pitfall 11) | opt-in live | `cargo run -p gamelib-info-cli -- drift (recorded in summary); drift --list` | ✅ extend | ✅ green |
+| 86-23-T1 | 86-23 | 18 | SVC-01 | T-86-57 | getUmuId shim forwards only | unit | `jest src/backend/info/__tests__/wiki.test.ts` | ❌ W0 | ✅ green |
+| 86-23-T2 | 86-23 | 18 | SVC-01 | T-86-57 | wiki resolver + clear shim scheduled | unit + gate | `jest wiki.test.ts infoShimSchedule.test.ts; codecheck; lint` | ✅ extend | ✅ green |
+| 86-24-T1 | 86-24 | 19 | SVC-01 | T-86-58 | wiki + crossover TS deleted; rows byte-identical | delete gate | `genStoreTable --check; git diff --quiet storeTable.json; codecheck; jest storeTable storeKinds createStores appRuntime` | ✅ extend | ✅ green |
+| 86-24-T2 | 86-24 | 19 | SVC-01 | T-86-59 | census agrees with the tree | census | `jest diPhaseGates bootSourceShape storeLayer shortcutsFlows enrichmentFlows; find-deadcode` | ✅ extend | ✅ green |
+| 86-24-T3 | 86-24 | 19 | SVC-01 | T-86-59 | oracle retired; nine describes pass (SC4) | delete gate | `jest infoPortComplete infoShimSchedule fixtureRedaction; cargo test -p gamelib-info --features testing` | ✅ extend | ✅ green |
+| 86-25-T1 | 86-25 | 20 | SVC-01 | T-86-62 | clean-worktree proof, SC4 sweep, drift run | phase proof | `full suite at P (see plan); grep '## Phase proof' '## SC4 sweep' '## Drift run'` | — | ❌ red |
 | 86-25-T2 | 86-25 | 20 | SVC-01 | T-86-60 | push and release authorised | manual | `checkpoint:decision` | — | ⬜ pending |
 | 86-25-T3 | 86-25 | 20 | SVC-01 | T-86-61 | three-OS CI (D-16); signed identity (D-15) | CI proof | `gh run view per leg; grep '## CI proof' 'Gate item 4:'` | — | ⬜ pending |
 | 86-26-T1 | 86-26 | 21 | SVC-01 | — | literals re-checked before the run | uat | `grep '## Pre-run re-check'; no CONDITIONAL in Required literals` | — | ⬜ pending |
@@ -201,3 +201,103 @@ No row is MISSING and no Phase 85 plan is open. Two rows differ from the 86 plan
 - **86-08 and 86-10 (row 7):** a Rust op that writes `games.recent` or `overrides` must not go live while the TS writer for the same key (`recent_games.ts:23`, `game_overrides/index.ts:103`) is still a reachable path, because both are whole-key read-modify-write writes from the mirror view. The Rust ops are added first and unreachable from callers until 86-09 and 86-11 turn the TS writers into forwarding shims in the same change that routes callers to them. The mirror itself stays current through `changed` events, so TS reads after a Rust write are correct.
 - **86-11, 86-17, 86-24 (row 5):** the commit that deletes a store's TS registration also adds its `EXTRA_ROWS` entry, with the current `tsNames`, and regenerates `storeTable.json` with the row byte-identical (`git diff --quiet src/common/types/ipc/storeTable.json`). It also moves the store's cell in `storeMirrorSchedule.test.ts` if the cell is not already 86.
 - **86-08 Task 3 (row 11):** the tray seed becomes a read through `store_boot::host()`, called after `open_all` as it already is.
+
+---
+
+## Phase proof
+
+Measured 2026-11-23 (86-25 Task 1) at the candidate head **P = `6d9654265f689b5df4aff1293e1ac672bd36e008`** (`docs(86-24): complete the wiki and CrossOver TS delete plan`), the HEAD of `main` after 86-24's SUMMARY commit. All 24 plan SUMMARYs (86-01..86-24) exist; every commit hash those SUMMARYs cite and that resolves to a commit (125 of them) is an ancestor of P, none is not. The phase base is `8805d74cd` (86-01's `plan_head_before`); P is 138 commits above it, several of them Phase 85 review-fix commits from another session.
+
+Clean worktree: `git worktree add --detach <scratchpad>/clean-86 6d9654265f689b5df4aff1293e1ac672bd36e008`, `git status` empty before and after the run, HEAD read back as `6d9654265f689b5df4aff1293e1ac672bd36e008`, then removed (`git worktree remove --force`, `git worktree list` no longer shows it). Because the worktree is a checkout of the commit, it carries none of the main tree's foreign-dirty edits (cache.ts, handlers.ts, the gog files, controls.rs, meta/i18n*): P is what a push would publish. Prep inside it: `pnpm install --frozen-lockfile` (lockfile up to date), `pnpm exec vite build`, `pnpm build:sidecar-sea` (arm64 SEA sidecar, real, not a placeholder).
+
+| # | Command (cwd = the clean worktree; Rust steps in `src-tauri`) | Result | Counts |
+|---|---------------------------------------------------------------|--------|--------|
+| 1 | `pnpm exec vite build` | pass | built |
+| 2 | `pnpm build:sidecar-sea` | pass | arm64 verified |
+| 3 | `cargo test -p gamelib-safety -p gamelib-testutil` (rust-test.yml step 1) | pass | 95 passed, 0 failed |
+| 4 | `cargo test -p gamelib-proc` (step 2) | pass | 29 passed, 0 failed |
+| 5 | multi-crate `cargo test -p gamelib-scan ... -p gamelib-store -p gamelib-store-cli -p gamelib-info -p gamelib-info-cli` (step 3, verbatim) | pass | 2206 passed, 0 failed, 7 ignored |
+| 6 | `cargo test -p gamelib-info --features testing` | pass | 360 passed, 0 failed |
+| 7 | static codec linkage: `cargo build -p gamelib-depot-cli` + `otool -L` grep for lzma/zstd/zlib | pass | no dynamic codec |
+| 8 | `cargo test --bin gamelib-shell` | pass | 763 passed, 0 failed, 2 ignored |
+| 9 | darwin clippy ratchet: `cargo +1.99.1 clippy --workspace --all-targets --message-format=json` then `node ../meta/clippyRatchet.cjs <json> --list` | **FAIL** | 3 ceilings exceeded, see Red items |
+| 10 | `pnpm codecheck` | pass | |
+| 11 | `pnpm lint` | pass | 0 errors, 7 warnings |
+| 12 | `pnpm prettier` (`prettier --check .`) | pass | |
+| 13 | `pnpm i18n --fail-on-update` | pass | |
+| 14 | `pnpm find-deadcode` | pass | 310 baselined knip findings |
+| 15 | `pnpm boundaries` | pass | 1370 modules, 8388 dependencies, no violations |
+| 16 | `pnpm steam-line-ceiling` | pass | 206 files, 0 allowlisted over 1000 |
+| 17 | `pnpm backend-di-ceilings` | **FAIL** | 2 violations, both foreign, see Red items |
+| 18 | `pnpm gameinfo-narrowing-ceiling` | pass | 866 files, 42 allowlisted |
+| 19 | `pnpm check:ipc-contract` | pass | ipc_contract.rs and ipcSchemaSnapshot.json up to date |
+| 20 | `pnpm smoke:exit-check -- --mode eof` | pass | verdict PASS, exit latency 9 ms |
+| 21 | `pnpm smoke:sidecar` | pass | built, READY written, exit 0 on stdin EOF |
+| 22 | `pnpm planning-gates` | pass | 12/12 |
+| 23 | `pnpm test` (all 6 jest projects) | **FAIL (1 test)** | 1131 suites: 1124 passed, 6 skipped, 1 failed; 24397 tests: 24356 passed, 40 skipped, 1 failed |
+| 24 | `cargo tree -p gamelib-info-cli \| grep -c keyring` (D-19) | pass | 0 |
+
+The pre-push hook (`.husky/pre-push`) runs rows 10-18 (codecheck, lint, prettier, i18n, find-deadcode, boundaries, steam-line-ceiling, backend-di-ceilings, gameinfo-narrowing-ceiling) and exits non-zero on any failure, so **row 17 would stop a push (the hook never runs with `--no-verify` here)**. The clippy ratchet (row 9) is the last step of rust-test.yml's macOS and Windows legs, so it would turn those two legs red.
+
+### Red items at P
+
+| # | Item | Cause | Classification | Fix |
+|---|------|-------|----------------|-----|
+| R1 | clippy `cloned_ref_to_slice_refs` 6 found, ceiling 2 | `info_dispatch.rs:1861` (86-15, `b425fa3d2`), `:2031`, `:2033`, `:2035` (86-16, `2ca381f61`), all in `#[cfg(test)]` code (`&[arg.clone()]`); the other 2 are `single_instance.rs:686`, `:870` (71-16, predate the phase) | 4 **phase-86-caused**, 2 pre-existing | `std::slice::from_ref(&arg)` at the four sites |
+| R2 | clippy `type_complexity` 4 found, ceiling 2 | `info_dispatch.rs:1122` `recording_sink()` return tuple (86-08, `604e8f425`, test code) and `native_router.rs:137` `CheckedReply` (`fix(85): B-WR-08`, `a8fcd4a2b`, a Phase 85 review fix landed after the 86 base); `shell_state.rs:14` and `store_embed/state.rs:653` predate the phase | 1 **phase-86-caused**, 1 **phase-85-review-fix-caused (in the 86 range)**, 2 pre-existing | type aliases for the two new tuples/sender |
+| R3 | clippy `dead_code` 2 found, ceiling 1 | `native_router.rs:255` `spawn_slice_worker` is now used only from tests (`fix(85): B-WR-01`, `4a743b730`, switched the one production call to `spawn_slice_worker_with`); `store_embed/state.rs:303` `observe_live_url` (71-12) predates the phase | 1 **phase-85-review-fix-caused (in the 86 range)**, 1 pre-existing | `#[cfg(test)]` on `spawn_slice_worker` |
+| R4 | `pnpm backend-di-ceilings` | `src/backend/storeManagers/steam/__tests__/optInDlc.test.ts` (6 jestMock) and `src/frontend/state/__tests__/libraryStoreFollowers.test.ts` (2 jestMock) have no baseline entry; both files were last touched before the 86 base (`3d4340bc0`, `c4dc3df27`, 2026-11-22) | pre-existing, foreign | baseline them or remove the mocks (not Phase 86 work) |
+| R5 | `meta/__tests__/genI18nGateScope.test.ts` A-17 ANTI-ROT | the committed `meta/i18nForkTouchedFiles.json` lacks `src/frontend/components/UI/WikiGameInfo/components/HowLongToBeat/index.tsx`, which 86-23 (`3dbdd45c4`) modified. It fails in the **clean** worktree too, so it is the stale committed artifact, not the main tree's foreign-dirty meta/i18n files | **phase-86-caused** (86-23) | `pnpm gen-i18n-gate-scope`, then commit `meta/i18nForkTouchedFiles.json` (and `i18nGateScope.json` if it moves), as `ee1995796` did |
+
+How R1-R3 were attributed: each flagged `file:line` from the ratchet's `--list` was `git blame`d at P; a line whose commit is in `8805d74cd..P` is "in the 86 range". The ratchet's per-lint ceilings (2 / 2 / 1) equal the number of lines that predate the range, so the excess is exactly the in-range lines. The base itself was not re-measured with clippy, so "pre-existing" is by blame and by that arithmetic, not by a baseline run. The other darwin ratchet entries (doc_lazy_continuation 5, unnecessary_to_owned 2, non_snake_case 2, incompatible_msrv 1, manual_hash_one 1, bool_comparison 1, needless_borrows_for_generic_args 1, if_same_then_else 1) are at their ceilings and all predate the phase. At P `non_snake_case` is 2 (`wake_lock.rs:375`, `main.rs:3746`), not the 19 the carry-forward notes recorded for `--all-targets -D warnings`. Windows has its own ceiling map (win32) that was not measured here; the windows-latest leg is its measurement.
+
+Fix status: **none of R1-R5 is fixed at P** (86-25 Task 1 records them; a source edit to `info_dispatch.rs` / `native_router.rs` was attempted and refused by the permission system, so it was not retried). Landing R1-R3 at once brings the counts to exactly the ceilings (2 / 2 / 1) with no ceiling change; R5 needs a regenerated artifact; R4 needs a baseline decision before any push, because the hook runs it.
+
+---
+
+## SC4 sweep
+
+Run in the clean worktree at P `6d9654265f689b5df4aff1293e1ac672bd36e008`.
+
+| Check | Result |
+|-------|--------|
+| nine `infoPortComplete` describes (`imagesCache`, `recentGames`, `gameOverrides`, `anticheat`, `steamgrid`, `storeSearch`, `discounts`, `wiki`, `crossover`) plus `oraclePortComplete` and the scans describe, and `infoShimSchedule` | `jest --runTestsByPath infoPortComplete.test.ts infoShimSchedule.test.ts`: 2 suites, 237 tests, all passed |
+| no file under `src/backend/{wiki_game_info,crossover_index,storeSearch,anticheat,recent_games,game_overrides,steamgrid}` | none of the seven directories exists; `git ls-files src/backend` filtered to them prints nothing |
+| `src/backend/images_cache.ts` | gone |
+| `src/backend/discounts/fetchDiscounts.ts` | gone (`src/backend/discounts/` holds only `__tests__/badges.test.ts` and `__tests__/storeSearchBadges.test.ts`) |
+| every survivor is a scheduled shim or resolver | `src/backend/info/` holds exactly `anticheat.ts`, `crossover.ts`, `discounts.ts`, `gameOverrides.ts`, `recentGames.ts`, `wiki.ts`; `infoShimSchedule.test.ts` passes (it pins each to a `deletedBy` row) |
+| `cache_view.rs` contains no `std::fs` | `grep -c "std::fs" src-tauri/crates/gamelib-info/src/cache_view.rs` = 0 (no `fs::` use either) |
+| D-01 out-of-scope list untouched: `git diff --name-only 8805d74cd..P` against online_monitor, macArch, runsForMe, appshell, signInProbe, `cache.ts` | no path matches any of the six names |
+| `gamedetails` changed only in `dispatch.ts` and `overrides.ts` | `git diff --stat 8805d74cd..P -- src/backend/gamedetails`: `dispatch.ts` (10), `overrides.ts` (53) and **also** `__tests__/gameDetailsModules.test.ts` (26), all from 86-11 `73e25675a` (the await ripple of the async override shims). The test change follows the two source files it exercises, so it is within the D-01 intent; it is recorded because the literal list names only the two source files |
+| `cargo tree -p gamelib-info-cli \| grep -c keyring` (D-19) | 0 |
+
+---
+
+## Drift run
+
+`cargo run -q -p gamelib-info-cli -- drift` at P, 2026-11-23, network on, with `GAMELIB_INFO_ITAD_KEY` and `GAMELIB_INFO_SGDB_KEY` unset in that process (`env -u`), so the keyed cases print their skip line. No key was read or used. Exit 0.
+
+```
+PASS anticheat-download-mac
+PASS anticheat-download-linux
+PASS anticheat-lookup
+SKIP steamgrid-search: GAMELIB_INFO_SGDB_KEY is not set
+SKIP steamgrid-grids: GAMELIB_INFO_SGDB_KEY is not set
+SKIP steamgrid-heroes: GAMELIB_INFO_SGDB_KEY is not set
+SKIP itad-search: GAMELIB_INFO_ITAD_KEY is not set
+SKIP itad-deals: GAMELIB_INFO_ITAD_KEY is not set
+SKIP itad-gids: GAMELIB_INFO_ITAD_KEY is not set
+PASS gog-discounts
+PASS crossover-index-fetch
+PASS crossover-rating-map
+PASS wiki-steam-mac
+PASS wiki-steam-linux
+PASS wiki-steam-windows
+PASS wiki-epic-mac
+PASS wiki-epic-linux
+PASS wiki-gog-mac
+PASS wiki-gog-linux
+PASS wiki-umu
+```
+
+14 PASS, 6 SKIP (all keyed, as designed), 0 FAIL. The six keyed cases stay unproved live until the operator runs them in their own terminal with their own keys; their replay proofs are in `cargo test -p gamelib-info --features testing` (row 6 above).
