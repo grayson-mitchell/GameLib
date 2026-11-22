@@ -20,14 +20,29 @@ pub(crate) fn rpc_safety_check_removal(args: &[Value]) -> Result<Value, String> 
 
 pub(crate) fn rpc_safety_remove_tree(args: &[Value]) -> Result<Value, String> {
     SafetyRemoveTreeArgs::from_args(args)?;
-    // Held until the eviction below is done: no queued store write lands between the two.
-    let _paused = crate::store_dispatch::pause_for_removal();
+    // Held until the eviction below is done: no queued store write lands between the two. Only a
+    // removal that holds an `app-data` target can delete a store file, so any other removal (a game
+    // install or a Wine prefix, possibly many GB) must not stop every store from persisting for the
+    // length of the delete (B-WR-04).
+    let _paused = has_app_data_target(args).then(crate::store_dispatch::pause_for_removal);
     let reply = gamelib_safety::dispatch("safety_remove_tree", args)?;
     for target in removed_app_data_targets(args, &reply) {
         crate::store_boot::host().evict_path(&target);
         crate::store_dispatch::evict_queued(&target);
     }
     Ok(reply)
+}
+
+/// Whether the request names an `app-data` target, the only kind that can delete a store file.
+fn has_app_data_target(args: &[Value]) -> bool {
+    args.first()
+        .and_then(|req| req.get("targets"))
+        .and_then(Value::as_array)
+        .is_some_and(|targets| {
+            targets
+                .iter()
+                .any(|t| t.get("kind").and_then(Value::as_str) == Some("app-data"))
+        })
 }
 
 /// The `app-data` target paths of a removal whose outcome is `removed`; none for any other outcome
@@ -93,6 +108,22 @@ mod tests {
         }
         assert!(removed_app_data_targets(&args, &json!({})).is_empty());
         assert!(removed_app_data_targets(&[], &json!({ "outcome": "removed" })).is_empty());
+    }
+
+    #[test]
+    fn safety_only_a_request_with_an_app_data_target_pauses_the_store_worker() {
+        let with = request(json!([
+            { "id": "a", "path": "/x/pfx", "kind": "prefix" },
+            { "id": "b", "path": "/x/GamesConfig", "kind": "app-data", "trustRoot": "/x" }
+        ]));
+        assert!(has_app_data_target(&with));
+        let without = request(json!([
+            { "id": "a", "path": "/x/pfx", "kind": "prefix" },
+            { "id": "b", "path": "/x/game", "kind": "install" }
+        ]));
+        assert!(!has_app_data_target(&without));
+        assert!(!has_app_data_target(&[]));
+        assert!(!has_app_data_target(&[json!({})]));
     }
 
     /// A dispatcher over `home` (every family is Rust's, 85-21), and the events it answered.
