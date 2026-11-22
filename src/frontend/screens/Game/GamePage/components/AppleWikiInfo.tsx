@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
 import { Build, CheckCircle, Refresh, WineBar } from '@mui/icons-material'
 import { IconButton, Rating } from '@mui/material'
+import classNames from 'classnames'
+import { useMinimumSpin } from 'frontend/hooks/useMinimumSpin'
 import { createNewWindow } from 'frontend/helpers'
 import { GameInfo, GamelibFixStatus } from 'common/types'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
@@ -24,6 +26,10 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
   const { t: tGamelib } = useTranslation('gamelib')
   const { wikiInfo, is, refreshWikiInfo } = useContext(GameContext)
   const [refreshing, setRefreshing] = useState(false)
+  // Quick 261123-bbi: the refresh icon spins for max(1 s from the click, end
+  // of the refresh). Declared above the early returns below (Rules of Hooks).
+  const { spinning: ratingSpinning, onClickStart: startRatingSpin } =
+    useMinimumSpin(refreshing)
 
   // Plan 16 (D-51-09/D-51-02): the game-page route row + limited-features
   // lines. Fetched once per game via its own bridge-route IPC round trip
@@ -86,6 +92,7 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
     // Stop the parent <a onClick={onClickCrossover}> from opening CodeWeavers.
     event.stopPropagation()
     event.preventDefault()
+    startRatingSpin()
     setRefreshing(true)
     try {
       await refreshWikiInfo?.()
@@ -198,7 +205,10 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
             title={tGamelib('info.refresh-rating', 'Refresh rating')}
             aria-label={tGamelib('info.refresh-rating', 'Refresh rating')}
           >
-            <Refresh fontSize="small" />
+            <Refresh
+              fontSize="small"
+              className={classNames({ 'fa-spin': ratingSpinning })}
+            />
           </IconButton>
         </a>
       )}

@@ -2,6 +2,8 @@ import { useContext, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@mui/material'
 import { Refresh } from '@mui/icons-material'
+import classNames from 'classnames'
+import { useMinimumSpin } from 'frontend/hooks/useMinimumSpin'
 import GameContext from '../../GameContext'
 
 /**
@@ -30,8 +32,13 @@ const WikiInfoEmptyState = () => {
   const { t } = useTranslation('gamelib')
   const { wikiInfo, refreshWikiInfo } = useContext(GameContext)
   const [refreshing, setRefreshing] = useState(false)
+  // Quick 261123-bbi: the Retry icon spins for max(1 s from the click, end of
+  // the refresh).
+  const { spinning: retrySpinning, onClickStart: startRetrySpin } =
+    useMinimumSpin(refreshing)
 
   const onRetry = async () => {
+    startRetrySpin()
     setRefreshing(true)
     try {
       await refreshWikiInfo?.()
@@ -74,7 +81,12 @@ const WikiInfoEmptyState = () => {
       <Button
         size="small"
         color="inherit"
-        startIcon={<Refresh fontSize="small" />}
+        startIcon={
+          <Refresh
+            fontSize="small"
+            className={classNames({ 'fa-spin': retrySpinning })}
+          />
+        }
         disabled={refreshing}
         onClick={onRetry}
       >

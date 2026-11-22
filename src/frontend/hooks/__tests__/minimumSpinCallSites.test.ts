@@ -4,7 +4,7 @@
 // useMinimumSpin.test.ts and the Humble Keys acceptance case in its own
 // component test.
 //
-// HONEST SCOPE: this pins the known sites only. A NEW refresh button that
+// HONEST SCOPE: this pins the six known sites only. A NEW refresh button that
 // skips the hook is not detected here (D-6).
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
@@ -50,6 +50,18 @@ const SITES: Site[] = [
     path: 'components/UI/ErrorComponent/index.tsx',
     forbidden: [],
     required: [/fa-spin/, /refreshIcon/]
+  },
+  {
+    name: 'Apple wiki rating refresh',
+    path: 'screens/Game/GamePage/components/AppleWikiInfo.tsx',
+    forbidden: [],
+    required: [/fa-spin/]
+  },
+  {
+    name: 'Wiki-info Retry',
+    path: 'screens/Game/GamePage/components/WikiInfoEmptyState.tsx',
+    forbidden: [],
+    required: [/fa-spin/]
   }
 ]
 
@@ -83,6 +95,15 @@ describe('refresh buttons route their spin through useMinimumSpin (261123-bbi)',
         new RegExp(`[\\[\\]'"]*fa-spin[\\[\\]'"]*\\s*:\\s*${name}\\b`)
       )
     })
+
+    if (site.name === 'Apple wiki rating refresh') {
+      it('calls useMinimumSpin( above the first early `return null`', () => {
+        expect(src.indexOf('useMinimumSpin(')).toBeGreaterThan(-1)
+        expect(src.indexOf('useMinimumSpin(')).toBeLessThan(
+          src.indexOf('return null')
+        )
+      })
+    }
 
     // Plain loops, not it.each: an empty table makes jest fail the suite.
     for (const re of site.forbidden) {
