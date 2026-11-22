@@ -1660,6 +1660,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "gamelib-info"
+version = "0.1.0"
+dependencies = [
+ "gamelib-core",
+ "gamelib-info",
+ "gamelib-store",
+ "gamelib-testutil",
+ "jiff",
+ "reqwest",
+ "rustls",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "gamelib-info-cli"
+version = "0.1.0"
+dependencies = [
+ "gamelib-core",
+ "gamelib-info",
+ "gamelib-store",
+ "gamelib-testutil",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "gamelib-log"
 version = "0.1.0"
 dependencies = [
@@ -1726,6 +1756,7 @@ dependencies = [
  "gamelib-core",
  "gamelib-depot",
  "gamelib-i18n",
+ "gamelib-info",
  "gamelib-log",
  "gamelib-proc",
  "gamelib-safety",

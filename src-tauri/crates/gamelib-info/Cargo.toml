@@ -1,0 +1,42 @@
+[package]
+name = "gamelib-info"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+# Tauri-free leaf information and cache services (Phase 86, SVC-01). No `tauri`, no `keyring`
+# (D-19: the shell owns the Keychain and hands keys in through `SecretSource`), no environment
+# reads: directories, clock, platform and keys all arrive in `InfoCtx`.
+gamelib-core = { path = "../gamelib-core" }
+gamelib-store = { path = "../gamelib-store" }
+# `rt-multi-thread` like gamelib-steamcm's runtime: the shell calls `dispatch_sync` from several
+# plain worker threads, and concurrent `block_on` calls on a current-thread runtime stall.
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# The shell's pin (src-tauri/Cargo.toml): no default features, the TLS provider is installed by
+# `http::install_crypto_provider`. The `query` feature stays OFF: query strings are built by
+# `http::axios_query`, because reqwest's `.query()` encodes differently from axios.
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+url = "2"
+# Fixed-offset civil time only (the cache timestamps): no tz database is read.
+jiff = { version = "0.2", default-features = false, features = ["std"] }
+
+[features]
+# `Replay` (a recorded-case `Http`) and `MemorySecretSource` for the golden tests and the CLI.
+testing = []
+
+[dev-dependencies]
+gamelib-info = { path = ".", features = ["testing"] }
+gamelib-testutil = { path = "../gamelib-testutil" }
+tempfile = "3"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"

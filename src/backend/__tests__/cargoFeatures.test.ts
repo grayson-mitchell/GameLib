@@ -172,7 +172,9 @@ describe('Phase 34.4.2 Plan 13 (operator decision D-A) objc2-app-kit NSGraphicsC
  * Phase 84-18 (8fcadab94, RUSTSEC-2026-0543: gamelib-log's SystemTz moved from chrono to jiff, which
  * adds jiff, jiff-core, jiff-static, jiff-tzdb, jiff-tzdb-platform, portable-atomic and
  * portable-atomic-util; the operator accepted these crates, operator decision 2026-11-22; chrono
- * stays locked because other crates still use it).
+ * stays locked because other crates still use it), and by Phase 86-03 (gamelib-info and
+ * gamelib-info-cli alone: reqwest, rustls, url, jiff, tokio, serde and serde_json were already
+ * locked, so no third-party name enters the tree).
  */
 const CARGO_LOCK_PATH = join(
   __dirname,
@@ -224,7 +226,7 @@ const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "find-msvc-tools", "fixedbitset", "flate2", "fnv", "foldhash", "foreign-types",
   "foreign-types-macros", "foreign-types-shared", "form_urlencoded", "fs_extra", "futures-channel", "futures-core",
   "futures-executor", "futures-io", "futures-lite", "futures-macro", "futures-sink", "futures-task",
-  "futures-util", "gamelib-core", "gamelib-depot", "gamelib-depot-cli", "gamelib-i18n", "gamelib-log", "gamelib-proc", "gamelib-safety", "gamelib-scan", "gamelib-scan-cli", "gamelib-shell",
+  "futures-util", "gamelib-core", "gamelib-depot", "gamelib-depot-cli", "gamelib-i18n", "gamelib-info", "gamelib-info-cli", "gamelib-log", "gamelib-proc", "gamelib-safety", "gamelib-scan", "gamelib-scan-cli", "gamelib-shell",
   "gamelib-steamcm", "gamelib-steamcm-cli", "gamelib-steamfiles", "gamelib-steamfiles-cli", "gamelib-steampoll", "gamelib-steampoll-cli", "gamelib-store", "gamelib-store-cli", "gamelib-testutil", "gdk", "gdk-pixbuf",
   "gdk-pixbuf-sys", "gdk-sys", "gdkwayland-sys", "gdkx11", "gdkx11-sys", "generic-array",
   "gethostname", "getrandom", "gilrs", "gilrs-core", "gio", "gio-sys",
