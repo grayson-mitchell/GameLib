@@ -5,10 +5,14 @@
 //! is opened by path, and the host dedups by path, so this module and the shell's boot sweep share
 //! one [`Store`]. Parity quirks of the TS original are copied, not fixed (D-03), each with a pending
 //! todo:
-//! - the list is unbounded (nothing trims it);
 //! - an entry with a falsy `appName` is dropped by every add and every remove;
 //! - a remove on an empty list writes nothing and tells nobody, while a remove on a non-empty list
 //!   that holds no such game rewrites the (unchanged) list and still tells the sink.
+//!
+//! One deliberate change from the TS original, by operator ruling 2026-11-23 (quick 261123-bax):
+//! [`add`] caps the stored list at [`MAX_STORED`] after putting the game first, dropping the oldest
+//! entries. [`list`] and [`remove`] never trim, so a list an older build stored longer stays as it
+//! is until the next add.
 //!
 //! Every add and remove is a read-modify-write of one key, so each runs under one module-level
 //! [`Mutex`] (research Pitfall 7): a launch's add and a tray or renderer remove never lose one
@@ -29,6 +33,10 @@ use crate::ctx::InfoCtx;
 /// The store table row and the dot path the list lives under.
 const STORE_ROW: &str = "store/config";
 const LIST_KEY: &str = "games.recent";
+
+/// The most entries [`add`] keeps, by operator ruling 2026-11-23 (quick 261123-bax). Older history
+/// is dropped at the next add.
+const MAX_STORED: usize = 50;
 
 /// The longest `appName` an op accepts, in UTF-16 code units (the renderer-facing zod bound).
 pub const APP_NAME_MAX_UTF16: usize = 1024;
@@ -116,7 +124,8 @@ fn write(ctx: &InfoCtx, store: &Store, list: Vec<Json>, op: &str) -> Result<(), 
 }
 
 /// `addRecentGame`: drops the game and any entry with no `appName`, then puts the game first. The
-/// entry's keys are `appName`, `title`, `runner`, in that order.
+/// entry's keys are `appName`, `title`, `runner`, in that order. It then keeps the first
+/// [`MAX_STORED`] entries, dropping the oldest.
 pub fn add(ctx: &InfoCtx, args: AddArgs) -> Result<(), String> {
     const OP: &str = "info_recent_add";
     if !valid_app_name(&args.app_name) {
@@ -131,6 +140,7 @@ pub fn add(ctx: &InfoCtx, args: AddArgs) -> Result<(), String> {
     entry.insert_js("title", Json::Str(args.title));
     entry.insert_js("runner", Json::Str(args.runner));
     list.insert(0, Json::Obj(entry));
+    list.truncate(MAX_STORED);
     write(ctx, &store, list, OP)
 }
 

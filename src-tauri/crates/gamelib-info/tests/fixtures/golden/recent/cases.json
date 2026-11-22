@@ -133,7 +133,7 @@
   },
   {
     "id": "sixty-entry-list",
-    "note": "the stored list is unbounded: 60 entries become 61",
+    "note": "the stored list is capped at 50 on add (operator ruling 2026-11-23, quick 261123-bax): 60 entries plus a new game become 50 and the 11 oldest are dropped; the expected files are hand-derived from that rule and the before-state, not recorded from the TS, because the TS original never trimmed and its oracle was deleted in 86-24",
     "ops": [
       {
         "op": "add",
