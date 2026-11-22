@@ -83,8 +83,24 @@ findings:
     severity: warning
     disposition: fixed
     title: "A line behind a Promise message is timestamped when the Promise settles, not at the call (D-12)"
-open: 0
-total: 20
+  - id: WR-11
+    severity: warning
+    disposition: open
+    title: "One rejecting link makes flush stop waiting at once, for every other link and for the transport"
+  - id: WR-12
+    severity: warning
+    disposition: open
+    title: "#settleChains has no clock-step-back clamp, so flush can wait far past LOG_FLUSH_TIMEOUT_MS"
+  - id: IN-11
+    severity: info
+    disposition: open
+    title: "logErrorSettled / logInfoSettled now also wait on every writer's held Promise messages"
+  - id: IN-12
+    severity: info
+    disposition: open
+    title: "The WR-10 test's tz assertions cannot fail, because no offset change happens inside the window"
+open: 4
+total: 24
 recorded: 2026-11-22T00:00:00.000Z
 ---
 
@@ -112,6 +128,10 @@ recorded: 2026-11-22T00:00:00.000Z
 | IN-10 | info | fixed | REVIEW-FIX r2: `7eea6b58d` (doc-only) |
 | WR-09 | warning | fixed | REVIEW-FIX r3: `61cffefff` |
 | WR-10 | warning | fixed | REVIEW-FIX r3: `349975ff0` |
+| WR-11 | warning | open | REVIEW r4 |
+| WR-12 | warning | open | REVIEW r4 |
+| IN-11 | info | open | REVIEW r4 |
+| IN-12 | info | open | REVIEW r4 |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
