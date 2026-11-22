@@ -5,7 +5,7 @@ slug: "store-host-config-and-versioned-migrations"
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
 status: draft
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: "2026-11-21"
 ---
 
@@ -43,35 +43,35 @@ Task IDs bound by the planner (2026-11-21). `85-NN-Tk` = plan 85-NN, task k. Com
 
 | Task | Requirement | Behavior | Test Type | Automated Command | File Exists | Status |
 |------|-------------|----------|-----------|-------------------|-------------|--------|
-| 85-01-T1..T3 | FND-06 / SC1 | TS oracle golden (ops, engine, migrate, settings docs) and dot-path, number, key-order vectors | golden | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/storeOracle.test.ts` | ❌ W0 | ⬜ pending |
-| 85-02-T1..T3 | FND-06 / SC1 | Redacted corpus complete, hashed, floored; redaction clean | jest | `pnpm exec jest --selectProjects Meta --runTestsByPath meta/__tests__/storeCorpus.test.ts` | ❌ W0 | ⬜ pending |
-| 85-03-T1 | FND-06 | Renderer policy vectors = today's TS | jest | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/storePolicyVectors.test.ts` | ❌ W0 | ⬜ pending |
-| 85-03-T2 | FND-06 | Store frame contract vectors well-formed | node check | see 85-03 Task 2 `<verify>` | ❌ W0 | ⬜ pending |
-| 85-03-T3 | FND-06 / FND-07 | Live gate contract parses (8 items, headingsSeen 0) | uat parse | see 85-03 Task 3 `<verify>` | ❌ W0 | ⬜ pending |
-| 85-04-T1..T2 | FND-06 | S1 protocol model converges; S3-S5 constants recorded | spike | `node .planning/spikes/092-store-mirror-protocol/sim.mjs --runs 10000 --seed 85` | ❌ W0 | ⬜ pending |
-| 85-05-T1..T3 | FND-07 / SC3 | Signed v0.10 baseline identity recorded (D-16) | manual + gh | see 85-05 `<verify>` | ❌ W0 | ⬜ pending |
-| 85-06-T1 | FND-06 / SC1 | Every golden file round-trips byte-identical in Rust | golden | `cd src-tauri && cargo test -p gamelib-store --test golden` | ❌ W0 | ⬜ pending |
-| 85-06-T2 | FND-06 / SC1 | JS number text and key order (vectors) | unit | `cd src-tauri && cargo test -p gamelib-store --test vectors` | ❌ W0 | ⬜ pending |
-| 85-06-T3 | FND-06 | dot-prop paths; atomic write incl. Windows open handle (S2 on CI) | unit (+ CI Windows) | `cd src-tauri && cargo test -p gamelib-store dotpath:: && cargo test -p gamelib-store atomic::` | ❌ W0 | ⬜ pending |
-| 85-07-T1 | FND-06 / SC1 | Golden ops replay byte-identical (envelope, reserved key) | golden | `cd src-tauri && cargo test -p gamelib-store --test ops_golden` | ❌ W0 | ⬜ pending |
-| 85-07-T2 | FND-06 / SC2 | Backup before migrate; newer read-only; corrupt copied aside and kept (D-18); missing empty | golden + unit | `cd src-tauri && cargo test -p gamelib-store --test engine_golden && cargo test -p gamelib-store engine::` | ❌ W0 | ⬜ pending |
-| 85-07-T3 | FND-06 / SC1 | Corpus: manifest complete, no-op open byte-identical, outcomes match; store table drift | integration + jest | `cd src-tauri && cargo test -p gamelib-store --test corpus` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/storeTable.test.ts` | ❌ W0 | ⬜ pending |
-| 85-08-T1..T2 | FND-06 / SC1 | Schema descriptor not stale; migrations equal TS oracle; versions pinned (D-04) | golden + jest | `cd src-tauri && cargo test -p gamelib-store --test migrate_golden` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/schemaDescriptor.test.ts` | ❌ W0 | ⬜ pending |
-| 85-08-T3 | FND-06 / SC1 | Older corpus files migrate like TS; CLI open on FakeHome | integration | `cd src-tauri && cargo test -p gamelib-store --test corpus older_versions_match_ts_oracle && cargo test -p gamelib-store-cli` | ❌ W0 | ⬜ pending |
-| 85-09-T1 | FND-06 | uploadedLogs v0.10 tab+envelope regression | unit | `cd src-tauri && cargo test --bin gamelib-shell log_upload` | ✅ add case | ⬜ pending |
-| 85-09-T2 | FND-06 | Rev under lock, ordered events, rollback, read-only, eviction | unit | `cd src-tauri && cargo test -p gamelib-store host::` | ❌ W0 | ⬜ pending |
-| 85-09-T3 | FND-06 | Bounded boot open, mode/ownership, boot env, `store` exit drain | unit + jest gates | `cd src-tauri && cargo test --bin gamelib-shell store_boot && cargo test --bin gamelib-shell handle_exit` | ❌ W0 | ⬜ pending |
-| 85-10-T1..T3 | FND-06 | Frame write path end to end; frame vectors on both sides; flush; registrant | unit + jest | `cd src-tauri && cargo test --bin gamelib-shell store_frame` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/storeWritePath.test.ts` | ❌ W0 | ⬜ pending |
-| 85-11-T1..T3 | FND-06 | Mirror protocol property test, shared cells, dot paths, quit flush, D-02 fallback | jest | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/mirrorCell.test.ts src/backend/stores/__tests__/dotPath.test.ts src/backend/stores/__tests__/storeFallback.test.ts` | ❌ W0 | ⬜ pending |
-| 85-12-T1..T2 | FND-06 | Cache family flipped; runtime caches; corrupt cache startEmpty | jest + unit | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/cacheFamily.test.ts` | ❌ W0 | ⬜ pending |
-| 85-13-T1..T2 | FND-06 | User-state flipped; libraries migrated at boot | jest + unit | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/userStateFamily.test.ts` ; `cd src-tauri && cargo test --bin gamelib-shell store_boot` | ❌ W0 | ⬜ pending |
-| 85-14-T1 | FND-06 | Account family flipped; shared steam_store cell; tightening | jest + unit | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/accountFamily.test.ts` | ❌ W0 | ⬜ pending |
-| 85-14-T2 | FND-07 / SC3 / D-10 | Keyring names pinned on all CI legs; no keyring dep in store crates | unit + `cargo tree` | `cd src-tauri && cargo test --bin gamelib-shell keyring_` | ❌ W0 | ⬜ pending |
-| 85-15-T1..T3 | FND-06 | Settings family flipped; readSettingsDoc; D-22; resync; eviction | jest + unit | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/settingsDocs.test.ts src/backend/stores/__tests__/settingsFamily.test.ts src/backend/__tests__/settingsMirrorResync.test.ts` | ❌ W0 | ⬜ pending |
-| 85-16-T1..T3 | FND-06 / SC2 | Native reads; one owner per channel; policy TS = Rust; Rust read-only notice | unit + jest | `cd src-tauri && cargo test --bin gamelib-shell store_policy && cargo test --bin gamelib-shell store_native` ; `pnpm exec jest --runTestsByPath src/backend/__tests__/nativeSeamPortComplete.test.ts` ; `pnpm check:ipc-contract` | ✅ update | ⬜ pending |
-| 85-17-T1..T3 | FND-06 | Native writes and storeChanged with rev; preload stale-push guard | unit + jest | `cd src-tauri && cargo test --bin gamelib-shell store_native` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/rendererWrites.test.ts src/preload/__tests__/tauriTransport.test.ts` | ❌ W0 | ⬜ pending |
-| 85-18-T1..T2 | FND-06 | Bottle version gate (D-17) for marker and ledger | unit + jest | `cd src-tauri && cargo test -p gamelib-store version_gate && cargo test --bin gamelib-shell store_gate` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/bottleVersionGate.test.ts` | ❌ W0 | ⬜ pending |
-| 85-19-T1..T3 | FND-06 / FND-07 | Clean-worktree proof; three-OS CI; Phase 85 signed identity recorded | proof | see 85-19 | — | ⬜ pending |
+| 85-01-T1..T3 | FND-06 / SC1 | TS oracle golden (ops, engine, migrate, settings docs) and dot-path, number, key-order vectors | golden | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/storeOracle.test.ts` | ✅ | ✅ green (85-19 proof at P) |
+| 85-02-T1..T3 | FND-06 / SC1 | Redacted corpus complete, hashed, floored; redaction clean | jest | `pnpm exec jest --selectProjects Meta --runTestsByPath meta/__tests__/storeCorpus.test.ts` | ✅ | ✅ green (85-19 proof at P) |
+| 85-03-T1 | FND-06 | Renderer policy vectors = today's TS | jest | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/storePolicyVectors.test.ts` | ✅ | ✅ green (85-19 proof at P) |
+| 85-03-T2 | FND-06 | Store frame contract vectors well-formed | node check | see 85-03 Task 2 `<verify>` | ✅ | ✅ green (85-19 proof at P) |
+| 85-03-T3 | FND-06 / FND-07 | Live gate contract parses (8 items, headingsSeen 0) | uat parse | see 85-03 Task 3 `<verify>` | ✅ | ✅ green (85-19 proof at P) |
+| 85-04-T1..T2 | FND-06 | S1 protocol model converges; S3-S5 constants recorded | spike | `node .planning/spikes/092-store-mirror-protocol/sim.mjs --runs 10000 --seed 85` | ✅ | ✅ green (85-19 proof at P) |
+| 85-05-T1..T3 | FND-07 / SC3 | Signed v0.10 baseline identity recorded (D-16) | manual + gh | see 85-05 `<verify>` | ✅ | ✅ green (baseline recorded, 85-05) |
+| 85-06-T1 | FND-06 / SC1 | Every golden file round-trips byte-identical in Rust | golden | `cd src-tauri && cargo test -p gamelib-store --test golden` | ✅ | ✅ green (85-19 proof at P) |
+| 85-06-T2 | FND-06 / SC1 | JS number text and key order (vectors) | unit | `cd src-tauri && cargo test -p gamelib-store --test vectors` | ✅ | ✅ green (85-19 proof at P) |
+| 85-06-T3 | FND-06 | dot-prop paths; atomic write incl. Windows open handle (S2 on CI) | unit (+ CI Windows) | `cd src-tauri && cargo test -p gamelib-store dotpath:: && cargo test -p gamelib-store atomic::` | ✅ | ✅ green (85-19 proof at P) |
+| 85-07-T1 | FND-06 / SC1 | Golden ops replay byte-identical (envelope, reserved key) | golden | `cd src-tauri && cargo test -p gamelib-store --test ops_golden` | ✅ | ✅ green (85-19 proof at P) |
+| 85-07-T2 | FND-06 / SC2 | Backup before migrate; newer read-only; corrupt copied aside and kept (D-18); missing empty | golden + unit | `cd src-tauri && cargo test -p gamelib-store --test engine_golden && cargo test -p gamelib-store engine::` | ✅ | ✅ green (85-19 proof at P) |
+| 85-07-T3 | FND-06 / SC1 | Corpus: manifest complete, no-op open byte-identical, outcomes match; store table drift | integration + jest | `cd src-tauri && cargo test -p gamelib-store --test corpus` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/storeTable.test.ts` | ✅ | ✅ green (85-19 proof at P) |
+| 85-08-T1..T2 | FND-06 / SC1 | Schema descriptor not stale; migrations equal TS oracle; versions pinned (D-04) | golden + jest | `cd src-tauri && cargo test -p gamelib-store --test migrate_golden` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/schemaDescriptor.test.ts` | ✅ | ✅ green (85-19 proof at P) |
+| 85-08-T3 | FND-06 / SC1 | Older corpus files migrate like TS; CLI open on FakeHome | integration | `cd src-tauri && cargo test -p gamelib-store --test corpus older_versions_match_ts_oracle && cargo test -p gamelib-store-cli` | ✅ | ✅ green (85-19 proof at P) |
+| 85-09-T1 | FND-06 | uploadedLogs v0.10 tab+envelope regression | unit | `cd src-tauri && cargo test --bin gamelib-shell log_upload` | ✅ | ✅ green (85-19 proof at P) |
+| 85-09-T2 | FND-06 | Rev under lock, ordered events, rollback, read-only, eviction | unit | `cd src-tauri && cargo test -p gamelib-store host::` | ✅ | ✅ green (85-19 proof at P) |
+| 85-09-T3 | FND-06 | Bounded boot open, mode/ownership, boot env, `store` exit drain | unit + jest gates | `cd src-tauri && cargo test --bin gamelib-shell store_boot && cargo test --bin gamelib-shell handle_exit` | ✅ | ✅ green (85-19 proof at P) |
+| 85-10-T1..T3 | FND-06 | Frame write path end to end; frame vectors on both sides; flush; registrant | unit + jest | `cd src-tauri && cargo test --bin gamelib-shell store_frame` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/storeWritePath.test.ts` | ✅ | ✅ green (85-19 proof at P) |
+| 85-11-T1..T3 | FND-06 | Mirror protocol property test, shared cells, dot paths, quit flush, D-02 fallback | jest | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/mirrorCell.test.ts src/backend/stores/__tests__/dotPath.test.ts src/backend/stores/__tests__/storeFallback.test.ts` | ✅ | ✅ green (85-19 proof at P) |
+| 85-12-T1..T2 | FND-06 | Cache family flipped; runtime caches; corrupt cache startEmpty | jest + unit | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/cacheFamily.test.ts` | ✅ | ✅ green (85-19 proof at P) |
+| 85-13-T1..T2 | FND-06 | User-state flipped; libraries migrated at boot | jest + unit | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/userStateFamily.test.ts` ; `cd src-tauri && cargo test --bin gamelib-shell store_boot` | ✅ | ✅ green (85-19 proof at P) |
+| 85-14-T1 | FND-06 | Account family flipped; shared steam_store cell; tightening | jest + unit | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/accountFamily.test.ts` | ✅ | ✅ green (85-19 proof at P) |
+| 85-14-T2 | FND-07 / SC3 / D-10 | Keyring names pinned on all CI legs; no keyring dep in store crates | unit + `cargo tree` | `cd src-tauri && cargo test --bin gamelib-shell keyring_` | ✅ | ✅ green (85-19 proof at P) |
+| 85-15-T1..T3 | FND-06 | Settings family flipped; readSettingsDoc; D-22; resync; eviction | jest + unit | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/settingsDocs.test.ts src/backend/stores/__tests__/settingsFamily.test.ts src/backend/__tests__/settingsMirrorResync.test.ts` | ✅ | ✅ green (85-19 proof at P) |
+| 85-16-T1..T3 | FND-06 / SC2 | Native reads; one owner per channel; policy TS = Rust; Rust read-only notice | unit + jest | `cd src-tauri && cargo test --bin gamelib-shell store_policy && cargo test --bin gamelib-shell store_native` ; `pnpm exec jest --runTestsByPath src/backend/__tests__/nativeSeamPortComplete.test.ts` ; `pnpm check:ipc-contract` | ✅ | ✅ green (85-19 proof at P) |
+| 85-17-T1..T3 | FND-06 | Native writes and storeChanged with rev; preload stale-push guard | unit + jest | `cd src-tauri && cargo test --bin gamelib-shell store_native` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/rendererWrites.test.ts src/preload/__tests__/tauriTransport.test.ts` | ✅ | ✅ green (85-19 proof at P) |
+| 85-18-T1..T2 | FND-06 | Bottle version gate (D-17) for marker and ledger | unit + jest | `cd src-tauri && cargo test -p gamelib-store version_gate && cargo test --bin gamelib-shell store_gate` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/bottleVersionGate.test.ts` | ✅ | ✅ green (85-19 proof at P) |
+| 85-19-T1..T3 | FND-06 / FND-07 | Clean-worktree proof; three-OS CI; Phase 85 signed identity recorded | proof | see 85-19 | — | ⬜ pending (T1 green at P `d90e33bc8`; T2 decision and T3 CI owed) |
 | 85-20-T1..T3 | FND-07 / SC3, SC1, SC2 | Live macOS gate on signed builds | manual | `85-HUMAN-UAT.md` | — | ⬜ pending |
 | 85-21-T1 | FND-06 / SC4, SC5 | Reachability recorded; migration system and migrationsStore deleted; mirror schedule pinned (D-19); migrations.json untouched (D-07) | jest + unit | `pnpm exec jest --runTestsByPath src/backend/__tests__/storeHostPortComplete.test.ts src/backend/__tests__/storeMirrorSchedule.test.ts` ; `cd src-tauri && cargo test --bin gamelib-shell store_boot_never_opens_migrations_json` | ❌ W0 | ⬜ pending |
 | 85-21-T2 | FND-06 / SC5 | Flag, TS owner path, oracle and `conf` deleted; census exemption closed | jest + unit | `pnpm exec jest --runTestsByPath src/backend/__tests__/storeHostPortComplete.test.ts src/backend/__tests__/nativeSeamPortComplete.test.ts` ; `cd src-tauri && cargo test --bin gamelib-shell store_` | ✅ update | ⬜ pending |
@@ -82,7 +82,7 @@ Task IDs bound by the planner (2026-11-21). `85-NN-Tk` = plan 85-NN, task k. Com
 | 85-24-T1 | FND-06 / SC5 | TS read-only notice path deleted; Rust's notice is the only one | jest + unit | `pnpm exec jest --runTestsByPath src/backend/__tests__/storeHostPortComplete.test.ts src/backend/sidecar/__tests__/appShellFlows.test.ts src/backend/stores/__tests__/storePolicyVectors.test.ts` ; `cd src-tauri && cargo test --bin gamelib-shell store_policy` | ✅ update | ⬜ pending |
 | 85-24-T2 | FND-06 / SC5 | Survivors relocated; storeVersioning and storeMigrations deleted | jest | `pnpm exec jest --runTestsByPath src/backend/__tests__/storeHostPortComplete.test.ts src/backend/utils/__tests__/schemaStrip.test.ts` ; `pnpm test` | ❌ W0 | ⬜ pending |
 | 85-25-T1..T3 | FND-06 / FND-07 | Post-deletion clean-worktree and three-OS CI proof | proof | see 85-25 | — | ⬜ pending |
-| all | Gates | Sidecar boot with no Rust peer exits cleanly | smoke | `pnpm smoke:sidecar` | ✅ | ⬜ pending |
+| all | Gates | Sidecar boot with no Rust peer exits cleanly | smoke | `pnpm smoke:sidecar` | ✅ | ✅ green (85-19 proof at P) |
 
 Binding notes: SC5 is read per D-19, not literally: ROADMAP SC5's "named and executed for every family flipped in this phase" means every persisted store's TS-mirror deletion phase is named (pinned by `storeMirrorSchedule.test.ts`, copied from `82-STATE-OWNERSHIP.md`) and only the deletions due in Phase 85 are executed (`migrationsStore`'s mirror), plus deletion of the TS *owner* path for every family (D-03); the other mirrors are deleted in the phases their column names, and the schedule test fails if one disappears early. D-03's "the phase's last plan deletes" is carried by 85-21..85-24, which run back to back after the live gate (85-20) with nothing else between them and the post-deletion proof (85-25); the split is for context budget only (storeVersioning's `versioning` dependency is threaded through about 60 consumer files). The schema descriptor drift test lives at `src/backend/stores/__tests__/schemaDescriptor.test.ts` (not under storeMigrations/, which 85-24 deletes); the read-only area parity is proven by cargo's `store_policy` tests over `storePolicyVectors.json` (85-16), so no separate `readonly::` module exists; the store drain is proven by `store_boot` and `store_frame` tests (85-09, 85-10) rather than a `host::drain` filter.
 
@@ -92,13 +92,15 @@ Binding notes: SC5 is read per D-19, not literally: ROADMAP SC5's "named and exe
 
 ## Wave 0 Requirements
 
-- [ ] `src/backend/stores/__tests__/storeOracle.test.ts` + `src-tauri/crates/gamelib-store/tests/fixtures/{golden,corpus,MANIFEST.json}` committed before any TS change
-- [ ] Corpus harvest + redaction tool under `createFakeHomeProfile()`, with a redaction test
-- [ ] `85-HUMAN-UAT.md` live-gate contract (convention 5 item shape), incl. signing-identity precondition
-- [ ] `gamelib-store` crate scaffold + CI wiring (`rust-test.yml`, `rustTestWorkflow.test.ts`, `cargoFeatures.test.ts`)
-- [ ] `storePolicyVectors.json` policy vectors (85-03; the policy itself moves to `storeChannels.json` in 85-16); `storeFrameVectors.json`
-- [ ] `meta/genStoreSchemas.ts` + drift test
-- [ ] Spikes S1–S5 (mirror rebase sim, Windows rename, frame throughput, GamesConfig sweep, `sync_all` cost)
+- [x] `src/backend/stores/__tests__/storeOracle.test.ts` + `src-tauri/crates/gamelib-store/tests/fixtures/{golden,corpus,MANIFEST.json}` committed before any TS change
+- [x] Corpus harvest + redaction tool under `createFakeHomeProfile()`, with a redaction test
+- [x] `85-HUMAN-UAT.md` live-gate contract (convention 5 item shape), incl. signing-identity precondition
+- [x] `gamelib-store` crate scaffold + CI wiring (`rust-test.yml`, `rustTestWorkflow.test.ts`, `cargoFeatures.test.ts`)
+- [x] `storePolicyVectors.json` policy vectors (85-03; the policy itself moves to `storeChannels.json` in 85-16); `storeFrameVectors.json`
+- [x] `meta/genStoreSchemas.ts` + drift test
+- [x] Spikes S1–S5 (mirror rebase sim, Windows rename, frame throughput, GamesConfig sweep, `sync_all` cost)
+
+All seven present at P `d90e33bc8` (checked by 85-19 Task 1): `storeOracle.test.ts`, `tests/fixtures/{golden,corpus,corpus/MANIFEST.json}`; `meta/harvestStoreCorpus.ts` + `meta/__tests__/storeCorpus.test.ts`; `85-HUMAN-UAT.md` (parses to 8 items, 0 headings); `src-tauri/crates/gamelib-store` + `rust-test.yml` `-p gamelib-store -p gamelib-store-cli` + `meta/__tests__/rustTestWorkflow.test.ts` + `src/backend/__tests__/cargoFeatures.test.ts`; `src/common/__fixtures__/storePolicyVectors.json` + `storeFrameVectors.json`; `meta/genStoreSchemas.ts` + `schemaDescriptor.test.ts`; spikes 092 (S1) and 093 (S3-S5), S2 deferred to CI per `85-SPIKES.md`.
 
 ---
 
@@ -107,6 +109,51 @@ Binding notes: SC5 is read per D-19, not literally: ROADMAP SC5's "named and exe
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
 | Signed v0.10 → signed Phase 85 upgrade: zero Keychain prompts, sign-ins survive | FND-07 / SC3 | Needs real signed releases with the same identity and a human watching for Keychain prompts | `85-HUMAN-UAT.md` |
+
+---
+
+## Phase proof
+
+Plan 85-19 Task 1, 2026-11-22, on the macOS machine (aarch64-apple-darwin, `rustc 1.99.1`, node 22.23.4, pnpm 10.28.0).
+
+**P = `d90e33bc8aba8c15622b5156b07113343593a101`** (main). Clean checkout: `git worktree add --detach <scratchpad>/gamelib-85-proof <P>`, removed afterwards (`git worktree remove --force` + `git worktree prune`).
+
+**Precondition.** The SUMMARYs of 85-01..85-18 all exist. 114 commit hashes they cite resolve; 113 are ancestors of P. The one that is not is `10c85ed72` (85-05's 0.10.0 bump), which lives only on branch `release/v0.10` by design (the signed baseline's build head), never on main.
+
+**How P was reached.** The first candidate was `2ce910a69` (the 0.11.0 version bump on top of 85-18's SUMMARY commit `07601c1ae` and 85-17's `186ffb9eb`). Its proof found three real failures, each fixed on main as a scoped commit, and P moved each time:
+
+| Found at | Failure | Fix | Commit |
+|----------|---------|-----|--------|
+| `2ce910a69` | darwin clippy ratchet FAIL: `clippy::redundant_closure` 1 (no ceiling) at `store_dispatch.rs:740` and `clippy::incompatible_msrv` 2 > ceiling 1 (`Option::is_none_or` at `:781`, stable 1.82, MSRV 1.77.2). Both from 85-10 `5aca95cd1` | pass `crate::shell_log` directly; `match` instead of `is_none_or`. No ceiling changed | `2bee0ba6c` |
+| `2bee0ba6c` | jest `meta/__tests__/changelogVersionGate.test.ts` 4 failed: `public/changelog.json` identity still 0.8.0 after the bump | tag_name, name, html_url and body heading to 0.11.0 (as the 0.8.0 bump `0212fecb9` did); release prose unchanged, 0.11.0 notes owed | `ace12ef70` |
+| `2bee0ba6c` | jest `meta/__tests__/rendererZodGuard.test.ts` rule d: `src/preload/tauriTransport.ts` and `src/preload/api/misc.ts` -> `src/common/types/storePolicy.ts` -> `./ipc/storeChannels.json` (since 85-16 `1848addc1`) | the guard (a zod-size stand-in) now admits a `.json` data module under ipc, which imports nothing; every `.ts` module under ipc is still forbidden; a detector test pins both halves | `d90e33bc8` |
+
+**Results at P** (every command run inside the proof worktree; cargo steps in `src-tauri`, copied verbatim from `rust-test.yml`):
+
+| # | Command | Exit | Counts / notes |
+|---|---------|------|----------------|
+| 1 | `pnpm install --frozen-lockfile` | 0 | "Lockfile is up to date" |
+| 2 | `pnpm exec vite build` | 0 | renderer assembled into `build/renderer` |
+| 3 | `pnpm build:sidecar-sea` | 0 | real SEA sidecar `src-tauri/binaries/gamelib-sidecar-aarch64-apple-darwin` (stronger than CI's placeholder step) |
+| 4 | `cargo test -p gamelib-safety -p gamelib-testutil` | 0 | 95 passed, 0 failed, 0 ignored |
+| 5 | `cargo test -p gamelib-proc` | 0 | 29 passed, 0 failed |
+| 6 | `cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli -p gamelib-steamfiles -p gamelib-steamfiles-cli -p gamelib-steamcm -p gamelib-steamcm-cli -p gamelib-steampoll -p gamelib-steampoll-cli -p gamelib-i18n -p gamelib-core -p gamelib-log -p gamelib-store -p gamelib-store-cli` | 0 | 93 test binaries, 1810 passed, 0 failed, 7 ignored; includes gamelib-store's 18 `atomic::` tests (the `atomic::windows` case is `cfg(windows)` and is owed to the CI windows leg) |
+| 7 | static codec linkage (`cargo build -p gamelib-depot-cli` + `otool -L`) | 0 | links only Security, CoreFoundation, libiconv, libSystem; no lzma/zstd/zlib |
+| 8 | `cargo test --bin gamelib-shell` | 0 | 702 passed, 0 failed, 2 ignored; includes `tests::keyring_names_are_pinned` (darwin; windows and ubuntu legs owed to CI) |
+| 9 | `cargo +1.99.1 clippy --workspace --all-targets --message-format=json` into `node ../meta/clippyRatchet.cjs <file> --list` | 0 | `PASS (darwin, toolchain 1.99.1)`; every lint at its ceiling (incompatible_msrv 1/1) |
+| 10 | `pnpm check:ipc-contract` | 0 | `ipc_contract.rs` and `ipcSchemaSnapshot.json` up to date |
+| 11 | `pnpm test` (run 1 at P) | 1 | 1145 suites run, 1144 passed; 24553 passed, 1 failed, 40 skipped. Failed: `runnerClone.test.ts` "aborts the clone through the abort controller and leaves no partial dir" hit the 900 s test timeout (load average 13-15 from other sessions). Alone, 5 of 5 runs: 64 passed, 1 skipped |
+| 11b | `pnpm test` (run 2 at P) | 1 | 24540 passed, 14 failed, 40 skipped, all 14 in `steamLoginPollLifecycle.test.tsx` (the QR reference markup came back empty). Alone, 3 of 3 runs: 23 passed. `runnerClone.test.ts` passed in this run |
+| 11c | `pnpm test` at `2bee0ba6c` (before the two jest fixes) | 1 | 24548 passed, 5 failed: only the changelog and zod-guard failures fixed above. Both flaky suites passed in this run |
+| 12 | `pnpm smoke:exit-check -- --mode eof` | 0 | `PASS (exit latency 59 ms)`, no survivors |
+| 13 | `pnpm smoke:sidecar` | 0 | built, started, wrote READY, exited 0 on stdin EOF |
+| 14 | pre-push gate set: `pnpm codecheck`, `pnpm lint`, `pnpm prettier`, `pnpm i18n --fail-on-update`, `pnpm find-deadcode`, `pnpm boundaries`, `pnpm steam-line-ceiling`, `pnpm backend-di-ceilings`, `pnpm gameinfo-narrowing-ceiling` | all 0 | lint 0 errors (648 warnings, production and tests PASS); prettier clean; knip PASS (311 baselined); depcruise no violations (1441 modules); backend-di PASS (jestMock 1804); plus `pnpm planning-gates` 12/12 |
+| 15 | `node .planning/spikes/092-store-mirror-protocol/sim.mjs --runs 10000 --seed 85` | 0 | all invariants held (P, G, V, R, C), 9995 distinct interleavings |
+| 16 | 85-03 T2 frame-vector check; 85-03 T3 UAT parse | 0 | vectors well formed; `85-HUMAN-UAT.md` parses to 8 items, 0 headings |
+
+**Jest verdict.** No test fails at P for a reason in the code: every failure across the three full runs is either fixed above or a suite that fails only under full-run load and passes alone (and passed in the other full runs). Neither flaky suite is Phase 85 code (`runnerClone` was last touched in 66.4, the Steam login suite is frontend). Both are recorded in `deferred-items.md`. CI's `test.yml` (ubuntu) is the jest authority after the push.
+
+**Not proven here, owed to CI after the push (Task 3):** the windows-latest and ubuntu-latest legs of `rust-test.yml`, gamelib-store's `atomic::windows` test on windows-latest (S2), `keyring_names_are_pinned` on windows-latest and ubuntu-latest (D-10), and the win32 clippy ceiling map. The late mirror-cell rev handshake 85-17 deferred (`deferred-items.md`) is not built and is not a push blocker.
 
 ---
 

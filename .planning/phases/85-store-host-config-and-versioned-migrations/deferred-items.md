@@ -42,3 +42,17 @@
   replay window. Candidate for 85-19 or a follow-up todo.
 - `src/backend/sidecar/__tests__/outboundHttpRegistry.test.ts` "does not track or destroy WebSocket upgrade requests" failed
   once in the full `src/backend` run and passes alone (a 353 ms WebSocket upgrade under load). Not touched by 85-17.
+
+## From 85-19
+
+- Two load-only jest flakes in the Task 1 proof at P `d90e33bc8`, neither Phase 85 code (machine load average 13-15 from
+  other sessions). Each passed alone and passed in the other full runs:
+  - `src/backend/storeManagers/steam/bridge/drm/__tests__/runnerClone.test.ts` "aborts the clone through the abort controller
+    and leaves no partial dir" hung to the 900 s test timeout in full run 1 (alone 5/5 green). A hang rather than a slow pass
+    suggests the abort can be lost when it lands before the fake `cp` starts listening; worth a look by whoever owns 66.4's
+    abort registry.
+  - `src/frontend/screens/Login/components/SteamLogin/__tests__/steamLoginPollLifecycle.test.tsx`: 14 failed in full run 2,
+    the QR reference markup rendered empty (alone 3/3 green).
+- The `outboundHttpRegistry.test.ts` WebSocket flake 85-17 recorded did not recur in any of the three 85-19 full runs.
+- `public/changelog.json` now carries the 0.11.0 identity but the 0.8.0 release prose; 0.11.0 notes are owed before a
+  release is published.
