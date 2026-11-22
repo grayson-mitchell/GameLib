@@ -1,0 +1,12 @@
+{
+	"overrides": {
+		"app1": {
+			"title": "First Ever"
+		}
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	}
+}

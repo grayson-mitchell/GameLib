@@ -1,0 +1,175 @@
+[
+  {
+    "id": "get-absent",
+    "note": "no entry for the game: null",
+    "ops": [
+      {
+        "op": "get",
+        "appName": "ghost"
+      }
+    ]
+  },
+  {
+    "id": "get-present",
+    "note": "the stored override",
+    "ops": [
+      {
+        "op": "get",
+        "appName": "app2"
+      }
+    ]
+  },
+  {
+    "id": "get-all-empty",
+    "note": "a store file with no overrides key reads as {}",
+    "ops": [
+      {
+        "op": "getAll"
+      }
+    ]
+  },
+  {
+    "id": "get-all-populated",
+    "note": "every stored override",
+    "ops": [
+      {
+        "op": "getAll"
+      }
+    ]
+  },
+  {
+    "id": "set-title-added",
+    "note": "a first override is added",
+    "ops": [
+      {
+        "op": "set",
+        "appName": "app3",
+        "override": {
+          "title": "Renamed Game"
+        }
+      }
+    ]
+  },
+  {
+    "id": "set-same-override-twice",
+    "note": "SVC-01 idempotency edge: the second set leaves identical bytes",
+    "ops": [
+      {
+        "op": "set",
+        "appName": "app3",
+        "override": {
+          "title": "Renamed Game"
+        }
+      },
+      {
+        "op": "set",
+        "appName": "app3",
+        "override": {
+          "title": "Renamed Game"
+        }
+      }
+    ]
+  },
+  {
+    "id": "set-replaces-whole-entry",
+    "note": "the new override replaces the stored one, it is not merged",
+    "ops": [
+      {
+        "op": "set",
+        "appName": "app2",
+        "override": {
+          "title": "Only A Title Now"
+        }
+      }
+    ]
+  },
+  {
+    "id": "set-art-only-is-not-empty",
+    "note": "an override with only art_cover is kept",
+    "ops": [
+      {
+        "op": "set",
+        "appName": "app3",
+        "override": {
+          "art_cover": "/img/app3-1.png"
+        }
+      }
+    ]
+  },
+  {
+    "id": "set-empty-removes-entry-and-images",
+    "note": "the entry goes and every <appName>-* file with it; app1x-1.png and other-1.png stay",
+    "ops": [
+      {
+        "op": "set",
+        "appName": "app1",
+        "override": {}
+      }
+    ]
+  },
+  {
+    "id": "set-empty-for-absent-entry-still-removes-images",
+    "note": "no entry, but the images still go; the stored overrides are written back unchanged",
+    "ops": [
+      {
+        "op": "set",
+        "appName": "app9",
+        "override": {}
+      }
+    ]
+  },
+  {
+    "id": "set-empty-without-images-dir",
+    "note": "the entry goes and a missing images folder is not an error",
+    "ops": [
+      {
+        "op": "set",
+        "appName": "app1",
+        "override": {}
+      }
+    ]
+  },
+  {
+    "id": "set-when-store-absent",
+    "note": "no store/game-overrides.json at all: the write creates it",
+    "ops": [
+      {
+        "op": "set",
+        "appName": "app1",
+        "override": {
+          "title": "First Ever"
+        }
+      }
+    ]
+  },
+  {
+    "id": "attach-with-override",
+    "note": "the override is attached as an overrides property, the original fields stay",
+    "ops": [
+      {
+        "op": "attach",
+        "game": {
+          "app_name": "app2",
+          "title": "Game 2",
+          "runner": "gog",
+          "art_cover": "https://example.invalid/cover2.jpg"
+        }
+      }
+    ]
+  },
+  {
+    "id": "attach-without-override",
+    "note": "the same game info comes back untouched",
+    "ops": [
+      {
+        "op": "attach",
+        "game": {
+          "app_name": "app7",
+          "title": "Game 7",
+          "runner": "nile",
+          "art_cover": "https://example.invalid/cover7.jpg"
+        }
+      }
+    ]
+  }
+]

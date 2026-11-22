@@ -112,6 +112,8 @@ export interface Recorder {
   readonly mode: OracleMode
   /** The exchanges seen so far (record mode) or served so far (replay modes). */
   readonly exchanges: readonly RecordedExchange[]
+  /** `METHOD url` (secrets redacted) of every request the TS made, in order. */
+  readonly requested: readonly string[]
   /** Record mode: write the files. Replay modes: assert nothing was unmatched or left over. */
   finish(): Promise<void>
 }
@@ -261,6 +263,9 @@ async function realRequest(
       unknown
     >
   )
+  // The body file holds the decoded bytes, so the wire's length and framing headers would lie.
+  delete headers['content-length']
+  delete headers['transfer-encoding']
   return {
     status: response.status,
     headers,
@@ -275,6 +280,14 @@ function pathOf(url: string): string {
 }
 
 /**
+ * Sets the shared adapter without starting a case, so a test can import its slice module before
+ * the first `installRecorder`. A request made with no case installed is rejected by name.
+ */
+export function installAdapter(): void {
+  axios.defaults.adapter = dispatcher
+}
+
+/**
  * Installs the recorder for one case. Call it before importing the slice module (the first call
  * is what sets the shared adapter); call it again for each later case.
  */
@@ -285,6 +298,7 @@ export function installRecorder(options: RecorderOptions): Recorder {
   const bodies = new Map<string, Buffer>()
   const served = new Set<number>()
   const unmatched: string[] = []
+  const requested: string[] = []
 
   if (mode !== 'record') {
     const file = join(dir, 'exchanges.json')
@@ -340,6 +354,7 @@ export function installRecorder(options: RecorderOptions): Recorder {
   ): Promise<AxiosResponse> => {
     const method = (config.method ?? 'get').toUpperCase()
     const url = redactUrl(axios.getUri(config))
+    requested.push(`${method} ${url}`)
     const body = bodyAsString(config.data)
     const request = {
       method,
@@ -371,6 +386,7 @@ export function installRecorder(options: RecorderOptions): Recorder {
   ): Promise<AxiosResponse> => {
     const method = (config.method ?? 'get').toUpperCase()
     const url = redactUrl(axios.getUri(config))
+    requested.push(`${method} ${url}`)
     const wanted = matchKey(method, url)
     const index = exchanges.findIndex(
       (e, i) =>
@@ -422,6 +438,7 @@ export function installRecorder(options: RecorderOptions): Recorder {
   return {
     mode,
     exchanges,
+    requested,
     async finish() {
       if (mode === 'record') {
         for (const extra of options.rustOnly ?? []) {

@@ -1,0 +1,21 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/Starz0r/AreWeAntiCheatYet/HEAD/games.json",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 503,
+      "headers": {
+        "content-type": "text/plain"
+      },
+      "bodyFile": "body-1.txt"
+    },
+    "synthetic": true
+  }
+]

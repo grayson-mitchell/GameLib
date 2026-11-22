@@ -1,0 +1,16 @@
+{
+  "ops": [
+    {
+      "app_name": "app2",
+      "title": "Game 2",
+      "runner": "gog",
+      "art_cover": "https://example.invalid/cover2.jpg",
+      "overrides": {
+        "title": "Other",
+        "art_cover": "/img/app2-1.png",
+        "art_square": "/img/app2-2.png"
+      }
+    }
+  ],
+  "images": null
+}

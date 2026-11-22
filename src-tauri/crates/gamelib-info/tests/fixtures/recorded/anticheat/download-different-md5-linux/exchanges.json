@@ -1,0 +1,43 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/Starz0r/AreWeAntiCheatYet/HEAD/games.json",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "cache-control": "max-age=300",
+        "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+        "content-type": "text/plain; charset=utf-8",
+        "etag": "W/\"60650a2a90dbb6b515d32a15eefec08b426171f2b3bd7878dc4ab68452c9888c\"",
+        "strict-transport-security": "max-age=31536000",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "deny",
+        "x-xss-protection": "1; mode=block",
+        "x-github-request-id": "C3E4:269754:176245:2BBBF1:6B02B7A8",
+        "x-github-edge-region": "australiaeast",
+        "accept-ranges": "bytes",
+        "date": "Sun, 22 Nov 2026 09:36:56 GMT",
+        "via": "1.1 varnish",
+        "x-served-by": "cache-wlg10424-WLG",
+        "x-cache": "HIT",
+        "x-cache-hits": "3",
+        "x-timer": "S1795340217.576530,VS0,VE0",
+        "vary": "Authorization,Accept-Encoding",
+        "access-control-allow-origin": "*",
+        "cross-origin-resource-policy": "cross-origin",
+        "x-fastly-request-id": "31fadb6a807574b245bcdd9f1bf7d034a6fae562",
+        "expires": "Sun, 22 Nov 2026 09:41:56 GMT",
+        "source-age": "15"
+      },
+      "bodyFile": "body-1.txt"
+    }
+  }
+]

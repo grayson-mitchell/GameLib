@@ -1,0 +1,12 @@
+{
+	"overrides": {
+		"app1": {
+			"title": "My Title"
+		},
+		"app2": {
+			"title": "Other",
+			"art_cover": "/img/app2-1.png",
+			"art_square": "/img/app2-2.png"
+		}
+	}
+}

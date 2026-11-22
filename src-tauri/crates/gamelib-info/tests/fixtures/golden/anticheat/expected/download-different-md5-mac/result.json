@@ -1,0 +1,11 @@
+{
+  "ops": [
+    {
+      "undefined": true
+    }
+  ],
+  "onlineCallbacksRegistered": 1,
+  "requests": [
+    "GET https://raw.githubusercontent.com/Heroic-Games-Launcher/MacAnticheatData/main/games.json"
+  ]
+}

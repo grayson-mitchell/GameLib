@@ -1,0 +1,186 @@
+[
+  {
+    "id": "lookup-namespace-present-mixed-case",
+    "note": "the file namespace is lower-cased and tested with includes: \"abcdef\" finds \"AbCdEf0123\"",
+    "platform": "linux",
+    "ops": [
+      {
+        "op": "lookup",
+        "namespace": "abcdef"
+      }
+    ]
+  },
+  {
+    "id": "lookup-namespace-absent",
+    "note": "no entry matches: find returns undefined (recorded as {\"undefined\": true})",
+    "platform": "linux",
+    "ops": [
+      {
+        "op": "lookup",
+        "namespace": "nomatch"
+      }
+    ]
+  },
+  {
+    "id": "lookup-uppercase-argument-misses",
+    "note": "TS quirk: only the file side is lower-cased, so an upper-case argument finds nothing",
+    "platform": "linux",
+    "ops": [
+      {
+        "op": "lookup",
+        "namespace": "ABCDEF"
+      }
+    ]
+  },
+  {
+    "id": "lookup-entry-without-epic-id-skipped",
+    "note": "an entry with no epic namespace never matches, even on its steam id",
+    "platform": "linux",
+    "ops": [
+      {
+        "op": "lookup",
+        "namespace": "222"
+      }
+    ]
+  },
+  {
+    "id": "lookup-undefined-namespace",
+    "note": "an undefined namespace answers null without reading the file",
+    "platform": "linux",
+    "ops": [
+      {
+        "op": "lookup"
+      }
+    ]
+  },
+  {
+    "id": "lookup-on-windows",
+    "note": "Windows answers null",
+    "platform": "windows",
+    "ops": [
+      {
+        "op": "lookup",
+        "namespace": "abcdef"
+      }
+    ]
+  },
+  {
+    "id": "lookup-data-file-missing",
+    "note": "no data file: null",
+    "platform": "linux",
+    "ops": [
+      {
+        "op": "lookup",
+        "namespace": "abcdef"
+      }
+    ]
+  },
+  {
+    "id": "lookup-data-file-not-json",
+    "note": "a data file that does not parse: null",
+    "platform": "linux",
+    "ops": [
+      {
+        "op": "lookup",
+        "namespace": "abcdef"
+      }
+    ]
+  },
+  {
+    "id": "download-matching-md5",
+    "note": "the local file hash equals the latest hash: no request, no online callback",
+    "platform": "linux",
+    "ops": [
+      {
+        "op": "download",
+        "latestFileHash": "1db9ed4c2f37c34cd34be5b296e40e71"
+      }
+    ]
+  },
+  {
+    "id": "download-different-md5-linux",
+    "note": "a different hash: the callback runs, the AreWeAntiCheatYet file is fetched and written byte-exact",
+    "platform": "linux",
+    "ops": [
+      {
+        "op": "download",
+        "latestFileHash": "6c7ba9c5a141421e1c03cb9807c97c74"
+      }
+    ]
+  },
+  {
+    "id": "download-different-md5-mac",
+    "note": "on macOS the MacAnticheatData URL is used",
+    "platform": "mac",
+    "ops": [
+      {
+        "op": "download",
+        "latestFileHash": "6c7ba9c5a141421e1c03cb9807c97c74"
+      }
+    ]
+  },
+  {
+    "id": "download-no-local-file-linux",
+    "note": "no local file: no hash check, the file is fetched",
+    "platform": "linux",
+    "ops": [
+      {
+        "op": "download",
+        "latestFileHash": "6c7ba9c5a141421e1c03cb9807c97c74"
+      }
+    ]
+  },
+  {
+    "id": "download-no-local-file-mac",
+    "note": "no local file on macOS",
+    "platform": "mac",
+    "ops": [
+      {
+        "op": "download"
+      }
+    ]
+  },
+  {
+    "id": "download-local-file-no-latest-hash",
+    "note": "a local file and no latest hash counts as changed",
+    "platform": "linux",
+    "ops": [
+      {
+        "op": "download"
+      }
+    ]
+  },
+  {
+    "id": "download-on-windows",
+    "note": "Windows downloads nothing and registers no callback",
+    "platform": "windows",
+    "ops": [
+      {
+        "op": "download",
+        "latestFileHash": "6c7ba9c5a141421e1c03cb9807c97c74"
+      }
+    ]
+  },
+  {
+    "id": "download-http-error-keeps-old-file",
+    "note": "synthetic: the service answers 503; the warning is logged and the old file stays",
+    "platform": "linux",
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/Starz0r/AreWeAntiCheatYet/HEAD/games.json",
+        "status": 503,
+        "headers": {
+          "content-type": "text/plain"
+        },
+        "body": "service unavailable"
+      }
+    ],
+    "ops": [
+      {
+        "op": "download",
+        "latestFileHash": "6c7ba9c5a141421e1c03cb9807c97c74"
+      }
+    ]
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "ops": [
+    {
+      "app_name": "app7",
+      "title": "Game 7",
+      "runner": "nile",
+      "art_cover": "https://example.invalid/cover7.jpg"
+    }
+  ],
+  "images": null
+}
