@@ -3,6 +3,7 @@ import { logTargetRefusal } from './forwarder'
 // Bound at call time, never at load: `./index` imports this file for its two constructors, so a
 // load-time use would meet a half-initialised module.
 import { enqueueLogEntry, logLine, logWarning, oweLogRotation } from './index'
+import { stringifyLogValue } from './stringifyLogValue'
 
 import type { LogFrameTarget } from 'common/types/sidecarTransport'
 import type { LogLevel } from './constants'
@@ -150,13 +151,36 @@ export default class LogWriter {
       (typeof options === 'string' ? options : options?.prefix) ??
       LogPrefix.General
     const rotate = this.#claimRotate()
-    if (this.#pending === 0) {
-      logLine(this.#target, rotate, level, prefix, message)
+    // Convert here, synchronously, so the writer knows whether the message is asynchronous: the
+    // forwarder would hold such a line in its own chain, which this writer's later writes cannot
+    // see, and a later write could then overtake it (WR-08).
+    const body = stringifyLogValue(message)
+    if (typeof body === 'string') {
+      if (this.#pending === 0) {
+        logLine(this.#target, rotate, level, prefix, body)
+      } else {
+        this.#extend(
+          this.#tail.then(() => {
+            logLine(this.#target, rotate, level, prefix, body)
+          })
+        )
+      }
     } else {
+      // Chain the Promise message like `writeString` does, so later writes queue behind it and an
+      // owed rotation (the message rejected) reaches the first entry queued after it, never one
+      // already written (WR-08).
+      body.catch(() => undefined)
       this.#extend(
-        this.#tail.then(() => {
-          logLine(this.#target, rotate, level, prefix, message)
-        })
+        this.#tail
+          .then(() => body)
+          .then(
+            (text) => {
+              logLine(this.#target, rotate, level, prefix, text)
+            },
+            () => {
+              if (rotate) oweLogRotation(this.#target)
+            }
+          )
       )
     }
     return Promise.resolve()

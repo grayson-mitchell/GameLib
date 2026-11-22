@@ -238,6 +238,50 @@ describe('LogWriter facade over the forwarder', () => {
     ])
   })
 
+  it('a Promise message that rejects keeps later writes behind it, so the owed rotation precedes them (WR-08)', async () => {
+    const { index, LogWriter, frames } = load()
+    const w = new LogWriter(GAME, false)
+    let rejectSlow: (reason: Error) => void = () => undefined
+    const slow = new Promise<string>((_, reject) => {
+      rejectSlow = reject
+    })
+    // The writer's first call claims the rotation on a Promise message that has not settled yet.
+    const first = w.logError(slow)
+    // A later write for the same target must not overtake it: if it were queued now with
+    // `rotate: false`, the owed rotation would land on a LATER entry and move this line away.
+    const second = w.writeString('current session line\n')
+    rejectSlow(new Error('never produced'))
+    await Promise.all([first, second])
+    await w.writeString('later line\n')
+    await index.flushLogForwarder()
+    const batches = batchesFor(frames, 'game')
+    expect(batches.map((b) => b.rotate)).toEqual([true])
+    expect(batches.flatMap((b) => b.entries)).toEqual([
+      { raw: 'current session line\n' },
+      { raw: 'later line\n' }
+    ])
+  })
+
+  it('a Promise message in a structured call keeps the writer order (WR-08)', async () => {
+    const { index, LogWriter, frames } = load()
+    const w = new LogWriter(GAME, false)
+    let release: (v: string) => void = () => undefined
+    const slow = new Promise<string>((resolve) => {
+      release = resolve
+    })
+    const first = w.logInfo(slow)
+    const second = w.writeString('after\n')
+    release('before')
+    await Promise.all([first, second])
+    await index.flushLogForwarder()
+    const batches = batchesFor(frames, 'game')
+    expect(batches.map((b) => b.rotate)).toEqual([true])
+    const entries = batches.flatMap((b) => b.entries)
+    expect(entries).toHaveLength(2)
+    expect(entries[0]).toMatchObject({ line: { level: 'INFO', msg: 'before' } })
+    expect(entries[1]).toEqual({ raw: 'after\n' })
+  })
+
   it('accepts a 255-byte appName and one with spaces', async () => {
     const { index, LogWriter, frames } = load()
     await new LogWriter(
