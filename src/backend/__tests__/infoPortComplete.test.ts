@@ -549,11 +549,16 @@ const DISCOUNTS: SliceSpec = {
 }
 
 /**
- * Why the `getGogDiscounts` registration in `source` is not exactly a forward to the resolver, or an
- * empty list when it is: `deps.ipc.handle('getGogDiscounts', <arrow>)` whose body is one expression, a
- * call of `getGogDiscounts` (no block, no statements, no other call around it).
+ * Why the `channel` registration in `source` is not exactly a forward to `resolver`, or an empty list
+ * when it is: `deps.ipc.handle('<channel>', <arrow>)` whose body is one expression, a call of
+ * `<resolver>` (no block, no statements, no other call around it). Used for the two D-24 resolvers
+ * that keep a sidecar registration: `getGogDiscounts` and `getCrossoverIndex`.
  */
-function discountsRegistrationProblems(source: string): string[] {
+function forwardRegistrationProblems(
+  source: string,
+  channel: string,
+  resolver: string
+): string[] {
   const sf = ts.createSourceFile(
     'registration.ts',
     source,
@@ -567,7 +572,7 @@ function discountsRegistrationProblems(source: string): string[] {
       node.expression.getText(sf) === 'deps.ipc.handle' &&
       node.arguments[0] !== undefined &&
       ts.isStringLiteralLike(node.arguments[0]) &&
-      node.arguments[0].text === 'getGogDiscounts'
+      node.arguments[0].text === channel
     ) {
       found.push(node)
     }
@@ -576,7 +581,7 @@ function discountsRegistrationProblems(source: string): string[] {
   visit(sf)
   const [registration] = found
   if (found.length !== 1 || !registration) {
-    return [`expected one getGogDiscounts registration, found ${found.length}`]
+    return [`expected one ${channel} registration, found ${found.length}`]
   }
   const handler = registration.arguments[1]
   if (!handler || !ts.isArrowFunction(handler)) {
@@ -589,12 +594,9 @@ function discountsRegistrationProblems(source: string): string[] {
   while (ts.isParenthesizedExpression(body) || ts.isAwaitExpression(body)) {
     body = body.expression
   }
-  if (
-    !ts.isCallExpression(body) ||
-    body.expression.getText(sf) !== 'getGogDiscounts'
-  ) {
+  if (!ts.isCallExpression(body) || body.expression.getText(sf) !== resolver) {
     return [
-      `the handler body is not a call of getGogDiscounts: ${body.getText(sf).slice(0, 60)}`
+      `the handler body is not a call of ${resolver}: ${body.getText(sf).slice(0, 60)}`
     ]
   }
   // Nothing inside the forwarded arguments may be another call (a fetch, a log, a lookup).
@@ -606,6 +608,9 @@ function discountsRegistrationProblems(source: string): string[] {
   for (const arg of body.arguments) walkArgs(arg)
   return inner.map((c) => `the forwarded arguments hold a call: ${c}`)
 }
+
+const discountsRegistrationProblems = (source: string): string[] =>
+  forwardRegistrationProblems(source, 'getGogDiscounts', 'getGogDiscounts')
 
 describe('discountsPortComplete', () => {
   runSlice(DISCOUNTS)
@@ -698,6 +703,324 @@ describe('discountsPortComplete', () => {
         ['buildUrl']
       )
     ).toEqual(['x.ts: buildUrl'])
+  })
+})
+
+/**
+ * `infoCaches` and `appRuntime` were dependencies of the TS wiki and CrossOver index slices, which 86-24
+ * deleted. Two registrations still declare them as inert `?: unknown` members, because
+ * `sidecar/handlers.ts` (a file another session had uncommitted edits in when 86-24 ran) still passes
+ * both to them. This list is exactly the files that hold such a member and can only shrink: delete the
+ * member, the handlers.ts line, then the entry. OWED once handlers.ts is clean.
+ */
+const INERT_DEPS_EXEMPT = [
+  'src/backend/sidecar/enrichmentFlowRegistration.ts',
+  'src/backend/sidecar/shortcutsFlowRegistration.ts'
+]
+
+/**
+ * 86-24 (SC4, D-13, D-18 and D-29 row 5): the wiki game info slice, umu included, is Rust. The CodeWeavers,
+ * PCGamingWiki, AppleGamingWiki, GamesDB, ProtonDB, Steam Deck, HowLongToBeat and umu lookups and the
+ * `wikigameinfo` cache are `gamelib-info` `wiki`; the TS module, its HLTB credentials and its store family
+ * are deleted. The three callers that remain (the non-Steam shortcut, the GOG/Epic/Amazon launch GAMEID and
+ * the sign-out clear) are the scheduled shims and resolver in `info/wiki.ts` (infoShimSchedule). The goldens,
+ * recordings and starting profiles stay for the Rust golden tests.
+ */
+const WIKI: SliceSpec = {
+  deleted: [
+    'src/backend/wiki_game_info',
+    'src/backend/wiki_game_info/wiki_game_info.ts',
+    'src/backend/wiki_game_info/stores.ts',
+    'src/backend/wiki_game_info/umu/utils.ts',
+    'src/backend/wiki_game_info/howlongtobeat/utils.ts',
+    'src/backend/wiki_game_info/howlongtobeat/titleMatch.ts',
+    'src/backend/wiki_game_info/pcgamingwiki/utils.ts',
+    'src/backend/wiki_game_info/applegamingwiki/utils.ts',
+    'src/backend/wiki_game_info/codeweavers/utils.ts',
+    'src/backend/wiki_game_info/gamesdb/utils.ts',
+    'src/backend/wiki_game_info/protondb/utils.ts',
+    'src/backend/wiki_game_info/steamdeck/utils.ts',
+    'src/backend/info/__tests__/oracle/wiki.oracle.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-info/tests/fixtures/golden/wiki',
+    'src-tauri/crates/gamelib-info/tests/fixtures/recorded/wiki',
+    'src-tauri/crates/gamelib-info/tests/fixtures/state/wiki',
+    'src/backend/info/wiki.ts'
+  ],
+  forbiddenIdentifiers: [
+    'createWikiGameInfoStores',
+    'WikiGameInfoDeps',
+    'getInfoFromPCGamingWiki',
+    'getInfoFromAppleGamingWiki',
+    'getInfoFromGamesDB',
+    'getInfoFromProtonDB',
+    'getSteamDeckComp',
+    'getHowLongToBeat',
+    'createHltbCredentials',
+    'HltbCredentials',
+    'pickBestMatch',
+    'umuStore'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_WIKI',
+  storeRowKeys: ['store_cache/wikigameinfo', 'store_cache/umu']
+}
+
+/** Whether `code` constructs a `CacheStore` over the store called `name`. */
+const constructsCacheStore = (code: string, name: string): boolean =>
+  new RegExp(`new\\s+CacheStore\\s*(<[^(]*>)?\\(\\s*'${name}'`).test(code)
+
+describe('wikiPortComplete', () => {
+  runSlice(WIKI)
+
+  it('self-test: a planted CacheStore construction is caught, a different store or a comment is not', () => {
+    expect(
+      constructsCacheStore("const c = new CacheStore<string>('umu', 60)", 'umu')
+    ).toBe(true)
+    expect(
+      constructsCacheStore(
+        "new CacheStore('wikigameinfo', null)",
+        'wikigameinfo'
+      )
+    ).toBe(true)
+    expect(constructsCacheStore("new CacheStore('umu_other', 1)", 'umu')).toBe(
+      false
+    )
+    expect(constructsCacheStore("registry.get('umu')", 'umu')).toBe(false)
+  })
+
+  it('getWikiGameInfo is a native info channel with no sidecar ipc.on or ipc.handle', () => {
+    expect(channelsOf('info')).toContain('getWikiGameInfo')
+    expect(findTsRegistrations(tsWalk.files, ['getWikiGameInfo'])).toEqual([])
+  })
+
+  it('the three wiki families are gone from the TS store layer: no wikiGameInfo family, no wikigameinfo or umu store constructed', () => {
+    expect(
+      findIdentifiers(
+        tsWalk.files.filter((f) => f.path.startsWith('src/backend/')),
+        ['wikiGameInfo']
+      )
+    ).toEqual([])
+    for (const name of ['wikigameinfo', 'umu']) {
+      const constructed = tsWalk.files.filter(
+        (f) =>
+          f.path.startsWith('src/backend/') &&
+          constructsCacheStore(f.code, name)
+      )
+      expect(constructed.map((f) => f.path)).toEqual([])
+    }
+  })
+
+  it('the wiki cache rows keep their cache kind and renderer names after the TS stores went (EXTRA_ROWS)', () => {
+    for (const name of ['wikigameinfo', 'umu']) {
+      const row = storeTable.rows.find((r) => r.key === `store_cache/${name}`)
+      expect(row).toMatchObject({ kind: 'cache', tsNames: [name] })
+    }
+    const generator = tsWalk.files.find(
+      (f) => f.path === 'meta/genStoreTable.ts'
+    )
+    expect(generator?.code).toContain("'wikigameinfo'")
+    expect(generator?.code).toContain("'umu'")
+  })
+
+  it('info/wiki.ts holds the shims and the resolver and reaches Rust only through the two wiki constants', () => {
+    const calls = findRustInfoCalls(tsWalk.files).filter((c) =>
+      c.path.endsWith('src/backend/info/wiki.ts')
+    )
+    expect(calls.map((c) => c.constant).sort()).toEqual([
+      'RUST_INFO_UMU_GET',
+      'RUST_INFO_WIKI_CACHE_CLEAR',
+      'RUST_INFO_WIKI_GET'
+    ])
+    const wiki = tsWalk.files.find((f) => f.path === 'src/backend/info/wiki.ts')
+    expect(wiki?.code).not.toMatch(/axios|fetch\(|URLSearchParams/)
+  })
+
+  it('the inert infoCaches and appRuntime members live only in the exempt registrations', () => {
+    const files = tsWalk.files
+      .filter((f) => /\b(infoCaches|appRuntime)\?: unknown/.test(f.code))
+      .map((f) => f.path)
+      .sort()
+    expect(files).toEqual([...INERT_DEPS_EXEMPT].sort())
+  })
+})
+
+/**
+ * 86-24 (SC4, D-13, D-18, D-24): the CrossOver index is Rust. The index fetch, schema, cache, back-off, the
+ * bundled snapshot, the title normalisation and the rating map are `gamelib-info` `crossover`; the TS module,
+ * its fetcher, its store family and the `crossoverIndex` app-runtime slots are deleted, and the goldens stay.
+ * `getCrossoverIndex` keeps its sidecar registration as a resolver (D-24: the games come from the library
+ * managers' in-memory lists, which stay TS until the library managers port): the registration is allowed,
+ * but it may hold nothing beyond the one call to the resolver in `info/crossover.ts`.
+ * `meta/measureCrossoverMatching.ts`, a Phase 19 one-off measurement harness, is deleted because its only
+ * import target (`crossover_index/normalize`) is gone; its result is recorded in Phase 19.
+ */
+const CROSSOVER: SliceSpec = {
+  deleted: [
+    'src/backend/crossover_index',
+    'src/backend/crossover_index/index.ts',
+    'src/backend/crossover_index/fetcher.ts',
+    'src/backend/crossover_index/crossoverRatingMap.ts',
+    'src/backend/crossover_index/normalize.ts',
+    'src/backend/crossover_index/schema.ts',
+    'src/backend/crossover_index/stores.ts',
+    'src/backend/info/__tests__/oracle/crossover.oracle.test.ts',
+    'meta/measureCrossoverMatching.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-info/tests/fixtures/golden/crossover',
+    'src-tauri/crates/gamelib-info/tests/fixtures/recorded/crossover',
+    'src-tauri/crates/gamelib-info/tests/fixtures/state/crossover',
+    'src/backend/info/crossover.ts'
+  ],
+  forbiddenIdentifiers: [
+    'createCrossoverIndex',
+    'createCrossoverIndexFetcher',
+    'createCrossoverIndexStores',
+    'buildCrossoverRatingMap',
+    'crossoverIndexDescriptor',
+    'isCrossoverIndexEligible',
+    'CrossoverIndexLookups',
+    'NAME_MATCHING_SHIPS',
+    'crossoverFetcher'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_CROSSOVER',
+  storeRowKeys: ['store_cache/crossover_index']
+}
+
+describe('crossoverPortComplete', () => {
+  runSlice(CROSSOVER)
+
+  it('the rating map and lookups are Rust: getCrossoverIndex is not a native channel and keeps exactly one TS registration', () => {
+    expect(channelsOf('info')).not.toContain('getCrossoverIndex')
+    expect(findTsRegistrations(tsWalk.files, ['getCrossoverIndex'])).toEqual([
+      'src/backend/sidecar/enrichmentFlowRegistration.ts: getCrossoverIndex'
+    ])
+  })
+
+  it('the getCrossoverIndex registration holds only the forward to the resolver', () => {
+    const registration = tsWalk.files.find(
+      (f) => f.path === 'src/backend/sidecar/enrichmentFlowRegistration.ts'
+    )
+    expect(registration).toBeDefined()
+    expect(
+      forwardRegistrationProblems(
+        registration?.raw ?? '',
+        'getCrossoverIndex',
+        'getCrossoverIndex'
+      )
+    ).toEqual([])
+  })
+
+  it('the resolver is the one place that names the rating-map channel, with the D-24 shape and no HTTP client', () => {
+    const resolver = tsWalk.files.find(
+      (f) => f.path === 'src/backend/info/crossover.ts'
+    )
+    expect(resolver).toBeDefined()
+    expect(resolver?.code).not.toMatch(/axios|fetch\(|URLSearchParams/)
+    expect(
+      findRustInfoCalls(tsWalk.files).filter(
+        (c) => c.constant === 'RUST_INFO_CROSSOVER_RATING_MAP'
+      )
+    ).toEqual([
+      {
+        path: 'src/backend/info/crossover.ts',
+        constant: 'RUST_INFO_CROSSOVER_RATING_MAP',
+        fn: 'getCrossoverIndex'
+      }
+    ])
+    expect(
+      checkShimShape(
+        readFileSync(join(REPO_ROOT, 'src/backend/info/crossover.ts'), 'utf8'),
+        'getCrossoverIndex',
+        { shape: 'resolver', inputs: ['games'] }
+      )
+    ).toEqual([])
+  })
+
+  it('the AppRuntime carries no crossover member and the store table keeps the cache row', () => {
+    const runtime = tsWalk.files.find(
+      (f) => f.path === 'src/backend/appRuntime.ts'
+    )
+    expect(runtime).toBeDefined()
+    expect(runtime?.code).not.toMatch(/crossover/i)
+    const row = storeTable.rows.find(
+      (r) => r.key === 'store_cache/crossover_index'
+    )
+    expect(row).toMatchObject({ kind: 'cache', tsNames: ['crossover_index'] })
+    const generator = tsWalk.files.find(
+      (f) => f.path === 'meta/genStoreTable.ts'
+    )
+    expect(generator?.code).toContain("'crossover_index'")
+  })
+
+  it('self-test: the registration check passes a plain forward for this channel and names a block or a wrong callee', () => {
+    const plain =
+      "deps.ipc.handle('getCrossoverIndex', async () => getCrossoverIndex({ a: deps.a }))"
+    const block =
+      "deps.ipc.handle('getCrossoverIndex', async () => { await load(); return 1 })"
+    const wrong =
+      "deps.ipc.handle('getCrossoverIndex', async () => buildCrossoverRatingMap(deps))"
+    const check = (src: string): string[] =>
+      forwardRegistrationProblems(src, 'getCrossoverIndex', 'getCrossoverIndex')
+    expect(check(plain)).toEqual([])
+    expect(check(block)).toEqual([expect.stringContaining('block body')])
+    expect(check(wrong)).toEqual([
+      expect.stringContaining('not a call of getCrossoverIndex')
+    ])
+  })
+})
+
+/**
+ * 86-24 (D-11): every slice's oracle test is deleted, so the oracle harness and recorder go with the last
+ * one. The goldens, recordings and starting profiles are the Rust tests' input and stay, each slice with
+ * its MANIFEST.json; `fixtureRedaction.test.ts` imports no slice and keeps guarding what the recordings hold.
+ */
+const ORACLE_SLICES_WITH_GOLDEN = [
+  'anticheat',
+  'crossover',
+  'discounts',
+  'overrides',
+  'recent',
+  'steamgrid',
+  'storeSearch',
+  'wiki'
+]
+
+describe('oraclePortComplete', () => {
+  it('the TS oracle directory (tests, recorder and harness) does not exist', () => {
+    expect(() =>
+      assertDeleted(['src/backend/info/__tests__/oracle'])
+    ).not.toThrow()
+  })
+
+  it.each(ORACLE_SLICES_WITH_GOLDEN)(
+    'the %s golden MANIFEST.json survives for the Rust golden test',
+    (slice) => {
+      expect(() =>
+        assertKept([
+          `src-tauri/crates/gamelib-info/tests/fixtures/golden/${slice}/MANIFEST.json`
+        ])
+      ).not.toThrow()
+    }
+  )
+
+  it('fixtureRedaction.test.ts is kept (it imports no slice)', () => {
+    expect(() =>
+      assertKept(['src/backend/info/__tests__/fixtureRedaction.test.ts'])
+    ).not.toThrow()
+  })
+
+  it('no non-test file names the oracle recorder or harness', () => {
+    expect(
+      findIdentifiers(tsWalk.files, [
+        'GAMELIB_WRITE_INFO_GOLDEN',
+        'oracleMode',
+        'recordedCaseDir'
+      ])
+    ).toEqual([])
   })
 })
 
