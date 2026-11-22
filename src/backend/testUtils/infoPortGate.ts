@@ -16,7 +16,7 @@
  * Pure: no timers, no handles, no module-level state, nothing mocked.
  */
 import { existsSync, readdirSync, readFileSync } from 'fs'
-import { join, relative } from 'path'
+import { dirname, join, posix, relative } from 'path'
 import * as ts from 'typescript'
 import {
   stripSourceComments,
@@ -252,9 +252,57 @@ export function findRustInfoCalls(
 
 /** Names of every exported function in `source`: declarations, and `export const f = () => ...`. */
 export function findExportedFunctions(path: string, source: string): string[] {
-  void path
-  void source
-  return []
+  const sf = parse(path, source)
+  const names: string[] = []
+  const exported = (n: ts.Node): boolean =>
+    ts.canHaveModifiers(n) &&
+    (ts.getModifiers(n) ?? []).some(
+      (m) => m.kind === ts.SyntaxKind.ExportKeyword
+    )
+  for (const st of sf.statements) {
+    if (ts.isFunctionDeclaration(st) && st.name && exported(st)) {
+      names.push(st.name.text)
+    } else if (ts.isVariableStatement(st) && exported(st)) {
+      for (const d of st.declarationList.declarations) {
+        const init = d.initializer
+        if (
+          ts.isIdentifier(d.name) &&
+          init &&
+          (ts.isArrowFunction(init) || ts.isFunctionExpression(init))
+        ) {
+          names.push(d.name.text)
+        }
+      }
+    }
+  }
+  return names
+}
+
+/** The module specifiers a source file imports, re-exports, requires or dynamically imports. */
+function moduleSpecifiers(path: string, source: string): string[] {
+  const sf = parse(path, source)
+  const out: string[] = []
+  const visit = (node: ts.Node): void => {
+    if (
+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier)
+    ) {
+      out.push(node.moduleSpecifier.text)
+    } else if (
+      ts.isCallExpression(node) &&
+      node.arguments.length > 0 &&
+      ts.isStringLiteralLike(node.arguments[0]!) &&
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) &&
+          node.expression.text === 'require'))
+    ) {
+      out.push(node.arguments[0].text)
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sf)
+  return out
 }
 
 /**
@@ -265,9 +313,23 @@ export function findImporters(
   files: readonly StrippedFile[],
   target: string
 ): string[] {
-  void files
-  void target
-  return []
+  const bare = target.replace(/\.tsx?$/, '')
+  const stem = bare.endsWith('/index') ? bare.slice(0, -'/index'.length) : bare
+  const importers: string[] = []
+  for (const f of files) {
+    if (f.path === target || !/\.tsx?$/.test(f.path)) continue
+    for (const spec of moduleSpecifiers(f.path, f.code)) {
+      const resolved = spec.startsWith('.')
+        ? join(dirname(f.path), spec).split('\\').join('/')
+        : `src/${spec}`
+      const norm = posix.normalize(resolved)
+      if (norm === bare || norm === stem) {
+        importers.push(f.path)
+        break
+      }
+    }
+  }
+  return importers
 }
 
 export interface ShimRow {
@@ -439,8 +501,27 @@ export function checkShimShape(
       problems.push(`${label}: extra statement before the call: ${excerpt(st)}`)
     }
   } else {
-    // The resolver rule (const names equal the row's inputs) lands with the schedule test (86-05 Task 2).
-    return [`${label}: the resolver rule is not implemented yet`]
+    for (const st of lead) {
+      if (
+        ts.isVariableStatement(st) &&
+        (st.declarationList.flags & ts.NodeFlags.Const) !== 0
+      ) {
+        for (const d of st.declarationList.declarations) {
+          bindingNames(d.name, declared)
+        }
+      } else {
+        problems.push(
+          `${label}: only const declarations may precede the call, found: ${excerpt(st)}`
+        )
+      }
+    }
+    const want = [...inputs].sort().join(',')
+    const got = [...declared].sort().join(',')
+    if (want !== got) {
+      problems.push(
+        `${label}: const names [${declared.join(', ')}] are not exactly the row's inputs [${inputs.join(', ')}]`
+      )
+    }
   }
 
   let returned: ts.Expression | undefined
