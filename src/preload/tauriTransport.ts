@@ -356,6 +356,12 @@ export function registerStore(storeName: string, options?: Record<string, unknow
  * `initStateSubscriptions`. This is the EAGER tier -- `BOOT_SET_STORES`
  * (src/common/types/storePolicy.ts). Anything not in that set is a lazy store, hydrated
  * on demand by `hydrateStore()` below.
+ *
+ * A store whose snapshot raced an `invalidated` push is left to the re-fetch that push started, and
+ * this function waits for that re-fetch (D-WR-03) so the store is populated and `hydrated` when
+ * boot goes on to mount. The wait is bounded by `BOOT_REFETCH_WAIT_MS`: a re-fetch that never
+ * answers must not hold the first paint, so past the bound boot proceeds and the store takes the
+ * lazy-miss path until the re-fetch lands.
  */
 export async function hydrateStoreSnapshot(): Promise<void> {
   const buffered: StoreChangedPayload[] = []
@@ -369,6 +375,7 @@ export async function hydrateStoreSnapshot(): Promise<void> {
   // Phase 85 (85-16): the Rust snapshot carries each store's rev under STORE_REV_KEY, which can
   // never be a store name. 85-17: each rev seeds that store's stale-push guard.
   const revs: Record<string, unknown> = result?.[STORE_REV_KEY] ?? {}
+  const deferredToRefetch: string[] = []
   for (const [storeName, values] of Object.entries(result ?? {})) {
     if (storeName === STORE_REV_KEY) continue
     const readRev = typeof revs[storeName] === 'number' ? revs[storeName] : undefined
@@ -376,6 +383,7 @@ export async function hydrateStoreSnapshot(): Promise<void> {
     // the store to the re-fetch it started: this snapshot predates the bulk change, so it must neither
     // overwrite what that fetch returned nor mark the store hydrated (C-WR-06).
     if (buffered.some((change) => change.store === storeName && change.invalidated && newerThanRead(change, readRev))) {
+      deferredToRefetch.push(storeName)
       continue
     }
     // WR-07: REPLACE, do not merge. See `hydrateStore` below for the rationale. A push that
@@ -390,6 +398,38 @@ export async function hydrateStoreSnapshot(): Promise<void> {
     snapshot[storeName] = fresh
     noteRev(storeName, readRev)
     hydrated.add(storeName)
+  }
+  if (deferredToRefetch.length > 0) await settleRefetches(deferredToRefetch)
+}
+
+/**
+ * How long `hydrateStoreSnapshot` waits for the re-fetches it deferred to (D-WR-03). Boot must not
+ * hang on a re-fetch that never answers.
+ */
+const BOOT_REFETCH_WAIT_MS = 5000
+
+/**
+ * Resolves once no re-fetch is in flight for any of `stores`, or after `BOOT_REFETCH_WAIT_MS`,
+ * whichever is first. Never rejects: `hydrateStore` catches its own fetch failure. An invalidation
+ * that arrives while a fetch runs queues another behind it (see the change listener), so each store
+ * is followed until `inflight` is empty rather than awaited once.
+ */
+async function settleRefetches(stores: string[]): Promise<void> {
+  const drained = Promise.all(
+    stores.map(async (storeName) => {
+      for (let task = inflight.get(storeName); task; task = inflight.get(storeName)) {
+        await task
+      }
+    })
+  )
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const bound = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, BOOT_REFETCH_WAIT_MS)
+  })
+  try {
+    await Promise.race([drained, bound])
+  } finally {
+    clearTimeout(timer)
   }
 }
 

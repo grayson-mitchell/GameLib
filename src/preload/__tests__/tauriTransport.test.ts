@@ -718,6 +718,69 @@ describe('change events', () => {
     await hydrating
     expect(snapshotGet('steamConfigStore', 'isLoggedIn')).toBe(false)
   })
+
+  it('D-WR-03: hydrateStoreSnapshot does not return until the re-fetch it deferred to has landed', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    let resolveSnapshot: ((value: unknown) => void) | undefined
+    mockedInvoke.mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          resolveSnapshot = r
+        }) as never
+    )
+    const refetch = deferredFetchWithRev()
+    const hydrating = hydrateStoreSnapshot()
+    push({ store: 'steamConfigStore', key: '', invalidated: true, rev: 80 })
+    // The older snapshot comes back FIRST; the re-fetch is still pending.
+    resolveSnapshot?.({
+      steamConfigStore: { isLoggedIn: true },
+      '@rev': { steamConfigStore: 75 }
+    })
+    let returned = false
+    void hydrating.then(() => {
+      returned = true
+    })
+    await settle()
+    expect(returned).toBe(false)
+    refetch.resolve({ isLoggedIn: false }, 80)
+    await hydrating
+    expect(returned).toBe(true)
+    // Populated by the re-fetch, and hydrated: a synchronous read neither misses nor warns.
+    expect(snapshotGet('steamConfigStore', 'isLoggedIn')).toBe(false)
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
+  it('D-WR-03: a re-fetch that never answers does not hold boot past the bound', async () => {
+    jest.useFakeTimers()
+    try {
+      let resolveSnapshot: ((value: unknown) => void) | undefined
+      mockedInvoke.mockImplementationOnce(
+        () =>
+          new Promise((r) => {
+            resolveSnapshot = r
+          }) as never
+      )
+      // The re-fetch is issued and never resolved.
+      mockedInvoke.mockImplementationOnce(() => new Promise(() => {}) as never)
+      const hydrating = hydrateStoreSnapshot()
+      push({ store: 'steamConfigStore', key: '', invalidated: true, rev: 90 })
+      resolveSnapshot?.({
+        steamConfigStore: { isLoggedIn: true },
+        '@rev': { steamConfigStore: 85 }
+      })
+      let returned = false
+      void hydrating.then(() => {
+        returned = true
+      })
+      await jest.advanceTimersByTimeAsync(4000)
+      expect(returned).toBe(false)
+      await jest.advanceTimersByTimeAsync(1500)
+      await hydrating
+      expect(returned).toBe(true)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
 })
 
 describe('allow-list', () => {
