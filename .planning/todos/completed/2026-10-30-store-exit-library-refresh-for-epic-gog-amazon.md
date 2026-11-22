@@ -11,13 +11,54 @@ files:
   - src-tauri/src/main.rs
 severity: minor
 platform: macos
-ready: blocked
-blocked_by: "no unclaimed Amazon Games-delivered Prime title left this month"
-revisit_trigger: "the next Prime Gaming batch adds an Amazon Games title - claim it, leave via the Library tab, confirm it shows without a manual Refresh"
+ready: live-gate
+completed: 2026-11-22
 audit_acknowledged:
   milestone: v0.10
   at: 2026-11-20
 ---
+
+## Closed (2026-11-22): Amazon passes live after the stale-library fix
+
+Root cause of the 2026-11-22 failure: since Phase 85-17/85-21 the shell pushes a sidecar cache
+write to the renderer only after persisting it, and the `refreshLibrary` RPC reply can arrive
+first, so `refresh()` committed the pre-refresh list. Fixed in debug session
+`.planning/debug/resolved/scoped-refresh-stale-library.md`: the Epic, GOG and Amazon library
+arrays now follow the renderer store snapshot (`registerLibraryStoreFollowers()` in
+`src/frontend/state/libraryState.ts`).
+
+Live, 20:45:35: Amazon sign-out then sign-in logged `[refreshLibrary] runner=nile
+origin=login-success` and `[Nile] Game list updated, got 3 games`, and all three titles showed with
+no manual Refresh (operator: "amazon pass"). Combined with the 2026-11-22 store-exit run, which
+proved the exit arms and refreshes nile with the new claim, that covers the last open check. Epic
+and GOG went through the same code path.
+
+## Status (2026-11-22, Amazon end-to-end run: FAILS on the frontend)
+
+Ran with a fresh Amazon Games-delivered claim, Squirrel with a Gun (nile was signed in again
+first; it had been signed out since some time after 2026-11-17). The backend half passes, the
+library screen does not:
+
+- 19:38:42 `[amazonStoreExitRefresh] armed host=gaming.amazon.com via=entry`.
+- 19:39:16 leaving via the Library tab refreshed `nile`, `legendary` and `gog`
+  (`origin=amazon-store-exit outcome=refreshed`); nile logged `Game list updated, got 3 games`
+  (was 2) in the same second.
+- The title did **not** appear until the operator pressed Refresh at 19:39:32
+  (`origin=action-icons-refresh-button`).
+
+The same thing happened earlier the same evening with an Epic-delivered claim, Jurassic World
+Evolution 2: the scoped legendary exit refresh returned 20 games (was 19) at 19:29:07, but
+`Force Update` only logged after the manual Refresh (19:29:40). So the defect is not Amazon- or
+runner-specific: after a runner-scoped refresh, `refresh()` in
+`src/frontend/state/libraryState.ts` commits the pre-refresh list. It is tracked in
+`.planning/debug/scoped-refresh-stale-library.md`; this todo is now blocked on that, not on a new
+Prime title. Close this todo once that fix is live-verified: a scoped refresh whose count changes
+shows the new game without a manual Refresh.
+
+Also seen (no todo filed): a Prime claim can be delivered as a redemption code for a third-party
+launcher (Time Travel: Escape Room Game -> Legacy Games). Those never reach any GameLib runner, so
+they are out of scope for the exit refresh. On gaming.amazon.com the crown icon marks titles
+delivered through the Amazon Games app.
 
 ## Status (2026-11-02, after quick 261102-s32)
 
