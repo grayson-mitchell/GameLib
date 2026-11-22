@@ -234,7 +234,7 @@ import { createMiscRuntime } from '../miscRuntime'
 import { createAppRuntime } from '../appRuntime'
 import type { AppRuntime } from '../appRuntime'
 import { fetchLastestReleases } from '../utils/releases'
-import { downloadAntiCheatData } from '../anticheat/utils'
+import { anticheatDownload, anticheatStatus } from '../info/anticheat'
 import { isMac, isSnap } from '../constants/environment'
 // Block F (todo 2026-09-06, quick-260908-k3x). `checkRosettaInstall()` has no static import
 // edge back into `sidecar/` (`grep -n "from './sidecar\|from '\.\./sidecar" src/backend/
@@ -2948,16 +2948,19 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'anticheat-listener',
       run: (_ctx, _io, state) => {
-        // Block A — re-homed `releasesInfoReady` anticheat listener (D-04). Reproduces
-        // `anticheat/ipc_handler.ts:12-19`'s body exactly, including its `logDebug` line.
+        // Block A — re-homed `releasesInfoReady` anticheat listener (D-04). The data file check, the
+        // download and the per-game lookup are Rust's now (Phase 86, 86-13, `gamelib-info`
+        // `anticheat`); this listener keeps TS's check-then-wait order (D-07, D-28): it asks
+        // `info_anticheat_status` first and only when the file is stale waits for the network
+        // (`onlineMonitor.runOnceWhenOnline`) and sends `info_anticheat_download`. Rust has no
+        // online logic, so the wait stays here until Phase 88 ports `online_monitor`.
         // `anticheat/ipc_handler.ts` itself cannot be side-effect-imported from
         // `src/backend/sidecar/`: its module scope calls `addHandler` from `backend/ipc`, which
         // imports the real `electron` (D-04's curated-import discipline, carried from Phase 30
         // D-08 / 34.1 D-09) — so this listener has no other home under the sidecar, and without it
-        // D-07's emit below would fire into a void and `getAnticheatInfo` would still structurally
-        // be unable to return data. Electron keeps using `anticheat/ipc_handler.ts`'s own copy via
-        // `main.ts`'s `import './anticheat/ipc_handler'` — this is an addition for the sidecar
-        // only, never a second registration in the same process.
+        // the data file would never be refreshed. Electron keeps using `anticheat/ipc_handler.ts`'s
+        // own copy via `main.ts`'s `import './anticheat/ipc_handler'` — this is an addition for the
+        // sidecar only, never a second registration in the same process (T-86-26).
         //
         // Must be registered before Block B's fetch, below, so the listener exists before the
         // event it responds to can possibly fire.
@@ -2965,10 +2968,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // CR-02 (34.2-09): the outer `try`/`catch` below covers ONLY the synchronous
         // `backendEvents.on(...)` registration call, which cannot itself throw — it gives ZERO
         // coverage to the listener body, which runs later from the emitter, outside this stack
-        // frame. The `.catch()` attached directly to the `downloadAntiCheatData(...)` call is what
-        // covers that body: `createMD5`'s `await` inside `downloadAntiCheatData` sits outside its
-        // own internal try/catch, so an `EACCES`/`ENOENT`/TOCTOU/is-a-directory fault on the local
-        // anticheat cache file would otherwise reject an unguarded promise.
+        // frame. The `.catch()` attached to the status-then-download chain is what covers that
+        // body: the status op REJECTS when the local data file is unreadable (an `EACCES`/
+        // is-a-directory fault, as TS's `createMD5` did), and the shell can reject a frame, so an
+        // unguarded promise would otherwise reach `unhandledRejection`.
         try {
           requireAppRuntime(state).events.on(
             'releasesInfoReady',
@@ -2977,20 +2980,41 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
                 'Releases info ready, checking anticheat data',
                 LogPrefix.Backend
               )
-              downloadAntiCheatData(
-                {
-                  onlineMonitor: requireServices(state).onlineMonitor,
-                  paths: requireServices(state).paths
-                },
-                isMac
-                  ? releasesInfo.anticheatFiles.shaMac
-                  : releasesInfo.anticheatFiles.shaLinux
-              ).catch((error) => {
-                logWarning(
-                  `[bootstrap] downloadAntiCheatData failed: ${String(error)}`,
-                  LogPrefix.Backend
-                )
-              })
+              const host = requireHost(state)
+              const latestFileHash = isMac
+                ? releasesInfo.anticheatFiles.shaMac
+                : releasesInfo.anticheatFiles.shaLinux
+              anticheatStatus(host, { latestFileHash })
+                .then((status) => {
+                  if (!(status as { needed: boolean }).needed) return
+                  // `runOnceWhenOnline` drops the callback's return, so the download carries its
+                  // own `.catch` (a rejected frame must not reach `unhandledRejection`).
+                  requireServices(state).onlineMonitor.runOnceWhenOnline(() =>
+                    anticheatDownload(host)
+                      .then((result) => {
+                        // The crate has no logger: a failed fetch or write comes back as `warning`.
+                        const { written, warning } = result as {
+                          written: boolean
+                          warning?: string
+                        }
+                        if (!written && warning) {
+                          logWarning(warning, LogPrefix.Backend)
+                        }
+                      })
+                      .catch((error) => {
+                        logWarning(
+                          `[bootstrap] anticheatDownload failed: ${String(error)}`,
+                          LogPrefix.Backend
+                        )
+                      })
+                  )
+                })
+                .catch((error) => {
+                  logWarning(
+                    `[bootstrap] anticheatStatus failed: ${String(error)}`,
+                    LogPrefix.Backend
+                  )
+                })
             }
           )
         } catch (error) {

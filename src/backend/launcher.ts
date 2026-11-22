@@ -13,7 +13,8 @@ import {
   WineInstallation,
   GameSettings,
   LaunchParams,
-  StatusPromise
+  StatusPromise,
+  AntiCheatInfo
 } from 'common/types'
 // This handles launching games, prefix creation etc..
 
@@ -83,7 +84,7 @@ import {
   flatpakRuntimeVersion
 } from './constants/environment'
 import { formatSystemInfo } from './utils/systeminfo'
-import { gameAnticheatInfo } from './anticheat/utils'
+import { gameAnticheatInfo } from './info/anticheat'
 import {
   armEngineLaunchDeadline,
   endEngineLaunch,
@@ -782,7 +783,7 @@ async function prepareLaunch(
   const acInfoPromise = gameAnticheatInfo(
     deps,
     asStoreGame(gameInfo, 'legendary')?.namespace
-  )
+  ) as Promise<AntiCheatInfo | null>
   logWriter.logInfo(
     acInfoPromise.then((info) =>
       info?.status ? `Anticheat Status: ${info.status}` : ''

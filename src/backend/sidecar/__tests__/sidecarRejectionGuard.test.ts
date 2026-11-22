@@ -3,8 +3,9 @@
  * Task 3) and pins the contract of the two mitigations Tasks 1/2 landed:
  *
  * Group 1 drives the REAL, unmocked `bootstrap.ts` `releasesInfoReady` listener with a
- * REJECTING `downloadAntiCheatData` (the exact fault T-34.2-38 describes -- an `EACCES`/
- * `ENOENT`/TOCTOU/is-a-directory fault on `<appFolder>/areweanticheatyet.json`) and proves the
+ * REJECTED `info_anticheat_status` frame (Phase 86, 86-13: the crate rejects when the local data
+ * file is unreadable -- the T-34.2-38 fault, an `EACCES`/is-a-directory fault on
+ * `<appFolder>/areweanticheatyet.json`) and proves the
  * sidecar survives: no `unhandledRejection` fires, a warning is logged, and the listener still
  * ran. This is the RED case this whole plan exists to fix -- see the `RED-PROOF` comment on
  * the first test in that group for exactly which line makes it fail if reverted.
@@ -83,9 +84,8 @@ jest.unmock('i18next')
 
 // ── os — redirect homedir() to a disposable per-process tmp directory (GAP FIX precedent,
 // appShellFlows.test.ts / bootstrapWirings.test.ts), namespaced per test via
-// `mockTestHomeSuffix` so `downloadAntiCheatData`'s own md5-unchanged-skip logic (were it not
-// mocked) could never see a sibling test's file -- kept even though this suite mocks
-// `downloadAntiCheatData` away, for parity with the harness and as defence-in-depth. ─────────
+// `mockTestHomeSuffix` so no test can see a sibling test's files -- kept for parity with the
+// harness and as defence-in-depth. ─────────────────────────────────────────────────────────
 let mockTestHomeSuffix = 0
 
 jest.mock('os', () => {
@@ -155,19 +155,6 @@ jest.mock('backend/config', () => {
   return { createGlobalConfig }
 })
 
-// ── backend/anticheat/utils — the fault this whole plan exists to survive. `downloadAntiCheatData`
-// always REJECTS with a filesystem-fault-shaped Error (the T-34.2-38 scenario); `gameAnticheatInfo`
-// stays a plain jest.fn() so any other registration module that imports this file still loads
-// cleanly. ──────────────────────────────────────────────────────────────────────────────────
-jest.mock('../../anticheat/utils', () => ({
-  downloadAntiCheatData: jest.fn(() =>
-    Promise.reject(
-      new Error("EACCES: permission denied, open 'areweanticheatyet.json'")
-    )
-  ),
-  gameAnticheatInfo: jest.fn()
-}))
-
 // Deliberately NOT `jest.mock('backend/logger', ...)`: `backend/logger/index.ts` and
 // `targetWriter.ts` import each other (the writer reaches `index.ts` at call time). A `jest.mock`
 // factory that calls `jest.requireActual('backend/logger')` re-enters that SAME mocked module
@@ -189,7 +176,7 @@ async function flush(times = 6): Promise<void> {
 /**
  * Requires the sidecar bootstrap graph fresh inside its own `jest.isolateModules()` sandbox
  * (see module docstring for why this is required, not cosmetic) and returns the handles
- * Group 1's tests need, including the mocked `downloadAntiCheatData` and the wrapped
+ * Group 1's tests need, including the `info_anticheat_*` frames the listener sent and the wrapped
  * `logWarning` spy from THIS SAME isolated registry -- the one `bootstrap.ts`'s Block A
  * listener actually calls.
  *
@@ -200,13 +187,22 @@ async function flush(times = 6): Promise<void> {
 function setupIsolatedBootstrapHarness(): {
   appRuntime: any
   backendEvents: any
-  downloadAntiCheatDataMock: jest.Mock
+  anticheatFramesSent: () => Array<{ channel?: string; args?: unknown }>
   logWarningMock: jest.SpyInstance
 } {
   let harness!: ReturnType<typeof setupIsolatedBootstrapHarness>
   // D-08: one boot per case through bootFresh(); the handles are read from the SAME fresh
   // registry the boot runs in. Require order is unchanged (bootstrap before logger).
-  bootFresh({
+  const sidecar = bootFresh({
+    // The shell rejects the status frame: the crate errors when the local data file is unreadable
+    // (what TS's `createMD5` did with an EACCES / is-a-directory fault).
+    rustAnswers: {
+      info_anticheat_status: () => {
+        throw new Error(
+          "EACCES: permission denied, open 'areweanticheatyet.json'"
+        )
+      }
+    },
     // The boot's app runtime, built in the same fresh registry by `before` below: its event bus is
     // the one the boot's Block A listener subscribes to.
     services: {
@@ -227,7 +223,6 @@ function setupIsolatedBootstrapHarness(): {
       const { createTestAppRuntime } = require('../../testUtils/testAppRuntime')
       const appRuntime = createTestAppRuntime()
       require('../bootstrap')
-      const { downloadAntiCheatData } = require('../../anticheat/utils')
       const loggerModule = require('backend/logger')
       /* eslint-enable @typescript-eslint/no-require-imports */
 
@@ -240,7 +235,13 @@ function setupIsolatedBootstrapHarness(): {
       harness = {
         appRuntime,
         backendEvents: appRuntime.events,
-        downloadAntiCheatDataMock: downloadAntiCheatData,
+        anticheatFramesSent: () =>
+          sidecar.frames.filter(
+            (f) =>
+              f.kind === 'rustInvoke' &&
+              typeof f.channel === 'string' &&
+              f.channel.startsWith('info_anticheat_')
+          ) as Array<{ channel?: string; args?: unknown }>,
         logWarningMock: logWarningSpy
       }
     }
@@ -254,7 +255,7 @@ function setupIsolatedBootstrapHarness(): {
  *
  * Refinement (gap cycle 2, plan 34.2-18, IN-03): the tripwire previously called the full
  * `setupIsolatedBootstrapHarness()` above -- building the entire bootstrap graph (backend
- * events, `downloadAntiCheatData`, the `logWarning` spy, GlobalConfig) and leaving an
+ * events, the `logWarning` spy, GlobalConfig) and leaving an
  * unrestored `jest.spyOn` -- just to read one module's constants. This narrower helper reads
  * only the path derivation, still inside `jest.isolateModules()`, without the unrelated side
  * effects.
@@ -541,14 +542,14 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     jest.restoreAllMocks()
   })
 
-  describe('Group 1: survival proof -- a rejecting downloadAntiCheatData cannot kill the sidecar', () => {
-    // RED-PROOF: reverting Task 1's `.catch()` on the `downloadAntiCheatData(...)` call in
-    // `bootstrap.ts`'s Block A back to a bare `void downloadAntiCheatData(...)` makes THIS
+  describe('Group 1: survival proof -- a rejected info_anticheat_status frame cannot kill the sidecar', () => {
+    // RED-PROOF: reverting the `.catch()` on the `anticheatStatus(...)` chain in
+    // `bootstrap.ts`'s Block A back to a bare `void anticheatStatus(...)` makes THIS
     // test fail -- the local `process.on('unhandledRejection', ...)` spy below observes the
     // rejection instead of it being caught at the call site. Verified by hand during this
     // task's execution (recorded in the plan SUMMARY's RED spot-check note) and restored
     // immediately afterwards.
-    it('RED-PROOF REQ-34.2-07: no unhandledRejection fires when downloadAntiCheatData rejects', async () => {
+    it('RED-PROOF REQ-34.2-07: no unhandledRejection fires when the status frame is rejected', async () => {
       const { backendEvents } = setupIsolatedBootstrapHarness()
 
       const unhandledRejectionSpy = jest.fn()
@@ -565,7 +566,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       }
     })
 
-    it('REQ-34.2-07/CR-02: logs a warning containing "[bootstrap] downloadAntiCheatData failed:"', async () => {
+    it('REQ-34.2-07/CR-02: logs a warning containing "[bootstrap] anticheatStatus failed:"', async () => {
       const { backendEvents, logWarningMock } = setupIsolatedBootstrapHarness()
 
       backendEvents.emit('releasesInfoReady', {
@@ -576,13 +577,13 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       const matched = logWarningMock.mock.calls.some(
         ([message]) =>
           typeof message === 'string' &&
-          message.includes('[bootstrap] downloadAntiCheatData failed:')
+          message.includes('[bootstrap] anticheatStatus failed:')
       )
       expect(matched).toBe(true)
     })
 
-    it('REQ-34.2-07: the listener still ran -- downloadAntiCheatData was called exactly once with the platform-selected hash', async () => {
-      const { backendEvents, downloadAntiCheatDataMock } =
+    it('REQ-34.2-07: the listener still ran -- the status op was sent exactly once with the platform-selected hash and no download followed', async () => {
+      const { backendEvents, anticheatFramesSent } =
         setupIsolatedBootstrapHarness()
 
       backendEvents.emit('releasesInfoReady', {
@@ -591,11 +592,12 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       await flush()
 
       // isMac:false/isLinux:true (mocked above) -> Block A selects shaLinux, never shaMac.
-      expect(downloadAntiCheatDataMock).toHaveBeenCalledTimes(1)
-      expect(downloadAntiCheatDataMock).toHaveBeenCalledWith(
-        expect.objectContaining({ onlineMonitor: expect.anything() }),
-        'mock-sha-linux'
-      )
+      expect(anticheatFramesSent()).toEqual([
+        expect.objectContaining({
+          channel: 'info_anticheat_status',
+          args: [{ latestFileHash: 'mock-sha-linux' }]
+        })
+      ])
     })
   })
 

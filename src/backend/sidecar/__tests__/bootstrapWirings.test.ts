@@ -1,6 +1,6 @@
 /**
  * Non-mocked proof for the two startup wirings landed by 34.2 Plan 01 (D-02, D-04, D-07) --
- * i18next initialization and the `releasesInfoReady` -> anticheat-data-download chain.
+ * i18next initialization and the `releasesInfoReady` -> anticheat status -> online wait -> Rust download chain.
  *
  * Phase 34.1's CR-01 finding (an un-init'd i18next silently swallowing the whole
  * `changeLanguage` persist path) was invisible to its OWN test suite specifically because
@@ -9,7 +9,7 @@
  * `electron`/`electron-store` redirects, `axios`, `backend/constants/environment`,
  * `backend/config`) and the online-monitor (same reasoning as `bootstrap.test.ts`'s own
  * block -- see that file's header). It NEVER mocks `i18next`, `backend_events`,
- * `backend/utils/releases`, or `backend/anticheat/utils` -- the exact four things Task 1/2
+ * `backend/utils/releases`, or the `backend/info/anticheat` shims -- the exact four things Task 1/2
  * wired up. Test 2 below is a by-construction guard (reads this file's own source) that a
  * future edit cannot quietly reintroduce an `i18next` mock into this file.
  *
@@ -23,20 +23,26 @@
  *
  * `os.homedir()` is redirected to a disposable per-process tmp directory (GAP FIX precedent,
  * `appShellFlows.test.ts` / `tests-clobbering-real-steam-store`) so this suite -- which
- * writes a REAL anticheat data file to disk -- can never reach the developer's real
+ * boots the real sidecar against a fake HOME -- can never reach the developer's real
  * `~/Library/Application Support/GameLib`. Test 7 below asserts the resolved `appFolder` is
  * actually under `os.tmpdir()` so a mis-wired mock fails loudly instead of silently.
  */
 
 import { PassThrough } from 'node:stream'
 import { bootFresh, handlerRegistry } from './helpers/sidecarHarness'
-import { existsSync, mkdirSync, readFileSync } from 'fs'
+import { mkdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { READY_SENTINEL } from 'common/types/sidecarTransport'
+import {
+  READY_SENTINEL,
+  RUST_INFO_ANTICHEAT_DOWNLOAD,
+  RUST_INFO_ANTICHEAT_STATUS
+} from 'common/types/sidecarTransport'
 import type { LogFrame } from 'common/types/sidecarTransport'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 import { createTestServices } from 'backend/testUtils/testServices'
+import type { BootServices } from '../../services/types'
+import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 
 // DIAGNOSIS QUALITY ONLY -- this buys no correctness and is not what fixed the drop this
 // suite was reported for (that was `LogWriter`'s rotate gate; see
@@ -66,17 +72,13 @@ jest.setTimeout(20000)
 jest.unmock('i18next')
 
 // ── os — redirect homedir() to a disposable per-process tmp directory, same GAP FIX
-// precedent as appShellFlows.test.ts / steamAuthFlows.test.ts -- this suite writes a REAL
-// anticheat data file, so it must never reach the developer's real config directory.
+// precedent as appShellFlows.test.ts / steamAuthFlows.test.ts -- this suite boots the real
+// sidecar against a fake HOME, so it must never reach the developer's real config directory.
 //
 // Unlike those suites' single fixed per-process directory, this file additionally
 // namespaces by `mockTestHomeSuffix` (bumped in `beforeEach`, `mock`-prefixed so the
-// hoisted factory below may reference it): each test drives the REAL, unmocked
-// `anticheat/utils.ts` write path via `init()`'s Block A/B side effects (not just the one
-// test that asserts on it), and `downloadAntiCheatData`'s own md5-unchanged-skip logic
-// would otherwise treat an earlier test's file as "already correct" and silently no-op the
-// write this test is trying to observe. A fresh subdirectory per test removes that
-// coupling entirely, and also removes any need to delete a directory a sibling test's
+// hoisted factory below may reference it): a fresh subdirectory per test removes any
+// coupling between tests, and also removes any need to delete a directory a sibling test's
 // in-flight fire-and-forget log write might still be using. ─────────────────────────────
 let mockTestHomeSuffix = 0
 
@@ -107,13 +109,6 @@ jest.mock('os', () => {
 // naming rule) ────────────────────────────────────────────────────────────────────────────
 const mockShaMac = 'mock-sha-mac-abc123'
 const mockShaLinux = 'mock-sha-linux-def456'
-const mockGamesJson = [
-  {
-    storeIds: { epic: { namespace: 'mockgame' } },
-    status: 'Denied'
-  }
-]
-const mockGamesJsonText = JSON.stringify(mockGamesJson)
 
 jest.mock('axios', () => {
   const mockInstance = {
@@ -127,9 +122,6 @@ jest.mock('axios', () => {
             }
           }
         })
-      }
-      if (typeof url === 'string' && url.includes('games.json')) {
-        return Promise.resolve({ data: mockGamesJsonText })
       }
       return Promise.reject(
         new Error(`bootstrapWirings.test.ts: unexpected axios.get URL "${url}"`)
@@ -148,7 +140,7 @@ jest.mock('axios', () => {
 
 // ── backend/constants/environment — deterministic branch regardless of host OS (mirrors
 // appShellFlows.test.ts / installFlows.test.ts / settingsFlows.test.ts), pinning
-// isWindows:false so neither fetchLastestReleases's nor downloadAntiCheatData's early-return
+// isWindows:false so fetchLastestReleases's early-return
 // fires ───────────────────────────────────────────────────────────────────────────────────
 jest.mock('backend/constants/environment', () => ({
   isWindows: false,
@@ -281,21 +273,33 @@ function setupWithoutBoot(): WiringHandles {
  * One boot (D-08) in a fresh registry. `beforeBoot` runs against the handles ahead of the boot
  * (create directories, install spies).
  */
-function bootWirings(beforeBoot?: (h: WiringHandles) => void): WiringHandles & {
+function bootWirings(
+  beforeBoot?: (h: WiringHandles) => void,
+  opts?: {
+    /** Answers for the shell's `rustInvoke` ops, layered over the harness defaults. */
+    rustAnswers?: Record<string, (args: unknown[]) => unknown>
+    /** A monitor the case drives itself (offline until it says otherwise). */
+    onlineMonitor?: ReturnType<typeof createTestOnlineMonitor>
+  }
+): WiringHandles & {
   input: PassThrough
   output: PassThrough
   lines: string[]
+  frames: Array<{ kind?: string; channel?: string; args?: unknown }>
 } {
   let handles!: WiringHandles
   const output = new PassThrough()
   const lines = collectLines(output)
+  const services: Partial<BootServices> = {
+    get appRuntime() {
+      return handles.appRuntime
+    }
+  }
+  if (opts?.onlineMonitor) services.onlineMonitor = opts.onlineMonitor
   const sidecar = bootFresh({
     output,
-    services: {
-      get appRuntime() {
-        return handles.appRuntime
-      }
-    },
+    rustAnswers: opts?.rustAnswers,
+    services,
     // The boot's anticheat data path is ctx.paths.appFolder (66.4-14); point it at this registry's
     // shimmed app folder, which `before` has loaded by the time the context is built.
     context: {
@@ -310,7 +314,13 @@ function bootWirings(beforeBoot?: (h: WiringHandles) => void): WiringHandles & {
       beforeBoot?.(handles)
     }
   })
-  return { ...handles, input: sidecar.input, output, lines }
+  return {
+    ...handles,
+    input: sidecar.input,
+    output,
+    lines,
+    frames: sidecar.frames
+  }
 }
 
 describe('sidecar bootstrap wirings (Phase 34.2 Plan 01 -- REQ-34.2-02/04/07/14)', () => {
@@ -380,34 +390,62 @@ describe('sidecar bootstrap wirings (Phase 34.2 Plan 01 -- REQ-34.2-02/04/07/14)
     ).toBe(true)
   })
 
-  it('REQ-34.2-04/REQ-34.2-07: the re-homed listener writes the anticheat data file to disk', async () => {
-    // Electron guarantees userData exists before any file operation runs. This test pre-creates
-    // the directory the same way a real app start would, so the anticheat write does not depend
-    // on which store happened to create the folder first (store_backend.ts's `prepareStore` makes
-    // a store's own directory at construction).
-    const { appFolder } = bootWirings(({ appFolder: folder }) => {
-      mkdirSync(folder, { recursive: true })
-    })
-
-    const anticheatDataPath = join(appFolder, 'areweanticheatyet.json')
-    await flush()
-    // Waits on the CONTENT, not on mere existence. `downloadAntiCheatData` writes via
-    // `fs/promises.writeFile`, which opens the target with O_TRUNC|O_CREAT and only then
-    // writes -- so between those two steps the file EXISTS and is EMPTY. An
-    // `existsSync`-only wait could return inside that window, after which the
-    // `readFileSync` below saw `''` and this test failed with a diff against the full
-    // expected JSON. That was a latent race, not a new one: it needed nothing but
-    // unlucky scheduling, and it surfaced when quick task 260822-s8y added the migration
-    // runner's own filesystem work to `init()`. Waiting for a non-empty read is the
-    // condition this assertion actually depends on.
-    await waitFor(
-      () =>
-        existsSync(anticheatDataPath) &&
-        readFileSync(anticheatDataPath, 'utf-8').length > 0
+  /** The `info_anticheat_*` frames the boot sent, in order. */
+  const anticheatFrames = (
+    frames: Array<{ kind?: string; channel?: string; args?: unknown }>
+  ) =>
+    frames.filter(
+      (f) =>
+        f.kind === 'rustInvoke' &&
+        (f.channel === RUST_INFO_ANTICHEAT_STATUS ||
+          f.channel === RUST_INFO_ANTICHEAT_DOWNLOAD)
     )
 
-    const contents = readFileSync(anticheatDataPath, 'utf-8')
-    expect(contents).toBe(mockGamesJsonText)
+  it('Phase 86 (D-07, D-28): the listener asks Rust whether the data file is stale with the platform hash, and downloads nothing when it is not', async () => {
+    const { frames } = bootWirings()
+    await waitFor(() => anticheatFrames(frames).length > 0)
+    await flush()
+
+    // isMac is false here, so the Linux hash is the one sent.
+    expect(anticheatFrames(frames)).toEqual([
+      expect.objectContaining({
+        channel: RUST_INFO_ANTICHEAT_STATUS,
+        args: [{ latestFileHash: mockShaLinux }]
+      })
+    ])
+  })
+
+  it('Phase 86 (D-07, D-28): a stale file is downloaded only once the monitor says online, after the status answer', async () => {
+    const onlineMonitor = createTestOnlineMonitor({ online: false })
+    const { frames, backendEvents } = bootWirings(undefined, {
+      onlineMonitor,
+      rustAnswers: {
+        [RUST_INFO_ANTICHEAT_STATUS]: () => ({ needed: true }),
+        [RUST_INFO_ANTICHEAT_DOWNLOAD]: () => ({ written: true })
+      }
+    })
+    // Offline, the boot's own releases fetch is held back too, so the event is emitted by hand.
+    backendEvents.emit('releasesInfoReady', {
+      anticheatFiles: { shaMac: mockShaMac, shaLinux: mockShaLinux }
+    })
+    await waitFor(() => anticheatFrames(frames).length > 0)
+    await flush()
+
+    // Offline: status went out, the wait holds the download back.
+    expect(anticheatFrames(frames).map((f) => f.channel)).toEqual([
+      RUST_INFO_ANTICHEAT_STATUS
+    ])
+
+    // Going online also releases the boot's own held releases fetch, which emits the event again,
+    // so only the first two frames are the ones this case is about.
+    onlineMonitor.setOnline(true)
+    await waitFor(() => anticheatFrames(frames).length >= 2)
+    expect(
+      anticheatFrames(frames)
+        .slice(0, 2)
+        .map((f) => f.channel)
+    ).toEqual([RUST_INFO_ANTICHEAT_STATUS, RUST_INFO_ANTICHEAT_DOWNLOAD])
+    expect(anticheatFrames(frames)[1]?.args).toEqual([{}])
   })
 
   it('REQ-34.2-07 one boot yields exactly one fetch and one listener', async () => {

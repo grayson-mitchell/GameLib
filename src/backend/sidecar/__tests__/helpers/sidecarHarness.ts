@@ -112,7 +112,11 @@ const DEFAULT_RUST_ANSWERS: Record<string, (args: unknown[]) => unknown> = {
   info_overrides_get_all: () => ({}),
   info_overrides_set: () => true,
   // The game object comes back unchanged when no override is stored for it.
-  info_overrides_attach: (args) => (args[0] as { gameInfo: unknown }).gameInfo
+  info_overrides_attach: (args) => (args[0] as { gameInfo: unknown }).gameInfo,
+  // 86-13: the anti-cheat data is up to date, nothing is downloaded and no game has an entry.
+  info_anticheat_status: () => ({ needed: false }),
+  info_anticheat_download: () => ({ written: false }),
+  info_anticheat_info: () => null
 }
 
 export interface FreshSidecar {
@@ -153,7 +157,8 @@ export function bootFresh(opts?: {
   answerSteamCmConfigure?: boolean
   /**
    * Answers for `rustInvoke` frames by channel, layered over the defaults above (the `info_*` ops).
-   * A case that checks what a shim sent and what it did with the answer supplies its own.
+   * A case that checks what a shim sent and what it did with the answer supplies its own. An answer
+   * that throws becomes a rejected frame.
    */
   rustAnswers?: Record<string, (args: unknown[]) => unknown>
   /** Prebuilt services handed to the boot; every other service is built by its step. */
@@ -216,9 +221,19 @@ export function bootFresh(opts?: {
     if (frame.kind === 'rustInvoke' && typeof frame.channel === 'string') {
       const answer = rustAnswers[frame.channel]
       if (answer) {
-        input.write(
-          `${JSON.stringify({ id: frame.id, ok: true, result: answer((frame.args as unknown[]) ?? []) })}\n`
-        )
+        // An answer that throws is the shell rejecting the frame (86-13: a case proves the listener
+        // survives a rejected `info_anticheat_status`).
+        let reply: Record<string, unknown>
+        try {
+          reply = {
+            id: frame.id,
+            ok: true,
+            result: answer((frame.args as unknown[]) ?? [])
+          }
+        } catch (error) {
+          reply = { id: frame.id, ok: false, error: String(error) }
+        }
+        input.write(`${JSON.stringify(reply)}\n`)
         return
       }
     }
