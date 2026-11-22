@@ -160,6 +160,17 @@ mod tests {
         d.enqueue(len, v);
     }
 
+    /// Waits until the host's event queue has run everything queued so far. The dispatcher posts
+    /// each answer through `host.post`, so `wait_idle` alone can return before it reaches `events`.
+    fn delivered(host: &StoreHost) {
+        let (tx, rx) = std::sync::mpsc::channel();
+        host.post(Box::new(move || {
+            let _ = tx.send(());
+        }));
+        rx.recv_timeout(Duration::from_secs(10))
+            .expect("the host's event queue drained");
+    }
+
     fn obj(text: &str) -> gamelib_store::json::Obj {
         match parse(text.as_bytes()).unwrap() {
             Json::Obj(o) => o,
@@ -215,6 +226,7 @@ mod tests {
             home.root().join("config.json").is_file(),
             "an unrelated store still writes"
         );
+        delivered(&host);
         let answers: Vec<(u64, String, Option<String>)> = events
             .lock()
             .unwrap()
@@ -267,6 +279,7 @@ mod tests {
             replace_frame(2, "settings/global", r#"{"version":"v2","a":1}"#),
         );
         assert!(dispatcher.wait_idle(Duration::from_secs(10)));
+        delivered(&host);
         let last = events.lock().unwrap().last().cloned().unwrap();
         assert_eq!(last["op"], "applied");
     }
