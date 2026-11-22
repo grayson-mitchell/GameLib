@@ -111,6 +111,10 @@ interface OpenInstallGameModalParams {
  * when it `resolve()`'s to exactly one registered library's own
  * `resolve()`'d path, otherwise it falls back to the primary.
  *
+ * `optInDlc` (quick 261122-rgi, D-01) is the opt-in DLC appIds the user ticked in the install
+ * dialog; it rides the payload as `steamOptInDlc` only when non-empty, so an install with
+ * nothing ticked sends exactly the payload it always did.
+ *
  * Callers: `startSteamQuickInstall` below (always `path: ''`), 34.13-10's
  * dialog confirm handler (an explicit chosen library path), and
  * `SteamClientSetup.tsx`'s post-setup retry (2-arg legacy shape). The
@@ -135,7 +139,8 @@ export const installSteamGame = (
   appName: string,
   gameInfo: GameInfo,
   path = '',
-  forceWindowsViaBottle = false
+  forceWindowsViaBottle = false,
+  optInDlc: string[] = []
 ): Promise<unknown> =>
   window.api.install({
     appName,
@@ -146,6 +151,7 @@ export const installSteamGame = (
     installLanguage: 'en-US',
     platformToInstall: 'Windows',
     steamForceWindowsViaBottle: forceWindowsViaBottle,
+    ...(optInDlc.length > 0 ? { steamOptInDlc: optInDlc } : {}),
     gameInfo
   })
 

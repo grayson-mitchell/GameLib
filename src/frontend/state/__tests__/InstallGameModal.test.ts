@@ -639,6 +639,21 @@ describe('Group D: the chokepoint and D-17 marshalling', () => {
     expect(arg.path).toBe('/some/path')
     expect(arg.steamForceWindowsViaBottle).not.toBe(true)
   })
+
+  it('261122-rgi: a 5th argument of ticked opt-in DLC rides the payload as steamOptInDlc', () => {
+    installSteamGame('570', makeGameInfo(), '', false, ['313250'])
+
+    expect(installMock.mock.calls[0][0].steamOptInDlc).toEqual(['313250'])
+  })
+
+  it('261122-rgi: no ticked DLC leaves the payload without a steamOptInDlc key (today payload)', () => {
+    installSteamGame('570', makeGameInfo())
+    expect(installMock.mock.calls[0][0]).not.toHaveProperty('steamOptInDlc')
+
+    installMock.mockClear()
+    installSteamGame('570', makeGameInfo(), '', false, [])
+    expect(installMock.mock.calls[0][0]).not.toHaveProperty('steamOptInDlc')
+  })
 })
 
 // ---------------------------------------------------------------------------

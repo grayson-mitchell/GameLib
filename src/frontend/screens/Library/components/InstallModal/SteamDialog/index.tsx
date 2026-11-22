@@ -73,13 +73,22 @@ import {
   resolveForceBottleDisplayed,
   resolveForceBottleWrite
 } from '../steamBridgeRouteLine'
-import type { SteamBridgeRouteVerdict } from 'common/types/steam'
+import type {
+  SteamBridgeRouteVerdict,
+  SteamOptInDlcInfo
+} from 'common/types/steam'
 import {
   SteamDialogLibraryOption,
   defaultSteamLibraryPath,
   resolveFreeSpaceProbeSubject,
   resolveSteamInstallPath
 } from './installTarget'
+import {
+  optInDlcSizeLabel,
+  pruneOptInChoice,
+  shownOptInDlc,
+  toggleOptInChoice
+} from './optInDlc'
 import { isBottleCapableEngine } from '../WineSelector/engineFilter'
 import { diskSpaceLabels } from '../diskSpaceLabels'
 import {
@@ -233,6 +242,10 @@ export default function SteamDialog({
     steamInstallNeedsSignIn(
       resolveSteamInstallSignInState(steam?.username, signInProbeOutcomes)
     )
+  // Quick 261122-rgi (D-01): the same "GameLib's own depot installer runs this install"
+  // predicate as `signInRequired` above. The opt-in tick means nothing on a delegated
+  // steam://install or InstallApp hand-off, where Steam shows its own DLC ticks.
+  const gamelibDepotInstall = nativeInstallOn || gating.wineSection
   const handleSignIn = useCallback(() => {
     backdropClick()
     navigate(buildLoginOpenPath('steam'))
@@ -243,6 +256,9 @@ export default function SteamDialog({
   )
 
   const [selectedPath, setSelectedPath] = useState('')
+  // Quick 261122-rgi (D-01): the opt-in DLC on offer and the ids the user ticked (none by default).
+  const [optInInfo, setOptInInfo] = useState<SteamOptInDlcInfo | null>(null)
+  const [optInChoice, setOptInChoice] = useState<string[]>([])
   const [diskSpace, setDiskSpace] = useState<DiskSpaceInfo | null>(null)
   // WR-13: submit-in-flight latch, so a double-click cannot fire
   // `installSteamGame` twice across the `persistBottleWineVersion` await.
@@ -419,6 +435,37 @@ export default function SteamDialog({
     // rather than leaving a verdict computed from the root fallback.
   }, [gating.freeSpaceLine, selectedPath, steamLibraries])
 
+  // Quick 261122-rgi (D-01): list the owned opt-in DLC once the install route is known. The
+  // cancellation flag is `optInCancelled`, not `cancelled`: the source gate locates Effect B by
+  // the FIRST `let cancelled = false` in this file.
+  useEffect(() => {
+    let optInCancelled = false
+    setOptInInfo(null)
+    setOptInChoice([])
+    if (!gamelibDepotInstall) return
+    const request = window.api.getSteamOptInDlc(appName, {
+      windowsBuild: gating.wineSection
+    })
+    request
+      .then((info) => {
+        if (!optInCancelled) setOptInInfo(info)
+      })
+      .catch((err: unknown) => {
+        window.api.logError(
+          `SteamDialog: getSteamOptInDlc failed (${String(err)}) for appName "${appName}"`
+        )
+      })
+    return () => {
+      optInCancelled = true
+    }
+  }, [appName, gamelibDepotInstall, gating.wineSection])
+
+  const optInShown = shownOptInDlc(optInInfo)
+  useEffect(() => {
+    setOptInChoice((choice) => pruneOptInChoice(choice, optInShown))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optInInfo])
+
   const proceedInstall = useCallback(async () => {
     if (signInRequired) {
       return
@@ -555,7 +602,8 @@ export default function SteamDialog({
         appName,
         gameInfo,
         destination,
-        gating.forceWindowsViaBottle
+        gating.forceWindowsViaBottle,
+        gamelibDepotInstall ? optInChoice : []
       ).catch(logSteamInstallDispatchFailure(appName))
     } catch (dispatchError) {
       // B-CR-01 belt-and-braces, now scoped to the DISPATCH half only: the
@@ -591,7 +639,9 @@ export default function SteamDialog({
     bridgeLine,
     forceBottlePending,
     signInRequired,
-    wineSectionEffective
+    wineSectionEffective,
+    optInChoice,
+    gamelibDepotInstall
   ])
 
   // Quick 261024-ho4: a CrossOver rating below 4 of 5 asks before the install
@@ -819,6 +869,34 @@ export default function SteamDialog({
               </MenuItem>
             ))}
           </SelectField>
+        )}
+        {gamelibDepotInstall && optInShown.length > 0 && (
+          <div className="infoBox">
+            <h3>
+              {tGamelib(
+                'gamelib:steam.install.optInDlc.title',
+                'Optional content'
+              )}
+            </h3>
+            <p>
+              {tGamelib(
+                'gamelib:steam.install.optInDlc.note',
+                "Steam doesn't download these unless you tick them."
+              )}
+            </p>
+            {optInShown.map((dlc) => (
+              <ToggleSwitch
+                key={dlc.appId}
+                htmlId={`steam-opt-in-dlc-${dlc.appId}`}
+                title={dlc.name}
+                description={optInDlcSizeLabel(dlc.bytes)}
+                value={optInChoice.includes(dlc.appId)}
+                handleChange={() =>
+                  setOptInChoice(toggleOptInChoice(optInChoice, dlc.appId))
+                }
+              />
+            ))}
+          </div>
         )}
         {gating.contentLightNotice && (
           <div className="infoBox">

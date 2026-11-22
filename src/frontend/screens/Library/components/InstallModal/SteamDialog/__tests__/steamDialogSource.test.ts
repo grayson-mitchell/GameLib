@@ -569,7 +569,12 @@ describe('required wiring', () => {
     // adding a new describe block) is deliberate -- B-WR-05's own finding
     // was that a new branch landing WITHOUT extending this list leaves every
     // gate green if the wiring is later reverted.
-    'gamelib:installFlows.diskSpaceFreeOfTotal'
+    'gamelib:installFlows.diskSpaceFreeOfTotal',
+    // quick 261122-rgi (D-01): the opt-in DLC ticks. The listing read, the group heading and
+    // the toggle helper are each a branch a revert would silently remove.
+    'window.api.getSteamOptInDlc(',
+    'gamelib:steam.install.optInDlc.title',
+    'toggleOptInChoice('
   ])('requires "%s" in the stripped source', (token) => {
     expectPresent(stripped, token, 'required wiring')
   })
