@@ -18,13 +18,12 @@ import {
   type DialogBoxDeps,
   type NotifyDeps
 } from '../../dialog/dialog'
-import {
-  getWikiGameInfo,
-  type WikiGameInfoDeps
-} from 'backend/wiki_game_info/wiki_game_info'
+import { getWikiGameInfo } from 'backend/info/wiki'
 import { isAppImage, isFlatpak, isWindows } from 'backend/constants/environment'
 import type { Game } from 'common/types/game_manager'
+import type { WikiInfo } from 'common/types'
 import type { InfoCaches, Stores } from 'backend/services/types'
+import type { CrossoverIndexLookups } from 'backend/crossover_index'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { invokeSteamFiles } from 'backend/storeManagers/steam/localFiles/rustSteamFiles'
 import type {
@@ -236,14 +235,24 @@ function rustEntryFields(entry: ShortcutEntry): EntryField[] {
   return fields
 }
 
-/** The icon lookup's managers plus the kvs store the shortcut's last-played read uses. */
+/**
+ * The icon lookup's managers plus the kvs store the shortcut's last-played read uses. The wiki lookup
+ * is one call to Rust through `requestRustInvoke` (86-23). `stores.wikiGameInfo`, `stores.crossoverIndex`,
+ * `infoCaches` and `appRuntime` are read by nothing here any more; the shortcuts registration and
+ * `handlers.ts` still supply them until phase 86-24 deletes the TS wiki module they were for.
+ */
 export type NonSteamGameDeps = ShortcutsDeps &
   DialogBoxDeps &
   NotifyDeps & {
     stores: Pick<Stores, 'kvs' | 'wikiGameInfo' | 'crossoverIndex'>
     infoCaches: Pick<InfoCaches, 'hltb'>
-  } & Pick<WikiGameInfoDeps, 'appRuntime'> &
-  RustInvokeDeps
+    appRuntime: {
+      crossoverIndex: Pick<
+        CrossoverIndexLookups,
+        'getCodeweaversFromIndex' | 'crossoverIndexHas'
+      >
+    }
+  } & RustInvokeDeps
 
 /**
  * Adds a non-steam game to steam via editing shortcuts.vdf
@@ -257,7 +266,7 @@ async function addNonSteamGame(
 ): Promise<boolean> {
   const gameInfo = game.getGameInfo()
   const steamUserdataDir = await getSteamUserdataDir(deps)
-  const wikiInfo = await getWikiGameInfo(deps, game)
+  const wikiInfo = (await getWikiGameInfo(deps, game)) as WikiInfo | null
   const steamID = wikiInfo?.pcgamingwiki?.steamID ?? wikiInfo?.gamesdb?.steamID
 
   const { folders, error } = checkSteamUserDataDir(steamUserdataDir)

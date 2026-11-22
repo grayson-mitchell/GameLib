@@ -11,6 +11,7 @@ import { createKvsStores } from 'backend/constants/key_value_stores'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { stubRustSteamFiles } from 'backend/storeManagers/steam/localFiles/__tests__/fixtures/stubRustSteamFiles'
 import {
+  RUST_INFO_WIKI_GET,
   RUST_STEAMFILES_SHORTCUTS_APPLY,
   RUST_STEAMFILES_SHORTCUTS_READ
 } from 'common/types/sidecarTransport'
@@ -27,7 +28,6 @@ const { tsStore } = createKvsStores({
 jest.mock('backend/logger')
 jest.mock('backend/dialog/dialog')
 jest.mock('backend/utils')
-jest.mock('backend/wiki_game_info/wiki_game_info')
 
 let tmpDir = {} as DirResult
 let tmpSteamUserConfigDir = ''
@@ -94,14 +94,29 @@ describe('NonSteamGame shortcuts through steamfiles', () => {
     removedAppName: null,
     ...over
   })
+  // The wiki lookup is one Rust call (86-23); Rust has no entry for these games. It is answered here
+  // and recorded in `wikiCalls`, so `stub.calls` keeps holding only the shortcut-file channels.
+  const wikiCalls: unknown[][] = []
   const rustDeps = (stub: { requestRustInvoke: unknown }) =>
     ({
       ...deps,
-      requestRustInvoke: stub.requestRustInvoke
+      requestRustInvoke: (channel: string, argv: unknown[]) => {
+        if (channel === RUST_INFO_WIKI_GET) {
+          wikiCalls.push(argv)
+          return Promise.resolve(null)
+        }
+        return (
+          stub.requestRustInvoke as (
+            c: string,
+            a: unknown[]
+          ) => Promise<unknown>
+        )(channel, argv)
+      }
     }) as unknown as Parameters<typeof addNonSteamGame>[0]
 
   beforeEach(() => {
     jest.clearAllMocks()
+    wikiCalls.length = 0
     tmpDir = dirSync({ unsafeCleanup: true })
     defaultSteamPath = tmpDir.name + "'"
     tmpSteamUserConfigDir = join(
@@ -125,6 +140,18 @@ describe('NonSteamGame shortcuts through steamfiles', () => {
     })
 
     await addNonSteamGame(rustDeps(stub), makeGameMock('MyGame', 'RustGame'))
+
+    // The Steam id comes from one wiki lookup in Rust, asked for the game's title, app name and runner.
+    expect(wikiCalls).toEqual([
+      [
+        {
+          title: 'MyGame',
+          appName: 'RustGame',
+          runner: undefined,
+          forceRefresh: undefined
+        }
+      ]
+    ])
 
     const apply = stub.calls.find(
       (c) => c.channel === RUST_STEAMFILES_SHORTCUTS_APPLY

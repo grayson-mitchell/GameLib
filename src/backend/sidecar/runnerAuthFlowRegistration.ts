@@ -85,10 +85,7 @@ export interface RunnerAuthFlowDeps extends DialogBoxDeps {
   appInfo: Pick<AppInfo, 'userAgentFallback' | 'version'>
   notifications: Pick<Notifications, 'show'>
   managers: Pick<StoreManagers, 'library'>
-  stores: Pick<
-    Stores,
-    'gog' | 'legendary' | 'nile' | 'wikiGameInfo' | 'kvs' | 'systemInfo'
-  >
+  stores: Pick<Stores, 'gog' | 'legendary' | 'nile' | 'kvs' | 'systemInfo'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   /** The boot-owned sign-in fence and outcome map the login/logout paths report through. */
   signIn: ManagerDeps['signIn']

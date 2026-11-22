@@ -94,9 +94,8 @@ jest.mock('backend/storeManagers', () => ({
 // branch that would reach it). Plan 34.5-11's `addToSteam`/`removeFromSteam`/`isAddedToSteam`
 // channels call it DIRECTLY and their whole security property (the exe-in-VDF pin, T-34.5-39/40)
 // requires the REAL VDF-write code path -- a mock would prove nothing. So this module is left
-// UNMOCKED here; `backend/wiki_game_info/wiki_game_info` is auto-mocked below instead (mirroring
-// `nonesteamgame.test.ts`'s own precedent) to keep addNonSteamGame's real call chain network-free.
-jest.mock('backend/wiki_game_info/wiki_game_info')
+// UNMOCKED here. The wiki lookup it makes is one Rust call (86-23), answered by the injected
+// requestRustInvoke below, which keeps addNonSteamGame's real call chain network-free.
 
 // ── backend/shortcuts/utils — shared by two real, unmocked call chains this file now drives:
 // `shortcuts.ts`'s darwin `.app` icon path (getIcon) and, new in plan 34.5-11, `steamhelper.ts`'s
@@ -146,6 +145,7 @@ import { createNativeImage } from '../nativeImageShim'
 import { createRealRunner } from '../../testUtils/realRunner'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { stubRustSteamFiles } from 'backend/storeManagers/steam/localFiles/__tests__/fixtures/stubRustSteamFiles'
+import { RUST_INFO_WIKI_GET } from 'common/types/sidecarTransport'
 import {
   createTestManagers,
   createTestServices,
@@ -236,7 +236,13 @@ function programShortcutsRust() {
       removedAppName: null
     })
   })
-  mockRequestRustInvoke.mockImplementation(stub.requestRustInvoke)
+  mockRequestRustInvoke.mockImplementation(
+    (channel: string, argv: readonly unknown[]) =>
+      // Rust has no wiki entry for the game under test.
+      channel === RUST_INFO_WIKI_GET
+        ? Promise.resolve(null)
+        : stub.requestRustInvoke(channel, argv)
+  )
   return stub
 }
 const mockHandleExit = jest.fn()

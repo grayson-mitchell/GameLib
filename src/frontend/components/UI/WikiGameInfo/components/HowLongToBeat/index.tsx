@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import './index.scss'
-import type { HeroicHowLongToBeatEntry } from 'backend/wiki_game_info/howlongtobeat/utils'
+import type { HeroicHowLongToBeatEntry } from 'common/types'
 import { createNewWindow } from 'frontend/helpers'
 
 type Props = {

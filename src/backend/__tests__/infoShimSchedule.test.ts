@@ -64,6 +64,15 @@ const ANTICHEAT_CALLERS = [
   'src/backend/sidecar/bootstrap.ts'
 ] as const
 
+/** Every importer of `info/wiki.ts` (86-23); `callers` is checked per file, so the three wiki rows share it. */
+const WIKI_CALLERS = [
+  'src/backend/shortcuts/nonesteamgame/nonesteamgame.ts',
+  'src/backend/storeManagers/gog/games.ts',
+  'src/backend/storeManagers/legendary/games.ts',
+  'src/backend/storeManagers/nile/games.ts',
+  'src/backend/utils.ts'
+] as const
+
 const SCHEDULE: readonly ScheduleRow[] = [
   // 86-09, recent games: both bodies are one typed call into `gamelib-info`. `callers` is checked
   // per FILE (every importer of `recentGames.ts`), so both rows list all three importers: the
@@ -190,20 +199,40 @@ const SCHEDULE: readonly ScheduleRow[] = [
     callers: ['src/backend/sidecar/enrichmentFlowRegistration.ts'],
     deletedBy: 92
   },
-  // 86-23, the umu id lookup: a one-call shim over `gamelib-info` `wiki::umu`. The GOG, Epic and
-  // Amazon store managers' Linux launch paths call it for the GAMEID env var. They are all phase 92
-  // (the last library managers to port), which also deletes the shim.
+  // 86-23, wiki game info and umu. All three functions live in `info/wiki.ts`, and `callers` is per
+  // FILE, so each row lists every importer: the GOG, Epic and Amazon store managers (the umu id for
+  // the Linux launch GAMEID), the non-Steam shortcut flow (the wiki lookup for the Steam id) and
+  // `utils.ts` (`clearCache`'s wiki cache clear). `getUmuId` is a one-call shim; its callers are the
+  // last library managers to port, so phase 92 deletes it. `getWikiGameInfo` is a RESOLVER (D-24):
+  // the one input Rust cannot gather is the game, which lives in a library manager's memory, so it
+  // reads the game's `title`, `appName` and `runner` and makes the one call; phase 94 ports the
+  // shortcuts flow and deletes it. `clearWikiGameInfoCache` is a one-call shim behind `clearCache`,
+  // a synchronous function in `utils.ts` that the shell-files, GOG, Nile and Legendary paths call;
+  // phase 98 (shell) deletes it.
   {
     name: 'getUmuId',
     file: 'src/backend/info/wiki.ts',
     shape: 'shim',
     channel: 'RUST_INFO_UMU_GET',
-    callers: [
-      'src/backend/storeManagers/gog/games.ts',
-      'src/backend/storeManagers/legendary/games.ts',
-      'src/backend/storeManagers/nile/games.ts'
-    ],
+    callers: WIKI_CALLERS,
     deletedBy: 92
+  },
+  {
+    name: 'getWikiGameInfo',
+    file: 'src/backend/info/wiki.ts',
+    shape: 'resolver',
+    inputs: ['title', 'appName', 'runner'],
+    channel: 'RUST_INFO_WIKI_GET',
+    callers: WIKI_CALLERS,
+    deletedBy: 94
+  },
+  {
+    name: 'clearWikiGameInfoCache',
+    file: 'src/backend/info/wiki.ts',
+    shape: 'shim',
+    channel: 'RUST_INFO_WIKI_CACHE_CLEAR',
+    callers: WIKI_CALLERS,
+    deletedBy: 98
   }
 ]
 

@@ -66,6 +66,7 @@ import type { ProcessRunner } from 'backend/process/types'
 import { isStore } from 'common/storeCapabilities'
 import type { SpawnAsync } from './spawnAsync'
 import type { RustInvokeDeps } from './host/rustInvokeDeps'
+import { clearWikiGameInfoCache } from './info/wiki'
 import { RUST_STEAMFILES_READ_LIBRARY_FOLDERS } from 'common/types/sidecarTransport'
 import { guardedRemoveTree } from './safety/rustSafety'
 import { collectKnownInstalls, titleForKnownKey } from './safety/knownInstalls'
@@ -326,11 +327,22 @@ function removeSpecialcharacters(text: string): string {
 }
 
 /** The cache families `clearCache` empties. */
-export interface ClearCacheDeps extends DialogBoxDeps {
-  stores: Pick<
-    Stores,
-    'wikiGameInfo' | 'gog' | 'legendary' | 'nile' | 'systemInfo'
-  >
+export interface ClearCacheDeps extends DialogBoxDeps, Partial<RustInvokeDeps> {
+  stores: Pick<Stores, 'gog' | 'legendary' | 'nile' | 'systemInfo'>
+}
+
+/**
+ * Whether `clearCache` can reach the wiki cache, which is Rust's (86-23). `requestRustInvoke` is
+ * optional because the per-library sign-out paths (`GOGUser`, `NileUser`, `LegendaryUser`) are built
+ * by `runnerAuthFlowRegistration.ts`, whose only caller, `sidecar/handlers.ts`, does not pass it yet;
+ * those paths leave the wiki cache as it is (public game data, refreshed after 30 days anyway). OWED:
+ * once `handlers.ts` is clean, pass `requestRustInvoke` to `registerRunnerAuthFlows`, add it to
+ * `userDeps()` there, and make this member required.
+ */
+function canClearWikiCache(
+  deps: ClearCacheDeps
+): deps is ClearCacheDeps & RustInvokeDeps {
+  return deps.requestRustInvoke !== undefined
 }
 
 /**
@@ -352,8 +364,17 @@ function clearCache(
   library?: 'gog' | 'legendary' | 'nile',
   fromVersionChange = false
 ) {
-  const { wikiGameInfo, gog, legendary, nile, systemInfo } = deps.stores
-  wikiGameInfo.wikiGameInfoStore.clear()
+  const { gog, legendary, nile, systemInfo } = deps.stores
+  // The wiki cache is Rust's now. clearCache stays synchronous (its callers do not await), so the
+  // clear is started here and a rejection is logged rather than thrown.
+  if (canClearWikiCache(deps)) {
+    void clearWikiGameInfoCache(deps).catch((error: unknown) => {
+      logWarning(
+        ['Could not clear the wiki game info cache:', error],
+        LogPrefix.Backend
+      )
+    })
+  }
   if (isStore(library, 'gog') || !library) {
     gog.apiInfoCache.clear()
     gog.libraryStore.clear()

@@ -4,6 +4,6 @@
     "src/backend/shortcuts/__tests__/getIcon.test.ts": 2,
     "src/backend/shortcuts/__tests__/removeShortcutsOutcome.test.ts": 3,
     "src/backend/shortcuts/__tests__/shortcutsExistsFallback.test.ts": 5,
-    "src/backend/shortcuts/nonesteamgame/__tests__/nonesteamgame.test.ts": 4
+    "src/backend/shortcuts/nonesteamgame/__tests__/nonesteamgame.test.ts": 3
   }
 }

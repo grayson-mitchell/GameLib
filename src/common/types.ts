@@ -16,11 +16,21 @@ import type { SideloadGameInfo } from './types/sideload'
 import type { TrayIconVariant } from './trayIconVariant'
 import type { SignInStore } from './signInState'
 import type { TitleBarOverlay, Rectangle } from 'common/types/hostTypes'
-import type { HeroicHowLongToBeatEntry } from 'backend/wiki_game_info/howlongtobeat/utils'
 import type { Path } from 'backend/schemas'
 import type LogWriter from 'backend/logger/targetWriter'
 
 export type Runner = 'legendary' | 'gog' | 'sideload' | 'nile' | 'steam'
+
+/** A HowLongToBeat entry, hours per play style, as the wiki game info carries it. */
+export interface HeroicHowLongToBeatEntry {
+  completionist: number
+  mainStory: number
+  mainExtra: number
+  gameId?: number
+  gameName?: string
+  gameImageUrl?: string
+  gameWebLink?: string
+}
 
 // NOTE: Do not put enum's in this module or it will break imports
 

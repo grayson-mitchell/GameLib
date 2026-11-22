@@ -127,7 +127,7 @@ export interface LegendaryUserDeps
   libraryManagers: Pick<ManagerDeps['libraryManagers'], 'legendary'>
   stores: LegendaryUserInfoDeps['stores'] & {
     legendary: Stores['legendary']
-  } & Pick<Stores, 'wikiGameInfo' | 'gog' | 'nile' | 'systemInfo'>
+  } & Pick<Stores, 'gog' | 'nile' | 'systemInfo'>
 }
 
 export class LegendaryUser {

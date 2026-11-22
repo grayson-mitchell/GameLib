@@ -2,17 +2,8 @@ import axios from 'axios'
 import { isStore } from 'common/storeCapabilities'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import type { Game } from 'common/types/game_manager'
+import type { HeroicHowLongToBeatEntry } from 'common/types'
 import { pickBestMatch, toSearchTerms } from './titleMatch'
-
-export interface HeroicHowLongToBeatEntry {
-  completionist: number
-  mainStory: number
-  mainExtra: number
-  gameId?: number
-  gameName?: string
-  gameImageUrl?: string
-  gameWebLink?: string
-}
 
 const HLTB_BASE_URL = 'https://howlongtobeat.com'
 const HLTB_SEARCH_INIT_URL = `${HLTB_BASE_URL}/api/search/site/init`
