@@ -258,6 +258,8 @@ export class LogForwarder {
    * Instance state, not module state (moduleStateCensus).
    */
   readonly #owedRotations = new Set<string>()
+  /** The (target kind, reason) pairs already reported as refused (IN-05): bounded, a few pairs. */
+  readonly #refusalsReported = new Set<string>()
   #waiters: (() => void)[] = []
 
   constructor(caps: LogForwarderCaps = {}) {
@@ -331,9 +333,11 @@ export class LogForwarder {
   /** Queues one entry (a line with its own timestamp, or a raw chunk). Never throws. */
   enqueue(target: LogFrameTarget, rotate: boolean, entry: LogFrameEntry): void {
     try {
-      if (logTargetRefusal(target) !== null) {
+      const refusal = logTargetRefusal(target)
+      if (refusal !== null) {
         // One bad target would cost the shell a whole frame of other writers' lines.
         this.#refusedTotal += 1
+        this.#reportRefusal(target, refusal)
         return
       }
       const clipped = sanitiseEntry(clipEntry(entry))
@@ -358,6 +362,29 @@ export class LogForwarder {
     } catch {
       // A log call never throws into its caller.
     }
+  }
+
+  /**
+   * Says once per (target kind, reason) that entries are being refused (IN-05), so a direct caller
+   * that builds a bad target does not lose its lines without a trace. Kind and reason only: the
+   * target's own text (an appName, a runner) is never echoed.
+   */
+  #reportRefusal(target: LogFrameTarget, reason: string): void {
+    const kind = (
+      ['general', 'gogRedist', 'runner', 'game'] as string[]
+    ).includes(target.kind)
+      ? target.kind
+      : 'unknown'
+    const seen = `${kind}/${reason}`
+    if (this.#refusalsReported.has(seen)) return
+    this.#refusalsReported.add(seen)
+    this.logLine(
+      { kind: 'general' },
+      false,
+      'WARNING',
+      'Backend',
+      `log entry refused: ${reason} (${kind} target)`
+    )
   }
 
   /**

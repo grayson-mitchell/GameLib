@@ -345,7 +345,47 @@ describe('LogForwarder', () => {
       fw.enqueue(GENERAL, false, { raw: 'g2' })
       expect(fw.stats().refusedTotal).toBe(4)
       jest.advanceTimersByTime(50)
-      expect(transport.messages()).toEqual(['g1', 'game1', 'g2'])
+      // The refusals are reported (IN-05); the lines the shell would have rejected are not sent.
+      expect(
+        transport.messages().filter((m) => !m.startsWith('log entry refused'))
+      ).toEqual(['g1', 'game1', 'g2'])
+    })
+
+    it('reports a refused target once per kind and reason, naming no target text (IN-05)', () => {
+      const fw = new LogForwarder()
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      const hostile = { ...GAME, appName: '../secret-title' } as LogFrameTarget
+      fw.enqueue(hostile, false, { raw: 'a' })
+      fw.enqueue(hostile, false, { raw: 'b' })
+      fw.enqueue({ ...hostile, appName: 'a/b' } as LogFrameTarget, false, {
+        raw: 'c'
+      })
+      fw.enqueue({ kind: 'runner', runner: 'bogus' }, false, { raw: 'd' })
+      expect(fw.stats().refusedTotal).toBe(4)
+      jest.advanceTimersByTime(50)
+      const reports = transport
+        .entries()
+        .map((e) => ('line' in e ? e.line : undefined))
+        .filter((l): l is NonNullable<typeof l> => l !== undefined)
+      expect(reports.map((l) => [l.level, l.prefix, l.msg])).toEqual([
+        [
+          'WARNING',
+          LogPrefix.Backend,
+          'log entry refused: invalid appName (game target)'
+        ],
+        [
+          'WARNING',
+          LogPrefix.Backend,
+          'log entry refused: invalid runner (runner target)'
+        ]
+      ])
+      expect(transport.messages().join('\n')).not.toMatch(/secret-title|bogus/)
+      expect(
+        transport.frames.every((f) =>
+          f.batch.every((b) => b.target.kind === 'general')
+        )
+      ).toBe(true)
     })
 
     it('the TS runner and game-type sets equal gamelib-core paths.rs (WR-01)', () => {
