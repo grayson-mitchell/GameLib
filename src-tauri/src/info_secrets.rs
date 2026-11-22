@@ -105,11 +105,9 @@ impl SecretSource for KeyringSecretSource {
             }
             Err(e) => {
                 // The category is the variant's name; the error's own text stays on stderr.
+                let kind = keyring_error_kind(&e);
                 shell_log_detail(
-                    &format!(
-                        "keyring {CHANNEL_SET} account={account} failed ({})",
-                        keyring_error_kind(&e)
-                    ),
+                    &format!("keyring {CHANNEL_SET} account={account} failed ({kind})"),
                     &format!("{e:?}"),
                 );
                 Err("unavailable".to_string())
@@ -138,11 +136,9 @@ impl SecretSource for KeyringSecretSource {
                 Ok(())
             }
             Err(e) => {
+                let kind = keyring_error_kind(&e);
                 shell_log_detail(
-                    &format!(
-                        "keyring {CHANNEL_DELETE} account={account} failed ({})",
-                        keyring_error_kind(&e)
-                    ),
+                    &format!("keyring {CHANNEL_DELETE} account={account} failed ({kind})"),
                     &format!("{e:?}"),
                 );
                 Err("unavailable".to_string())
