@@ -71,22 +71,6 @@ export function seaEsbuildFlags(outfile: string, entry: string): string[] {
   ]
 }
 
-/**
- * Phase 47 D-01: esbuild `--define` flag that bakes the shared IsThereAnyDeal
- * key into a sidecar bundle. The value is NEVER logged. An absent or
- * whitespace-only `ITAD_API_KEY` yields `""` so keyless PR/test/dev builds stay
- * green (D-03/D-04). Deliberately NOT part of `seaEsbuildFlags()`: that list is
- * shared with runTs bundles of meta scripts, which must not carry the key.
- */
-export function itadKeyDefineFlag(
-  env: NodeJS.ProcessEnv = process.env
-): string {
-  return (
-    '--define:__ITAD_API_KEY__=' +
-    JSON.stringify((env.ITAD_API_KEY ?? '').trim())
-  )
-}
-
 /** Argv-form (never a shell string, T-24-06 convention) child_process spawn,
  *  capturing stdout/stderr for compile-gate error reporting. */
 export function spawnArgv(

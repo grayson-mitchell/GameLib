@@ -474,6 +474,10 @@ describe('storeSearchPortComplete', () => {
     }
   )
 
+  it('the sidecar bundle names no __ITAD_API_KEY__ define (the key is baked into the shell build only, D-25)', () => {
+    expect(findIdentifiers(tsWalk.files, ['__ITAD_API_KEY__'])).toEqual([])
+  })
+
   it('itadSecrets is named only in the three files that still carry the inert member', () => {
     const hits = findIdentifiers(
       tsWalk.files.filter((f) => f.path.startsWith('src/backend/')),

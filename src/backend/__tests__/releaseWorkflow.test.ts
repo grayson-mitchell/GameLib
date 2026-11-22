@@ -1816,9 +1816,12 @@ describe('release-tauri.yml ITAD key (Phase 47 D-01/D-04)', () => {
     expect(failFast().index).toBeLessThan(seaIndex)
   })
 
-  test('SEA step env maps ITAD_API_KEY to the secret', () => {
+  // Phase 86 (86-17, D-25): the key left the sidecar step; the Tauri build step carries it
+  // (pinned by meta/__tests__/releaseItadKey.test.ts).
+  test('SEA step env does not carry ITAD_API_KEY', () => {
     const sea = parseReleaseSteps().find((s) => s.name === seaName)
-    expect(sea?.env?.ITAD_API_KEY).toBe('${{ secrets.ITAD_API_KEY }}')
+    expect(sea).toBeDefined()
+    expect(Object.keys(sea?.env ?? {})).not.toContain('ITAD_API_KEY')
   })
 
   test('job-level env has no ITAD_API_KEY', () => {

@@ -341,10 +341,11 @@ jobs:
         run: |
           test -n "$IN_ITAD_API_KEY" || { echo "::error::ITAD_API_KEY repo secret is missing or empty. A release must not ship without the IsThereAnyDeal key (Store Search would show 'not set up in this build'). Create it with: gh secret set ITAD_API_KEY"; exit 1; }
 
+      # Phase 86 (86-17, D-25): no ITAD_API_KEY here. The store search is Rust's and the shell bakes the
+      # key at compile time in the Tauri build step below, so the sidecar bundle never holds a key.
       - name: Build self-contained sidecar (Node SEA)
         env:
           GAMELIB_SIDECAR_TARGET_TRIPLE: ${{ matrix.sidecar_triple }}
-          ITAD_API_KEY: ${{ secrets.ITAD_API_KEY }}
         run: pnpm build:sidecar-sea
 
       # GAP-A (34-16, live run 30084918812): both macOS legs failed with `failed to

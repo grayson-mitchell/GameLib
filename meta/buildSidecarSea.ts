@@ -111,7 +111,6 @@ import { createHash } from 'node:crypto'
 // runs the full SEA build as a module-scope side effect (see the bottom guard), which is safe
 // only under jest (`JEST_WORKER_ID`).
 import {
-  itadKeyDefineFlag,
   resolveEsbuildCli,
   seaEsbuildFlags,
   spawnArgv
@@ -276,16 +275,14 @@ export function buildPostjectArgv(
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
 export function buildEsbuildArgv(
-  platform: NodeJS.Platform = process.platform,
-  env: NodeJS.ProcessEnv = process.env
-): { command: string; args: string[] } {
+  platform: NodeJS.Platform = process.platform
+): {
+  command: string
+  args: string[]
+} {
   const esbuildCli = resolveEsbuildCli()
-  // Phase 47 D-01: the SEA bundle re-bundles from source, so the ITAD key
-  // define must be applied here as well as in build:sidecar. Never log argv.
-  const flags = [
-    ...seaEsbuildFlags(SEA_BUNDLE_PATH, SIDECAR_ENTRY_PATH),
-    itadKeyDefineFlag(env)
-  ]
+  // No ITAD key define (Phase 86, 86-17, D-25): the store search is Rust's and the shell bakes the key.
+  const flags = seaEsbuildFlags(SEA_BUNDLE_PATH, SIDECAR_ENTRY_PATH)
   if (platform === 'win32') {
     return { command: process.execPath, args: [esbuildCli, ...flags] }
   }

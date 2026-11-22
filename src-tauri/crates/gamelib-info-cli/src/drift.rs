@@ -66,6 +66,9 @@ struct Case {
 /// The variable the SteamGridDB cases read their key from.
 const SGDB_KEY_VAR: &str = "GAMELIB_INFO_SGDB_KEY";
 
+/// The variable the IsThereAnyDeal cases read their key from (the user-key slot of the context).
+const ITAD_KEY_VAR: &str = "GAMELIB_INFO_ITAD_KEY";
+
 /// The fixed case table. Anticheat's: the data file each platform downloads, and one lookup over the
 /// file just downloaded. The lookup's empty namespace matches the first entry that carries an Epic
 /// namespace (`"".includes` is always true), so it needs no hard-coded game; its answer is one entry
@@ -153,6 +156,51 @@ const CASES: &[Case] = &[
         pointer: "/ops/1/ok",
         mode: Mode::Whole,
         needs_env: Some(SGDB_KEY_VAR),
+    },
+    // IsThereAnyDeal (86-17, D-12): search, deals and Steam gids over the live service, each held
+    // against the shape the operator's 86-07 recording showed (the golden's `ok` is the op's whole
+    // answer). They need the operator's own key in GAMELIB_INFO_ITAD_KEY and are skipped without it.
+    // The search is "portal" in the US; the deals case asks for Portal's own ITAD id; the gids case
+    // asks for the five Steam app ids of the recording, so a mapping ITAD drops shows up as a missing
+    // key path.
+    Case {
+        id: "itad-search",
+        slice: "itad",
+        platform: Platform::Linux,
+        setup: &[],
+        op: "info_itad_search",
+        args: r#"[{"query":"portal","country":"US"}]"#,
+        read: Read::Answer,
+        golden: "storeSearch/expected/live-search-portal-us/result.json",
+        pointer: "/ops/0/ok",
+        mode: Mode::Whole,
+        needs_env: Some(ITAD_KEY_VAR),
+    },
+    Case {
+        id: "itad-deals",
+        slice: "itad",
+        platform: Platform::Linux,
+        setup: &[],
+        op: "info_itad_deals",
+        args: r#"[{"gameId":"018d937f-1749-73f8-bf5a-8e0aa3cdd9ff","country":"US"}]"#,
+        read: Read::Answer,
+        golden: "storeSearch/expected/live-deals-portal-us/result.json",
+        pointer: "/ops/0/ok",
+        mode: Mode::Whole,
+        needs_env: Some(ITAD_KEY_VAR),
+    },
+    Case {
+        id: "itad-gids",
+        slice: "itad",
+        platform: Platform::Linux,
+        setup: &[],
+        op: "info_itad_gids",
+        args: r#"[{"appIds":["220","400","292030","1245620","99999999"]}]"#,
+        read: Read::Answer,
+        golden: "storeSearch/expected/live-gids-five-appids/result.json",
+        pointer: "/ops/0/ok",
+        mode: Mode::Whole,
+        needs_env: Some(ITAD_KEY_VAR),
     },
 ];
 
@@ -380,7 +428,7 @@ fn refused(op: &str, answer: &Value) -> Result<(), String> {
 
 /// The key source drift uses: the two `GAMELIB_INFO_*` variables, never the Keychain.
 fn env_secrets() -> Arc<dyn SecretSource> {
-    Arc::new(EnvSecretSource::new("GAMELIB_INFO_ITAD_KEY", SGDB_KEY_VAR))
+    Arc::new(EnvSecretSource::new(ITAD_KEY_VAR, SGDB_KEY_VAR))
 }
 
 /// Why `case` cannot run, when it cannot: the variable it needs is unset or blank.
@@ -563,6 +611,17 @@ mod tests {
                 .all(|c| c.needs_env == Some(SGDB_KEY_VAR)),
             "every steamgrid case needs the operator's key"
         );
+        assert!(
+            CASES.iter().filter(|c| c.slice == "itad").count() >= 3,
+            "itad carries search, deals and gids"
+        );
+        assert!(
+            CASES
+                .iter()
+                .filter(|c| c.slice == "itad")
+                .all(|c| c.needs_env == Some(ITAD_KEY_VAR)),
+            "every itad case needs the operator's key"
+        );
         for case in CASES {
             let text = std::fs::read(golden_root().join(case.golden)).expect(case.golden);
             let golden: Value = serde_json::from_slice(&text).unwrap();
@@ -621,6 +680,45 @@ mod tests {
             let outcome = run_case(case, replay.clone(), keys, "0.11.0", &golden_root());
             assert_eq!(outcome, Ok(String::new()), "{case_id}");
             replay.finish().expect(case_id);
+        }
+    }
+
+    #[test]
+    fn a_recorded_service_that_matches_the_golden_passes_every_itad_case() {
+        use gamelib_info::secrets::{MemorySecretSource, Slot};
+        for (case_id, recording) in [
+            ("itad-search", "live-search-portal-us"),
+            ("itad-deals", "live-deals-portal-us"),
+            ("itad-gids", "live-gids-five-appids"),
+        ] {
+            let case = CASES.iter().find(|c| c.id == case_id).unwrap();
+            let replay = recorded("storeSearch", recording);
+            // The recorder stores the key as REDACTED; any non-empty key query value matches.
+            let keys = Arc::new(MemorySecretSource::with(Slot::Itad, "a-test-key"));
+            let outcome = run_case(case, replay.clone(), keys, "0.11.0", &golden_root());
+            assert_eq!(outcome, Ok(String::new()), "{case_id}");
+            replay.finish().expect(case_id);
+        }
+    }
+
+    #[test]
+    fn an_itad_case_is_skipped_with_a_reason_when_the_key_variable_is_unset_or_blank() {
+        for id in ["itad-search", "itad-deals", "itad-gids"] {
+            let case = CASES.iter().find(|c| c.id == id).unwrap();
+            assert_eq!(
+                skip_reason(case, |_| None).as_deref(),
+                Some("GAMELIB_INFO_ITAD_KEY is not set"),
+                "{id} unset"
+            );
+            assert!(
+                skip_reason(case, |_| Some(" ".to_string())).is_some(),
+                "{id} blank"
+            );
+            assert_eq!(
+                skip_reason(case, |_| Some("k".to_string())),
+                None,
+                "{id} set"
+            );
         }
     }
 

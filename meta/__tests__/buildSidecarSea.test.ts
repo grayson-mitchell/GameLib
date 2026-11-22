@@ -290,13 +290,12 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
     }
   })
 
-  test('buildEsbuildArgv carries the ITAD key define (Phase 47 D-01)', () => {
-    expect(buildEsbuildArgv('linux', { ITAD_API_KEY: 'k' }).args).toContain(
-      '--define:__ITAD_API_KEY__="k"'
-    )
-    expect(buildEsbuildArgv('win32', {}).args).toContain(
-      '--define:__ITAD_API_KEY__=""'
-    )
+  test('buildEsbuildArgv carries no ITAD key define (Phase 86 86-17, D-25: the shell bakes the key)', () => {
+    for (const platform of ['linux', 'win32'] as const) {
+      const { args } = buildEsbuildArgv(platform)
+      expect(args.filter((a) => a.startsWith('--define'))).toEqual([])
+      expect(args.join(' ')).not.toContain('ITAD')
+    }
   })
 
   // WR-06 (34-REVIEW.md gap cycle 2): buildEsbuildArgv() read process.platform

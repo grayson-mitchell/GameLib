@@ -1,8 +1,9 @@
 /**
  * Phase 86 D-25: the Rust shell bakes the IsThereAnyDeal key at COMPILE time, so the release
  * workflow's Tauri build step (the one that runs cargo) must carry `ITAD_API_KEY` from the repo
- * secret, exactly as the sidecar SEA step already does. Without it a signed release shows "not set
- * up in this build" for Store Search once the Rust ITAD port is live.
+ * secret. Phase 86 (86-17) removed the key from the sidecar SEA step: no TS ITAD code is left, so the
+ * sidecar bundle holds no key and the shell build is its only home. Without it a signed release shows
+ * "not set up in this build" for Store Search.
  *
  * A workflow cannot be run from jest, so this is wiring: the workflow is parsed to a steps array
  * and compared by INDEX (a raw-text order check is unsound against step comments), and the two
@@ -50,8 +51,8 @@ const isFailFast = (s: Step): boolean =>
   (s.run ?? '').includes('test -n "$IN_ITAD_API_KEY"')
 
 /**
- * What the workflow must look like: the fail-fast step first, then the SEA step and the Tauri build
- * step both carrying the secret. Returns the failures, empty when it holds.
+ * What the workflow must look like: the fail-fast step first, then the SEA step WITHOUT the key and the
+ * Tauri build step carrying the secret. Returns the failures, empty when it holds.
  */
 function problems(doc: Workflow): string[] {
   const steps = releaseSteps(doc)
@@ -66,8 +67,8 @@ function problems(doc: Workflow): string[] {
   if (steps[failFast]?.env?.IN_ITAD_API_KEY !== SECRET) {
     found.push('the fail-fast step does not read the secret')
   }
-  if (steps[sea]?.env?.ITAD_API_KEY !== SECRET) {
-    found.push('the sidecar step does not carry ITAD_API_KEY from secrets')
+  if (steps[sea]?.env && 'ITAD_API_KEY' in steps[sea].env) {
+    found.push('the sidecar step carries ITAD_API_KEY')
   }
   if (steps[tauri]?.env?.ITAD_API_KEY !== SECRET) {
     found.push('the Tauri build step does not carry ITAD_API_KEY from secrets')
@@ -83,7 +84,7 @@ function problems(doc: Workflow): string[] {
 const workflow = load(read('.github/workflows/release-tauri.yml')) as Workflow
 
 describe('release-tauri.yml bakes the ITAD key into the Rust shell (D-25)', () => {
-  test('self-test: the workflow has the three steps and each carries the secret', () => {
+  test('self-test: the workflow has the three steps, the Tauri build carries the secret and the sidecar does not', () => {
     expect(problems(workflow)).toEqual([])
   })
 
@@ -92,9 +93,10 @@ describe('release-tauri.yml bakes the ITAD key into the Rust shell (D-25)', () =
     expect(step?.env?.ITAD_API_KEY).toBe(SECRET)
   })
 
-  test('the sidecar step still maps ITAD_API_KEY to the secret', () => {
+  test('the sidecar step carries no ITAD_API_KEY (D-25: the key lives only in the shell build)', () => {
     const step = releaseSteps(workflow).find((s) => s.name === SEA_STEP)
-    expect(step?.env?.ITAD_API_KEY).toBe(SECRET)
+    expect(step).toBeDefined()
+    expect(Object.keys(step?.env ?? {})).not.toContain('ITAD_API_KEY')
   })
 
   test('the fail-fast step still runs before both builds', () => {
@@ -121,6 +123,14 @@ describe('release-tauri.yml bakes the ITAD key into the Rust shell (D-25)', () =
     expect(problems(mutated)).toEqual([
       'the Tauri build step does not carry ITAD_API_KEY from secrets'
     ])
+  })
+
+  test('mutation: putting the key back on the sidecar step makes the check fail', () => {
+    const mutated = structuredClone(workflow)
+    const step = releaseSteps(mutated).find((s) => s.name === SEA_STEP)
+    if (!step) throw new Error('sidecar step not found')
+    step.env = { ...step.env, ITAD_API_KEY: SECRET }
+    expect(problems(mutated)).toEqual(['the sidecar step carries ITAD_API_KEY'])
   })
 
   test('mutation: a Tauri step env that names another secret makes the check fail', () => {
