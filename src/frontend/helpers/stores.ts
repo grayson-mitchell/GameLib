@@ -76,6 +76,14 @@ class TypeCheckedStoreFrontend<
   public clear() {
     throw new Error('Not implemented for TypeCheckedStoreFrontend')
   }
+
+  /**
+   * Calls `callback` after this store's renderer snapshot changes (a backend write reaching the
+   * renderer, or a re-fetch). Returns the unsubscribe function.
+   */
+  public onChange(callback: () => void): () => void {
+    return window.api.storeOnChanged(this.storeName, callback)
+  }
 }
 
 class CacheStore<ValueType, KeyType extends string = string> {
@@ -127,6 +135,14 @@ class CacheStore<ValueType, KeyType extends string = string> {
   public set(key: KeyType, value: ValueType) {
     window.api.storeSet(this.storeName, key, value)
     window.api.storeSet(this.storeName, `__timestamp.${key}`, Date())
+  }
+
+  /**
+   * Calls `callback` after this store's renderer snapshot changes (a backend write reaching the
+   * renderer, or a re-fetch). Returns the unsubscribe function.
+   */
+  public onChange(callback: () => void): () => void {
+    return window.api.storeOnChanged(this.storeName, callback)
   }
 }
 

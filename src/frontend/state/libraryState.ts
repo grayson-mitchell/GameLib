@@ -895,5 +895,80 @@ export function registerLibrarySideEffects(): void {
   )
 }
 
+/**
+ * One library array and the snapshot values it is derived from (debug/scoped-refresh-stale-library).
+ * `raw` returns the snapshot values themselves, never a fallback built per call, so two reads of an
+ * unchanged snapshot compare identical.
+ */
+interface LibraryFollower {
+  subscribe: ReadonlyArray<(callback: () => void) => () => void>
+  raw: () => readonly unknown[]
+  derive: () => Partial<LibraryState>
+}
+
+const LIBRARY_FOLLOWERS: readonly LibraryFollower[] = [
+  {
+    subscribe: [(cb) => libraryStore.onChange(cb)],
+    raw: () => [libraryStore.get('library')],
+    derive: () => ({ epicLibrary: loadLegendaryLibrary() })
+  },
+  {
+    subscribe: [
+      (cb) => gogLibraryStore.onChange(cb),
+      (cb) => gogInstalledGamesStore.onChange(cb)
+    ],
+    raw: () => [
+      gogLibraryStore.get('games'),
+      gogInstalledGamesStore.get_nodefault('installed')
+    ],
+    derive: () => ({ gogLibrary: loadGOGLibrary() })
+  },
+  {
+    subscribe: [(cb) => nileLibraryStore.onChange(cb)],
+    raw: () => [nileLibraryStore.get('library')],
+    derive: () => ({ amazonLibrary: loadAmazonLibrary() })
+  }
+]
+
+/**
+ * Keeps the Epic, GOG and Amazon library arrays following the renderer's store snapshot, so a list
+ * the backend writes becomes visible however its push is ordered against the RPC that caused it.
+ *
+ * Why this exists: `refresh()` reads each runner's cache from the snapshot, and a scoped
+ * `refreshLibrary` calls it the moment its RPC resolves. The shell announces a sidecar store write
+ * only after persisting it, while it answers the RPC the instant the response line is read (85-17;
+ * Pitfall 8: an event and an invoke response have no relative order). The RPC therefore routinely
+ * wins, `refresh()` commits the pre-refresh list, and nothing looked again when the push landed: the
+ * game a store-exit or sign-in refresh had just fetched stayed missing until a full refresh slow
+ * enough to run after the push. The library state now re-derives a list whenever its snapshot
+ * values change, as `updateGameOverrides` already does from the same loaders, so `refresh()` can
+ * keep reading the snapshot without having to be the only thing that does.
+ *
+ * Steam is not followed: its list is also fed by per-game pushes that run ahead of the persisted
+ * set (`applyGamePushes`, `reconcileSteamLibrary`), so a snapshot re-derive could drop them.
+ *
+ * A cache write arrives as two pushes (the value, then its `__timestamp`), so a change is applied
+ * only when one of the raw values differs from the last one seen: one commit per write. The
+ * returned function unsubscribes (tests); the app registers once and never disposes (D-07).
+ */
+export function registerLibraryStoreFollowers(): () => void {
+  const disposers: Array<() => void> = []
+  for (const follower of LIBRARY_FOLLOWERS) {
+    let seen = follower.raw()
+    const onChange = () => {
+      const raw = follower.raw()
+      if (raw.every((value, i) => value === seen[i])) return
+      seen = raw
+      useLibraryStateRaw.setState(follower.derive())
+    }
+    for (const subscribe of follower.subscribe) {
+      disposers.push(subscribe(onChange))
+    }
+  }
+  return () => {
+    for (const dispose of disposers) dispose()
+  }
+}
+
 const useLibraryState = bindStoreHooks(useLibraryStateRaw)
 export default useLibraryState

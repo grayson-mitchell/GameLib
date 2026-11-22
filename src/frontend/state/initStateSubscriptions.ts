@@ -44,7 +44,8 @@ import useSettingsState, {
 import useAuthState, { readInitialAuth } from './authState'
 import useLibraryState, {
   readInitialLibrary,
-  registerLibrarySideEffects
+  registerLibrarySideEffects,
+  registerLibraryStoreFollowers
 } from './libraryState'
 import { registerSleepAssertionSubscriber } from './sleepAssertion'
 import { normalizeSignInDismissals } from 'common/signInDismissal'
@@ -267,6 +268,8 @@ export function initStateSubscriptions(): void {
   // (3) store.subscribe side effects (D-08)
   registerSettingsSideEffects()
   registerLibrarySideEffects()
+  // After (1): the followers seed from the snapshot values `readInitialLibrary` just derived from.
+  registerLibraryStoreFollowers()
   registerSleepAssertionSubscriber()
 }
 
