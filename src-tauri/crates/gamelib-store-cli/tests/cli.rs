@@ -259,3 +259,86 @@ fn open_with_a_missing_directory_or_bad_flags_fails_cleanly() {
     let bad = on_fake_home(&home, &["open", home.root().to_str().unwrap(), "--nope"]);
     assert_eq!(bad.status.code(), Some(64));
 }
+
+/// D-14 / FND-07: the CLI works on the profile it is handed and nothing else. It runs with the
+/// environment cleared and only a FakeHome's eight variables set (never the operator's HOME), over
+/// a profile under that FakeHome holding the two token-bearing account configs (synthetic
+/// ciphertext-shaped values). Sentinels stand where a HOME or Keychain reader would look: a
+/// Keychain database path, a GameLib userData under the FakeHome's appData, and a dotfile. The run
+/// must exit 0 and leave every byte and mtime outside the profile as it was. That no store code can
+/// reach the keyring at all is the other half: neither store crate depends on a keyring crate
+/// (`cargo tree -p gamelib-store -p gamelib-store-cli`, checked by the plan's verify).
+#[test]
+fn cli_never_reads_home_or_keychain() {
+    let home = FakeHome::new("gamelib-store-cli-home-");
+    let root = home.root().to_path_buf();
+    let sentinels = [
+        root.join("Library")
+            .join("Keychains")
+            .join("login.keychain-db"),
+        root.join("Library")
+            .join("Application Support")
+            .join("GameLib")
+            .join("steam_store")
+            .join("config.json"),
+        root.join("AppData")
+            .join("Roaming")
+            .join("GameLib")
+            .join("humble_store")
+            .join("config.json"),
+        root.join(".config").join("GameLib").join("config.json"),
+        root.join("real-home-sentinel"),
+    ];
+    for s in &sentinels {
+        fs::create_dir_all(s.parent().unwrap()).unwrap();
+        fs::write(s, b"sentinel: never read or written by gamelib-store-cli").unwrap();
+    }
+
+    let profile = root.join("profile");
+    let config = "{\n\t\"refreshToken\": \"steam:v1:REDACTED\",\n\t\"isLoggedIn\": false,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}";
+    for dir in ["steam_store", "humble_store"] {
+        fs::create_dir_all(profile.join(dir)).unwrap();
+        fs::write(profile.join(dir).join("config.json"), config).unwrap();
+    }
+
+    let outside = |root: &Path| {
+        let mut t = tree_bytes(root);
+        t.retain(|name, _| !name.starts_with("profile/"));
+        t
+    };
+    let mtimes = || {
+        sentinels
+            .iter()
+            .map(|s| fs::metadata(s).unwrap().modified().unwrap())
+            .collect::<Vec<_>>()
+    };
+    let before = outside(&root);
+    let before_mtimes = mtimes();
+
+    let out = on_fake_home(&home, &["open", profile.to_str().unwrap()]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = lines(&out);
+    assert!(
+        stdout.iter().any(|l| l.starts_with("steam_store/config "))
+            && stdout.iter().any(|l| l.starts_with("humble_store/config ")),
+        "the CLI opened the profile's account configs: {stdout:?}"
+    );
+    assert_eq!(
+        outside(&root),
+        before,
+        "nothing outside the profile changed"
+    );
+    assert_eq!(mtimes(), before_mtimes, "no sentinel was rewritten");
+    // The profile's own account configs are still the same documents.
+    for dir in ["steam_store", "humble_store"] {
+        assert_eq!(
+            fs::read_to_string(profile.join(dir).join("config.json")).unwrap(),
+            config
+        );
+    }
+}

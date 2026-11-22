@@ -3477,6 +3477,64 @@ mod tests {
         assert!(keyring_account("ITAD-Api-Key").is_err());
     }
 
+    /// FND-07's automated half (Phase 85 plan 14, D-10, D-14). The Keychain is keyed by the
+    /// service and account names below, and every stored credential survives an upgrade only if
+    /// they never change: a rename is a silent sign-out and a fresh Keychain prompt (SC3). The
+    /// store work of Phase 85 moves the account configs to the Rust owner but leaves the secrets
+    /// behind `keyring_dispatch` (`rpc_keyring_get/set/delete` resolve through exactly
+    /// `KEYRING_SERVICE` and `keyring_account`), so this pins those names as literals rather than
+    /// against the constants they come from.
+    ///
+    /// It runs in `cargo test --bin gamelib-shell`, which `rust-test.yml` runs on windows-latest,
+    /// macos-latest and ubuntu-latest, so the same names are asserted on all three CI legs (D-10:
+    /// the live Windows and Linux upgrade checks ride with Phase 99, RET-02).
+    #[test]
+    fn keyring_names_are_pinned() {
+        assert_eq!(KEYRING_SERVICE, "com.gamelib.launcher");
+        assert_eq!(KEYRING_DEFAULT_SLOT, "steam-refresh-token");
+        const SLOTS: [&str; 5] = [
+            "steam-refresh-token",
+            "humble-session",
+            "humble-csrf",
+            "steamgrid-api-key",
+            "itad-api-key",
+        ];
+        for slot in SLOTS {
+            assert_eq!(
+                keyring_account(slot),
+                Ok(slot),
+                "slot {slot} must map to the account of the same name"
+            );
+        }
+        // Every other slot is refused: a fixed list of names a store or a frame might plausibly
+        // send, plus three near-misses of real slots (trailing space, NUL suffix, path suffix).
+        for other in [
+            "",
+            "steam",
+            "humble",
+            "refreshToken",
+            "sessionCookie",
+            "csrf",
+            "steamgrid",
+            "itad",
+            "gog",
+            "epic",
+            "nile",
+            "legendary",
+            KEYRING_SERVICE,
+            KEYRING_REACHABILITY_PROBE_ACCOUNT,
+            "steam-refresh-token ",
+            "humble-session\0",
+            "itad-api-key/",
+        ] {
+            assert_eq!(
+                keyring_account(other),
+                Err("keyring:unknown-slot".to_string()),
+                "slot {other:?} must be refused"
+            );
+        }
+    }
+
     // ---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----
     //
     // Separate concern from keyring_account: this is the ONE deliberate default (absent slot
