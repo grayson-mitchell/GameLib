@@ -16,8 +16,20 @@
 //!     (`exchanges.json` and its body files) instead of the network, every request is pinned to its
 //!     recorded twin, and the run fails (exit 2) if one differs or a recorded exchange goes unused.
 //!     An op error prints on stderr and exits 2.
+//! `drift [--slice <name>] [--list]`
+//!     the D-12 live drift check, run by hand and by nobody else: never from `cargo test`, never from
+//!     CI. It hits the live endpoints for a fixed table of cases (anticheat now; later slices add
+//!     theirs), over a fresh temp profile that is removed afterwards, with the environment key
+//!     source only (never the Keychain), and prints one `PASS <case>` or `FAIL <case>: <reason>` line
+//!     per case. A case passes when the live result has the shape the TS golden has: every key path
+//!     the golden carries is present with an overlapping JSON type (values are not compared, and a
+//!     key only the live side has is noted, not failed). `--list` prints the case ids without
+//!     touching the network; `--slice` keeps one slice's cases. Exit 0 only if every case passed, 1
+//!     if one failed.
 //! anything else: usage on stderr (exit 64); bad input (an unknown store, an unreadable file, a bad
-//! number) exits 2.
+//! number, a slice with no cases) exits 2.
+
+mod drift;
 
 use std::path::PathBuf;
 use std::process::exit;
@@ -34,7 +46,7 @@ use gamelib_info::secrets::EnvSecretSource;
 use gamelib_store::host::StoreHost;
 use gamelib_store::json::to_compact_bytes;
 
-const USAGE: &str = "usage: gamelib-info-cli ops\n       gamelib-info-cli cache-get --user-data <dir> --store <name> --key <key> --now-ms <ms>\n       gamelib-info-cli op <name> <json-args> --user-data <dir> [--replay <case-dir>] [--now-ms <ms>]";
+const USAGE: &str = "usage: gamelib-info-cli ops\n       gamelib-info-cli cache-get --user-data <dir> --store <name> --key <key> --now-ms <ms>\n       gamelib-info-cli op <name> <json-args> --user-data <dir> [--replay <case-dir>] [--now-ms <ms>]\n       gamelib-info-cli drift [--slice <name>] [--list]\n         (drift hits the live services: opt-in, never run by tests or CI, never touches the Keychain)";
 
 fn usage() -> ! {
     eprintln!("{USAGE}");
@@ -184,6 +196,7 @@ fn main() {
         }
         Some("cache-get") => cache_get(&argv[1..]),
         Some("op") => run_op(&argv[1..]),
+        Some("drift") => drift::run(&argv[1..]),
         _ => usage(),
     }
 }

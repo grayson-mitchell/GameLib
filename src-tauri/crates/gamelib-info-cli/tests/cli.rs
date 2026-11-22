@@ -203,3 +203,67 @@ fn replay_failure_is_reported_even_when_the_op_is_unknown() {
     assert_eq!(out.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&out.stderr).contains("unused"));
 }
+
+// ---------------------------------------------------------------------------------------------
+// drift (D-12): the live check is opt-in. None of these touches the network: `--list` only prints
+// the case table, and every other case here is a usage or input error that exits first.
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn drift_list_prints_the_anticheat_cases_without_touching_the_network() {
+    let out = cli().args(["drift", "--list"]).output().unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    let text = String::from_utf8_lossy(&out.stdout);
+    let ids: Vec<&str> = text.lines().collect();
+    assert!(
+        ids.iter().filter(|id| id.starts_with("anticheat-")).count() >= 3,
+        "{ids:?}"
+    );
+    for id in [
+        "anticheat-download-mac",
+        "anticheat-download-linux",
+        "anticheat-lookup",
+    ] {
+        assert!(ids.contains(&id), "{id} missing from {ids:?}");
+    }
+    // Run with an empty environment (see `cli()`): it needs no key, no HOME and no network.
+    assert!(out.stderr.is_empty());
+}
+
+#[test]
+fn drift_slice_filters_the_list_and_an_unknown_slice_is_bad_input() {
+    let out = cli()
+        .args(["drift", "--slice", "anticheat", "--list"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    assert!(String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .all(|id| id.starts_with("anticheat-")));
+
+    let out = cli()
+        .args(["drift", "--slice", "nope", "--list"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert!(out.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("no drift cases for slice nope"));
+}
+
+#[test]
+fn drift_flag_mistakes_are_usage_errors_and_the_usage_names_drift_as_opt_in() {
+    for args in [
+        vec!["drift", "--bogus"],
+        vec!["drift", "--slice"],
+        vec!["drift", "extra"],
+    ] {
+        let out = cli().args(&args).output().unwrap();
+        assert_eq!(out.status.code(), Some(64), "{args:?}");
+        assert!(out.stdout.is_empty(), "{args:?}");
+    }
+    let out = cli().output().unwrap();
+    let usage = String::from_utf8_lossy(&out.stderr);
+    assert!(usage.contains("drift [--slice <name>] [--list]"), "{usage}");
+    assert!(usage.contains("opt-in"), "{usage}");
+    assert!(usage.contains("never touches the Keychain"), "{usage}");
+}
