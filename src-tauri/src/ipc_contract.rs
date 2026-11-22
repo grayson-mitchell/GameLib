@@ -73,6 +73,7 @@ pub(crate) enum RustInvokeChannel {
     SafetyRemoveTree,
     StoreVersionGate,
     StoreBackupFile,
+    StoreReadOnlyNotice,
     DepotFinalize,
     DepotJobCancel,
     DepotJobRun,
@@ -199,6 +200,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::SafetyRemoveTree,
         RustInvokeChannel::StoreVersionGate,
         RustInvokeChannel::StoreBackupFile,
+        RustInvokeChannel::StoreReadOnlyNotice,
         RustInvokeChannel::DepotFinalize,
         RustInvokeChannel::DepotJobCancel,
         RustInvokeChannel::DepotJobRun,
@@ -325,6 +327,7 @@ impl RustInvokeChannel {
             "safety_remove_tree" => Some(RustInvokeChannel::SafetyRemoveTree),
             "store_version_gate" => Some(RustInvokeChannel::StoreVersionGate),
             "store_backup_file" => Some(RustInvokeChannel::StoreBackupFile),
+            "store_read_only_notice" => Some(RustInvokeChannel::StoreReadOnlyNotice),
             "depot_finalize" => Some(RustInvokeChannel::DepotFinalize),
             "depot_job_cancel" => Some(RustInvokeChannel::DepotJobCancel),
             "depot_job_run" => Some(RustInvokeChannel::DepotJobRun),
@@ -453,6 +456,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::SafetyRemoveTree => "safety_remove_tree",
             RustInvokeChannel::StoreVersionGate => "store_version_gate",
             RustInvokeChannel::StoreBackupFile => "store_backup_file",
+            RustInvokeChannel::StoreReadOnlyNotice => "store_read_only_notice",
             RustInvokeChannel::DepotFinalize => "depot_finalize",
             RustInvokeChannel::DepotJobCancel => "depot_job_cancel",
             RustInvokeChannel::DepotJobRun => "depot_job_run",
@@ -1549,6 +1553,34 @@ impl StoreBackupFileArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "store_backup_file:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "store_backup_file:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct StoreReadOnlyNoticeArgs {
+    #[serde(rename = "tsEntries")]
+    pub(crate) ts_entries: Vec<StoreReadOnlyNoticeArgsTsEntriesItem>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum StoreReadOnlyNoticeArgsTsEntriesItemReason {
+    #[serde(rename = "newer")]
+    Newer,
+    #[serde(rename = "failed")]
+    Failed,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct StoreReadOnlyNoticeArgsTsEntriesItem {
+    #[serde(rename = "storeKey")]
+    pub(crate) store_key: String,
+    pub(crate) reason: StoreReadOnlyNoticeArgsTsEntriesItemReason,
+}
+
+impl StoreReadOnlyNoticeArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "store_read_only_notice:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "store_read_only_notice:bad-args".to_string())
     }
 }
 

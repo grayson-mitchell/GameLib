@@ -78,6 +78,7 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::SafetyRemoveTree => rpc_safety_remove_tree(args),
         RustInvokeChannel::StoreVersionGate => rpc_store_version_gate(args),
         RustInvokeChannel::StoreBackupFile => rpc_store_backup_file(args),
+        RustInvokeChannel::StoreReadOnlyNotice => store_native::rpc_read_only_notice(args, app),
         RustInvokeChannel::SteamfilesFindAcf => rpc_steamfiles_find_acf(args),
         RustInvokeChannel::SteamfilesParseValveManifest => {
             rpc_steamfiles_parse_valve_manifest(args)

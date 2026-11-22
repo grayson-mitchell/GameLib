@@ -6,10 +6,12 @@
  */
 
 import type { StoreReadOnlyReason } from './types'
-import type {
-  ReadOnlyArea,
-  ReadOnlyStoresNoticePayload
+import {
+  READ_ONLY_AREAS,
+  type ReadOnlyArea,
+  type ReadOnlyStoresNoticePayload
 } from '../../common/types/readOnlyStores'
+import storeChannels from '../../common/types/ipc/storeChannels.json'
 
 type ReadOnlyEntry = {
   storeKey: string
@@ -23,34 +25,30 @@ export type Sinks = {
   log: (line: string) => void
 }
 
-const AREA_BY_KEY: Record<string, ReadOnlyArea> = {
-  'store_cache/steam_library': 'steam-library',
-  'store_cache/gog_library': 'gog-library',
-  'gog_store/installed': 'gog-library',
-  'store_cache/legendary_library': 'epic-library',
-  'store_cache/nile_library': 'amazon-library',
-  'sideload_apps/library': 'sideload-library',
-  'steam_store/config': 'steam-account',
-  'gog_store/config': 'gog-account',
-  'legendary_store/config': 'epic-account',
-  'nile_store/config': 'amazon-account',
-  'humble_store/config': 'humble',
-  'store/download-manager': 'downloads',
-  'store/timestamp': 'play-history',
-  'gog_store/saveTimestamps': 'play-history',
-  'store_cache/gog_playtime_sync_queue': 'play-history',
-  'store/config': 'preferences',
-  'settings/global': 'settings',
-  'settings/game': 'game-settings'
+/**
+ * The area of each store key, read from `storeChannels.json` (`readOnlyAreas`), the file the Rust
+ * shell's `store_policy.rs` reads too (85-16), so both sides name the same area for a store: an
+ * exact key, else the first matching prefix (`store_cache/humble_`, and `GamesConfig/` since the
+ * shell reports a per-game document by its own key, 85-15), else the fallback (`app-data`).
+ */
+const READ_ONLY_AREA_MAP = storeChannels.readOnlyAreas
+
+/** A value from the JSON narrowed to the closed set; anything else falls back to `app-data`. */
+function asArea(value: string): ReadOnlyArea {
+  return (READ_ONLY_AREAS as readonly string[]).includes(value)
+    ? (value as ReadOnlyArea)
+    : 'app-data'
 }
 
 export function areaForStoreKey(storeKey: string): ReadOnlyArea {
-  const mapped = AREA_BY_KEY[storeKey]
-  if (mapped) return mapped
-  if (storeKey.startsWith('store_cache/humble_')) return 'humble'
-  // The shell reports a per-game document by its own key (`GamesConfig/<app>`, 85-15).
-  if (storeKey.startsWith('GamesConfig/')) return 'game-settings'
-  return 'app-data'
+  const byKey: Readonly<Record<string, string>> = READ_ONLY_AREA_MAP.byKey
+  if (Object.prototype.hasOwnProperty.call(byKey, storeKey)) {
+    return asArea(byKey[storeKey] ?? READ_ONLY_AREA_MAP.fallback)
+  }
+  const prefixed = READ_ONLY_AREA_MAP.byPrefix.find((p) =>
+    storeKey.startsWith(p.prefix)
+  )
+  return asArea(prefixed ? prefixed.area : READ_ONLY_AREA_MAP.fallback)
 }
 
 function stderrFailure(what: string, error: unknown): void {

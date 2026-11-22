@@ -22,6 +22,12 @@
 //! Rust read it, absent when the sidecar answered. The values are wrapped rather than given a `rev`
 //! sibling because a `"*"` store's top-level keys are arbitrary strings.
 //!
+//! The read-only stores notice (D-12) is raised here too, once per process:
+//! `store_read_only_notice` (rustInvoke, from the sidecar's `frontendReady`) brings the stores TS
+//! still reports read-only; they are merged with `StoreHost`'s, mapped to areas by
+//! [`area_for_store_key`], de-duplicated in first-seen order and pushed as `readOnlyStoresNotice`
+//! with the unchanged ids-only payload `{entries: [{area, reason}]}`.
+//!
 //! The boot snapshot (`sidecar_store_snapshot`, every `bootSetStores` store) is built the same way
 //! under `rust`: each store read from `StoreHost` and filtered, plus one extra key, [`STORE_REV_KEY`]
 //! (`"@rev"`, which no store name can be), mapping each Rust-read store to its rev. A boot store Rust
@@ -29,17 +35,24 @@
 //! is returned unchanged.
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use gamelib_core::emitter::FrontendEmitter;
+use gamelib_store::engine::ReadOnlyReason;
 use gamelib_store::host::StoreHost;
 use gamelib_store::table::{row_for_key, table, TableRow};
 use serde_json::{json, Map, Value};
 
-use crate::ipc_contract::STORE_SNAPSHOT_CHANNEL;
+use crate::ipc_contract::{
+    StoreReadOnlyNoticeArgs, StoreReadOnlyNoticeArgsTsEntriesItemReason, STORE_SNAPSHOT_CHANNEL,
+};
 use crate::native_router::{invalid_args, NativeCtx, NativeFuture};
 use crate::relay_commands::echo_channel;
 use crate::store_boot::{is_rust_owned, Ownership, StoreMode};
-use crate::store_policy::{filter_store_snapshot, is_plausible_cache_name, policy};
+use crate::store_policy::{
+    area_for_store_key, filter_store_snapshot, is_plausible_cache_name, policy,
+};
 
 /// The renderer's lazy per-store fetch (native, slice `store`).
 pub(crate) const STORE_FETCH_CHANNEL: &str = "sidecar:store-fetch";
@@ -264,6 +277,105 @@ pub(crate) fn snapshot_blocking(host: &StoreHost, reads: &StoreReads) -> Result<
     }
     stores.insert(STORE_REV_KEY.to_string(), Value::Object(revs));
     Ok(Value::Object(stores))
+}
+
+/// The renderer push the read-only notice rides (`frontendMessage` channel).
+const READ_ONLY_NOTICE_CHANNEL: &str = "readOnlyStoresNotice";
+
+/// The most TS entries one notice call accepts, and the longest store key: the generated args type
+/// takes no length keywords, so the bounds live here.
+const NOTICE_MAX_ENTRIES: usize = 1024;
+const NOTICE_KEY_MAX: usize = 256;
+
+/// Set by the first notice of the process: later calls send nothing (D-12, once per launch).
+static NOTICE_SENT: AtomicBool = AtomicBool::new(false);
+
+fn reason_word(reason: ReadOnlyReason) -> &'static str {
+    match reason {
+        ReadOnlyReason::Newer => "newer",
+        ReadOnlyReason::Failed => "failed",
+    }
+}
+
+/// `store_read_only_notice`: merge TS's read-only stores with the host's and push the notice, once
+/// per process. Resolves the number of entries sent.
+pub(crate) fn read_only_notice(
+    args: &[Value],
+    emitter: &dyn FrontendEmitter,
+) -> Result<Value, String> {
+    let rust_entries = crate::store_boot::host().read_only_entries();
+    read_only_notice_with(args, &rust_entries, emitter, &NOTICE_SENT, &|line| {
+        crate::shell_log(line)
+    })
+}
+
+/// The `store_read_only_notice` rustInvoke arm: [`read_only_notice`] through the app's emitter.
+pub(crate) fn rpc_read_only_notice(
+    args: &[Value],
+    app: &tauri::AppHandle,
+) -> Result<Value, String> {
+    read_only_notice(
+        args,
+        &crate::steampoll_dispatch::TauriFrontendEmitter(app.clone()),
+    )
+}
+
+/// [`read_only_notice`] with the host's entries, the once-flag and the log sink passed in.
+pub(crate) fn read_only_notice_with(
+    args: &[Value],
+    rust_entries: &[(String, ReadOnlyReason, String)],
+    emitter: &dyn FrontendEmitter,
+    sent: &AtomicBool,
+    log: &dyn Fn(&str),
+) -> Result<Value, String> {
+    const BAD: &str = "store_read_only_notice:bad-args";
+    if args.len() != 1 {
+        return Err(BAD.to_string());
+    }
+    let parsed = StoreReadOnlyNoticeArgs::from_args(args)?;
+    if parsed.ts_entries.len() > NOTICE_MAX_ENTRIES
+        || parsed
+            .ts_entries
+            .iter()
+            .any(|e| e.store_key.is_empty() || e.store_key.len() > NOTICE_KEY_MAX)
+    {
+        return Err(BAD.to_string());
+    }
+    if sent.swap(true, Ordering::SeqCst) {
+        return Ok(json!(0));
+    }
+    // Rust's stores first, then TS's, each mapped to its area; the first (area, reason) wins.
+    let ts_entries = parsed.ts_entries.iter().map(|e| {
+        let reason = match e.reason {
+            StoreReadOnlyNoticeArgsTsEntriesItemReason::Newer => "newer",
+            StoreReadOnlyNoticeArgsTsEntriesItemReason::Failed => "failed",
+        };
+        (e.store_key.as_str(), reason)
+    });
+    let all = rust_entries
+        .iter()
+        .map(|(key, reason, _detail)| (key.as_str(), reason_word(*reason)))
+        .chain(ts_entries);
+    let mut seen: Vec<(&'static str, &'static str)> = Vec::new();
+    for (key, reason) in all {
+        let pair = (area_for_store_key(key), reason);
+        if !seen.contains(&pair) {
+            seen.push(pair);
+        }
+    }
+    let entries: Vec<Value> = seen
+        .iter()
+        .map(|(area, reason)| json!({ "area": area, "reason": reason }))
+        .collect();
+    let count = entries.len();
+    if count > 0 {
+        emitter.emit(
+            READ_ONLY_NOTICE_CHANNEL,
+            vec![json!({ "entries": entries })],
+        );
+    }
+    log(&format!("store read-only notice: {count} entries"));
+    Ok(json!(count))
 }
 
 /// The `sidecar:store-fetch` invoke handler.
@@ -620,6 +732,103 @@ pub(crate) mod tests {
         const TS_TRANSPORT: &str = include_str!("../../src/common/types/sidecarTransport.ts");
         assert!(TS_TRANSPORT.contains("export const STORE_REV_KEY = '@rev' as const"));
         assert!(!is_plausible_cache_name(STORE_REV_KEY));
+    }
+
+    /// A recording emitter: every push, in order.
+    struct RecordingEmitter(Mutex<Vec<(String, Vec<Value>)>>);
+    impl FrontendEmitter for RecordingEmitter {
+        fn emit(&self, channel: &str, args: Vec<Value>) {
+            self.0.lock().unwrap().push((channel.to_string(), args));
+        }
+    }
+
+    fn notice_args(entries: Value) -> Vec<Value> {
+        vec![json!({ "tsEntries": entries })]
+    }
+
+    #[test]
+    fn store_native_the_notice_merges_dedupes_and_is_sent_once() {
+        let emitter = RecordingEmitter(Mutex::new(Vec::new()));
+        let sent = AtomicBool::new(false);
+        let lines = Mutex::new(Vec::<String>::new());
+        let log = |l: &str| lines.lock().unwrap().push(l.to_string());
+        let rust = vec![
+            (
+                "store_cache/steam_library".to_string(),
+                ReadOnlyReason::Newer,
+                "v3 > v2".to_string(),
+            ),
+            (
+                "GamesConfig/480".to_string(),
+                ReadOnlyReason::Failed,
+                "parse".to_string(),
+            ),
+        ];
+        let ts = notice_args(json!([
+            {"storeKey": "store/migrations", "reason": "newer"},
+            // The same area and reason as a Rust entry: one notice entry.
+            {"storeKey": "settings/game", "reason": "failed"},
+            {"storeKey": "store_cache/humble_revealed", "reason": "failed"},
+            {"storeKey": "store_cache/humble_audit", "reason": "failed"}
+        ]));
+        let n = read_only_notice_with(&ts, &rust, &emitter, &sent, &log).unwrap();
+        assert_eq!(n, json!(4));
+        let pushed = emitter.0.lock().unwrap().clone();
+        assert_eq!(pushed.len(), 1);
+        assert_eq!(pushed[0].0, "readOnlyStoresNotice");
+        assert_eq!(
+            pushed[0].1,
+            vec![json!({"entries": [
+                {"area": "steam-library", "reason": "newer"},
+                {"area": "game-settings", "reason": "failed"},
+                {"area": "app-data", "reason": "newer"},
+                {"area": "humble", "reason": "failed"}
+            ]})]
+        );
+        assert_eq!(
+            lines.lock().unwrap().as_slice(),
+            &["store read-only notice: 4 entries".to_string()]
+        );
+
+        // A second call in the same process sends nothing.
+        let again = read_only_notice_with(&ts, &rust, &emitter, &sent, &log).unwrap();
+        assert_eq!(again, json!(0));
+        assert_eq!(emitter.0.lock().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn store_native_an_empty_notice_pushes_nothing_but_still_uses_the_one_shot() {
+        let emitter = RecordingEmitter(Mutex::new(Vec::new()));
+        let sent = AtomicBool::new(false);
+        let n =
+            read_only_notice_with(&notice_args(json!([])), &[], &emitter, &sent, &|_| {}).unwrap();
+        assert_eq!(n, json!(0));
+        assert!(emitter.0.lock().unwrap().is_empty());
+        assert!(sent.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn store_native_bad_notice_args_are_refused_and_do_not_spend_the_one_shot() {
+        let emitter = RecordingEmitter(Mutex::new(Vec::new()));
+        let sent = AtomicBool::new(false);
+        let long = "k".repeat(NOTICE_KEY_MAX + 1);
+        let too_many: Vec<Value> = (0..=NOTICE_MAX_ENTRIES)
+            .map(|i| json!({"storeKey": format!("k{i}"), "reason": "newer"}))
+            .collect();
+        for args in [
+            vec![],
+            vec![json!({})],
+            vec![json!({"tsEntries": [{"storeKey": "a", "reason": "corrupt"}]})],
+            vec![json!({"tsEntries": [{"storeKey": "", "reason": "newer"}]})],
+            vec![json!({"tsEntries": [{"storeKey": long, "reason": "newer"}]})],
+            vec![json!({"tsEntries": too_many})],
+            vec![json!({"tsEntries": []}), json!("extra")],
+        ] {
+            let err = read_only_notice_with(&args, &[], &emitter, &sent, &|_| {}).unwrap_err();
+            assert_eq!(err, "store_read_only_notice:bad-args", "{args:?}");
+        }
+        assert!(!sent.load(Ordering::SeqCst));
+        assert!(emitter.0.lock().unwrap().is_empty());
     }
 
     struct NullHost;

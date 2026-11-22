@@ -531,6 +531,17 @@ export const RUST_STORE_VERSION_GATE = 'store_version_gate' as const
 export const RUST_STORE_BACKUP_FILE = 'store_backup_file' as const
 
 /**
+ * Rust-side channel name: Phase 85 (85-16, D-12) `store_read_only_notice`. The renderer's read-only
+ * stores notice is raised by Rust once per launch: `frontendReady` (under `GAMELIB_STORE=rust`)
+ * sends ONE object arg `{ tsEntries: [{ storeKey, reason }] }` with the stores TS still reported
+ * read-only (`reason` is `newer` or `failed`); Rust merges them with its own read-only stores, maps
+ * each to its area, de-duplicates, and emits `readOnlyStoresNotice` with the unchanged ids-only
+ * payload `{ entries: [{ area, reason }] }`. Resolves the number of entries sent (0 on any call
+ * after the first). Bad args reject `store_read_only_notice:bad-args`.
+ */
+export const RUST_STORE_READ_ONLY_NOTICE = 'store_read_only_notice' as const
+
+/**
  * Rust-side channel name: Phase 75 (D-03) Steam depot `depot_finalize`, a no-download ACF finalize
  * (zero-depot install, failed resume verify) through the depot crate's own finalize rules.
  * Takes ONE object arg `{ appId, finalize, depots, outcome }` (validated in-crate with
@@ -1160,6 +1171,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_SAFETY_REMOVE_TREE,
   RUST_STORE_VERSION_GATE,
   RUST_STORE_BACKUP_FILE,
+  RUST_STORE_READ_ONLY_NOTICE,
   RUST_DEPOT_FINALIZE,
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,

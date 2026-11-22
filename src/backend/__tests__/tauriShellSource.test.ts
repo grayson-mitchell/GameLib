@@ -481,9 +481,10 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 122 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 123 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(122)
+    // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(123)
     expect(router).not.toContain('_ =>')
   })
 
@@ -732,6 +733,12 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // `bottleVersionGate.test.ts` for the sidecar side. NOT ATTEMPTED here: a live sidecar round trip.
       'store_version_gate',
       'store_backup_file',
+
+      // Phase 85 plan 16 (D-12) -- the read-only stores notice raised by Rust: TS's entries merged
+      // with the StoreHost's, mapped to areas, de-duplicated and pushed once per process. PROVEN:
+      // the `store_native` notice tests (merge, dedupe, once, bad args) and the appShellFlows
+      // rust-mode case for the sidecar side. NOT ATTEMPTED here: a live sidecar round trip.
+      'store_read_only_notice',
 
       // Phase 73 plan 12 (D-03, D-06, D-08) -- three pass-through arms into the Tauri-free
       // `gamelib-depot` crate, one per RUST_DEPOT_* channel. PROVEN: `depotChannelParity.test.ts`

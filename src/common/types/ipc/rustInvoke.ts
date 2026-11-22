@@ -90,6 +90,7 @@ import {
   RUST_SAFETY_CHECK_REMOVAL,
   RUST_SAFETY_REMOVE_TREE,
   RUST_STORE_BACKUP_FILE,
+  RUST_STORE_READ_ONLY_NOTICE,
   RUST_STORE_VERSION_GATE,
   RUST_SCAN_CONTAINED_REAL,
   RUST_SCAN_PE_IMPORTED_DLLS,
@@ -400,6 +401,23 @@ export const rustInvokeArgs = {
   [RUST_STORE_BACKUP_FILE]: z.tuple([
     z
       .object({ path: z.string(), fromVersion: z.number().int().min(0) })
+      .strict()
+  ]),
+  // ---- The read-only stores notice (Phase 85, 85-16, D-12): TS's entries, merged by Rust. Store
+  // keys and closed reason words only, never a value. The generator takes no length keywords, so
+  // Rust bounds the key length and the entry count itself (store_native::read_only_notice).
+  [RUST_STORE_READ_ONLY_NOTICE]: z.tuple([
+    z
+      .object({
+        tsEntries: z.array(
+          z
+            .object({
+              storeKey: z.string(),
+              reason: z.enum(['newer', 'failed'])
+            })
+            .strict()
+        )
+      })
       .strict()
   ]),
   // ---- Steam local files (Phase 75; paths in, typed results out)

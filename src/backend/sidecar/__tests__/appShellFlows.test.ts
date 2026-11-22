@@ -287,6 +287,7 @@ import {
   RUST_APP_EXIT,
   RUST_DIALOG_MESSAGE,
   RUST_NOTIFICATION_SHOW,
+  RUST_STORE_READ_ONLY_NOTICE,
   RUST_TRAY_SET_ICON,
   RUST_INVOKE_CHANNELS,
   RUST_WAKE_LOCK_START,
@@ -358,7 +359,11 @@ const directListeners = () => ({
     directIpc?.listenerMap().get(channel) as unknown as [() => void]
 })
 
-function directDeps(stores: unknown = {}, sendFrontendMessage = jest.fn()) {
+function directDeps(
+  stores: unknown = {},
+  sendFrontendMessage = jest.fn(),
+  storeMode: 'rust' | 'ts' = 'ts'
+) {
   /* eslint-disable @typescript-eslint/no-require-imports */
   // Required at call time so a fresh-registry scope hands the registration ITS registry and its
   // mocked GlobalConfig, not the shared ones.
@@ -393,6 +398,8 @@ function directDeps(stores: unknown = {}, sendFrontendMessage = jest.fn()) {
     appShell: createAppShellState({ clock: createClock() }),
     // The boot's read-only tracker (66.4-18): a fresh one per direct registration.
     readOnly: createReadOnlyStores(),
+    // 85-16: who raises the read-only notice (ts: this registration; rust: the shell).
+    storeMode,
     // The boot's store mirrors (85-11): nothing waiting, so the quit flush resolves at once.
     storeMirrors: { flushStores: jest.fn().mockResolvedValue(undefined) },
     appRuntime
@@ -1295,6 +1302,62 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       const without = await deliver(false)
       expect(
         without.mock.calls.filter(
+          ([channel]) => channel === 'readOnlyStoresNotice'
+        )
+      ).toHaveLength(0)
+    })
+
+    // Phase 85 (85-16, D-12): under GAMELIB_STORE=rust the notice is raised by Rust. The
+    // registration hands TS's entries (store keys and reasons only) to `store_read_only_notice`
+    // once per launch and pushes nothing itself; under ts the push above is unchanged.
+    it('85-16: under rust mode frontendReady x2 hands the TS entries to store_read_only_notice once and pushes no notice itself', async () => {
+      const sendMock = jest.fn()
+      let rustInvoke!: jest.Mock
+      let frontendReadyListener!: () => void
+      inFreshRegistry(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('backend/config').createGlobalConfig.mockReturnValue({
+          getSettings: () => ({ language: 'en' }),
+          setSetting: jest.fn(),
+          set: jest.fn(),
+          flush: jest.fn()
+        })
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        rustInvoke = require('../sidecarRpc').requestRustInvoke
+        rustInvoke.mockResolvedValue(1)
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../../logger').initHeadless()
+        const deps = directDeps({}, sendMock, 'rust')
+        deps.readOnly.record({
+          storeKey: 'store/migrations',
+          file: 'migrations.json',
+          reason: 'newer',
+          detail: 'v9 > v1'
+        })
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../appShellFlowRegistration').registerAppShellFlows(deps)
+        ;[frontendReadyListener] = directListeners().get('frontendReady')
+      })
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        frontendReadyListener()
+        await flush()
+        frontendReadyListener()
+        await flush()
+      } finally {
+        jest.useRealTimers()
+      }
+      const noticeCalls = rustInvoke.mock.calls.filter(
+        ([channel]) => channel === RUST_STORE_READ_ONLY_NOTICE
+      )
+      expect(noticeCalls).toEqual([
+        [
+          RUST_STORE_READ_ONLY_NOTICE,
+          [{ tsEntries: [{ storeKey: 'store/migrations', reason: 'newer' }] }]
+        ]
+      ])
+      expect(
+        sendMock.mock.calls.filter(
           ([channel]) => channel === 'readOnlyStoresNotice'
         )
       ).toHaveLength(0)
