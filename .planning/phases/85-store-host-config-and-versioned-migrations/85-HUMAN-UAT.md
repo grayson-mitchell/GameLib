@@ -1,5 +1,5 @@
 ---
-status: pending
+status: partial
 phase: 85-store-host-config-and-versioned-migrations
 source: [85-CONTEXT.md D-02 D-04 D-08 D-12 D-16 D-18 D-21, 85-RESEARCH.md Open Questions Q1]
 authored_by: 85-03
@@ -206,41 +206,41 @@ at this re-check: `v0.10.0` draft, target `10c85ed72`, assets `GameLib_0.10.0_aa
 
 ## Current Test
 
-[pending — P5: signed v0.10.0 installed in /Applications; operator sign-ins in the baseline next (A1 and A3 applied)]
+[complete — 8 of 8 scored: 6 pass, 2 issue (items 2 and 3); see Summary]
 
 ## Tests
 
 ### 1. Signed upgrade with zero Keychain prompts (SC3, D-08)
 expected: In launch 1 (the signed Phase 85 build installed over the signed v0.10 with matching identities, network off only for the launch: off, launch, wait for the library to render, on, report), no Keychain dialog appeared and `keychain-1.log` holds no SecurityAgent prompt event for a GameLib process.
-result: pending
+result: pass — launch 1 (signed v0.11.0 installed over signed v0.10.0, identities equal per 85-VALIDATION.md; network off for the launch, gamelib-launch-1.log 17:24:29-17:24:44 'Connectivity probe failed on every host'): operator "dialog: none, no keychain"; keychain-1.log (15749 lines) holds 0 'displaying keychain prompt' and 0 'user approved' events, so 0 SecurityAgent prompt events for a GameLib process. Non-vacuous: the same capture logged the P5 baseline prompt (keychain-p5.log, 1 'displaying keychain prompt' for /Applications/GameLib.app, operator chose "always allow"), and launch 1 read the credential without one ('keyring keyring_get account=steam-refresh-token outcome=found', 17:24:59).
 
 ### 2. Every stored credential still works (SC3, FND-07)
 expected: In launch 1, continued with the network back on, Steam Refresh finishes with no sign-in prompt, Humble sync finishes, the Login screen's Epic tile shows signed in, the SteamGrid key shows as set if P5 set it, and every P4 account that was found is still found.
-result: pending
+result: issue — launch 1, network back on. Met: Steam Refresh ran (17:28:12 origin=action-icons-refresh-button, complete 17:28:19) with no sign-in prompt (operator "no sign in prompt"; signInProbe steam healthy); every P4 account found after P5 is still found (steam-refresh-token found; humble-session, humble-csrf, steamgrid-api-key, itad-api-key absent at P5 and after launch 1); SteamGrid N/A (no key set at P5). Not met: Humble sync did not finish (no 'Humble sync finished:' line; operator "nothing shows in humble") and the Login screen's Epic tile shows signed out (operator "no"). Precondition context, not a Phase 85 regression: Humble was not signed in on either build (humble-session absent and signInProbe humble outcome=unknown in both v0.10.0 launches, gamelib-old-after-p5.log 17:11:09 and gamelib-after-p5.log 17:12:51, and in launch 1), and Epic was never signed in under v0.10.0 (no ~/Library/Application Support/gamelib/legendaryConfig/legendary/user.json in the pre-gate copy, the v0.10.0 copy or after the run; the baseline signInProbe covers gog,humble,steam only). Those two sub-checks could not be exercised.
 
 ### 3. Existing data loads unchanged (SC1, D-04)
 expected: After launch 1 quits, running P7 against the live profile prints the same version for every file as `snapshot-v010.txt`, no file listed there is missing, no file prints UNPARSEABLE that did not in the baseline, and the `count` lines taken while launch 1 was running (before Refresh) and the three settings recorded at P5 equal the baseline's.
-result: pending
+result: issue — launch 1. Versions met: P7 after quit (snapshot-after-launch1.txt) prints the same version for every file as snapshot-v010.txt (diff empty, none missing, 0 UNPARSEABLE), and the three P5 settings are equal (store/config.json theme nord-light; config.json checkForUpdatesOnStartup true, steamExperimentalInstallApp false; no other key differs in either file). Counts not met: the running snapshot before Refresh (snapshot-launch1-running.txt) has steam_library 401 = 401, legendary 0 = 0, nile 0 = 0, sideload 3 = 3, but gog_library 0 against 10. During the offline first boot store_cache/gog_library.json was rewritten to a 66-byte envelope with no games key, and gog_api_info.json shrank from 104202 B to 66 B (gamelib-launch-1.log 17:24:29: 8 'Could not get game info', then 'No cache found, getting data from gog...'); v0.10.0's own first launch had no such backend miss. The online Refresh at 17:28 refilled the same 10 GOG app ids. Filed as .planning/todos/pending/2026-11-22-gog-offline-launch-empties-library-cache.md (operator decision: a todo, not a block on 85-21); evidence kept in the gate dir: launch1-gog_library.emptied.json, gamelib-launch-1.log.
 
 ### 4. A settings change persists in the TS byte format (FND-06, D-05)
 expected: In launch 2 one global setting, one per-game setting and the theme are changed and the app quit; `config.json` and `GamesConfig/<app>.json` are 2-space JSON with no trailing newline, `store/config.json` is tab-indented with the `__internal__` envelope, and launch 3 shows all three values (the values are then changed back through the UI in launch 3).
-result: pending
+result: pass — launches 2 and 3. Launch 2 (operator): Share detected fixes on (config.json defaultSettings.shareDetectedFixes false->true, mirrored in store/config.json), Schedule I stats overlay on (GamesConfig/3205720.json showFps false->true), theme Cyberspace Oasis (store/config.json theme nord-light->cyberSpaceOasis); no other key and no other GamesConfig file changed. Byte checks with the app closed: config.json last byte 7d (not 0a) and a 2-space indent; GamesConfig/3205720.json last byte 7d and a 2-space indent; store/config.json line 2 opens with a tab and carries __internal__ (count 1). Launch 3: operator "2. pass" (all three values shown), reverted through the UI; the three files are byte-identical to the pre-item copies.
 
 ### 5. A corrupt store is kept and reported (SC2, D-18)
 expected: With the app closed and `store/timestamp.json` copied to the session directory, `garbage` is appended to it; in launch 4 the read-only notice lists Play history, a `timestamp.corrupt.<stamp>.json` copy exists beside it, and after quit `cmp` of the store file against the copy of the edited bytes reports no difference; the file is then restored from the first copy.
-result: pending
+result: pass — launch 4. store/timestamp.json with 'garbage' appended (1286 -> 1293 B, unparseable); notice "Some data is read-only" / "Play history couldn't be updated, so changes won't be saved. See the log for details."; store/timestamp.corrupt.20261122T044548903Z.json created (mode 0600, cmp equal to the edited bytes); after quit cmp of store/timestamp.json against the edited copy: no difference. gamelib-launch-4.log: 'store boot: 105 opened, 7 adopted, 0 migrated, 1 read-only, 0 start-empty, 0 deferred in 12 ms', 'store read-only notice: 1 entries', '[storeVersion] store/timestamp (timestamp.json) is read-only: failed - reported by the Rust store host'. Restored from the first copy (cmp equal); the corrupt copy was moved out of store/.
 
 ### 6. A newer-version store is read-only and untouched (SC2)
 expected: With the app closed and `store/download-manager.json` copied to the session directory, its `__internal__.gamelib.schemaVersion` is set to 99; in launch 5 the read-only notice shows the newer-GameLib text and the log carries a read-only line for `store/download-manager` with reason newer, and after quit `cmp` against the copy of the edited bytes reports no difference; the file is then restored from the first copy.
-result: pending
+result: pass — launch 5. store/download-manager.json schemaVersion 3 -> 99; notice "Some data is read-only" / "This data was saved by a newer GameLib, so changes won't be saved. Update GameLib to keep them."; gamelib-launch-5.log '[storeVersion] store/download-manager (download-manager.json) is read-only: newer - reported by the Rust store host' (with '1 read-only' and 'store read-only notice: 1 entries'); after quit cmp against the edited copy: no difference; no new download-manager.* file. Restored from the first copy (cmp equal).
 
 ### 7. A pre-migration backup is taken before a migration (SC2)
 expected: With the app closed and the current `store_cache/steam_library.json` copied to the session directory, an older `steam_library.v1.<stamp>.bak.json` from profile-before is copied over it; in launch 6 `store_cache/steam_library.json` reaches schemaVersion 3 (P7), a `steam_library.v1.*.bak.json` byte-identical to that v1 source exists beside it (new, or the existing identical capture the newest-equal rule keeps), and Steam Refresh repopulates the library; the original file is then restored.
-result: pending
+result: pass — launch 6. The v1 capture steam_library.v1.20261114T043721665Z.bak.json (schemaVersion 1, 401 games, sha1 ecc7ff0a46dc78576dd4a0990a43a717a1a3605e) was copied over store_cache/steam_library.json; gamelib-launch-6.log 'store boot: 105 opened, 7 adopted, 1 migrated, …'; after quit P7 shows store_cache/steam_library.json schemaVersion 3 (409 games); a new steam_library.v1.20261122T045033050Z.bak.json byte-identical to the v1 source exists beside it (cmp equal; the pre-existing identical capture is kept too). The Steam games were listed before Refresh, and Refresh ran (17:50:44 origin=action-icons-refresh-button, complete 17:50:50; operator "steam games were there", "pressed it, though"). Restored from the first copy (cmp equal); the gate-created backup was moved out of store_cache/.
 
 ### 8. Quit flushes writes inside the exit budget (D-21)
 expected: In launch 7 one setting is toggled and Cmd+Q pressed within 2 s; `gamelib-launch-7.log` has `exit finished in <ms> ms` with ms at most 5000 and no `still running at exit deadline:` line naming store, and launch 8 shows the toggled value (which is then toggled back).
-result: pending
+result: pass — launch 7: Share detected fixes toggled off -> on (shareDetectedFixes false->true in config.json and store/config.json, both written 17:52:31) and Cmd+Q in the same second ('quit (Cmd+Q): handed to the sidecar handleExit', 17:52:31); gamelib-launch-7.log 'exit finished in 51 ms' (at most 5000) and no 'still running at exit deadline:' line. Launch 8: operator "2 yes / changed" (the toggled value was shown, then toggled back); config.json and store/config.json are byte-identical to the pre-item copies. Across all eight launches: exit 50-52 ms, 0 'still running at exit deadline:', 0 'store frame rejected', 0 'refused a store write', 0 Keychain prompt events. Closing inventory: see ## Closing inventory.
 
 ## Test procedures
 
@@ -376,13 +376,21 @@ item 6 edit, launch 5, archive, item 6 restore, item 7 overwrite, launch 6, arch
 toggle), archive, launch 8 (item 8 verify and revert), archive, closing inventory.
 
 **Run-time count (to be filled by 85-20).** Structural impossibilities and unresolved requirement interactions met during the
-run: _not run_.
+run: 4. One structural impossibility (the Required literals row `store write failed`, no emitter; amended A1). One precondition precision defect (P2's `pgrep -fl GameLib` matched unrelated processes; amended A3). One unresolved requirement interaction outside the pairing pass: item 1's network-off first boot x item 3's running counts (the offline first Phase 85 boot emptied the GOG caches before the count snapshot; todo filed). One unmet external-state precondition (T6): item 2 assumed Humble and Epic were signed in at P5, and neither was on v0.10.0.
+
+## Closing inventory
+
+Taken 2026-11-22 after launch 8, before cleanup, in `/tmp/gamelib-gate-2026-11-22T03:38:53Z/`. `notes.log` has 8 `=== GATE LAUNCH` delimiters (79 lines). Per launch N = 1..8: `gamelib-launch-N.log` (255, 150, 134, 112, 115, 141, 115, 121 lines; each has exactly one `store boot: ` and one `exit finished in ` line), `gamelib-old-after-launch-N.log`, and `keychain-N.log` (15749, 985, 2347, 775, 788, 750, 775, 799 lines). Baseline: `keychain-p5.log` (12573 lines), `gamelib-old-after-p5.log` (176), `gamelib-after-p5.log` (163). Snapshots: `snapshot-v010.txt`, `snapshot-launch1-running.txt`, `snapshot-after-launch1.txt` (112 lines each). Profile copies: `profile-before/` and `profile-v010/` (5.6G each, 32484 regular files). Item copies: `item4-before/` (config.json, store/config.json, 109 GamesConfig files), item5/6/7/8 originals and edited copies, the moved `timestamp.corrupt.20261122T044548903Z.json` and `steam_library.v1.20261122T045033050Z.bak.json`; `launch1-gog_library.emptied.json`; `shell-pid-1.txt`; downloads `dl-v010/`, `dl-v011/`; `app-v010/`.
+
+The live instance count was recorded for launch 1 only (`shell-pid-1.txt`, count 1). For launches 2 to 8, P2 was clean before each launch and each log has exactly one boot line, which stands in for the count.
+
+Cleanup: the profile copies, item copies, downloads, preexisting-log copies and moved store files were deleted after scoring (they hold account data). Kept at `/tmp/gamelib-gate-2026-11-22T03:38:53Z/`: `notes.log`, the snapshots, the `gamelib-*.log` and `keychain-*.log` captures (local paths and store names), `launch1-gog_library.emptied.json` and `gamelib-launch-1.log` (both cited by the GOG todo), and `app-v010/GameLib.app` (the signed v0.10.0, moved there by the swap). `/Applications/GameLib.app` is left as the signed v0.11.0. Every hand-edited store was restored from its copy and `cmp`-checked.
 
 ## Summary
 
 total: 8
-passed: 0
-issues: 0
-pending: 8
+passed: 6
+issues: 2
+pending: 0
 skipped: 0
 blocked: 0
