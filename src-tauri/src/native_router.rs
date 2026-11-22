@@ -25,7 +25,7 @@ use crate::relay_commands::echo_channel;
 use crate::store_native;
 use gamelib_core::emitter::FrontendEmitter;
 use gamelib_core::paths::{LogTarget, Platform};
-use gamelib_core::shutdown::Shutdown;
+use gamelib_core::shutdown::{Registrant, Shutdown};
 use gamelib_log::sanitize::RendererMessage;
 use gamelib_log::Level;
 use gamelib_store::host::StoreHost;
@@ -174,15 +174,29 @@ pub(crate) struct NativeSendJob {
     pub(crate) payload: SendPayload,
 }
 
+/// A queued job plus, for a durable slice, the registrant its enqueue took.
+type QueuedJob = (NativeSendJob, Option<Registrant>);
+
 /// The FIFO hand-off to one slice's worker thread.
-pub(crate) struct SliceQueue(Sender<NativeSendJob>);
+pub(crate) struct SliceQueue {
+    tx: Sender<QueuedJob>,
+    /// Set for a slice whose jobs must not be lost at exit (B-WR-01): each enqueue holds a
+    /// registrant under this name until its job has run.
+    durable: Option<(Shutdown, &'static str)>,
+}
 
 impl SliceQueue {
     /// Queue `job`. Never waits on the handler; fails only if the worker thread is gone.
     pub(crate) fn enqueue(&self, job: NativeSendJob) -> Result<(), String> {
-        self.0
-            .send(job)
-            .map_err(|rejected| format!("native send worker is gone: {}", rejected.0.channel))
+        // Taken before the send, so a worker that picks the job up at once can never release a
+        // registrant that did not exist yet. A failed send drops it with the rejected job.
+        let queued = self
+            .durable
+            .as_ref()
+            .map(|(shutdown, name)| shutdown.register(name));
+        self.tx
+            .send((job, queued))
+            .map_err(|rejected| format!("native send worker is gone: {}", rejected.0 .0.channel))
     }
 }
 
@@ -201,16 +215,38 @@ pub(crate) fn spawn_slice_worker<H>(
 where
     H: Fn(NativeSendJob) -> Result<(), String> + Send + 'static,
 {
-    let (tx, rx) = mpsc_channel::<NativeSendJob>();
+    spawn_slice_worker_with(slice, shutdown, false, handler)
+}
+
+/// [`spawn_slice_worker`] with the choice of what happens to a queued job at exit.
+///
+/// `durable` false is D-14's drop-on-cancel, right for log lines. `durable` true is for persisted
+/// user state (the store slice, B-WR-01): every enqueue holds a registrant named `slice` until its
+/// job has run, so the exit drain waits for the whole backlog, and a job queued before the token
+/// was cancelled still runs after it. A job enqueued after the drain started is dropped like any
+/// other, because by then exit no longer waits for it.
+pub(crate) fn spawn_slice_worker_with<H>(
+    slice: &'static str,
+    shutdown: Shutdown,
+    durable: bool,
+    handler: H,
+) -> SliceQueue
+where
+    H: Fn(NativeSendJob) -> Result<(), String> + Send + 'static,
+{
+    let (tx, rx) = mpsc_channel::<QueuedJob>();
     let token = shutdown.token();
+    let held_shutdown = shutdown.clone();
     let spawned = thread::Builder::new()
         .name(format!("native-send-{slice}"))
         .spawn(move || {
-            for job in rx {
-                if token.is_cancelled() {
+            for (job, queued) in rx {
+                // A durable job already holds the registrant that made the drain wait for it.
+                if token.is_cancelled() && queued.is_none() {
                     continue;
                 }
                 let _held = shutdown.register(slice);
+                let _queued = queued;
                 let channel = job.channel;
                 // A panicking handler must not kill the slice's only worker: every later send on
                 // it would be silently lost. The slice name is all the log line carries.
@@ -230,7 +266,10 @@ where
         // `rx` went down with the failed spawn, so every enqueue reports the worker as gone.
         shell_eprintln!("[shell] native send worker for slice {slice} could not start");
     }
-    SliceQueue(tx)
+    SliceQueue {
+        tx,
+        durable: durable.then_some((held_shutdown, slice)),
+    }
 }
 
 /// One native send channel: the slice whose queue runs it and its validator.
@@ -376,9 +415,12 @@ impl NativeRouter {
             let worker_ctx = Arc::clone(&ctx);
             queues.insert(
                 slice,
-                spawn_slice_worker(slice, shutdown.clone(), move |job| {
-                    run_send_job(&worker_ctx, job)
-                }),
+                spawn_slice_worker_with(
+                    slice,
+                    shutdown.clone(),
+                    slice == STORE_SLICE,
+                    move |job| run_send_job(&worker_ctx, job),
+                ),
             );
         }
         Self {
@@ -944,6 +986,34 @@ mod tests {
             ran_rx.recv_timeout(Duration::from_millis(200)).is_err(),
             "a job queued after the token was cancelled must be dropped"
         );
+        assert!(shutdown.drain(Duration::from_secs(2)).is_empty());
+    }
+
+    #[test]
+    fn a_durable_slice_runs_its_queued_jobs_after_the_drain_starts_and_the_drain_waits_for_them() {
+        let shutdown = Shutdown::new();
+        let (started_tx, started_rx) = mpsc_channel::<()>();
+        let (release_tx, release_rx) = mpsc_channel::<()>();
+        let (ran_tx, ran_rx) = mpsc_channel::<String>();
+        let queue = spawn_slice_worker_with("durable-test", shutdown.clone(), true, move |job| {
+            let _ = ran_tx.send(url_of(&job));
+            if url_of(&job) == "first" {
+                let _ = started_tx.send(());
+                let _ = release_rx.recv();
+            }
+            Ok(())
+        });
+        queue.enqueue(job("storeSet", "first")).unwrap();
+        started_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        queue.enqueue(job("storeSet", "second")).unwrap();
+        // The first job blocks (its enqueue registrant and the worker's), the second is queued
+        // behind it (its own): the drain cancels the token and names the slice for all three.
+        assert_eq!(
+            shutdown.drain(Duration::from_millis(50)),
+            ["durable-test", "durable-test", "durable-test"]
+        );
+        release_tx.send(()).unwrap();
+        assert_eq!(collect(&ran_rx, 2), ["first", "second"]);
         assert!(shutdown.drain(Duration::from_secs(2)).is_empty());
     }
 
