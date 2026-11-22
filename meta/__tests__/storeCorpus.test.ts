@@ -350,7 +350,12 @@ describe('store corpus chain table', () => {
 // ---- redaction -------------------------------------------------------------------------------------------------
 
 describe('store corpus redaction', () => {
-  const username = userInfo().username
+  // The account-name check guards the HARVESTING operator's name, so it is meaningful only on the operator's own
+  // machine. On a GitHub-hosted runner the OS account is the runner's own, `runner`, which is not the operator's
+  // name and is also a GameLib domain key (`runner: 'gog'`), so every store file matched it (85-19 CI, run
+  // 44978826083). There the check is disabled (an empty name is below the 5-character floor); every other scan runs.
+  const username =
+    process.env.GITHUB_ACTIONS === 'true' ? '' : userInfo().username
 
   it('finds no account data in any committed file', () => {
     const findings: Record<string, string[]> = {}
