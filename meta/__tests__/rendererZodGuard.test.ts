@@ -4,7 +4,8 @@
  * This is a SOURCE-LEVEL stand-in for a bundle check: cheap, runs in the meta project, needs
  * no vite build. Rules:
  *   (a) no non-test file under src/frontend or src/preload value-imports `zod` or anything
- *       under `common/types/ipc` (only `import type` / `export type` qualify; an inline
+ *       under `common/types/ipc` except a `.json` data module, which imports nothing (only
+ *       `import type` / `export type` qualify; an inline
  *       `import { type X }` does not, because under isolatedModules it can keep a
  *       side-effect import);
  *   (b) src/common/types/ipc/index.ts contains only type imports/exports;
@@ -86,6 +87,11 @@ function isIpcTarget(
 ): boolean {
   const abs = resolveSpecifier(spec, fromFile, exists)
   if (!abs) return false
+  // A `.json` module under ipc is plain data: it imports nothing, so it cannot carry zod into the
+  // bundle, which is the only thing this guard exists to stop (V67-C / D-04). Phase 85's
+  // storeChannels.json is read by storePolicy.ts, which the preload imports by design (85-16,
+  // 85-17). Every `.ts` module under ipc is still forbidden.
+  if (abs.endsWith('.json')) return false
   return abs === IPC_DIR || abs.startsWith(IPC_DIR + '/')
 }
 
@@ -180,6 +186,21 @@ describe('detectors (mutation proof on in-memory snippets)', () => {
       []
     )
     expect(directViolations(`// import { z } from 'zod'`, f)).toEqual([])
+  })
+
+  test('rule a/d: a .json data module under ipc is allowed, a .ts module beside it is not', () => {
+    expect(
+      directViolations(
+        `import storeChannels from 'common/types/ipc/storeChannels.json'`,
+        f
+      )
+    ).toEqual([])
+    expect(
+      directViolations(`import { A } from 'common/types/ipc/steam'`, f)
+    ).toHaveLength(1)
+    expect(
+      directViolations(`import { A } from 'common/types/ipc/steam.ts'`, f)
+    ).toHaveLength(1)
   })
 
   test('rule b: flags a value statement in an ipc barrel', () => {
