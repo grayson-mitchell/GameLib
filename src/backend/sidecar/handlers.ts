@@ -216,7 +216,6 @@ export function registerHandlers(deps: {
   // before.
   registerAppShellFlows({
     ipc,
-    readOnly: deps.services.storeRoot.readOnly,
     storeMirrors: deps.services.storeRoot.mirrors,
     appRuntime: deps.services.appRuntime,
     aborts: deps.services.aborts,

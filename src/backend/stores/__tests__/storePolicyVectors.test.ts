@@ -1,19 +1,21 @@
 // Phase 85 plan 03: the renderer store policy held as shared vectors (FND-06).
 //
 // `common/__fixtures__/storePolicyVectors.json` carries the read, write, key-path, cache-name and
-// read-only-area rules as `{input, expected}` rows. This suite asserts every row against today's TS
-// (`isAllowedStoreField`, `isWritableStoreField`, `isSafeKeyPath`, `CACHE_STORE_NAME_PATTERN` plus
-// `RECOGNIZED_CACHE_STORE_NAMES`, `areaForStoreKey`) on every run; plan 85-16's Rust `store_policy.rs`
-// asserts the same file, so the two sides cannot drift apart.
+// read-only-area rules as `{input, expected}` rows. This suite asserts the read, write, keyPath and
+// cacheName rows against today's TS (`isAllowedStoreField`, `isWritableStoreField`, `isSafeKeyPath`,
+// `CACHE_STORE_NAME_PATTERN` plus `RECOGNIZED_CACHE_STORE_NAMES`) on every run; plan 85-16's Rust
+// `store_policy.rs` asserts the same file, so the two sides cannot drift apart.
+//
+// The `area` section has no TS implementation since 85-24 deleted the TS read-only aggregate: the
+// Rust `area_for_store_key` (85-16) is the only one, and cargo's `store_policy` test asserts every
+// area row against it. This suite keeps the section in the file (non-empty) and never rewrites it.
 //
 // Two modes:
-//   - compare (default): the committed file must equal the document built from the inputs below and
-//     today's TS results, row for row.
-//   - write (`GAMELIB_WRITE_STORE_GOLDEN=1`): rewrite the file from the TS code under test. The INPUTS
-//     are the hand-curated constants in this file; no expected value is ever typed by hand.
-//
-// Plan 85-24 retargets the `area` half when readOnlyStores.ts is deleted (the Rust port from 85-16
-// then becomes its only implementation).
+//   - compare (default): the committed read, write, keyPath and cacheName sections must equal the
+//     ones built from the inputs below and today's TS results, row for row.
+//   - write (`GAMELIB_WRITE_STORE_GOLDEN=1`): rewrite those four sections from the TS code under
+//     test, carrying the committed `area` section over unchanged. The INPUTS are the hand-curated
+//     constants in this file; no expected value is ever typed by hand.
 
 import { readFileSync, writeFileSync } from 'fs'
 import { resolve } from 'path'
@@ -26,7 +28,6 @@ import {
   isSafeKeyPath,
   isWritableStoreField
 } from 'common/types/storePolicy'
-import { areaForStoreKey } from '../../storeVersioning/readOnlyStores'
 
 const FIXTURE = resolve(
   __dirname,
@@ -156,35 +157,6 @@ const CACHE_NAME_INPUTS: string[] = [
   'ünïcode'
 ]
 
-const AREA_INPUTS: string[] = [
-  // every AREA_BY_KEY key
-  'store_cache/steam_library',
-  'store_cache/gog_library',
-  'gog_store/installed',
-  'store_cache/legendary_library',
-  'store_cache/nile_library',
-  'sideload_apps/library',
-  'steam_store/config',
-  'gog_store/config',
-  'legendary_store/config',
-  'nile_store/config',
-  'humble_store/config',
-  'store/download-manager',
-  'store/timestamp',
-  'gog_store/saveTimestamps',
-  'store_cache/gog_playtime_sync_queue',
-  'store/config',
-  'settings/global',
-  'settings/game',
-  // the humble prefix rule and the app-data fallback
-  'store_cache/humble_revealed',
-  'store_cache/humble_library',
-  'store_cache/umu',
-  'store/fonts',
-  'GamesConfig/480',
-  ''
-]
-
 type VectorDoc = {
   read: (StoreKeyInput & { allowed: boolean })[]
   write: (StoreKeyInput & { allowed: boolean })[]
@@ -193,7 +165,13 @@ type VectorDoc = {
   area: { storeKey: string; area: string }[]
 }
 
-function buildDoc(): VectorDoc {
+/** The sections today's TS computes; `area` is Rust's alone (cargo `store_policy`). */
+type TsSections = Omit<VectorDoc, 'area'>
+
+const readCommitted = (): VectorDoc =>
+  JSON.parse(readFileSync(FIXTURE, 'utf8')) as VectorDoc
+
+function buildTsSections(): TsSections {
   return {
     read: READ_INPUTS.map((i) => ({
       ...i,
@@ -212,20 +190,17 @@ function buildDoc(): VectorDoc {
       accepted:
         CACHE_STORE_NAME_PATTERN.test(name) &&
         RECOGNIZED_CACHE_STORE_NAMES.includes(name)
-    })),
-    area: AREA_INPUTS.map((storeKey) => ({
-      storeKey,
-      area: areaForStoreKey(storeKey)
     }))
   }
 }
 
 if (WRITE_MODE) {
-  writeFileSync(FIXTURE, JSON.stringify(buildDoc(), null, 2) + '\n')
+  const doc: VectorDoc = { ...buildTsSections(), area: readCommitted().area }
+  writeFileSync(FIXTURE, JSON.stringify(doc, null, 2) + '\n')
 }
 
 describe('store policy vectors (today TS policy -> committed vectors)', () => {
-  const committed = JSON.parse(readFileSync(FIXTURE, 'utf8')) as VectorDoc
+  const committed = readCommitted()
 
   it('covers every allow-listed store, so a new store cannot skip the vectors', () => {
     expect(Object.keys(ALLOWED_KEY_BY_STORE).sort()).toEqual(
@@ -257,23 +232,27 @@ describe('store policy vectors (today TS policy -> committed vectors)', () => {
   it.each(['read', 'write'] as const)(
     '%s vectors equal what today TS computes',
     (section) => {
-      expect(committed[section]).toEqual(buildDoc()[section])
+      expect(committed[section]).toEqual(buildTsSections()[section])
     }
   )
 
   it('keyPath vectors equal isSafeKeyPath', () => {
-    expect(committed.keyPath).toEqual(buildDoc().keyPath)
+    expect(committed.keyPath).toEqual(buildTsSections().keyPath)
   })
 
   it('cacheName vectors equal the pattern plus the recognized list', () => {
-    expect(committed.cacheName).toEqual(buildDoc().cacheName)
+    expect(committed.cacheName).toEqual(buildTsSections().cacheName)
   })
 
-  it('area vectors equal areaForStoreKey', () => {
-    expect(committed.area).toEqual(buildDoc().area)
-  })
-
-  it('the file is the exact document the inputs produce (no stray or reordered rows)', () => {
-    expect(committed).toEqual(buildDoc())
+  it('carries exactly the five sections, the TS four being the exact rows the inputs produce', () => {
+    expect(Object.keys(committed).sort()).toEqual([
+      'area',
+      'cacheName',
+      'keyPath',
+      'read',
+      'write'
+    ])
+    const { area: _area, ...tsSections } = committed
+    expect(tsSections).toEqual(buildTsSections())
   })
 })

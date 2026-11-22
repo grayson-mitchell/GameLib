@@ -34,10 +34,7 @@ export function testUserDataDir(): string {
  */
 export function createTestStoreRoot(
   userData?: string,
-  options: Pick<
-    Parameters<typeof createStoreRoot>[0],
-    'readOnlySinks' | 'boot' | 'frameSink'
-  > & {
+  options: Pick<Parameters<typeof createStoreRoot>[0], 'boot' | 'frameSink'> & {
     recordFrames?: StoreFrame[]
     wrapSink?: (inner: StoreFrameSink) => StoreFrameSink
   } = {}

@@ -7,14 +7,13 @@
  * hands it to every store, so two boots (or two tests) share nothing and no store resolves a
  * path at import.
  *
- * Import budget: the pure read-only aggregate (storeVersioning/readOnlyStores: no logger, no IPC),
- * the pure mirror layer (mirrorCell, storeFrames: no logger, no IPC, the output stream injected)
- * and type-only imports. Stores import this module; it must never reach the IPC layer (see the
- * changes-channel note below) or construct a store.
+ * Import budget: the pure mirror layer (mirrorCell, storeFrames: no logger, no IPC, the output
+ * stream injected) and type-only imports. Stores import this module; it must never reach the IPC
+ * layer (see the changes-channel note below) or construct a store.
  *
- * Plan 18 added `readOnly` (the read-only tracker, former readOnlyStores.ts module state): every
- * store of a boot shares it, two roots never do. The per-file version engine plan 18 added beside it
- * is gone (85-23): the shell migrates and guards every store.
+ * Plan 18 added a read-only tracker and a per-file version engine to the root. Both are gone: the
+ * engine in 85-23, the tracker in 85-24. The shell migrates and guards every store and raises the
+ * read-only notice from its own host (85-16); what it reported at boot is `boot` below.
  *
  * The changes channel (formerly `storeChangeNotifier.ts`)
  *
@@ -31,13 +30,7 @@
  * disk writer. There is no rollback flag and no TS owner: the root carries the frame sink a mirror
  * writes through and what the shell reported about the stores it opened (`GAMELIB_STORE_BOOT`).
  */
-import { basename } from 'path'
 import type { StoreChangedPayload } from 'common/types/sidecarTransport'
-import {
-  createReadOnlyStores,
-  type ReadOnlyStores,
-  type Sinks as ReadOnlySinks
-} from '../storeVersioning/readOnlyStores'
 import { MirrorRegistry } from './mirrorCell'
 import type { StoreFrameSink } from './storeFrames'
 import type { StoreRegistry } from './storeRegistry'
@@ -69,7 +62,6 @@ interface StoreChangeChannel {
 export interface StoreRoot {
   readonly userData: string
   readonly changes: StoreChangeChannel
-  readonly readOnly: ReadOnlyStores
   readonly boot: StoreBootEnv
   readonly frameSink: StoreFrameSink
   readonly mirrors: MirrorRegistry
@@ -144,23 +136,6 @@ export function readStoreBootEnv(
   return { readOnly: readOnlyMap, startEmpty: startEmptySet }
 }
 
-/**
- * The stores the shell found read-only at boot (`GAMELIB_STORE_BOOT`), entered into the root's
- * aggregate so the once-per-launch notice (payload unchanged, D-12) lists them beside the stores
- * the TS engine marks. Keyed like the engine's own entries (`<dir>/<name>`, `<name>.json`), so a
- * store both sides report is recorded once.
- */
-function seedBootReadOnly(readOnly: ReadOnlyStores, boot: StoreBootEnv): void {
-  for (const [storeKey, reason] of boot.readOnly) {
-    readOnly.record({
-      storeKey,
-      file: `${basename(storeKey)}.json`,
-      reason,
-      detail: 'reported by the Rust store host'
-    })
-  }
-}
-
 function createStoreChangeChannel(): StoreChangeChannel {
   let push: StorePush | null = null
   let suppressDepth = 0
@@ -201,8 +176,6 @@ export interface StoreFamilyDeps {
 
 export function createStoreRoot(deps: {
   userData: string
-  /** Test seam: read-only sinks installed at construction (production installs them at flush). */
-  readOnlySinks?: ReadOnlySinks
   /** `GAMELIB_STORE_BOOT`, parsed (`readStoreBootEnv`). */
   boot?: StoreBootEnv
   /** Where a mirror's frames go. Absent, a store write on this root throws. */
@@ -210,12 +183,9 @@ export function createStoreRoot(deps: {
 }): StoreRoot {
   const frameSink = deps.frameSink ?? NO_FRAME_SINK
   const boot = deps.boot ?? NO_BOOT
-  const readOnly = createReadOnlyStores({ sinks: deps.readOnlySinks })
-  seedBootReadOnly(readOnly, boot)
   return {
     userData: deps.userData,
     changes: createStoreChangeChannel(),
-    readOnly,
     boot,
     frameSink,
     mirrors: new MirrorRegistry({ sink: frameSink, boot })

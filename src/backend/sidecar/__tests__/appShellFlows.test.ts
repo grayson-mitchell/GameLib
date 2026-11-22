@@ -66,7 +66,6 @@
  * fresh registry with `inFreshRegistry()` and call `registerAppShellFlows()` themselves.
  */
 
-import { createReadOnlyStores } from '../../storeVersioning/readOnlyStores'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { defined } from 'backend/testUtils/indexed'
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'fs'
@@ -392,8 +391,6 @@ function directDeps(stores: unknown = {}, sendFrontendMessage = jest.fn()) {
     stores: stores as never,
     // A fresh instance per direct registration, as a fresh module registry gave before 66.4-16.
     appShell: createAppShellState({ clock: createClock() }),
-    // The boot's read-only tracker (66.4-18): a fresh one per direct registration.
-    readOnly: createReadOnlyStores(),
     // The boot's store mirrors (85-11): nothing waiting, so the quit flush resolves at once.
     storeMirrors: { flushStores: jest.fn().mockResolvedValue(undefined) },
     appRuntime
@@ -1238,11 +1235,11 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       }
     })
 
-    // Phase 68 D-05, Phase 85 (85-16, D-12): the notice is raised by Rust (the only path since
-    // 85-21). The registration hands TS's entries (store keys and reasons only) to
-    // `store_read_only_notice` once per launch and pushes nothing itself. ISOLATED like the CR-02
-    // tests above so the module-scoped one-shot flag starts unflipped.
-    it('85-16: frontendReady x2 hands the TS entries to store_read_only_notice once and pushes no notice itself', async () => {
+    // Phase 68 D-05, Phase 85 (85-16, D-12; 85-24): the notice is raised by Rust from its own
+    // host's read-only stores. The registration calls `store_read_only_notice` once per launch with
+    // no TS entries (the TS read-only aggregate is gone) and pushes nothing itself. ISOLATED like the
+    // CR-02 tests above so the module-scoped one-shot flag starts unflipped.
+    it('85-24: frontendReady x2 calls store_read_only_notice once with no TS entries and pushes no notice itself', async () => {
       const sendMock = jest.fn()
       let rustInvoke!: jest.Mock
       let frontendReadyListener!: () => void
@@ -1260,12 +1257,6 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('../../logger').initHeadless()
         const deps = directDeps({}, sendMock)
-        deps.readOnly.record({
-          storeKey: 'store_cache/steam_library',
-          file: 'steam_library.json',
-          reason: 'newer',
-          detail: 'v9 > v1'
-        })
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('../appShellFlowRegistration').registerAppShellFlows(deps)
         ;[frontendReadyListener] = directListeners().get('frontendReady')
@@ -1283,16 +1274,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         ([channel]) => channel === RUST_STORE_READ_ONLY_NOTICE
       )
       expect(noticeCalls).toEqual([
-        [
-          RUST_STORE_READ_ONLY_NOTICE,
-          [
-            {
-              tsEntries: [
-                { storeKey: 'store_cache/steam_library', reason: 'newer' }
-              ]
-            }
-          ]
-        ]
+        [RUST_STORE_READ_ONLY_NOTICE, [{ tsEntries: [] }]]
       ])
       expect(
         sendMock.mock.calls.filter(

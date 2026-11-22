@@ -185,8 +185,6 @@ import { assertOpenableExternalUrl } from './openPolicy'
 import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { GlobalConfigSlice } from '../config'
 import { logInfo, LogPrefix } from '../logger'
-import { raiseReadOnlyStoresNoticeInRust } from './readOnlyStoresNotice'
-import type { ReadOnlyStores } from '../storeVersioning/readOnlyStores'
 import type { MirrorRegistry } from '../stores/mirrorCell'
 // Phase 35 plan 11: boot-time download-queue auto-resume, ported from
 // `main.ts:613` before that file is deleted at plan 35-14. See the
@@ -204,7 +202,10 @@ import type { OpenExternal } from '../host/openExternal'
 import type { AppPaths } from '../process/context'
 import type { RequestRustInvoke } from '../host'
 import type { Clock, TimerHandle } from '../process/types'
-import { RUST_TRAY_SET_ICON } from '../../common/types/sidecarTransport'
+import {
+  RUST_STORE_READ_ONLY_NOTICE,
+  RUST_TRAY_SET_ICON
+} from '../../common/types/sidecarTransport'
 import {
   migrateTrayIconVariant,
   trayIconWireArgs
@@ -336,8 +337,6 @@ export interface AppShellFlowDeps
   managers: Pick<StoreManagers, 'library'>
   /** The boot's in-app dialog display-ack table the `dialogDisplayed` channel resolves (66.4-18). */
   dialogs: Pick<Dialogs, 'showErrorBox' | 'showMessageBox' | 'displayAcks'>
-  /** The boot's read-only store tracker, flushed to the renderer once per launch (66.4-18). */
-  readOnly: Pick<ReadOnlyStores, 'flush' | 'list'>
   /** The boot's store mirrors: `quit` waits for the shell to have applied their writes (85-11). */
   storeMirrors: Pick<MirrorRegistry, 'flushStores'>
   /** The boot-owned abort registry the `abort` channel signals (66.4-13). */
@@ -707,19 +706,18 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
         }
 
         // Phase 68 D-05: deliver the read-only stores notice. WHY HERE: stores are checked
-        // at module scope, long before a renderer listener exists, and `listen()` has no
-        // replay, so a push at detection time would be dropped. WHY ONE-SHOT: this block
-        // runs once per process, giving one notice per launch. Creates no timer or handle
-        // (sidecar exit contract); own try/catch so it can never skip the work above.
-        // Phase 85 (85-16, D-12): Rust raises the notice, merging the entries TS still reports with
-        // its own (no TS-raised notice since 85-21, D-03).
+        // at boot, long before a renderer listener exists, and `listen()` has no replay, so a
+        // push at detection time would be dropped. WHY ONE-SHOT: this block runs once per
+        // process, giving one notice per launch. Creates no timer or handle (sidecar exit
+        // contract); own try/catch so it can never skip the work above.
+        // Phase 85 (85-16, D-12; 85-24): Rust raises the notice from its own host's read-only
+        // stores, the only ones there are since the TS engine went (D-03), so TS reports no entries.
         try {
-          raiseReadOnlyStoresNoticeInRust(
-            deps.readOnly,
-            deps.requestRustInvoke
-          ).catch((error: unknown) =>
-            logSendFailure('frontendReady -> readOnlyStoresNotice', error)
-          )
+          deps
+            .requestRustInvoke(RUST_STORE_READ_ONLY_NOTICE, [{ tsEntries: [] }])
+            .catch((error: unknown) =>
+              logSendFailure('frontendReady -> readOnlyStoresNotice', error)
+            )
         } catch (error) {
           logSendFailure('frontendReady -> readOnlyStoresNotice', error)
         }

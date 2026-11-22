@@ -56,7 +56,10 @@ const DELETED = [
   'src/backend/stores/__tests__/storeOracle.test.ts',
   'src/backend/stores/__tests__/storeOwnership.test.ts',
   'src/backend/stores/__tests__/storeFallback.test.ts',
-  'src/backend/__tests__/storeBackendVersioning.test.ts'
+  'src/backend/__tests__/storeBackendVersioning.test.ts',
+  // 85-24 Task 1: the TS read-only notice path. The frontendReady flow sends only Rust's notice
+  // (85-16); the shell's own read-only stores are the whole notice.
+  'src/backend/sidecar/readOnlyStoresNotice.ts'
 ]
 
 /** What the mirror and the Rust tests still need; deleting one of these is a regression. */
@@ -89,7 +92,11 @@ const FORBIDDEN_IDENTIFIERS = [
   'store:ts-',
   // 85-23 Task 2: the test helper that built a TS versioning engine for a consumer under test.
   // Built from parts so this file does not name it either.
-  ['createTest', 'Versioning'].join('')
+  ['createTest', 'Versioning'].join(''),
+  // 85-24 Task 1: the TS notice push helper (and its pre-85-16 name), gone with the TS read-only
+  // notice path. Built from parts so this file does not name them either.
+  ['raiseReadOnlyStoresNotice', 'InRust'].join(''),
+  ['pushReadOnly', 'StoresNotice'].join('')
 ]
 
 /**
