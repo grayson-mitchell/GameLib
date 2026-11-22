@@ -540,7 +540,9 @@ export interface NativeManifest {
   channels: Record<string, NativeChannelSpec>
 }
 
-const NATIVE_NAME = /^[A-Za-z0-9:_-]+$/
+// `.` is allowed because the renderer's dotted channels (`steamgriddb.searchGame`) move native as
+// they are. It is ASCII, so the sorted order is still the byte order `binary_search` needs.
+const NATIVE_NAME = /^[A-Za-z0-9:_.-]+$/
 const NATIVE_SLICE = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
 function isArrayOfArrays(v: unknown): v is unknown[][] {
@@ -569,7 +571,7 @@ export function parseNativeManifest(raw: unknown): NativeManifest {
   const out: Record<string, NativeChannelSpec> = {}
   for (const [name, value] of Object.entries(channels)) {
     if (!NATIVE_NAME.test(name)) {
-      bad(name, 'name must match [A-Za-z0-9:_-]')
+      bad(name, 'name must match [A-Za-z0-9:_.-]')
     }
     const e = value as Partial<Record<keyof NativeChannelSpec, unknown>> | null
     if (typeof e !== 'object' || e === null)

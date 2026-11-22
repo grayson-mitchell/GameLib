@@ -323,6 +323,9 @@ mod replay {
     /// Header values a message must never print.
     const HIDDEN_HEADERS: [&str; 4] = ["authorization", "x-auth-token", "x-hp-key", "x-hp-val"];
 
+    /// What the oracle recorder writes in place of a secret header's value.
+    const REDACTED: &str = "REDACTED";
+
     /// Query parameter names whose values a message must never print.
     const HIDDEN_PARAMS: [&str; 7] = [
         "key",
@@ -647,7 +650,13 @@ mod replay {
                 header(&exchange.headers, name),
                 header(&request.headers, name),
             );
-            if recorded != got {
+            // The recorder stores a secret header as the bare word `REDACTED` (the real value is
+            // never written to a fixture), so a request carrying any value in that header is the
+            // recorded twin; a request without it, or with it empty, is still drift.
+            let redacted_twin = HIDDEN_HEADERS.contains(&name)
+                && recorded == Some(REDACTED)
+                && got.is_some_and(|v| !v.is_empty());
+            if recorded != got && !redacted_twin {
                 if HIDDEN_HEADERS.contains(&name) {
                     diffs.push(format!("header {name} differs"));
                 } else {

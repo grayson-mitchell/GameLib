@@ -239,11 +239,9 @@ jest.mock('../../steamgrid/secretStore', () => ({
 // (module docstring): the channel-routing/seam logic is what this suite
 // tests, not SteamGridDB's own HTTP-shaped client body (already covered by
 // steamgrid/__tests__ if present) ────────────────────────────────────────
-const mockSteamGridSearchGame = jest.fn()
 const mockSteamGridGetGrids = jest.fn()
 const mockSteamGridGetHeroes = jest.fn()
 jest.mock('../../steamgrid/utils', () => ({
-  searchGame: (...args: unknown[]) => mockSteamGridSearchGame(...args),
   getGrids: (...args: unknown[]) => mockSteamGridGetGrids(...args),
   getHeroes: (...args: unknown[]) => mockSteamGridGetHeroes(...args)
 }))
@@ -562,7 +560,6 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     mockSecretStoreGetApiKey.mockReset().mockResolvedValue(undefined)
     mockSecretStoreSetApiKey.mockReset().mockResolvedValue(undefined)
     mockSecretStoreClearApiKey.mockReset().mockResolvedValue(undefined)
-    mockSteamGridSearchGame.mockReset()
     mockSteamGridGetGrids.mockReset()
     mockSteamGridGetHeroes.mockReset()
     mockGetGogDiscounts.mockReset()
@@ -1170,40 +1167,6 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       expect(mockSecretStoreSetApiKey).toHaveBeenCalledWith('')
     })
 
-    it('REQ-34.6-04 steamgriddb.searchGame returns [] and never calls SteamGridDB.searchGame when no key is stored', async () => {
-      mockSecretStoreGetApiKey.mockResolvedValueOnce(undefined)
-      const { input, frames } = boot()
-      writeInvoke(input, 'sgdb-search-nokey', 'steamgriddb.searchGame', [
-        'some query'
-      ])
-      await flush()
-
-      expect(findResponse(frames, 'sgdb-search-nokey')?.result).toEqual([])
-      expect(mockSteamGridSearchGame).not.toHaveBeenCalled()
-    })
-
-    it('REQ-34.6-04 steamgriddb.searchGame returns SteamGridDB.searchGame’s mapped results when a key is stored', async () => {
-      mockSecretStoreGetApiKey.mockResolvedValueOnce('a-seeded-test-value')
-      mockSteamGridSearchGame.mockResolvedValueOnce([
-        { id: 1, name: 'Game One', extraNoise: 'dropped-by-the-mapper' }
-      ])
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'sgdb-search-1', 'steamgriddb.searchGame', [
-        'game one'
-      ])
-      await flush()
-
-      expect(mockSteamGridSearchGame).toHaveBeenCalledWith(
-        expect.anything(),
-        'a-seeded-test-value',
-        'game one'
-      )
-      expect(findResponse(frames, 'sgdb-search-1')?.result).toEqual([
-        { id: 1, name: 'Game One' }
-      ])
-    })
-
     it('REQ-34.6-04 steamgriddb.getGrids and steamgriddb.getHeroes each return their own mapped results when a key is stored', async () => {
       mockSecretStoreGetApiKey.mockResolvedValue('a-seeded-test-value')
       mockSteamGridGetGrids.mockResolvedValueOnce([
@@ -1288,16 +1251,18 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       ])
     })
 
-    it('T-34.6-25: a steamgriddb.searchGame rejection is logged without any log argument containing the seeded API key value', async () => {
+    it('T-34.6-25: a steamgriddb.getGrids rejection is logged without any log argument containing the seeded API key value', async () => {
       const logErrorSpy = jest.spyOn(loggerModule, 'logError')
       const seededKey = 'a-seeded-test-value-that-must-never-be-logged'
       mockSecretStoreGetApiKey.mockResolvedValueOnce(seededKey)
-      mockSteamGridSearchGame.mockRejectedValueOnce(
+      mockSteamGridGetGrids.mockRejectedValueOnce(
         new Error('SteamGridDB boundary rejection')
       )
 
       const { input, frames } = boot()
-      writeInvoke(input, 'sgdb-search-err', 'steamgriddb.searchGame', ['query'])
+      writeInvoke(input, 'sgdb-search-err', 'steamgriddb.getGrids', [
+        { gameId: 1 }
+      ])
       await flush()
 
       expect(findResponse(frames, 'sgdb-search-err')?.ok).toBe(false)

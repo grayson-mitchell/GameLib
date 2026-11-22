@@ -73,7 +73,6 @@ export const enrichmentAsyncArgs = {
   'steamgriddb.hasApiKey': noArgs,
   // T-67-50: bounded; a rejection never echoes the key (value-free rejection log).
   'steamgriddb.setApiKey': z.tuple([z.string().max(256)]),
-  'steamgriddb.searchGame': z.tuple([searchTerm]),
   'steamgriddb.getGrids': z.tuple([steamGridQuery]),
   'steamgriddb.getHeroes': z.tuple([steamGridQuery])
 }
@@ -95,7 +94,6 @@ interface EnrichmentAsyncReturns {
   'itad.setApiKey': Promise<void>
   'steamgriddb.hasApiKey': Promise<boolean>
   'steamgriddb.setApiKey': Promise<void>
-  'steamgriddb.searchGame': Promise<Array<{ id: number; name: string }>>
   'steamgriddb.getGrids': Promise<
     Array<{ id: number; url: string; thumb: string }>
   >

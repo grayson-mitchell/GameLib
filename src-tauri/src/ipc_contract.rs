@@ -831,6 +831,7 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "removeRecent",
     "sidecar:store-fetch",
     "sidecar:store-set-checked",
+    "steamgriddb.searchGame",
     "uploadLogFile",
 ];
 

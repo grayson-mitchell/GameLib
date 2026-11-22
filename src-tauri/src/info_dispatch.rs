@@ -426,6 +426,41 @@ pub(crate) fn get_anticheat_info(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> Nati
     })
 }
 
+/// Decodes the one `query` argument of `steamgriddb.searchGame`: exactly one string of 0 to
+/// [`gamelib_info::steamgrid::TEXT_MAX_UTF16`] UTF-16 code units (the zod bound it replaces).
+fn parse_steamgrid_search(args: &[Value]) -> Result<&str, Rejection> {
+    let [arg] = args else {
+        return Err(("(args)", "invalid_type"));
+    };
+    let Value::String(query) = arg else {
+        return Err(("0", "invalid_type"));
+    };
+    if query.encode_utf16().count() > gamelib_info::steamgrid::TEXT_MAX_UTF16 {
+        return Err(("0", "too_big"));
+    }
+    Ok(query)
+}
+
+/// The native `steamgriddb.searchGame` handler (slice `info`, D-17): `[{id, name}]` for a title, `[]`
+/// when no key is stored. Validated before the context is looked at, like `removeRecent`. A crate
+/// error is a fixed `<op>:<category>` or the text the TS rethrow carried (`Request failed with
+/// status code 401`); the key and the request URL are never in it (T-86-31).
+pub(crate) fn steamgrid_search(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        let query = parse_steamgrid_search(&args)
+            .map_err(|(path, code)| invalid_args("steamgriddb.searchGame", &[path], &[code]))?
+            .to_string();
+        let info = info_ctx().ok_or_else(|| "steamgriddb.searchGame: not ready".to_string())?;
+        run_info_op(
+            Arc::clone(info),
+            "info_steamgrid_search",
+            vec![serde_json::json!({ "query": query })],
+            "steamgriddb.searchGame: the search did not finish",
+        )
+        .await
+    })
+}
+
 #[cfg(test)]
 use gamelib_store::host::StoreHost;
 #[cfg(test)]
@@ -936,6 +971,118 @@ mod tests {
             );
             assert!(!error.contains("SECRET"), "{error}");
         }
+    }
+
+    #[test]
+    fn steamgrid_search_accepts_exactly_one_bounded_string_and_the_empty_one() {
+        assert_eq!(parse_steamgrid_search(&[json!("Celeste")]), Ok("Celeste"));
+        assert_eq!(parse_steamgrid_search(&[json!("")]), Ok(""));
+        assert_eq!(
+            parse_steamgrid_search(&[json!("x".repeat(256))]).map(str::len),
+            Ok(256)
+        );
+        for (args, want) in [
+            (vec![], ("(args)", "invalid_type")),
+            (vec![json!(1)], ("0", "invalid_type")),
+            (vec![json!(null)], ("0", "invalid_type")),
+            (vec![json!({})], ("0", "invalid_type")),
+            (vec![json!("a"), json!("b")], ("(args)", "invalid_type")),
+            (vec![json!("x".repeat(257))], ("0", "too_big")),
+            // Two UTF-16 units per astral character: 129 of them are 258 units.
+            (vec![json!("\u{1F3AE}".repeat(129))], ("0", "too_big")),
+        ] {
+            assert_eq!(parse_steamgrid_search(&args), Err(want), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn the_steamgrid_search_handler_validates_first_and_answers_not_ready_before_install() {
+        assert!(info_ctx().is_none());
+        let router_ctx = Arc::new(crate::native_router::NativeCtx::for_tests(
+            Arc::new(NoHost),
+            None,
+        ));
+        let not_ready = tauri::async_runtime::block_on(steamgrid_search(
+            Arc::clone(&router_ctx),
+            vec![json!("Celeste")],
+        ));
+        assert_eq!(
+            not_ready,
+            Err("steamgriddb.searchGame: not ready".to_string())
+        );
+        let secret = "SECRET-QUERY-".repeat(40);
+        for bad in [
+            tauri::async_runtime::block_on(steamgrid_search(
+                Arc::clone(&router_ctx),
+                vec![json!(secret)],
+            )),
+            tauri::async_runtime::block_on(steamgrid_search(router_ctx, vec![])),
+        ] {
+            let error = bad.unwrap_err();
+            assert!(
+                error.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+                "{error}"
+            );
+            assert!(!error.contains("SECRET"), "{error}");
+        }
+    }
+
+    /// Hands out one key for every slot and records nothing else.
+    struct OneKey(&'static str);
+
+    impl gamelib_info::secrets::SecretSource for OneKey {
+        fn get(&self, _slot: gamelib_info::secrets::Slot) -> Result<Option<String>, String> {
+            Ok(Some(self.0.to_string()))
+        }
+        fn set(&self, _slot: gamelib_info::secrets::Slot, _value: &str) -> Result<(), String> {
+            Ok(())
+        }
+        fn delete(&self, _slot: gamelib_info::secrets::Slot) -> Result<(), String> {
+            Ok(())
+        }
+    }
+
+    /// Answers every request with one body and remembers the request.
+    struct Canned(Mutex<Vec<gamelib_info::http::Request>>);
+
+    impl gamelib_info::http::Http for Canned {
+        fn send(&self, request: gamelib_info::http::Request) -> gamelib_info::http::HttpFuture<'_> {
+            self.0.lock().unwrap().push(request);
+            Box::pin(async {
+                Ok(gamelib_info::http::Response {
+                    status: 200,
+                    headers: Vec::new(),
+                    body: br#"{"success":true,"data":[{"id":7,"name":"Celeste","verified":true}]}"#
+                        .to_vec(),
+                })
+            })
+        }
+    }
+
+    #[test]
+    fn the_steamgrid_search_runs_through_the_blocking_pool_with_the_stored_key() {
+        let home = FakeHome::new("info-dispatch-");
+        let canned = Arc::new(Canned(Mutex::new(Vec::new())));
+        let mut ctx = test_ctx(&home, None);
+        ctx.http = canned.clone();
+        ctx.secrets = Some(Arc::new(OneKey("test-key")));
+        let found = tauri::async_runtime::block_on(run_info_op(
+            Arc::new(ctx),
+            "info_steamgrid_search",
+            vec![json!({ "query": "Dead Cells" })],
+            "x",
+        ));
+        assert_eq!(found, Ok(json!([{ "id": 7, "name": "Celeste" }])));
+        let seen = canned.0.lock().unwrap();
+        assert_eq!(seen.len(), 1);
+        assert_eq!(
+            seen[0].url,
+            "https://www.steamgriddb.com/api/v2/search/autocomplete/Dead%20Cells"
+        );
+        assert!(seen[0]
+            .headers
+            .iter()
+            .any(|(k, v)| k == "Authorization" && v == "Bearer test-key"));
     }
 
     #[test]

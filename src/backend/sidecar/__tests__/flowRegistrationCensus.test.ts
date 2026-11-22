@@ -93,7 +93,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Phase 47 Plan 12: invoke 17 -> 19 -- itad.getKeyStatus, itad.setApiKey
   // Phase 86 Plan 08 (D-17): invoke 19 -> 18 -- `removeRecent` is a native `info` channel.
   // Phase 86 Plan 12 (D-17): invoke 18 -> 17 -- `getAnticheatInfo` is a native `info` channel.
-  'enrichmentFlowRegistration.ts': { invoke: 17, send: 0 },
+  // Phase 86 Plan 15 (D-17): invoke 17 -> 16 -- `steamgriddb.searchGame` is a native `info` channel.
+  'enrichmentFlowRegistration.ts': { invoke: 16, send: 0 },
   // Phase 34.6 Plan 08 (2026-08-24): new module — the 8 EOS overlay channels ported
   // byte-equivalently from eos_overlay/ipc_handler.ts (all invoke-kind, D-09).
   'eosOverlayFlowRegistration.ts': { invoke: 8, send: 0 },

@@ -56,6 +56,13 @@ export interface NativeAsync {
   // returned `undefined`, D-03), on Windows, and when the data file is missing or unreadable. The
   // namespace is 0 to 1024 UTF-16 units.
   getAnticheatInfo: (appNamespace: string) => Promise<AntiCheatInfo | null>
+  // Phase 86 (86-15, D-17): the SteamGridDB title search, run by the Rust `info` slice
+  // (`info_steamgrid_search`) with the key from the Keychain owner. `[]` when no key is stored. The
+  // query is 0 to 256 UTF-16 units; a non-2xx answer rejects with `Request failed with status code
+  // <n>`, as the TS rethrow did.
+  'steamgriddb.searchGame': (
+    query: string
+  ) => Promise<Array<{ id: number; name: string }>>
 }
 
 export interface NativeSync {

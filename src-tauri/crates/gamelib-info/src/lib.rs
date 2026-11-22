@@ -18,6 +18,7 @@ pub mod http;
 pub mod overrides;
 pub mod recent;
 pub mod secrets;
+pub mod steamgrid;
 
 use ctx::InfoCtx;
 use serde_json::Value;
@@ -39,6 +40,7 @@ pub const OPS: &[&str] = &[
     "info_overrides_set",
     "info_recent_add",
     "info_recent_remove",
+    "info_steamgrid_search",
 ];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
@@ -67,6 +69,7 @@ async fn route(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, String>
         "info_overrides_set" => overrides::set(ctx, decode(op, args)?).map(Value::Bool),
         "info_recent_add" => recent::add(ctx, decode(op, args)?).map(|()| Value::Null),
         "info_recent_remove" => recent::remove(ctx, decode(op, args)?).map(|()| Value::Null),
+        "info_steamgrid_search" => steamgrid::search_game(ctx, decode(op, args)?).await,
         _ => Err(format!("unknown op: {op}")),
     }
 }

@@ -294,7 +294,7 @@ const ENRICHMENT_CHANNELS = [
   'getGogDiscounts',
   'steamgriddb.hasApiKey',
   'steamgriddb.setApiKey',
-  'steamgriddb.searchGame',
+  // Phase 86 Plan 15 (D-17): `steamgriddb.searchGame` left this list -- it is a native `info` channel.
   'steamgriddb.getGrids',
   'steamgriddb.getHeroes',
   // Quick 261027-ch9 (a2385f6bf): +1 invoke, the 15th enrichment channel
@@ -613,7 +613,7 @@ describe('completeness — all 66 channels are registered with the right kind, a
     restoreCanonicalRegistrations()
   })
 
-  it('exactly 70 channels are handle-kind and exactly 2 are listen-kind (Phase 47 Plan 12: 70/2 -> 72/2, +2 invoke itad.getKeyStatus/itad.setApiKey; Quick 261029-mkz, d601ff705: 68/2 -> 70/2, +2 invoke getRunsForMeMap/setRunsForMe, +0 send; Quick 261027-ch9, a2385f6bf: 67/2 -> 68/2, +1 invoke getGamelibFixStatus, +0 send; Quick 261012-ca6, 2026-10-12: 65/4 -> 67/2, +2 invoke -2 send, kind-swapped not added, total channels unchanged; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
+  it('exactly 69 channels are handle-kind and exactly 2 are listen-kind (Phase 86 Plan 15: 70/2 -> 69/2, steamgriddb.searchGame is a native `info` channel; Phase 47 Plan 12: 70/2 -> 72/2, +2 invoke itad.getKeyStatus/itad.setApiKey; Quick 261029-mkz, d601ff705: 68/2 -> 70/2, +2 invoke getRunsForMeMap/setRunsForMe, +0 send; Quick 261027-ch9, a2385f6bf: 67/2 -> 68/2, +1 invoke getGamelibFixStatus, +0 send; Quick 261012-ca6, 2026-10-12: 65/4 -> 67/2, +2 invoke -2 send, kind-swapped not added, total channels unchanged; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
     const handleChannels = [...handlerRegistry.keys()]
     const listenChannels = [...listenerRegistry.entries()]
       .filter(([, listeners]) => listeners.length > 0)
@@ -634,7 +634,8 @@ describe('completeness — all 66 channels are registered with the right kind, a
     // Phase 47 Plan 12: itad.getKeyStatus/itad.setApiKey are invoke-kind -- 70+2=72 invoke, 2+0=2 send.
     // Phase 86 Plan 08 (D-17): removeRecent is a native `info` channel, no longer registered -- 72-1=71.
     // Phase 86 Plan 12 (D-17): getAnticheatInfo is a native `info` channel too -- 71-1=70.
-    expect(handleChannels.length).toBe(70)
+    // Phase 86 Plan 15 (D-17): steamgriddb.searchGame is a native `info` channel too -- 70-1=69.
+    expect(handleChannels.length).toBe(69)
     expect(listenChannels.length).toBe(2)
   })
 
@@ -665,14 +666,15 @@ describe('completeness — all 66 channels are registered with the right kind, a
     }
   )
 
-  it('per-module declared counts are exactly 11 / 12 / 7 / 14 / 8 / 17, totalling 69 (Phase 86 Plan 12: enrichment 18 -> 17, getAnticheatInfo is a native `info` channel; Phase 86 Plan 08: enrichment 19 -> 18, removeRecent is a native `info` channel; Phase 47 Plan 12: enrichment 17 -> 19; Quick 261029-mkz, d601ff705: enrichment 15 -> 17; Quick 261027-ch9, a2385f6bf: enrichment 14 -> 15; Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12)', () => {
+  it('per-module declared counts are exactly 11 / 12 / 7 / 14 / 8 / 16, totalling 68 (Phase 86 Plan 15: enrichment 17 -> 16, steamgriddb.searchGame is a native `info` channel; Phase 86 Plan 12: enrichment 18 -> 17, getAnticheatInfo is a native `info` channel; Phase 86 Plan 08: enrichment 19 -> 18, removeRecent is a native `info` channel; Phase 47 Plan 12: enrichment 17 -> 19; Quick 261029-mkz, d601ff705: enrichment 15 -> 17; Quick 261027-ch9, a2385f6bf: enrichment 14 -> 15; Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12)', () => {
     const counts = MODULES.map((m) => m.declaredChannels.length)
     // Measured (jest failure ACTUAL) and independently re-derived (64 prior total + 3 new = 67,
     // then -1 for winetricksInstall's retirement = 66, then +1 getGamelibFixStatus = 67, then +2 getRunsForMeMap/setRunsForMe = 69, then +2 itad.getKeyStatus/itad.setApiKey = 71) — agree.
     // Phase 86 Plan 08 (D-17): 71 - 1 (removeRecent) = 70.
     // Phase 86 Plan 12 (D-17): 70 - 1 (getAnticheatInfo) = 69.
-    expect(counts).toEqual([11, 12, 7, 14, 8, 17])
-    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(69)
+    // Phase 86 Plan 15 (D-17): 69 - 1 (steamgriddb.searchGame) = 68.
+    expect(counts).toEqual([11, 12, 7, 14, 8, 16])
+    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(68)
   })
 
   afterAll(() => {
@@ -750,7 +752,6 @@ describe('SteamGridDB presence, correct kind, across all six modules together (P
     'steamgriddb.getGrids',
     'steamgriddb.getHeroes',
     'steamgriddb.hasApiKey',
-    'steamgriddb.searchGame',
     'steamgriddb.setApiKey'
   ]
 
@@ -758,7 +759,7 @@ describe('SteamGridDB presence, correct kind, across all six modules together (P
     restoreCanonicalRegistrations()
   })
 
-  it('lists exactly the same 5 names Describe 7 used to carry as deferred (containment: no drift between the two lists)', () => {
+  it('lists exactly the names Describe 7 used to carry as deferred that the sidecar still registers (searchGame is native since Phase 86 Plan 15; containment: no drift between the two lists)', () => {
     expect(new Set(STEAMGRIDDB_CHANNELS)).toEqual(
       new Set(
         ENRICHMENT_CHANNELS.filter((channel) =>
@@ -814,7 +815,9 @@ const WINETRICKS_CENSUS_CHANNELS = [
 // retired by a LATER plan — not absent from the scope, absent from the live registries. Kept
 // separate from `CENSUS_CHANNELS` (the live set) so the two can be unioned back together for the
 // one test that cross-checks against `IPC-PORT-INVENTORY.md`'s unedited historical bucket lines.
-const RETIRED_SINCE_CENSUS = ['winetricksInstall']
+// Phase 86 Plan 15 (D-17): `steamgriddb.searchGame` is a native `info` channel, so the sidecar no
+// longer registers it.
+const RETIRED_SINCE_CENSUS = ['winetricksInstall', 'steamgriddb.searchGame']
 // Phase 34.6 Plan 05/06/10 (D-01): the 8 late-discovered channels — `getAchievements`,
 // `getDefaultSavePath` and `getPlaytimeFromRunner` land in THIS plan (Task 1 above); the other 5
 // were already ported by plans 34.6-05/06 (`frontendReady`, `moveInstall`, `importGame`,
@@ -896,12 +899,12 @@ describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 0
     restoreCanonicalRegistrations()
   })
 
-  it('lists exactly 23 live names: EOS overlay 8 + SteamGridDB 5 + winetricks 2 + late-discovered 8 (winetricksInstall retired, Phase 45 Plan 02)', () => {
+  it('lists exactly 22 live names: EOS overlay 8 + SteamGridDB 4 + winetricks 2 + late-discovered 8 (winetricksInstall retired, Phase 45 Plan 02; searchGame native, Phase 86 Plan 15)', () => {
     expect(EOS_OVERLAY_CHANNELS.length).toBe(8)
-    expect(STEAMGRIDDB_CENSUS_CHANNELS.length).toBe(5)
+    expect(STEAMGRIDDB_CENSUS_CHANNELS.length).toBe(4)
     expect(WINETRICKS_CENSUS_CHANNELS.length).toBe(2)
     expect(LATE_DISCOVERED_CENSUS_CHANNELS.length).toBe(8)
-    expect(CENSUS_CHANNELS.length).toBe(23)
+    expect(CENSUS_CHANNELS.length).toBe(22)
   })
 
   it("matches .planning/IPC-PORT-INVENTORY.md's two Phase-34.6 bucket lines exactly — set equality against the document itself, not a retyped copy", () => {
@@ -974,11 +977,11 @@ describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 0
     }
   )
 
-  it('exactly 22 of the live 23 are invoke-kind and exactly 1 (frontendReady) is send-kind (winetricksInstall retired, Phase 45 Plan 02)', () => {
+  it('exactly 21 of the live 22 are invoke-kind and exactly 1 (frontendReady) is send-kind (winetricksInstall retired, Phase 45 Plan 02; searchGame native, Phase 86 Plan 15)', () => {
     const sendCount = CENSUS_CHANNELS.filter((channel) =>
       CENSUS_SEND_CHANNELS.includes(channel)
     ).length
     expect(sendCount).toBe(1)
-    expect(CENSUS_CHANNELS.length - sendCount).toBe(22)
+    expect(CENSUS_CHANNELS.length - sendCount).toBe(21)
   })
 })

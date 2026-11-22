@@ -416,6 +416,21 @@
       "returns": "AntiCheatInfo | null",
       "valid": [["abc"], [""]],
       "invalid": [[], [1], [null], ["a", "b"]]
+    },
+    "steamgriddb.searchGame": {
+      "kind": "invoke",
+      "slice": "info",
+      "args": [
+        {
+          "name": "query",
+          "type": "string",
+          "maxLength": 256,
+          "maxLengthUnit": "utf16"
+        }
+      ],
+      "returns": "[{ id, name }]",
+      "valid": [["Celeste"], [""]],
+      "invalid": [[], [1], [null], ["a", "b"], [{}]]
     }
   }
 }

@@ -2,7 +2,7 @@
  * Curated enrichment-channel registration (Phase 34.2 Plan 06, D-04/D-07/
  * D-10, REQ-34.2-04/REQ-34.2-11/REQ-34.2-12/REQ-34.2-14).
  *
- * Registers the 17 enrichment channels the game-details page and store
+ * Registers the 16 enrichment channels the game-details page and store
  * search container depend on, onto platformApi's own `ipcMain` recorder,
  * importing the REAL underlying bodies plans 34.2-01/34.2-03 already
  * extracted or wired unchanged (mirrors `gameDetailsFlowRegistration.ts`'s
@@ -113,10 +113,13 @@
  * key value never leaves the sidecar; the adapter (`storeSearch/itad.ts`) reads the same owner
  * through `deps` for its user > env > baked key precedence.
  *
- * `steamgriddb.*` (5) / `getGogDiscounts` (1) — Phase 34.6 Plan 09,
+ * Phase 86 (86-15, D-17): `steamgriddb.searchGame` is no longer registered here. It is a native `info`
+ * channel served by Rust (`nativeChannels.json`), so it has exactly one owner.
+ *
+ * `steamgriddb.*` (4) / `getGogDiscounts` (1) — Phase 34.6 Plan 09,
  * REQ-34.6-02/REQ-34.6-04/REQ-34.6-08/REQ-34.6-13, Amendment A-03:
  *
- *   - `steamgriddb.hasApiKey` / `.setApiKey` / `.searchGame` / `.getGrids` /
+ *   - `steamgriddb.hasApiKey` / `.setApiKey` / `.getGrids` /
  *     `.getHeroes` -> bodies copied from `steamgrid/ipc_handler.ts`'s five
  *     `addHandler` calls with ONE deliberate change required by A-03: every
  *     API-key read and write goes through
@@ -220,7 +223,7 @@ const RUNS_FOR_ME_RUNNERS: readonly string[] = Object.freeze([
 ] as const)
 
 /**
- * Registers the 17 enrichment channels. Called once from `handlers.ts`
+ * Registers the 16 enrichment channels. Called once from `handlers.ts`
  * — this module owns no side effects at import time beyond the imports
  * above; the caller decides when registration onto the handler registry
  * happens.
@@ -409,28 +412,6 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
         return
       }
       await deps.itadSecrets.setApiKey(key)
-    }
-  )
-
-  deps.ipc.handle(
-    'steamgriddb.searchGame',
-    async (_event: unknown, ...args: unknown[]) => {
-      const query = args[0] as string
-      const apiKey = await deps.steamGridSecrets.getApiKey()
-      if (!apiKey) {
-        return []
-      }
-
-      try {
-        const results = await SteamGridDB.searchGame(deps, apiKey, query)
-        return results.map((game) => ({
-          id: game.id,
-          name: game.name
-        }))
-      } catch (error) {
-        logError(['SteamGridDB search failed:', error], LogPrefix.Backend)
-        throw error
-      }
     }
   )
 

@@ -190,6 +190,43 @@ async fn replay_fails_on_a_pinned_header_that_differs_or_is_added() {
 }
 
 #[tokio::test]
+async fn replay_takes_any_value_for_a_secret_header_the_recorder_redacted() {
+    // The oracle recorder writes a secret header as the bare word `REDACTED`, never as
+    // `Bearer REDACTED`, so a request carrying any value in that header is the recorded twin.
+    let mut exchanges = one_exchange();
+    exchanges[0]["request"]["headers"]["Authorization"] = json!("REDACTED");
+    let (_dir, r) = replay(exchanges.clone());
+    let req = Request::get(matching_request().url, T)
+        .header("User-Agent", "GameLib/1.0")
+        .header("Authorization", "Bearer some-test-key");
+    r.send(req).await.unwrap();
+    r.finish().unwrap();
+
+    // A request with no such header, or an empty one, is still drift, and the message never prints
+    // a value.
+    for header in [None, Some("")] {
+        let (_dir, r) = replay(exchanges.clone());
+        let mut req = Request::get(matching_request().url, T).header("User-Agent", "GameLib/1.0");
+        if let Some(value) = header {
+            req = req.header("Authorization", value);
+        }
+        let HttpError::Network(message) = r.send(req).await.unwrap_err() else {
+            panic!("expected a replay mismatch")
+        };
+        assert!(
+            message.contains("header authorization differs"),
+            "{message}"
+        );
+    }
+
+    // The leniency is for secret headers only: a redacted-looking User-Agent is compared exactly.
+    let mut other = one_exchange();
+    other[0]["request"]["headers"]["User-Agent"] = json!("REDACTED");
+    let (_dir, r) = replay(other);
+    assert!(r.send(matching_request()).await.is_err());
+}
+
+#[tokio::test]
 async fn replay_fails_on_a_body_that_differs() {
     let exchanges = json!([{
         "id": "post",

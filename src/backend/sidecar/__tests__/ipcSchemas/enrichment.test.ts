@@ -85,10 +85,6 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
     valid: [['abcdef0123'], ['']],
     invalid: [[], [1], ['k'.repeat(300)], [null]]
   },
-  'steamgriddb.searchGame': {
-    valid: [['doom']],
-    invalid: [[], [1], ['q'.repeat(300)]]
-  },
   'steamgriddb.getGrids': {
     valid: [[gridQuery], [{ gameId: 1 }]],
     invalid: [[], [{ gameId: 0 }], [{ gameId: 1.5 }], [{ ...gridQuery, x: 1 }]]
@@ -100,9 +96,9 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
 }
 
 describe('enrichment channel schemas', () => {
-  it('has a fixture for every key (17 total)', () => {
+  it('has a fixture for every key (16 total)', () => {
     expectFixtureCoverage(enrichmentAsyncArgs, table)
-    expect(Object.keys(enrichmentAsyncArgs).length).toBe(17)
+    expect(Object.keys(enrichmentAsyncArgs).length).toBe(16)
   })
   runFixtureTable(enrichmentAsyncArgs, table)
 
