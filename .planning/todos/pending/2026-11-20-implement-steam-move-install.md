@@ -33,8 +33,9 @@ Today you have to use Properties → Installed Files → Move in the Steam app.
 - **Steam-registered games: ask Steam first.** Spike for a move method in Steam's internal app
   manager that moves to another registered library folder silently, next to
   InstallApp/UninstallApp. Fallback: GameLib moves the folder and ACF itself, then lets Steam
-  pick it up the way it adopts installs today (on restart, see `macSteamAdoption.ts`). Only move
-  between registered Steam libraries.
+  pick it up the way it adopts installs today (on restart, see `macSteamAdoption.ts`). Moves go
+  to a Steam library; GameLib now registers a picked folder as one first with AddLibraryFolder
+  (spike 094, quick 261122-n4q).
 - **Bridge games:** decide what "move" means first. Either they stay in the bridge bottle's
   `steamapps` (then Move only applies if the bridge supports a second library folder), or the
   bottle's library can point outside the bottle. Paths written into the bridge state, the shim
@@ -65,8 +66,12 @@ for completion, because a Steam operation does not always move the ACF.
 
 ## Live gate
 
-Move a Mac-native game to a second Steam library; Steam and GameLib both show the new location and
-it launches.
+1. In GameLib's Move picker, for a Mac-native Steam game, pick an arbitrary new folder that is not
+   a Steam library. Steam registers it as a library, visible in Steam → Settings → Storage. The
+   game moves to `<folder>/steamapps/common/<installdir>`. Steam and GameLib both show the new
+   location, and the game launches from there.
+2. Move the game to an existing Steam library. The same result follows, and no new library is
+   added.
 
 ## Progress (2026-11-22, quick 261122-9sl)
 
@@ -81,3 +86,22 @@ it launches.
   - Steam Move off macOS.
   - The cross-volume move and the post-move error paths spike 090 did not exercise.
   - The live gate.
+
+## Progress (2026-11-22, quick 261122-n4q)
+
+- Option 1 is implemented: `--steam-moveapp --add-library`, a guarded AddLibraryFolder (0x16a1,
+  with Remove at +3 as a guard only, never called) whose returned index is the MoveApp target, and
+  GameLib-side folder refusals before any Steam call.
+- The folder-gap bug in `gl_ia_list_folders` is fixed for `--steam-installapp --library` and
+  `--steam-moveapp`.
+- After a move the helper nudges a stalled verify once with StartValidatingApp, and reports
+  not-settled instead of success while Files Missing persists.
+- Still open:
+  - bridge-game Move
+  - Steam Move off macOS
+  - cross-volume and external-drive moves
+  - a library on an unmounted volume (it still fails the folder lookup)
+  - Steam signed out
+  - a pre-move note in the Move dialog that the picked folder becomes the library root (it needs
+    i18n strings)
+  - the live gate
