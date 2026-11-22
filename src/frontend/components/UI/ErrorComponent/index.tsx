@@ -6,11 +6,17 @@ import { CleaningServicesOutlined, DeleteOutline } from '@mui/icons-material'
 import './index.css'
 import useLibraryState from 'frontend/state/libraryState'
 import useUiState from 'frontend/state/uiState'
+import { useMinimumSpin } from 'frontend/hooks/useMinimumSpin'
+import classNames from 'classnames'
 
 export default function ErrorComponent({ message }: { message: string }) {
   const { t } = useTranslation()
   const refreshLibrary = useLibraryState((s) => s.refreshLibrary)
   const showResetDialog = useUiState((s) => s.showResetDialog)
+  const refreshing = useLibraryState((s) => s.refreshing)
+  // Quick 261123-bbi: spin for max(1 s from the click, end of the refresh).
+  const { spinning: refreshSpinning, onClickStart: startRefreshSpin } =
+    useMinimumSpin(refreshing)
 
   return (
     <div className="errorComponent">
@@ -23,17 +29,23 @@ export default function ErrorComponent({ message }: { message: string }) {
             'generic.library.refresh-tooltip',
             'Re-scans your game libraries from each connected store.'
           )}
-          onClick={async () =>
-            refreshLibrary({
+          onClick={async () => {
+            startRefreshSpin()
+            return refreshLibrary({
               checkForUpdates: true,
               runInBackground: false,
               origin: 'error-component-retry'
             })
-          }
+          }}
         >
           <div className="button-icontext-flex">
             <div className="button-icon-flex">
-              <FontAwesomeIcon className="refreshIcon" icon={faSyncAlt} />
+              <FontAwesomeIcon
+                className={classNames('refreshIcon', {
+                  'fa-spin': refreshSpinning
+                })}
+                icon={faSyncAlt}
+              />
             </div>
             <span className="button-icon-text">
               {t('generic.library.refresh', 'Refresh Library')}

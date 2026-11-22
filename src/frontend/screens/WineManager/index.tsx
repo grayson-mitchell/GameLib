@@ -13,6 +13,7 @@ import SearchBar from 'frontend/components/UI/SearchBar'
 import WineManagerSettingsModal from './components/WineManagerSettingsModal'
 import classNames from 'classnames'
 import useUiState from 'frontend/state/uiState'
+import { useMinimumSpin } from 'frontend/hooks/useMinimumSpin'
 
 const WineItem = lazy(
   async () => import('frontend/screens/WineManager/components/WineItem')
@@ -27,6 +28,10 @@ export default function WineManager(): JSX.Element | null {
     'refreshingWineVersions',
     'refreshWineVersions'
   )
+  // Quick 261123-bbi: the toolbar icon spins for max(1 s from the click, end
+  // of the refresh). The list's loading state keeps the real flag.
+  const { spinning: refreshIconSpinning, onClickStart: startRefreshSpin } =
+    useMinimumSpin(refreshingWineVersions)
 
   const repositories: WineManagerUISettings[] = useMemo(() => {
     if (isLinux) {
@@ -165,11 +170,12 @@ export default function WineManager(): JSX.Element | null {
             className="toolbarBtn"
             title={t('generic.library.refresh', 'Refresh Library')}
             onClick={() => {
+              startRefreshSpin()
               refreshWineVersions(true)
             }}
           >
             <FontAwesomeIcon
-              className={classNames({ 'fa-spin': refreshingWineVersions })}
+              className={classNames({ 'fa-spin': refreshIconSpinning })}
               icon={faSyncAlt}
             />
           </button>

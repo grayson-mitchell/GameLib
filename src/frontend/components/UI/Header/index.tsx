@@ -25,6 +25,7 @@ import { GameInfo } from 'common/types'
 import LibraryContext from 'frontend/screens/Library/LibraryContext'
 import useLibraryState from 'frontend/state/libraryState'
 import useUiState from 'frontend/state/uiState'
+import { useMinimumSpin } from 'frontend/hooks/useMinimumSpin'
 import { countGamesExcludingDlc } from 'frontend/screens/Library/gameCount'
 import { LIBRARY_TOUR_ID } from 'frontend/screens/Library/components/LibraryTour'
 import TourButton from 'frontend/components/Tour/TourButton'
@@ -199,7 +200,10 @@ export default function Header({ list, totalGames }: Props) {
   // Quick 261030-qqh: a scoped refresh (store exit, redeem, login) spins the
   // Refresh button itself, the same feedback a manual Refresh gives, instead
   // of lighting the separate sync spinner beside it.
-  const refreshButtonSpinning = refreshing || anyScopedRefresh
+  // The value also covers the 1 s after a click (quick 261123-bbi), so an
+  // instant refresh still shows the click landed.
+  const { spinning: refreshButtonSpinning, onClickStart: startRefreshSpin } =
+    useMinimumSpin(refreshing || anyScopedRefresh)
 
   const showStaleIndicator =
     connectivity.status !== 'online' && syncedAt !== null
@@ -473,12 +477,13 @@ export default function Header({ list, totalGames }: Props) {
               active: refreshButtonSpinning
             })}
             title={t('generic.library.refresh', 'Refresh Library')}
-            onClick={async () =>
-              refreshLibrary({
+            onClick={async () => {
+              startRefreshSpin()
+              return refreshLibrary({
                 checkForUpdates: true,
                 origin: 'action-icons-refresh-button'
               })
-            }
+            }}
           >
             <FontAwesomeIcon
               className={classNames({ ['fa-spin']: refreshButtonSpinning })}
@@ -498,6 +503,7 @@ export default function Header({ list, totalGames }: Props) {
               - global refresh          -> the BUTTON spins (this hidden)
               - scoped per-runner refresh -> the BUTTON spins (this hidden;
                 quick 261030-qqh, previously this one)
+              - the 1 s after a click -> the BUTTON spins (this hidden)
               - background metadata sync, no foreground refresh -> this one
 
             The scoped case is why `isSteamSyncing` itself must NOT be
