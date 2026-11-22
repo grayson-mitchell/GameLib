@@ -7347,99 +7347,35 @@
     {
       "channel": "steamgriddb.getGrids",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "object",
-            "properties": {
-              "gameId": {
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "maximum": 9007199254740991
-              },
-              "styles": {
-                "maxItems": 64,
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "maxLength": 64
-                }
-              },
-              "dimensions": {
-                "maxItems": 64,
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "maxLength": 64
-                }
-              }
-            },
-            "required": [
-              "gameId"
-            ],
-            "additionalProperties": false
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "query",
+          "type": "{ gameId, styles?, dimensions? }",
+          "strict": true
+        }
+      ],
+      "returns": "[{ id, url, thumb }]"
     },
     {
       "channel": "steamgriddb.getHeroes",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "object",
-            "properties": {
-              "gameId": {
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "maximum": 9007199254740991
-              },
-              "styles": {
-                "maxItems": 64,
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "maxLength": 64
-                }
-              },
-              "dimensions": {
-                "maxItems": 64,
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "maxLength": 64
-                }
-              }
-            },
-            "required": [
-              "gameId"
-            ],
-            "additionalProperties": false
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "query",
+          "type": "{ gameId, styles?, dimensions? }",
+          "strict": true
+        }
+      ],
+      "returns": "[{ id, url, thumb }]"
     },
     {
       "channel": "steamgriddb.hasApiKey",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [],
-        "items": false,
-        "maxItems": 0
-      }
+      "owner": "native",
+      "args": [],
+      "returns": "boolean"
     },
     {
       "channel": "steamgriddb.searchGame",
@@ -7458,19 +7394,16 @@
     {
       "channel": "steamgriddb.setApiKey",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "maxLength": 256
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "key",
+          "type": "string",
+          "maxLength": 256,
+          "maxLengthUnit": "utf16"
+        }
+      ],
+      "returns": "void"
     },
     {
       "channel": "storeDelete",

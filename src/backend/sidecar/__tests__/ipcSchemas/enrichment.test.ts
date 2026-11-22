@@ -11,14 +11,9 @@ import {
   type FixtureTable
 } from 'backend/testUtils/ipcSchemaFixtures'
 
-const SENTINEL = 'SENTINEL-STEAMGRIDDB-KEY-77c1'
+const SENTINEL = 'SENTINEL-API-KEY-77c1'
 const noArgs = { valid: [[]], invalid: [['x']] }
 const locale = { countryCode: 'US', locale: 'en-US', currencyCode: 'USD' }
-const gridQuery = {
-  gameId: 123,
-  styles: ['alternate'],
-  dimensions: ['600x900']
-}
 
 const table: FixtureTable<typeof enrichmentAsyncArgs> = {
   getKnownFixes: {
@@ -79,26 +74,13 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
   'itad.setApiKey': {
     valid: [['k'], ['']],
     invalid: [[], [1], ['x'.repeat(257)]]
-  },
-  'steamgriddb.hasApiKey': noArgs,
-  'steamgriddb.setApiKey': {
-    valid: [['abcdef0123'], ['']],
-    invalid: [[], [1], ['k'.repeat(300)], [null]]
-  },
-  'steamgriddb.getGrids': {
-    valid: [[gridQuery], [{ gameId: 1 }]],
-    invalid: [[], [{ gameId: 0 }], [{ gameId: 1.5 }], [{ ...gridQuery, x: 1 }]]
-  },
-  'steamgriddb.getHeroes': {
-    valid: [[gridQuery]],
-    invalid: [[], [{ gameId: '1' }], [{ gameId: 1, styles: [1] }]]
   }
 }
 
 describe('enrichment channel schemas', () => {
-  it('has a fixture for every key (16 total)', () => {
+  it('has a fixture for every key (12 total)', () => {
     expectFixtureCoverage(enrichmentAsyncArgs, table)
-    expect(Object.keys(enrichmentAsyncArgs).length).toBe(16)
+    expect(Object.keys(enrichmentAsyncArgs).length).toBe(12)
   })
   runFixtureTable(enrichmentAsyncArgs, table)
 
@@ -108,15 +90,16 @@ describe('enrichment channel schemas', () => {
     }
   })
 
-  // T-67-50: a rejected API key never reaches the log.
+  // T-67-50: a rejected API key never reaches the log (itad.setApiKey; the steamgriddb.* key channel
+  // is native since Phase 86 Plan 15 and its rejections are fixed literals in the Rust handler).
   describe.each([
     [[{ [SENTINEL]: SENTINEL }]],
     [[SENTINEL.repeat(20)]],
     [[SENTINEL, SENTINEL]]
-  ])('steamgriddb.setApiKey rejection %#', (badArgs) => {
+  ])('itad.setApiKey rejection %#', (badArgs) => {
     it('is value-free', () => {
       const verdict = validateInbound(
-        'steamgriddb.setApiKey',
+        'itad.setApiKey',
         'invoke',
         roundTrip(badArgs) as unknown[]
       )

@@ -18,7 +18,6 @@ const appName = nonEmptyString(256)
 const searchTerm = z.string().max(256)
 // Lenient on purpose: the handler maps anything that is not /^[A-Z]{2}$/ to US (RESEARCH D3).
 const countryArg = optionalArg(z.string().max(16))
-const styleList = z.array(z.string().max(64)).max(64).optional()
 
 // Renderer-constructed, so strict. Quick 261029-mkz: per-game "Runs for me" override.
 const runsForMePayload = z.strictObject({
@@ -31,12 +30,6 @@ const localeSettings = z.strictObject({
   countryCode: z.string().max(16),
   locale: z.string().max(64),
   currencyCode: z.string().max(16)
-})
-
-const steamGridQuery = z.strictObject({
-  gameId: z.number().int().positive(),
-  styles: styleList,
-  dimensions: styleList
 })
 
 export const enrichmentAsyncArgs = {
@@ -69,12 +62,9 @@ export const enrichmentAsyncArgs = {
   ]),
   // Phase 47 D-05: the optional ITAD user key. Status is booleans only; the key is bounded.
   'itad.getKeyStatus': noArgs,
-  'itad.setApiKey': z.tuple([z.string().max(256)]),
-  'steamgriddb.hasApiKey': noArgs,
-  // T-67-50: bounded; a rejection never echoes the key (value-free rejection log).
-  'steamgriddb.setApiKey': z.tuple([z.string().max(256)]),
-  'steamgriddb.getGrids': z.tuple([steamGridQuery]),
-  'steamgriddb.getHeroes': z.tuple([steamGridQuery])
+  'itad.setApiKey': z.tuple([z.string().max(256)])
+  // Phase 86 (86-15, D-17): the five `steamgriddb.*` channels are native `info` channels
+  // (`nativeChannels.json`); their bounds live in the Rust decode.
 }
 
 interface EnrichmentAsyncReturns {
@@ -92,14 +82,6 @@ interface EnrichmentAsyncReturns {
   getItadSteamGids: Promise<Record<string, string>>
   'itad.getKeyStatus': Promise<{ hasKey: boolean; rejected: boolean }>
   'itad.setApiKey': Promise<void>
-  'steamgriddb.hasApiKey': Promise<boolean>
-  'steamgriddb.setApiKey': Promise<void>
-  'steamgriddb.getGrids': Promise<
-    Array<{ id: number; url: string; thumb: string }>
-  >
-  'steamgriddb.getHeroes': Promise<
-    Array<{ id: number; url: string; thumb: string }>
-  >
 }
 
 export type EnrichmentAsync = InvokeFns<

@@ -2,7 +2,7 @@
  * Curated enrichment-channel registration (Phase 34.2 Plan 06, D-04/D-07/
  * D-10, REQ-34.2-04/REQ-34.2-11/REQ-34.2-12/REQ-34.2-14).
  *
- * Registers the 16 enrichment channels the game-details page and store
+ * Registers the 12 enrichment channels the game-details page and store
  * search container depend on, onto platformApi's own `ipcMain` recorder,
  * importing the REAL underlying bodies plans 34.2-01/34.2-03 already
  * extracted or wired unchanged (mirrors `gameDetailsFlowRegistration.ts`'s
@@ -113,29 +113,11 @@
  * key value never leaves the sidecar; the adapter (`storeSearch/itad.ts`) reads the same owner
  * through `deps` for its user > env > baked key precedence.
  *
- * Phase 86 (86-15, D-17): `steamgriddb.searchGame` is no longer registered here. It is a native `info`
- * channel served by Rust (`nativeChannels.json`), so it has exactly one owner.
+ * Phase 86 (86-15, D-17): the five `steamgriddb.*` channels are no longer registered here. They
+ * are native `info` channels served by Rust (`nativeChannels.json`), so each has exactly one owner.
  *
- * `steamgriddb.*` (4) / `getGogDiscounts` (1) — Phase 34.6 Plan 09,
- * REQ-34.6-02/REQ-34.6-04/REQ-34.6-08/REQ-34.6-13, Amendment A-03:
- *
- *   - `steamgriddb.hasApiKey` / `.setApiKey` / `.getGrids` /
- *     `.getHeroes` -> bodies copied from `steamgrid/ipc_handler.ts`'s five
- *     `addHandler` calls with ONE deliberate change required by A-03: every
- *     API-key read and write goes through
- *     `steamgrid/secretStore.ts`'s `deps.steamGridSecrets`, never
- *     through `GlobalConfig`/`steamgrid/secureKey.ts` directly. This is a
- *     narrow, explicit exception to this file's own D-02 port-then-harden
- *     rule (applied everywhere else in this file): under the sidecar,
- *     `safeStorage` resolves to `platform/index.ts`'s dead stub, so a
- *     byte-equivalent port would persist a real key to `config.json` in
- *     the clear (T-34.6-01). `steamgrid/ipc_handler.ts` itself is NEVER
- *     imported here (it calls `addHandler`, which imports the real
- *     `electron`) — only `steamgrid/utils.ts` (the actual SteamGridDB API
- *     client) and `steamgrid/secretStore.ts` (the seam) are imported,
- *     mirroring this file's existing curated-import discipline (D-04).
- *   - `getGogDiscounts` -> `discounts/fetchDiscounts.ts`'s
- *     `getGogDiscounts(locale, hideOwned, wishlistOnly)` (Plan 34.6-09
+ * `getGogDiscounts` (1) — Phase 34.6 Plan 09, REQ-34.6-08: `discounts/fetchDiscounts.ts`'s
+ * `getGogDiscounts(locale, hideOwned, wishlistOnly)` (Plan 34.6-09
  *     extraction out of `discounts/index.ts`'s previously-inline
  *     `addHandler` body — that file had no separate underlying module
  *     before this plan, exactly like every other feature ported into this
@@ -168,9 +150,8 @@ import {
 import { getRunsForMeMap, setRunsForMeByUser } from '../runsForMe'
 import type { SteamGridDbSecretStore } from '../steamgrid/secretStore'
 import type { ItadSecrets } from '../storeSearch/itadSecrets'
-import * as SteamGridDB from '../steamgrid/utils'
 import { getGogDiscounts } from '../discounts/fetchDiscounts'
-import { logError, logWarning, LogPrefix } from '../logger'
+import { logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
 import type { ManagerDeps, StoreManagers, Stores } from 'backend/services/types'
 
@@ -223,7 +204,7 @@ const RUNS_FOR_ME_RUNNERS: readonly string[] = Object.freeze([
 ] as const)
 
 /**
- * Registers the 16 enrichment channels. Called once from `handlers.ts`
+ * Registers the 12 enrichment channels. Called once from `handlers.ts`
  * — this module owns no side effects at import time beyond the imports
  * above; the caller decides when registration onto the handler registry
  * happens.
@@ -361,36 +342,6 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
       )
   )
 
-  // ── steamgriddb.* (5) — Amendment A-03: every read/write below goes
-  // through deps.steamGridSecrets, NEVER GlobalConfig or
-  // steamgrid/secureKey.ts directly. See module docstring.
-
-  deps.ipc.handle('steamgriddb.hasApiKey', async () => {
-    const apiKey = await deps.steamGridSecrets.getApiKey()
-    return !!apiKey
-  })
-
-  deps.ipc.handle(
-    'steamgriddb.setApiKey',
-    async (_event: unknown, ...args: unknown[]) => {
-      // WR-01 (34.6-REVIEW.md): `args[0] as string` is a CAST, not a check. A non-string
-      // reaching `SidecarKeyringSlotStore.setToken()` is awaited through `requestRustInvoke`
-      // FIRST -- so the keyring write may actually be issued (e.g. as a serialized `null`) --
-      // and only afterwards does `token.length` throw, landing in a catch that logs the write
-      // as "failed" when it may have succeeded with a corrupted value. `setToken` is a total
-      // method, so the caller never sees a rejection either. Reject at the boundary instead.
-      const key = args[0]
-      if (typeof key !== 'string') {
-        logWarning(
-          'steamgriddb.setApiKey: ignored a non-string key',
-          LogPrefix.Backend
-        )
-        return
-      }
-      await deps.steamGridSecrets.setApiKey(key)
-    }
-  )
-
   // ── itad.* (2) — the optional user key (Phase 47 D-05, D-06). The renderer gets two booleans,
   // never the key (T-47-41); the adapter reads the same owner through `deps` for key precedence.
 
@@ -412,68 +363,6 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
         return
       }
       await deps.itadSecrets.setApiKey(key)
-    }
-  )
-
-  deps.ipc.handle(
-    'steamgriddb.getGrids',
-    async (_event: unknown, ...args: unknown[]) => {
-      const gridArgs = args[0] as {
-        gameId: number
-        styles?: string[]
-        dimensions?: string[]
-      }
-      const apiKey = await deps.steamGridSecrets.getApiKey()
-      if (!apiKey) {
-        return []
-      }
-
-      try {
-        const results = await SteamGridDB.getGrids(deps, apiKey, {
-          gameId: gridArgs.gameId,
-          dimensions: gridArgs.dimensions,
-          styles: gridArgs.styles
-        })
-        return results.map((grid) => ({
-          id: grid.id,
-          url: grid.url,
-          thumb: grid.thumb
-        }))
-      } catch (error) {
-        logError([`SteamGridDB getGrids failed:`, error], LogPrefix.Backend)
-        throw error
-      }
-    }
-  )
-
-  deps.ipc.handle(
-    'steamgriddb.getHeroes',
-    async (_event: unknown, ...args: unknown[]) => {
-      const heroArgs = args[0] as {
-        gameId: number
-        styles?: string[]
-        dimensions?: string[]
-      }
-      const apiKey = await deps.steamGridSecrets.getApiKey()
-      if (!apiKey) {
-        return []
-      }
-
-      try {
-        const results = await SteamGridDB.getHeroes(deps, apiKey, {
-          gameId: heroArgs.gameId,
-          dimensions: heroArgs.dimensions,
-          styles: heroArgs.styles
-        })
-        return results.map((grid) => ({
-          id: grid.id,
-          url: grid.url,
-          thumb: grid.thumb
-        }))
-      } catch (error) {
-        logError([`SteamGridDB getHeroes failed:`, error], LogPrefix.Backend)
-        throw error
-      }
     }
   )
 }

@@ -40,7 +40,11 @@ pub const OPS: &[&str] = &[
     "info_overrides_set",
     "info_recent_add",
     "info_recent_remove",
+    "info_steamgrid_grids",
+    "info_steamgrid_has_key",
+    "info_steamgrid_heroes",
     "info_steamgrid_search",
+    "info_steamgrid_set_key",
 ];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
@@ -69,7 +73,11 @@ async fn route(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, String>
         "info_overrides_set" => overrides::set(ctx, decode(op, args)?).map(Value::Bool),
         "info_recent_add" => recent::add(ctx, decode(op, args)?).map(|()| Value::Null),
         "info_recent_remove" => recent::remove(ctx, decode(op, args)?).map(|()| Value::Null),
+        "info_steamgrid_grids" => steamgrid::get_grids(ctx, decode(op, args)?).await,
+        "info_steamgrid_has_key" => steamgrid::has_api_key(ctx, decode(op, args)?),
+        "info_steamgrid_heroes" => steamgrid::get_heroes(ctx, decode(op, args)?).await,
         "info_steamgrid_search" => steamgrid::search_game(ctx, decode(op, args)?).await,
+        "info_steamgrid_set_key" => steamgrid::set_api_key(ctx, decode(op, args)?),
         _ => Err(format!("unknown op: {op}")),
     }
 }

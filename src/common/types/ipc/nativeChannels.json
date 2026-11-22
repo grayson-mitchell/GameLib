@@ -431,6 +431,186 @@
       "returns": "[{ id, name }]",
       "valid": [["Celeste"], [""]],
       "invalid": [[], [1], [null], ["a", "b"], [{}]]
+    },
+    "steamgriddb.hasApiKey": {
+      "kind": "invoke",
+      "slice": "info",
+      "args": [],
+      "returns": "boolean",
+      "valid": [[]],
+      "invalid": [[1], [null], [{}]]
+    },
+    "steamgriddb.setApiKey": {
+      "kind": "invoke",
+      "slice": "info",
+      "args": [
+        {
+          "name": "key",
+          "type": "string",
+          "maxLength": 256,
+          "maxLengthUnit": "utf16"
+        }
+      ],
+      "returns": "void",
+      "valid": [["abcdef0123"], [""]],
+      "invalid": [[], [1], [null], ["a", "b"], [{}]]
+    },
+    "steamgriddb.getGrids": {
+      "kind": "invoke",
+      "slice": "info",
+      "args": [
+        {
+          "name": "query",
+          "type": "{ gameId, styles?, dimensions? }",
+          "strict": true
+        }
+      ],
+      "returns": "[{ id, url, thumb }]",
+      "valid": [
+        [{ "gameId": 1 }],
+        [
+          {
+            "gameId": 13136,
+            "styles": ["alternate"],
+            "dimensions": ["460x215", "920x430"]
+          }
+        ],
+        [{ "gameId": 1, "styles": [], "dimensions": [] }]
+      ],
+      "invalid": [
+        [],
+        [{}],
+        [{ "gameId": 0 }],
+        [{ "gameId": -1 }],
+        [{ "gameId": 1.5 }],
+        [{ "gameId": "1" }],
+        [{ "gameId": null }],
+        [{ "gameId": 1, "extra": 1 }],
+        [{ "gameId": 1, "styles": null }],
+        [{ "gameId": 1, "styles": [1] }],
+        [{ "gameId": 1, "styles": "alternate" }],
+        [
+          {
+            "gameId": 1,
+            "styles": [
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a",
+              "a"
+            ]
+          }
+        ],
+        [
+          {
+            "gameId": 1,
+            "dimensions": [
+              "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            ]
+          }
+        ],
+        [{ "gameId": 1 }, { "gameId": 2 }],
+        [1]
+      ]
+    },
+    "steamgriddb.getHeroes": {
+      "kind": "invoke",
+      "slice": "info",
+      "args": [
+        {
+          "name": "query",
+          "type": "{ gameId, styles?, dimensions? }",
+          "strict": true
+        }
+      ],
+      "returns": "[{ id, url, thumb }]",
+      "valid": [
+        [{ "gameId": 1 }],
+        [
+          {
+            "gameId": 13136,
+            "styles": ["alternate"],
+            "dimensions": ["1920x620"]
+          }
+        ]
+      ],
+      "invalid": [
+        [],
+        [{}],
+        [{ "gameId": 0 }],
+        [{ "gameId": "1" }],
+        [{ "gameId": 1, "extra": 1 }],
+        [{ "gameId": 1, "styles": null }],
+        [{ "gameId": 1, "dimensions": [1] }],
+        [
+          {
+            "gameId": 1,
+            "styles": [
+              "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            ]
+          }
+        ]
+      ]
     }
   }
 }

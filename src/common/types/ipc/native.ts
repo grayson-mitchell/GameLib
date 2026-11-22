@@ -21,6 +21,13 @@ type LogMessage =
   | string[]
   | { name?: string; message?: string; stack?: string }
 
+/** The renderer's SteamGridDB grids and heroes request; the Rust `GridArgs` decode is the schema. */
+interface SteamGridQuery {
+  gameId: number
+  styles?: string[]
+  dimensions?: string[]
+}
+
 export interface NativeAsync {
   getHeroicVersion: () => string
   getLogContent: (args: GetLogFileArgs) => string
@@ -63,6 +70,19 @@ export interface NativeAsync {
   'steamgriddb.searchGame': (
     query: string
   ) => Promise<Array<{ id: number; name: string }>>
+  // Phase 86 (86-15, D-17): the other four SteamGridDB channels, run by the same `info` slice.
+  // `hasApiKey` is whether the `steamgrid-api-key` Keychain slot holds a key; `setApiKey` stores the
+  // trimmed key (0 to 256 UTF-16 units) or clears it for an empty one. `getGrids` and `getHeroes`
+  // take a strict `{ gameId, styles?, dimensions? }` (a positive integer id; each list at most 64
+  // strings of at most 64 UTF-16 units) and answer `[]` when no key is stored.
+  'steamgriddb.hasApiKey': () => Promise<boolean>
+  'steamgriddb.setApiKey': (key: string) => Promise<void>
+  'steamgriddb.getGrids': (
+    query: SteamGridQuery
+  ) => Promise<Array<{ id: number; url: string; thumb: string }>>
+  'steamgriddb.getHeroes': (
+    query: SteamGridQuery
+  ) => Promise<Array<{ id: number; url: string; thumb: string }>>
 }
 
 export interface NativeSync {

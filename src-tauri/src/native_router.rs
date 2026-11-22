@@ -445,8 +445,12 @@ impl NativeRouter {
         // by the `info` slice. The sidecar no longer registers `getAnticheatInfo`.
         invoke.insert("getAnticheatInfo", info_dispatch::get_anticheat_info);
         // Phase 86 (86-15, D-17): the SteamGridDB title search, run by the `info` slice with the key
-        // from the Keychain owner. The sidecar no longer registers `steamgriddb.searchGame`.
+        // from the Keychain owner. The sidecar no longer registers any of the five `steamgriddb.*` channels.
+        invoke.insert("steamgriddb.getGrids", info_dispatch::steamgrid_grids);
+        invoke.insert("steamgriddb.getHeroes", info_dispatch::steamgrid_heroes);
+        invoke.insert("steamgriddb.hasApiKey", info_dispatch::steamgrid_has_key);
         invoke.insert("steamgriddb.searchGame", info_dispatch::steamgrid_search);
+        invoke.insert("steamgriddb.setApiKey", info_dispatch::steamgrid_set_key);
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -803,7 +807,15 @@ mod tests {
         assert!(info.contains(&"getAllGameOverrides"), "{info:?}");
         assert!(info.contains(&"getGameMetadataOverride"), "{info:?}");
         assert!(info.contains(&"getAnticheatInfo"), "{info:?}");
-        assert!(info.contains(&"steamgriddb.searchGame"), "{info:?}");
+        for name in [
+            "steamgriddb.getGrids",
+            "steamgriddb.getHeroes",
+            "steamgriddb.hasApiKey",
+            "steamgriddb.searchGame",
+            "steamgriddb.setApiKey",
+        ] {
+            assert!(info.contains(&name), "{name}: {info:?}");
+        }
         for name in info {
             // The info slice is invoke-only: no send queue exists for it.
             assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");

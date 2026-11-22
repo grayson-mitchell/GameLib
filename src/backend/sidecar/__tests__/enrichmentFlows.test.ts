@@ -234,18 +234,6 @@ jest.mock('../../steamgrid/secretStore', () => ({
   createSteamGridDbSecrets: () => mockGetSteamGridDbSecretStore()
 }))
 
-// ── steamgrid/utils — the real SteamGridDB API client. Mocked at this
-// boundary per this suite's own "mocked only at the boundaries" discipline
-// (module docstring): the channel-routing/seam logic is what this suite
-// tests, not SteamGridDB's own HTTP-shaped client body (already covered by
-// steamgrid/__tests__ if present) ────────────────────────────────────────
-const mockSteamGridGetGrids = jest.fn()
-const mockSteamGridGetHeroes = jest.fn()
-jest.mock('../../steamgrid/utils', () => ({
-  getGrids: (...args: unknown[]) => mockSteamGridGetGrids(...args),
-  getHeroes: (...args: unknown[]) => mockSteamGridGetHeroes(...args)
-}))
-
 // ── discounts/fetchDiscounts — getGogDiscounts's Plan 34.6-09 extraction
 // out of discounts/index.ts's previously-inline addHandler body. Mocked
 // here for the same reason as steamgrid/utils above: this suite tests the
@@ -334,7 +322,6 @@ let wikiGameInfoStore: ReturnType<
 let configStore: ReturnType<
   typeof import('../../constants/key_value_stores').createKvsStores
 >['configStore']
-let loggerModule: typeof import('../../logger')
 let mockedGlobalConfigGet: jest.Mock
 let mockedIsOnline: jest.Mock
 let mockedRunOnceWhenOnline: jest.Mock
@@ -360,7 +347,6 @@ function freshRegistry(): void {
       registry: createStoreRegistry(),
       root: testRoot
     }))
-  loggerModule = require('../../logger')
   /* eslint-enable @typescript-eslint/no-require-imports */
   mockedGlobalConfigGet = createGlobalConfig as jest.Mock
   mockedIsOnline = jest.fn()
@@ -560,8 +546,6 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     mockSecretStoreGetApiKey.mockReset().mockResolvedValue(undefined)
     mockSecretStoreSetApiKey.mockReset().mockResolvedValue(undefined)
     mockSecretStoreClearApiKey.mockReset().mockResolvedValue(undefined)
-    mockSteamGridGetGrids.mockReset()
-    mockSteamGridGetHeroes.mockReset()
     mockGetGogDiscounts.mockReset()
 
     envMock.isWindows = false
@@ -1069,156 +1053,10 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     })
   })
 
-  // ── REQ-34.6-02/04/08/13, Amendment A-03: steamgriddb.* + getGogDiscounts
-  // (invoke) — every steamgriddb.* read/write below goes through
-  // deps.steamGridSecrets exclusively; NEVER GlobalConfig or
-  // steamgrid/secureKey.ts directly (T-34.6-01/T-34.6-24). Never logs,
-  // echoes, or otherwise persists a raw API key value in this file — every
-  // assertion below checks presence/absence and call arguments only.
-  describe('REQ-34.6-02/04/08/13 steamgriddb.* + getGogDiscounts (invoke)', () => {
-    it('REQ-34.6-02 steamgriddb.hasApiKey is false when the secret store holds no key, and never reads GlobalConfig', async () => {
-      mockSecretStoreGetApiKey.mockResolvedValueOnce(undefined)
-      const { input, frames } = boot()
-      // bootstrap.ts's REAL (unmocked) startSidecarSteamGridDbSecretStore()
-      // fires a synchronous-start, fire-and-forget migrateSteamGridDbApiKey()
-      // that reads the global config on its very first line (Plan 34.6-02,
-      // A-03) — unrelated to the handler under test here. Cleared AFTER
-      // boot() but BEFORE the invoke below so the assertion below
-      // is scoped to the hasApiKey handler's OWN behavior only.
-      mockedGlobalConfigGet.mockClear()
-      writeInvoke(input, 'sgdb-has-1', 'steamgriddb.hasApiKey', [])
-      await flush()
-      expect(findResponse(frames, 'sgdb-has-1')?.result).toBe(false)
-
-      expect(mockedGlobalConfigGet).not.toHaveBeenCalled()
-    })
-
-    it('REQ-34.6-02 steamgriddb.hasApiKey is true when the secret store holds a key, and never reads GlobalConfig', async () => {
-      mockSecretStoreGetApiKey.mockResolvedValueOnce('a-seeded-test-value')
-      const { input, frames } = boot()
-      // See the test above for why this mockClear() is required.
-      mockedGlobalConfigGet.mockClear()
-      writeInvoke(input, 'sgdb-has-2', 'steamgriddb.hasApiKey', [])
-      await flush()
-      expect(findResponse(frames, 'sgdb-has-2')?.result).toBe(true)
-
-      expect(mockedGlobalConfigGet).not.toHaveBeenCalled()
-    })
-
-    it('REQ-34.6-02 steamgriddb.setApiKey persists via the secret store’s setApiKey and never touches GlobalConfig', async () => {
-      const { input, frames } = boot()
-      // See the hasApiKey test above for why this mockClear() is required
-      // and load-bearing, not incidental cleanup.
-      mockedGlobalConfigGet.mockClear()
-      writeInvoke(input, 'sgdb-set-1', 'steamgriddb.setApiKey', [
-        'a-seeded-test-value'
-      ])
-      await flush()
-
-      expect(findResponse(frames, 'sgdb-set-1')?.ok).toBe(true)
-      expect(mockSecretStoreSetApiKey).toHaveBeenCalledWith(
-        'a-seeded-test-value'
-      )
-      // Amendment A-03's load-bearing assertion: the global config must
-      // NEVER be called by this handler. RED-proven live during
-      // implementation (see 34.6-09-SUMMARY.md) by temporarily adding a
-      // `the global config.setSetting(...)` call inside the handler —
-      // this exact assertion failed, and only this one, before the
-      // temporary line was reverted.
-      expect(mockedGlobalConfigGet).not.toHaveBeenCalled()
-    })
-
-    // WR-01 (34.6-REVIEW.md): the handler used `args[0] as string` -- a CAST, not
-    // a check. A non-string reaching SidecarKeyringSlotStore.setToken() gets
-    // requestRustInvoke awaited FIRST (so the keyring write may actually be issued,
-    // e.g. as a serialized null) and only then does `token.length` throw, landing in
-    // a catch that logs the write as "failed" when it may have succeeded with a
-    // corrupted value. setToken is a total method, so no rejection reaches the caller
-    // either. These pin rejection at the boundary, before any keyring round trip.
-
-    it.each([
-      ['undefined', undefined],
-      ['a number', 42],
-      ['null', null],
-      ['an object', { key: 'not-a-string' }]
-    ])(
-      'WR-01 steamgriddb.setApiKey REJECTS %s at the schema boundary and never reaches the secret store',
-      async (_label, badKey) => {
-        const { input, frames } = boot()
-        writeInvoke(input, 'sgdb-bad-1', 'steamgriddb.setApiKey', [badKey])
-        await flush()
-
-        // Phase 67: the channel schema rejects a non-string key before the handler runs.
-        expect(findResponse(frames, 'sgdb-bad-1')?.ok).toBe(false)
-        // The load-bearing half: the store is never touched, so no keyring
-        // round trip is attempted with a non-string.
-        expect(mockSecretStoreSetApiKey).not.toHaveBeenCalled()
-      }
-    )
-
-    it('WR-01 steamgriddb.setApiKey still accepts an EMPTY STRING (a valid clear gesture, not a malformed key)', async () => {
-      const { input, frames } = boot()
-      writeInvoke(input, 'sgdb-empty-1', 'steamgriddb.setApiKey', [''])
-      await flush()
-
-      expect(findResponse(frames, 'sgdb-empty-1')?.ok).toBe(true)
-      // Proves the guard tests the TYPE, not truthiness -- a falsy-check here
-      // would have silently broken "submit an empty value to clear the key".
-      expect(mockSecretStoreSetApiKey).toHaveBeenCalledWith('')
-    })
-
-    it('REQ-34.6-04 steamgriddb.getGrids and steamgriddb.getHeroes each return their own mapped results when a key is stored', async () => {
-      mockSecretStoreGetApiKey.mockResolvedValue('a-seeded-test-value')
-      mockSteamGridGetGrids.mockResolvedValueOnce([
-        {
-          id: 10,
-          url: 'https://example/grid.png',
-          thumb: 'https://example/grid-thumb.png'
-        }
-      ])
-      mockSteamGridGetHeroes.mockResolvedValueOnce([
-        {
-          id: 20,
-          url: 'https://example/hero.png',
-          thumb: 'https://example/hero-thumb.png'
-        }
-      ])
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'sgdb-grids-1', 'steamgriddb.getGrids', [
-        { gameId: 123, styles: ['alternate'], dimensions: ['600x900'] }
-      ])
-      writeInvoke(input, 'sgdb-heroes-1', 'steamgriddb.getHeroes', [
-        { gameId: 123 }
-      ])
-      await flush()
-
-      expect(mockSteamGridGetGrids).toHaveBeenCalledWith(
-        expect.anything(),
-        'a-seeded-test-value',
-        { gameId: 123, dimensions: ['600x900'], styles: ['alternate'] }
-      )
-      expect(findResponse(frames, 'sgdb-grids-1')?.result).toEqual([
-        {
-          id: 10,
-          url: 'https://example/grid.png',
-          thumb: 'https://example/grid-thumb.png'
-        }
-      ])
-      expect(mockSteamGridGetHeroes).toHaveBeenCalledWith(
-        expect.anything(),
-        'a-seeded-test-value',
-        { gameId: 123, dimensions: undefined, styles: undefined }
-      )
-      expect(findResponse(frames, 'sgdb-heroes-1')?.result).toEqual([
-        {
-          id: 20,
-          url: 'https://example/hero.png',
-          thumb: 'https://example/hero-thumb.png'
-        }
-      ])
-    })
-
+  // ── REQ-34.6-08: getGogDiscounts (invoke). The five steamgriddb.* channels left this
+  // registration in Phase 86 Plan 15 (D-17): they are native `info` channels now, and their
+  // behaviour is pinned by the Rust golden_steamgrid test and the native manifest vectors.
+  describe('REQ-34.6-08 getGogDiscounts (invoke)', () => {
     it('REQ-34.6-08 getGogDiscounts delegates to fetchDiscounts.ts’s getGogDiscounts(deps, locale, hideOwned, wishlistOnly)', async () => {
       const locale = {
         countryCode: 'US',
@@ -1249,29 +1087,6 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       expect(findResponse(frames, 'discounts-1')?.result).toEqual([
         { id: 'prod-1', title: 'Discounted Game' }
       ])
-    })
-
-    it('T-34.6-25: a steamgriddb.getGrids rejection is logged without any log argument containing the seeded API key value', async () => {
-      const logErrorSpy = jest.spyOn(loggerModule, 'logError')
-      const seededKey = 'a-seeded-test-value-that-must-never-be-logged'
-      mockSecretStoreGetApiKey.mockResolvedValueOnce(seededKey)
-      mockSteamGridGetGrids.mockRejectedValueOnce(
-        new Error('SteamGridDB boundary rejection')
-      )
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'sgdb-search-err', 'steamgriddb.getGrids', [
-        { gameId: 1 }
-      ])
-      await flush()
-
-      expect(findResponse(frames, 'sgdb-search-err')?.ok).toBe(false)
-      expect(logErrorSpy).toHaveBeenCalled()
-      for (const call of logErrorSpy.mock.calls) {
-        const serialized = JSON.stringify(call)
-        expect(serialized).not.toContain(seededKey)
-      }
-      logErrorSpy.mockRestore()
     })
   })
 

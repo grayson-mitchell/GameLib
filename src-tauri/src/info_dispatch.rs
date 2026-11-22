@@ -461,6 +461,152 @@ pub(crate) fn steamgrid_search(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> Native
     })
 }
 
+/// `steamgriddb.hasApiKey` takes no argument.
+fn parse_steamgrid_has_key(args: &[Value]) -> Result<(), Rejection> {
+    if args.is_empty() {
+        Ok(())
+    } else {
+        Err(("(args)", "too_big"))
+    }
+}
+
+/// The native `steamgriddb.hasApiKey` handler (slice `info`, D-17): whether a key is stored.
+pub(crate) fn steamgrid_has_key(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        parse_steamgrid_has_key(&args)
+            .map_err(|(path, code)| invalid_args("steamgriddb.hasApiKey", &[path], &[code]))?;
+        let info = info_ctx().ok_or_else(|| "steamgriddb.hasApiKey: not ready".to_string())?;
+        run_info_op(
+            Arc::clone(info),
+            "info_steamgrid_has_key",
+            vec![serde_json::json!({})],
+            "steamgriddb.hasApiKey: the check did not finish",
+        )
+        .await
+    })
+}
+
+/// Decodes the one `key` argument of `steamgriddb.setApiKey`: exactly one string of 0 to
+/// [`gamelib_info::steamgrid::TEXT_MAX_UTF16`] UTF-16 code units (an empty one clears the key).
+fn parse_steamgrid_set_key(args: &[Value]) -> Result<&str, Rejection> {
+    // The same shape and bound as the search term; the value is never echoed into a rejection.
+    parse_steamgrid_search(args)
+}
+
+/// The native `steamgriddb.setApiKey` handler (slice `info`, D-17): stores the trimmed key in the
+/// `steamgrid-api-key` slot, or clears it for an empty value. The key is never in a log line, an
+/// error or a rejection (T-86-31, T-86-33).
+pub(crate) fn steamgrid_set_key(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        let key = parse_steamgrid_set_key(&args)
+            .map_err(|(path, code)| invalid_args("steamgriddb.setApiKey", &[path], &[code]))?
+            .to_string();
+        let info = info_ctx().ok_or_else(|| "steamgriddb.setApiKey: not ready".to_string())?;
+        run_info_op(
+            Arc::clone(info),
+            "info_steamgrid_set_key",
+            vec![serde_json::json!({ "key": key })],
+            "steamgriddb.setApiKey: the write did not finish",
+        )
+        .await
+    })
+}
+
+/// Checks one `styles` or `dimensions` list: when present, an array of at most
+/// [`gamelib_info::steamgrid::LIST_MAX_ITEMS`] strings of at most
+/// [`gamelib_info::steamgrid::LIST_ITEM_MAX_UTF16`] UTF-16 code units.
+fn check_steamgrid_list(value: Option<&Value>, path: &'static str) -> Result<(), Rejection> {
+    let Some(value) = value else {
+        return Ok(());
+    };
+    let Value::Array(items) = value else {
+        return Err((path, "invalid_type"));
+    };
+    if items.len() > gamelib_info::steamgrid::LIST_MAX_ITEMS {
+        return Err((path, "too_big"));
+    }
+    for item in items {
+        let Value::String(text) = item else {
+            return Err((path, "invalid_type"));
+        };
+        if text.encode_utf16().count() > gamelib_info::steamgrid::LIST_ITEM_MAX_UTF16 {
+            return Err((path, "too_big"));
+        }
+    }
+    Ok(())
+}
+
+/// Decodes the one object argument of `steamgriddb.getGrids` and `steamgriddb.getHeroes`: a strict
+/// `{ gameId, styles?, dimensions? }` with `gameId` a positive integer. The object is handed on as
+/// it came; the crate decodes it again strictly. Every rejection is a fixed path and code, never
+/// the renderer's value.
+fn parse_steamgrid_artwork(args: &[Value]) -> Result<&Value, Rejection> {
+    let [arg] = args else {
+        return Err(("(args)", "invalid_type"));
+    };
+    let Value::Object(object) = arg else {
+        return Err(("0", "invalid_type"));
+    };
+    if object
+        .keys()
+        .any(|key| !matches!(key.as_str(), "gameId" | "styles" | "dimensions"))
+    {
+        return Err(("0", "unrecognized_keys"));
+    }
+    match object.get("gameId") {
+        Some(Value::Number(n)) => {
+            if n.as_u64() == Some(0) || n.as_i64().is_some_and(|v| v < 0) {
+                return Err(("0.gameId", "too_small"));
+            }
+            if n.as_u64().is_none() && n.as_i64().is_none() {
+                return Err(("0.gameId", "invalid_type"));
+            }
+        }
+        _ => return Err(("0.gameId", "invalid_type")),
+    }
+    check_steamgrid_list(object.get("styles"), "0.styles")?;
+    check_steamgrid_list(object.get("dimensions"), "0.dimensions")?;
+    Ok(arg)
+}
+
+/// One artwork channel: validates first, then runs `op` on the blocking pool.
+fn steamgrid_artwork(
+    channel: &'static str,
+    op: &'static str,
+    failed: &'static str,
+    args: Vec<Value>,
+) -> NativeFuture {
+    Box::pin(async move {
+        let request = parse_steamgrid_artwork(&args)
+            .map_err(|(path, code)| invalid_args(channel, &[path], &[code]))?
+            .clone();
+        let info = info_ctx().ok_or_else(|| format!("{channel}: not ready"))?;
+        run_info_op(Arc::clone(info), op, vec![request], failed).await
+    })
+}
+
+/// The native `steamgriddb.getGrids` handler (slice `info`, D-17): `[{id, url, thumb}]`, `[]` when no
+/// key is stored.
+pub(crate) fn steamgrid_grids(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    steamgrid_artwork(
+        "steamgriddb.getGrids",
+        "info_steamgrid_grids",
+        "steamgriddb.getGrids: the request did not finish",
+        args,
+    )
+}
+
+/// The native `steamgriddb.getHeroes` handler (slice `info`, D-17): `[{id, url, thumb}]`, `[]` when
+/// no key is stored.
+pub(crate) fn steamgrid_heroes(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    steamgrid_artwork(
+        "steamgriddb.getHeroes",
+        "info_steamgrid_heroes",
+        "steamgriddb.getHeroes: the request did not finish",
+        args,
+    )
+}
+
 #[cfg(test)]
 use gamelib_store::host::StoreHost;
 #[cfg(test)]
@@ -1083,6 +1229,168 @@ mod tests {
             .headers
             .iter()
             .any(|(k, v)| k == "Authorization" && v == "Bearer test-key"));
+    }
+
+    #[test]
+    fn the_steamgrid_key_channels_accept_exactly_their_shapes() {
+        assert_eq!(parse_steamgrid_has_key(&[]), Ok(()));
+        assert_eq!(
+            parse_steamgrid_has_key(&[json!(1)]),
+            Err(("(args)", "too_big"))
+        );
+        assert_eq!(parse_steamgrid_set_key(&[json!("k")]), Ok("k"));
+        assert_eq!(parse_steamgrid_set_key(&[json!("")]), Ok(""));
+        assert_eq!(
+            parse_steamgrid_set_key(&[json!("k".repeat(256))]).map(str::len),
+            Ok(256)
+        );
+        for (args, want) in [
+            (vec![], ("(args)", "invalid_type")),
+            (vec![json!(1)], ("0", "invalid_type")),
+            (vec![json!(null)], ("0", "invalid_type")),
+            (vec![json!("a"), json!("b")], ("(args)", "invalid_type")),
+            (vec![json!("k".repeat(257))], ("0", "too_big")),
+        ] {
+            assert_eq!(parse_steamgrid_set_key(&args), Err(want), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn the_steamgrid_artwork_argument_is_strict() {
+        let ok = |v: Value| parse_steamgrid_artwork(&[v]).is_ok();
+        assert!(ok(json!({ "gameId": 1 })));
+        assert!(ok(
+            json!({ "gameId": 1, "styles": ["a"], "dimensions": [] })
+        ));
+        let limit = vec!["x".repeat(64); 64];
+        assert!(ok(json!({ "gameId": 7, "styles": limit })));
+        for (arg, want) in [
+            (json!({}), ("0.gameId", "invalid_type")),
+            (json!({ "gameId": 0 }), ("0.gameId", "too_small")),
+            (json!({ "gameId": -1 }), ("0.gameId", "too_small")),
+            (json!({ "gameId": 1.5 }), ("0.gameId", "invalid_type")),
+            (json!({ "gameId": "1" }), ("0.gameId", "invalid_type")),
+            (json!({ "gameId": null }), ("0.gameId", "invalid_type")),
+            (
+                json!({ "gameId": 1, "extra": 1 }),
+                ("0", "unrecognized_keys"),
+            ),
+            (
+                json!({ "gameId": 1, "styles": null }),
+                ("0.styles", "invalid_type"),
+            ),
+            (
+                json!({ "gameId": 1, "styles": "a" }),
+                ("0.styles", "invalid_type"),
+            ),
+            (
+                json!({ "gameId": 1, "styles": [1] }),
+                ("0.styles", "invalid_type"),
+            ),
+            (
+                json!({ "gameId": 1, "styles": vec!["a"; 65] }),
+                ("0.styles", "too_big"),
+            ),
+            (
+                json!({ "gameId": 1, "dimensions": ["x".repeat(65)] }),
+                ("0.dimensions", "too_big"),
+            ),
+            // 33 astral characters are 66 UTF-16 units.
+            (
+                json!({ "gameId": 1, "dimensions": ["\u{1F3AE}".repeat(33)] }),
+                ("0.dimensions", "too_big"),
+            ),
+            (json!("x"), ("0", "invalid_type")),
+            (json!(null), ("0", "invalid_type")),
+        ] {
+            assert_eq!(parse_steamgrid_artwork(&[arg.clone()]), Err(want), "{arg}");
+        }
+        assert_eq!(
+            parse_steamgrid_artwork(&[]),
+            Err(("(args)", "invalid_type"))
+        );
+        assert_eq!(
+            parse_steamgrid_artwork(&[json!({ "gameId": 1 }), json!({})]),
+            Err(("(args)", "invalid_type"))
+        );
+    }
+
+    #[test]
+    fn the_steamgrid_handlers_validate_first_and_answer_not_ready_before_install() {
+        assert!(info_ctx().is_none());
+        let router_ctx = Arc::new(crate::native_router::NativeCtx::for_tests(
+            Arc::new(NoHost),
+            None,
+        ));
+        let run =
+            |handler: fn(Arc<crate::native_router::NativeCtx>, Vec<Value>) -> NativeFuture,
+             args: Vec<Value>| {
+                tauri::async_runtime::block_on(handler(Arc::clone(&router_ctx), args))
+            };
+        assert_eq!(
+            run(steamgrid_has_key, vec![]),
+            Err("steamgriddb.hasApiKey: not ready".to_string())
+        );
+        assert_eq!(
+            run(steamgrid_set_key, vec![json!("k")]),
+            Err("steamgriddb.setApiKey: not ready".to_string())
+        );
+        assert_eq!(
+            run(steamgrid_grids, vec![json!({ "gameId": 1 })]),
+            Err("steamgriddb.getGrids: not ready".to_string())
+        );
+        assert_eq!(
+            run(steamgrid_heroes, vec![json!({ "gameId": 1 })]),
+            Err("steamgriddb.getHeroes: not ready".to_string())
+        );
+        // A bad call is rejected the same way before install, and never echoes the value.
+        let secret = "SECRET-KEY-".repeat(40);
+        for bad in [
+            run(steamgrid_set_key, vec![json!(secret)]),
+            run(steamgrid_set_key, vec![json!(5)]),
+            run(steamgrid_has_key, vec![json!("x")]),
+            run(
+                steamgrid_grids,
+                vec![json!({ "gameId": 0, "styles": [secret] })],
+            ),
+            run(steamgrid_heroes, vec![json!({ "gameId": 1, "SECRET": 1 })]),
+        ] {
+            let error = bad.unwrap_err();
+            assert!(
+                error.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+                "{error}"
+            );
+            assert!(!error.contains("SECRET"), "{error}");
+        }
+    }
+
+    #[test]
+    fn the_steamgrid_key_ops_run_through_the_blocking_pool() {
+        let home = FakeHome::new("info-dispatch-");
+        let canned = Arc::new(Canned(Mutex::new(Vec::new())));
+        let mut ctx = test_ctx(&home, None);
+        ctx.http = canned.clone();
+        ctx.secrets = Some(Arc::new(OneKey("test-key")));
+        let ctx = Arc::new(ctx);
+        let has = tauri::async_runtime::block_on(run_info_op(
+            Arc::clone(&ctx),
+            "info_steamgrid_has_key",
+            vec![json!({})],
+            "x",
+        ));
+        assert_eq!(has, Ok(json!(true)));
+        let grids = tauri::async_runtime::block_on(run_info_op(
+            ctx,
+            "info_steamgrid_grids",
+            vec![json!({ "gameId": 7, "styles": ["alternate"], "dimensions": ["460x215"] })],
+            "x",
+        ));
+        assert_eq!(grids, Ok(json!([{ "id": 7 }])));
+        let seen = canned.0.lock().unwrap();
+        assert_eq!(
+            seen[0].url,
+            "https://www.steamgriddb.com/api/v2/grids/game/7?dimensions=460x215&styles=alternate"
+        );
     }
 
     #[test]
