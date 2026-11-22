@@ -422,20 +422,20 @@ export class LogForwarder {
    * for the whole timeout. The whole call, the wait on Promise-valued messages and the wait on the
    * transport together, takes at most `LOG_FLUSH_TIMEOUT_MS` (one deadline taken at entry, WR-06),
    * so a message that never settles cannot hold it longer, and the lines of other writers are
-   * still handed to the transport. Never rejects. The fatal `uncaughtException` guard awaits this before exiting, so it must not hang.
+   * still handed to the transport. The deadline is on the monotonic clock (`performance.now()`), so
+   * a wall-clock step back (NTP, a manual change, a VM resume) cannot stretch either wait (WR-12).
+   * Never rejects. The fatal `uncaughtException` guard awaits this before exiting, so it must not
+   * hang.
    */
   async flush(): Promise<void> {
-    const deadline = Date.now() + this.#flushTimeoutMs
+    const deadline = performance.now() + this.#flushTimeoutMs
     try {
       await this.#settleChains(deadline)
       if (this.#transport === null) return
       this.#pump()
       if (this.#isIdle()) return
-      // Whatever is left of the one deadline, never more than a full timeout (a clock step back).
-      const left = Math.min(
-        this.#flushTimeoutMs,
-        Math.max(0, deadline - Date.now())
-      )
+      // Whatever is left of the one (monotonic) deadline.
+      const left = Math.max(0, deadline - performance.now())
       await new Promise<void>((resolve) => {
         const done = (): void => {
           clearTimeout(timer)
@@ -453,11 +453,11 @@ export class LogForwarder {
 
   /**
    * Waits for the Promise-valued messages in flight, the forwarder's own and the target writers'
-   * (WR-09), giving up at `deadline` (WR-06).
+   * (WR-09), giving up at `deadline` (WR-06), a `performance.now()` reading (WR-12).
    */
   async #settleChains(deadline: number): Promise<void> {
     while (this.#chains.size > 0 || this.#writerLinks.size > 0) {
-      const left = deadline - Date.now()
+      const left = deadline - performance.now()
       if (left <= 0) return
       let timer: ReturnType<typeof setTimeout> | undefined
       const expired = new Promise<boolean>((resolve) => {

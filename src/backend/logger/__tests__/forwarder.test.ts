@@ -576,6 +576,33 @@ describe('LogForwarder', () => {
     })
   })
 
+  describe('a wall-clock step back cannot stretch flush past its bound (WR-12)', () => {
+    it('flush resolves within LOG_FLUSH_TIMEOUT_MS when the clock steps back 60 s mid-wait (WR-12)', async () => {
+      const fw = new LogForwarder()
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      // The first pass waits on a link that settles at 100 ms ...
+      fw.trackSettle(
+        new Promise<void>((resolve) => setTimeout(() => resolve(), 100))
+      )
+      let flushed = false
+      const flushing = fw.flush().then(() => {
+        flushed = true
+      })
+      await jest.advanceTimersByTimeAsync(50)
+      // ... meanwhile the wall clock steps back a minute and a link that never settles arrives, so
+      // the second pass computes what is left of the deadline after the step.
+      jest.setSystemTime(Date.now() - 60_000)
+      fw.trackSettle(new Promise<void>(() => undefined))
+      await jest.advanceTimersByTimeAsync(LOG_FLUSH_TIMEOUT_MS - 50 - 1)
+      expect(flushed).toBe(false)
+      await jest.advanceTimersByTimeAsync(2)
+      // Asserted before awaiting, so a regression fails here rather than hanging the test.
+      expect(flushed).toBe(true)
+      await flushing
+    })
+  })
+
   describe('settle (logErrorSettled / logInfoSettled, the CR-01 contract)', () => {
     type Index = typeof import('../index')
     function freshIndex(): Index {
