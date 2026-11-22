@@ -3,7 +3,7 @@
     "id": "ex-1",
     "request": {
       "method": "GET",
-      "url": "https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=#KILLALLZOMBIES&format=json",
+      "url": "https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=%23KILLALLZOMBIES&format=json",
       "headers": {
         "accept": "application/json, text/plain, */*",
         "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
@@ -12,30 +12,27 @@
     "response": {
       "status": 200,
       "headers": {
-        "date": "Sun, 22 Nov 2026 10:08:53 GMT",
-        "content-type": "text/html; charset=UTF-8",
-        "connection": "keep-alive",
-        "strict-transport-security": "max-age=15552000; includeSubDomains; preload",
+        "date": "Sun, 22 Nov 2026 18:11:01 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "accept-ranges": "bytes",
         "cache-control": "private, must-revalidate, max-age=0",
-        "content-disposition": "inline; filename=api-result.html",
-        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=ajLpOMrLQycTLOmel%2FLNtX6TIKL6mZ9ZzJHSKwjlxSXf1oaqRFJRRUR4RP%2Bo6G2LruHj4%2FFCM6OtsQcluxZ30FKUvVXn1qYKhnH7crpGcp2C6o9GQWlR65iAgYxhi%2BAUH47fDcR0\"}]}",
-        "content-language": "en",
-        "expires": "Thu, 01 Jan 1970 00:00:00 GMT",
-        "mediawiki-api-error": "missingparam",
+        "content-disposition": "inline; filename=api-result.json",
         "server": "cloudflare",
-        "vary": "Accept-Encoding,Cookie",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
         "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY",
-        "x-request-id": "7058be1d04b44dd08ecf165f",
-        "x-varnish": "203892763",
+        "x-request-id": "2688ebef0154474df706c177",
+        "x-varnish": "199568661",
         "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
-        "age": "56",
-        "last-modified": "Sun, 22 Nov 2026 10:07:57 GMT",
+        "age": "664",
+        "last-modified": "Sun, 22 Nov 2026 17:59:57 GMT",
         "cf-cache-status": "HIT",
-        "cf-ray": "a5e722af2c2057a4-WLG"
+        "strict-transport-security": "max-age=15552000; includeSubDomains; preload",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=1j28ze1ZjN6SxYVcu%2BZZ%2BwwFJfxQf88zZ7v741bSzyWQ%2BrigH0psHzng0HFzLUdf2%2BX2cS%2FYeyVLhTwaGDyvVn3Np1Ai%2FnXoDSCW2KrBpUa1A%2B4izDYLL8Q5rDGw2JB5H8lKKkQU\"}]}",
+        "cf-ray": "a5e9e4ef294e1411-WLG"
       },
-      "bodyFile": "body-1.html"
+      "bodyFile": "body-1.json"
     }
   },
   {

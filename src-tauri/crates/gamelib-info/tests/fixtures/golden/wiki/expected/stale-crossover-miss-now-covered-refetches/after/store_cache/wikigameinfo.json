@@ -18,7 +18,7 @@
 		"steamInfo": null,
 		"umuId": null,
 		"fetchStatus": {
-			"pcgamingwiki": "error",
+			"pcgamingwiki": "notfound",
 			"howlongtobeat": "notfound"
 		}
 	},

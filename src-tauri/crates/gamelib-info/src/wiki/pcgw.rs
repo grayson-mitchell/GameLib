@@ -2,10 +2,13 @@
 //! the page id (a cargoquery by GOG id first, then a title search), the page's wikitext, and the scores,
 //! ids and lists read out of it.
 //!
-//! The requests are the ones the TS made and the 86-06 goldens pin (D-10): the title has its first
-//! ` -` replaced by `:` and its spaces by a hand-written `%20` (the search term is otherwise not
-//! encoded), the page id goes into the URL as the JS template literal prints it, and each request
-//! carries the `GameLib/<version>` User-Agent.
+//! The requests are the ones the TS made and the 86-06 goldens pin (D-10), with one departure: the
+//! search term (the title with its first ` -` replaced by `:`) is encoded as `encodeURIComponent`
+//! would encode it (`crate::js::encode_uri_component`, as AppleGamingWiki's search does), where the TS
+//! encoded only its spaces. A `#`, `&`, `=` or `;` in a title therefore stays inside the term instead
+//! of cutting or splitting the URL (todo `2026-11-23-pcgw-search-term-not-url-encoded`; the TS was
+//! deleted in 86-24, so there is no parity left to keep). The page id goes into the URL as the JS
+//! template literal prints it, and each request carries the `GameLib/<version>` User-Agent.
 //!
 //! Parity points copied, not fixed (D-03):
 //! - every failure (a status outside 2xx, a transport failure, an answer without the property the code
@@ -19,7 +22,7 @@ use gamelib_store::json::{Json, Obj};
 use serde_json::Value;
 
 use crate::ctx::InfoCtx;
-use crate::js::{index, opt_prop, prop, to_js_text, truthy};
+use crate::js::{encode_uri_component, index, opt_prop, prop, to_js_text, truthy};
 
 use super::regexes;
 use super::{get_data, user_agent, Outcome, Thrown};
@@ -193,7 +196,7 @@ async fn page_id(
 
     let url = format!(
         "{API}?action=query&list=search&srsearch={}&format=json",
-        title.replace(' ', "%20")
+        encode_uri_component(title)
     );
     let data = get_data(ctx, url, &agent).await?;
     // `data.query.search[0]?.pageid`

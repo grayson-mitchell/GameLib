@@ -1,7 +1,8 @@
 //! The wiki sources' paths the recorded goldens do not reach (86-20): what each source does with an
 //! answer of the wrong shape, how the TS built each URL for awkward titles, which `User-Agent` each one
 //! sends, and what a diagnostic line may hold. Each expectation is what the TS code does for the same
-//! input (a property read of `undefined` throws and lands in the source's failure value).
+//! input (a property read of `undefined` throws and lands in the source's failure value), except the
+//! PCGamingWiki search term, which is now fully encoded (todo `2026-11-23-pcgw-search-term-not-url-encoded`).
 
 mod wiki_golden;
 
@@ -91,7 +92,7 @@ fn urls(run: &Run) -> Vec<String> {
 const PCGW_UA: &str = "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)";
 
 #[tokio::test]
-async fn pcgamingwiki_builds_the_ts_urls_and_sends_the_gamelib_user_agent() {
+async fn pcgamingwiki_builds_its_urls_and_sends_the_gamelib_user_agent() {
     let wikitext = "|steam appid  = 5\n|hltb         = 6\n";
     let run = run(vec![
         (
@@ -103,19 +104,43 @@ async fn pcgamingwiki_builds_the_ts_urls_and_sends_the_gamelib_user_agent() {
             ok(json!({ "parse": { "wikitext": { "*": wikitext } } })),
         ),
     ]);
-    // The first " -" becomes ":", spaces become a hand-written %20, nothing else is encoded.
+    // The first " -" becomes ":", then the whole term is encoded like encodeURIComponent, so ":" is
+    // %3A and "&" is %26.
     let got = pcgw::get_info(&run.ctx, "Anno 1602 - Konigs - Edition & More", None).await;
     assert_eq!(got.outcome, Outcome::Ok);
     assert_eq!(got.info.unwrap().steam_id, "5");
     assert_eq!(
         urls(&run),
         [
-            "https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=Anno%201602:%20Konigs%20-%20Edition%20&%20More&format=json",
+            "https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=Anno%201602%3A%20Konigs%20-%20Edition%20%26%20More&format=json",
             "https://www.pcgamingwiki.com/w/api.php?action=parse&format=json&pageid=200143&redirects=true&prop=wikitext",
         ]
     );
     for (_, agent) in run.http.seen.lock().unwrap().iter() {
         assert_eq!(agent.as_deref(), Some(PCGW_UA));
+    }
+}
+
+#[tokio::test]
+async fn pcgamingwiki_keeps_hash_equals_and_semicolon_inside_the_search_term() {
+    let pairs = [
+        (
+            "Fez #1",
+            "https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=Fez%20%231&format=json",
+        ),
+        (
+            "Rock=Paper; Scissors",
+            "https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=Rock%3DPaper%3B%20Scissors&format=json",
+        ),
+    ];
+    for (title, expected) in pairs {
+        let run = run(vec![(
+            "list=search",
+            ok(json!({ "query": { "search": [] } })),
+        )]);
+        let got = pcgw::get_info(&run.ctx, title, None).await;
+        assert_eq!(got.outcome, Outcome::NotFound, "{title}");
+        assert_eq!(urls(&run), [expected], "{title}");
     }
 }
 
