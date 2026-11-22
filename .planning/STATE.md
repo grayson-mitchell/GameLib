@@ -6,10 +6,10 @@ current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
 stopped_at: Completed 85-19-PLAN.md
-last_updated: "2026-11-22T03:34:53.733Z"
+last_updated: "2026-11-22T04:00:18.275Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 482625eccf23729b9f819041ca91db23701d11c3
+state_head: 1f9f0cd2c4ec08008400e7e2fd50116d2655c530
 progress:
   total_phases: 20
   completed_phases: 23
@@ -801,6 +801,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261122-93a | Set up gsd-graph for .planning and exclude .planning from graphify | 2026-11-22 | 5ad01481e | — | [261122-93a-set-up-gsd-graph-for-planning-and-exclud](./quick/261122-93a-set-up-gsd-graph-for-planning-and-exclud/) |
 | 261122-9sl | Implement Move install for Steam games (moveInstall is a stub) | 2026-11-22 | 4bbab9da4 | — | [261122-9sl-implement-move-install-for-steam-games](./quick/261122-9sl-implement-move-install-for-steam-games/) |
 | 261122-gzp | fix the hold() test race in writer.rs | 2026-11-22 | 7dc3d632b | — | [261122-gzp-fix-the-hold-test-race-in-writer-rs](./quick/261122-gzp-fix-the-hold-test-race-in-writer-rs/) |
+| 261122-n4q | Steam Move option 1: add a picked non-library folder as a Steam library, folder-gap fix, post-move verify nudge | 2026-11-22 | 1f9f0cd2c | — | [261122-n4q-steam-move-option-1-add-picked-folder-as](./quick/261122-n4q-steam-move-option-1-add-picked-folder-as/) |
 
 ## Deferred Items
 
