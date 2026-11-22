@@ -1,0 +1,21 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=1&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyFile": "body-1.json"
+    },
+    "synthetic": true
+  }
+]

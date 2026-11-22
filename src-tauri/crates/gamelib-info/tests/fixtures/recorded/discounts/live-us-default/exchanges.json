@@ -1,0 +1,932 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=1&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1440163901 catalog-product-1711230643 catalog-product-1312824873 catalog-product-2141207403 catalog-product-1207658787 catalog-product-1998527297 catalog-product-1242989820 catalog-product-1207659037 catalog-product-1485720934 catalog-product-1248282609 catalog-product-1604726955 catalog-product-1741843789 catalog-product-1430740458 catalog-product-1202885143 catalog-product-1900745791 catalog-product-1810841502 catalog-product-1296467424 catalog-product-1207659042 catalog-product-1721096025 catalog-product-1578751181 catalog-product-1213504814 catalog-product-1724969043 catalog-product-1207658747 catalog-product-1403000599 catalog-product-1074905459 catalog-product-1297439746 catalog-product-1207659126 catalog-product-1127395101 catalog-product-2049187585 catalog-product-1430740694 catalog-product-1182943037 catalog-product-1207659038 catalog-product-1923260625 catalog-product-1801825368 catalog-product-1833855510 catalog-product-1438332414 catalog-product-1207659230 catalog-product-1207658995 catalog-product-1207658880 catalog-product-1356518037 catalog-product-1931614212 catalog-product-2037689757 catalog-product-1176929400 catalog-product-1207658918 catalog-product-1440166436 catalog-product-1440166342 catalog-product-1207658785 catalog-product-1310457090",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "0",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-eddf8230219-FRA, cache-wlg10426-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-1.json"
+    }
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=2&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1207658997 catalog-product-1630229434 catalog-product-1462962180 catalog-product-1298669607 catalog-product-1950574400 catalog-product-1889589606 catalog-product-1817832734 catalog-product-1580081235 catalog-product-2069488821 catalog-product-1164193173 catalog-product-1207658725 catalog-product-1207664593 catalog-product-1587885678 catalog-product-1207658945 catalog-product-1207659052 catalog-product-2079763780 catalog-product-1313144493 catalog-product-1273195617 catalog-product-1209025141 catalog-product-1945515431 catalog-product-1207666193 catalog-product-1370227705 catalog-product-1574905103 catalog-product-1259935712 catalog-product-1084263831 catalog-product-1423058413 catalog-product-1207658755 catalog-product-1207658916 catalog-product-2089114674 catalog-product-1451150270 catalog-product-1455877361 catalog-product-1428305992 catalog-product-1708301722 catalog-product-1970407416 catalog-product-1978178686 catalog-product-1632475257 catalog-product-1207659016 catalog-product-2057392130 catalog-product-1360785671 catalog-product-1489253805 catalog-product-1426252678 catalog-product-1100566473 catalog-product-1207659082 catalog-product-1207658915 catalog-product-1438074791 catalog-product-1207659034 catalog-product-1207658957 catalog-product-1438168222",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "134",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-eddf8230069-FRA, cache-wlg10426-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-2.json"
+    }
+  },
+  {
+    "id": "ex-3",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=23&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1207659050 catalog-product-1207659075 catalog-product-1452257327 catalog-product-1103597019 catalog-product-1207658864 catalog-product-1441038404 catalog-product-1239584357 catalog-product-1380961633 catalog-product-1995005660 catalog-product-1207658697 catalog-product-1207658698 catalog-product-1684624696 catalog-product-1438007195 catalog-product-1719266458 catalog-product-1207658823 catalog-product-1207659004 catalog-product-1862293124 catalog-product-1248079725 catalog-product-1795210166 catalog-product-1207658759 catalog-product-1207658763 catalog-product-1207658790 catalog-product-1207658848 catalog-product-1207658722 catalog-product-1207659067 catalog-product-1207658958 catalog-product-1207658802 catalog-product-1175067557 catalog-product-1207658661 catalog-product-1207658670 catalog-product-1606010486 catalog-product-1440163405 catalog-product-1207658683 catalog-product-1207659254 catalog-product-1333602811 catalog-product-1248581604 catalog-product-1457346888 catalog-product-1207660013 catalog-product-1207659110 catalog-product-1207659003 catalog-product-1238184378 catalog-product-1661434114 catalog-product-1485600994 catalog-product-1207658847 catalog-product-1207658744 catalog-product-1435224812 catalog-product-1446131634 catalog-product-1207658912",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "133",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-eddf8230066-FRA, cache-wlg10421-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-3.json"
+    }
+  },
+  {
+    "id": "ex-4",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=17&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1822996619 catalog-product-1769579757 catalog-product-1235845586 catalog-product-1632701911 catalog-product-2147483045 catalog-product-1897092010 catalog-product-1350128401 catalog-product-1752390734 catalog-product-1139279216 catalog-product-1720979707 catalog-product-1211127702 catalog-product-1488827509 catalog-product-1384959600 catalog-product-1823168521 catalog-product-1091815649 catalog-product-1869649388 catalog-product-1896497767 catalog-product-1178128112 catalog-product-1712497501 catalog-product-1200864597 catalog-product-1160861263 catalog-product-1274798618 catalog-product-1788139485 catalog-product-1386909466 catalog-product-1527016770 catalog-product-1084856569 catalog-product-1448633816 catalog-product-1134077783 catalog-product-1854141325 catalog-product-2080674103 catalog-product-1444308510 catalog-product-1971178382 catalog-product-1269519984 catalog-product-1742262652 catalog-product-1571578826 catalog-product-1190194125 catalog-product-1617011795 catalog-product-1496008129 catalog-product-1593560335 catalog-product-1516554499 catalog-product-1353960921 catalog-product-1785384169 catalog-product-1656650384 catalog-product-1726727487 catalog-product-1775031253 catalog-product-1979865595 catalog-product-1840972926 catalog-product-1896980482",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "134",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-etou8220194-FRA, cache-wlg10423-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-4.json"
+    }
+  },
+  {
+    "id": "ex-5",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=9&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1207660493 catalog-product-1503811760 catalog-product-1862122311 catalog-product-1207659573 catalog-product-1207659243 catalog-product-2095741221 catalog-product-1420630484 catalog-product-1848713226 catalog-product-2068170636 catalog-product-1460731832 catalog-product-1721250578 catalog-product-1460731635 catalog-product-1386697093 catalog-product-1441039322 catalog-product-1856743450 catalog-product-1207659204 catalog-product-1207658867 catalog-product-1207666183 catalog-product-1875699572 catalog-product-1879874988 catalog-product-1621663895 catalog-product-1207658975 catalog-product-1732894127 catalog-product-1207658973 catalog-product-1602633329 catalog-product-1207659163 catalog-product-1438075172 catalog-product-1980503427 catalog-product-1207659022 catalog-product-1219067675 catalog-product-1207658693 catalog-product-1207658816 catalog-product-1134401292 catalog-product-1993805983 catalog-product-1207658793 catalog-product-1973516426 catalog-product-1441032629 catalog-product-1207659068 catalog-product-1207658708 catalog-product-1678303006 catalog-product-1207658706 catalog-product-1207658815 catalog-product-1207660613 catalog-product-1207659008 catalog-product-1421964930 catalog-product-1207658762 catalog-product-1273860392 catalog-product-1207659137",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "47",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-eddf8230125-FRA, cache-wlg10421-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-5.json"
+    }
+  },
+  {
+    "id": "ex-6",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=14&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1909436284 catalog-product-1379321630 catalog-product-1466717340 catalog-product-1799198959 catalog-product-1147780184 catalog-product-1589506293 catalog-product-1397204219 catalog-product-1889332257 catalog-product-2035081143 catalog-product-2066411559 catalog-product-1979573819 catalog-product-1604903045 catalog-product-1106779987 catalog-product-1408221873 catalog-product-1944430326 catalog-product-1343640785 catalog-product-1959273870 catalog-product-1075877492 catalog-product-1511307459 catalog-product-1919221653 catalog-product-1855737785 catalog-product-1138549039 catalog-product-1747340100 catalog-product-1776938573 catalog-product-1889957442 catalog-product-1776937255 catalog-product-1181317918 catalog-product-1688404720 catalog-product-1915718900 catalog-product-1599916752 catalog-product-2116633042 catalog-product-1791527542 catalog-product-1186009992 catalog-product-1859830883 catalog-product-1567265031 catalog-product-1437401972 catalog-product-1247844248 catalog-product-1511366207 catalog-product-1276601116 catalog-product-1724461734 catalog-product-1952862920 catalog-product-1587233922 catalog-product-1356259958 catalog-product-1734211869 catalog-product-1400355647 catalog-product-1661670554 catalog-product-2099051765 catalog-product-1390080347",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "134",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-eddf8230072-FRA, cache-wlg10420-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-6.json"
+    }
+  },
+  {
+    "id": "ex-7",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=10&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1207658682 catalog-product-1207658714 catalog-product-1423481910 catalog-product-1266089300 catalog-product-1207658942 catalog-product-1207658883 catalog-product-1207658866 catalog-product-1207659943 catalog-product-1233068155 catalog-product-1443433575 catalog-product-1207659104 catalog-product-1207658871 catalog-product-1207659139 catalog-product-1618073558 catalog-product-1207658707 catalog-product-1454313816 catalog-product-1207658732 catalog-product-1207658689 catalog-product-1207658796 catalog-product-1207659823 catalog-product-1443160656 catalog-product-1429089605 catalog-product-1207658925 catalog-product-1207659813 catalog-product-2038903037 catalog-product-1427108887 catalog-product-1207659683 catalog-product-1207659130 catalog-product-1207664473 catalog-product-1207665313 catalog-product-1319649169 catalog-product-1966220998 catalog-product-1494358416 catalog-product-1629708306 catalog-product-1376745214 catalog-product-1093692007 catalog-product-1235841495 catalog-product-2086275098 catalog-product-2048944497 catalog-product-1546179524 catalog-product-1732837498 catalog-product-1113044635 catalog-product-1318784106 catalog-product-1653226562 catalog-product-1230458622 catalog-product-1529745071 catalog-product-1994983163 catalog-product-1743476117",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "134",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-eddf8230080-FRA, cache-wlg10425-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-7.json"
+    }
+  },
+  {
+    "id": "ex-8",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=29&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1387294258 catalog-product-1555067310 catalog-product-1233095875 catalog-product-1426150184 catalog-product-1847486809 catalog-product-1664660424 catalog-product-2016418866 catalog-product-1428444939 catalog-product-1741768778 catalog-product-1729296498 catalog-product-1285127237 catalog-product-1475441601 catalog-product-2139952877 catalog-product-1959557536 catalog-product-1691741958 catalog-product-1722102457 catalog-product-1418607390 catalog-product-1731863709 catalog-product-1907797192 catalog-product-1408592565 catalog-product-2119178892 catalog-product-2056050499 catalog-product-1562153725 catalog-product-1494660752 catalog-product-1122195133 catalog-product-1485277412 catalog-product-1999340699 catalog-product-1914572789 catalog-product-2116108601 catalog-product-1329725338 catalog-product-1726016440 catalog-product-2139299534 catalog-product-1229564708 catalog-product-1521627808 catalog-product-1958625700 catalog-product-1412361410 catalog-product-1249931446 catalog-product-1744597199 catalog-product-1548353160 catalog-product-1697470156 catalog-product-1948328636 catalog-product-1713547012 catalog-product-1135788149 catalog-product-1783203305 catalog-product-1992198803 catalog-product-1312172099 catalog-product-1221332228 catalog-product-1592003664",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "47",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-etou8220065-FRA, cache-wlg10420-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-8.json"
+    }
+  },
+  {
+    "id": "ex-9",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=28&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1229852260 catalog-product-1282023748 catalog-product-1977124126 catalog-product-1522361451 catalog-product-1630817572 catalog-product-2110992455 catalog-product-1425296058 catalog-product-1438247767 catalog-product-1385640320 catalog-product-1879688148 catalog-product-1838266540 catalog-product-1755267062 catalog-product-1609487216 catalog-product-1596889440 catalog-product-1906926016 catalog-product-2073470119 catalog-product-1134257742 catalog-product-1673729127 catalog-product-1829124945 catalog-product-1251516687 catalog-product-1809109115 catalog-product-2045025106 catalog-product-1685156313 catalog-product-2067374669 catalog-product-1450252608 catalog-product-1273182713 catalog-product-1194848616 catalog-product-2081165399 catalog-product-1590372707 catalog-product-1946788969 catalog-product-1436885379 catalog-product-1675286861 catalog-product-1224274567 catalog-product-1710225016 catalog-product-1911159206 catalog-product-2125520369 catalog-product-1308963382 catalog-product-1240486570 catalog-product-1578153679 catalog-product-1894384721 catalog-product-1857184434 catalog-product-1867651623 catalog-product-1607929817 catalog-product-2048031151 catalog-product-2042584692 catalog-product-1767250935 catalog-product-2003026413 catalog-product-1797437237",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "134",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-eddf8230202-FRA, cache-wlg10421-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-9.json"
+    }
+  },
+  {
+    "id": "ex-10",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=30&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-2132388768 catalog-product-1316952658 catalog-product-1846073334 catalog-product-1424745673 catalog-product-1277799595 catalog-product-1519742410 catalog-product-1485723191 catalog-product-2115470467 catalog-product-2112757903 catalog-product-1326358628 catalog-product-1563461232 catalog-product-1203388068 catalog-product-1798714211 catalog-product-1974598212 catalog-product-1087152396 catalog-product-1480385563 catalog-product-1596394257 catalog-product-1499094261 catalog-product-1777427874 catalog-product-1352746308 catalog-product-1868373632 catalog-product-1443538938 catalog-product-1216488564 catalog-product-1264535120 catalog-product-1858277042 catalog-product-1966855660 catalog-product-1602045052 catalog-product-1274530033 catalog-product-1148403215 catalog-product-1234354617 catalog-product-2143232971 catalog-product-1339157411 catalog-product-1987536057 catalog-product-1193870393 catalog-product-1561928791 catalog-product-1508883440 catalog-product-2087490632 catalog-product-2011183752 catalog-product-1901015854 catalog-product-2000195674 catalog-product-1776861531 catalog-product-1588896497 catalog-product-1902358607 catalog-product-1634539783 catalog-product-1211657424 catalog-product-1390906801 catalog-product-1289337120 catalog-product-2008721818",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "47",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-eddf8230189-FRA, cache-wlg10420-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-10.json"
+    }
+  },
+  {
+    "id": "ex-11",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=26&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1815547910 catalog-product-2130069707 catalog-product-1458460306 catalog-product-1469028433 catalog-product-1568844596 catalog-product-1643536310 catalog-product-1717598396 catalog-product-1517614866 catalog-product-1777704954 catalog-product-1234008475 catalog-product-1107179410 catalog-product-1469000270 catalog-product-2084941195 catalog-product-1983259736 catalog-product-1830270121 catalog-product-2146521586 catalog-product-1321117140 catalog-product-1680347485 catalog-product-2044359215 catalog-product-1952785258 catalog-product-2121942105 catalog-product-1275219184 catalog-product-1730479498 catalog-product-1169152159 catalog-product-1559017271 catalog-product-1290660327 catalog-product-1780499066 catalog-product-1850441349 catalog-product-1992978097 catalog-product-1185750210 catalog-product-1669045124 catalog-product-2103953787 catalog-product-1601902008 catalog-product-1949435590 catalog-product-1461736296 catalog-product-1738643372 catalog-product-1635711858 catalog-product-1388426248 catalog-product-1137521022 catalog-product-1772567372 catalog-product-1335033880 catalog-product-1722976764 catalog-product-1709744050 catalog-product-1641966950 catalog-product-2065999903 catalog-product-2022268883 catalog-product-1250442560 catalog-product-1571381382",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "134",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-etou8220189-FRA, cache-wlg10427-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-11.json"
+    }
+  },
+  {
+    "id": "ex-12",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=18&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1910074141 catalog-product-1523173048 catalog-product-1379416965 catalog-product-1338405553 catalog-product-1639182085 catalog-product-1257451886 catalog-product-1392063772 catalog-product-1641677213 catalog-product-1238366028 catalog-product-1266833574 catalog-product-1138017190 catalog-product-1809056267 catalog-product-1553503979 catalog-product-2048907635 catalog-product-1838151696 catalog-product-1567269698 catalog-product-1938714864 catalog-product-1146517012 catalog-product-1823842189 catalog-product-1782120169 catalog-product-1334902593 catalog-product-2104869248 catalog-product-1414471894 catalog-product-2056667973 catalog-product-1813724401 catalog-product-1686331123 catalog-product-1761387470 catalog-product-1674501647 catalog-product-1250668173 catalog-product-2060028353 catalog-product-1297892886 catalog-product-1619024184 catalog-product-1866538975 catalog-product-2037234491 catalog-product-1341028548 catalog-product-1950114562 catalog-product-1450551173 catalog-product-2145804719 catalog-product-1544460195 catalog-product-2068474256 catalog-product-1844816308 catalog-product-1772598132 catalog-product-1090255211 catalog-product-1835035058 catalog-product-2098172050 catalog-product-2063590233 catalog-product-1659642973 catalog-product-1376056537",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "134",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-etou8220091-FRA, cache-wlg10426-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-12.json"
+    }
+  },
+  {
+    "id": "ex-13",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=7&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1552917456 catalog-product-1707627596 catalog-product-1653942461 catalog-product-1311030206 catalog-product-1828096528 catalog-product-1512893158 catalog-product-1556523808 catalog-product-1496956756 catalog-product-1237982317 catalog-product-1983428612 catalog-product-1735910522 catalog-product-1809782847 catalog-product-1311164947 catalog-product-1346065995 catalog-product-1300564971 catalog-product-2081410845 catalog-product-1320515406 catalog-product-1375812220 catalog-product-2014295976 catalog-product-1302753134 catalog-product-1222133130 catalog-product-1108354550 catalog-product-2056019722 catalog-product-1357323278 catalog-product-2010300617 catalog-product-1804958929 catalog-product-1441636983 catalog-product-1828449821 catalog-product-1592693763 catalog-product-1569244437 catalog-product-1641719136 catalog-product-1224800338 catalog-product-1217083139 catalog-product-1711765822 catalog-product-1421405124 catalog-product-1455223208 catalog-product-1976524578 catalog-product-1545133940 catalog-product-1186580639 catalog-product-1464526060 catalog-product-1959577571 catalog-product-2035493674 catalog-product-1211776926 catalog-product-1649787293 catalog-product-1248489555 catalog-product-2106346549 catalog-product-1131091063 catalog-product-1249219203",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "134",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-eddf8230206-FRA, cache-wlg10422-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-13.json"
+    }
+  },
+  {
+    "id": "ex-14",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=12&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1672000739 catalog-product-1209975196 catalog-product-1207228180 catalog-product-1165555973 catalog-product-1855265933 catalog-product-1237976550 catalog-product-1681381455 catalog-product-1830691367 catalog-product-1396420224 catalog-product-1487385828 catalog-product-2075486692 catalog-product-1133886710 catalog-product-1730761582 catalog-product-1893634777 catalog-product-1097598185 catalog-product-1865161543 catalog-product-1317193866 catalog-product-1081173744 catalog-product-1642325521 catalog-product-2050916447 catalog-product-1278178241 catalog-product-1543192927 catalog-product-1173453440 catalog-product-1223179941 catalog-product-2057803684 catalog-product-1440468422 catalog-product-2091584841 catalog-product-1884722132 catalog-product-1450067114 catalog-product-2035521944 catalog-product-1288534304 catalog-product-1145143193 catalog-product-1970421633 catalog-product-2099316746 catalog-product-1612382151 catalog-product-1493194442 catalog-product-2046432221 catalog-product-1573579398 catalog-product-1750687415 catalog-product-1627302734 catalog-product-1461910419 catalog-product-1197675719 catalog-product-1212412353 catalog-product-1375092202 catalog-product-1615964291 catalog-product-1649451731 catalog-product-1436868350 catalog-product-2073659013",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "134",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-etou8220049-FRA, cache-wlg10421-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-14.json"
+    }
+  },
+  {
+    "id": "ex-15",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=11&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-2120510293 catalog-product-1993275712 catalog-product-1078209404 catalog-product-1924537992 catalog-product-1294502829 catalog-product-1652265782 catalog-product-1571645040 catalog-product-1664658602 catalog-product-1093540480 catalog-product-1763745792 catalog-product-1589675197 catalog-product-1716372337 catalog-product-1773045611 catalog-product-1089097517 catalog-product-2052069523 catalog-product-1830954867 catalog-product-1084125970 catalog-product-1751120069 catalog-product-1453624529 catalog-product-1666155516 catalog-product-1842106386 catalog-product-1928945121 catalog-product-1092129443 catalog-product-2011907181 catalog-product-1632354378 catalog-product-1857773119 catalog-product-1376503597 catalog-product-1730445467 catalog-product-2076318399 catalog-product-1988049753 catalog-product-2139825640 catalog-product-1418289015 catalog-product-1404082331 catalog-product-1185935872 catalog-product-1340091827 catalog-product-1127187147 catalog-product-1117337171 catalog-product-2022144587 catalog-product-1256398057 catalog-product-1816578202 catalog-product-1253025084 catalog-product-1324555435 catalog-product-1331823035 catalog-product-1376190780 catalog-product-1958357230 catalog-product-1372785870 catalog-product-2029824167 catalog-product-1590867511",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "47",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-eddf8230150-FRA, cache-wlg10427-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-15.json"
+    }
+  },
+  {
+    "id": "ex-16",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=4&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1882985557 catalog-product-1939903548 catalog-product-1719198803 catalog-product-1109523731 catalog-product-1332215619 catalog-product-2138058393 catalog-product-1242384383 catalog-product-1447688349 catalog-product-1436434037 catalog-product-1855184473 catalog-product-1207659118 catalog-product-1207659017 catalog-product-1343806495 catalog-product-1207658749 catalog-product-1207660523 catalog-product-1417159445 catalog-product-1207660283 catalog-product-1077141756 catalog-product-1207658803 catalog-product-1207658920 catalog-product-1207658978 catalog-product-1207658770 catalog-product-1207660623 catalog-product-1207658940 catalog-product-1207658696 catalog-product-1207658800 catalog-product-1534123252 catalog-product-1207658788 catalog-product-1356099797 catalog-product-1207659047 catalog-product-1207658854 catalog-product-1837805079 catalog-product-1207660223 catalog-product-1423059062 catalog-product-1207658923 catalog-product-1167742290 catalog-product-1376131651 catalog-product-1875095393 catalog-product-1162687982 catalog-product-1984661382 catalog-product-1399674434 catalog-product-1807117822 catalog-product-1076704248 catalog-product-1099397157 catalog-product-1513524329 catalog-product-1623831076 catalog-product-1804860967 catalog-product-1429058266",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "0",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:20 GMT",
+        "x-served-by": "cache-fra-etou8220121-FRA, cache-wlg10425-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-16.json"
+    }
+  },
+  {
+    "id": "ex-17",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=13&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1641000596 catalog-product-1795196666 catalog-product-1235084453 catalog-product-1510860534 catalog-product-1104084973 catalog-product-1155924803 catalog-product-1309336363 catalog-product-2061867517 catalog-product-2081773927 catalog-product-1302420295 catalog-product-1326221139 catalog-product-1248037989 catalog-product-1771607985 catalog-product-1158717618 catalog-product-1572894987 catalog-product-1594084166 catalog-product-1484887196 catalog-product-1433527110 catalog-product-1930246738 catalog-product-1944811685 catalog-product-1211603686 catalog-product-1229761293 catalog-product-1374142013 catalog-product-1807364253 catalog-product-2114324200 catalog-product-1213696419 catalog-product-1254210921 catalog-product-2016556326 catalog-product-1649134120 catalog-product-2021103941 catalog-product-1821395622 catalog-product-1490213242 catalog-product-1381541022 catalog-product-1296881380 catalog-product-1598140349 catalog-product-1402209995 catalog-product-2084106840 catalog-product-1075465038 catalog-product-1735638003 catalog-product-1694890072 catalog-product-1319700978 catalog-product-1418418312 catalog-product-1817545222 catalog-product-1159176173 catalog-product-1788295898 catalog-product-2019945836 catalog-product-1720794248 catalog-product-1963012717",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "0",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:20 GMT",
+        "x-served-by": "cache-fra-eddf8230203-FRA, cache-wlg10424-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-17.json"
+    }
+  },
+  {
+    "id": "ex-18",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=24&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1462173886 catalog-product-1207658789 catalog-product-1207659153 catalog-product-1207658761 catalog-product-1207659094 catalog-product-1207658733 catalog-product-1151948886 catalog-product-1917711239 catalog-product-2014998256 catalog-product-1207658769 catalog-product-1441098222 catalog-product-1207658738 catalog-product-1580232252 catalog-product-1198456673 catalog-product-1207658895 catalog-product-1430136184 catalog-product-1187016819 catalog-product-1207658721 catalog-product-1207658797 catalog-product-1436955893 catalog-product-1403485498 catalog-product-1207661373 catalog-product-1207658768 catalog-product-1207658748 catalog-product-1852354510 catalog-product-1364612036 catalog-product-1207658690 catalog-product-1207659000 catalog-product-1433929853 catalog-product-1207658726 catalog-product-1207659463 catalog-product-1207663083 catalog-product-1432222749 catalog-product-1965302672 catalog-product-1659763953 catalog-product-1207658767 catalog-product-1207665483 catalog-product-1207659173 catalog-product-1207658935 catalog-product-1345207570 catalog-product-1191986305 catalog-product-1207658728 catalog-product-2037198195 catalog-product-2105995113 catalog-product-1207664773 catalog-product-1263931780 catalog-product-1425108206 catalog-product-1828289583",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "0",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:20 GMT",
+        "x-served-by": "cache-fra-eddf8230161-FRA, cache-wlg10423-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-18.json"
+    }
+  },
+  {
+    "id": "ex-19",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=25&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1207658766 catalog-product-1207658678 catalog-product-1838022938 catalog-product-1207660463 catalog-product-1413773160 catalog-product-1444390670 catalog-product-1207661733 catalog-product-1973799922 catalog-product-1362607336 catalog-product-1660643617 catalog-product-1443160586 catalog-product-1298659718 catalog-product-1373993343 catalog-product-2010079291 catalog-product-1190622010 catalog-product-1392464320 catalog-product-1774073357 catalog-product-1150329801 catalog-product-2139694978 catalog-product-2049717140 catalog-product-1264259540 catalog-product-1729642464 catalog-product-2046092649 catalog-product-1456022419 catalog-product-1544796469 catalog-product-1554433587 catalog-product-1447968380 catalog-product-1146209589 catalog-product-1438752943 catalog-product-1238962664 catalog-product-1082666085 catalog-product-1819804051 catalog-product-2115866266 catalog-product-1232709808 catalog-product-2069317376 catalog-product-1466990708 catalog-product-1086409355 catalog-product-1622151550 catalog-product-1639466383 catalog-product-1080011325 catalog-product-2028480951 catalog-product-2140964530 catalog-product-1644626644 catalog-product-1924399294 catalog-product-1821762690 catalog-product-1980751921 catalog-product-1269970804 catalog-product-2033989341",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "0",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:20 GMT",
+        "x-served-by": "cache-fra-eddf8230025-FRA, cache-wlg10426-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-19.json"
+    }
+  },
+  {
+    "id": "ex-20",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=20&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1999786718 catalog-product-1211269088 catalog-product-1499274528 catalog-product-1086743022 catalog-product-1706032184 catalog-product-1081614865 catalog-product-2146639313 catalog-product-1154606028 catalog-product-1459259227 catalog-product-1824175646 catalog-product-1650460968 catalog-product-1600722961 catalog-product-1106111796 catalog-product-1455194922 catalog-product-1741374013 catalog-product-1420469009 catalog-product-1151479345 catalog-product-1965973671 catalog-product-1816422575 catalog-product-1758619932 catalog-product-1325604411 catalog-product-1356815634 catalog-product-1270048047 catalog-product-1835348437 catalog-product-1857125331 catalog-product-1434021265 catalog-product-1728393087 catalog-product-1740495502 catalog-product-1840673966 catalog-product-1797227701 catalog-product-1130879425 catalog-product-1453128328 catalog-product-1697970811 catalog-product-1890174246 catalog-product-1589477612 catalog-product-2140144872 catalog-product-1940160431 catalog-product-1508702879 catalog-product-1460710709 catalog-product-1513762570 catalog-product-1746804092 catalog-product-1127587102 catalog-product-1452686647 catalog-product-1458053826 catalog-product-1114765251 catalog-product-2080526928 catalog-product-1456837030 catalog-product-1439969610",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "0",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:20 GMT",
+        "x-served-by": "cache-fra-etou8220190-FRA, cache-wlg10425-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-20.json"
+    }
+  },
+  {
+    "id": "ex-21",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=5&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1891344864 catalog-product-1074533562 catalog-product-1360951571 catalog-product-1388220662 catalog-product-1195723193 catalog-product-1366600472 catalog-product-1986080547 catalog-product-1480921455 catalog-product-1089210906 catalog-product-1435738629 catalog-product-1908302341 catalog-product-1862877679 catalog-product-1819561805 catalog-product-1487652667 catalog-product-1257094744 catalog-product-1742916647 catalog-product-1133514031 catalog-product-2131232214 catalog-product-1617276554 catalog-product-2147483071 catalog-product-1193046833 catalog-product-1780408621 catalog-product-2029222893 catalog-product-1942942943 catalog-product-1344895033 catalog-product-1077527220 catalog-product-1769415595 catalog-product-1827514625 catalog-product-1445852217 catalog-product-1443428641 catalog-product-2070943843 catalog-product-2131627785 catalog-product-1590306674 catalog-product-1430740172 catalog-product-1446830366 catalog-product-2015389384 catalog-product-1541066319 catalog-product-1207659103 catalog-product-1683316495 catalog-product-1114411610 catalog-product-1207659150 catalog-product-1426253436 catalog-product-1702120068 catalog-product-1426250716 catalog-product-1207658900 catalog-product-1426249888 catalog-product-1928816144 catalog-product-1207658825",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "134",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-etou8220151-FRA, cache-wlg10427-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-21.json"
+    }
+  },
+  {
+    "id": "ex-22",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=8&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1623513243 catalog-product-1403677436 catalog-product-1934166258 catalog-product-1750252381 catalog-product-1211984113 catalog-product-1660959380 catalog-product-1771589310 catalog-product-1495035333 catalog-product-2018838490 catalog-product-1599346921 catalog-product-1460218995 catalog-product-1540405950 catalog-product-1076642617 catalog-product-1435294665 catalog-product-1957357825 catalog-product-1347477001 catalog-product-2095755635 catalog-product-1336069439 catalog-product-1604634952 catalog-product-1201995925 catalog-product-1351925727 catalog-product-1300320746 catalog-product-1733684424 catalog-product-1153735119 catalog-product-1165094689 catalog-product-1569130440 catalog-product-1680239891 catalog-product-2090261953 catalog-product-2076059543 catalog-product-1513949567 catalog-product-1459790972 catalog-product-1242327312 catalog-product-1455107123 catalog-product-1439487606 catalog-product-1428054996 catalog-product-1874889748 catalog-product-1424773427 catalog-product-1443692774 catalog-product-1420648481 catalog-product-1207667263 catalog-product-1577265251 catalog-product-2079613275 catalog-product-1207666433 catalog-product-1427876514 catalog-product-1420812121 catalog-product-1207666643 catalog-product-1753068551 catalog-product-1282731468",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "0",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:20 GMT",
+        "x-served-by": "cache-fra-eddf8230036-FRA, cache-wlg10420-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-22.json"
+    }
+  },
+  {
+    "id": "ex-23",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=16&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-2017285811 catalog-product-1870324793 catalog-product-1521846175 catalog-product-1781309427 catalog-product-1421555971 catalog-product-1765360308 catalog-product-1582333296 catalog-product-1987978059 catalog-product-1570853516 catalog-product-1768848229 catalog-product-2063674355 catalog-product-2056531790 catalog-product-1409253341 catalog-product-1585794858 catalog-product-1760702251 catalog-product-2143043899 catalog-product-1426240474 catalog-product-1239857383 catalog-product-1427459497 catalog-product-1573967124 catalog-product-2047978668 catalog-product-1958669080 catalog-product-1162721350 catalog-product-1954693152 catalog-product-2036622572 catalog-product-1490739959 catalog-product-1092710223 catalog-product-1804122723 catalog-product-1465434701 catalog-product-1506609383 catalog-product-1268895261 catalog-product-1299400354 catalog-product-2095232159 catalog-product-1524987006 catalog-product-2013881119 catalog-product-1176983560 catalog-product-1772522891 catalog-product-1242122770 catalog-product-1425341439 catalog-product-1791360202 catalog-product-1790459966 catalog-product-1770130134 catalog-product-1893734117 catalog-product-1209310984 catalog-product-1693622295 catalog-product-1973407267 catalog-product-1589167087 catalog-product-1991603866",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "134",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-eddf8230071-FRA, cache-wlg10420-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-23.json"
+    }
+  },
+  {
+    "id": "ex-24",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=21&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1073954123 catalog-product-1455647768 catalog-product-2047670766 catalog-product-1458056008 catalog-product-1612002354 catalog-product-1308272827 catalog-product-1908407113 catalog-product-1816350713 catalog-product-1440152251 catalog-product-1442909513 catalog-product-1533118789 catalog-product-1439548178 catalog-product-1433238834 catalog-product-1625207125 catalog-product-1434460532 catalog-product-1456754427 catalog-product-1433331863 catalog-product-2019389960 catalog-product-1968374657 catalog-product-1427292148 catalog-product-1424773562 catalog-product-1666688320 catalog-product-1533865045 catalog-product-1422619461 catalog-product-1207667233 catalog-product-1657813519 catalog-product-1207665543 catalog-product-1207666873 catalog-product-1529501778 catalog-product-1778055342 catalog-product-1207666213 catalog-product-1659430030 catalog-product-1207665373 catalog-product-1207666103 catalog-product-1207665893 catalog-product-1207660913 catalog-product-1633252128 catalog-product-1207665843 catalog-product-1814467460 catalog-product-1928154062 catalog-product-1408399958 catalog-product-1207659019 catalog-product-1207664393 catalog-product-1207664373 catalog-product-1207664253 catalog-product-1426762679 catalog-product-1207660893 catalog-product-1207661333",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "0",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:20 GMT",
+        "x-served-by": "cache-fra-eddf8230124-FRA, cache-wlg10420-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-24.json"
+    }
+  },
+  {
+    "id": "ex-25",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=3&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1207658980 catalog-product-1552190876 catalog-product-1731348684 catalog-product-1370908824 catalog-product-1948704334 catalog-product-1846774951 catalog-product-1950524511 catalog-product-1860281269 catalog-product-1717855275 catalog-product-1325467411 catalog-product-1169744036 catalog-product-1993581340 catalog-product-1926077727 catalog-product-1929434313 catalog-product-1432813160 catalog-product-1999933307 catalog-product-1345222405 catalog-product-1624457803 catalog-product-1448050501 catalog-product-1207659023 catalog-product-1207658718 catalog-product-1207658715 catalog-product-1207659036 catalog-product-1207658750 catalog-product-1669042393 catalog-product-1207659089 catalog-product-1207658680 catalog-product-1595659240 catalog-product-1397939414 catalog-product-1207659101 catalog-product-1207658876 catalog-product-1874325037 catalog-product-1207659001 catalog-product-1207659077 catalog-product-1440162836 catalog-product-1207658752 catalog-product-1440163341 catalog-product-1207666113 catalog-product-1207659229 catalog-product-1798335080 catalog-product-1446538488 catalog-product-1355762673 catalog-product-1196903604 catalog-product-1674598037 catalog-product-1887281589 catalog-product-1882046319 catalog-product-1205406003 catalog-product-1763268053",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "134",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:19 GMT",
+        "x-served-by": "cache-fra-eddf8230034-FRA, cache-wlg10424-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-25.json"
+    }
+  },
+  {
+    "id": "ex-26",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=22&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1207660403 catalog-product-1207660313 catalog-product-1455645883 catalog-product-1330135151 catalog-product-1207660183 catalog-product-1207659903 catalog-product-1207660054 catalog-product-1089398960 catalog-product-1604584366 catalog-product-1749711952 catalog-product-1234611193 catalog-product-1207659242 catalog-product-1207659218 catalog-product-1207659198 catalog-product-1207659241 catalog-product-1207659124 catalog-product-1207660213 catalog-product-1193585573 catalog-product-1207659133 catalog-product-1613811126 catalog-product-1207659024 catalog-product-1435068351 catalog-product-1435068458 catalog-product-1189065674 catalog-product-1577877141 catalog-product-1207659166 catalog-product-1901829422 catalog-product-1428579671 catalog-product-1440426004 catalog-product-1743464065 catalog-product-1350159402 catalog-product-1786995757 catalog-product-1929225045 catalog-product-1362483431 catalog-product-1905791638 catalog-product-1435321049 catalog-product-1839978015 catalog-product-1207659066 catalog-product-1489865307 catalog-product-1770556474 catalog-product-1312818781 catalog-product-1796017250 catalog-product-1460731213 catalog-product-1460891791 catalog-product-1207658868 catalog-product-1584302429 catalog-product-1207658869 catalog-product-1999648426",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "0",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:20 GMT",
+        "x-served-by": "cache-fra-eddf8230113-FRA, cache-wlg10420-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-26.json"
+    }
+  },
+  {
+    "id": "ex-27",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=19&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1210103243 catalog-product-2146336406 catalog-product-1602894919 catalog-product-2023945788 catalog-product-2032950534 catalog-product-1396468236 catalog-product-2001710861 catalog-product-1557080015 catalog-product-1705092808 catalog-product-1832698625 catalog-product-1463977001 catalog-product-1489389825 catalog-product-1324401455 catalog-product-1407287452 catalog-product-1450564046 catalog-product-1469845437 catalog-product-1362328577 catalog-product-1544161518 catalog-product-1451215361 catalog-product-1689362899 catalog-product-1898079843 catalog-product-2111088471 catalog-product-1487502333 catalog-product-2078420771 catalog-product-2020235723 catalog-product-1660194629 catalog-product-1462451314 catalog-product-1084764045 catalog-product-1523902487 catalog-product-1304427900 catalog-product-2060365190 catalog-product-1590878628 catalog-product-1546940267 catalog-product-1936751046 catalog-product-1944341561 catalog-product-1677919510 catalog-product-2133872469 catalog-product-1507139900 catalog-product-1673521992 catalog-product-1421993477 catalog-product-1377044054 catalog-product-1424717003 catalog-product-2143232690 catalog-product-1948839141 catalog-product-1089914798 catalog-product-1554935533 catalog-product-2032442003 catalog-product-1722846437",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "0",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:20 GMT",
+        "x-served-by": "cache-fra-etou8220172-FRA, cache-wlg10426-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-27.json"
+    }
+  },
+  {
+    "id": "ex-28",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=27&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1824752294 catalog-product-1445635262 catalog-product-2074235023 catalog-product-2024951331 catalog-product-1523055548 catalog-product-1442284498 catalog-product-2064423652 catalog-product-1088623297 catalog-product-1686500330 catalog-product-1727445510 catalog-product-1336403541 catalog-product-1716484150 catalog-product-2033884652 catalog-product-1210935451 catalog-product-1083912697 catalog-product-1794993474 catalog-product-1952246494 catalog-product-1878853648 catalog-product-1629255124 catalog-product-1511574065 catalog-product-1640947128 catalog-product-2000798982 catalog-product-1910404586 catalog-product-1768727131 catalog-product-1788507471 catalog-product-1987166130 catalog-product-1372484934 catalog-product-2135254565 catalog-product-1425635651 catalog-product-1654914090 catalog-product-2062545933 catalog-product-1992101679 catalog-product-1788217759 catalog-product-2093053752 catalog-product-2062079148 catalog-product-1320520340 catalog-product-1207836582 catalog-product-1310231644 catalog-product-1571927298 catalog-product-1289196571 catalog-product-1285440151 catalog-product-1836480766 catalog-product-1979827308 catalog-product-1429671075 catalog-product-1197640847 catalog-product-1948991730 catalog-product-1170484612 catalog-product-1452185016",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "0",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:20 GMT",
+        "x-served-by": "cache-fra-eddf8230183-FRA, cache-wlg10423-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-28.json"
+    }
+  },
+  {
+    "id": "ex-29",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=6&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-1526007082 catalog-product-1651577736 catalog-product-1207659088 catalog-product-1207659005 catalog-product-1207666093 catalog-product-1207658791 catalog-product-1207658877 catalog-product-1207658751 catalog-product-1207659063 catalog-product-1166585525 catalog-product-1207659252 catalog-product-5 catalog-product-1207659108 catalog-product-1680004800 catalog-product-1207658921 catalog-product-1207658786 catalog-product-1207658949 catalog-product-1760463998 catalog-product-1436955815 catalog-product-1207658729 catalog-product-1207658855 catalog-product-1207658988 catalog-product-1972111803 catalog-product-1909273717 catalog-product-1134024811 catalog-product-1587851209 catalog-product-1174733633 catalog-product-1412583633 catalog-product-1214615066 catalog-product-1909925234 catalog-product-1708038763 catalog-product-1898010066 catalog-product-1629486561 catalog-product-1993442013 catalog-product-1964536662 catalog-product-2125022825 catalog-product-1354277217 catalog-product-1719874648 catalog-product-1721569739 catalog-product-1698218753 catalog-product-1800456002 catalog-product-1612971969 catalog-product-1402793832 catalog-product-1173472993 catalog-product-1830812539 catalog-product-2080889961 catalog-product-1184941116 catalog-product-1407750955",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "0",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:20 GMT",
+        "x-served-by": "cache-fra-eddf8230082-FRA, cache-wlg10427-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-29.json"
+    }
+  },
+  {
+    "id": "ex-30",
+    "request": {
+      "method": "GET",
+      "url": "https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=15&countryCode=US&locale=en-US&currencyCode=USD",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.11.0"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "catalog-product-2090014396 catalog-product-1658248214 catalog-product-1380826782 catalog-product-1861207243 catalog-product-1105269488 catalog-product-1561818206 catalog-product-1428013675 catalog-product-1409800471 catalog-product-1731366259 catalog-product-1574775422 catalog-product-2040120327 catalog-product-2044656083 catalog-product-1372581920 catalog-product-1108345769 catalog-product-1273071930 catalog-product-1460447406 catalog-product-1553602216 catalog-product-2100919316 catalog-product-1678365723 catalog-product-1277892404 catalog-product-1199820566 catalog-product-2117347604 catalog-product-1790032718 catalog-product-1280902753 catalog-product-1635627436 catalog-product-1147294126 catalog-product-2075493778 catalog-product-1930532696 catalog-product-1240343320 catalog-product-1284626411 catalog-product-1550798708 catalog-product-1438668439 catalog-product-2066656277 catalog-product-1770055681 catalog-product-1437080923 catalog-product-1789795376 catalog-product-1156382433 catalog-product-1504083920 catalog-product-1081193936 catalog-product-2027556931 catalog-product-1639417146 catalog-product-2057574746 catalog-product-1237168477 catalog-product-1982382861 catalog-product-1403834217 catalog-product-2068318498 catalog-product-1346646938 catalog-product-1546733364",
+        "accept-ranges": "bytes",
+        "cache-control": "no-cache, private",
+        "x-origin-age": "0",
+        "via": "1.1 varnish, 1.1 varnish",
+        "date": "Sun, 22 Nov 2026 09:59:20 GMT",
+        "x-served-by": "cache-fra-eddf8230209-FRA, cache-wlg10421-WLG",
+        "x-cache": "MISS, MISS",
+        "x-cache-hits": "0, 0",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-30.json"
+    }
+  }
+]

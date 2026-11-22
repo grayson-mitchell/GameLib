@@ -1,0 +1,1156 @@
+{
+  "ok": true,
+  "count": 7,
+  "ids": [
+    "1440163901",
+    "1711230643",
+    "1312824873",
+    "2141207403",
+    "1207658787",
+    "1998527297",
+    "1242989820"
+  ],
+  "sha256": "33a0b34128a193897066990d1f6ad34fae0f922d255c9e28feb02a036b537c17",
+  "products": [
+    {
+      "id": "1440163901",
+      "slug": "the_elder_scrolls_iii_morrowind_goty_edition",
+      "features": [
+        {
+          "name": "Single-player",
+          "slug": "single"
+        }
+      ],
+      "screenshots": [
+        "https://images.gog-statics.com/90bb352c03105ad4e0696ecd8085f7f8df29de239faa8ed9338305a3f0b07561_{formatter}.jpg",
+        "https://images.gog-statics.com/ff672df24fc0fe8b2f60566f6a001bc26ec74dfc860fea47a0e656d66c799b8b_{formatter}.jpg",
+        "https://images.gog-statics.com/5b78a2ead89c387d7f4923afa7bb61baeccbfd28236d1c5537a9620b4d933b27_{formatter}.jpg",
+        "https://images.gog-statics.com/04a767648de0e2527666e6955bb26ebe5079773bfd48d885d66c72e1586e38af_{formatter}.jpg",
+        "https://images.gog-statics.com/b90deb7bbb27af9a1362241970041e77c3399c649671d24223cd19b69d7231e1_{formatter}.jpg",
+        "https://images.gog-statics.com/56053cf70601d9efecdfc950dc62a92940d53acd5d922350de2420ce13dfb93a_{formatter}.jpg",
+        "https://images.gog-statics.com/1d8554febe4d54c08838461d15c220230e9328353fbdc120ac0476ff2406739f_{formatter}.jpg",
+        "https://images.gog-statics.com/937db2c290f5f43e1d3bd9efe27417d953b2000de8dd3ae5b816d36e404c1657_{formatter}.jpg",
+        "https://images.gog-statics.com/58240cdee778fb220e0825c48bf214e199951a7fa077ee55be845fe9528c2e6d_{formatter}.jpg",
+        "https://images.gog-statics.com/55e101bfe4c0160ed4c7c366dc80147260ec3c2a8a562157cf4cf93736172cd6_{formatter}.jpg",
+        "https://images.gog-statics.com/da6a85489ef79d45e75b58191ccf788163e59d08cf5a8473a2d4d14fe7842605_{formatter}.jpg"
+      ],
+      "userPreferredLanguage": {
+        "code": "en",
+        "inAudio": true,
+        "inText": true
+      },
+      "releaseDate": "2002.04.29",
+      "storeReleaseDate": "2015.08.26",
+      "productType": "pack",
+      "title": "The Elder Scrolls III: Morrowind GOTY Edition",
+      "coverHorizontal": "https://images.gog-statics.com/408994da00dea6d8c398cdc0e0d419c386355441216f74573880155dbf4deb79.png",
+      "coverVertical": "https://images.gog-statics.com/28ed5a2e4485a200c3f4655d9b4de95aabf76c0c8ceba7d07fbbd2e1d84f9880.jpg",
+      "logo": "https://images.gog-statics.com/c832e0eaf5175a9810a5782df185a34ecc8b728c72f4e83fdfeb22ff32b1eeeb.png",
+      "galaxyBackgroundImage": "https://images.gog-statics.com/289a24eba1a271efe1a7c537317ff12141678a060e5823f5a39d1b7caf699766.jpg",
+      "developers": [
+        "Bethesda Softworks"
+      ],
+      "publishers": [
+        "Bethesda Softworks LLC"
+      ],
+      "operatingSystems": [
+        "windows"
+      ],
+      "price": {
+        "final": "$3.75",
+        "base": "$14.99",
+        "discount": "-75%",
+        "finalMoney": {
+          "amount": "3.75",
+          "currency": "USD",
+          "discount": "11.24"
+        },
+        "baseMoney": {
+          "amount": "14.99",
+          "currency": "USD"
+        }
+      },
+      "productState": "default",
+      "genres": [
+        {
+          "name": "Role-playing",
+          "slug": "rpg"
+        },
+        {
+          "name": "Adventure",
+          "slug": "adventure"
+        },
+        {
+          "name": "Open World",
+          "slug": "open-world"
+        }
+      ],
+      "tags": [
+        {
+          "name": "Adventure",
+          "slug": "adventure"
+        },
+        {
+          "name": "Fantasy",
+          "slug": "fantasy"
+        },
+        {
+          "name": "Role-playing",
+          "slug": "role-playing"
+        },
+        {
+          "name": "Classic",
+          "slug": "classic"
+        },
+        {
+          "name": "First-Person",
+          "slug": "first-person"
+        },
+        {
+          "name": "Third Person",
+          "slug": "third-person"
+        },
+        {
+          "name": "Open World",
+          "slug": "open-world"
+        },
+        {
+          "name": "Sandbox",
+          "slug": "sandbox"
+        },
+        {
+          "name": "Magic",
+          "slug": "magic"
+        },
+        {
+          "name": "Medieval",
+          "slug": "medieval"
+        },
+        {
+          "name": "Good Old Game",
+          "slug": "good-old-game"
+        }
+      ],
+      "reviewsRating": 47,
+      "reviewsCount": 2246,
+      "editions": [],
+      "ratings": [
+        {
+          "name": "pegiRating",
+          "ageRating": "12"
+        },
+        {
+          "name": "esrbRating",
+          "ageRating": "13"
+        },
+        {
+          "name": "uskRating",
+          "ageRating": "12"
+        }
+      ],
+      "storeLink": "https://www.gog.com/en/game/the_elder_scrolls_iii_morrowind_goty_edition"
+    },
+    {
+      "id": "1711230643",
+      "slug": "the_elder_scrolls_v_skyrim_special_edition",
+      "features": [
+        {
+          "name": "Achievements",
+          "slug": "achievements"
+        },
+        {
+          "name": "Cloud saves",
+          "slug": "cloud_saves"
+        },
+        {
+          "name": "Controller support",
+          "slug": "controller_support"
+        },
+        {
+          "name": "Overlay",
+          "slug": "overlay"
+        },
+        {
+          "name": "Single-player",
+          "slug": "single"
+        }
+      ],
+      "screenshots": [
+        "https://images.gog-statics.com/58a92fc34a92e061467237d55a847f88932320b0b53e599e5b751cd1969af13d_{formatter}.jpg",
+        "https://images.gog-statics.com/34a8b27ef27278037e15f5442ef806e00051d845d22c0a720a2b7d2c368f9919_{formatter}.jpg",
+        "https://images.gog-statics.com/3b58b41240ff280840b898b07cfb41a489521faa23e137df08ed664f652e7f96_{formatter}.jpg",
+        "https://images.gog-statics.com/a61bcaf3b69c758eca2d5c3754799ee83ea6208290ab0c023c1dd9567c0adc82_{formatter}.jpg",
+        "https://images.gog-statics.com/1d4d0167a92901089a7914ca4950251a8028b5b85f04b398c55da57e2f263049_{formatter}.jpg",
+        "https://images.gog-statics.com/78ad31501457cae7260f8d239bc02f0a70f8bee993a944832c7cca8002f542ba_{formatter}.jpg",
+        "https://images.gog-statics.com/b415473be29d9752592ae2a409d17777cfdeb3703111bff9ae31a0220c9c25cc_{formatter}.jpg",
+        "https://images.gog-statics.com/3140fadfa3704b745ebb51d31d4afa6086e880561b6b10bb849e4e5747f1d6a5_{formatter}.jpg"
+      ],
+      "userPreferredLanguage": {
+        "code": "en",
+        "inAudio": true,
+        "inText": true
+      },
+      "releaseDate": "2016.11.28",
+      "storeReleaseDate": "2022.09.29",
+      "productType": "game",
+      "title": "The Elder Scrolls V: Skyrim Special Edition",
+      "coverHorizontal": "https://images.gog-statics.com/7a75d49946cb5ff732f0a889f44dd49fb3bede3ad7212c84b7c34a6d29aeff77.png",
+      "coverVertical": "https://images.gog-statics.com/ddedeef7636157b558d2fac8fa8a6c0d28e6fab0668c6aab7fd28220f29ec734.jpg",
+      "logo": "https://images.gog-statics.com/dabc6d175047b275b320d2e9d3442a3a17c714ba5114cdf7ed67ad7d234823ee.png",
+      "galaxyBackgroundImage": "https://images.gog-statics.com/2598e50c4a49dbfe1ee36e95ffef6dc89c3c8da1970e9f806bf7cb6745c850c8.jpg",
+      "developers": [
+        "Bethesda Game Studios"
+      ],
+      "publishers": [
+        "Bethesda Softworks LLC"
+      ],
+      "operatingSystems": [
+        "windows"
+      ],
+      "price": {
+        "final": "$7.99",
+        "base": "$39.99",
+        "discount": "-80%",
+        "finalMoney": {
+          "amount": "7.99",
+          "currency": "USD",
+          "discount": "32.00"
+        },
+        "baseMoney": {
+          "amount": "39.99",
+          "currency": "USD"
+        }
+      },
+      "productState": "default",
+      "genres": [
+        {
+          "name": "Role-playing",
+          "slug": "rpg"
+        },
+        {
+          "name": "Adventure",
+          "slug": "adventure"
+        },
+        {
+          "name": "Fantasy",
+          "slug": "fantasy"
+        }
+      ],
+      "tags": [
+        {
+          "name": "Adventure",
+          "slug": "adventure"
+        },
+        {
+          "name": "Fantasy",
+          "slug": "fantasy"
+        },
+        {
+          "name": "Story Rich",
+          "slug": "story-rich"
+        },
+        {
+          "name": "Atmospheric",
+          "slug": "atmospheric"
+        },
+        {
+          "name": "Role-playing",
+          "slug": "role-playing"
+        },
+        {
+          "name": "Exploration",
+          "slug": "exploration"
+        },
+        {
+          "name": "Classic",
+          "slug": "classic"
+        },
+        {
+          "name": "First-Person",
+          "slug": "first-person"
+        },
+        {
+          "name": "Great Soundtrack",
+          "slug": "great-soundtrack"
+        },
+        {
+          "name": "Third Person",
+          "slug": "third-person"
+        },
+        {
+          "name": "Open World",
+          "slug": "open-world"
+        },
+        {
+          "name": "Magic",
+          "slug": "magic"
+        },
+        {
+          "name": "Crafting",
+          "slug": "crafting"
+        },
+        {
+          "name": "Choose Your Own Adventure",
+          "slug": "choose-your-own-adventure"
+        }
+      ],
+      "reviewsRating": 44,
+      "reviewsCount": 1698,
+      "editions": [
+        {
+          "id": 1711230643,
+          "name": "Special Edition",
+          "isRootEdition": true
+        },
+        {
+          "id": 1801825368,
+          "name": "Anniversary Edition",
+          "isRootEdition": false
+        }
+      ],
+      "ratings": [
+        {
+          "name": "pegiRating",
+          "ageRating": "18"
+        },
+        {
+          "name": "esrbRating",
+          "ageRating": "17"
+        },
+        {
+          "name": "brRating",
+          "ageRating": "18"
+        },
+        {
+          "name": "gogRating",
+          "ageRating": "18"
+        }
+      ],
+      "storeLink": "https://www.gog.com/en/game/the_elder_scrolls_v_skyrim_special_edition"
+    },
+    {
+      "id": "1312824873",
+      "slug": "fallout_new_vegas_ultimate_edition",
+      "features": [
+        {
+          "name": "Achievements",
+          "slug": "achievements"
+        },
+        {
+          "name": "Cloud saves",
+          "slug": "cloud_saves"
+        },
+        {
+          "name": "Controller support",
+          "slug": "controller_support"
+        },
+        {
+          "name": "Overlay",
+          "slug": "overlay"
+        },
+        {
+          "name": "Single-player",
+          "slug": "single"
+        }
+      ],
+      "screenshots": [
+        "https://images.gog-statics.com/a844e0b5374042a8b328e57b4bddd072e465b6603906842222fd354f2a82a424_{formatter}.jpg",
+        "https://images.gog-statics.com/b167581703eef12daf355f802c835e194532359ab3cf4b2a6a68f922a191eb50_{formatter}.jpg",
+        "https://images.gog-statics.com/666218e927b0e0009b038a5483fd43f86736ca84d6c7770af73b9c3e7ee6ec1c_{formatter}.jpg",
+        "https://images.gog-statics.com/c9d757d0cc0bb8965f0be27edd1bb5dcfa857b6b0dfc0a799a5379c861f796ae_{formatter}.jpg",
+        "https://images.gog-statics.com/a1fc7c5a57ad85e7b9b352d596b266e7ba5b2574a32880ee81f8bd983a72918a_{formatter}.jpg",
+        "https://images.gog-statics.com/6805b0c969b87a8c794eb863d3b7156859bccba9c51c5eac0ce6fc40036e6127_{formatter}.jpg",
+        "https://images.gog-statics.com/2ee64adc1e694a46fb02d185277bf36b1aa4df5e02d0241971671ff83b8bcfb4_{formatter}.jpg",
+        "https://images.gog-statics.com/f932e00d1ed4f5f3e4d35e5ebde3cb4cb79b44f22ae85798e5e17ec849a36c3e_{formatter}.jpg",
+        "https://images.gog-statics.com/150255c78413ffdea4d1c6908f83e56a68cb60cdbe246621f328ca1168669244_{formatter}.jpg",
+        "https://images.gog-statics.com/433e0ffd5f3951e4b74d0f70a64972c56a9998cb3f6150fee71251633a6e243b_{formatter}.jpg",
+        "https://images.gog-statics.com/472100671d6d15f1949e5cb86fef6592a2c6cb018a49faeff7611ddfe5f28c95_{formatter}.jpg",
+        "https://images.gog-statics.com/3489153b6e060e4e6e0fa54ae0378d77d1086455376d8a561d05a5661443b823_{formatter}.jpg",
+        "https://images.gog-statics.com/501450d3688409737145b178078b548a61ba2b5798a207703f9a670e248cfbfe_{formatter}.jpg",
+        "https://images.gog-statics.com/bada4df14ed3ef9277feeddac083f27643390140457765a2a413bedd4f6418c0_{formatter}.jpg",
+        "https://images.gog-statics.com/45bded2c24af11689a2b93f2b0c2424bdc05da3e8907e96fe4e0d61985c7fb1c_{formatter}.jpg"
+      ],
+      "userPreferredLanguage": {
+        "code": "en",
+        "inAudio": true,
+        "inText": true
+      },
+      "releaseDate": "2010.10.20",
+      "storeReleaseDate": "2017.06.01",
+      "productType": "pack",
+      "title": "Fallout: New Vegas Ultimate Edition",
+      "coverHorizontal": "https://images.gog-statics.com/d18b14716866d6edda0361a30661f25a4e326698561e03d3b5ac1ce15d97e884.png",
+      "coverVertical": "https://images.gog-statics.com/41453c2dad42a2759ba1c9bc400df9a935fd0741eb9b2d6fcc3801b2b5a8d702.jpg",
+      "logo": "https://images.gog-statics.com/6fd386523e72e28d7f85261229a1cf8200fb34f8e54f6557843e500082d7c427.png",
+      "galaxyBackgroundImage": "https://images.gog-statics.com/8064e94210b0914d6edbf0790d145e40d0c1890da78130c3d3c28f18bdae483e.jpg",
+      "developers": [
+        "Obsidian Entertainment"
+      ],
+      "publishers": [
+        "Bethesda Softworks LLC"
+      ],
+      "operatingSystems": [
+        "windows"
+      ],
+      "price": {
+        "final": "$4.99",
+        "base": "$19.99",
+        "discount": "-75%",
+        "finalMoney": {
+          "amount": "4.99",
+          "currency": "USD",
+          "discount": "15.00"
+        },
+        "baseMoney": {
+          "amount": "19.99",
+          "currency": "USD"
+        }
+      },
+      "productState": "default",
+      "genres": [
+        {
+          "name": "Role-playing",
+          "slug": "rpg"
+        },
+        {
+          "name": "Action",
+          "slug": "action"
+        },
+        {
+          "name": "Open World",
+          "slug": "open-world"
+        }
+      ],
+      "tags": [
+        {
+          "name": "Action",
+          "slug": "action"
+        },
+        {
+          "name": "Story Rich",
+          "slug": "story-rich"
+        },
+        {
+          "name": "Atmospheric",
+          "slug": "atmospheric"
+        },
+        {
+          "name": "Role-playing",
+          "slug": "role-playing"
+        },
+        {
+          "name": "Exploration",
+          "slug": "exploration"
+        },
+        {
+          "name": "Sci-fi",
+          "slug": "sci-fi"
+        },
+        {
+          "name": "Classic",
+          "slug": "classic"
+        },
+        {
+          "name": "First-Person",
+          "slug": "first-person"
+        },
+        {
+          "name": "Choices Matter",
+          "slug": "choices-matter"
+        },
+        {
+          "name": "Great Soundtrack",
+          "slug": "great-soundtrack"
+        },
+        {
+          "name": "Third Person",
+          "slug": "third-person"
+        },
+        {
+          "name": "Open World",
+          "slug": "open-world"
+        },
+        {
+          "name": "Gore",
+          "slug": "gore"
+        },
+        {
+          "name": "FPS",
+          "slug": "fps"
+        },
+        {
+          "name": "Post-apocalyptic",
+          "slug": "post-apocalyptic"
+        },
+        {
+          "name": "Modern",
+          "slug": "modern"
+        },
+        {
+          "name": "Good Old Game",
+          "slug": "good-old-game"
+        },
+        {
+          "name": "Western",
+          "slug": "western"
+        }
+      ],
+      "reviewsRating": 46,
+      "reviewsCount": 2332,
+      "editions": [],
+      "ratings": [
+        {
+          "name": "pegiRating",
+          "ageRating": "18"
+        },
+        {
+          "name": "esrbRating",
+          "ageRating": "17"
+        },
+        {
+          "name": "uskRating",
+          "ageRating": "18"
+        }
+      ],
+      "storeLink": "https://www.gog.com/en/game/fallout_new_vegas_ultimate_edition"
+    },
+    {
+      "id": "2141207403",
+      "slug": "wicked_island",
+      "features": [
+        {
+          "name": "Overlay",
+          "slug": "overlay"
+        },
+        {
+          "name": "Single-player",
+          "slug": "single"
+        }
+      ],
+      "screenshots": [
+        "https://images.gog-statics.com/c186c07e092af67d8cd13516362d7da65ea90fc75df37ff4c9760f60bd8caa12_{formatter}.jpg",
+        "https://images.gog-statics.com/3013f7a2199dcc474ed21e283caf79a049118dc9a0521ff3afc188089b8f5ce1_{formatter}.jpg",
+        "https://images.gog-statics.com/9824168474acc5d879a5be13665f9e98e7fbf62bb706f79c5f46525c095dc7e8_{formatter}.jpg",
+        "https://images.gog-statics.com/425e18f17a89a31ba619a597262310793e8dcd8294a3d05154cbdd72e36da03d_{formatter}.jpg",
+        "https://images.gog-statics.com/8742bcfacc66d8a1a6d680b705b9f3b6c25a24d78800a28dd74fa03d763ec206_{formatter}.jpg",
+        "https://images.gog-statics.com/c2568475c25a06109984efac1d9e52a42d4c961eac5d7d798cc1e25c5269ef12_{formatter}.jpg",
+        "https://images.gog-statics.com/48f575cdaf4b73326b6805a9ff7151ba050d9bf2a40c1103143fdcd0dc62658a_{formatter}.jpg"
+      ],
+      "userPreferredLanguage": {
+        "code": "en",
+        "inAudio": false,
+        "inText": true
+      },
+      "releaseDate": "2026.11.17",
+      "storeReleaseDate": "2026.11.18",
+      "productType": "game",
+      "title": "Wicked Island",
+      "coverHorizontal": "https://images.gog-statics.com/9500b9e5a1900e0ab45d31b99fb94892ab282e87ee3e2d690993230991f82e19.png",
+      "coverVertical": "https://images.gog-statics.com/b2e35bad28f6370f86d01ee813d784e7e9d07c99719548d74d584f94d5709453.jpg",
+      "logo": "https://images.gog-statics.com/48668b8c8ef93fe014460bebed3051cf17a28b1b1fc0f5efab16b232b76666e5.png",
+      "galaxyBackgroundImage": "https://images.gog-statics.com/5299c7aae65233a6a7eb148654fe15363015a4fcb3c8095988a95e4a2fcda07a.jpg",
+      "developers": [
+        "RawDarkness"
+      ],
+      "publishers": [
+        "RawDarkness"
+      ],
+      "operatingSystems": [
+        "windows"
+      ],
+      "price": {
+        "final": "$22.79",
+        "base": "$37.99",
+        "discount": "-40%",
+        "finalMoney": {
+          "amount": "22.79",
+          "currency": "USD",
+          "discount": "15.20"
+        },
+        "baseMoney": {
+          "amount": "37.99",
+          "currency": "USD"
+        }
+      },
+      "productState": "default",
+      "genres": [
+        {
+          "name": "Role-playing",
+          "slug": "rpg"
+        },
+        {
+          "name": "Fantasy",
+          "slug": "fantasy"
+        },
+        {
+          "name": "Survival",
+          "slug": "survival"
+        }
+      ],
+      "tags": [
+        {
+          "name": "Indie",
+          "slug": "indie"
+        },
+        {
+          "name": "Role-playing",
+          "slug": "role-playing"
+        },
+        {
+          "name": "Female Protagonist",
+          "slug": "female-protagonist"
+        },
+        {
+          "name": "Third Person",
+          "slug": "third-person"
+        },
+        {
+          "name": "Sandbox",
+          "slug": "sandbox"
+        },
+        {
+          "name": "Mature",
+          "slug": "mature"
+        },
+        {
+          "name": "Sexual Content",
+          "slug": "sexual-content"
+        },
+        {
+          "name": "Nudity",
+          "slug": "nudity"
+        },
+        {
+          "name": "Survival",
+          "slug": "survival"
+        },
+        {
+          "name": "Violent",
+          "slug": "violent"
+        },
+        {
+          "name": "NSFW",
+          "slug": "nsfw"
+        },
+        {
+          "name": "Crafting",
+          "slug": "crafting"
+        },
+        {
+          "name": "Base Building",
+          "slug": "base-building"
+        },
+        {
+          "name": "Hentai",
+          "slug": "hentai"
+        },
+        {
+          "name": "Werewolves",
+          "slug": "werewolves"
+        }
+      ],
+      "reviewsRating": 35,
+      "reviewsCount": 19,
+      "editions": [],
+      "ratings": [
+        {
+          "name": "gogRating",
+          "ageRating": "18"
+        }
+      ],
+      "storeLink": "https://www.gog.com/en/game/wicked_island"
+    },
+    {
+      "id": "1207658787",
+      "slug": "heroes_of_might_and_magic_3_complete_edition",
+      "features": [
+        {
+          "name": "Cloud saves",
+          "slug": "cloud_saves"
+        },
+        {
+          "name": "Co-op",
+          "slug": "coop"
+        },
+        {
+          "name": "Multi-player",
+          "slug": "multi"
+        },
+        {
+          "name": "Single-player",
+          "slug": "single"
+        }
+      ],
+      "screenshots": [
+        "https://images.gog-statics.com/585207428de200a4e827011f98bc9ebd2403b9a2f0a69d4017a580f754737edf_{formatter}.jpg",
+        "https://images.gog-statics.com/d4607cd152c961cd0d3276c98189a8c0d5847aa4ccda138fd48f4155b0783fbb_{formatter}.jpg",
+        "https://images.gog-statics.com/c1e08b28b7061f12be5f595b700bc32817c97fdc1fbbc0ecc875348aa7be9a27_{formatter}.jpg",
+        "https://images.gog-statics.com/c599402fdf29ce48774d55fa02abd20d54f762ef83dc9b10173a00ac87d08bac_{formatter}.jpg",
+        "https://images.gog-statics.com/39b361351a0cac322a2cc3464e9f0a7bf07aa53050980e3a38061ce620c82737_{formatter}.jpg",
+        "https://images.gog-statics.com/32eb941de3847ada3be5136e9ed7b4178c8f5ade5b70ea32719c502829f5870b_{formatter}.jpg",
+        "https://images.gog-statics.com/885d0d03e78213691c1fa6b5496bafccc72ae832bf988c0a29df77f5b36a6417_{formatter}.jpg",
+        "https://images.gog-statics.com/3b08779fffc281958d66f3e498a69a8e2e9a99ef2866004c98f90d5cbc47863f_{formatter}.jpg",
+        "https://images.gog-statics.com/877fc127578264724383a3270b7c56ac26740b22d7aecf9588195ab32d91cfa8_{formatter}.jpg",
+        "https://images.gog-statics.com/8956afd4c11b6607ac3443bbfbf0e27481fe369942543814f1db95e007af246b_{formatter}.jpg",
+        "https://images.gog-statics.com/a57acb0aeaed488082b245102ec7732200d9336e47be6ff91f7cde1b7464c9d9_{formatter}.jpg",
+        "https://images.gog-statics.com/2832b9ceea99b55f5345be745d67d12566a9b4683b9f6db9aceb8058ebc79f0e_{formatter}.jpg",
+        "https://images.gog-statics.com/79338887fdcafe9df05d9ffc9d240a0b4499ae3cbf8c2a991845d7086345cd47_{formatter}.jpg",
+        "https://images.gog-statics.com/e35a766b0e30811936e12a3439e72d66b6cf8b558c34c561b212f6f59ffa23a1_{formatter}.jpg",
+        "https://images.gog-statics.com/0f63c5f418d434eff3178c652c1e2d6ddcf275f436473f2842ef5fb4994f3322_{formatter}.jpg",
+        "https://images.gog-statics.com/8e401209b82f9a43ff803287e3970e703b1eaeb505ae25c96108499dd7a210e5_{formatter}.jpg",
+        "https://images.gog-statics.com/9b2cf8f995903d3c50fb6f9d8bc461b69b49819d27d7cb917094b892c8ffdccf_{formatter}.jpg",
+        "https://images.gog-statics.com/9ae7e3dd35983cd699791486bc864adcc42446088464cd2684687c6e394847e9_{formatter}.jpg",
+        "https://images.gog-statics.com/cc8cd8fc7d3085ff41e5af1c4623c28fbac16ce730c5b4d2e72f37efe3910b9f_{formatter}.jpg",
+        "https://images.gog-statics.com/517e74f80d89d3658174dc5f72cd67020aee28197f59ef8ec902fece6dabbeb5_{formatter}.jpg"
+      ],
+      "userPreferredLanguage": {
+        "code": "en",
+        "inAudio": true,
+        "inText": true
+      },
+      "releaseDate": "1999.06.01",
+      "storeReleaseDate": null,
+      "productType": "game",
+      "title": "Heroes of Might and Magic® 3: Complete",
+      "coverHorizontal": "https://images.gog-statics.com/a18a7017bdca7bdd14fb003a46522e320051d3e9c1fb939559a4517d90f86170.png",
+      "coverVertical": "https://images.gog-statics.com/869b56a1048405d97f48358ea537af2c08c9d8cd508f8e4a82883bf8eafad361.jpg",
+      "logo": "https://images.gog-statics.com/6d04ac88628e9622eb4859e0cabfdc891d41de7922d3422edf0d75356f04fe90.png",
+      "galaxyBackgroundImage": "https://images.gog-statics.com/f3094325cda8f48dfce92557b3f105e7b6df6d359478ab976fce10e71a55600f.jpg",
+      "developers": [
+        "New World Computing, Inc."
+      ],
+      "publishers": [
+        "Ubisoft"
+      ],
+      "operatingSystems": [
+        "windows"
+      ],
+      "price": {
+        "final": "$4.99",
+        "base": "$9.99",
+        "discount": "-50%",
+        "finalMoney": {
+          "amount": "4.99",
+          "currency": "USD",
+          "discount": "5.00"
+        },
+        "baseMoney": {
+          "amount": "9.99",
+          "currency": "USD"
+        }
+      },
+      "productState": "default",
+      "genres": [
+        {
+          "name": "Strategy",
+          "slug": "strategy"
+        },
+        {
+          "name": "Turn-based",
+          "slug": "turnbased"
+        },
+        {
+          "name": "Fantasy",
+          "slug": "fantasy"
+        }
+      ],
+      "tags": [
+        {
+          "name": "Fantasy",
+          "slug": "fantasy"
+        },
+        {
+          "name": "Atmospheric",
+          "slug": "atmospheric"
+        },
+        {
+          "name": "Strategy",
+          "slug": "strategy"
+        },
+        {
+          "name": "Turn-Based",
+          "slug": "turn-based"
+        },
+        {
+          "name": "Classic",
+          "slug": "classic"
+        },
+        {
+          "name": "Great Soundtrack",
+          "slug": "great-soundtrack"
+        },
+        {
+          "name": "Tactical",
+          "slug": "tactical"
+        },
+        {
+          "name": "Management",
+          "slug": "management"
+        },
+        {
+          "name": "Multiplayer",
+          "slug": "multiplayer"
+        },
+        {
+          "name": "Resource Management",
+          "slug": "resource-management"
+        },
+        {
+          "name": "Magic",
+          "slug": "magic"
+        },
+        {
+          "name": "Base Building",
+          "slug": "base-building"
+        },
+        {
+          "name": "Local Co-Op",
+          "slug": "local-co-op"
+        },
+        {
+          "name": "Local Multiplayer",
+          "slug": "local-multiplayer"
+        },
+        {
+          "name": "Good Old Game",
+          "slug": "good-old-game"
+        }
+      ],
+      "reviewsRating": 48,
+      "reviewsCount": 16077,
+      "editions": [],
+      "ratings": [
+        {
+          "name": "pegiRating",
+          "ageRating": "12"
+        },
+        {
+          "name": "esrbRating",
+          "ageRating": "6"
+        },
+        {
+          "name": "uskRating",
+          "ageRating": "12"
+        },
+        {
+          "name": "brRating",
+          "ageRating": "12"
+        }
+      ],
+      "storeLink": "https://www.gog.com/en/game/heroes_of_might_and_magic_3_complete_edition"
+    },
+    {
+      "id": "1998527297",
+      "slug": "fallout_4_game_of_the_year_edition",
+      "features": [
+        {
+          "name": "Achievements",
+          "slug": "achievements"
+        },
+        {
+          "name": "Cloud saves",
+          "slug": "cloud_saves"
+        },
+        {
+          "name": "Controller support",
+          "slug": "controller_support"
+        },
+        {
+          "name": "Overlay",
+          "slug": "overlay"
+        },
+        {
+          "name": "Single-player",
+          "slug": "single"
+        }
+      ],
+      "screenshots": [
+        "https://images.gog-statics.com/7d890f4fd6cae24928c39263d6cc1be1d98f033d97a2bcbbabd8a27257a1a1cc_{formatter}.jpg",
+        "https://images.gog-statics.com/fb681f9ec219169674a65f1d59e2e95323840dec14bafb791b1802565b21ce2e_{formatter}.jpg",
+        "https://images.gog-statics.com/13e6b550e16944ad923c38f78afdac27371f5ead8c74960da8ca8ecc0013ecc2_{formatter}.jpg",
+        "https://images.gog-statics.com/74a643bd9078760178b5abd58764d74875165d18a3dbf43d1cc01d81a8c38c9a_{formatter}.jpg",
+        "https://images.gog-statics.com/fa3f573db170679b3f572135afa15d204bd454d7cc4e19db12fcc7a199cd7107_{formatter}.jpg",
+        "https://images.gog-statics.com/9f9b21e69addf88b99bd9dd8ac6c1546cf0b1f4c42094145b1fb364248d2029a_{formatter}.jpg",
+        "https://images.gog-statics.com/cc63089464cd54b9cbf883cca5f2554cba178a588037f5d1e41a08c3e6c9cde5_{formatter}.jpg",
+        "https://images.gog-statics.com/df0286f619b32b743d866613082d699a5f8156676deb5d4b168a3370b5b2e534_{formatter}.jpg",
+        "https://images.gog-statics.com/f11b2773c16dcf16eb5db4c6fc152a02fe6e4e4a2726c7eeeadd54191f1fbd04_{formatter}.jpg",
+        "https://images.gog-statics.com/de5b92e045f86bb3f5f9a2c5cb24e9c58ebe63bcbae4bfac46353431b87c0b8d_{formatter}.jpg",
+        "https://images.gog-statics.com/09e8e59ff909c5436a64f2609f0b7b9385449dac762ae3aa0fb56c9df56923a3_{formatter}.jpg",
+        "https://images.gog-statics.com/1b9d718890120f3493dcd8f3569312b1475e6001e609aec582357377315665c2_{formatter}.jpg",
+        "https://images.gog-statics.com/5157f66091a9a910bdf8b9ad7b94084236d04d560c7077fb1a8e07c347eddc4d_{formatter}.jpg",
+        "https://images.gog-statics.com/2a14826678b5466ac7ccf57756c22d3b0847fbc77e1a0282a4aec13f3c3c3fda_{formatter}.jpg",
+        "https://images.gog-statics.com/076cd11e6858e18e0059ff608fa179e76fe8144a2d731784db2e315585fec7ec_{formatter}.jpg",
+        "https://images.gog-statics.com/3cd6b6e4b0c1425c325adc4fc715694cd169a986fc5bebaf6033210b18718e87_{formatter}.jpg",
+        "https://images.gog-statics.com/b55f08f10bc05172b1051dd49038e2947a946cb1de129fe1c6d248af3092c1dd_{formatter}.jpg",
+        "https://images.gog-statics.com/e9d9242779d0c5f86fdb3c29ab626860bafdd510a74be1c23c9af7ac74f0e139_{formatter}.jpg",
+        "https://images.gog-statics.com/7ef103025cdd6bf795db2082bffe105d4b84b2032976db4357ae4a05da0222b2_{formatter}.jpg",
+        "https://images.gog-statics.com/04b82cd3826fa573c5deef88db29172985dfbccd606a0f2f977de4222d278ff1_{formatter}.jpg",
+        "https://images.gog-statics.com/68764afe439913c9e241ae400ab194f34a5048579c33b63551f5e1fc2097c802_{formatter}.jpg"
+      ],
+      "userPreferredLanguage": {
+        "code": "en",
+        "inAudio": true,
+        "inText": true
+      },
+      "releaseDate": "2015.11.10",
+      "storeReleaseDate": "2023.08.17",
+      "productType": "game",
+      "title": "Fallout 4: Game of the Year Edition",
+      "coverHorizontal": "https://images.gog-statics.com/8b074a51347f0377d0a60ac241e8c5535d829540fe9c2e7ddf9277e4cc6d53d1.png",
+      "coverVertical": "https://images.gog-statics.com/634bb301339d0a687a034801434197f88ded87326fcbe66338e8a798ffc64ad4.jpg",
+      "logo": "https://images.gog-statics.com/83b0412cca5c0652035aa500314a126bfa2e4611bba5a380cf753297a1ab1802.png",
+      "galaxyBackgroundImage": "https://images.gog-statics.com/a617fe8e9f37d4f66f2fe34d00efae0d44646e2ad8696c84012e498756310ce4.jpg",
+      "developers": [
+        "Bethesda Game Studios"
+      ],
+      "publishers": [
+        "Bethesda Softworks LLC"
+      ],
+      "operatingSystems": [
+        "windows"
+      ],
+      "price": {
+        "final": "$9.99",
+        "base": "$39.99",
+        "discount": "-75%",
+        "finalMoney": {
+          "amount": "9.99",
+          "currency": "USD",
+          "discount": "30.00"
+        },
+        "baseMoney": {
+          "amount": "39.99",
+          "currency": "USD"
+        }
+      },
+      "productState": "default",
+      "genres": [
+        {
+          "name": "Role-playing",
+          "slug": "rpg"
+        },
+        {
+          "name": "Action",
+          "slug": "action"
+        },
+        {
+          "name": "Open World",
+          "slug": "open-world"
+        }
+      ],
+      "tags": [
+        {
+          "name": "Action",
+          "slug": "action"
+        },
+        {
+          "name": "Story Rich",
+          "slug": "story-rich"
+        },
+        {
+          "name": "Atmospheric",
+          "slug": "atmospheric"
+        },
+        {
+          "name": "Role-playing",
+          "slug": "role-playing"
+        },
+        {
+          "name": "Exploration",
+          "slug": "exploration"
+        },
+        {
+          "name": "Sci-fi",
+          "slug": "sci-fi"
+        },
+        {
+          "name": "First-Person",
+          "slug": "first-person"
+        },
+        {
+          "name": "Great Soundtrack",
+          "slug": "great-soundtrack"
+        },
+        {
+          "name": "Third Person",
+          "slug": "third-person"
+        },
+        {
+          "name": "Open World",
+          "slug": "open-world"
+        },
+        {
+          "name": "Sandbox",
+          "slug": "sandbox"
+        },
+        {
+          "name": "Survival",
+          "slug": "survival"
+        },
+        {
+          "name": "FPS",
+          "slug": "fps"
+        },
+        {
+          "name": "Post-apocalyptic",
+          "slug": "post-apocalyptic"
+        }
+      ],
+      "reviewsRating": 40,
+      "reviewsCount": 1828,
+      "editions": [],
+      "ratings": [
+        {
+          "name": "pegiRating",
+          "ageRating": "18"
+        },
+        {
+          "name": "esrbRating",
+          "ageRating": "17"
+        },
+        {
+          "name": "gogRating",
+          "ageRating": "18"
+        }
+      ],
+      "storeLink": "https://www.gog.com/en/game/fallout_4_game_of_the_year_edition"
+    },
+    {
+      "id": "1242989820",
+      "slug": "elder_scrolls_iv_oblivion_game_of_the_year_edition_deluxe_the",
+      "features": [
+        {
+          "name": "Cloud saves",
+          "slug": "cloud_saves"
+        },
+        {
+          "name": "Controller support",
+          "slug": "controller_support"
+        },
+        {
+          "name": "Overlay",
+          "slug": "overlay"
+        },
+        {
+          "name": "Single-player",
+          "slug": "single"
+        }
+      ],
+      "screenshots": [
+        "https://images.gog-statics.com/26472edf964b0904abad63d41854fcdc8fca3424c9dc9f927375c2806e060d1d_{formatter}.jpg",
+        "https://images.gog-statics.com/429e175ac0eb193f9a67ec2219b815ae5eabfeb7908c9ca6d5dcfc9e13e92643_{formatter}.jpg",
+        "https://images.gog-statics.com/57498e18ff749580973bfb81d1b14ab9313d7dcb222efa5062dbc06af75d1edb_{formatter}.jpg",
+        "https://images.gog-statics.com/c0bf0ea35f1ab8c2061d8c053f6183bf8c198e045775644249933f11702487c4_{formatter}.jpg",
+        "https://images.gog-statics.com/9f25bcf1aa84c5fffe6575b3995af565161ac767e65ab4ce56109041c8b7b6b8_{formatter}.jpg",
+        "https://images.gog-statics.com/8ff18e3d010840a97c20dff28f8b435bd9c2ce4d70b7bf23fabcf4904e58962d_{formatter}.jpg",
+        "https://images.gog-statics.com/863257052f2c9fb26621cd321f03285f934efb71f83ca91ff26c526a919bbfa1_{formatter}.jpg",
+        "https://images.gog-statics.com/ca3f40986e2d014b21608ec435472b1a4986078b36073ea848742fdfea41271f_{formatter}.jpg",
+        "https://images.gog-statics.com/0a5dce15ee3d836a01ceab50edd7e8c36a938e37f7f7551a3e020f9ef31e207e_{formatter}.jpg",
+        "https://images.gog-statics.com/79d5dacc4fe7ba7bbbc26c6bf6eec72f7c82a20ce64086c5a8b7f1a3a7af718e_{formatter}.jpg",
+        "https://images.gog-statics.com/3f3afaaa399c620f0b6447bc6d3af0a3ad82c965f04a91f033533d721391503f_{formatter}.jpg",
+        "https://images.gog-statics.com/b287d37667d782ae71f86bbddd99f5bcac968399beb2eab611b72dc717185b8c_{formatter}.jpg",
+        "https://images.gog-statics.com/d0eb2458973d88ab8ba6f2fa7be7df59be2e44b827218c2f4e7db7938584ff8e_{formatter}.jpg",
+        "https://images.gog-statics.com/41aa77749a514896031c62899aa9a5589a6ae9a87006896c87af27f7a532932a_{formatter}.jpg",
+        "https://images.gog-statics.com/d0398b5dc1e86bc00eead973d4a6bd70fe2f504dba32b1a5a51e9f091e7bd0ac_{formatter}.jpg",
+        "https://images.gog-statics.com/b6fdbcea73692d9239b1e93191c96445e8d6b9c0bf3c121e228312730ea2595b_{formatter}.jpg",
+        "https://images.gog-statics.com/f66cc2a054d50433ac261b8eddabc16b50ed08d5350288a308b92f1ff555dabd_{formatter}.jpg"
+      ],
+      "userPreferredLanguage": {
+        "code": "en",
+        "inAudio": true,
+        "inText": true
+      },
+      "releaseDate": "2007.09.11",
+      "storeReleaseDate": "2017.06.01",
+      "productType": "pack",
+      "title": "The Elder Scrolls IV: Oblivion - Game of the Year Edition Deluxe",
+      "coverHorizontal": "https://images.gog-statics.com/437047af723933d9686fd99c53436f214bd615883298a885009e5056d0437815.png",
+      "coverVertical": "https://images.gog-statics.com/e496d831e02168dd0df2196f83498980427d4d36bc8a126c60b728dee3d4606d.jpg",
+      "logo": "https://images.gog-statics.com/d4ea13082fab61ae0fbc1be0853e516a368fbffc5ef8fc4d8918392dd636b49a.png",
+      "galaxyBackgroundImage": "https://images.gog-statics.com/5195eb1653649d52dc4284a8ca1115384f402e1cc65ccfb5843dcb2280de3662.jpg",
+      "developers": [
+        "Bethesda Game Studios"
+      ],
+      "publishers": [
+        "Bethesda Softworks LLC"
+      ],
+      "operatingSystems": [
+        "windows"
+      ],
+      "price": {
+        "final": "$3.99",
+        "base": "$19.99",
+        "discount": "-80%",
+        "finalMoney": {
+          "amount": "3.99",
+          "currency": "USD",
+          "discount": "16.00"
+        },
+        "baseMoney": {
+          "amount": "19.99",
+          "currency": "USD"
+        }
+      },
+      "productState": "default",
+      "genres": [
+        {
+          "name": "Role-playing",
+          "slug": "rpg"
+        },
+        {
+          "name": "Adventure",
+          "slug": "adventure"
+        },
+        {
+          "name": "Fantasy",
+          "slug": "fantasy"
+        }
+      ],
+      "tags": [
+        {
+          "name": "Adventure",
+          "slug": "adventure"
+        },
+        {
+          "name": "Fantasy",
+          "slug": "fantasy"
+        },
+        {
+          "name": "Role-playing",
+          "slug": "role-playing"
+        },
+        {
+          "name": "Classic",
+          "slug": "classic"
+        },
+        {
+          "name": "Good Old Game",
+          "slug": "good-old-game"
+        }
+      ],
+      "reviewsRating": 41,
+      "reviewsCount": 1411,
+      "editions": [],
+      "ratings": [
+        {
+          "name": "pegiRating",
+          "ageRating": "16"
+        },
+        {
+          "name": "esrbRating",
+          "ageRating": "17"
+        },
+        {
+          "name": "uskRating",
+          "ageRating": "12"
+        }
+      ],
+      "storeLink": "https://www.gog.com/en/game/elder_scrolls_iv_oblivion_game_of_the_year_edition_deluxe_the"
+    }
+  ],
+  "credentialLookups": 0,
+  "requests": [
+    "GET https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=1&countryCode=US&locale=en-US&currencyCode=USD",
+    "GET https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=2&countryCode=US&locale=en-US&currencyCode=USD"
+  ]
+}

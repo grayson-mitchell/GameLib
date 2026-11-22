@@ -1,0 +1,100 @@
+[
+  {
+    "id": "live-us-default",
+    "note": "US/en-US/USD, no flags. Live: the catalog has 132 pages, the TS fetches the cap of 30 and dedupes by id.",
+    "locale": { "countryCode": "US", "locale": "en-US", "currencyCode": "USD" },
+    "live": true
+  },
+  {
+    "id": "live-pl-locale",
+    "note": "A non-US locale (PL/pl-PL/PLN) that has discounts: no US retry. Live.",
+    "locale": { "countryCode": "PL", "locale": "pl-PL", "currencyCode": "PLN" },
+    "live": true
+  },
+  {
+    "id": "synthetic-hide-owned-with-credentials",
+    "note": "hideOwned with a token: an Authorization header and hideOwned=true on the request. Token is the literal REDACTED.",
+    "locale": { "countryCode": "US", "locale": "en-US", "currencyCode": "USD" },
+    "hideOwned": true,
+    "credentials": true,
+    "synthetic": [{ "from": "live-us-default", "pages": 1, "take": 5 }]
+  },
+  {
+    "id": "synthetic-hide-owned-no-credentials",
+    "note": "hideOwned with no credentials: both flags reset, no Authorization header, no hideOwned param. Synthetic (a single page cloned from the live one) so the 30-page catalog is not recorded a third time; the request set is the same as live-us-default's first page.",
+    "locale": { "countryCode": "US", "locale": "en-US", "currencyCode": "USD" },
+    "hideOwned": true,
+    "credentials": false,
+    "synthetic": [{ "from": "live-us-default", "pages": 1, "take": 5 }]
+  },
+  {
+    "id": "synthetic-wishlist-with-credentials",
+    "note": "wishlistOnly with a token: wishlist=eq:true and the Authorization header.",
+    "locale": { "countryCode": "US", "locale": "en-US", "currencyCode": "USD" },
+    "wishlistOnly": true,
+    "credentials": true,
+    "synthetic": [{ "from": "live-us-default", "pages": 1, "take": 5 }]
+  },
+  {
+    "id": "synthetic-wishlist-no-credentials",
+    "note": "wishlistOnly with no credentials: flags reset, plain catalog request.",
+    "locale": { "countryCode": "US", "locale": "en-US", "currencyCode": "USD" },
+    "wishlistOnly": true,
+    "credentials": false,
+    "synthetic": [{ "from": "live-us-default", "pages": 1, "take": 5 }]
+  },
+  {
+    "id": "synthetic-hide-owned-and-wishlist-with-credentials",
+    "note": "Both flags with a token: hideOwned then wishlist appended in that order.",
+    "locale": { "countryCode": "US", "locale": "en-US", "currencyCode": "USD" },
+    "hideOwned": true,
+    "wishlistOnly": true,
+    "credentials": true,
+    "synthetic": [{ "from": "live-us-default", "pages": 1, "take": 5 }]
+  },
+  {
+    "id": "synthetic-page2-500-skipped",
+    "note": "Two pages and a 500 on page 2: the page is logged and skipped, page 1 is returned.",
+    "locale": { "countryCode": "US", "locale": "en-US", "currencyCode": "USD" },
+    "synthetic": [
+      { "from": "live-us-default", "pages": 2, "take": 5 },
+      { "status": 500, "text": "{\"error\":\"internal\"}" }
+    ]
+  },
+  {
+    "id": "synthetic-page1-500-throws",
+    "note": "A 500 on the first page is not skipped: the error is rethrown.",
+    "locale": { "countryCode": "US", "locale": "en-US", "currencyCode": "USD" },
+    "synthetic": [{ "status": 500, "text": "{\"error\":\"internal\"}" }]
+  },
+  {
+    "id": "synthetic-empty-locale-falls-back-to-us",
+    "note": "A locale with no discounts (empty first page) retries with US/en-US/USD.",
+    "locale": { "countryCode": "PL", "locale": "pl-PL", "currencyCode": "PLN" },
+    "synthetic": [
+      { "from": "live-us-default", "pages": 1, "take": 0 },
+      { "from": "live-us-default", "pages": 1, "take": 5 }
+    ]
+  },
+  {
+    "id": "synthetic-us-empty-no-fallback",
+    "note": "An empty US result is returned as is: the fallback locale never retries itself.",
+    "locale": { "countryCode": "US", "locale": "en-US", "currencyCode": "USD" },
+    "synthetic": [{ "from": "live-us-default", "pages": 1, "take": 0 }]
+  },
+  {
+    "id": "synthetic-duplicate-ids-across-pages",
+    "note": "Products 3 and 4 appear on both pages: deduped by id, first wins.",
+    "locale": { "countryCode": "US", "locale": "en-US", "currencyCode": "USD" },
+    "synthetic": [
+      { "from": "live-us-default", "pages": 2, "take": 5 },
+      { "from": "live-us-default", "pages": 2, "drop": 3, "take": 4 }
+    ]
+  },
+  {
+    "id": "synthetic-network-error-page1",
+    "note": "A transport failure on the first page is rethrown.",
+    "locale": { "countryCode": "US", "locale": "en-US", "currencyCode": "USD" },
+    "synthetic": [{ "networkError": true }]
+  }
+]

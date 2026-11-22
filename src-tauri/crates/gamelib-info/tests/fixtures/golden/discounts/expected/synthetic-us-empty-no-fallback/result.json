@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "count": 0,
+  "ids": [],
+  "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "products": [],
+  "credentialLookups": 0,
+  "requests": [
+    "GET https://catalog.gog.com/v1/catalog?limit=48&order=desc%3Atrending&discounted=eq%3Atrue&productType=in%3Agame%2Cpack%2Cdlc&page=1&countryCode=US&locale=en-US&currencyCode=USD"
+  ]
+}
