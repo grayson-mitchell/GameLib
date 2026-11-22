@@ -482,7 +482,7 @@ Plans:
   4. The legendary store migration is ported only if a supported upgrade path still reaches it (reachability recorded), otherwise it is deleted
   5. The TS write-through mirror's deletion point is named and executed for every family flipped in this phase, and `storeVersioning`, `storeMigrations` and `migration/*` TypeScript are deleted
 
-**Plans:** 17/25 plans executed in 20 waves; planned 2026-11-21
+**Plans:** 18/25 plans executed in 20 waves; planned 2026-11-21
 
 Plans:
 **Wave 1**
@@ -527,7 +527,7 @@ Plans:
 - [x] 85-16-PLAN.md — Renderer reads native: one policy file for TS and Rust, snapshot and fetch from StoreHost, read-only notice from Rust
 
 **Wave 13** *(blocked on Wave 12 completion)*
-- [ ] 85-17-PLAN.md — Renderer writes native: set/set-checked/delete/new and storeChanged from Rust with rev; preload stale-push guard
+- [x] 85-17-PLAN.md — Renderer writes native: set/set-checked/delete/new and storeChanged from Rust with rev; preload stale-push guard
 
 **Wave 14** *(blocked on Wave 13 completion)*
 - [ ] 85-19-PLAN.md — Clean-worktree proof, push and signed Phase 85 build checkpoint, three-OS CI, identity recorded beside the baseline

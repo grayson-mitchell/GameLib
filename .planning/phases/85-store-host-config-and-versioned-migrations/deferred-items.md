@@ -28,3 +28,17 @@
   while 85-16 ran). 85-16 never touched `meta/harvestStoreCorpus.ts`. The owner of that fix should drop the
   export or tag it `@public`.
   **Resolved:** the orchestrator dropped the export; `pnpm find-deadcode` passes.
+
+## From 85-17
+
+- **Load-time rev handshake for a late mirror cell (S1 rule 8, second half), not built.** 85-11 left it to 85-17; the plan's
+  tasks and must-haves do not name it, and doing it properly is a protocol change of its own: a cell created after boot would
+  send a new `load` frame (a new op in the shared `storeFrameVectors.json`, `validateStoreFrame` and `parse_store_frame`), Rust
+  would answer `loaded {rev, valueJson?}` in the ordered event stream (the snapshot only when `rev > 0`), and the cell would drop
+  `changed` events until it arrives. Every cell sending a frame at creation also moves the frame counts many store suites pin.
+  What exists today: a late cell starts at rev 0 over the file and converges because every op assigns state (the 85-11
+  property test runs late cells); between creation and the last in-flight event it can briefly read an older value the file
+  already superseded. 85-17 made the event stream strictly ordered (one host queue), which closes the reorder cases, not this
+  replay window. Candidate for 85-19 or a follow-up todo.
+- `src/backend/sidecar/__tests__/outboundHttpRegistry.test.ts` "does not track or destroy WebSocket upgrade requests" failed
+  once in the full `src/backend` run and passes alone (a 353 ms WebSocket upgrade under load). Not touched by 85-17.
