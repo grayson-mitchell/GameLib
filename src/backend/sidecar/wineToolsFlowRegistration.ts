@@ -122,6 +122,8 @@ export interface WineToolsFlowDeps
   /** The boot-owned engine runtime and path roots (66.4-05). */
   engineRuntime: ToolsDeps['engineRuntime']
   versioning: ToolsDeps['versioning']
+  /** The boot's store root: the stored game config is read through it (85-15). */
+  storeRoot?: ToolsDeps['storeRoot']
   paths: ToolsDeps['paths']
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
   /** The boot-owned tools state the Tools of this registration share (66.4-14). */

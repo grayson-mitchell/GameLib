@@ -4,6 +4,7 @@
  */
 import type { Dialogs } from 'backend/host/dialogs'
 import type { StoreVersioning } from 'backend/storeVersioning/engine'
+import type { SettingsDocRoot } from 'backend/stores/settingsDocs'
 import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { OnlineMonitor } from 'backend/online_monitor'
 import type { DialogBoxDeps, NotifyDeps } from 'backend/dialog/dialog'
@@ -35,6 +36,11 @@ export interface EngineServices {
   engineRuntime: EngineRuntime
   /** The boot's store-versioning engine (`StoreRoot.versioning`): game configs and bottle markers migrate through it. */
   versioning: StoreVersioning
+  /**
+   * The boot's store root (85-15): the stored game config is read through its mirror when the shell
+   * owns the settings family. Absent (a test), the config is read from disk.
+   */
+  storeRoot?: SettingsDocRoot
   /** The installed Wine Manager release list, read from the injected wineManager store. */
   wineManagerReleases: () => WineManagerRelease[]
   /** The global settings snapshot the engine's config reads inherit from (66.3-06). */

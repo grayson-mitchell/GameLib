@@ -3,30 +3,36 @@
  * Steam titles whose getSettings() would otherwise return only the bottle/global
  * settings (todo 2026-11-04 bridge-game-settings-read-write-split).
  */
-import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import type { AppPaths } from 'backend/process/context'
+import {
+  readSettingsDoc,
+  type SettingsDocRoot
+} from 'backend/stores/settingsDocs'
 import type { GameSettings } from 'common/types'
 
 /**
- * The title's stored GamesConfig entry, read straight from its file:
+ * The title's stored GamesConfig entry, read through the settings-document seam:
  * the per-game config's `.config` is filled asynchronously after construction
- * (59-UAT G11), and fetching that config creates a missing file. Values are
- * unvalidated. Returns undefined on a bad appId, missing or corrupt file, or a
- * missing/non-object entry.
+ * (59-UAT G11), and fetching that config creates a missing file. When the shell
+ * owns the settings family the read is the mirror's view, pending writes included,
+ * so a setting the Settings screen wrote a moment ago reads back (85-15); otherwise
+ * it is the file. Values are unvalidated. Returns undefined on a bad appId, missing
+ * or corrupt file, or a missing/non-object entry.
  */
 export function readStoredTitleConfig(
   appId: string,
-  deps: { paths: Pick<AppPaths, 'gamesConfigPath'> }
+  deps: {
+    paths: Pick<AppPaths, 'gamesConfigPath'>
+    /** The boot's store root (85-15). Absent (a test), the document is read from disk. */
+    storeRoot?: SettingsDocRoot
+  }
 ): Record<string, unknown> | undefined {
   if (!/^[0-9]{1,10}$/.test(appId)) return undefined
   const path = join(deps.paths.gamesConfigPath, `${appId}.json`)
-  if (!existsSync(path)) return undefined
   try {
-    const raw = JSON.parse(readFileSync(path, 'utf8')) as Record<
-      string,
-      unknown
-    >
+    const raw = readSettingsDoc(deps.storeRoot ?? { storeMode: 'ts' }, path)
+    if (raw === undefined) return undefined
     const entry = raw[appId]
     if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
       return undefined

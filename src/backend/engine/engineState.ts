@@ -120,6 +120,7 @@ function effectiveFor(
     ...configPathDepsFrom({
       paths: deps.paths,
       versioning: deps.versioning,
+      storeRoot: deps.storeRoot,
       engineRuntime: deps.engineRuntime
     }),
     globalSettings: deps.globalSettings

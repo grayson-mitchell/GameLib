@@ -7,11 +7,15 @@
  * never a stored value: it is a derived variant for a Wine outside the option
  * list.
  */
-import { existsSync, readFileSync } from 'fs'
 import { isAbsolute, join, relative, resolve } from 'path'
 import type { AppPaths } from 'backend/process/context'
 import type { FallbackEngine } from './fallbackEngine'
-import { ensureSettingsMigrated } from 'backend/storeVersioning/settingsFiles'
+import {
+  prepareSettingsDoc,
+  readSettingsDoc,
+  settingsDocExists,
+  type SettingsDocRoot
+} from 'backend/stores/settingsDocs'
 import type { StoreVersioning } from 'backend/storeVersioning/engine'
 import { hasCapability } from 'common/storeCapabilities'
 import type { WineInstallation } from 'common/types'
@@ -33,6 +37,12 @@ export interface EngineConfigDeps {
   gamesConfigPath: string
   /** The boot's store-versioning engine: the game config is migrated through it before a read. */
   versioning: StoreVersioning
+  /**
+   * The boot's store root (85-15): the game config is read through its mirror when the shell owns
+   * the settings family, so a setting written a moment ago is seen. Absent (a test), the document
+   * is TS-owned over `versioning`.
+   */
+  storeRoot?: SettingsDocRoot
   globalSettings(): Record<string, unknown>
 }
 
@@ -43,18 +53,20 @@ function defaultDeps(): Pick<EngineConfigDeps, 'pins'> {
 /** The path reads the config helpers need (66.4-05): the games-config root and the pin's Wine binary. */
 export type ConfigPathDeps = Pick<
   EngineConfigDeps,
-  'gamesConfigPath' | 'pinWineBin' | 'versioning'
+  'gamesConfigPath' | 'pinWineBin' | 'versioning' | 'storeRoot'
 >
 
-/** Builds the path reads from the boot's `paths` and fallback-engine owner. */
+/** Builds the path reads from the boot's `paths`, store root and fallback-engine owner. */
 export function configPathDepsFrom(source: {
   paths: Pick<AppPaths, 'gamesConfigPath'>
   versioning: StoreVersioning
+  storeRoot?: SettingsDocRoot
   engineRuntime: { fallback: Pick<FallbackEngine, 'pinnedEnginePaths'> }
 }): ConfigPathDeps {
   return {
     gamesConfigPath: source.paths.gamesConfigPath,
     versioning: source.versioning,
+    ...(source.storeRoot ? { storeRoot: source.storeRoot } : {}),
     pinWineBin: (pin) =>
       source.engineRuntime.fallback.pinnedEnginePaths(
         pin as (typeof ENGINE_PINS)['current']
@@ -80,14 +92,15 @@ const withDeps = (
 })
 
 /**
- * The game's stored GamesConfig entry, read straight from its file (never
+ * The game's stored GamesConfig entry, read through the settings-document seam (never
  * `GameConfig.get`, which creates a missing file and fills asynchronously,
- * 59-UAT G11). Values are unvalidated. Undefined on a bad appName, a missing
- * or corrupt file, or a non-object entry.
+ * 59-UAT G11): the mirror's view, pending writes included, when the shell owns the
+ * settings family; the file otherwise (85-15). Values are unvalidated. Undefined on a
+ * bad appName, a missing or corrupt file, or a non-object entry.
  */
 export function readStoredGameConfig(
   appName: string,
-  deps: Pick<EngineConfigDeps, 'gamesConfigPath' | 'versioning'>
+  deps: Pick<EngineConfigDeps, 'gamesConfigPath' | 'versioning' | 'storeRoot'>
 ): Record<string, unknown> | undefined {
   if (
     typeof appName !== 'string' ||
@@ -103,14 +116,16 @@ export function readStoredGameConfig(
   const rel = relative(root, target)
   if (rel.startsWith('..') || isAbsolute(rel)) return undefined
   const path = join(root, `${appName}.json`)
-  if (!existsSync(path)) return undefined
+  const docs: SettingsDocRoot = deps.storeRoot ?? {
+    storeMode: 'ts',
+    versioning: deps.versioning
+  }
+  if (!settingsDocExists(docs, path)) return undefined
   // Containment checks above passed (T-68-19).
-  ensureSettingsMigrated(deps.versioning, path, 'settings/game')
+  prepareSettingsDoc(docs, path, 'settings/game')
   try {
-    const raw = JSON.parse(readFileSync(path, 'utf8')) as Record<
-      string,
-      unknown
-    >
+    const raw = readSettingsDoc(docs, path)
+    if (raw === undefined) return undefined
     const entry = raw[appName]
     if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
       return undefined

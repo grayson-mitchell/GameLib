@@ -249,6 +249,8 @@ export interface ToolsDeps
   /** The boot-owned engine runtime and the path roots the engine reads (66.4-05). */
   engineRuntime: EngineServices['engineRuntime']
   versioning: EngineServices['versioning']
+  /** The boot's store root: the stored game config is read through it (85-15). */
+  storeRoot?: EngineServices['storeRoot']
   paths: EngineServices['paths'] &
     Pick<AppPaths, 'defaultUmuPath' | 'publicDir' | 'runtimePath'>
   config: Pick<
@@ -266,6 +268,7 @@ function engineServicesFor(deps: ToolsDeps): EngineServices {
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
     versioning: deps.versioning,
+    storeRoot: deps.storeRoot,
     paths: deps.paths,
     installRemove: (...a) => createDxvk(deps).installRemove(...a),
     wineManagerReleases: wineManagerReleasesFrom(deps),

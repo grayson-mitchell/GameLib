@@ -148,6 +148,8 @@ export type RunnerDeps = {
   >
   /** The boot's store-versioning engine the stored game config is migrated through. */
   versioning: EngineServices['versioning']
+  /** The boot's store root the stored game config is read through (85-15). */
+  storeRoot?: EngineServices['storeRoot']
   /** The boot-owned engine runtime pieces the defaults read. */
   engineRuntime: Pick<
     EngineServices['engineRuntime'],
@@ -598,6 +600,7 @@ export async function decideLaunchEngine(
       runner: deps.runner,
       paths: deps.paths,
       versioning: deps.versioning,
+      storeRoot: deps.storeRoot,
       engineRuntime: deps.engineRuntime
     },
     { killOnTimeout: true, key: args.key }

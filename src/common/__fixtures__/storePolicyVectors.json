@@ -779,7 +779,7 @@
     },
     {
       "storeKey": "GamesConfig/480",
-      "area": "app-data"
+      "area": "game-settings"
     },
     {
       "storeKey": "",

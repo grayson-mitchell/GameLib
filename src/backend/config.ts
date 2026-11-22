@@ -1,5 +1,5 @@
 import type { SendFrontendMessage } from './host/frontendMessage'
-import { existsSync, mkdirSync, readFileSync } from 'graceful-fs'
+import { existsSync, mkdirSync } from 'graceful-fs'
 
 import {
   AppSettings,
@@ -11,9 +11,12 @@ import { migrateFocusRowSelection } from 'common/focusRowMigration'
 import { migrateTrayIconVariant } from 'common/trayIconVariant'
 
 import {
-  ensureSettingsMigrated,
-  writeSettingsFile
-} from './storeVersioning/settingsFiles'
+  prepareSettingsDoc,
+  readSettingsDoc,
+  settingsDocExists,
+  writeSettingsDoc,
+  type SettingsDocRoot
+} from './stores/settingsDocs'
 import type { StoreVersioning } from './storeVersioning/engine'
 import type { RustInvokeDeps } from './host/rustInvokeDeps'
 import {
@@ -74,6 +77,11 @@ export interface GlobalConfigDeps extends RustInvokeDeps {
   paths: GlobalConfigPaths
   /** The boot's store-versioning engine (`StoreRoot.versioning`): settings migration and read-only guard. */
   versioning: StoreVersioning
+  /**
+   * The boot's store root (85-15): config.json is read and written through its mirror when the
+   * shell owns the settings family. Absent (a test), the document is TS-owned over `versioning`.
+   */
+  root?: SettingsDocRoot
   onSettingChanged?: (
     ...args: Parameters<BackendEvents['settingChanged']>
   ) => void
@@ -90,7 +98,12 @@ export interface GlobalConfigDeps extends RustInvokeDeps {
 abstract class GlobalConfig {
   public abstract version: GlobalConfigVersion
 
-  constructor(protected readonly deps: GlobalConfigDeps) {}
+  /** The settings documents of this boot (85-15): config.json is read and written through it. */
+  protected readonly docs: SettingsDocRoot
+
+  constructor(protected readonly deps: GlobalConfigDeps) {
+    this.docs = deps.root ?? { storeMode: 'ts', versioning: deps.versioning }
+  }
 
   protected config: AppSettings | undefined
 
@@ -196,12 +209,9 @@ abstract class GlobalConfig {
    */
   public abstract resetToDefaults(): void
 
+  /** One whole-document write: a `replace` frame when the shell owns config.json (85-15). */
   protected writeToFile(config: Record<string, unknown>) {
-    return writeSettingsFile(
-      this.deps.versioning,
-      this.deps.paths.configPath,
-      config
-    )
+    return writeSettingsDoc(this.docs, this.deps.paths.configPath, config)
   }
 
   /**
@@ -219,10 +229,15 @@ abstract class GlobalConfig {
 
   /**
    * Load the config file, upgrade if needed.
+   *
+   * D-22: on a fresh profile the factory defaults are written as one ordinary document write (a
+   * `replace` frame when the shell owns config.json) and `this.config` already holds them, so the
+   * `getSettings()` below, and every later one, is served from memory: nothing reads the file back
+   * while the shell may not have applied the write yet.
    */
   protected load() {
     // Config file doesn't exist, make one.
-    if (!existsSync(this.deps.paths.configPath)) {
+    if (!settingsDocExists(this.docs, this.deps.paths.configPath)) {
       this.resetToDefaults()
     }
     this.config = this.getSettings()
@@ -246,12 +261,16 @@ class GlobalConfigV0 extends GlobalConfig {
       mkdirSync(this.deps.paths.gamesConfigPath, { recursive: true })
     }
 
-    if (!existsSync(this.deps.paths.configPath)) {
+    // Through the settings-document seam: the cell's view (pending writes included) when the shell
+    // owns config.json, the file itself otherwise (85-15).
+    const stored = readSettingsDoc(this.docs, this.deps.paths.configPath)
+    if (stored === undefined) {
       return this.getFactoryDefaults()
     }
 
-    let settings = JSON.parse(readFileSync(this.deps.paths.configPath, 'utf-8'))
-    const defaultSettings = settings.defaultSettings as AppSettings
+    // A document with no defaultSettings (one the shell found unreadable reads as `{}`) is the
+    // factory defaults, not a crash.
+    const defaultSettings = (stored.defaultSettings ?? {}) as AppSettings
 
     // keep old setting value for backwards compatibility, always use defaultWinePrefixDir in new code
     if (!defaultSettings.defaultWinePrefixDir)
@@ -262,7 +281,7 @@ class GlobalConfigV0 extends GlobalConfig {
       ? defaultSettings?.winePrefix?.replace('~', this.deps.paths.userHome)
       : ''
 
-    settings = {
+    const settings = {
       ...this.getFactoryDefaults(),
       ...defaultSettings,
       winePrefix,
@@ -412,8 +431,10 @@ export type GlobalConfigSlice = Pick<
  * crashing on an unknown version.
  */
 export function createGlobalConfig(deps: GlobalConfigDeps): GlobalConfig {
-  ensureSettingsMigrated(
-    deps.versioning,
+  // TS-owned only: when the shell owns config.json it migrated it at boot, before this process
+  // started (store_boot, 85-15), so nothing runs here.
+  prepareSettingsDoc(
+    deps.root ?? { storeMode: 'ts', versioning: deps.versioning },
     deps.paths.configPath,
     'settings/global'
   )

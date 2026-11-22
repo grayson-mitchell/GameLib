@@ -167,6 +167,11 @@ export interface InfoCaches {
 export interface ManagerDeps {
   /** The boot's store-versioning engine (`StoreRoot.versioning`, 66.4-18): game configs, bottle markers and ledgers migrate through it. */
   versioning: StoreVersioning
+  /**
+   * The boot's store root (85-15): the settings documents (config.json, GamesConfig/<app>.json)
+   * are read through its mirror when the shell owns them. Optional so a manager test builds bare.
+   */
+  storeRoot?: StoreRoot
   libraryManagers: StoreManagers['library']
   stores: Stores
   commandRunner: CommandRunner

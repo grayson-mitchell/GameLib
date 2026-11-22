@@ -137,6 +137,7 @@ function toolSlices(services: BootServices) {
     engineState: services.engineState,
     engineRuntime: services.engineRuntime,
     versioning: services.storeRoot.versioning,
+    storeRoot: services.storeRoot,
     paths: services.paths,
     aborts: services.aborts,
     toolsState: services.toolsState,
@@ -180,6 +181,7 @@ export function registerHandlers(deps: {
     engineState: deps.services.engineState,
     engineRuntime: deps.services.engineRuntime,
     versioning: deps.services.storeRoot.versioning,
+    storeRoot: deps.services.storeRoot,
     paths: deps.services.paths,
     steamBottle: deps.services.steamBottle,
     steamLaunchRuntime: deps.services.steamLaunchRuntime

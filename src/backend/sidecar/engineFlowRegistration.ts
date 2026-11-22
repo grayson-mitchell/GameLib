@@ -51,6 +51,8 @@ export interface EngineFlowDeps {
   engineRuntime: EngineServices['engineRuntime']
   /** The boot's store-versioning engine (66.4-18). */
   versioning: EngineServices['versioning']
+  /** The boot's store root: the stored game config is read through it (85-15). */
+  storeRoot?: EngineServices['storeRoot']
   paths: EngineServices['paths']
   /** The Steam bottle slice the Steam engine state reads (66.3-15). */
   steamBottle: SteamEngineBottle['steamBottle']
@@ -69,6 +71,7 @@ function engineServicesOf(
     | 'engineState'
     | 'engineRuntime'
     | 'versioning'
+    | 'storeRoot'
     | 'paths'
   > {
   return {
@@ -76,6 +79,7 @@ function engineServicesOf(
     engineState: deps.engineState,
     engineRuntime: deps.engineRuntime,
     versioning: deps.versioning,
+    storeRoot: deps.storeRoot,
     paths: deps.paths,
     runner: deps.runner,
     wineManagerReleases: wineManagerReleasesFrom(deps),

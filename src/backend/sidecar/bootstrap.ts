@@ -1799,12 +1799,15 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // `initOnlineMonitor()`'s and `tokenStore.configure()`'s placement comments below).
         // MigrationSystem's only migration copies the legendary config folder and never writes
         // config.json, so running after 'migrations' loses nothing. configBootOrder.test.ts pins it.
-        // createGlobalConfig() runs the settings migration first; the per-game registry holds its
-        // cache in its closure and reads global defaults through the config built here.
+        // createGlobalConfig() runs the settings migration first when TS owns config.json (the
+        // shell migrated it at boot when it owns it, 85-15); the per-game registry holds its cache
+        // in its closure and reads global defaults through the config built here. Both read and
+        // write the settings documents through the store root's mirror (settingsDocs.ts).
         const config =
           prebuilt.config ??
           createGlobalConfig({
             versioning: requireStoreRoot(state).versioning,
+            root: requireStoreRoot(state),
             paths: prebuilt.paths ?? ctx.paths,
             requestRustInvoke: requireHost(state).requestRustInvoke,
             // The bus is built by the later 'app-runtime' step; a setting can only change at call time.
@@ -2423,6 +2426,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           steamProcesses: requireSteamProcesses(state),
           getDownloadQueue: () => requireServices(state).downloadQueue,
           versioning: requireStoreRoot(state).versioning,
+          storeRoot: requireStoreRoot(state),
           config,
           gameConfigs,
           paths,

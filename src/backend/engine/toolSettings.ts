@@ -119,6 +119,7 @@ function releaseBoundDeps(
     runner: services.runner,
     paths: services.paths,
     versioning: services.versioning,
+    storeRoot: services.storeRoot,
     engineRuntime: services.engineRuntime
   }
   const config = {

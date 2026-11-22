@@ -3,7 +3,7 @@ import { dirname, resolve } from 'path'
 import { deletePath, setPath } from '../stores/dotPath'
 import type { MirrorRegistry } from '../stores/mirrorCell'
 import type { StoreFrame, StoreFrameSink } from '../stores/storeFrames'
-import { dotPathsFor, familyOf } from '../stores/storeOwnership'
+import { dotPathsFor } from '../stores/storeOwnership'
 import type { StoreVersioning } from '../storeVersioning/engine'
 
 /**
@@ -101,7 +101,11 @@ export function createDiskStoreSink(
         doc = JSON.parse(frame.valueJson as string) as Doc
         break
     }
-    const settings = familyOf(frame.store) === 'settings'
+    // A settings DOCUMENT (the `settings` flavour): config.json or a GamesConfig file. The family's
+    // third store, store/config (configStore), is a conf store like any other (85-15).
+    const settings =
+      frame.store === 'settings/global' ||
+      frame.store.startsWith('GamesConfig/')
     if (!settings) {
       const internal = (doc.__internal__ ?? {}) as Doc
       const gamelib = (internal.gamelib ?? {}) as Doc

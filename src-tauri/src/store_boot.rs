@@ -164,6 +164,12 @@ fn candidates(
                     .map(|e| e.path())
                     // A backup, a corrupt copy or a temp file has no row: `row_for_path` skips it.
                     .filter(|p| row_for_path(user_data, user_data, p).is_some())
+                    // A name no `GamesConfig/<app>` frame can carry is never Rust's (T-85-37).
+                    .filter(|p| {
+                        p.file_stem()
+                            .and_then(|s| s.to_str())
+                            .is_some_and(crate::store_dispatch::plain_name)
+                    })
                     .collect();
                 files.sort();
                 found.extend(files.into_iter().map(|p| (row, p)));
@@ -176,6 +182,19 @@ fn candidates(
     }
     found.retain(|(_, path)| path.is_file());
     found
+}
+
+/// The document key of a settings-family file: `settings/global` for `config.json`,
+/// `GamesConfig/<app>` for a game document (its file stem), `None` for any other row.
+fn settings_doc_key(row: &TableRow, path: &Path) -> Option<String> {
+    match row.key.as_str() {
+        "settings/global" => Some(row.key.clone()),
+        "settings/game" => path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .map(|stem| format!("GamesConfig/{stem}")),
+        _ => None,
+    }
 }
 
 /// Opens every Rust-owned store file under `user_data` once, stopping at `max_files` files,
@@ -202,22 +221,29 @@ pub(crate) fn open_all_with(
             break;
         }
         report.opened += 1;
-        match host.open_row(row, path) {
+        // A settings document opens under its own key (`settings/global`, `GamesConfig/<app>`), so
+        // the frame worker finds the same store and a read-only report names the document the
+        // sidecar's mirror cell is keyed by (85-15).
+        let doc_key = settings_doc_key(row, &path);
+        let key = doc_key.as_deref().unwrap_or(&row.key);
+        let opened = match &doc_key {
+            Some(doc) => host.open_doc(doc, path),
+            None => host.open_row(row, path),
+        };
+        match opened {
             Ok(store) => match store.open_outcome() {
                 OpenOutcome::Adopted => report.adopted += 1,
                 OpenOutcome::Migrated { .. } => report.migrated += 1,
-                OpenOutcome::ReadOnly { reason, .. } => {
-                    note_read_only(&mut report, &row.key, *reason)
-                }
+                OpenOutcome::ReadOnly { reason, .. } => note_read_only(&mut report, key, *reason),
                 OpenOutcome::StartEmpty { .. } => {
-                    if !report.start_empty.contains(&row.key) {
-                        report.start_empty.push(row.key.clone());
+                    if !report.start_empty.iter().any(|k| k == key) {
+                        report.start_empty.push(key.to_string());
                     }
                 }
                 OpenOutcome::Missing | OpenOutcome::Ok | OpenOutcome::CacheDiscarded => {}
             },
             // The host refuses only a row it never opens; a store that cannot be used is read-only.
-            Err(_) => note_read_only(&mut report, &row.key, ReadOnlyReason::Failed),
+            Err(_) => note_read_only(&mut report, key, ReadOnlyReason::Failed),
         }
     }
     report.elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
@@ -1075,5 +1101,190 @@ mod tests {
         walk(root, root, &mut found);
         found.sort();
         found
+    }
+
+    // ---- 85-15: the settings family at boot -------------------------------------------------
+
+    /// An older-version settings document of the corpus (`expect: migrate`, the TS oracle said
+    /// `migrated`): its row, the stored bytes, and the bytes the real TS chains produced at the
+    /// corpus placement (`config.json`, `GamesConfig/app.json`).
+    struct OlderSettings {
+        global: bool,
+        path: String,
+        stored: Vec<u8>,
+        expected: Vec<u8>,
+    }
+
+    fn older_settings_documents() -> Vec<OlderSettings> {
+        let text = fs::read_to_string(format!("{CORPUS_DIR}/MANIFEST.json")).unwrap();
+        let manifest: serde_json::Value = serde_json::from_str(&text).unwrap();
+        let expected_dir = format!(
+            "{}/crates/gamelib-store/tests/fixtures/corpus-expected",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let outcomes: serde_json::Value = serde_json::from_str(
+            &fs::read_to_string(format!("{expected_dir}/outcomes.json")).unwrap(),
+        )
+        .unwrap();
+        let migrated: Vec<&str> = outcomes
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|o| o["result"] == "migrated")
+            .filter_map(|o| o["path"].as_str())
+            .collect();
+        let mut found = Vec::new();
+        for entry in manifest["files"].as_array().unwrap() {
+            let (Some(key), Some(path)) = (entry["tableKey"].as_str(), entry["path"].as_str())
+            else {
+                continue;
+            };
+            if !key.starts_with("settings/") || !migrated.contains(&path) {
+                continue;
+            }
+            found.push(OlderSettings {
+                global: key == "settings/global",
+                path: path.to_string(),
+                stored: fs::read(format!("{CORPUS_DIR}/{path}")).unwrap(),
+                expected: fs::read(format!("{expected_dir}/{path}")).unwrap(),
+            });
+        }
+        found
+    }
+
+    /// Research A4 / D-12 at boot: with the shipped ownership file (settings flipped), `open_all`
+    /// migrates every older config.json and GamesConfig document before `spawn_sidecar_state`, each
+    /// behind one backup holding the stored bytes, and the migrated bytes equal the TS oracle's, so
+    /// GameConfig's synchronous reads never see an unmigrated document.
+    #[test]
+    fn store_boot_migrates_every_older_settings_document_before_spawn() {
+        let older = older_settings_documents();
+        let (globals, games) = (
+            older.iter().filter(|o| o.global).count(),
+            older.iter().filter(|o| !o.global).count(),
+        );
+        assert!(globals >= 3, "only {globals} older config.json files");
+        assert!(games >= 40, "only {games} older GamesConfig documents");
+        let own = Ownership::embedded();
+        for doc in &older {
+            let home = FakeHome::new("gamelib-store-boot-settings-");
+            let path = if doc.global {
+                home.root().join("config.json")
+            } else {
+                home.root().join("GamesConfig").join("app.json")
+            };
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(&path, &doc.stored).unwrap();
+
+            let (host, report) = open(&home, own, BOOT_SWEEP_MAX_FILES, BOOT_SWEEP_MAX_MS);
+            assert_eq!(
+                (report.opened, report.migrated, report.deferred),
+                (1, 1, 0),
+                "{}",
+                doc.path
+            );
+            assert!(
+                report.read_only.is_empty(),
+                "{}: {:?}",
+                doc.path,
+                report.read_only
+            );
+            assert_eq!(
+                String::from_utf8_lossy(&fs::read(&path).unwrap()),
+                String::from_utf8_lossy(&doc.expected),
+                "{}: migrated bytes differ from the TS oracle",
+                doc.path
+            );
+            let backups = backups_beside(&path);
+            assert_eq!(backups.len(), 1, "{}: {backups:?}", doc.path);
+            assert_eq!(fs::read(&backups[0]).unwrap(), doc.stored, "{}", doc.path);
+            // The frame worker reaches the same store under the document key: a reopen is the
+            // migrated store, not a second migration.
+            let key = if doc.global {
+                "settings/global".to_string()
+            } else {
+                "GamesConfig/app".to_string()
+            };
+            let store = host.open_doc(&key, path.clone()).unwrap();
+            assert_eq!(store.key(), key);
+            assert!(matches!(store.open_outcome(), OpenOutcome::Migrated { .. }));
+        }
+    }
+
+    #[test]
+    fn store_boot_reports_a_settings_document_by_its_document_key_and_ts_mode_opens_none() {
+        let home = FakeHome::new("gamelib-store-boot-settings-");
+        let games = home.root().join("GamesConfig");
+        fs::create_dir_all(&games).unwrap();
+        fs::write(games.join("480.json"), "{\"480\":{},\"version\":\"v9\"}").unwrap();
+        fs::write(games.join("620.json"), "{not json").unwrap();
+        // A stem no frame could carry is not Rust's: never opened, never reported.
+        fs::write(games.join("a..b.json"), "{\"version\":\"v2\"}").unwrap();
+        fs::write(home.root().join("config.json"), "{\"version\":\"v2\"}").unwrap();
+        let before = home_tree(home.root());
+
+        let (_host, ts) = open_all_mode(&home, StoreMode::Ts);
+        assert_eq!(ts.opened, 0, "ts mode opens no settings document");
+        assert_eq!(
+            home_tree(home.root()),
+            before,
+            "ts mode touches no settings document"
+        );
+
+        let (host, report) = open_all_mode(&home, StoreMode::Rust);
+        assert_eq!(report.opened, 3, "config.json, 480 and 620");
+        assert_eq!(
+            report.read_only,
+            vec![
+                ("GamesConfig/480".to_string(), ReadOnlyReason::Newer),
+                ("GamesConfig/620".to_string(), ReadOnlyReason::Failed),
+            ]
+        );
+        let env = boot_env_value(&report).unwrap();
+        assert!(
+            env.contains("{\"store\":\"GamesConfig/480\",\"reason\":\"newer\"}"),
+            "{env}"
+        );
+        assert!(!env.contains("a..b"), "{env}");
+        // The corrupt one is kept byte-identical beside its copy (D-18).
+        assert_eq!(
+            fs::read_to_string(games.join("620.json")).unwrap(),
+            "{not json"
+        );
+        let keys: Vec<String> = host.read_only_entries().into_iter().map(|e| e.0).collect();
+        assert_eq!(keys, ["GamesConfig/480", "GamesConfig/620"]);
+    }
+
+    #[test]
+    fn store_boot_settings_documents_respect_the_boot_bound() {
+        let home = FakeHome::new("gamelib-store-boot-settings-");
+        let games = home.root().join("GamesConfig");
+        fs::create_dir_all(&games).unwrap();
+        for app in 0..6 {
+            fs::write(
+                games.join(format!("{app}.json")),
+                format!("{{\"{app}\":{{}},\"version\":\"v2\"}}"),
+            )
+            .unwrap();
+        }
+        let own = ownership(&["settings"], &[]);
+        let (_host, report) = open(&home, &own, 2, 60_000);
+        assert_eq!((report.opened, report.deferred), (2, 4));
+        let (_host, report) = open(&home, &own, 10_000, 0);
+        assert_eq!((report.opened, report.deferred), (0, 6));
+    }
+
+    fn open_all_mode(home: &FakeHome, mode: StoreMode) -> (StoreHost, BootReport) {
+        let host = StoreHost::new();
+        let report = open_all_with(
+            &host,
+            mode,
+            Ownership::embedded(),
+            home.root(),
+            BOOT_SWEEP_MAX_FILES,
+            60_000,
+            &|| false,
+        );
+        (host, report)
     }
 }

@@ -49,13 +49,14 @@ import { readStoredTitleConfig } from '../titleSettings'
 export function readSteamEngineOverride(
   deps: { paths: Pick<AppPaths, 'gamesConfigPath'> } & Pick<
     EngineConfigDeps,
-    'versioning'
+    'versioning' | 'storeRoot'
   >,
   appId: string
 ): unknown {
   const generic = readStoredGameConfig(appId, {
     gamesConfigPath: deps.paths.gamesConfigPath,
-    versioning: deps.versioning
+    versioning: deps.versioning,
+    storeRoot: deps.storeRoot
   })?.engineOverride
   if (typeof generic === 'string') return generic
   return readStoredTitleConfig(appId, deps)?.steamEngineOverride
@@ -77,6 +78,7 @@ export function steamDecisionServices(
     paths: EngineServices['paths']
     engineRuntime: EngineServices['engineRuntime']
     versioning: EngineServices['versioning']
+    storeRoot?: EngineServices['storeRoot']
     stores: Pick<Stores, 'wineManager'>
   } & SteamEngineBottle
 ): Pick<
@@ -87,6 +89,7 @@ export function steamDecisionServices(
   | 'paths'
   | 'engineRuntime'
   | 'versioning'
+  | 'storeRoot'
 > &
   SteamEngineBottle {
   return {
@@ -95,6 +98,7 @@ export function steamDecisionServices(
     paths: deps.paths,
     engineRuntime: deps.engineRuntime,
     versioning: deps.versioning,
+    storeRoot: deps.storeRoot,
     steamBottle: deps.steamBottle,
     steamLaunchRuntime: deps.steamLaunchRuntime,
     wineManagerReleases: wineManagerReleasesFrom(deps)
@@ -110,6 +114,7 @@ export function steamDecisionDeps(
     | 'paths'
     | 'engineRuntime'
     | 'versioning'
+    | 'storeRoot'
   > &
     SteamEngineBottle
 ): Partial<EngineDecisionDeps> &
@@ -120,6 +125,7 @@ export function steamDecisionDeps(
     paths: services.paths,
     engineRuntime: services.engineRuntime,
     versioning: services.versioning,
+    storeRoot: services.storeRoot,
     killCrossoverWineserver: killCrossoverWineserverWith(services),
     wineManagerReleases: services.wineManagerReleases,
     resolveCrossoverBinDir: () => hintedBinDir(services),

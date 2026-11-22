@@ -134,6 +134,8 @@ export interface CreateStoreManagersDeps {
   engineState: ManagerDeps['engineState']
   engineRuntime: ManagerDeps['engineRuntime']
   versioning: ManagerDeps['versioning']
+  /** The boot's store root: the settings documents are read through it (85-15). */
+  storeRoot?: ManagerDeps['storeRoot']
   signIn: ManagerDeps['signIn']
   steamSession: ManagerDeps['steamSession']
   tokenStore: ManagerDeps['tokenStore']
@@ -169,6 +171,7 @@ export function createStoreManagers(
     libraryManagers: library,
     stores: deps.stores,
     versioning: deps.versioning,
+    storeRoot: deps.storeRoot,
     commandRunner: deps.commandRunner,
     // The launcher is built below from the same map; managers reach it at call time.
     get launcher() {
@@ -219,6 +222,7 @@ export function createStoreManagers(
     libraryManagers: library,
     launchHooks,
     versioning: deps.versioning,
+    storeRoot: deps.storeRoot,
     commandRunner: deps.commandRunner,
     runner: deps.runner,
     spawnAsync: deps.spawnAsync,

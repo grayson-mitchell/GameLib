@@ -102,6 +102,7 @@ export async function getGameEngineState(
     | 'paths'
     | 'engineRuntime'
     | 'versioning'
+    | 'storeRoot'
   >,
   identity: unknown,
   deps: GameEngineStateDeps = {}
@@ -135,6 +136,7 @@ export async function getGameEngineState(
     paths: services.paths,
     engineRuntime: services.engineRuntime,
     versioning: services.versioning,
+    storeRoot: services.storeRoot,
     ...releases,
     globalSettings: services.globalSettings,
     ...stateDeps,
@@ -176,6 +178,7 @@ export async function listGameEngineOptions(
     | 'paths'
     | 'engineRuntime'
     | 'versioning'
+    | 'storeRoot'
   >,
   args: unknown,
   deps: {
@@ -196,6 +199,7 @@ export async function listGameEngineOptions(
     paths: services.paths,
     engineRuntime: services.engineRuntime,
     versioning: services.versioning,
+    storeRoot: services.storeRoot,
     ...deps.decision
   })
   let effective: EffectiveEngine | null = null
@@ -221,6 +225,7 @@ export function getDefaultEngine(
     | 'paths'
     | 'engineRuntime'
     | 'versioning'
+    | 'storeRoot'
   >,
   overrides?: Partial<EngineConfigDeps>
 ): {

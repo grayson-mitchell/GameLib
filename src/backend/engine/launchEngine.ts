@@ -256,6 +256,7 @@ export async function selectEngineForLaunch(
       runner: services.runner,
       paths: services.paths,
       versioning: services.versioning,
+      storeRoot: services.storeRoot,
       engineRuntime: services.engineRuntime
     }),
     ...overrides

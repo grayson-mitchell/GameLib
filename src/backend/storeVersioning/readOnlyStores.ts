@@ -48,6 +48,8 @@ export function areaForStoreKey(storeKey: string): ReadOnlyArea {
   const mapped = AREA_BY_KEY[storeKey]
   if (mapped) return mapped
   if (storeKey.startsWith('store_cache/humble_')) return 'humble'
+  // The shell reports a per-game document by its own key (`GamesConfig/<app>`, 85-15).
+  if (storeKey.startsWith('GamesConfig/')) return 'game-settings'
   return 'app-data'
 }
 

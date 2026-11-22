@@ -106,8 +106,9 @@ fn disallowed_segment(segment: &str) -> bool {
     matches!(segment, "__proto__" | "prototype" | "constructor")
 }
 
-/// A plain file name: what `GamesConfig/<app>` may name (never a path).
-fn plain_name(name: &str) -> bool {
+/// A plain file name: what `GamesConfig/<app>` may name (never a path). The boot sweep skips a
+/// `GamesConfig` file whose stem is not one (no frame could ever name it).
+pub(crate) fn plain_name(name: &str) -> bool {
     !name.is_empty()
         && name.len() <= 255
         && name != "."

@@ -34,7 +34,7 @@ export function resolveOverlayEnabled(a: {
  */
 export function readStoredOverlayOverride(
   appId: string,
-  deps: { paths: Pick<AppPaths, 'gamesConfigPath'> }
+  deps: Parameters<typeof readStoredTitleConfig>[1]
 ): unknown {
   return readStoredTitleConfig(appId, deps)?.steamOverlayOverride
 }
