@@ -186,7 +186,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 82: Guardrails, hygiene and shared safety primitives** — 20/20 plans (16 + 4 gap closure); completed 2026-11-21
 - [x] **Phase 83: Native seam, gamelib-core and process/shutdown contract** — 11/11 plans; completed 2026-11-21
 - [x] **Phase 84: Logger** — 18/18 plans (11 + 7 gap closure); completed 2026-11-22
-- [ ] **Phase 85: Store host, config and versioned migrations** — 25 plans in 20 waves (the D-03 deletion split into four plans for context budget); planned 2026-11-21
+- [x] **Phase 85: Store host, config and versioned migrations** — 25/25 plans in 20 waves (the D-03 deletion split into four plans for context budget); completed 2026-11-22
 - [ ] **Phase 86: Pure leaf services** — 26 plans in 21 waves; planned 2026-11-22 (executes after 85-19/20)
 - [ ] **Phase 87: Engine, Wine and tools** — not planned
 - [ ] **Phase 88: Launch pipeline** — not planned
@@ -482,7 +482,7 @@ Plans:
   4. The legendary store migration is ported only if a supported upgrade path still reaches it (reachability recorded), otherwise it is deleted
   5. The TS write-through mirror's deletion point is named and executed for every family flipped in this phase, and `storeVersioning`, `storeMigrations` and `migration/*` TypeScript are deleted
 
-**Plans:** 25/25 plans executed in 20 waves; planned 2026-11-21
+**Plans:** 25/25 plans complete in 20 waves; planned 2026-11-21
 
 Plans:
 **Wave 1**
