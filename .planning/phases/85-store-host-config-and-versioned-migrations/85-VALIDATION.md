@@ -81,7 +81,7 @@ Task IDs bound by the planner (2026-11-21). `85-NN-Tk` = plan 85-NN, task k. Com
 | 85-23-T2 | FND-06 / SC5 | ManagerDeps and StoreRoot carry no versioning engine; test helper forbidden and gone | jest | `pnpm exec jest --runTestsByPath src/backend/__tests__/storeHostPortComplete.test.ts src/backend/storeManagers/__tests__/createStoreManagers.test.ts` ; `pnpm test` | ✅ | ✅ green (85-25 proof at D `92495cd50`) |
 | 85-24-T1 | FND-06 / SC5 | TS read-only notice path deleted; Rust's notice is the only one | jest + unit | `pnpm exec jest --runTestsByPath src/backend/__tests__/storeHostPortComplete.test.ts src/backend/sidecar/__tests__/appShellFlows.test.ts src/backend/stores/__tests__/storePolicyVectors.test.ts` ; `cd src-tauri && cargo test --bin gamelib-shell store_policy` | ✅ | ✅ green (85-25 proof at D `92495cd50`) |
 | 85-24-T2 | FND-06 / SC5 | Survivors relocated; storeVersioning and storeMigrations deleted | jest | `pnpm exec jest --runTestsByPath src/backend/__tests__/storeHostPortComplete.test.ts src/backend/utils/__tests__/schemaStrip.test.ts` ; `pnpm test` | ✅ | ✅ green (85-25 proof at D `92495cd50`) |
-| 85-25-T1..T3 | FND-06 / FND-07 | Post-deletion clean-worktree and three-OS CI proof | proof | see 85-25 | — | ⬜ pending |
+| 85-25-T1..T3 | FND-06 / FND-07 | Post-deletion clean-worktree and three-OS CI proof | proof | see 85-25 | — | ✅ green (proof at D `92495cd50` and D' `6ef75501d`; CI green at `88b48b70d` on all three legs) |
 | all | Gates | Sidecar boot with no Rust peer exits cleanly | smoke | `pnpm smoke:sidecar` | ✅ | ✅ green (85-19 proof at P; 85-25 proof at D) |
 
 Binding notes: SC5 is read per D-19, not literally: ROADMAP SC5's "named and executed for every family flipped in this phase" means every persisted store's TS-mirror deletion phase is named (pinned by `storeMirrorSchedule.test.ts`, copied from `82-STATE-OWNERSHIP.md`) and only the deletions due in Phase 85 are executed (`migrationsStore`'s mirror), plus deletion of the TS *owner* path for every family (D-03); the other mirrors are deleted in the phases their column names, and the schedule test fails if one disappears early. D-03's "the phase's last plan deletes" is carried by 85-21..85-24, which run back to back after the live gate (85-20) with nothing else between them and the post-deletion proof (85-25); the split is for context budget only (storeVersioning's `versioning` dependency is threaded through about 60 consumer files). The schema descriptor drift test lives at `src/backend/stores/__tests__/schemaDescriptor.test.ts` (not under storeMigrations/, which 85-24 deletes); the read-only area parity is proven by cargo's `store_policy` tests over `storePolicyVectors.json` (85-16), so no separate `readonly::` module exists; the store drain is proven by `store_boot` and `store_frame` tests (85-09, 85-10) rather than a `host::drain` filter.
@@ -249,6 +249,38 @@ Plan 85-25 Task 1, 2026-11-22 (06:52:58Z to 07:02:22Z), on the macOS machine (aa
 - **Verdict.** D' is proven: no failure caused by the code, and nothing was fixed.
 
 **Not proven here, owed to CI after the push (Task 3):** the windows-latest and ubuntu-latest legs of `rust-test.yml` at D's code (D-03's deletions in Rust on every OS), the win32 clippy ceiling map, and `test.yml` / `codecheck.yml` on ubuntu (D-03's TS deletions there).
+
+---
+
+## CI proof (post-deletion)
+
+Plan 85-25 Task 3, 2026-11-22. The push was made under the operator's pre-authorisation, given in the main session ("yes, cover 85-25 too", which extends 85-19's push-and-build terms to this plan's push).
+
+**Push.**
+- **First attempt, at `6ef75501d`:** blocked by the open-time check before any push command. D..HEAD listed the 23 non-`.planning` paths of quick-261122-qwk; see "D' re-proof" above.
+- **Second attempt:**
+  - **Check.** `git diff --name-only D' HEAD` (D' = `6ef75501d`, HEAD = `88b48b70d`) was re-run immediately before the push. It listed only `85-VALIDATION.md` and `deferred-items.md` under this phase directory.
+  - **Hook failure in the main working tree.** `git push origin main` from the main working tree was rejected by the pre-push hook. `pnpm backend-di-ceilings` flagged `src/frontend/state/__tests__/libraryStoreFollowers.test.ts` (2 jestMock, no baseline entry). That file is another session's **untracked** work and is in no commit. Every other gate passed.
+  - **Push from a clean worktree.** The push was then made from a clean detached worktree at `88b48b70d`, with the open-time diff re-run immediately before it (same two paths). `git push origin HEAD:main` ran the full pre-push hook against exactly the pushed tree and passed, never `--no-verify`. origin/main moved `482625ecc..88b48b70d`. This push also published 85-21..85-24, quick-261122-qwk and the other sessions' commits since `482625ecc`.
+
+**Runs at `88b48b70d` (tree = D' code plus two `.planning` docs), all green on the first round:**
+
+| Workflow | Run id | Leg / job | Conclusion | Evidence from the step logs |
+|----------|--------|-----------|------------|------------------------------|
+| Rust test | 44997872609 | cargo-test (windows-latest) | success | multi-crate step (with `-p gamelib-store -p gamelib-store-cli`): 93 binaries, 1766 passed, 0 failed; `atomic::windows::a_destination_held_without_share_delete_is_retried_then_written_directly ... ok`; `table_chain_versions_equal_the_shell_chains ... ok`; shell step 663 passed, 0 failed, 4 ignored, incl. `store_boot_never_opens_migrations_json ... ok` and `tests::keyring_names_are_pinned ... ok`; clippy ratchet `PASS (win32, toolchain 1.99.1)` |
+| Rust test | 44997872609 | cargo-test (macos-latest) | success | multi-crate 1811 passed, 0 failed; shell 687 passed, 0 failed, 2 ignored (equal to the local proof); clippy `PASS (darwin, toolchain 1.99.1)` |
+| Rust test | 44997872609 | cargo-test (ubuntu-latest) | success | multi-crate 1809 passed, 0 failed; shell 672 passed, 0 failed, 3 ignored, incl. `store_boot_never_opens_migrations_json` and `keyring_names_are_pinned`; no clippy on Linux by design |
+| Test | 44997872575 | ci (ubuntu) | success | 1126 suites passed, 13 skipped; 24100 passed, 245 skipped, 0 failed |
+| Code check | 44997872574 | codecheck | success | |
+| Lint | 44997872599 | lint | success | |
+| Supply-chain audit | 44997872652 | cargo-deny, pnpm-audit | success, success | |
+
+**D-03 on CI.** The deletion plans' Rust and TS changes compile and test green on windows-latest, macos-latest and ubuntu-latest:
+- 85-21: the flag, the TS owner path and `conf`, with `store_boot_never_opens_migrations_json` on all three legs.
+- 85-22 and 85-23: `versioning` unthreaded.
+- 85-24: storeVersioning, storeMigrations and the migration system, with `table_chain_versions_equal_the_shell_chains` on all three legs.
+
+No CI-only failure occurred, so there were no fix commits. No clippy ceiling changed; both platforms passed at their existing ceilings. No release workflow was dispatched.
 
 ---
 
