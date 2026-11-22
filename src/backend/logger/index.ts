@@ -82,8 +82,9 @@ const logErrorSettled = (
 }
 
 /**
- * `logInfoSettled` (Phase 34.3 plan 04, REQ-34.3-09): the `logInfo` sibling of `logErrorSettled`,
- * for the `logInfo` send listener's call-site guard. It shares `flush`, so it carries the same
+ * `logInfoSettled` (Phase 34.3 plan 04, REQ-34.3-09): the `logInfo` sibling of `logErrorSettled`.
+ * It has no production caller today: it is kept as that sibling and is listed in
+ * `meta/logSecretGate.ts` (IN-13). It shares `flush`, so a future caller would carry the same
  * coupling to the target writers' held Promise messages (IN-11, see `logErrorSettled`): up to the
  * full `LOG_FLUSH_TIMEOUT_MS` while any writer holds one that has not settled.
  */
