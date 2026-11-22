@@ -53,8 +53,6 @@ jest.mock('graceful-fs', () => ({
   existsSync: jest.fn()
 }))
 
-import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
-import { createTestInfoCaches } from 'backend/testUtils/testEpicAmazonRuntimes'
 import { createTestAbortRegistry } from 'backend/testUtils/testAbortRegistry'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { existsSync } from 'graceful-fs'
@@ -98,7 +96,6 @@ function hostSlices() {
     notifications: host.notifications,
     config: createTestGlobalConfig(),
     paths: createContainedHomeAppPaths(),
-    infoCaches: createTestInfoCaches(),
     aborts: createTestAbortRegistry(),
     imageTools: host.imageTools,
     requestRustInvoke: host.requestRustInvoke
@@ -119,7 +116,6 @@ function overrideProcessPlatform(os: string): string {
 
 registerShortcutsFlows({
   sendFrontendMessage,
-  appRuntime: createTestAppRuntime(),
   ipc,
   ...hostSlices(),
   managers: createTestManagers({

@@ -930,7 +930,9 @@ export type WinetricksApplyResult =
 /** `Winetricks.install`'s own per-call outcome (D-11), distinct from the queue-run outcome map. */
 export type WinetricksInstallOutcome = 'installed' | 'failed' | 'refused'
 
-export interface GameScoreInfo {
+// Not exported (86-24): the TS wiki module that imported these wiki source shapes is deleted, so they
+// are used only by `WikiInfo` below (`pnpm find-deadcode`).
+interface GameScoreInfo {
   score: string
   urlid: string
 }
@@ -945,33 +947,23 @@ export interface PCGamingWikiInfo {
   releaseDate: string[]
 }
 
-export interface AppleGamingWikiInfo {
+interface AppleGamingWikiInfo {
   crossoverRating: string
   wineRating: string
   crossoverLink: string
 }
 
-export interface CodeweaversInfo {
+interface CodeweaversInfo {
   macRating: number | null
   linuxRating: number | null
   slug: string
 }
 
-export interface GamesDBInfo {
+interface GamesDBInfo {
   steamID: string
 }
 
-export interface ProtonDBCompatibilityInfo {
-  level: string
-}
-
-// Cross-store PCGamingWiki / Steam Deck compatibility data (D-13): shown for
-// every store's game, so it stays here rather than in types/steam.ts.
-export interface SteamDeckComp {
-  category: number
-}
-
-export interface SteamInfo {
+interface SteamInfo {
   compatibilityLevel: string | null
   steamDeckCatagory: number | null
 }
@@ -990,8 +982,8 @@ export interface SteamInfo {
  * PCGamingWiki result, so when that lookup errors HLTB never issues a request at all.
  * Reporting that as `notfound` would blame HLTB for PCGamingWiki's failure.
  */
-export type WikiSourceOutcome = 'ok' | 'notfound' | 'error'
-export type HowLongToBeatOutcome = 'ok' | 'notfound' | 'skipped'
+type WikiSourceOutcome = 'ok' | 'notfound' | 'error'
+type HowLongToBeatOutcome = 'ok' | 'notfound' | 'skipped'
 
 // Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
 // flagged the previously-exported form as a used-in-module finding -- there

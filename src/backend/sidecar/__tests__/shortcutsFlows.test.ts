@@ -120,8 +120,6 @@ jest.mock('backend/shortcuts/utils', () => ({
 // — proving the real `sips`-backed `nativeImageShim.ts` chain (and, for `app.getPath('exe')`,
 // GAMELIB_SHELL_EXE -> getPath('exe') -> shortcuts.ts:227) is this suite's whole point.
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
-import { createTestInfoCaches } from 'backend/testUtils/testEpicAmazonRuntimes'
 import { createTestAbortRegistry } from 'backend/testUtils/testAbortRegistry'
 import { defined } from 'backend/testUtils/indexed'
 import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
@@ -305,7 +303,6 @@ const ipc = createIpcRegistry()
 const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
 registerShortcutsFlows({
   sendFrontendMessage,
-  appRuntime: createTestAppRuntime(),
   ipc,
   aborts: createTestAbortRegistry(),
   managers: createTestManagers({
@@ -319,7 +316,6 @@ registerShortcutsFlows({
   }),
   quit: { handleExit: () => mockHandleExit() },
   stores: createTestStores(),
-  infoCaches: createTestInfoCaches(),
   runner: createTestServices().runner,
   config: {
     getSettings: () => mockGlobalConfigGet().getSettings()

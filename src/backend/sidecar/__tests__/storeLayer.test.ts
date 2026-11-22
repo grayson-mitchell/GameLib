@@ -148,9 +148,9 @@ describe('round-trip', () => {
     'gogSyncStore',
     'gogPrivateBranches',
     // 'wikigameinfo' is NOT excluded — see the cache-backed round-trip
-    // block below. It IS a `ValidStoreName`, but `wiki_game_info/
-    // stores.ts` constructs it as a `CacheStore`, not a
-    // `TypeCheckedStoreBackend`, so `registry.get()` can never
+    // block below. It IS a `ValidStoreName`, but it is a `CacheStore`, not a
+    // `TypeCheckedStoreBackend` (86-24: no TS file constructs it now; Rust's
+    // `gamelib-info` wiki slice owns the file), so `registry.get()` can never
     // resolve it — it round-trips through the same mechanism as the D-13
     // cache stores instead, immediately below.
     //
@@ -177,7 +177,7 @@ describe('round-trip', () => {
   // D-13's five dynamically-named CacheStore names that are part of the
   // synchronous boot read path even though they are not `ValidStoreName`s,
   // PLUS `wikigameinfo` (a `ValidStoreName` that is nonetheless constructed
-  // as a `CacheStore` in the real backend — see the comment above) —
+  // as a `CacheStore` — see the comment above) —
   // round-tripped through the REAL backend/cache.ts CacheStore class (D-11:
   // cache.ts is unmodified and rides the Module._load substitution).
   const CACHE_BACKED_STORE_NAMES = [
@@ -195,9 +195,8 @@ describe('round-trip', () => {
       // stores.ts module constructs its `libraryStore` — a fresh
       // `CacheStore` instance at the SAME filename reads and writes the same
       // file, because conf re-reads it on every access (it is not a shared
-      // in-memory cell), so this sees the identical underlying data as the instance storeRegistration.ts (or,
-      // for wikigameinfo, wiki_game_info/stores.ts) already
-      // constructed.
+      // in-memory cell), so this sees the identical underlying data as the instance storeRegistration.ts already
+      // constructed (for wikigameinfo, the file the Rust wiki slice owns).
       const cache = new CacheStore<string, '__gsdProbe'>(name, null, {
         root,
         kind: 'cache'
