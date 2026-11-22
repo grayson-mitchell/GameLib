@@ -75,8 +75,16 @@ findings:
     severity: info
     disposition: fixed
     title: "`flush` doc says it returns at once with no transport, but it first waits on the chains"
-open: 0
-total: 18
+  - id: WR-09
+    severity: warning
+    disposition: open
+    title: "flush() no longer waits for a Promise-valued structured message held on the writer's #tail"
+  - id: WR-10
+    severity: warning
+    disposition: open
+    title: "A line behind a Promise message is timestamped when the Promise settles, not at the call (D-12)"
+open: 2
+total: 20
 recorded: 2026-11-22T00:00:00.000Z
 ---
 
@@ -102,6 +110,8 @@ recorded: 2026-11-22T00:00:00.000Z
 | IN-08 | info | fixed | REVIEW-FIX r2: `3eebffe5b` |
 | IN-09 | info | fixed | REVIEW-FIX r2: `7ff92181a` |
 | IN-10 | info | fixed | REVIEW-FIX r2: `7eea6b58d` (doc-only) |
+| WR-09 | warning | open | round-3 review (`84-REVIEW.md`); regression from the WR-08 fix |
+| WR-10 | warning | open | round-3 review (`84-REVIEW.md`); regression from the WR-08 fix |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.

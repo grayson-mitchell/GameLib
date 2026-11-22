@@ -2,189 +2,125 @@
 phase: 84-logger
 reviewed: 2026-11-22T00:00:00Z
 depth: standard
-files_reviewed: 27
+files_reviewed: 14
 files_reviewed_list:
   - src-tauri/crates/README.md
-  - src-tauri/crates/gamelib-core/src/shutdown.rs
-  - src-tauri/crates/gamelib-core/src/store.rs
   - src-tauri/crates/gamelib-log/src/bridge.rs
+  - src-tauri/crates/gamelib-log/src/frame.rs
   - src-tauri/crates/gamelib-log/src/lib.rs
-  - src-tauri/crates/gamelib-log/src/limiter.rs
-  - src-tauri/crates/gamelib-log/src/sanitize.rs
   - src-tauri/crates/gamelib-log/src/writer.rs
-  - src-tauri/crates/gamelib-log/tests/golden.rs
-  - src-tauri/src/keyring_dispatch.rs
-  - src-tauri/src/log_upload.rs
-  - src-tauri/src/macos_epic_embed/nav_delegate.rs
-  - src-tauri/src/macos_notifications.rs
+  - src-tauri/crates/gamelib-steamcm/src/refresh/owned_demos.rs
+  - src-tauri/src/log_dispatch.rs
   - src-tauri/src/main.rs
   - src-tauri/src/sidecar.rs
-  - src-tauri/src/terminate_veto.rs
-  - src/backend/__tests__/cargoFeatures.test.ts
-  - src/backend/__tests__/keyringDiagPersistence.test.ts
-  - src/backend/__tests__/macosEpicEmbedDiagPersistence.test.ts
   - src/backend/__tests__/shellLogCategoryOnly.test.ts
-  - src/backend/__tests__/tauriShellSource.test.ts
   - src/backend/logger/__tests__/forwarder.test.ts
   - src/backend/logger/__tests__/targetWriter.test.ts
   - src/backend/logger/forwarder.ts
-  - src/backend/logger/index.ts
   - src/backend/logger/targetWriter.ts
-  - CLAUDE.md
 findings:
   critical: 0
-  warning: 1
-  info: 6
-  total: 7
+  warning: 2
+  info: 0
+  total: 2
   necessity: 0
 status: issues_found
 ---
 
-# Phase 84: Code Review Report (round 2)
+# Phase 84: Code Review Report (round 3)
 
 **Reviewed:** 2026-11-22
 **Depth:** standard
-**Files Reviewed:** 26 source and test files (plus CLAUDE.md for conventions)
+**Files Reviewed:** 14
 **Status:** issues_found
-
-This report supersedes the round-1 report. The round-1 report stays in git history at `16074a253`.
 
 ## Summary
 
-Round 2 covers the Phase 84 gap-closure changes (plans 84-12 to 84-17 and pin commit `a0401bbc6`), read as diffs against
-`16074a253` and then in context. Hunks from other phases (Phase 100 `LONG_RUNNING_CHANNELS`, Phase 85 store entries in
-the README and `cargoFeatures` list) were not reviewed.
+Round 3 reviews the round-2 fix commits (1790bba62, 5020002a4, 1192c510a, 1438bbd0f, 6535f3135, 3eebffe5b,
+7ff92181a, 7eea6b58d) and the quick-task `Logger::hold()` handshake (7dc3d632b). Phase 85 store hunks in
+`main.rs`, `sidecar.rs` and `log_dispatch.rs` and the concurrent session's uncommitted files were left out of
+scope. Verification run: `npx jest src/backend/logger src/backend/__tests__/shellLogCategoryOnly.test.ts`
+(7 suites, 154 tests pass) and `cargo test -p gamelib-log` (all pass).
 
-I also ran the checks that bear on the changes:
+All eight round-2 findings are closed as the findings described them, and the Rust halves (IN-06 a, IN-07,
+IN-08, IN-09, the `hold()` handshake) are sound. The two defects below are both side effects of the WR-08 fix:
+by chaining Promise-valued structured messages inside `LogWriter`, the fix moved them out of the forwarder's
+own chain bookkeeping, and two properties the forwarder guaranteed for those messages no longer hold.
 
-- `cargo test -p gamelib-log -p gamelib-core` passes.
-- `cargo test --bin gamelib-shell` over the shell_log, keyring_error, log_upload and bridge tests passes.
-- `cargo check --bin gamelib-shell --tests` (the macOS-only NSError code compiles on this host) and `cargo clippy` on the
-  two crates are clean.
-- The logger jest suites and the four persistence gates pass (185 tests).
-- A scan of every `shell_log(` call for named, positional, `.display()` and path/url-shaped arguments found no external
-  text still reaching `gamelib.log` through the shell's own diagnostics.
-- `jiff` is built without its `logging` feature (`cargo tree -e features`), so it cannot re-enter the `log` bridge.
+## Round-2 fix verification
 
-All 11 round-1 findings are fixed correctly. I found no critical defect and no regression in the Rust fixes. One TS
-regression-shaped defect is new: the WR-05 "owed rotation" can rotate a live session's lines away (WR-08 below). The
-remaining items are residuals and maintainability points.
-
-Conventions (CLAUDE.md): every new timer in the forwarder is `unref`'d and cleared; no new spawn, task or exit work was
-added in Rust, so the sidecar-exit and Rust-shutdown conventions hold. No necessity findings.
-
-## Round-1 finding verdicts
-
-| Round 1 | Verdict | Notes |
-|---|---|---|
-| WR-01 malformed entry drops a batch | Fixed | `sanitiseEntry` (lone surrogates, prefix to `Backend`) and `logTargetRefusal` (runner, type, appName incl. `isWellFormed`) cover every field the shell rejects from a TS producer; the `LogPrefix` set is a subset of `Prefix::ALL`. The runner and type sets are pinned to `paths.rs`. See IN-05 for the silent refusal. |
-| WR-02 shell and bridge lines with raw CR/LF, uploaded | Fixed | `gamelib_log::log`, `shell_log_to` and both bridges escape; `shell_log_detail` keeps error text on stderr; `shellLogCategoryOnly` walks every `.rs` file. Residuals are IN-07 and IN-09. |
-| WR-03 store persist truncates on temp-write failure | Fixed | A failed temp write now returns before the live file is opened. The rename-failed fallback is unchanged and remains safe. |
-| WR-04 renderer object values bypass the cut | Fixed | Object values are cut with `truncate_text`; keys are limited to `name`/`message`/`stack` by the deserialiser. `Logger::submit_line` also caps native entries. |
-| WR-05 dropped or skipped rotation | Fixed with a residual | Rust half is correct (owed set, deduplicated, general never owes). TS half has a new ordering hole, WR-08 below, plus IN-06. |
-| WR-06 unbounded flush chain wait | Fixed | One deadline across chain and transport waits; both timers `unref`'d and cleared. See IN-10 for a stale doc sentence. |
-| WR-07 `validate_paste_url` returns raw text | Fixed | Returns `parsed.to_string()`; the store key, emitted URL and log line all carry the normalised value. |
-| IN-01 "lines dropped" counts messages | Fixed | `send` counts the entries a lost frame carried. |
-| IN-02 limiter windows on sender timestamps | Fixed | `anchor = ts.min(clock.now_ms())`; the line itself keeps its own `ts`. |
-| IN-03 `install_bridges` failure silent | Fixed | `bridge_install_warning`. See IN-08 for an inaccuracy in its wording. |
-| IN-04 `ExitBudget` remaining is stale | Fixed | `FinishContext` carries a deadline `Instant`; `remaining_now()` is read at flush time. The README and the pinned `tauriShellSource` regex were updated together. |
+- **WR-08 (1790bba62): closes the finding, with two regressions (WR-09, WR-10).** `#logBase` converts the
+  message synchronously, chains a Promise body on `#tail`, owes the rotation on rejection, and a later write
+  queues behind it, so the owed rotation reaches the first entry queued after the rejection. Both new tests
+  assert exactly that and pass. `stringifyLogValue` never throws, so the new synchronous conversion cannot
+  throw into a caller.
+- **IN-05 (5020002a4): closed.** One general WARNING per (kind, reason), kind and reason only, never the
+  target text; an unrecognised kind prints as `unknown`; the set is instance state and bounded (a few pairs).
+  `logLine` for the general target cannot recurse into `enqueue`'s refusal branch.
+- **IN-06 (1192c510a, 1438bbd0f): closed.** (b) `emit` owes the rotation when an empty body makes no entry.
+  (a) `rotating_targets` reads only valid non-general claims and `route_log_frame` owes them on a reject; the
+  unit test and the end-to-end `launch.log` test cover it. A raw frame that fails `serde_json::from_str`
+  never reaches `route_log_frame` and still cannot owe anything, but its content is unreadable, so no claim
+  can be recovered from it.
+- **IN-07 (6535f3135): closed.** `Logger::log` escapes CR/LF; the only verbatim caller is
+  `log_dispatch::write_renderer_log` via `log_body`. The sole other `Logger::log` callers (`shell_log_to`,
+  the bridge sinks, `gamelib_log::log`) are native text, and escaping twice is a no-op because the escape
+  emits no CR or LF.
+- **IN-08 (3eebffe5b): closed.** `BridgesInstalled { tracing, log }` replaces the combined bool, and the
+  warning names only the missing bridge. `install_bridges` has no other caller.
+- **IN-09 (7ff92181a): closed.** The gate scans every `diag(` producer in `gamelib-steamcm` and is
+  non-vacuous. I read the multi-line `diag(` calls and none carries external text now. The one real case
+  (`{e:?}` in the demos failure) writes `kind_name(&e)`. The README section states the bridge boundary.
+- **IN-10 (7eea6b58d): doc is accurate for the forwarder's own chains but is now overstated for writer-held
+  Promise messages (see WR-09).**
+- **Quick task 7dc3d632b (`Logger::hold()`): sound.** `entered` is acked inside the arm before parking;
+  `hold()` panics after `GENEROUS` instead of hanging; `hold_returns_only_once_the_writer_is_parked` passes.
 
 ## Warnings
 
-> Round-2 IDs continue the round-1 numbering (round 1 used WR-01..WR-07 and IN-01..IN-04, all recorded fixed in
-> `84-REVIEW-DISPOSITION.md`), so this round's findings are WR-08 and IN-05..IN-10 and never collide with a recorded
-> round-1 decision.
+### WR-09: `flush()` no longer waits for a Promise-valued structured message, so the fatal-exit guard can lose it
 
-### WR-08: A rotation owed after a rejected Promise message can rotate away the session's already-written lines
+**File:** `src/backend/logger/targetWriter.ts:168-185` (cause), `src/backend/logger/forwarder.ts:394-449` (doc and wait)
+**Issue:** Before 1790bba62 a structured call with a Promise message reached `LogForwarder.logLine`, which
+registered it in `#chains`. `flush()` calls `#settleChains`, which waits on exactly that map, so a pending
+message was awaited (bounded by `LOG_FLUSH_TIMEOUT_MS`) before the final frame. Now the writer holds the
+Promise on its own `#tail` and calls `logLine` only after it resolves, so the forwarder's `#chains` never
+sees it. A `flush()` taken while such a message is pending (the `uncaughtException` guard, and
+`releaseOnStdinEof`) returns at once and the line, plus every later write queued behind it on that writer,
+is lost at exit. The IN-10 doc rewrite ("It always waits for the Promise-valued messages in flight first")
+is therefore wrong for these messages. `writeString` with a Promise already had this gap; WR-08 widened it
+to the structured calls, which is a regression for them.
+**Fix:** Make the writer's chain visible to the forwarder rather than a second private one. Smallest change:
+have the writer register its pending link with the forwarder, for example an `index.ts` wrapper
+`trackLogSettle(link: Promise<unknown>)` that adds it to a forwarder-owned `Set` which `#settleChains`
+awaits with the same deadline, and call it from `#extend`. Alternatively keep `body` going through
+`logForwarder.logLine` (so `#chains` holds it) and make the writer hold later writes behind a
+forwarder-exposed settle promise. Add a test that `flush()` with a pending `writer.logInfo(slow)` resolves
+only after `slow` settles (or the timeout), and update the `flush` doc if the scope stays narrower.
 
-**File:** `src/backend/logger/forwarder.ts:306-312` (owe on rejection), `:346` (spend on next enqueue); `src/backend/logger/targetWriter.ts:108-111,152-154`
-**Issue:** The WR-05 fix assumes nothing for the target is queued between the claim and the rejection, so that "carry the
-rotation to the next entry" is the same as "rotate before the first entry". That holds for `writeString`, which chains
-behind `#tail`. It does not hold for `#logBase`. When the first call on a rotating writer is `logError(promise)`, `#pending`
-is 0, so `#logBase` calls `logLine` directly with the Promise body and does not extend `#tail`. The forwarder holds the
-line in its own `#chains`, while a following `writeString('x')` sees `#pending === 0` and enqueues at once with
-`rotate=false`. When the Promise then rejects, `oweRotation` runs and the third write consumes the owed flag
-(`this.#owedRotations.delete(key) || rotate`), so `launch.log` is rotated to `.old` after `x` was already written (or sent).
-Before the fix the rotation was lost and the file was appended to the previous session. After the fix the live session's own
-lines are moved out of the log users upload. Likelihood is low (it needs a rejecting Promise as the first call on a rotating
-game writer), but the result is silent loss of current-session content.
-**Fix:** Make the writer own ordering for Promise messages in `#logBase` too, so a later write cannot overtake it:
+### WR-10: A line behind a Promise message is timestamped when the chain reaches it, not when it was logged (D-12)
+
+**File:** `src/backend/logger/targetWriter.ts:160-183`
+**Issue:** D-12 says a TS line's timestamp is taken where it originates. `LogForwarder.logLine` stamps `ts`
+and `tz` on entry. In `#logBase` the Promise branch now calls `logLine` inside the `.then` that runs after
+the Promise settles, and the synchronous-but-queued branch (`#pending > 0`) calls it after the chain
+drains. Both are stamped at that later moment. For the Promise-valued line itself this is new: before
+1790bba62 the forwarder stamped it at call time, then held it. A message that takes 30 s to settle, and
+every line the writer logs in that window, is written with a timestamp 30 s late and out of step with
+lines from other writers and with the sidecar's own events. (The queued synchronous branch pre-dates
+WR-08 but is the same defect and shares its fix.)
+**Fix:** Take the clock at the call, and enqueue a finished entry after the wait instead of calling
+`logLine` late. In `#logBase`, before any chaining:
 ```ts
-// #logBase: treat a thenable like writeString does
-if (this.#pending === 0 && typeof message !== 'object') { logLine(...); return }
-this.#extend(
-  this.#tail
-    .then(() => message)
-    .then(
-      (text) => logLine(this.#target, rotate, level, prefix, text),
-      () => { if (rotate) oweLogRotation(this.#target) }
-    )
-)
+const ts = Date.now()
+const tz = -new Date(ts).getTimezoneOffset()
 ```
-Alternatively stamp each owed claim with the enqueue count for its key at claim time and only owe when no entry for that key
-has been queued since.
-
-## Info
-
-### IN-05: Refused entries vanish with no trace; `refusedTotal` is never read
-
-**File:** `src/backend/logger/forwarder.ts:334-337,426` and `src/backend/logger/index.ts` (no consumer)
-**Issue:** `enqueue` drops an entry whose target `logTargetRefusal` rejects and only increments `#refusedTotal`. Nothing in
-production reads `stats().refusedTotal` (only a test does). The one user-visible trace is the constructor WARNING in
-`LogWriter`, and `LogWriter` is the only producer today and already refuses, so the forwarder-level check is unreachable on
-current call paths. A future direct `enqueueLogEntry` caller would lose lines with no log line saying so.
-**Fix:** Emit one rate-limited `[Backend]` WARNING the first time a target is refused (target kind and reason only), or
-report `refusedTotal` alongside the `lines dropped` line.
-
-### IN-06: Remaining paths that lose a rotation without owing it
-
-**File:** `src-tauri/src/sidecar.rs:375-387` (`handle_log_frame`), `src/backend/logger/forwarder.ts:294-297` (`emit`)
-**Issue:** WR-05's principle is "do not spend a rotate claim on an entry that never reaches a frame". Two paths still do.
-(a) A frame the shell rejects in `parse_frame` (for example the accepted over-cap control-character case) is never submitted,
-so its `rotate: true` is lost; only `Logger::send` owes rotations. (b) `emit` returns early for an empty message after
-`rotate` was claimed (`logInfo('')` as a writer's first call), so that claim is spent on nothing. If (b) is covered by the
-accepted "empty first call" item, ignore it; that item was recorded against the Rust side.
-**Fix:** For (a), have `route_log_frame` owe the rotate flags of a rejected frame before the parse error is returned (the
-batches are not parsed, so a cheap pre-scan of `batch[*].rotate` and target would be needed), or document the residual. For
-(b), call `oweRotation(target)` when `emit` drops an empty body.
-
-### IN-07: Two native entry points with opposite escaping rules, enforced only by a comment
-
-**File:** `src-tauri/crates/gamelib-log/src/lib.rs:38-46`, `src-tauri/crates/gamelib-log/src/writer.rs:149-153`, `src-tauri/src/main.rs:585-590`
-**Issue:** `gamelib_log::log` escapes CR/LF, but the public `Logger::log` is verbatim. `shell_log_to` has to remember to call
-`escape_line_breaks` itself because it takes a `&Logger`. The next native caller of `Logger::log` reintroduces the WR-02 forgery.
-The renderer path needs the verbatim form only because its object body is multi-line on purpose.
-**Fix:** Make `Logger::log` escape, and give `log_dispatch` an explicit verbatim method (for example `log_body`) used only
-for sanitised renderer bodies. The existing tests then cover the safe default.
-
-### IN-08: The bridge-install warning claims all crate diagnostics are lost when only one bridge may have failed
-
-**File:** `src-tauri/crates/gamelib-log/src/bridge.rs:243-255`, `src-tauri/src/main.rs:669-683`
-**Issue:** `install_bridges` returns `tracing_set && log_set`. If only the `log` logger was already taken, the tracing layer
-is installed and steam-vent diagnostics still arrive, yet the warning says steam-vent, reqwest and the rest "will not reach
-gamelib.log". The reverse also holds. The warning then misdirects whoever reads it.
-**Fix:** Return the two booleans (or a small enum) and name which bridge is missing: `tracing` (steam-vent, gamelib-steamcm)
-or `log` (reqwest).
-
-### IN-09: Residual free text reaches the uploaded file through paths the new gate does not cover
-
-**File:** `src-tauri/src/steamcm_dispatch.rs:342-349` (`steamcm_diag`), `src-tauri/crates/gamelib-log/src/bridge.rs:177-181,231-235`, `src/backend/__tests__/shellLogCategoryOnly.test.ts:121-140`
-**Issue:** WR-02's privacy delta was that `gamelib.log` is posted to a public paste service. 84-17 closes it for `shell_log`
-and `shell_log_detail`, and the gate only scans those two names. `steamcm_diag` and the tracing/`log` bridges still write
-crate-authored text (peer, URL and error strings at WARN and above) into the same file, with only CR/LF handled. I read the
-current `diag(` call sites in `gamelib-steamcm` and they are categories, so this is a judgment call about future drift, not a
-demonstrated leak. The disposition records WR-02 as fixed without this boundary being stated.
-**Fix:** Add `steamcm_diag` to the gate's call list, and state in the README that bridge output is crate text and uploaded as
-is (or redact URL query strings in the bridge sink).
-
-### IN-10: `flush` doc says it returns at once with no transport, but it first waits on the chains
-
-**File:** `src/backend/logger/forwarder.ts:363-371`
-**Issue:** The comment says flush resolves "or at once when no transport is bound". `flush` awaits `#settleChains` first, up
-to `LOG_FLUSH_TIMEOUT_MS`, before it checks `#transport === null`. With a stuck Promise message and no transport, a caller
-waits the full timeout, not zero.
-**Fix:** Reword: "returns after the chain wait (bounded) and, with no transport, without a transport wait", or check
-`#transport === null` before waiting on the chains if a quick return is wanted.
+then, where the body is known (immediately for a string, after settle for a Promise), send
+`enqueueLogEntry(this.#target, rotate, { line: { ts, tz, level, prefix, msg } })` and apply the
+empty-body rule there (`if (msg.length === 0) { if (rotate) oweLogRotation(this.#target); return }`).
+Alternatively add optional `ts`/`tz` arguments to `LogForwarder.logLine` and `index.logLine`. Add a test
+using fake timers: log a Promise message, advance 30 s, resolve it, and assert the entry's `ts` equals the
+call-time clock.
 
 ---
 
