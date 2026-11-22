@@ -1,5 +1,5 @@
 ---
-status: partial
+status: complete
 phase: 85-store-host-config-and-versioned-migrations
 source: [85-CONTEXT.md D-02 D-04 D-08 D-12 D-16 D-18 D-21, 85-RESEARCH.md Open Questions Q1]
 authored_by: 85-03
@@ -216,11 +216,13 @@ result: pass — launch 1 (signed v0.11.0 installed over signed v0.10.0, identit
 
 ### 2. Every stored credential still works (SC3, FND-07)
 expected: In launch 1, continued with the network back on, Steam Refresh finishes with no sign-in prompt, Humble sync finishes, the Login screen's Epic tile shows signed in, the SteamGrid key shows as set if P5 set it, and every P4 account that was found is still found.
-result: issue — launch 1, network back on. Met: Steam Refresh ran (17:28:12 origin=action-icons-refresh-button, complete 17:28:19) with no sign-in prompt (operator "no sign in prompt"; signInProbe steam healthy); every P4 account found after P5 is still found (steam-refresh-token found; humble-session, humble-csrf, steamgrid-api-key, itad-api-key absent at P5 and after launch 1); SteamGrid N/A (no key set at P5). Not met: Humble sync did not finish (no 'Humble sync finished:' line; operator "nothing shows in humble") and the Login screen's Epic tile shows signed out (operator "no"). Precondition context, not a Phase 85 regression: Humble was not signed in on either build (humble-session absent and signInProbe humble outcome=unknown in both v0.10.0 launches, gamelib-old-after-p5.log 17:11:09 and gamelib-after-p5.log 17:12:51, and in launch 1), and Epic was never signed in under v0.10.0 (no ~/Library/Application Support/gamelib/legendaryConfig/legendary/user.json in the pre-gate copy, the v0.10.0 copy or after the run; the baseline signInProbe covers gog,humble,steam only). Those two sub-checks could not be exercised.
+result: skipped — originally scored issue — launch 1, network back on. Met: Steam Refresh ran (17:28:12 origin=action-icons-refresh-button, complete 17:28:19) with no sign-in prompt (operator "no sign in prompt"; signInProbe steam healthy); every P4 account found after P5 is still found (steam-refresh-token found; humble-session, humble-csrf, steamgrid-api-key, itad-api-key absent at P5 and after launch 1); SteamGrid N/A (no key set at P5). Not met: Humble sync did not finish (no 'Humble sync finished:' line; operator "nothing shows in humble") and the Login screen's Epic tile shows signed out (operator "no"). Precondition context, not a Phase 85 regression: Humble was not signed in on either build (humble-session absent and signInProbe humble outcome=unknown in both v0.10.0 launches, gamelib-old-after-p5.log 17:11:09 and gamelib-after-p5.log 17:12:51, and in launch 1), and Epic was never signed in under v0.10.0 (no ~/Library/Application Support/gamelib/legendaryConfig/legendary/user.json in the pre-gate copy, the v0.10.0 copy or after the run; the baseline signInProbe covers gog,humble,steam only). Those two sub-checks could not be exercised.
+reason: "Deferred follow-up: precondition not met: Humble and Epic were never signed in on either build (and SteamGrid had no key), so those sub-checks could not be exercised. Steam's credential survived with no prompt. Operator re-scored issue -> skipped in 85 UAT on 2026-11-22 after accepting the live evidence (85-UAT.md test 1); a re-run with those accounts signed in would be new work, not a Phase 85 blocker."
 
 ### 3. Existing data loads unchanged (SC1, D-04)
 expected: After launch 1 quits, running P7 against the live profile prints the same version for every file as `snapshot-v010.txt`, no file listed there is missing, no file prints UNPARSEABLE that did not in the baseline, and the `count` lines taken while launch 1 was running (before Refresh) and the three settings recorded at P5 equal the baseline's.
-result: issue — launch 1. Versions met: P7 after quit (snapshot-after-launch1.txt) prints the same version for every file as snapshot-v010.txt (diff empty, none missing, 0 UNPARSEABLE), and the three P5 settings are equal (store/config.json theme nord-light; config.json checkForUpdatesOnStartup true, steamExperimentalInstallApp false; no other key differs in either file). Counts not met: the running snapshot before Refresh (snapshot-launch1-running.txt) has steam_library 401 = 401, legendary 0 = 0, nile 0 = 0, sideload 3 = 3, but gog_library 0 against 10. During the offline first boot store_cache/gog_library.json was rewritten to a 66-byte envelope with no games key, and gog_api_info.json shrank from 104202 B to 66 B (gamelib-launch-1.log 17:24:29: 8 'Could not get game info', then 'No cache found, getting data from gog...'); v0.10.0's own first launch had no such backend miss. The online Refresh at 17:28 refilled the same 10 GOG app ids. Filed as .planning/todos/pending/2026-11-22-gog-offline-launch-empties-library-cache.md (operator decision: a todo, not a block on 85-21); evidence kept in the gate dir: launch1-gog_library.emptied.json, gamelib-launch-1.log.
+result: skipped — originally scored issue — launch 1. Versions met: P7 after quit (snapshot-after-launch1.txt) prints the same version for every file as snapshot-v010.txt (diff empty, none missing, 0 UNPARSEABLE), and the three P5 settings are equal (store/config.json theme nord-light; config.json checkForUpdatesOnStartup true, steamExperimentalInstallApp false; no other key differs in either file). Counts not met: the running snapshot before Refresh (snapshot-launch1-running.txt) has steam_library 401 = 401, legendary 0 = 0, nile 0 = 0, sideload 3 = 3, but gog_library 0 against 10. During the offline first boot store_cache/gog_library.json was rewritten to a 66-byte envelope with no games key, and gog_api_info.json shrank from 104202 B to 66 B (gamelib-launch-1.log 17:24:29: 8 'Could not get game info', then 'No cache found, getting data from gog...'); v0.10.0's own first launch had no such backend miss. The online Refresh at 17:28 refilled the same 10 GOG app ids. Filed as .planning/todos/pending/2026-11-22-gog-offline-launch-empties-library-cache.md (operator decision: a todo, not a block on 85-21); evidence kept in the gate dir: launch1-gog_library.emptied.json, gamelib-launch-1.log.
+reason: "Deferred follow-up: the GOG cache wipe is the renderer's pre-existing version-change clearCache (gamelib-launch-1.log line 21 'Updated to a new version, cleaaning up the cache.', same sequence in the v0.10.0 baseline), not the Rust store host. Tracked in .planning/todos/pending/2026-11-22-gog-offline-launch-empties-library-cache.md and .planning/debug/gog-offline-empties-cache.md. Operator re-scored issue -> skipped on 2026-11-22."
 
 ### 4. A settings change persists in the TS byte format (FND-06, D-05)
 expected: In launch 2 one global setting, one per-game setting and the theme are changed and the app quit; `config.json` and `GamesConfig/<app>.json` are 2-space JSON with no trailing newline, `store/config.json` is tab-indented with the `__internal__` envelope, and launch 3 shows all three values (the values are then changed back through the UI in launch 3).
@@ -386,11 +388,21 @@ The live instance count was recorded for launch 1 only (`shell-pid-1.txt`, count
 
 Cleanup: the profile copies, item copies, downloads, preexisting-log copies and moved store files were deleted after scoring (they hold account data). Kept at `/tmp/gamelib-gate-2026-11-22T03:38:53Z/`: `notes.log`, the snapshots, the `gamelib-*.log` and `keychain-*.log` captures (local paths and store names), `launch1-gog_library.emptied.json` and `gamelib-launch-1.log` (both cited by the GOG todo), and `app-v010/GameLib.app` (the signed v0.10.0, moved there by the swap). `/Applications/GameLib.app` is left as the signed v0.11.0. Every hand-edited store was restored from its copy and `cmp`-checked.
 
+
+## Deferred Follow-Ups
+
+- test: 2
+  idea: "Re-run item 2 on a signed baseline with Humble, Epic and the SteamGrid key signed in, and confirm they survive the upgrade with no prompt."
+  deferred_at: 2026-11-22
+- test: 3
+  idea: "Fix the offline GOG cache wipe (renderer version-change clearCache): .planning/todos/pending/2026-11-22-gog-offline-launch-empties-library-cache.md, then re-run item 3's offline first launch."
+  deferred_at: 2026-11-22
+
 ## Summary
 
 total: 8
 passed: 6
-issues: 2
+issues: 0
 pending: 0
-skipped: 0
+skipped: 2
 blocked: 0
