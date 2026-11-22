@@ -27,7 +27,8 @@ describe('rustInvokeArgs', () => {
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
     // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
     // Phase 86 plan 10: 125 -> 129, the four info_overrides_* ops.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(129)
+    // Phase 86 plan 12: 129 -> 132, the three info_anticheat_* ops.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(132)
   })
 
   it('parses the store-embed wire fixtures', () => {

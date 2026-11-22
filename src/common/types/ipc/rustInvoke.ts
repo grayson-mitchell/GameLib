@@ -58,6 +58,9 @@ import {
   RUST_STEAMPOLL_STATUS,
   RUST_STEAMPOLL_UNINSTALL_START,
   RUST_STEAMPOLL_UNINSTALL_STOP,
+  RUST_INFO_ANTICHEAT_DOWNLOAD,
+  RUST_INFO_ANTICHEAT_INFO,
+  RUST_INFO_ANTICHEAT_STATUS,
   RUST_INFO_OVERRIDES_ATTACH,
   RUST_INFO_OVERRIDES_GET,
   RUST_INFO_OVERRIDES_GET_ALL,
@@ -714,6 +717,16 @@ export const rustInvokeArgs = {
       })
       .strict()
   ]),
+  // Phase 86 (SVC-01): anti-cheat. The crate re-validates every arg (deny_unknown_fields; the
+  // namespace is at most 1024 UTF-16 units). `appNamespace` is optional: TS's `gameAnticheatInfo`
+  // took `string | undefined`.
+  [RUST_INFO_ANTICHEAT_INFO]: z.tuple([
+    z.object({ appNamespace: z.string().optional() }).strict()
+  ]),
+  [RUST_INFO_ANTICHEAT_STATUS]: z.tuple([
+    z.object({ latestFileHash: z.string().optional() }).strict()
+  ]),
+  [RUST_INFO_ANTICHEAT_DOWNLOAD]: z.tuple([z.object({}).strict()]),
   [RUST_STEAM_API_PIN_RESOLVE]: empty
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 

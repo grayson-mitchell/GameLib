@@ -191,6 +191,37 @@ pub(crate) fn rpc_info_overrides_attach(args: &[Value]) -> Result<Value, String>
     overrides_attach_with(installed("info_overrides_attach")?, args)
 }
 
+/// The `info_anticheat_*` ops: validated by the generated args struct, then the crate (which
+/// validates again with its own `deny_unknown_fields` structs). They are reachable only from the TS
+/// shims 86-13 adds (D-29 row 7): `info` serves the renderer's lookup natively, while the launcher's
+/// lookup and the `releasesInfoReady` listener's status-then-download go through rustInvoke.
+fn anticheat_info_with(ctx: &InfoCtx, args: &[Value]) -> Result<Value, String> {
+    InfoAnticheatInfoArgs::from_args(args)?;
+    gamelib_info::dispatch_sync("info_anticheat_info", args, ctx)
+}
+
+fn anticheat_status_with(ctx: &InfoCtx, args: &[Value]) -> Result<Value, String> {
+    InfoAnticheatStatusArgs::from_args(args)?;
+    gamelib_info::dispatch_sync("info_anticheat_status", args, ctx)
+}
+
+fn anticheat_download_with(ctx: &InfoCtx, args: &[Value]) -> Result<Value, String> {
+    InfoAnticheatDownloadArgs::from_args(args)?;
+    gamelib_info::dispatch_sync("info_anticheat_download", args, ctx)
+}
+
+pub(crate) fn rpc_info_anticheat_info(args: &[Value]) -> Result<Value, String> {
+    anticheat_info_with(installed("info_anticheat_info")?, args)
+}
+
+pub(crate) fn rpc_info_anticheat_status(args: &[Value]) -> Result<Value, String> {
+    anticheat_status_with(installed("info_anticheat_status")?, args)
+}
+
+pub(crate) fn rpc_info_anticheat_download(args: &[Value]) -> Result<Value, String> {
+    anticheat_download_with(installed("info_anticheat_download")?, args)
+}
+
 /// What a rejected `removeRecent` argument looks like: the JSON path and the zod-vocabulary code.
 /// Fixed literals only, never the renderer's value (T-86-15).
 type Rejection = (&'static str, &'static str);
@@ -952,6 +983,61 @@ mod tests {
         assert_eq!(
             rpc_info_overrides_get_all(&[]),
             Err("info_overrides_get_all:not-ready".to_string())
+        );
+    }
+
+    #[test]
+    fn the_anticheat_rpc_ops_reject_bad_args_before_the_crate_and_answer_not_ready() {
+        let home = FakeHome::new("info-dispatch-");
+        let ctx = test_ctx(&home, None);
+        for (result, op) in [
+            (anticheat_info_with(&ctx, &[]), "info_anticheat_info"),
+            (
+                anticheat_info_with(&ctx, &[json!({ "appNamespace": 1 })]),
+                "info_anticheat_info",
+            ),
+            (
+                anticheat_status_with(&ctx, &[json!({ "latestFileHash": 1 })]),
+                "info_anticheat_status",
+            ),
+            // Unknown fields reach the crate's `deny_unknown_fields` struct, which rejects them alike.
+            (
+                anticheat_status_with(&ctx, &[json!({ "x": 1 })]),
+                "info_anticheat_status",
+            ),
+            (
+                anticheat_download_with(&ctx, &[json!({ "x": 1 })]),
+                "info_anticheat_download",
+            ),
+            (
+                anticheat_download_with(&ctx, &[]),
+                "info_anticheat_download",
+            ),
+        ] {
+            assert_eq!(result, Err(format!("{op}:bad-args")), "{op}");
+        }
+        // Windows-free golden answers through the arms: no file, so a download is needed.
+        assert_eq!(
+            anticheat_status_with(&ctx, &[json!({})]),
+            Ok(json!({ "needed": true }))
+        );
+        assert_eq!(
+            anticheat_info_with(&ctx, &[json!({ "appNamespace": "abc" })]),
+            Ok(Value::Null)
+        );
+        // No test installs the global context, so these are the pre-install answers.
+        assert!(info_ctx().is_none());
+        assert_eq!(
+            rpc_info_anticheat_info(&[json!({})]),
+            Err("info_anticheat_info:not-ready".to_string())
+        );
+        assert_eq!(
+            rpc_info_anticheat_status(&[json!({})]),
+            Err("info_anticheat_status:not-ready".to_string())
+        );
+        assert_eq!(
+            rpc_info_anticheat_download(&[json!({})]),
+            Err("info_anticheat_download:not-ready".to_string())
         );
     }
 

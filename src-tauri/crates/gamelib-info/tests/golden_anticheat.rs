@@ -10,7 +10,7 @@ use std::sync::Arc;
 use gamelib_core::clock::SystemClock;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_info::ctx::{InfoCtx, InfoPaths, Platform};
-use gamelib_info::http::{Http, HttpError, HttpFuture, Request};
+use gamelib_info::http::{Http, HttpError, HttpFuture, Replay, Request};
 use gamelib_info::{dispatch_sync, OPS};
 use gamelib_store::host::StoreHost;
 use gamelib_testutil::FakeHome;
@@ -22,7 +22,7 @@ const FLOOR: usize = 11;
 
 /// Every case op the TS oracle drives that this file replays; a case with an op not listed here is
 /// skipped (and counted against the floor).
-const REPLAYED: &[&str] = &["lookup"];
+const REPLAYED: &[&str] = &["lookup", "download"];
 
 fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
@@ -192,7 +192,13 @@ fn an_empty_case_list_fails_the_manifest_guard() {
 
 #[test]
 fn the_anticheat_ops_are_in_the_sorted_op_table() {
-    assert!(OPS.contains(&"info_anticheat_info"));
+    for op in [
+        "info_anticheat_download",
+        "info_anticheat_info",
+        "info_anticheat_status",
+    ] {
+        assert!(OPS.contains(&op), "{op}");
+    }
     let mut sorted = OPS.to_vec();
     sorted.sort_unstable();
     assert_eq!(OPS, sorted.as_slice());
@@ -207,6 +213,22 @@ fn run_lookup(ctx: &InfoCtx, op: &Value) -> Value {
     dispatch_sync("info_anticheat_info", &[args], ctx).expect("info_anticheat_info")
 }
 
+fn is_lookup(case: &Value) -> bool {
+    case["ops"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|op| op["op"] == "lookup")
+}
+
+fn is_download(case: &Value) -> bool {
+    case["ops"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|op| op["op"] == "download")
+}
+
 #[test]
 fn every_lookup_case_matches_the_ts_results_and_leaves_the_file_alone() {
     let cases = read_json(&golden_dir().join("cases.json"));
@@ -214,13 +236,9 @@ fn every_lookup_case_matches_the_ts_results_and_leaves_the_file_alone() {
         .as_array()
         .unwrap()
         .iter()
-        .filter(|c| replayed(c))
+        .filter(|c| replayed(c) && is_lookup(c))
         .collect();
-    assert!(
-        lookups.len() >= 8,
-        "the oracle recorded 8 lookup cases, replayed {}",
-        lookups.len()
-    );
+    assert_eq!(lookups.len(), 8, "the oracle recorded 8 lookup cases");
     for case in lookups {
         let id = case["id"].as_str().unwrap();
         let before = fixtures().join("state/anticheat").join(id);
@@ -378,4 +396,116 @@ fn bad_lookup_args_are_rejected_with_a_fixed_literal() {
         .unwrap(),
         Value::Null
     );
+}
+
+/// What TS did for one `downloadAntiCheatData` call, as the status op and the download op now split
+/// it (D-28): `(online callbacks registered, what `download` answered)`. TS registered its online
+/// callback exactly when `status` says a download is needed.
+fn run_download(ctx: &InfoCtx, op: &Value) -> (usize, Option<Value>) {
+    let args = match op.get("latestFileHash") {
+        Some(hash) => json!({ "latestFileHash": hash }),
+        None => json!({}),
+    };
+    let status = dispatch_sync("info_anticheat_status", &[args], ctx).expect("status");
+    if status["needed"] != json!(true) {
+        return (0, None);
+    }
+    let written = dispatch_sync("info_anticheat_download", &[json!({})], ctx).expect("download");
+    (1, Some(written))
+}
+
+#[test]
+fn every_download_case_matches_the_ts_requests_callbacks_and_bytes() {
+    let cases = read_json(&golden_dir().join("cases.json"));
+    let downloads: Vec<&Value> = cases
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|c| is_download(c))
+        .collect();
+    assert_eq!(downloads.len(), 8, "the oracle recorded 8 download cases");
+    for case in downloads {
+        let id = case["id"].as_str().unwrap();
+        let before = fixtures().join("state/anticheat").join(id);
+        let replay = Arc::new(
+            Replay::from_case(&fixtures().join("recorded/anticheat").join(id))
+                .unwrap_or_else(|e| panic!("{id}: {e}")),
+        );
+        let p = profile(&before, platform_of(case), replay.clone());
+        let mut callbacks = 0;
+        let mut written = Vec::new();
+        for op in case["ops"].as_array().unwrap() {
+            let (registered, answered) = run_download(&p.ctx, op);
+            callbacks += registered;
+            written.extend(answered);
+        }
+
+        let expected = golden_dir().join("expected").join(id);
+        let result = read_json(&expected.join("result.json"));
+        assert_eq!(
+            json!(callbacks),
+            result["onlineCallbacksRegistered"],
+            "{id}: online callbacks"
+        );
+        // The requests the replay served are exactly the ones TS made: the replay pins each URL and
+        // the recorded headers (D-10), and `finish` fails on any request left unmatched or unserved.
+        replay.finish().unwrap_or_else(|e| panic!("{id}: {e}"));
+        let recorded: Vec<Value> = read_json(
+            &fixtures()
+                .join("recorded/anticheat")
+                .join(id)
+                .join("exchanges.json"),
+        )
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| {
+            json!(format!(
+                "{} {}",
+                e["request"]["method"].as_str().unwrap(),
+                e["request"]["url"].as_str().unwrap()
+            ))
+        })
+        .collect();
+        assert_eq!(json!(recorded), result["requests"], "{id}: requests");
+
+        // `written` is true exactly when the recorded answer was a success.
+        let served_ok = read_json(
+            &fixtures()
+                .join("recorded/anticheat")
+                .join(id)
+                .join("exchanges.json"),
+        )
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|e| e["response"]["status"].as_u64().is_some_and(|s| s < 300));
+        for answer in &written {
+            assert_eq!(answer["written"], json!(served_ok), "{id}: {answer}");
+        }
+        assert_eq!(
+            files(&p.user_data),
+            files(&expected.join("after")),
+            "{id}: the files the case left"
+        );
+    }
+}
+
+#[test]
+fn the_download_replay_fails_when_the_request_differs_from_the_recorded_one() {
+    let id = "download-different-md5-linux";
+    // The same exchange, but the app is a different version: the User-Agent differs and the replay
+    // must say so (this is what makes the replay a pin on D-10 and not a rubber stamp).
+    let replay =
+        Arc::new(Replay::from_case(&fixtures().join("recorded/anticheat").join(id)).unwrap());
+    let mut p = profile(
+        &fixtures().join("state/anticheat").join(id),
+        Platform::Linux,
+        replay.clone(),
+    );
+    p.ctx.app_version = "9.9.9".to_string();
+    let out = dispatch_sync("info_anticheat_download", &[json!({})], &p.ctx).unwrap();
+    assert_eq!(out["written"], json!(false));
+    let problems = replay.finish().unwrap_err();
+    assert!(problems.contains("header user-agent"), "{problems}");
 }

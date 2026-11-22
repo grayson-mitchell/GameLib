@@ -481,12 +481,13 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 129 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 132 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
     // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
     // Phase 86 plan 10: 125 -> 129, the four info_overrides_* ops.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(129)
+    // Phase 86 plan 12: 129 -> 132, the three info_anticheat_* ops.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(132)
     expect(router).not.toContain('_ =>')
   })
 
@@ -853,7 +854,16 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'info_overrides_attach',
       'info_overrides_get',
       'info_overrides_get_all',
-      'info_overrides_set'
+      'info_overrides_set',
+
+      // Phase 86 plan 12 -- anti-cheat, pass-through arms into `gamelib-info`. PROVEN:
+      // `golden_anticheat.rs` replays every 86-04 TS golden (lookups and the recorded downloads)
+      // against the crate's ops, and `info_dispatch::tests` drives the arms' validation against a
+      // FakeHome host. NOT ATTEMPTED here: a live rustInvoke round trip (no TS caller until 86-13,
+      // D-29 row 7).
+      'info_anticheat_download',
+      'info_anticheat_info',
+      'info_anticheat_status'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

@@ -1,5 +1,8 @@
 import { addRecentGame, removeRecentGame } from '../recentGames'
 import {
+  RUST_INFO_ANTICHEAT_DOWNLOAD,
+  RUST_INFO_ANTICHEAT_INFO,
+  RUST_INFO_ANTICHEAT_STATUS,
   RUST_INFO_CHANNELS,
   RUST_INFO_OVERRIDES_ATTACH,
   RUST_INFO_OVERRIDES_GET,
@@ -82,7 +85,7 @@ describe('removeRecentGame shim', () => {
 })
 
 describe('the info channel list', () => {
-  it('names exactly the recent-games and overrides channels, each one allowed on the Rust invoke leg', () => {
+  it('names exactly the recent-games, overrides and anticheat channels, each one allowed on the Rust invoke leg', () => {
     expect([...RUST_INFO_CHANNELS].sort()).toEqual(
       [
         RUST_INFO_RECENT_ADD,
@@ -90,7 +93,10 @@ describe('the info channel list', () => {
         RUST_INFO_OVERRIDES_GET,
         RUST_INFO_OVERRIDES_GET_ALL,
         RUST_INFO_OVERRIDES_SET,
-        RUST_INFO_OVERRIDES_ATTACH
+        RUST_INFO_OVERRIDES_ATTACH,
+        RUST_INFO_ANTICHEAT_INFO,
+        RUST_INFO_ANTICHEAT_STATUS,
+        RUST_INFO_ANTICHEAT_DOWNLOAD
       ].sort()
     )
     for (const channel of RUST_INFO_CHANNELS) {

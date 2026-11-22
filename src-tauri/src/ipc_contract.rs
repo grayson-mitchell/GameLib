@@ -152,6 +152,9 @@ pub(crate) enum RustInvokeChannel {
     InfoOverridesGetAll,
     InfoOverridesSet,
     InfoOverridesAttach,
+    InfoAnticheatInfo,
+    InfoAnticheatStatus,
+    InfoAnticheatDownload,
 }
 
 impl RustInvokeChannel {
@@ -285,6 +288,9 @@ impl RustInvokeChannel {
         RustInvokeChannel::InfoOverridesGetAll,
         RustInvokeChannel::InfoOverridesSet,
         RustInvokeChannel::InfoOverridesAttach,
+        RustInvokeChannel::InfoAnticheatInfo,
+        RustInvokeChannel::InfoAnticheatStatus,
+        RustInvokeChannel::InfoAnticheatDownload,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -418,6 +424,9 @@ impl RustInvokeChannel {
             "info_overrides_get_all" => Some(RustInvokeChannel::InfoOverridesGetAll),
             "info_overrides_set" => Some(RustInvokeChannel::InfoOverridesSet),
             "info_overrides_attach" => Some(RustInvokeChannel::InfoOverridesAttach),
+            "info_anticheat_info" => Some(RustInvokeChannel::InfoAnticheatInfo),
+            "info_anticheat_status" => Some(RustInvokeChannel::InfoAnticheatStatus),
+            "info_anticheat_download" => Some(RustInvokeChannel::InfoAnticheatDownload),
             _ => None,
         }
     }
@@ -553,6 +562,9 @@ impl RustInvokeChannel {
             RustInvokeChannel::InfoOverridesGetAll => "info_overrides_get_all",
             RustInvokeChannel::InfoOverridesSet => "info_overrides_set",
             RustInvokeChannel::InfoOverridesAttach => "info_overrides_attach",
+            RustInvokeChannel::InfoAnticheatInfo => "info_anticheat_info",
+            RustInvokeChannel::InfoAnticheatStatus => "info_anticheat_status",
+            RustInvokeChannel::InfoAnticheatDownload => "info_anticheat_download",
         }
     }
 }
@@ -2889,5 +2901,43 @@ impl InfoOverridesAttachArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "info_overrides_attach:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "info_overrides_attach:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoAnticheatInfoArgs {
+    #[serde(rename = "appNamespace")]
+    #[serde(default)]
+    pub(crate) app_namespace: Option<String>,
+}
+
+impl InfoAnticheatInfoArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "info_anticheat_info:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "info_anticheat_info:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoAnticheatStatusArgs {
+    #[serde(rename = "latestFileHash")]
+    #[serde(default)]
+    pub(crate) latest_file_hash: Option<String>,
+}
+
+impl InfoAnticheatStatusArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "info_anticheat_status:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "info_anticheat_status:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoAnticheatDownloadArgs {}
+
+impl InfoAnticheatDownloadArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "info_anticheat_download:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "info_anticheat_download:bad-args".to_string())
     }
 }

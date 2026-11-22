@@ -174,7 +174,9 @@ describe('Phase 34.4.2 Plan 13 (operator decision D-A) objc2-app-kit NSGraphicsC
  * portable-atomic-util; the operator accepted these crates, operator decision 2026-11-22; chrono
  * stays locked because other crates still use it), and by Phase 86-03 (gamelib-info and
  * gamelib-info-cli alone: reqwest, rustls, url, jiff, tokio, serde and serde_json were already
- * locked, so no third-party name enters the tree).
+ * locked, so no third-party name enters the tree), and by Phase 86-12 (md-5 0.10, the one new crate
+ * of the phase: the anti-cheat data file's change check; its `digest` and `cfg-if` were already
+ * locked, research Package Legitimacy Audit verdict OK).
  */
 const CARGO_LOCK_PATH = join(
   __dirname,
@@ -242,7 +244,7 @@ const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "jobserver", "js-sys", "json-patch", "jsonptr", "keyboard-types", "keyring",
   "lazy_static", "libappindicator", "libappindicator-sys", "libc", "libdbus-sys", "libloading",
   "libm", "libredox", "libudev-sys", "linux-raw-sys", "litemap", "lock_api",
-  "log", "lru-slab", "lzma-sys", "mac-notification-sys", "markup5ever", "memchr",
+  "log", "lru-slab", "lzma-sys", "mac-notification-sys", "markup5ever", "md-5", "memchr",
   "memoffset", "mime", "minisign-verify", "miniz_oxide", "mio", "moxcms",
   "muda", "ndk", "ndk-sys", "new_debug_unreachable", "nix", "nom",
   "notify-rust", "num-bigint-dig", "num-conv", "num-integer", "num-iter", "num-traits",

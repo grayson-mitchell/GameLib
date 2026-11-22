@@ -970,6 +970,33 @@ export const RUST_INFO_OVERRIDES_SET = 'info_overrides_set' as const
 export const RUST_INFO_OVERRIDES_ATTACH = 'info_overrides_attach' as const
 
 /**
+ * Phase 86 (SVC-01, 86-12): the anti-cheat data file `<appFolder>/areweanticheatyet.json`, served by
+ * `gamelib-info`. Rust has no online logic in this phase (D-07): TS keeps its `releasesInfoReady`
+ * listener and its online wait, and calls these between them (D-28).
+ *
+ * `info_anticheat_info`: args `{ appNamespace? }`. Resolves the data file's entry whose Epic namespace
+ * contains the argument, or `null` (also on Windows, for no argument and for a missing or unreadable
+ * file). TS's `gameAnticheatInfo` answered `undefined` for no match; Rust answers `null` (D-03).
+ */
+export const RUST_INFO_ANTICHEAT_INFO = 'info_anticheat_info' as const
+
+/**
+ * `info_anticheat_status`: args `{ latestFileHash? }`, the MD5 hex the release feed advertises.
+ * Resolves `{ needed }`: false on Windows and when the local file exists and its MD5 equals the
+ * hash, true otherwise. Rejects (`info_anticheat_status:unreadable`) when the file exists but cannot
+ * be read, as the TS `createMD5` did.
+ */
+export const RUST_INFO_ANTICHEAT_STATUS = 'info_anticheat_status' as const
+
+/**
+ * `info_anticheat_download`: args `{}`. Fetches the platform feed (MacAnticheatData on macOS,
+ * AreWeAntiCheatYet elsewhere) and writes it byte for byte. Resolves `{ written }`, plus a `warning`
+ * string when `written` is false because of a failed request or write (the caller logs it as the TS
+ * did); resolves `{ written: false }` on Windows. The caller runs it behind its own online wait.
+ */
+export const RUST_INFO_ANTICHEAT_DOWNLOAD = 'info_anticheat_download' as const
+
+/**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
  * the macOS bridge helper loads: the GameLib cache, else a snapshot of the Steam client's own copy
  * when it already hashes to the pin, else a fetch from Valve's client-update CDN (sha2vz, VZ decode,
@@ -1295,7 +1322,10 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_INFO_OVERRIDES_GET,
   RUST_INFO_OVERRIDES_GET_ALL,
   RUST_INFO_OVERRIDES_SET,
-  RUST_INFO_OVERRIDES_ATTACH
+  RUST_INFO_OVERRIDES_ATTACH,
+  RUST_INFO_ANTICHEAT_INFO,
+  RUST_INFO_ANTICHEAT_STATUS,
+  RUST_INFO_ANTICHEAT_DOWNLOAD
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
@@ -1417,7 +1447,10 @@ export const RUST_INFO_CHANNELS = [
   RUST_INFO_OVERRIDES_GET,
   RUST_INFO_OVERRIDES_GET_ALL,
   RUST_INFO_OVERRIDES_SET,
-  RUST_INFO_OVERRIDES_ATTACH
+  RUST_INFO_OVERRIDES_ATTACH,
+  RUST_INFO_ANTICHEAT_INFO,
+  RUST_INFO_ANTICHEAT_STATUS,
+  RUST_INFO_ANTICHEAT_DOWNLOAD
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */

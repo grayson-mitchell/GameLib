@@ -30,7 +30,9 @@ use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each slice adds its own.
 pub const OPS: &[&str] = &[
+    "info_anticheat_download",
     "info_anticheat_info",
+    "info_anticheat_status",
     "info_overrides_attach",
     "info_overrides_get",
     "info_overrides_get_all",
@@ -51,7 +53,9 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, 
 /// Each slice adds its arms here, in step with `OPS`.
 async fn route(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, String> {
     match op {
+        "info_anticheat_download" => anticheat::download(ctx, decode(op, args)?).await,
         "info_anticheat_info" => anticheat::info(ctx, decode(op, args)?),
+        "info_anticheat_status" => anticheat::status(ctx, decode(op, args)?),
         "info_overrides_attach" => overrides::attach(ctx, decode(op, args)?),
         "info_overrides_get" => Ok(overrides::get(ctx, &decode(op, args)?).to_value()),
         "info_overrides_get_all" => {
