@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 252 |
-| Ported to sidecar | 97 |
+| Unique channels | 253 |
+| Ported to sidecar | 98 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -180,7 +180,7 @@ goes 68 → 71. `Unported` is unchanged: the channels are born ported.
 
 ## Already ported (34)
 
-`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `get-connectivity-status`, `getDMQueueInformation`, `getItadSteamGids`, `getLogContent`, `getMaxCpus`, `getSteamDeleteRoute`, `getSteamInstallAppTargets`, `getSteamUpdateInfo`, `getSystemInfo`, `hasExecutable`, `install`, `isNative`, `isSteamBottleEligible`, `itad.getKeyStatus`, `itad.setApiKey`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamAdoptionOpenSteam`, `steamAdoptionRestartNow`, `steamAdoptionStatus`, `steamDirectLaunchVerdict`, `steamLaunchWithoutSteamOnce`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
+`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `get-connectivity-status`, `getDMQueueInformation`, `getItadSteamGids`, `getLogContent`, `getMaxCpus`, `getSteamDeleteRoute`, `getSteamInstallAppTargets`, `getSteamOptInDlc`, `getSteamUpdateInfo`, `getSystemInfo`, `hasExecutable`, `install`, `isNative`, `isSteamBottleEligible`, `itad.getKeyStatus`, `itad.setApiKey`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamAdoptionOpenSteam`, `steamAdoptionRestartNow`, `steamAdoptionStatus`, `steamDirectLaunchVerdict`, `steamLaunchWithoutSteamOnce`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
 
 `logError` was ported early by Phase 34.2 gap cycle 2 (plan 34.2-16) — see the Phase 34.3 list
 below, which now excludes it, and `34.2-PORTED-CHANNELS.md`'s gap-cycle-2 subsection for the full
@@ -774,3 +774,12 @@ gap surfaced at the 81-20 live gate's `pnpm planning-gates` run.
 
 **Unique channels raised 248 → 252, Ported to sidecar raised 93 → 97 (Phase 81, 2026-11-18):**
 both numbers moved together by +4 and `Unported` (159) is unchanged.
+
+## Quick 261122-rgi — opt-in Steam DLC listing (1 channel) — **PORTED**
+
+`getSteamOptInDlc` is BRAND NEW, invoke-kind (`makeHandlerInvoker`, `src/preload/api/misc.ts`),
+registered only in the sidecar, in `installFlowRegistration.ts`. It is filed in the "Already ported"
+bucket line. There is no Electron leg.
+
+**Unique channels raised 252 → 253, Ported to sidecar raised 97 → 98 (quick 261122-rgi, 2026-11-22):**
+both numbers moved together by +1 and `Unported` (159) is unchanged.
