@@ -219,6 +219,13 @@ pub(crate) const BOOT_ENV_MAX_BYTES: usize = 16 * 1024;
 /// The `GAMELIB_STORE_BOOT` value: `{"readOnly":[{"store":"<key>","reason":"newer"|"failed"}],
 /// "startEmpty":["<key>"]}`, or `None` when no store is read-only or empty. Entries beyond
 /// [`BOOT_ENV_MAX_BYTES`] are left out and `"truncated":true` is appended after `startEmpty`.
+///
+/// What is kept is chosen by importance, not report order (D-WR-02). The report follows table order,
+/// where hundreds of per-game `GamesConfig/<app>` documents sort ahead of `steam_store/config`,
+/// `store/*` and the caches, so a cut in report order would lose exactly the stores the mirror most
+/// needs to know about. The budget goes first to every non-`GamesConfig` read-only store, then to
+/// every start-empty cache, and last to the `GamesConfig/*` documents, so a cut only loses per-game
+/// ones. Within a tier the report order holds.
 pub(crate) fn boot_env_value(report: &BootReport) -> Option<String> {
     if report.read_only.is_empty() && report.start_empty.is_empty() {
         return None;
@@ -226,33 +233,38 @@ pub(crate) fn boot_env_value(report: &BootReport) -> Option<String> {
     // Written by hand so the documented key order holds; each key goes through serde_json's string
     // escaping.
     let quoted = |s: &str| serde_json::to_string(s).unwrap_or_else(|_| "\"\"".to_string());
+    let read_only_entry = |key: &str, reason: ReadOnlyReason| {
+        format!(
+            "{{\"store\":{},\"reason\":\"{}\"}}",
+            quoted(key),
+            reason_word(reason)
+        )
+    };
+    let is_per_game = |key: &str| key.starts_with("GamesConfig/");
     let mut used = 0usize;
     let mut truncated = false;
+    // An entry that does not fit is skipped and marks the cut; a shorter one after it may still fit.
     let mut take = |entry: String| -> Option<String> {
         // One byte for the separating comma.
-        if truncated || used + entry.len() + 1 > BOOT_ENV_MAX_BYTES {
+        if used + entry.len() + 1 > BOOT_ENV_MAX_BYTES {
             truncated = true;
             return None;
         }
         used += entry.len() + 1;
         Some(entry)
     };
-    let read_only: Vec<String> = report
-        .read_only
-        .iter()
-        .map_while(|(key, reason)| {
-            take(format!(
-                "{{\"store\":{},\"reason\":\"{}\"}}",
-                quoted(key),
-                reason_word(*reason)
-            ))
-        })
-        .collect();
+    let mut read_only: Vec<String> = Vec::new();
+    for (key, reason) in report.read_only.iter().filter(|(k, _)| !is_per_game(k)) {
+        read_only.extend(take(read_only_entry(key, *reason)));
+    }
     let start_empty: Vec<String> = report
         .start_empty
         .iter()
-        .map_while(|k| take(quoted(k)))
+        .filter_map(|k| take(quoted(k)))
         .collect();
+    for (key, reason) in report.read_only.iter().filter(|(k, _)| is_per_game(k)) {
+        read_only.extend(take(read_only_entry(key, *reason)));
+    }
     let marker = if truncated { ",\"truncated\":true" } else { "" };
     Some(format!(
         "{{\"readOnly\":[{}],\"startEmpty\":[{}]{marker}}}",
@@ -371,6 +383,41 @@ mod tests {
             ..BootReport::default()
         };
         assert!(!boot_env_value(&small).unwrap().contains("truncated"));
+    }
+
+    #[test]
+    fn a_truncated_report_keeps_the_core_stores_and_the_caches_and_cuts_per_game_documents() {
+        // Table order: per-game documents sort ahead of `steam_store/config` and `store/*`.
+        let mut read_only: Vec<(String, ReadOnlyReason)> = (0..10_000)
+            .map(|i| (format!("GamesConfig/{i}"), ReadOnlyReason::Newer))
+            .collect();
+        read_only.push(("steam_store/config".to_string(), ReadOnlyReason::Newer));
+        read_only.push(("store/config".to_string(), ReadOnlyReason::Newer));
+        read_only.push(("store/timestamp".to_string(), ReadOnlyReason::Failed));
+        let report = BootReport {
+            read_only,
+            start_empty: vec!["store_cache/steam_metadata".to_string()],
+            ..BootReport::default()
+        };
+        let value = boot_env_value(&report).unwrap();
+        assert!(value.len() <= BOOT_ENV_MAX_BYTES + 64, "{}", value.len());
+        let parsed: serde_json::Value = serde_json::from_str(&value).unwrap();
+        assert_eq!(parsed["truncated"], true);
+        let kept: Vec<&str> = parsed["readOnly"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|e| e["store"].as_str().unwrap())
+            .collect();
+        for core in ["steam_store/config", "store/config", "store/timestamp"] {
+            assert!(kept.contains(&core), "{core} was cut");
+        }
+        assert_eq!(parsed["startEmpty"][0], "store_cache/steam_metadata");
+        let per_game = kept
+            .iter()
+            .filter(|k| k.starts_with("GamesConfig/"))
+            .count();
+        assert!(per_game > 100 && per_game < 10_000, "{per_game}");
     }
 
     #[test]

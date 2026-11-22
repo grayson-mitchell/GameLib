@@ -470,6 +470,7 @@ export class MirrorRegistry {
   private readonly cells = new Map<string, MirrorCell>()
   private readonly byStoreKey = new Map<string, MirrorCell>()
   private seq = 0
+  private loggedTruncatedBoot = false
 
   constructor(private readonly deps: MirrorRegistryDeps) {}
 
@@ -481,6 +482,21 @@ export class MirrorRegistry {
   }): MirrorCell {
     const existing = this.cells.get(options.path)
     if (existing) return existing
+    const { boot } = this.deps
+    if (
+      boot.truncated === true &&
+      !this.loggedTruncatedBoot &&
+      !boot.readOnly.has(options.storeKey) &&
+      !boot.startEmpty.has(options.storeKey)
+    ) {
+      // The shell cut its boot report at the size cap, so this store is unlisted, not known good.
+      // It is still treated as writable (the shell's `refused` event reverts a write it rejects);
+      // say so once, naming only the store key.
+      this.loggedTruncatedBoot = true
+      process.stderr.write(
+        `[mirrorCell] ${options.storeKey}: the shell's boot report was truncated, so this store's read-only state is unknown; a refused write will revert\n`
+      )
+    }
     const cell = new MirrorCell({
       ...options,
       readOnly: this.deps.boot.readOnly.has(options.storeKey),

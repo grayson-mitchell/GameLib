@@ -210,6 +210,18 @@ describe('readStoreBootEnv', () => {
     expect(logged()).not.toContain('TOKEN-VALUE')
   })
 
+  it('surfaces the truncated marker, and only a literal true', () => {
+    expect(
+      parse({ readOnly: [], startEmpty: [], truncated: true }).truncated
+    ).toBe(true)
+    for (const truncated of [false, 'true', 1, null]) {
+      expect(parse({ readOnly: [], startEmpty: [], truncated }).truncated).toBe(
+        undefined
+      )
+    }
+    expect(parse({ readOnly: [], startEmpty: [] }).truncated).toBeUndefined()
+  })
+
   it('ignores fields it does not know and a non-array readOnly or startEmpty', () => {
     const boot = parse({ readOnly: 'store/config', startEmpty: {}, extra: 1 })
     expect(boot.readOnly.size).toBe(0)

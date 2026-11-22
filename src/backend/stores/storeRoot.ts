@@ -84,6 +84,11 @@ export interface StoreBootEnv {
   readonly readOnly: ReadonlyMap<string, BootReadOnlyReason>
   /** Caches that could not be read and continue empty. */
   readonly startEmpty: ReadonlySet<string>
+  /**
+   * The shell cut the report at its size cap (`"truncated":true`): a store in neither list above
+   * is not known to be writable, only unlisted. Absent means not truncated.
+   */
+  readonly truncated?: boolean
 }
 
 const NO_BOOT: StoreBootEnv = { readOnly: new Map(), startEmpty: new Set() }
@@ -91,7 +96,9 @@ const NO_BOOT: StoreBootEnv = { readOnly: new Map(), startEmpty: new Set() }
 /**
  * Parses `GAMELIB_STORE_BOOT` (`{"readOnly":[{"store","reason"}],"startEmpty":["<key>"]}`, written
  * by `store_boot::boot_env_value`) defensively: a missing value is the empty result, and so is one
- * that is not that shape, with one stderr line. Entries of the wrong shape are skipped.
+ * that is not that shape, with one stderr line. Entries of the wrong shape are skipped. A
+ * `"truncated":true` marker is surfaced as `truncated` (the shell omitted entries to stay under the
+ * environment size cap).
  */
 export function readStoreBootEnv(
   env: Readonly<Record<string, string | undefined>> = process.env
@@ -133,7 +140,13 @@ export function readStoreBootEnv(
       if (typeof key === 'string') startEmptySet.add(key)
     }
   }
-  return { readOnly: readOnlyMap, startEmpty: startEmptySet }
+  return {
+    readOnly: readOnlyMap,
+    startEmpty: startEmptySet,
+    ...((parsed as Record<string, unknown>).truncated === true
+      ? { truncated: true }
+      : {})
+  }
 }
 
 function createStoreChangeChannel(): StoreChangeChannel {

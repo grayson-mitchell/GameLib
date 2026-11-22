@@ -895,4 +895,54 @@ describe('read-only stores the shell reported at boot', () => {
     expect(store.get('480')).toBe(1)
     expect(frames).toEqual([])
   })
+
+  it('logs once when the report was truncated and the store is in neither list, and stays writable', () => {
+    plant('{"480":1}')
+    const { sink } = recording()
+    const stderr = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    try {
+      const root = rustRoot(sink, {
+        readOnly: new Map(),
+        startEmpty: new Set(),
+        truncated: true
+      })
+      const store = tracerStore(root)
+      expect(store.readOnly).toBe(false)
+      const lines = stderr.mock.calls
+        .map((c) => String(c[0]))
+        .filter((l) => l.includes('boot report was truncated'))
+      expect(lines).toHaveLength(1)
+    } finally {
+      stderr.mockRestore()
+    }
+  })
+
+  it('stays silent for a listed store, and for any store when the report was not truncated', () => {
+    plant('{"480":1}')
+    const { sink } = recording()
+    const stderr = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    try {
+      tracerStore(
+        rustRoot(sink, {
+          readOnly: new Map([[TRACER, 'newer' as const]]),
+          startEmpty: new Set(),
+          truncated: true
+        })
+      )
+      tracerStore(
+        rustRoot(sink, { readOnly: new Map(), startEmpty: new Set() })
+      )
+      expect(
+        stderr.mock.calls.some((c) =>
+          String(c[0]).includes('boot report was truncated')
+        )
+      ).toBe(false)
+    } finally {
+      stderr.mockRestore()
+    }
+  })
 })
