@@ -624,6 +624,68 @@ mod tests {
         }
     }
 
+    // ---- Phase 86 plan 08 (Pitfall 8): the tray's boot seed reads through the StoreHost ----
+
+    #[test]
+    fn recent_seed_reads_games_recent_through_a_populated_store_host() {
+        let home = gamelib_testutil::FakeHome::new("tray-seed-");
+        // The legacy entry has no runner, the other carries one: both shapes seed.
+        let ctx =
+            crate::info_dispatch::test_ctx(&home, Some("add-keeps-legacy-entry-without-runner"));
+        let games = load_recent_games_from(&ctx, 5);
+        assert_eq!(
+            games,
+            vec![
+                TrayRecentGame {
+                    app_name: "app2".into(),
+                    title: "Game 2".into(),
+                    runner: None
+                },
+                TrayRecentGame {
+                    app_name: "app3".into(),
+                    title: "Game 3".into(),
+                    runner: Some("gog".into())
+                },
+            ]
+        );
+        // The menu limit applies to the seed as it does to a live update.
+        assert_eq!(load_recent_games_from(&ctx, 1).len(), 1);
+    }
+
+    #[test]
+    fn recent_seed_reads_a_write_the_host_just_made() {
+        // The host is the owner: a seed taken after a host write reads that write.
+        let home = gamelib_testutil::FakeHome::new("tray-seed-");
+        let ctx = crate::info_dispatch::test_ctx(&home, Some("add-to-populated-list"));
+        gamelib_info::recent::add(
+            &ctx,
+            gamelib_info::recent::AddArgs {
+                app_name: "app1".into(),
+                title: "Game 1".into(),
+                runner: "steam".into(),
+            },
+        )
+        .unwrap();
+        let games = load_recent_games_from(&ctx, 5);
+        assert_eq!(games[0].app_name, "app1");
+        assert_eq!(games[0].runner.as_deref(), Some("steam"));
+        assert_eq!(games.len(), 3);
+    }
+
+    #[test]
+    fn recent_seed_is_empty_when_there_is_no_list_or_no_store_file() {
+        let home = gamelib_testutil::FakeHome::new("tray-seed-");
+        let ctx = crate::info_dispatch::test_ctx(&home, None);
+        assert!(load_recent_games_from(&ctx, 5).is_empty());
+    }
+
+    #[test]
+    fn recent_seed_without_an_installed_context_is_empty_not_a_file_read() {
+        // No test installs the global context, and there is no direct-file fallback.
+        assert!(crate::info_dispatch::info_ctx().is_none());
+        assert!(load_recent_games_from_disk(5).is_empty());
+    }
+
     #[test]
     fn recent_games_parse_drops_unusable_entries_and_respects_the_limit() {
         let payload = json!([

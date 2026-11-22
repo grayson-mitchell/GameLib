@@ -1556,10 +1556,12 @@ fn attach_main_window_focus_refresh(app: &tauri::App) {
 
 fn seed_tray_recent_games(max_recent_games: usize) {
     // Seed the recent-games cache before the menu is built, so the section is
-    // populated on a COLD start rather than only after the first launch of a session.
+    // populated on a COLD start rather than only after the first launch of a session. The
+    // read goes through the StoreHost's info context, which `run_setup` installs right after the
+    // host opens, before this call (Pitfall 8).
     let seeded = load_recent_games_from_disk(max_recent_games);
     shell_eprintln!(
-        "[shell] tray recent games: seeded {} entr{} from disk (limit {})",
+        "[shell] tray recent games: seeded {} entr{} from the store (limit {})",
         seeded.len(),
         if seeded.len() == 1 { "y" } else { "ies" },
         max_recent_games

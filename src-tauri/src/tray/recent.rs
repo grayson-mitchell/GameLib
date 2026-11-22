@@ -419,25 +419,39 @@ pub(crate) fn close_request_action(tray_exists: bool, hide_on_close: bool) -> Cl
     }
 }
 
-/// Seed the recent-games cache from `configStore`'s on-disk JSON
-/// (`<appFolder>/store/config.json`, key `games.recent` -- `constants/key_value_stores.ts`'s
-/// `new TypeCheckedStoreBackend('configStore', { cwd: 'store' })`).
+/// Seed the recent-games cache from the `games.recent` list of the `store/config` store, read
+/// through the StoreHost (Phase 86, Pitfall 8).
 ///
-/// Startup seeding is a READ of the same file the sidecar owns, not a second writer: the shell
-/// never writes it. Live updates arrive over the existing `recentGamesChanged` frontend-message
-/// push instead, so this read exists only to make the tray useful BEFORE the first launch of a
-/// session -- without it, the recent-games section would be empty on every cold start, which is
-/// a worse reduction than the one this avoids.
+/// The StoreHost is the one owner of that store file (Phase 85): a direct read of the file here
+/// would race the host's writer and would never see a change the host has applied but not yet
+/// written. Startup seeding is a READ, not a second writer, and it runs after `run_setup` opened
+/// the host and installed the info context. Live updates come from the Rust `TrayRecentSink`
+/// (and, until 86-09, from the sidecar relay's `recentGamesChanged` frames). This read exists only
+/// to make the tray useful BEFORE the first launch of a session.
+///
+/// When the context is not installed (no home directory, so no store paths) the seed is an empty
+/// list and one `shell_log` line says so: there is deliberately no direct-file fallback.
 pub(crate) fn load_recent_games_from_disk(limit: usize) -> Vec<TrayRecentGame> {
-    let Some(folder) = gamelib_app_folder() else {
-        return Vec::new();
-    };
-    let path = folder.join("store").join("config.json");
-    let Some(store) = read_json_file(&path) else {
-        return Vec::new();
-    };
-    match store.get("games").and_then(|g| g.get("recent")) {
-        Some(recent) => tray_recent_games_from_value(recent, limit),
-        None => Vec::new(),
+    match crate::info_dispatch::info_ctx() {
+        Some(ctx) => load_recent_games_from(ctx, limit),
+        None => {
+            crate::shell_log("tray recent games: no store host, seeding an empty list");
+            Vec::new()
+        }
+    }
+}
+
+/// [`load_recent_games_from_disk`] against a given context (a unit test builds its own host). A
+/// list the host cannot read seeds nothing; the log line carries the crate's fixed error text.
+pub(crate) fn load_recent_games_from(
+    ctx: &gamelib_info::ctx::InfoCtx,
+    limit: usize,
+) -> Vec<TrayRecentGame> {
+    match gamelib_info::recent::list(ctx) {
+        Ok(list) => tray_recent_games_from_value(&list.to_value(), limit),
+        Err(code) => {
+            crate::shell_log(&format!("tray recent games: seed not read ({code})"));
+            Vec::new()
+        }
     }
 }
