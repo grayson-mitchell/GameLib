@@ -237,6 +237,17 @@ Plan 85-25 Task 1, 2026-11-22 (06:52:58Z to 07:02:22Z), on the macOS machine (aa
 
 **Verdict.** D is proven locally from a clean checkout with no failure and no fix. The deletions (the store flag, the TS owner path, `conf`, the `versioning` dependency, storeVersioning, storeMigrations and the TS migration system) compile, lint and test clean on darwin.
 
+**D' re-proof (2026-11-22, 07:05:18Z to 07:14:43Z).** The first push attempt was blocked by the open-time check. `git diff --name-only D HEAD` listed 23 paths outside `.planning/` (`src/frontend/**`, `public/locales/en/gamelib.json`, `meta/i18nCatalogPresenceBaseline.json`), because another session had committed quick task 261122-qwk (GameLib Light and Nord Light on the official palette) to main while the proof ran. Nothing was pushed. The orchestrator chose to re-prove at the new head, within the operator's push authorisation.
+
+- **D' = `6ef75501d9aa1bd87536bfe1b145ca482b64c3cd`.** D is an ancestor of it. D' adds the other session's five commits (`96557e486` docs(87), `17c528d82`, `b3ce729d3`, `126567da4`, `4ded9287d` quick-261122-qwk) and this plan's Task 1 record (`6ef75501d`).
+- **Re-proof run.** The same script ran in a fresh `git worktree add --detach <scratchpad>/gamelib-85-proof2 <D'>`, which was removed afterwards.
+- **Results:**
+  - Every step exited 0 except `pnpm test`, with the same counts as D: frozen install "Lockfile is up to date"; cargo 95 / 29 / 1811 (7 ignored) / 687 (2 ignored), 0 failed; codec clean; clippy `PASS (darwin, toolchain 1.99.1)`; ipc contract up to date; exit-check PASS (9 ms); smoke:sidecar PASS; all nine pre-push gates and planning-gates 12/12 PASS; sim invariants held.
+  - `pnpm test` exited 1: 1139 suites, 1131 passed, 2 failed, 6 skipped; 24298 tests passed, 7 failed, 40 skipped. Both failures were load-only, in suites D..D' does not touch, and each suite passed alone twice:
+    - `src/backend/__tests__/diPhaseGates.test.ts` (1 failed) hit ENOENT reading `meta/runTs.__probe__.cjs`. That transient file is written and unlinked by `meta/__tests__/runTsSignals.test.ts` while the 66.3 specifier scan walks `meta/`, a cross-suite race. Alone: 156/156, twice.
+    - `meta/__tests__/shimAbiGate.test.ts` (6 failed): `zig cc` exited with a null code (killed), and a later spawn failed with `Unknown system error -88` (EBADMACHO), at load average about 10. Alone: 7/7, twice.
+- **Verdict.** D' is proven: no failure caused by the code, and nothing was fixed.
+
 **Not proven here, owed to CI after the push (Task 3):** the windows-latest and ubuntu-latest legs of `rust-test.yml` at D's code (D-03's deletions in Rust on every OS), the win32 clippy ceiling map, and `test.yml` / `codecheck.yml` on ubuntu (D-03's TS deletions there).
 
 ---

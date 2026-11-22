@@ -58,3 +58,13 @@
   release is published.
 - CI-only (Task 3): `meta/__tests__/storeCorpus.test.ts` account-name scan collided with the hosted runner's `runner`
   account; fixed in `c06a0c237` (scan off when `GITHUB_ACTIONS=true`). Not deferred, recorded for the trail.
+
+## From 85-25
+
+- Two more load-only jest failures in the D' re-proof full run (`6ef75501d`, load average about 10). Both suites passed alone
+  twice, and the D proof's full run at `92495cd50` was fully green. Neither is Phase 85 code:
+  - `src/backend/__tests__/diPhaseGates.test.ts` (66.3 specifier scan): ENOENT reading `meta/runTs.__probe__.cjs`, which
+    `meta/__tests__/runTsSignals.test.ts` writes and unlinks while the scan walks `meta/`. This is a real cross-suite race: the
+    scan should skip files that vanish (or `*.__probe__.*`), or the probe should live in a temp dir.
+  - `meta/__tests__/shimAbiGate.test.ts`: `zig cc` killed (exit null), then a spawn failed with errno -88 (EBADMACHO) under load.
+- None of the 85-19 flakes (`runnerClone`, `steamLoginPollLifecycle`, `outboundHttpRegistry`) failed in either 85-25 full run.
