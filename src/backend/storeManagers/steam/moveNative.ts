@@ -258,6 +258,16 @@ export async function moveRegisteredSteamGame(
         `Steam moved ${title}, but GameLib couldn't read its new location. Refresh the Steam library to pick it up.`
       )
     }
+    if (outcome.kind === 'not-settled') {
+      // The files moved, so install_path must follow even though Steam's verify has not settled.
+      await collab.reconcile(deps)
+      const prefix = outcome.addedLibrary
+        ? `Steam added ${libraryRoot} as a library. `
+        : ''
+      return fail(
+        `${prefix}Steam moved ${title} into ${libraryRoot}, but its file check hasn't finished (${outcome.reason}). Run Verify on ${title}, or let Steam finish it in Downloads.`
+      )
+    }
     if (outcome.kind === 'ok') {
       await collab.reconcile(deps)
       return fail(

@@ -36,7 +36,15 @@ const CASES = [
   'nesting-inside',
   'nesting-contains',
   'nesting-none',
-  'nesting-skips-gap'
+  'nesting-skips-gap',
+  'wait-steam-verifies-itself',
+  'wait-nudge-once-then-finish',
+  'wait-nudge-then-not-settled',
+  'wait-no-validate-slot',
+  'wait-fallback-without-files-missing',
+  'wait-busy-resets-quiet',
+  'wait-not-started',
+  'wait-cap'
 ]
 
 describeArm64Darwin('gamelib_installapp.h pure logic (host harness)', () => {

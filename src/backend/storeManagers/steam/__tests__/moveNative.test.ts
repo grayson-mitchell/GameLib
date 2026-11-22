@@ -468,6 +468,37 @@ describe('add-library route (quick 261122-n4q)', () => {
     await refuses(picked, "couldn't read Steam's library list")
   })
 
+  it('reconciles once and tells the user to Verify when the move is not settled', async () => {
+    requestMove.mockResolvedValue({
+      kind: 'not-settled',
+      reason: 'verify-pending',
+      installState: 46,
+      folderIndex: 2,
+      nudged: true
+    })
+    const r = await moveRegisteredSteamGame(game, picked, makeCollab())
+    expect(reconcile).toHaveBeenCalledTimes(1)
+    expect(r.status).toBe('error')
+    expect(r.error).toContain(realpathSync(picked))
+    expect(r.error).toContain('Verify')
+    expect(r.error).not.toContain('Steam added')
+  })
+
+  it('says Steam added the library when it was added and the verify is pending', async () => {
+    requestMove.mockResolvedValue({
+      kind: 'not-settled',
+      reason: 'verify-pending',
+      installState: 46,
+      folderIndex: 2,
+      nudged: false,
+      addedLibrary: true
+    })
+    const r = await moveRegisteredSteamGame(game, picked, makeCollab())
+    expect(reconcile).toHaveBeenCalledTimes(1)
+    expect(r.error).toContain('Steam added')
+    expect(r.error).toContain('Verify')
+  })
+
   it.each([
     [
       { kind: 'refused', reason: 'inside-library' },

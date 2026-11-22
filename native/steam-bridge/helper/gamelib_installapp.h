@@ -79,6 +79,15 @@
  * "addedLibrary":true|false. A dry run reports "wouldAddLibrary":true and
  * "addLibrarySlot":S with folderIndex -1, and never calls Add. The dry-run
  * libraryFolders array has one entry per Steam index; a gap is "".
+ * After MoveApp, --wait nudges a stalled post-move verify ONCE: with the game at the
+ * target, Files Missing set and no running work for GL_IA_MOVE_NUDGE_AFTER_S it
+ * calls StartValidatingApp (same slot guard as --steam-validateapp; no guarded slot
+ * means no nudge). It never reports finished while Files Missing is set: if that
+ * persists with no running work for GL_IA_MOVE_VERIFY_PENDING_S the result is
+ *   {"result":"not-settled","appId":N,"tracked":true,"finished":false,
+ *    "installState":S,"folderIndex":T,"fromFolder":F,"reason":"verify-pending",
+ *    "nudged":B,"addedLibrary":B}                                    exit 0
+ * (the move happened; only the verify is pending).
  *
  * Output: exactly ONE JSON line on the original stdout; everything Steam logs
  * goes to stderr (fd 1 is redirected to fd 2 while Steam code runs).
@@ -140,6 +149,16 @@
 /* Must track MOVE_WAIT_TIMEOUT_MS in steamInstallApp.ts (cap + margin). */
 #define GL_IA_MOVE_WAIT_CAP_S 21600
 #define GL_IA_MOVE_START_GRACE_S 30
+/* quick 261122-n4q: at the target with Files Missing set and no running work, wait this
+ * long (spike 094: Steam sits at state 46 until something starts a verify), then nudge once
+ * with StartValidatingApp. */
+#define GL_IA_MOVE_NUDGE_AFTER_S 5
+/* After the nudge (or with no nudge slot), Files Missing still set with no running work for
+ * this long ends the wait as not-settled / verify-pending. */
+#define GL_IA_MOVE_VERIFY_PENDING_S 60
+/* A continuous no-running-work window at the target ends the wait as finished, but ONLY with
+ * Files Missing clear (spike 094 step 8: 60 s of state 46 must not count as success). It rides
+ * out a persistent UpdateRequired / UpdateQueued bit left from before the move. */
 #define GL_IA_MOVE_SETTLE_FALLBACK_S 60
 #define GL_IA_STATE_FULLY_INSTALLED 0x4u
 #define GL_IA_STATE_FILES_MISSING 0x20u
@@ -648,6 +667,18 @@ static int gl_ia_run_uninstall(uint32_t app_id, bool dry_run) {
   return GL_IA_EXIT_ERROR;
 }
 
+/* The StartValidatingApp slot guard (quick 261120-p2j), shared with the post-move nudge:
+ * the unique StartValidatingApp ID, and CancelValidation right after by unique ID and by the
+ * high half at that exact position. Returns the slot, or -1. */
+static int gl_ia_find_validate_slot(void **vt) {
+  int slot = gl_ia_find_method_slot(vt, GL_IA_FN_STARTVALIDATING);
+  if (slot < 0 ||
+      gl_ia_slot_hi(vt, slot + 1) != (int)GL_IA_FN_CANCELVALIDATION ||
+      gl_ia_find_method_slot(vt, GL_IA_FN_CANCELVALIDATION) != slot + 1)
+    return -1;
+  return slot;
+}
+
 /*
  * quick 261120-p2j: --steam-validateapp. Same attach order as the uninstall run.
  * Without --wait: fire StartValidatingApp and report. With --wait: poll IPC app
@@ -672,10 +703,8 @@ static int gl_ia_run_validate(uint32_t app_id, bool wait, bool dry_run) {
 
   void **vt = gl_ia_vt(apm);
   /* Slot guard: unique StartValidatingApp ID, CancelValidation right after. */
-  int validate_slot = gl_ia_find_method_slot(vt, GL_IA_FN_STARTVALIDATING);
-  if (validate_slot < 0 ||
-      gl_ia_slot_hi(vt, validate_slot + 1) != (int)GL_IA_FN_CANCELVALIDATION ||
-      gl_ia_find_method_slot(vt, GL_IA_FN_CANCELVALIDATION) != validate_slot + 1)
+  int validate_slot = gl_ia_find_validate_slot(vt);
+  if (validate_slot < 0)
     return gl_ia_unavailable("method-unverified:StartValidatingApp");
 
   if (dry_run) {
@@ -767,6 +796,75 @@ static int gl_ia_run_validate(uint32_t app_id, bool wait, bool dry_run) {
                app_id, last_state, stop_reason ? stop_reason : "unknown");
   }
   return GL_IA_EXIT_OK;
+}
+
+/*
+ * quick 261122-n4q: the --wait decision for a move, as a pure state machine so a host
+ * harness can drive it with synthetic readings and a synthetic clock. One call per poll.
+ */
+typedef struct {
+  long started_ms;
+  bool seen_moving;
+  int settled_run;
+  long quiet_since_ms; /* start of the continuous no-running-work window, -1 if none */
+  bool nudged;
+  bool can_nudge;
+} gl_ia_move_wait;
+
+enum {
+  GL_IA_WAIT_CONTINUE = 0,
+  GL_IA_WAIT_FINISHED,
+  GL_IA_WAIT_NUDGE,
+  GL_IA_WAIT_NOT_SETTLED,
+  GL_IA_WAIT_NOT_STARTED,
+  GL_IA_WAIT_CAP
+};
+
+static void gl_ia_move_wait_init(gl_ia_move_wait *w, long now_ms, bool can_nudge) {
+  w->started_ms = now_ms;
+  w->seen_moving = false;
+  w->settled_run = 0;
+  w->quiet_since_ms = -1;
+  w->nudged = false;
+  w->can_nudge = can_nudge;
+}
+
+static int gl_ia_move_wait_step(gl_ia_move_wait *w, uint32_t prog, int32_t folder,
+                                int32_t target, uint32_t st, long now_ms) {
+  long elapsed_s = (now_ms - w->started_ms) / 1000L;
+  if (prog == 1) w->seen_moving = true;
+
+  bool at_target = (prog == 0 && folder == target);
+  bool settled = at_target && (st & GL_IA_STATE_FULLY_INSTALLED) &&
+                 !(st & GL_IA_ACTIVE_STATE_MASK) &&
+                 !(st & GL_IA_STATE_FILES_MISSING);
+  w->settled_run = settled ? w->settled_run + 1 : 0;
+  if (w->settled_run >= 2) return GL_IA_WAIT_FINISHED;
+
+  bool quiet = at_target && !(st & GL_IA_MOVE_BUSY_MASK);
+  if (quiet) {
+    if (w->quiet_since_ms < 0) w->quiet_since_ms = now_ms;
+  } else {
+    w->quiet_since_ms = -1;
+  }
+  long quiet_s = quiet ? (now_ms - w->quiet_since_ms) / 1000L : 0;
+
+  if (quiet && (st & GL_IA_STATE_FILES_MISSING)) {
+    if (!w->nudged && w->can_nudge && quiet_s >= GL_IA_MOVE_NUDGE_AFTER_S) {
+      w->nudged = true;
+      w->quiet_since_ms = now_ms; /* the verify-pending window starts at the nudge */
+      return GL_IA_WAIT_NUDGE;
+    }
+    if ((w->nudged || !w->can_nudge) && quiet_s >= GL_IA_MOVE_VERIFY_PENDING_S)
+      return GL_IA_WAIT_NOT_SETTLED;
+  } else if (quiet && quiet_s >= GL_IA_MOVE_SETTLE_FALLBACK_S) {
+    return GL_IA_WAIT_FINISHED; /* reachable only with Files Missing clear */
+  }
+
+  if (!w->seen_moving && folder != target && elapsed_s >= GL_IA_MOVE_START_GRACE_S)
+    return GL_IA_WAIT_NOT_STARTED;
+  if (elapsed_s >= GL_IA_MOVE_WAIT_CAP_S) return GL_IA_WAIT_CAP;
+  return GL_IA_WAIT_CONTINUE;
 }
 
 /*
@@ -907,10 +1005,12 @@ static int gl_ia_run_move(uint32_t app_id, const char *library, bool wait,
   /* Resolve the wait-state slot BEFORE the move: unresolved is untracked, not
    * an error. */
   int state_slot = -1;
+  int validate_slot = -1; /* a miss only disables the post-move nudge */
   const char *untracked = NULL;
   if (wait) {
     state_slot = gl_ia_find_method_slot(vt, GL_IA_FN_INSTALLSTATE);
     if (state_slot < 0) untracked = "method-unverified:GetAppInstallState";
+    validate_slot = gl_ia_find_validate_slot(vt);
   }
 
   /* A CanMoveApp error returns BEFORE any Add, so a refused move never leaves a
@@ -957,10 +1057,8 @@ static int gl_ia_run_move(uint32_t app_id, const char *library, bool wait,
     return GL_IA_EXIT_OK;
   }
 
-  long started = gl_ia_now_ms();
-  bool seen_moving = false;
-  int settled_run = 0;
-  long quiet_since_ms = -1; /* start of the continuous no-busy-bits window */
+  gl_ia_move_wait mw;
+  gl_ia_move_wait_init(&mw, gl_ia_now_ms(), validate_slot >= 0);
   uint32_t last_state = 0;
   uint32_t prev_prog = 0xFFFFFFFFu;
   uint64_t prev_a = 0;
@@ -969,6 +1067,7 @@ static int gl_ia_run_move(uint32_t app_id, const char *library, bool wait,
   uint32_t prev_state = 0xFFFFFFFFu;
   const char *stop_reason = NULL;
   bool finished = false;
+  bool not_settled = false;
   for (;;) {
     uint64_t a = 0;
     uint64_t b = 0;
@@ -992,39 +1091,38 @@ static int gl_ia_run_move(uint32_t app_id, const char *library, bool wait,
       prev_folder = folder;
       prev_state = st;
     }
-    long now_ms = gl_ia_now_ms();
-    long elapsed_s = (now_ms - started) / 1000L;
-    if (prog == 1) seen_moving = true;
-
-    bool at_target = (prog == 0 && folder == target);
-    bool settled = at_target && (st & GL_IA_STATE_FULLY_INSTALLED) &&
-                   !(st & GL_IA_ACTIVE_STATE_MASK) &&
-                   !(st & GL_IA_STATE_FILES_MISSING);
-    settled_run = settled ? settled_run + 1 : 0;
-    if (settled_run >= 2) {
+    int step = gl_ia_move_wait_step(&mw, prog, folder, (int32_t)target, st,
+                                    gl_ia_now_ms());
+    if (step == GL_IA_WAIT_FINISHED) {
       finished = true;
       break;
     }
-    /* Fallback: at the target with no running work for a continuous window, so
-     * a persistent queued/required bit cannot hold the wait forever. */
-    if (at_target && !(st & GL_IA_MOVE_BUSY_MASK)) {
-      if (quiet_since_ms < 0) quiet_since_ms = now_ms;
-      if ((now_ms - quiet_since_ms) / 1000L >= GL_IA_MOVE_SETTLE_FALLBACK_S) {
-        finished = true;
-        break;
-      }
-    } else {
-      quiet_since_ms = -1;
+    if (step == GL_IA_WAIT_NOT_SETTLED) {
+      not_settled = true;
+      break;
     }
-    if (!seen_moving && folder != target && elapsed_s >= GL_IA_MOVE_START_GRACE_S) {
+    if (step == GL_IA_WAIT_NOT_STARTED) {
       stop_reason = "not-started";
       break;
     }
-    if (elapsed_s >= GL_IA_MOVE_WAIT_CAP_S) {
+    if (step == GL_IA_WAIT_CAP) {
       stop_reason = "wait-cap";
       break;
     }
+    if (step == GL_IA_WAIT_NUDGE) {
+      int ok = ((int (*)(void *, uint32_t))vt[validate_slot])(apm, app_id) & 0xff;
+      fprintf(stderr, "[moveapp] nudge StartValidatingApp app %u ok=%d\n", app_id, ok);
+    }
     usleep(1000000);
+  }
+  if (not_settled) {
+    gl_ia_emit("{\"result\":\"not-settled\",\"appId\":%u,\"tracked\":true,"
+               "\"finished\":false,\"installState\":%u,\"folderIndex\":%d,"
+               "\"fromFolder\":%d,\"reason\":\"verify-pending\",\"nudged\":%s,"
+               "\"addedLibrary\":%s}",
+               app_id, last_state, target, (int)from, mw.nudged ? "true" : "false",
+               added ? "true" : "false");
+    return GL_IA_EXIT_OK;
   }
   if (finished) {
     gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"tracked\":true,\"finished\":true,"

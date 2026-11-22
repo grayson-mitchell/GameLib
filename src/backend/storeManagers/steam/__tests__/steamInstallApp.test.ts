@@ -538,6 +538,45 @@ describe('requestSteamMoveApp (quick 261122-9sl)', () => {
     ).resolves.toEqual({ kind: 'unavailable', reason: 'helper-failed' })
   })
 
+  describe('not-settled (quick 261122-n4q)', () => {
+    it('maps a not-settled line', async () => {
+      await expect(
+        requestSteamMoveApp(
+          '440',
+          opts,
+          deps(
+            runWith(
+              '{"result":"not-settled","reason":"verify-pending","installState":46,"folderIndex":2,"nudged":true}'
+            )
+          )
+        )
+      ).resolves.toEqual({
+        kind: 'not-settled',
+        reason: 'verify-pending',
+        installState: 46,
+        folderIndex: 2,
+        nudged: true
+      })
+    })
+
+    it('carries addedLibrary and defaults a missing reason to verify-pending', async () => {
+      await expect(
+        requestSteamMoveApp(
+          '440',
+          opts,
+          deps(runWith('{"result":"not-settled","addedLibrary":true}'))
+        )
+      ).resolves.toEqual({
+        kind: 'not-settled',
+        reason: 'verify-pending',
+        installState: null,
+        folderIndex: null,
+        nudged: false,
+        addedLibrary: true
+      })
+    })
+  })
+
   describe('addLibrary (quick 261122-n4q)', () => {
     it('puts --add-library right after the library path and before --wait', async () => {
       const run = runWith(

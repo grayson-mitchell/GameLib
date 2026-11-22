@@ -88,6 +88,15 @@ export type SteamMoveAppOutcome =
       reason?: string
       addedLibrary?: true
     }
+  | {
+      /** The move happened, but Steam's file check after it has not settled (quick 261122-n4q). */
+      kind: 'not-settled'
+      reason: string
+      installState: number | null
+      folderIndex: number | null
+      nudged: boolean
+      addedLibrary?: true
+    }
   | { kind: 'refused'; reason: string }
   | { kind: 'error'; stage: string; code: number; addedLibrary?: true }
   | { kind: 'unavailable'; reason: string }
@@ -384,6 +393,21 @@ export async function requestSteamMoveApp(
       installState: typeof state === 'number' ? state : null,
       folderIndex: typeof folder === 'number' ? folder : null,
       ...(typeof parsed.reason === 'string' ? { reason: parsed.reason } : {}),
+      ...(parsed.addedLibrary === true ? { addedLibrary: true as const } : {})
+    }
+  }
+  if (parsed.result === 'not-settled') {
+    const reason =
+      typeof parsed.reason === 'string' ? parsed.reason : 'verify-pending'
+    const state = parsed.installState
+    const folder = parsed.folderIndex
+    warn(appId, `move not settled: ${reason}`, stderr)
+    return {
+      kind: 'not-settled',
+      reason,
+      installState: typeof state === 'number' ? state : null,
+      folderIndex: typeof folder === 'number' ? folder : null,
+      nudged: parsed.nudged === true,
       ...(parsed.addedLibrary === true ? { addedLibrary: true as const } : {})
     }
   }
