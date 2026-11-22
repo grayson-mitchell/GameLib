@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 86-18-PLAN.md
-last_updated: "2026-11-22T13:41:37.299Z"
+stopped_at: Completed 86-19-PLAN.md
+last_updated: "2026-11-22T14:09:18.040Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 86 execution started
-state_head: d31fb59511706215bf78eb43fb1d1334372c57f2
+state_head: d04f3f78441e7ac06efda287a06e679c1edda02b
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 86 (Pure leaf services) — EXECUTING
-Plan: 18 of 26
+Plan: 19 of 26
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 86 execution started
 Progress: [██████████] 100%
@@ -402,6 +402,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 86 P16 | 80min | 3 tasks | 27 files |
 | Phase 86 P17 | 100min | 3 tasks | 62 files |
 | Phase 86 P18 | 14min | 2 tasks | 26 files |
+| Phase 86 P19 | 25min | 3 tasks | 31 files |
 
 ## Accumulated Context
 
@@ -798,6 +799,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 86]: 86-16: itad setApiKey surfaces a Keychain write failure as a fixed category (TS swallowed it); the crate has no logger so run_itad_op logs category-only lines
 - [Phase 86]: 86-17: the ITAD priced-country list, fallback and shop ids are one src/common/itadCoverage.json read by the renderer and (include_str!) by Rust; the TS store-search slice, secret store, itadGate and itad-secrets boot step are deleted with the two cache rows kept in EXTRA_ROWS; the sidecar no longer bakes the ITAD key (shell build only)
 - [Phase 86]: 86-18: getGogDiscounts stays a TS-registered resolver (const token, one RUST_INFO_GOG_DISCOUNTS call, deletedBy 92); the crate gained an optional InfoLog sink; MiscRuntime carries requestRustInvoke until handlers.ts can pass it directly
+- [Phase 86]: 86-19: the CrossOver index schema bounds are ported exactly (DO NOT LOOSEN), the decompressed size is capped at 32 MiB, the rating map is a D-24 resolver over the library games, and the shell hands the crate the sidecar's own app root plus public
 
 ### Pending Todos
 
@@ -1067,8 +1069,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T13:41:35.604Z
-Stopped at: Completed 86-18-PLAN.md
+Last session: 2026-11-22T14:09:07.193Z
+Stopped at: Completed 86-19-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
