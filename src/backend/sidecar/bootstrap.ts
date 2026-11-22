@@ -1824,6 +1824,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           createGameConfigs({
             config,
             versioning: requireStoreRoot(state).versioning,
+            root: requireStoreRoot(state),
             paths: prebuilt.paths ?? ctx.paths
           })
         state.services.paths = prebuilt.paths ?? ctx.paths

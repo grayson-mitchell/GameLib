@@ -480,6 +480,26 @@ export class MirrorRegistry {
     return cell
   }
 
+  /** The cell for `path` when one exists; never creates one. */
+  peek(path: string): MirrorCell | undefined {
+    return this.cells.get(path)
+  }
+
+  /**
+   * Forgets the cell for `path` (its file was deleted: a reset or an uninstall), so the next read
+   * goes to disk and the next write starts a new cell over whatever the file is then. An answer
+   * still owed to the dropped cell routes nowhere. `true` when a cell was dropped.
+   */
+  drop(path: string): boolean {
+    const cell = this.cells.get(path)
+    if (cell === undefined) return false
+    this.cells.delete(path)
+    if (this.byStoreKey.get(cell.storeKey) === cell) {
+      this.byStoreKey.delete(cell.storeKey)
+    }
+    return true
+  }
+
   /** Routes a shell event to the cell of its store. `false` when no cell exists for that store. */
   applyEvent(event: StoreMirrorEvent): boolean {
     const cell = this.byStoreKey.get(event.store)

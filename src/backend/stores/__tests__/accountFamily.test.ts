@@ -81,11 +81,11 @@ afterEach(() => {
 })
 
 describe(`the account family (${ACCOUNT_ROWS.length} account rows)`, () => {
-  it('is flipped by the family flag alone, after cache and user-state, before settings', () => {
+  it('is flipped by the family flag alone, after cache and user-state, before settings (85-15)', () => {
     expect(ownershipFile.families.account).toBe(true)
     expect(ownershipFile.families.cache).toBe(true)
     expect(ownershipFile.families['user-state']).toBe(true)
-    expect(ownershipFile.families.settings).toBe(false)
+    expect(ownershipFile.families.settings).toBe(true)
     expect(Object.keys(ownershipFile.stores)).toEqual([])
   })
 

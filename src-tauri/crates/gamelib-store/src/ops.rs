@@ -37,6 +37,10 @@ pub enum OpReject {
     ReservedKey,
     /// dot-prop refuses the path (a `__proto__`, `prototype` or `constructor` segment).
     KeyPath,
+    /// A settings document (`config.json`, `GamesConfig/<app>.json`) takes whole-document
+    /// replaces only: TS writes it as one object (`writeSettingsFile`), never a key at a time.
+    /// [`apply`] never returns this; the host refuses the op before it reaches the document.
+    NotReplace,
 }
 
 /// The first segment of `key` as `typed_store` splits it: always on `.`, whatever `dot_paths` says.

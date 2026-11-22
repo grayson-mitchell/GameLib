@@ -1,12 +1,14 @@
-import { existsSync, readFileSync } from 'graceful-fs'
-
 import { GameConfigVersion, GameSettings } from 'common/types'
 import type { GlobalConfigSlice } from './config'
-import { logInfo } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { isStoreKey } from './stores/storeOwnership'
 import {
-  ensureSettingsMigrated,
-  writeSettingsFile
-} from './storeVersioning/settingsFiles'
+  prepareSettingsDoc,
+  readSettingsDoc,
+  settingsDocExists,
+  writeSettingsDoc,
+  type SettingsDocRoot
+} from './stores/settingsDocs'
 import type { StoreVersioning } from './storeVersioning/engine'
 import { join } from 'path'
 import { currentGameConfigVersion } from 'backend/constants/others'
@@ -36,16 +38,17 @@ abstract class GameConfig {
 
   protected readonly globalConfig: Pick<GlobalConfigSlice, 'getSettings'>
 
-  protected readonly versioning: StoreVersioning
+  /** The settings documents of this boot (85-15): every read and write goes through it. */
+  protected readonly docs: SettingsDocRoot
   protected readonly paths: GameConfigPaths
 
   protected constructor(
     appName: string,
     globalConfig: Pick<GlobalConfigSlice, 'getSettings'>,
-    versioning: StoreVersioning,
+    docs: SettingsDocRoot,
     paths: GameConfigPaths
   ) {
-    this.versioning = versioning
+    this.docs = docs
     this.paths = paths
     this.appName = appName
     this.path = join(paths.gamesConfigPath, appName + '.json')
@@ -75,8 +78,24 @@ abstract class GameConfig {
    */
   public abstract resetToDefaults(): void
 
+  /**
+   * One whole-document write: a `replace` frame when the shell owns the file (85-15). Under the
+   * Rust owner a name that is not one plain path segment is refused here (T-85-37): its path is not
+   * `GamesConfig/<app>.json` (`'../config'` resolves to the global document), the shell would refuse
+   * the frame, and TS must not write a file the shell owns. The line names no appName.
+   */
   protected writeToFile(config: Record<string, unknown>) {
-    return writeSettingsFile(this.versioning, this.path, config)
+    if (
+      this.docs.storeMode === 'rust' &&
+      !isStoreKey(`GamesConfig/${this.appName}`)
+    ) {
+      logWarning(
+        'game settings write refused: the game name is not one plain file name',
+        LogPrefix.Backend
+      )
+      return
+    }
+    return writeSettingsDoc(this.docs, this.path, config)
   }
 
   /**
@@ -89,8 +108,9 @@ abstract class GameConfig {
    * Load the config file, upgrade if needed.
    */
   protected load() {
-    // Config file doesn't exist, make one.
-    if (!existsSync(this.paths.configPath)) {
+    // Config file doesn't exist, make one. A global document written but not yet applied by the
+    // shell exists (85-15).
+    if (!settingsDocExists(this.docs, this.paths.configPath)) {
       this.resetToDefaults()
     }
     // Synchronous: an async load left `this.config` undefined for a tick, so a
@@ -109,10 +129,10 @@ class GameConfigV0 extends GameConfig {
   constructor(
     appName: string,
     globalConfig: Pick<GlobalConfigSlice, 'getSettings'>,
-    versioning: StoreVersioning,
+    docs: SettingsDocRoot,
     paths: GameConfigPaths
   ) {
-    super(appName, globalConfig, versioning, paths)
+    super(appName, globalConfig, docs, paths)
     this.load()
   }
 
@@ -203,10 +223,12 @@ class GameConfigV0 extends GameConfig {
 
     let gameSettings = {} as GameSettings
 
-    if (existsSync(this.path)) {
+    // Through the settings-document seam: the cell's view (pending writes included) when the shell
+    // owns the file, the file itself otherwise (85-15).
+    const settings = readSettingsDoc(this.docs, this.path)
+    if (settings !== undefined) {
       // read game's settings
-      const settings = JSON.parse(readFileSync(this.path, 'utf-8'))
-      gameSettings = settings[this.appName] || ({} as GameSettings)
+      gameSettings = (settings[this.appName] || {}) as GameSettings
     } else {
       // only set the `disableUMU` default value when getting settings for a new game
       // we want it to be `undefined` for games that were installed already
@@ -331,33 +353,42 @@ export interface GameConfigs {
 
 /**
  * Builds the per-game config registry. Called once by the boot's 'config' step; the per-game
- * cache lives in this closure, so two registries never share an instance. A game's file is
- * migrated lazily on its first `get` (memoised per file, never sweeps GamesConfig/ at boot: the
+ * cache lives in this closure, so two registries never share an instance.
+ *
+ * Who migrates a game's file depends on its owner (85-15, research A4). When the shell owns the
+ * settings family (`GAMELIB_STORE=rust`), its boot sweep migrates every `GamesConfig/*.json` before
+ * this process is spawned, inside the store boot bound, so a synchronous read here never sees an
+ * unmigrated document and nothing is migrated from TS. When TS owns it, a game's file is migrated
+ * lazily on its first `get` (memoised per file); TS itself never sweeps GamesConfig/ at boot (the
  * sidecar exit contract).
  */
 export function createGameConfigs(deps: {
   config: Pick<GlobalConfigSlice, 'getSettings'>
   /** The boot's store-versioning engine (`StoreRoot.versioning`). */
   versioning: StoreVersioning
+  /**
+   * The boot's store root (85-15): the settings documents read and write through its mirror when
+   * the shell owns them. Absent (a test), the documents are TS-owned over `versioning`.
+   */
+  root?: SettingsDocRoot
   /** The boot's path roots: the games-config folder, the config file and the prefix defaults. */
   paths: GameConfigPaths
 }): GameConfigs {
   const instances = new Map<string, GameConfigSlice>()
+  const docs: SettingsDocRoot = deps.root ?? {
+    storeMode: 'ts',
+    versioning: deps.versioning
+  }
   return {
     get: (appName) => {
       let instance = instances.get(appName)
       if (!instance) {
-        ensureSettingsMigrated(
-          deps.versioning,
+        prepareSettingsDoc(
+          docs,
           join(deps.paths.gamesConfigPath, appName + '.json'),
           'settings/game'
         )
-        instance = new GameConfigV0(
-          appName,
-          deps.config,
-          deps.versioning,
-          deps.paths
-        )
+        instance = new GameConfigV0(appName, deps.config, docs, deps.paths)
         instances.set(appName, instance)
       }
       return instance

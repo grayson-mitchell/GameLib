@@ -161,7 +161,7 @@ describe('isRustOwned', () => {
     expect(isRustOwned('store_cache/umu', 'rust', hostile)).toBe(false)
   })
 
-  it('reads the committed ownership file: the cache (85-12), user-state (85-13) and account (85-14) families are Rust’s and settings has not moved yet', () => {
+  it('reads the committed ownership file: the cache (85-12), user-state (85-13), account (85-14) and settings (85-15) families are Rust’s', () => {
     expect(isRustOwned('store_cache/wikigameinfo', 'rust')).toBe(true)
     expect(isRustOwned('store_cache/wikigameinfo', 'ts')).toBe(false)
     expect(ownershipFile.families.cache).toBe(true)
@@ -169,7 +169,11 @@ describe('isRustOwned', () => {
     expect(Object.keys(ownershipFile.stores)).toEqual([])
     expect(ownershipFile.families['user-state']).toBe(true)
     expect(ownershipFile.families.account).toBe(true)
-    expect(ownershipFile.families.settings).toBe(false)
+    expect(ownershipFile.families.settings).toBe(true)
+    expect(isRustOwned('settings/global', 'rust')).toBe(true)
+    expect(isRustOwned('GamesConfig/Fortnite', 'rust')).toBe(true)
+    expect(isRustOwned('store/config', 'rust')).toBe(true)
+    expect(isRustOwned('settings/global', 'ts')).toBe(false)
     // Every flag in the file names a family or a store that exists in the table.
     const families = new Set(tableFile.rows.map((r) => r.family))
     for (const family of Object.keys(ownershipFile.families)) {

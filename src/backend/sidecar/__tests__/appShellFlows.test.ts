@@ -409,6 +409,11 @@ function boot() {
       appRuntime,
       // The real monitor: this suite pins the connectivity listener it registers on start().
       onlineMonitor: undefined,
+      // 85-15: the settings family is Rust's, so the 'config' step's mirror resync writes
+      // store/config as a frame. There is no shell in this suite to answer it, and quit waits for
+      // the store flush (2 s budget) before handleExit, so the boot's stores sit on a root whose
+      // in-process disk sink answers every frame at once (the shell's role), in rust mode.
+      storeRoot: createTestStoreRoot(undefined, { storeMode: 'rust' }),
       downloadQueue: downloadQueueStub as never,
       // Delegates every call to whatever the global config returns NOW, so `mockAppSettings`
       // after boot (the tray tests) is what the registrations read, as with the static getter.

@@ -297,6 +297,10 @@ impl Store {
         if let Some((reason, _)) = st.read_only {
             return Err(ApplyError::ReadOnly(reason));
         }
+        // A settings document is written whole (`writeSettingsFile`), so only a replace reaches it.
+        if self.flavour == Flavour::Settings && !matches!(op, Op::Replace(_)) {
+            return Err(ApplyError::Rejected(OpReject::NotReplace));
+        }
         let previous = st.view.clone();
         let changed = match ops::apply(&mut st.view, &op, self.dot_paths) {
             Ok(changed) => changed,
@@ -448,6 +452,18 @@ fn tighten_token_paths(key: &str, path: &Path) {
     }
 }
 
+/// One plain path segment: what a `GamesConfig/<app>` name must be (`isContainedGameConfig` /
+/// `isPlainAppName` on the TS side, `plain_name` in the shell's dispatcher): 1-255 bytes, not `.`
+/// or `..`, no separator, NUL or `..` run.
+fn plain_segment(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 255
+        && name != "."
+        && name != ".."
+        && !name.contains(['/', '\\', '\0'])
+        && !name.contains("..")
+}
+
 /// A file that is not a readable store: a cache that starts empty over it, or any store that opens
 /// read-only because it could not be read, copied aside or migrated. (A `Newer` file is readable.)
 fn unreadable(outcome: &OpenOutcome) -> bool {
@@ -594,6 +610,41 @@ impl StoreHost {
             None => runtime_cache_row(key, dir_name, name),
         };
         self.open_inner(&row, path, true)
+    }
+
+    /// Opens a settings document: `settings/global` (`<appFolder>/config.json`) or
+    /// `GamesConfig/<app>` (`<appFolder>/GamesConfig/<app>.json`), at `path`, which the caller
+    /// resolves. It is a settings-flavour store under `key` itself (so a read-only report and a
+    /// change name the document, not the `settings/game` pattern row): two-space bytes with no
+    /// trailing newline, the top-level `version: 'vN'` string stamped by its chain
+    /// (`settings/global` or `settings/game`), `sync_all` on write (D-21), and only a whole-document
+    /// [`Op::Replace`] is applied (a set, delete or clear is [`OpReject::NotReplace`]). A
+    /// `GamesConfig` app name must be one plain path segment (T-85-37), else `InvalidInput` and
+    /// nothing is opened. Like [`StoreHost::open_row`], a file that cannot be read opens read-only
+    /// rather than failing, and a missing one is an empty document written on the first replace.
+    pub fn open_doc(&self, key: &str, path: PathBuf) -> io::Result<Arc<Store>> {
+        let pattern = if key == "settings/global" {
+            "settings/global"
+        } else {
+            match key.strip_prefix("GamesConfig/") {
+                Some(app) if plain_segment(app) => "settings/game",
+                _ => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "not a settings document key",
+                    ))
+                }
+            }
+        };
+        let Some(row) = row_for_key(pattern) else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "the store table has no settings document row",
+            ));
+        };
+        let mut row = row.clone();
+        row.key = key.to_string();
+        self.open_inner(&row, path, false)
     }
 
     /// Opens the file at `path` as `row`, whatever the engine decides: a file that cannot be read
@@ -1454,5 +1505,181 @@ mod tighten_tests {
         assert!(text.contains("\"refreshToken\": \"steam:v1:REDACTED\""));
         assert!(text.contains("\t\t\t\"humble:v1:REDACTED\"\n"));
         assert_eq!(store.get("provisioned"), Some(Json::Num(Num::U(1))));
+    }
+}
+
+/// 85-15: settings documents (`settings/global`, `GamesConfig/<app>`) through [`StoreHost::open_doc`].
+#[cfg(test)]
+mod doc_tests {
+    use super::*;
+    use crate::json::{parse, Num, Obj};
+    use gamelib_testutil::FakeHome;
+    use std::fs;
+
+    fn games_config(home: &FakeHome) -> PathBuf {
+        home.root().join("GamesConfig")
+    }
+
+    fn obj(text: &str) -> Obj {
+        match parse(text.as_bytes()).unwrap() {
+            Json::Obj(o) => o,
+            other => panic!("not an object: {other:?}"),
+        }
+    }
+
+    /// The document `GameConfig.flush` writes for one game in explicit mode.
+    fn game_doc(app: &str, value: u64) -> Obj {
+        obj(&format!(
+            "{{\"{app}\": {{\"maxSharpness\": {value}, \"launcherArgs\": \"-x\"}}, \"version\": \"v0\", \"explicit\": true}}"
+        ))
+    }
+
+    #[test]
+    fn host_doc_a_replace_writes_two_space_bytes_with_no_trailing_newline_and_the_chain_version() {
+        let home = FakeHome::new("gamelib-store-doc-");
+        let path = games_config(&home).join("1245620.json");
+        let host = StoreHost::new();
+        let doc = host.open_doc("GamesConfig/1245620", path.clone()).unwrap();
+        assert_eq!(
+            doc.key(),
+            "GamesConfig/1245620",
+            "the store is named by its document key"
+        );
+        assert_eq!(doc.open_outcome(), &OpenOutcome::Missing);
+        assert!(!path.exists(), "nothing is written until the first replace");
+
+        assert_eq!(
+            doc.apply(Op::Replace(game_doc("1245620", 3)), Origin::Rust),
+            Ok(1)
+        );
+        // The game chain is at v2 (D-04, pinned to TS), so `version` is re-stamped where it sits.
+        let expected = "{\n  \"1245620\": {\n    \"maxSharpness\": 3,\n    \"launcherArgs\": \"-x\"\n  },\n  \"version\": \"v2\",\n  \"explicit\": true\n}";
+        assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+        // The replace is visible to a reader at once, version included.
+        assert_eq!(doc.get("version"), Some(Json::Str("v2".to_string())));
+        assert_eq!(doc.get("1245620.maxSharpness"), Some(Json::Num(Num::U(3))));
+    }
+
+    #[test]
+    fn host_doc_the_global_document_is_its_own_store_and_reopens_as_ok() {
+        let home = FakeHome::new("gamelib-store-doc-");
+        let path = home.root().join("config.json");
+        let host = StoreHost::new();
+        let doc = host.open_doc("settings/global", path.clone()).unwrap();
+        let body = obj(
+            "{\"defaultSettings\": {\"language\": \"en\", \"maxWorkers\": 0}, \"version\": \"v0\"}",
+        );
+        doc.apply(Op::Replace(body), Origin::Rust).unwrap();
+        let text = fs::read_to_string(&path).unwrap();
+        assert_eq!(
+            text,
+            "{\n  \"defaultSettings\": {\n    \"language\": \"en\",\n    \"maxWorkers\": 0\n  },\n  \"version\": \"v2\"\n}"
+        );
+        // The same path is one store; a second host reads it back as current (no migration, no write).
+        assert!(Arc::ptr_eq(
+            &doc,
+            &host.open_doc("settings/global", path.clone()).unwrap()
+        ));
+        let again = StoreHost::new()
+            .open_doc("settings/global", path.clone())
+            .unwrap();
+        assert_eq!(again.open_outcome(), &OpenOutcome::Ok);
+        assert_eq!(fs::read_to_string(&path).unwrap(), text);
+    }
+
+    #[test]
+    fn host_doc_set_delete_and_clear_are_refused_and_write_nothing() {
+        let home = FakeHome::new("gamelib-store-doc-");
+        let path = games_config(&home).join("app.json");
+        let doc = StoreHost::new()
+            .open_doc("GamesConfig/app", path.clone())
+            .unwrap();
+        let refused = Err(ApplyError::Rejected(OpReject::NotReplace));
+        let set = Op::Set {
+            key: "app.x".to_string(),
+            value: Json::Bool(true),
+        };
+        assert_eq!(doc.apply(set, Origin::Rust), refused);
+        assert_eq!(
+            doc.apply(
+                Op::Delete {
+                    key: "app".to_string()
+                },
+                Origin::Rust
+            ),
+            refused
+        );
+        assert_eq!(doc.apply(Op::Clear, Origin::Rust), refused);
+        assert!(!path.exists());
+        assert_eq!(doc.rev(), 0);
+        assert!(doc.set("app", Json::Bool(true)).is_err());
+    }
+
+    #[test]
+    fn host_doc_an_app_name_that_is_not_one_plain_segment_is_refused_before_any_path_is_used() {
+        let home = FakeHome::new("gamelib-store-doc-");
+        let host = StoreHost::new();
+        let long = "a".repeat(256);
+        for bad in [
+            "GamesConfig/",
+            "GamesConfig/.",
+            "GamesConfig/..",
+            "GamesConfig/../config",
+            "GamesConfig/a/b",
+            "GamesConfig/a\\b",
+            "GamesConfig/a..b",
+            "GamesConfig/a\0b",
+            &format!("GamesConfig/{long}"),
+            "settings/game",
+            "store/config",
+            "config",
+        ] {
+            let err = host
+                .open_doc(bad, home.root().join("escape.json"))
+                .err()
+                .unwrap_or_else(|| panic!("{bad:?} was opened"));
+            assert_eq!(err.kind(), io::ErrorKind::InvalidInput, "{bad:?}");
+        }
+        assert!(
+            fs::read_dir(home.root()).unwrap().next().is_none(),
+            "nothing was created"
+        );
+        // 255 bytes is the longest name allowed.
+        let max = "b".repeat(255);
+        assert!(host
+            .open_doc(
+                &format!("GamesConfig/{max}"),
+                games_config(&home).join("max.json")
+            )
+            .is_ok());
+    }
+
+    #[test]
+    fn host_doc_an_older_document_is_migrated_with_a_backup_on_open() {
+        let home = FakeHome::new("gamelib-store-doc-");
+        let dir = games_config(&home);
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("app.json");
+        let v0 = "{\n  \"app\": {\n    \"maxSharpness\": 3\n  }\n}";
+        fs::write(&path, v0).unwrap();
+        let doc = StoreHost::new()
+            .open_doc("GamesConfig/app", path.clone())
+            .unwrap();
+        assert!(
+            matches!(
+                doc.open_outcome(),
+                OpenOutcome::Migrated { from: 0, to: 2, .. }
+            ),
+            "{:?}",
+            doc.open_outcome()
+        );
+        let backups: Vec<_> = fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().ends_with(".bak.json"))
+            .collect();
+        assert_eq!(backups.len(), 1);
+        assert_eq!(fs::read_to_string(backups[0].path()).unwrap(), v0);
+        assert_eq!(doc.get("version"), Some(Json::Str("v2".to_string())));
     }
 }

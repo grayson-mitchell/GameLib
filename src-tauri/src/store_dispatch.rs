@@ -185,7 +185,18 @@ fn owned_row(
     .then_some(row)
 }
 
-/// Where a store's file is, under the user-data directory (`store_boot::candidates` agrees).
+/// Whether a store key names a settings document (`settings/global`, `GamesConfig/<app>`), which
+/// the host opens with [`StoreHost::open_doc`] under the document's own key.
+fn is_settings_doc(key: &str) -> bool {
+    key == "settings/global" || key.starts_with("GamesConfig/")
+}
+
+/// Where a store's file is, under the user-data directory (`store_boot::candidates` agrees). The
+/// user-data directory is `gamelib_core::paths::resolve(..).user_data`, which is also TS's
+/// `appFolder`, so `settings/global` is that module's `config_path` (`<user_data>/config.json`) and
+/// a `GamesConfig/<app>` document is `<user_data>/GamesConfig/<app>.json`; `<app>` has already
+/// passed the plain-segment check in [`row_for_store_key`] (a frame naming anything else is refused
+/// `store-key` before it is queued, T-85-37).
 fn path_for(user_data: &Path, key: &str, row: &TableRow) -> PathBuf {
     if let Some(app) = key.strip_prefix("GamesConfig/") {
         return user_data.join("GamesConfig").join(format!("{app}.json"));
@@ -470,7 +481,12 @@ impl Dispatcher {
             return;
         }
         let path = path_for(&self.config.user_data, &store, &row);
-        let opened = match self.host.open_row(&row, path) {
+        let opened = if is_settings_doc(&store) {
+            self.host.open_doc(&store, path)
+        } else {
+            self.host.open_row(&row, path)
+        };
+        let opened = match opened {
             Ok(opened) => opened,
             Err(_) => {
                 self.reply(&store, 0, "refused", seq, Some("io"));
@@ -490,7 +506,9 @@ impl Dispatcher {
                 let reason = match refusal {
                     ApplyError::ReadOnly(_) => "read-only",
                     ApplyError::Evicted => "evicted",
-                    ApplyError::Rejected(OpReject::ReservedKey | OpReject::KeyPath) => "rejected",
+                    ApplyError::Rejected(
+                        OpReject::ReservedKey | OpReject::KeyPath | OpReject::NotReplace,
+                    ) => "rejected",
                     ApplyError::Io(_) => "io",
                 };
                 self.reply(&store, opened.rev(), "refused", seq, Some(reason));
@@ -1345,5 +1363,128 @@ mod tests {
                 .count(),
             1
         );
+    }
+
+    // ---- 85-15: settings documents --------------------------------------------------------
+
+    fn settings_ownership() -> Ownership {
+        Ownership::parse(r#"{"families":{"settings":true},"stores":{}}"#).unwrap()
+    }
+
+    #[test]
+    fn store_frame_a_settings_document_replace_writes_the_two_space_document_and_is_applied() {
+        let rig = rig_with(settings_ownership(), StoreMode::Rust);
+        let doc = r#"{"1245620":{"maxSharpness":3,"enviromentOptions":[]},"version":"v0","explicit":true}"#;
+        send(
+            &rig,
+            frame(1, "GamesConfig/1245620", "replace", None, Some(doc)),
+        );
+        let global = r#"{"defaultSettings":{"language":"en"},"version":"v0"}"#;
+        send(
+            &rig,
+            frame(2, "settings/global", "replace", None, Some(global)),
+        );
+        settle(&rig);
+
+        let game = fs::read_to_string(rig.home.root().join("GamesConfig/1245620.json")).unwrap();
+        assert_eq!(
+            game,
+            "{\n  \"1245620\": {\n    \"maxSharpness\": 3,\n    \"enviromentOptions\": []\n  },\n  \"version\": \"v2\",\n  \"explicit\": true\n}"
+        );
+        let config = fs::read_to_string(rig.home.root().join("config.json")).unwrap();
+        assert_eq!(
+            config,
+            "{\n  \"defaultSettings\": {\n    \"language\": \"en\"\n  },\n  \"version\": \"v2\"\n}"
+        );
+        let events = lock(&rig.events);
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0]["store"], "GamesConfig/1245620");
+        assert_eq!(events[0]["op"], "applied");
+        assert_eq!(events[1]["store"], "settings/global");
+        assert_eq!(events[1]["op"], "applied");
+        // Each document is its own store, named by its document key.
+        let keys: Vec<String> = rig
+            .host
+            .read_only_entries()
+            .into_iter()
+            .map(|(k, _, _)| k)
+            .collect();
+        assert!(keys.is_empty(), "{keys:?}");
+    }
+
+    #[test]
+    fn store_frame_a_set_on_a_settings_document_is_refused_rejected_and_writes_nothing() {
+        let rig = rig_with(settings_ownership(), StoreMode::Rust);
+        send(
+            &rig,
+            frame(1, "GamesConfig/app", "set", Some("app.x"), Some("1")),
+        );
+        send(&rig, frame(2, "settings/global", "clear", None, None));
+        settle(&rig);
+        let events = lock(&rig.events);
+        assert_eq!(events.len(), 2);
+        for e in events.iter() {
+            assert_eq!(e["op"], "refused", "{e}");
+            assert_eq!(e["reason"], "rejected", "{e}");
+        }
+        assert!(!rig.home.root().join("GamesConfig/app.json").exists());
+        assert!(!rig.home.root().join("config.json").exists());
+    }
+
+    #[test]
+    fn store_frame_a_games_config_name_that_is_a_path_is_rejected_store_key_and_writes_nothing() {
+        let rig = rig_with(settings_ownership(), StoreMode::Rust);
+        for (seq, store) in [
+            (1, "GamesConfig/../config"),
+            (2, "GamesConfig/a/b"),
+            (3, "GamesConfig/a\\b"),
+            (4, "GamesConfig/.."),
+            (5, "GamesConfig/"),
+        ] {
+            let value = frame(seq, store, "replace", None, Some(r#"{"version":"v2"}"#));
+            assert_eq!(
+                parse_store_frame(64, &value),
+                Err(StoreFrameReject::StoreKey),
+                "{store:?}"
+            );
+            send(&rig, value);
+        }
+        settle(&rig);
+        let logs = lock(&rig.logs);
+        assert_eq!(
+            logs.iter()
+                .filter(|l| l.as_str() == "WARN: store frame rejected: store-key")
+                .count(),
+            5
+        );
+        assert!(logs
+            .iter()
+            .all(|l| !l.contains("config") && !l.contains("..")));
+        // Nothing outside the user-data tree, nor in it, was created.
+        assert!(fs::read_dir(rig.home.root()).unwrap().next().is_none());
+    }
+
+    #[test]
+    fn store_frame_a_settings_document_is_not_owned_under_ts_mode_or_before_the_flip() {
+        for (ownership, mode) in [
+            (settings_ownership(), StoreMode::Ts),
+            (cache_ownership(), StoreMode::Rust),
+        ] {
+            let rig = rig_with(ownership, mode);
+            send(
+                &rig,
+                frame(
+                    1,
+                    "GamesConfig/app",
+                    "replace",
+                    None,
+                    Some(r#"{"version":"v2"}"#),
+                ),
+            );
+            settle(&rig);
+            let events = lock(&rig.events);
+            assert_eq!(events[0]["reason"], "not-owned");
+            assert!(!rig.home.root().join("GamesConfig/app.json").exists());
+        }
     }
 }

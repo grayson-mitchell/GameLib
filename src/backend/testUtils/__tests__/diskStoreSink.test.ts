@@ -150,10 +150,12 @@ describe('createDiskStoreSink', () => {
       mirrors: { applyEvent: (e) => (events.push(e), true) },
       versioning: { currentVersionOf: () => 1 }
     })
+    // `settings/global` is the app folder's config.json (85-15, the shell's path_for), written
+    // whole by a replace; a GamesConfig document sits at its own key's path.
     disk.sink.send(
-      frame({ store: 'settings/global', op: 'set', key: 'a', valueJson: '1' })
+      frame({ store: 'settings/global', op: 'replace', valueJson: '{"a":1}' })
     )
-    expect(readFileSync(join(userData, 'settings/global.json'), 'utf8')).toBe(
+    expect(readFileSync(join(userData, 'config.json'), 'utf8')).toBe(
       '{\n  "a": 1\n}'
     )
     disk.sink.send(

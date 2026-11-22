@@ -258,10 +258,11 @@ describe('the sidecar write path to a Rust-owned store', () => {
   it('keeps every other store on conf, and every store on conf in ts mode', () => {
     const { frames, sink } = recordingSink()
     const root = rustRoot(sink)
+    // Since 85-15 every family is Rust's; store/migrations is the one store Rust never opens (D-07).
     const config = new GameLibStore({
       root,
       cwd: 'store',
-      name: 'config',
+      name: 'migrations',
       declaration: { kind: 'user-state' }
     })
     config.set('k', 1)

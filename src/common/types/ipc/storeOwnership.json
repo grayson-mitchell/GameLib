@@ -3,7 +3,7 @@
     "cache": true,
     "user-state": true,
     "account": true,
-    "settings": false
+    "settings": true
   },
   "stores": {}
 }

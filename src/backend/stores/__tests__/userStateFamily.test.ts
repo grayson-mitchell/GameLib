@@ -68,9 +68,9 @@ describe(`the user-state family (${USER_STATE_ROWS.length} user-state rows)`, ()
   it('is flipped by the family flag alone, next to the cache family', () => {
     expect(ownershipFile.families['user-state']).toBe(true)
     expect(ownershipFile.families.cache).toBe(true)
-    // 85-14 flipped the account family after this one; settings is the last to move.
+    // 85-14 flipped the account family after this one and 85-15 settings, last.
     expect(ownershipFile.families.account).toBe(true)
-    expect(ownershipFile.families.settings).toBe(false)
+    expect(ownershipFile.families.settings).toBe(true)
     expect(Object.keys(ownershipFile.stores)).toEqual([])
   })
 
@@ -103,7 +103,7 @@ describe(`the user-state family (${USER_STATE_ROWS.length} user-state rows)`, ()
     expect(keys).not.toContain('store/migrations')
   })
 
-  it('owns the cache, user-state, account and native rows under rust and only the native ones under ts', () => {
+  it('owns the cache, user-state, account, settings and native rows under rust and only the native ones under ts', () => {
     for (const row of tableFile.rows) {
       if (row.name === null) continue
       const rust = isRustOwned(row.key, 'rust')
@@ -112,6 +112,7 @@ describe(`the user-state family (${USER_STATE_ROWS.length} user-state rows)`, ()
         row.family === 'cache' ||
           row.family === 'user-state' ||
           row.family === 'account' ||
+          row.family === 'settings' ||
           row.family === 'native'
       )
       expect(ts).toBe(row.family === 'native')

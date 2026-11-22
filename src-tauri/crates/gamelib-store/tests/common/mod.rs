@@ -181,6 +181,7 @@ impl Replay {
             }
             Err(OpReject::ReservedKey) => self.threw.push(i),
             Err(OpReject::KeyPath) => {}
+            Err(OpReject::NotReplace) => unreachable!("ops::apply never refuses a whole-store op"),
         }
     }
 }

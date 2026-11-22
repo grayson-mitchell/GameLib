@@ -37,7 +37,7 @@ export interface DiskStoreSink {
 }
 
 export interface DiskStoreSinkOptions {
-  /** The directory store keys resolve under (`<userData>/<store key>.json`, as `mirrorCellFor` expects). */
+  /** The directory store keys resolve under (`<userData>/<store key>.json`, as `mirrorCellFor` expects; `settings/global` is `<userData>/config.json`). */
   userData: string
   /** Every frame the sink receives is also pushed here, in order, before it is applied. */
   recordFrames?: StoreFrame[]
@@ -66,8 +66,12 @@ export function createDiskStoreSink(
   const revs = new Map<string, number>()
   let root: Parameters<DiskStoreSink['attach']>[0] | undefined
 
+  // `settings/global` is the app folder's `config.json` (the shell's `path_for`); every other key,
+  // `GamesConfig/<app>` included, is `<userData>/<key>.json`.
   const pathOf = (storeKey: string): string =>
-    resolve(options.userData, `${storeKey}.json`)
+    storeKey === 'settings/global'
+      ? resolve(options.userData, 'config.json')
+      : resolve(options.userData, `${storeKey}.json`)
 
   /** Applies the frame's op to the store's document in memory and returns the file's text. */
   function apply(frame: StoreFrame): string {
