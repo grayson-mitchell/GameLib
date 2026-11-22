@@ -291,7 +291,7 @@ const ENRICHMENT_CHANNELS = [
   'searchStores',
   'getStoreSearchDeals',
   'getItadSteamGids',
-  'removeRecent',
+  // Phase 86 Plan 08 (D-17): `removeRecent` left this list -- it is a native `info` channel.
   'getGogDiscounts',
   'steamgriddb.hasApiKey',
   'steamgriddb.setApiKey',
@@ -633,7 +633,8 @@ describe('completeness — all 66 channels are registered with the right kind, a
     // Quick 261029-mkz (d601ff705): getRunsForMeMap/setRunsForMe are invoke-kind -- 68+2=70
     // invoke, 2+0=2 send.
     // Phase 47 Plan 12: itad.getKeyStatus/itad.setApiKey are invoke-kind -- 70+2=72 invoke, 2+0=2 send.
-    expect(handleChannels.length).toBe(72)
+    // Phase 86 Plan 08 (D-17): removeRecent is a native `info` channel, no longer registered -- 72-1=71.
+    expect(handleChannels.length).toBe(71)
     expect(listenChannels.length).toBe(2)
   })
 
@@ -664,12 +665,13 @@ describe('completeness — all 66 channels are registered with the right kind, a
     }
   )
 
-  it('per-module declared counts are exactly 11 / 12 / 7 / 14 / 8 / 19, totalling 71 (Phase 47 Plan 12: enrichment 17 -> 19; Quick 261029-mkz, d601ff705: enrichment 15 -> 17; Quick 261027-ch9, a2385f6bf: enrichment 14 -> 15; Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12)', () => {
+  it('per-module declared counts are exactly 11 / 12 / 7 / 14 / 8 / 18, totalling 70 (Phase 86 Plan 08: enrichment 19 -> 18, removeRecent is a native `info` channel; Phase 47 Plan 12: enrichment 17 -> 19; Quick 261029-mkz, d601ff705: enrichment 15 -> 17; Quick 261027-ch9, a2385f6bf: enrichment 14 -> 15; Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12)', () => {
     const counts = MODULES.map((m) => m.declaredChannels.length)
     // Measured (jest failure ACTUAL) and independently re-derived (64 prior total + 3 new = 67,
     // then -1 for winetricksInstall's retirement = 66, then +1 getGamelibFixStatus = 67, then +2 getRunsForMeMap/setRunsForMe = 69, then +2 itad.getKeyStatus/itad.setApiKey = 71) — agree.
-    expect(counts).toEqual([11, 12, 7, 14, 8, 19])
-    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(71)
+    // Phase 86 Plan 08 (D-17): 71 - 1 (removeRecent) = 70.
+    expect(counts).toEqual([11, 12, 7, 14, 8, 18])
+    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(70)
   })
 
   afterAll(() => {

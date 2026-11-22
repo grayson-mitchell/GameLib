@@ -41,6 +41,9 @@ export interface NativeAsync {
     keyPath: string,
     value: unknown
   ) => Promise<boolean>
+  // Phase 86 (86-08, D-17): the renderer's Remove-from-recent, run by the Rust `info` slice
+  // (`gamelib-info`'s `info_recent_remove`). The appName is 1 to 1024 UTF-16 units.
+  removeRecent: (appName: string) => Promise<void>
 }
 
 export interface NativeSync {

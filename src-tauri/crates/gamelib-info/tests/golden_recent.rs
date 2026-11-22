@@ -362,3 +362,82 @@ fn bad_args_are_rejected_with_a_fixed_literal_and_write_nothing() {
     assert!(tree(&p.user_data).is_empty(), "a rejected op wrote a file");
     assert!(p.sink.0.lock().unwrap().is_empty());
 }
+
+/// The two writers the app really has: a launch's add and a tray or renderer remove, on separate
+/// threads against one host. Each is a read-modify-write of the same key, so without the crate's
+/// Mutex one effect is lost to the other's stale read (research Pitfall 7).
+#[test]
+fn a_concurrent_add_and_remove_both_take_effect() {
+    let before = fixtures().join("state/recent/add-over-empty-appname-entry");
+    // [ghost (empty appName), app2]: a remove of app2 and an add of app1 must give [app1].
+    for round in 0..100 {
+        let p = Arc::new(profile(Some(&before)));
+        let barrier = Arc::new(std::sync::Barrier::new(2));
+        let adder = {
+            let (p, barrier) = (Arc::clone(&p), Arc::clone(&barrier));
+            std::thread::spawn(move || {
+                barrier.wait();
+                dispatch_sync(
+                    "info_recent_add",
+                    &[json!({ "appName": "app1", "title": "Game 1", "runner": "gog" })],
+                    &p.ctx,
+                )
+            })
+        };
+        let remover = {
+            let (p, barrier) = (Arc::clone(&p), Arc::clone(&barrier));
+            std::thread::spawn(move || {
+                barrier.wait();
+                dispatch_sync(
+                    "info_recent_remove",
+                    &[json!({ "appName": "app2" })],
+                    &p.ctx,
+                )
+            })
+        };
+        adder.join().unwrap().unwrap();
+        remover.join().unwrap().unwrap();
+        let list = recent::list(&p.ctx).unwrap().to_value();
+        let names: Vec<&str> = list
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|e| e["appName"].as_str().unwrap())
+            .collect();
+        assert_eq!(names, ["app1"], "round {round}: an effect was lost");
+        // The file agrees with the list, and every change was announced.
+        assert_eq!(p.sink.0.lock().unwrap().len(), 2, "round {round}");
+    }
+}
+
+#[test]
+fn many_concurrent_adds_all_land() {
+    let p = Arc::new(profile(None));
+    let threads: Vec<_> = (0..16)
+        .map(|i| {
+            let p = Arc::clone(&p);
+            std::thread::spawn(move || {
+                dispatch_sync(
+                    "info_recent_add",
+                    &[json!({ "appName": format!("g{i}"), "title": "T", "runner": "gog" })],
+                    &p.ctx,
+                )
+                .unwrap();
+            })
+        })
+        .collect();
+    for t in threads {
+        t.join().unwrap();
+    }
+    let list = recent::list(&p.ctx).unwrap().to_value();
+    let mut names: Vec<String> = list
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| e["appName"].as_str().unwrap().to_string())
+        .collect();
+    names.sort();
+    let mut want: Vec<String> = (0..16).map(|i| format!("g{i}")).collect();
+    want.sort();
+    assert_eq!(names, want, "an add was lost");
+}

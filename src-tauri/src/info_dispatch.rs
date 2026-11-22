@@ -152,6 +152,62 @@ pub(crate) fn rpc_info_recent_remove(args: &[Value]) -> Result<Value, String> {
     recent_remove_with(installed("info_recent_remove")?, args)
 }
 
+/// What a rejected `removeRecent` argument looks like: the JSON path and the zod-vocabulary code.
+/// Fixed literals only, never the renderer's value (T-86-15).
+type Rejection = (&'static str, &'static str);
+
+/// Decodes the one `appName` argument of `removeRecent`: exactly one string of 1 to
+/// [`gamelib_info::recent::APP_NAME_MAX_UTF16`] UTF-16 code units.
+fn parse_remove_recent(args: &[Value]) -> Result<&str, Rejection> {
+    let [arg] = args else {
+        return Err(("(args)", "invalid_type"));
+    };
+    let Value::String(name) = arg else {
+        return Err(("0", "invalid_type"));
+    };
+    if name.is_empty() {
+        return Err(("0", "too_small"));
+    }
+    if name.encode_utf16().count() > gamelib_info::recent::APP_NAME_MAX_UTF16 {
+        return Err(("0", "too_big"));
+    }
+    Ok(name)
+}
+
+/// The invalid-args error for a rejected `removeRecent` argument.
+fn remove_recent_rejected((path, code): Rejection) -> String {
+    invalid_args("removeRecent", &[path], &[code])
+}
+
+/// Runs `info_recent_remove` for an already validated `app_name` on the blocking pool. The crate's
+/// own async `dispatch` is driven with `block_on` there (never `dispatch_sync`, which refuses a
+/// thread inside a runtime), so the file write stays off the async workers and the op still holds
+/// its shutdown registrant.
+async fn run_remove_recent(info: Arc<InfoCtx>, app_name: String) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        tauri::async_runtime::block_on(gamelib_info::dispatch(
+            "info_recent_remove",
+            &[serde_json::json!({ "appName": app_name })],
+            &info,
+        ))
+    })
+    .await
+    .map_err(|_| "removeRecent: the removal did not finish".to_string())?
+}
+
+/// The native `removeRecent` handler (slice `info`, D-17). The arguments are validated first, so a
+/// bad call is rejected the same way before and after the context is installed. An error is a fixed
+/// literal (the crate's `<op>:<category>` or the invalid-args marker), never the renderer's string.
+pub(crate) fn remove_recent(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        let app_name = parse_remove_recent(&args)
+            .map_err(remove_recent_rejected)?
+            .to_string();
+        let info = info_ctx().ok_or_else(|| "removeRecent: not ready".to_string())?;
+        run_remove_recent(Arc::clone(info), app_name).await
+    })
+}
+
 #[cfg(test)]
 use gamelib_store::host::StoreHost;
 #[cfg(test)]
@@ -329,5 +385,123 @@ mod tests {
             rpc_info_recent_remove(&[json!({ "appName": "a" })]),
             Err("info_recent_remove:not-ready".to_string())
         );
+    }
+    #[test]
+    fn remove_recent_accepts_exactly_one_bounded_non_empty_string() {
+        assert_eq!(parse_remove_recent(&[json!("abc")]), Ok("abc"));
+        assert_eq!(
+            parse_remove_recent(&[json!("x".repeat(1024))]).map(str::len),
+            Ok(1024)
+        );
+        for (args, want) in [
+            (vec![], ("(args)", "invalid_type")),
+            (vec![json!(1)], ("0", "invalid_type")),
+            (vec![json!(null)], ("0", "invalid_type")),
+            (vec![json!(["a"])], ("0", "invalid_type")),
+            (vec![json!("a"), json!("b")], ("(args)", "invalid_type")),
+            (vec![json!("")], ("0", "too_small")),
+            (vec![json!("x".repeat(1025))], ("0", "too_big")),
+            // Two UTF-16 units per astral character: 513 of them are 1026 units.
+            (vec![json!("\u{1F3AE}".repeat(513))], ("0", "too_big")),
+        ] {
+            assert_eq!(parse_remove_recent(&args), Err(want), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn a_rejected_remove_recent_never_echoes_the_argument() {
+        let secret = "SECRET-APP-NAME-".repeat(80);
+        let rejection = parse_remove_recent(&[json!(secret.clone())]).unwrap_err();
+        let error = remove_recent_rejected(rejection);
+        assert!(
+            error.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+            "{error}"
+        );
+        assert!(!error.contains("SECRET"), "{error}");
+        assert!(error.len() < 300, "{error}");
+    }
+
+    #[test]
+    fn remove_recent_removes_writes_the_golden_bytes_emits_and_updates_the_tray() {
+        let home = FakeHome::new("info-dispatch-");
+        let mut ctx = test_ctx(&home, Some("remove-present-game"));
+        let (sink, emitter, tray) = recording_sink();
+        ctx.recent_sink = Some(sink);
+
+        let result =
+            tauri::async_runtime::block_on(run_remove_recent(Arc::new(ctx), "app3".to_string()));
+        assert_eq!(result, Ok(Value::Null));
+
+        let written = std::fs::read(home.root().join("userData/store/config.json")).unwrap();
+        assert_eq!(written, golden_bytes("remove-present-game"));
+        let pushes = emitter.0.lock().unwrap();
+        assert_eq!(pushes.len(), 1);
+        assert_eq!(pushes[0].0, "recentGamesChanged");
+        let names: Vec<&str> = pushes[0].1[0]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|e| e["appName"].as_str().unwrap())
+            .collect();
+        assert!(!names.contains(&"app3"), "{names:?}");
+        assert_eq!(tray.lock().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn a_launch_add_and_a_native_remove_on_two_threads_both_land() {
+        // [ghost, app2] + add app1 + remove app2 = [app1], whichever runs first.
+        for round in 0..30 {
+            let home = FakeHome::new("info-dispatch-");
+            let ctx = Arc::new(test_ctx(&home, Some("add-over-empty-appname-entry")));
+            let adder = {
+                let ctx = Arc::clone(&ctx);
+                std::thread::spawn(move || {
+                    recent_add_with(
+                        &ctx,
+                        &[json!({ "appName": "app1", "title": "Game 1", "runner": "gog" })],
+                    )
+                })
+            };
+            let removed = tauri::async_runtime::block_on(run_remove_recent(
+                Arc::clone(&ctx),
+                "app2".to_string(),
+            ));
+            assert_eq!(removed, Ok(Value::Null), "round {round}");
+            assert_eq!(adder.join().unwrap(), Ok(Value::Null), "round {round}");
+            let list = gamelib_info::recent::list(&ctx).unwrap().to_value();
+            let names: Vec<&str> = list
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|e| e["appName"].as_str().unwrap())
+                .collect();
+            assert_eq!(names, ["app1"], "round {round}: an effect was lost");
+        }
+    }
+
+    #[test]
+    fn remove_recent_answers_not_ready_before_install_after_validating() {
+        // No test installs the global context.
+        assert!(info_ctx().is_none());
+        let router_ctx = Arc::new(crate::native_router::NativeCtx::for_tests(
+            Arc::new(NoHost),
+            None,
+        ));
+        let ok = tauri::async_runtime::block_on(remove_recent(
+            Arc::clone(&router_ctx),
+            vec![json!("abc")],
+        ));
+        assert_eq!(ok, Err("removeRecent: not ready".to_string()));
+        let bad = tauri::async_runtime::block_on(remove_recent(router_ctx, vec![json!("")]));
+        assert!(bad
+            .unwrap_err()
+            .starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER));
+    }
+
+    /// A host that does nothing: `remove_recent` never reaches the native host.
+    struct NoHost;
+    impl crate::native_router::NativeHost for NoHost {
+        fn open_url(&self, _url: String) {}
+        fn reveal_path(&self, _path: String) {}
     }
 }

@@ -52,7 +52,6 @@ export const enrichmentAsyncArgs = {
   setRunsForMe: z.tuple([runsForMePayload]),
   // Phase 19 (Plan 06): bulk CrossOver-rating resolver (D-11/D-16).
   getCrossoverIndex: noArgs,
-  removeRecent: z.tuple([appName]),
   getWikiGameInfo: z.tuple([
     z.string().max(1024),
     appName,
@@ -94,7 +93,6 @@ interface EnrichmentAsyncReturns {
   // `number` = matched rating, `null` = eligible & consulted with no record, key-absent =
   // never looked up (ineligible under the D-02 gate).
   getCrossoverIndex: Promise<Record<string, number | null>>
-  removeRecent: Promise<void>
   getWikiGameInfo: Promise<WikiInfo | null>
   getGogDiscounts: Promise<CatalogProduct[]>
   searchStores: Promise<StoreSearchResponse>

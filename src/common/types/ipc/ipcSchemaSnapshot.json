@@ -5729,20 +5729,16 @@
     {
       "channel": "removeRecent",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "appName",
+          "type": "string",
+          "maxLength": 1024,
+          "maxLengthUnit": "utf16"
+        }
+      ],
+      "returns": "void"
     },
     {
       "channel": "removeShortcut",

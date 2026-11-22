@@ -17,6 +17,7 @@
 //! `IPC_INVALID_ARGS_MARKER` from [`invalid_args`] (D-03 as refined by research F3), so
 //! `bootErrorSurface` never paints a native rejection as a fatal boot error.
 
+use crate::info_dispatch;
 use crate::ipc_contract::{IPC_INVALID_ARGS, IPC_INVALID_ARGS_MARKER};
 use crate::log_dispatch;
 use crate::log_upload::{self, PasteClient};
@@ -341,6 +342,12 @@ const LOGGER_SLICE: &str = "logger";
 /// writes are applied in send order, one at a time, off the main thread (a write is a persist).
 const STORE_SLICE: &str = "store";
 
+/// The slice that owns the leaf information channels in `nativeChannels.json` (Phase 86): invoke
+/// channels only, so it has no send queue; the handler runs the `gamelib-info` op on the blocking
+/// pool. Named here, with the other slices, for the manifest-slice test.
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) const INFO_SLICE: &str = "info";
+
 /// Run one queued send on its slice worker: the channel picks the handler.
 fn run_send_job(ctx: &Arc<NativeCtx>, job: NativeSendJob) -> Result<(), String> {
     match (job.channel, job.payload) {
@@ -424,6 +431,9 @@ impl NativeRouter {
                 validate: log_dispatch::parse_show_log_file,
             },
         );
+        // Phase 86 (86-08, D-17): the renderer's Remove-from-recent, run by the `info` slice. The
+        // sidecar no longer registers it, so the channel has exactly one owner.
+        invoke.insert("removeRecent", info_dispatch::remove_recent);
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -764,6 +774,28 @@ mod tests {
                 "{name} has no invalid vector: a native channel needs a negative test"
             );
         }
+    }
+
+    #[test]
+    fn native_manifest_info_channels_are_registered_in_the_info_slice() {
+        let m = manifest();
+        let channels = m["channels"].as_object().expect("channels object");
+        let router = router();
+        let info: Vec<&str> = channels
+            .iter()
+            .filter(|(_, spec)| spec["slice"] == INFO_SLICE)
+            .map(|(name, _)| name.as_str())
+            .collect();
+        assert!(info.contains(&"removeRecent"), "{info:?}");
+        for name in info {
+            // The info slice is invoke-only: no send queue exists for it.
+            assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");
+            assert!(
+                router.invoke_handler(name).is_some(),
+                "{name} has no handler"
+            );
+        }
+        assert!(!router.queues.contains_key(INFO_SLICE));
     }
 
     #[test]

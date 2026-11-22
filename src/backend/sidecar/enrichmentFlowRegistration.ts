@@ -2,7 +2,7 @@
  * Curated enrichment-channel registration (Phase 34.2 Plan 06, D-04/D-07/
  * D-10, REQ-34.2-04/REQ-34.2-11/REQ-34.2-12/REQ-34.2-14).
  *
- * Registers the 19 enrichment channels the game-details page and store
+ * Registers the 18 enrichment channels the game-details page and store
  * search container depend on, onto platformApi's own `ipcMain` recorder,
  * importing the REAL underlying bodies plans 34.2-01/34.2-03 already
  * extracted or wired unchanged (mirrors `gameDetailsFlowRegistration.ts`'s
@@ -35,8 +35,6 @@
  *       `handleGetItadSteamGids(appIds)`
  *       (Plan 34.2-13 extraction; imported the same way by
  *       `storeSearch/index.ts` on the Electron side)
- *     - `removeRecent` -> `recent_games/recent_games.ts`'s
- *       `removeRecentGame(appName)` (`recent_games/ipc_handler.ts:4`)
  *
  * A `send` channel registered with `ipcMain.handle` (or the reverse) fails
  * 100% SILENTLY at runtime (Phase 31 Pitfall 2) — all eight registrations
@@ -86,11 +84,9 @@
  * hoisting that build out of the per-game loop is a recorded deferred
  * optimization (34.2-03-SUMMARY.md), not a fix this slice makes.
  *
- * `removeRecent` imports ONLY `removeRecentGame` from
- * `recent_games/recent_games.ts` — that module's single `export {}`
- * statement also names `getRecentGames`, `addRecentGame` and
- * `removeRecentGame`, of which this channel needs only the last (curated-import
- * discipline, D-04).
+ * Phase 86 (86-08, D-17): `removeRecent` is no longer registered here. It is a
+ * native `info` channel served by Rust (`nativeChannels.json`), so it has exactly
+ * one owner.
  *
  * Uses platformApi's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`/`addListener`) — `backend/ipc.ts` itself imports the real
@@ -179,7 +175,6 @@ import {
   handleGetItadSteamGids
 } from '../storeSearch/handlers'
 import { getRunsForMeMap, setRunsForMeByUser } from '../runsForMe'
-import { removeRecentGame } from '../recent_games/recent_games'
 import type { SteamGridDbSecretStore } from '../steamgrid/secretStore'
 import type { ItadSecrets } from '../storeSearch/itadSecrets'
 import * as SteamGridDB from '../steamgrid/utils'
@@ -237,7 +232,7 @@ const RUNS_FOR_ME_RUNNERS: readonly string[] = Object.freeze([
 ] as const)
 
 /**
- * Registers the 19 enrichment channels. Called once from `handlers.ts`
+ * Registers the 18 enrichment channels. Called once from `handlers.ts`
  * — this module owns no side effects at import time beyond the imports
  * above; the caller decides when registration onto the handler registry
  * happens.
@@ -362,12 +357,6 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
     'getItadSteamGids',
     async (_event: unknown, ...args: unknown[]) =>
       handleGetItadSteamGids(deps, args[0] as string[])
-  )
-
-  // Imports ONLY removeRecentGame from recent_games.ts — not
-  // getRecentGames/addRecentGame (curated-import discipline, D-04).
-  deps.ipc.handle('removeRecent', async (_event: unknown, ...args: unknown[]) =>
-    removeRecentGame(deps, args[0] as string)
   )
 
   deps.ipc.handle(

@@ -363,6 +363,21 @@
         ["http://exa mple.com"],
         ["https://a", "extra"]
       ]
+    },
+    "removeRecent": {
+      "kind": "invoke",
+      "slice": "info",
+      "args": [
+        {
+          "name": "appName",
+          "type": "string",
+          "maxLength": 1024,
+          "maxLengthUnit": "utf16"
+        }
+      ],
+      "returns": "void",
+      "valid": [["abc"]],
+      "invalid": [[], [1], ["a", "b"], [""]]
     }
   }
 }

@@ -43,7 +43,6 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
     ]
   },
   getCrossoverIndex: noArgs,
-  removeRecent: { valid: [['abc']], invalid: [[], [''], [{}]] },
   getWikiGameInfo: {
     valid: [
       ['Title', 'abc', 'gog'],
@@ -105,9 +104,9 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
 }
 
 describe('enrichment channel schemas', () => {
-  it('has a fixture for every key (19 total)', () => {
+  it('has a fixture for every key (18 total)', () => {
     expectFixtureCoverage(enrichmentAsyncArgs, table)
-    expect(Object.keys(enrichmentAsyncArgs).length).toBe(19)
+    expect(Object.keys(enrichmentAsyncArgs).length).toBe(18)
   })
   runFixtureTable(enrichmentAsyncArgs, table)
 

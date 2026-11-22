@@ -942,24 +942,10 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
   })
 
   // ── REQ-34.2-11: removeRecent positive side-effect ────────────────────────
-  describe('REQ-34.2-11 removeRecent (invoke)', () => {
-    it('REQ-34.2-11 actually removes the named entry from the real configStore-backed recent-games list', async () => {
-      configStore.set('games.recent', [
-        { appName: 'keep-me', title: 'Keep Me' },
-        { appName: 'remove-me', title: 'Remove Me' }
-      ])
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'rr-1', 'removeRecent', ['remove-me'])
-      await flush()
-
-      expect(findResponse(frames, 'rr-1')?.ok).toBe(true)
-      const remaining = configStore.get('games.recent', []) as Array<{
-        appName: string
-      }>
-      expect(remaining.map((g) => g.appName)).toEqual(['keep-me'])
-    })
-  })
+  // Phase 86 Plan 08 (D-17): `removeRecent` is a native `info` channel served by Rust, so the
+  // sidecar no longer registers it. Its removal, write bytes, emit and tray update are pinned by
+  // `gamelib-info`'s `golden_recent` and the shell's `info_dispatch` tests; its single owner by
+  // `nativeChannelOwnership.test.ts`.
 
   // ── REQ-34.2-11: getWikiGameInfo resolves via getGame(appName, runner);
   // the title argument is intentionally ignored ────────────────────────────
@@ -1457,8 +1443,8 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       ['getCrossoverIndex', []],
       ['searchStores', ['query-x']],
       ['getStoreSearchDeals', [ITAD_GID]],
-      ['getItadSteamGids', [['440']]],
-      ['removeRecent', ['app-x']]
+      ['getItadSteamGids', [['440']]]
+      // `removeRecent` left this list in Phase 86 Plan 08 (D-17): it is a native `info` channel.
     ]
 
     it.each(ALL_8_CHANNELS)(
