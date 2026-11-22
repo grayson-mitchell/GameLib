@@ -393,11 +393,13 @@ export class LogForwarder {
 
   /**
    * Resolves once everything queued so far has been handed to the transport and its write callback
-   * has run, or at once when no transport is bound. The whole call, the wait on Promise-valued
-   * messages and the wait on the transport together, takes at most `LOG_FLUSH_TIMEOUT_MS` (one
-   * deadline taken at entry, WR-06): a message that never settles cannot hold it, and the lines of
-   * other writers are still handed to the transport. Never rejects. The fatal `uncaughtException`
-   * guard awaits this before exiting, so it must not hang.
+   * has run. It always waits for the Promise-valued messages in flight first (bounded), so with no
+   * transport bound it returns after that chain wait, without a transport wait, and not at once: a
+   * message that never settles holds it for the whole timeout. The whole call, the wait on
+   * Promise-valued messages and the wait on the transport together, takes at most
+   * `LOG_FLUSH_TIMEOUT_MS` (one deadline taken at entry, WR-06), so a message that never settles
+   * cannot hold it longer, and the lines of other writers are still handed to the transport. Never
+   * rejects. The fatal `uncaughtException` guard awaits this before exiting, so it must not hang.
    */
   async flush(): Promise<void> {
     const deadline = Date.now() + this.#flushTimeoutMs
