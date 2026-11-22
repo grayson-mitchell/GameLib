@@ -33,3 +33,17 @@ colon.
 
 Encode the term with `encodeURIComponent` after the ` -` to `:` replacement, re-record the PCGamingWiki goldens
 (a colon becomes `%3A`), and make the same change in both the TS and the Rust source in one commit.
+
+## Resolution
+
+Fixed 2026-11-23 (fix commit `aacc9c11f`). The TS half has no target: `src/backend/wiki_game_info/pcgamingwiki/utils.ts`
+was deleted in 86-24 (`fcf981590`), so the "same change in the TS and the Rust" step does not apply, and the D-03 parity
+reason for encoding only spaces is gone. In `src-tauri/crates/gamelib-info/src/wiki/pcgw.rs`, `page_id` now builds
+`srsearch` with `encode_uri_component(title)` after the ` -` to `:` replacement, as `agw.rs` does, and the module doc is
+reworded. The edge test now expects `Anno%201602%3A%20Konigs%20-%20Edition%20%26%20More`, and the new test
+`pcgamingwiki_keeps_hash_equals_and_semicolon_inside_the_search_term` pins `Fez%20%231` and
+`Rock%3DPaper%3B%20Scissors`. The `#KILLALLZOMBIES` golden (`stale-crossover-miss-now-covered-refetches`) was
+re-recorded from a live request (response `date` Sun, 22 Nov 2026 18:11:01 GMT). It is now a zero-hit JSON answer, so
+the outcome went from `error` to `notfound`, `requestsMade` is unchanged at 3, and `body-1.html` was replaced by
+`body-1.json`. That was the only PCGW golden whose term changed under encoding. `cargo test -p gamelib-info`: all green
+(`golden_wiki` 11, `golden_wiki_sources` 8, `wiki_source_edges` 13).
