@@ -1,0 +1,35 @@
+{
+  "ops": [
+    {
+      "op": "wiki",
+      "game": "Zzqx Qvbnm",
+      "forceRefresh": false,
+      "result": {
+        "pcgamingwiki": null,
+        "applegamingwiki": {
+          "crossoverRating": "",
+          "wineRating": "",
+          "crossoverLink": ""
+        },
+        "codeweavers": {
+          "macRating": null,
+          "linuxRating": null,
+          "slug": ""
+        },
+        "howlongtobeat": null,
+        "gamesdb": {
+          "steamID": ""
+        },
+        "steamInfo": null,
+        "umuId": null,
+        "fetchStatus": {
+          "pcgamingwiki": "notfound",
+          "howlongtobeat": "notfound"
+        }
+      },
+      "requestsMade": 0
+    }
+  ],
+  "requests": [],
+  "gogApiInfoWrites": []
+}

@@ -1,0 +1,33 @@
+{
+	"Cyberpunk 2077": {
+		"pcgamingwiki": null,
+		"applegamingwiki": {
+			"crossoverRating": "perfect",
+			"wineRating": "perfect",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": 5,
+			"linuxRating": null,
+			"slug": "cyberpunk-2077"
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": "1091500"
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "error",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"Cyberpunk 2077": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)"
+	}
+}

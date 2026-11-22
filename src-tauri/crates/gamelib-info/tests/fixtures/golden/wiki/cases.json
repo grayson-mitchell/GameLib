@@ -1,0 +1,1123 @@
+[
+  {
+    "id": "live-steam-mac",
+    "note": "Steam title on mac: PCGamingWiki, AppleGamingWiki, the CrossOver index (seeded from Task 2), GamesDB skipped for Steam, HowLongToBeat by the PCGamingWiki id. Live.",
+    "platform": "mac",
+    "live": true,
+    "crossoverIndex": true,
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "steam",
+          "app_name": "1245620",
+          "title": "Elden Ring"
+        }
+      }
+    ]
+  },
+  {
+    "id": "live-steam-linux",
+    "note": "Steam title on linux: umu (a miss for this app), ProtonDB and Steam Deck keyed by the app id. Live.",
+    "platform": "linux",
+    "live": true,
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "steam",
+          "app_name": "1245620",
+          "title": "Elden Ring"
+        }
+      }
+    ]
+  },
+  {
+    "id": "live-steam-windows",
+    "note": "Steam title on windows: the bare path, PCGamingWiki and HowLongToBeat only. Live.",
+    "platform": "windows",
+    "live": true,
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "steam",
+          "app_name": "1245620",
+          "title": "Elden Ring"
+        }
+      }
+    ]
+  },
+  {
+    "id": "live-epic-mac",
+    "note": "Epic title on mac: the GamesDB read for the epic store, AppleGamingWiki, the CrossOver index. Live.",
+    "platform": "mac",
+    "live": true,
+    "crossoverIndex": true,
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "legendary",
+          "app_name": "Ginger",
+          "title": "Cyberpunk 2077"
+        }
+      }
+    ]
+  },
+  {
+    "id": "live-epic-linux",
+    "note": "Epic title on linux: umu (egs store, lower-cased codename), the Steam id from GamesDB feeds ProtonDB and Steam Deck. Live.",
+    "platform": "linux",
+    "live": true,
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "legendary",
+          "app_name": "Ginger",
+          "title": "Cyberpunk 2077"
+        }
+      }
+    ]
+  },
+  {
+    "id": "live-gog-mac",
+    "note": "GOG title on mac, through the real getExtraInfo: the GOG requests Rust will not make are tsOnly and Rust's own v2/games read is rustOnly (D-23). Live.",
+    "platform": "mac",
+    "live": true,
+    "crossoverIndex": true,
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "gog",
+          "app_name": "1423049311",
+          "title": "Cyberpunk 2077"
+        }
+      }
+    ]
+  },
+  {
+    "id": "live-gog-linux",
+    "note": "GOG title on linux: umu (gog store), the Steam id from GamesDB feeds ProtonDB and Steam Deck, plus the D-23 tsOnly and rustOnly exchanges. Live.",
+    "platform": "linux",
+    "live": true,
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "gog",
+          "app_name": "1423049311",
+          "title": "Cyberpunk 2077"
+        }
+      }
+    ]
+  },
+  {
+    "id": "live-sideload-mac",
+    "note": "A sideload title on mac: no store catalog, so no umu and no GamesDB; HowLongToBeat by the PCGamingWiki id. Live.",
+    "platform": "mac",
+    "live": true,
+    "crossoverIndex": true,
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "celeste-sideload",
+          "title": "Celeste"
+        }
+      }
+    ]
+  },
+  {
+    "id": "live-sideload-linux",
+    "note": "A sideload title on linux: umu is null with no request, no Steam id so no ProtonDB. Live.",
+    "platform": "linux",
+    "live": true,
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "celeste-sideload",
+          "title": "Celeste"
+        }
+      }
+    ]
+  },
+  {
+    "id": "live-dotted-title-linux",
+    "note": "A title with dots: the store key nests by dot path in the cache file, and the second call reads the same entry back with no request. Live.",
+    "platform": "linux",
+    "live": true,
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "steam",
+          "app_name": "4500",
+          "title": "S.T.A.L.K.E.R.: Shadow of Chernobyl"
+        }
+      },
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "steam",
+          "app_name": "4500",
+          "title": "S.T.A.L.K.E.R.: Shadow of Chernobyl"
+        }
+      }
+    ]
+  },
+  {
+    "id": "live-not-found-windows",
+    "note": "A title no source knows: PCGamingWiki notfound, HowLongToBeat notfound. Live.",
+    "platform": "windows",
+    "live": true,
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "live-not-found-mac",
+    "note": "A title no source knows on mac: the AppleGamingWiki empty marker and the CrossOver miss marker are cached. Live.",
+    "platform": "mac",
+    "live": true,
+    "crossoverIndex": true,
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "live-repeat-call-served-from-cache",
+    "note": "The same title twice inside the 30 day lifespan: the second call returns the cached value with no request (idempotency edge). Live first call.",
+    "platform": "windows",
+    "live": true,
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      },
+      {
+        "op": "advance",
+        "minutes": 600
+      },
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cache-expired-after-30-days-refetches",
+    "note": "An entry older than the 30 day lifespan is dropped on read and the title is fetched again. Live.",
+    "platform": "windows",
+    "live": true,
+    "wikiCache": [
+      {
+        "title": "Zzqx Qvbnm",
+        "ageMinutes": 45000,
+        "value": {
+          "pcgamingwiki": null,
+          "applegamingwiki": {
+            "crossoverRating": "",
+            "wineRating": "",
+            "crossoverLink": ""
+          },
+          "codeweavers": {
+            "macRating": null,
+            "linuxRating": null,
+            "slug": ""
+          },
+          "howlongtobeat": null,
+          "gamesdb": {
+            "steamID": ""
+          },
+          "steamInfo": null,
+          "umuId": null,
+          "fetchStatus": {
+            "pcgamingwiki": "notfound",
+            "howlongtobeat": "notfound"
+          }
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "force-refresh-bypasses-fresh-cache",
+    "note": "forceRefresh true fetches even though the cached entry is fresh. Live.",
+    "platform": "windows",
+    "live": true,
+    "wikiCache": [
+      {
+        "title": "Zzqx Qvbnm",
+        "ageMinutes": 60,
+        "value": {
+          "pcgamingwiki": null,
+          "applegamingwiki": {
+            "crossoverRating": "",
+            "wineRating": "",
+            "crossoverLink": ""
+          },
+          "codeweavers": {
+            "macRating": null,
+            "linuxRating": null,
+            "slug": ""
+          },
+          "howlongtobeat": null,
+          "gamesdb": {
+            "steamID": ""
+          },
+          "steamInfo": null,
+          "umuId": null,
+          "fetchStatus": {
+            "pcgamingwiki": "notfound",
+            "howlongtobeat": "notfound"
+          }
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        },
+        "forceRefresh": true
+      }
+    ]
+  },
+  {
+    "id": "cache-fresh-windows-no-request",
+    "note": "A fresh, complete cached entry is returned with no request at all.",
+    "platform": "windows",
+    "wikiCache": [
+      {
+        "title": "Zzqx Qvbnm",
+        "ageMinutes": 60,
+        "value": {
+          "pcgamingwiki": null,
+          "applegamingwiki": {
+            "crossoverRating": "",
+            "wineRating": "",
+            "crossoverLink": ""
+          },
+          "codeweavers": {
+            "macRating": null,
+            "linuxRating": null,
+            "slug": ""
+          },
+          "howlongtobeat": null,
+          "gamesdb": {
+            "steamID": ""
+          },
+          "steamInfo": null,
+          "umuId": null,
+          "fetchStatus": {
+            "pcgamingwiki": "notfound",
+            "howlongtobeat": "notfound"
+          }
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "stale-apple-data-mac-refetches",
+    "note": "On mac a cached entry whose applegamingwiki is null is a miss (staleAppleData). Live.",
+    "platform": "mac",
+    "live": true,
+    "crossoverIndex": true,
+    "wikiCache": [
+      {
+        "title": "Zzqx Qvbnm",
+        "ageMinutes": 60,
+        "value": {
+          "pcgamingwiki": null,
+          "applegamingwiki": null,
+          "codeweavers": {
+            "macRating": null,
+            "linuxRating": null,
+            "slug": ""
+          },
+          "howlongtobeat": null,
+          "gamesdb": {
+            "steamID": ""
+          },
+          "steamInfo": null,
+          "umuId": null,
+          "fetchStatus": {
+            "pcgamingwiki": "notfound",
+            "howlongtobeat": "notfound"
+          }
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "stale-crossover-null-mac-refetches",
+    "note": "On mac a cached entry whose codeweavers is null is a miss (staleCrossoverData). Live.",
+    "platform": "mac",
+    "live": true,
+    "crossoverIndex": true,
+    "wikiCache": [
+      {
+        "title": "Zzqx Qvbnm",
+        "ageMinutes": 60,
+        "value": {
+          "pcgamingwiki": null,
+          "applegamingwiki": {
+            "crossoverRating": "",
+            "wineRating": "",
+            "crossoverLink": ""
+          },
+          "codeweavers": null,
+          "howlongtobeat": null,
+          "gamesdb": {
+            "steamID": ""
+          },
+          "steamInfo": null,
+          "umuId": null,
+          "fetchStatus": {
+            "pcgamingwiki": "notfound",
+            "howlongtobeat": "notfound"
+          }
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "stale-crossover-old-shape-mac-refetches",
+    "note": "On mac a cached codeweavers without macRating (the old shape) is a miss. Live.",
+    "platform": "mac",
+    "live": true,
+    "crossoverIndex": true,
+    "wikiCache": [
+      {
+        "title": "Zzqx Qvbnm",
+        "ageMinutes": 60,
+        "value": {
+          "pcgamingwiki": null,
+          "applegamingwiki": {
+            "crossoverRating": "",
+            "wineRating": "",
+            "crossoverLink": ""
+          },
+          "codeweavers": {
+            "slug": ""
+          },
+          "howlongtobeat": null,
+          "gamesdb": {
+            "steamID": ""
+          },
+          "steamInfo": null,
+          "umuId": null,
+          "fetchStatus": {
+            "pcgamingwiki": "notfound",
+            "howlongtobeat": "notfound"
+          }
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "stale-crossover-miss-now-covered-refetches",
+    "note": "A cached CrossOver miss (macRating null) is stale only when the index now has the title: it does here, so the title is fetched again. Live.",
+    "platform": "mac",
+    "live": true,
+    "crossoverIndex": true,
+    "wikiCache": [
+      {
+        "title": "#KILLALLZOMBIES",
+        "ageMinutes": 60,
+        "value": {
+          "pcgamingwiki": null,
+          "applegamingwiki": {
+            "crossoverRating": "",
+            "wineRating": "",
+            "crossoverLink": ""
+          },
+          "codeweavers": {
+            "macRating": null,
+            "linuxRating": null,
+            "slug": ""
+          },
+          "howlongtobeat": null,
+          "gamesdb": {
+            "steamID": ""
+          },
+          "steamInfo": null,
+          "umuId": null,
+          "fetchStatus": {
+            "pcgamingwiki": "notfound",
+            "howlongtobeat": "notfound"
+          }
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "steam",
+          "app_name": "303720",
+          "title": "#KILLALLZOMBIES"
+        }
+      }
+    ]
+  },
+  {
+    "id": "crossover-miss-stays-cached-when-index-lacks",
+    "note": "The same cached miss for a title the index does not have stays cached: no request.",
+    "platform": "mac",
+    "crossoverIndex": true,
+    "wikiCache": [
+      {
+        "title": "Zzqx Qvbnm",
+        "ageMinutes": 60,
+        "value": {
+          "pcgamingwiki": null,
+          "applegamingwiki": {
+            "crossoverRating": "",
+            "wineRating": "",
+            "crossoverLink": ""
+          },
+          "codeweavers": {
+            "macRating": null,
+            "linuxRating": null,
+            "slug": ""
+          },
+          "howlongtobeat": null,
+          "gamesdb": {
+            "steamID": ""
+          },
+          "steamInfo": null,
+          "umuId": null,
+          "fetchStatus": {
+            "pcgamingwiki": "notfound",
+            "howlongtobeat": "notfound"
+          }
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "stale-pcgw-error-status-refetches",
+    "note": "A cached fetchStatus.pcgamingwiki of error is a miss; PCGamingWiki answers 403 again (synthetic) and the entry stays error. HowLongToBeat live.",
+    "platform": "windows",
+    "wikiCache": [
+      {
+        "title": "Zzqx Qvbnm",
+        "ageMinutes": 60,
+        "value": {
+          "pcgamingwiki": null,
+          "applegamingwiki": {
+            "crossoverRating": "",
+            "wineRating": "",
+            "crossoverLink": ""
+          },
+          "codeweavers": {
+            "macRating": null,
+            "linuxRating": null,
+            "slug": ""
+          },
+          "howlongtobeat": null,
+          "gamesdb": {
+            "steamID": ""
+          },
+          "steamInfo": null,
+          "umuId": null,
+          "fetchStatus": {
+            "pcgamingwiki": "error",
+            "howlongtobeat": "notfound"
+          }
+        }
+      }
+    ],
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/w/api.php",
+        "status": 403,
+        "text": "Forbidden"
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "stale-hltb-skipped-status-refetches",
+    "note": "A cached fetchStatus.howlongtobeat of skipped (legacy) is a miss. Live.",
+    "platform": "windows",
+    "live": true,
+    "wikiCache": [
+      {
+        "title": "Zzqx Qvbnm",
+        "ageMinutes": 60,
+        "value": {
+          "pcgamingwiki": null,
+          "applegamingwiki": {
+            "crossoverRating": "",
+            "wineRating": "",
+            "crossoverLink": ""
+          },
+          "codeweavers": {
+            "macRating": null,
+            "linuxRating": null,
+            "slug": ""
+          },
+          "howlongtobeat": null,
+          "gamesdb": {
+            "steamID": ""
+          },
+          "steamInfo": null,
+          "umuId": null,
+          "fetchStatus": {
+            "pcgamingwiki": "notfound",
+            "howlongtobeat": "skipped"
+          }
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "stale-no-fetch-status-refetches",
+    "note": "A cached entry with no fetchStatus at all (the 403-era shape) is a miss. Live.",
+    "platform": "windows",
+    "live": true,
+    "wikiCache": [
+      {
+        "title": "Zzqx Qvbnm",
+        "ageMinutes": 60,
+        "value": {
+          "pcgamingwiki": null,
+          "applegamingwiki": {
+            "crossoverRating": "",
+            "wineRating": "",
+            "crossoverLink": ""
+          },
+          "codeweavers": {
+            "macRating": null,
+            "linuxRating": null,
+            "slug": ""
+          },
+          "howlongtobeat": null,
+          "gamesdb": {
+            "steamID": ""
+          },
+          "steamInfo": null,
+          "umuId": null
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "pcgw-403-is-error-not-notfound",
+    "note": "A PCGamingWiki 403 is outcome error (not notfound) and that outcome is what gets cached. Synthetic 403, HowLongToBeat live.",
+    "platform": "windows",
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/w/api.php",
+        "status": 403,
+        "text": "Forbidden"
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "crossover-index-unavailable-mac",
+    "note": "On mac with no stored CrossOver index and a transport failure fetching it, codeweavers is null. Synthetic failure, other sources live.",
+    "platform": "mac",
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/grayson-mitchell/GameLib/releases/download/crossover-index/crossover-index.json.gz",
+        "networkError": true
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "zzqx",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hltb-search-403-reinitialises-once",
+    "note": "A 403 on the HowLongToBeat search re-initialises the credentials once and retries. Synthetic init (twice) and search (403 then 200).",
+    "platform": "windows",
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/api/search/site/init",
+        "json": {
+          "token": "synthetic-token-value",
+          "hpKey": "hpk",
+          "hpVal": "hpv"
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/search/site",
+        "status": 403,
+        "json": {
+          "data": []
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/search/site",
+        "status": 200,
+        "json": {
+          "data": [
+            {
+              "game_id": 4242,
+              "game_name": "Zzqx Qvbnm",
+              "comp_main": 36000,
+              "comp_plus": 72000,
+              "comp_100": 108000,
+              "game_image": "4242_zzqx.jpg"
+            }
+          ]
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "hltb-synth",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hltb-ambiguous-search-refuses",
+    "note": "Two results with the same normalised name: no guess, howlongtobeat null. Synthetic search.",
+    "platform": "windows",
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/api/search/site/init",
+        "json": {
+          "token": "synthetic-token-value",
+          "hpKey": "hpk",
+          "hpVal": "hpv"
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/search/site",
+        "status": 200,
+        "json": {
+          "data": [
+            {
+              "game_id": 4242,
+              "game_name": "Zzqx Qvbnm",
+              "comp_main": 36000,
+              "comp_plus": 72000,
+              "comp_100": 108000,
+              "game_image": "4242_zzqx.jpg"
+            },
+            {
+              "game_id": 4243,
+              "game_name": "Zzqx Qvbnm",
+              "comp_main": 36000,
+              "comp_plus": 72000,
+              "comp_100": 108000,
+              "game_image": "4242_zzqx.jpg"
+            }
+          ]
+        }
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "hltb-synth",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hltb-init-403-no-credentials",
+    "note": "The HowLongToBeat init answers 403: no credentials, howlongtobeat null, no search request. Synthetic init.",
+    "platform": "windows",
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/api/search/site/init",
+        "status": 403,
+        "text": "Forbidden"
+      }
+    ],
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "sideload",
+          "app_name": "hltb-synth",
+          "title": "Zzqx Qvbnm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "umu-miss-caches-null",
+    "note": "An app umu has no entry for: null, and null is stored. Live.",
+    "platform": "linux",
+    "live": true,
+    "ops": [
+      {
+        "op": "umu",
+        "runner": "steam",
+        "app_name": "1245620"
+      }
+    ]
+  },
+  {
+    "id": "umu-cached-null-is-refetched",
+    "note": "A cached null is falsy, so it is looked up again (the TS quirk). Live.",
+    "platform": "linux",
+    "live": true,
+    "umuCache": [
+      {
+        "key": "steam_1091500",
+        "ageMinutes": 5,
+        "value": null
+      }
+    ],
+    "ops": [
+      {
+        "op": "umu",
+        "runner": "steam",
+        "app_name": "1091500"
+      }
+    ]
+  },
+  {
+    "id": "umu-cache-fresh-no-request",
+    "note": "A cached id inside the 6 hour lifespan is returned with no request.",
+    "platform": "linux",
+    "umuCache": [
+      {
+        "key": "steam_1091500",
+        "ageMinutes": 10,
+        "value": "umu-cached-fresh"
+      }
+    ],
+    "ops": [
+      {
+        "op": "umu",
+        "runner": "steam",
+        "app_name": "1091500"
+      }
+    ]
+  },
+  {
+    "id": "umu-expired-truthy-value-kept",
+    "note": "An expired cached id that is truthy is kept (invalidateCheck is WhenFalsy): returned with no request.",
+    "platform": "linux",
+    "umuCache": [
+      {
+        "key": "steam_1091500",
+        "ageMinutes": 400,
+        "value": "umu-cached-expired"
+      }
+    ],
+    "ops": [
+      {
+        "op": "umu",
+        "runner": "steam",
+        "app_name": "1091500"
+      }
+    ]
+  },
+  {
+    "id": "umu-sideload-has-no-store-catalog",
+    "note": "A runner without a store catalog returns null with no request.",
+    "platform": "linux",
+    "ops": [
+      {
+        "op": "umu",
+        "runner": "sideload",
+        "app_name": "anything"
+      }
+    ]
+  },
+  {
+    "id": "umu-server-error-returns-null-uncached",
+    "note": "A 500 from umu: null, nothing stored. Synthetic.",
+    "platform": "linux",
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/umu_api.php",
+        "status": 500,
+        "text": "error"
+      }
+    ],
+    "ops": [
+      {
+        "op": "umu",
+        "runner": "steam",
+        "app_name": "1091500"
+      }
+    ]
+  },
+  {
+    "id": "umu-transport-failure-returns-null",
+    "note": "A transport failure: null, nothing stored. Synthetic.",
+    "platform": "linux",
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/umu_api.php",
+        "networkError": true
+      }
+    ],
+    "ops": [
+      {
+        "op": "umu",
+        "runner": "legendary",
+        "app_name": "Ginger"
+      }
+    ]
+  },
+  {
+    "id": "umu-hit-epic-codename-lower-cased",
+    "note": "An epic codename umu knows: the request lower-cases it and uses the egs store; the id is returned and cached. Live.",
+    "platform": "linux",
+    "live": true,
+    "ops": [
+      {
+        "op": "umu",
+        "runner": "legendary",
+        "app_name": "Ginger"
+      }
+    ]
+  },
+  {
+    "id": "umu-nile-miss",
+    "note": "The amazon store mapping for a nile title umu has no entry for: null and null is stored. Live.",
+    "platform": "linux",
+    "live": true,
+    "ops": [
+      {
+        "op": "umu",
+        "runner": "nile",
+        "app_name": "amzn1.adg.product.0000"
+      }
+    ]
+  },
+  {
+    "id": "gog-pcgw-cargo-id-hit-synthetic",
+    "note": "The GOG-id PCGamingWiki lookup answers with a page id (synthetic; the live API now answers permissiondenied, see live-gog-linux), then the real recorded page text is parsed. GOG getExtraInfo and GamesDB live; D-23 tsOnly and rustOnly exchanges.",
+    "platform": "windows",
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "gog",
+          "app_name": "1423049311",
+          "title": "Cyberpunk 2077"
+        }
+      }
+    ],
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/w/api.php",
+        "json": {
+          "cargoquery": [
+            {
+              "title": {
+                "pageID": "97605"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/w/api.php",
+        "fromRecorded": {
+          "case": "live-epic-linux",
+          "file": "body-3.json"
+        }
+      }
+    ]
+  },
+  {
+    "id": "gog-pcgw-cargo-empty-falls-back-to-title-search-synthetic",
+    "note": "An empty cargo result falls through to the title search, then the page text is parsed (the recorded Cyberpunk search and page bodies). D-23 exchanges as above.",
+    "platform": "windows",
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "gog",
+          "app_name": "1423049311",
+          "title": "Cyberpunk 2077"
+        }
+      }
+    ],
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/w/api.php",
+        "json": {
+          "cargoquery": []
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/w/api.php",
+        "fromRecorded": {
+          "case": "live-epic-linux",
+          "file": "body-1.json"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/w/api.php",
+        "fromRecorded": {
+          "case": "live-epic-linux",
+          "file": "body-3.json"
+        }
+      }
+    ]
+  }
+]

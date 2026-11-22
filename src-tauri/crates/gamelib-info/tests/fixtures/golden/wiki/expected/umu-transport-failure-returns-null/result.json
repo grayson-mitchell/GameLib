@@ -1,0 +1,15 @@
+{
+  "ops": [
+    {
+      "op": "umu",
+      "runner": "legendary",
+      "app_name": "Ginger",
+      "result": null,
+      "requestsMade": 1
+    }
+  ],
+  "requests": [
+    "GET https://umu.openwinecomponents.org/umu_api.php?codename=ginger&store=egs"
+  ],
+  "gogApiInfoWrites": []
+}

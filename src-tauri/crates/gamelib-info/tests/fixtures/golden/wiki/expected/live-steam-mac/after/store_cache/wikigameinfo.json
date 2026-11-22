@@ -1,0 +1,66 @@
+{
+	"Elden Ring": {
+		"pcgamingwiki": {
+			"steamID": "2622380",
+			"howLongToBeatID": "160589",
+			"metacritic": {
+				"score": "80",
+				"urlid": "elden-ring-nightreign"
+			},
+			"opencritic": {
+				"score": "80",
+				"urlid": "18502/elden-ring-nightreign"
+			},
+			"igdb": {
+				"score": "85",
+				"urlid": "elden-ring-nightreign"
+			},
+			"direct3DVersions": [
+				"12"
+			],
+			"genres": [
+				"Action",
+				"RPG"
+			],
+			"releaseDate": [
+				"Windows: May 29, 2025"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "playable",
+			"wineRating": "perfect",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": 5,
+			"linuxRating": null,
+			"slug": "elden-ring"
+		},
+		"howlongtobeat": {
+			"mainStory": 29,
+			"mainExtra": 41,
+			"completionist": 69,
+			"gameId": 160589,
+			"gameName": "Elden Ring: Nightreign",
+			"gameImageUrl": "https://howlongtobeat.com/games/160589_Elden_Ring_Nightreign.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/160589"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"Elden Ring": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)"
+	}
+}

@@ -1,0 +1,193 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=S.T.A.L.K.E.R.%20Shadow%20of%20Chernobyl&format=json",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:51 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=bYM%2BJTQvJVHIMH1DALzfSAPmVtZMhU8d53fflSnk9b61d%2B%2FO2%2B2A7iyTuOXIyJtqHQrTU2TzuMYd5D40R5nvxkVdF1kxVQ%2BzCYRfTZzxoXFulGMTHdjzeI8akpVehGjT9B9VlUj0\"}]}",
+        "cache-control": "private, must-revalidate, max-age=0",
+        "content-disposition": "inline; filename=api-result.json",
+        "server": "cloudflare",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "093c61a92de9514f1b244f07",
+        "x-varnish": "200479179",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "58",
+        "last-modified": "Sun, 22 Nov 2026 10:07:53 GMT",
+        "cf-cache-status": "HIT",
+        "strict-transport-security": "max-age=15552000; includeSubDomains; preload",
+        "cf-ray": "a5e722a0bd1357a4-WLG"
+      },
+      "bodyFile": "body-1.json"
+    }
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://www.pcgamingwiki.com/w/api.php?action=parse&format=json&pageid=204694&redirects=true&prop=wikitext",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:51 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "cache-control": "private, must-revalidate, max-age=0",
+        "content-disposition": "inline; filename=api-result.json",
+        "server": "cloudflare",
+        "x-varnish": "202774317",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "bd7e20eb5f86eebee87fbd1b",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "57",
+        "last-modified": "Sun, 22 Nov 2026 10:07:54 GMT",
+        "cf-cache-status": "HIT",
+        "strict-transport-security": "max-age=15552000; includeSubDomains; preload",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=4ol2M5NvbcnYsTYJdYWxCfm%2Fi98cPOmYPxXcccvVzqM%2FZLl8g13FuYJLDnDD%2B3PhLP0UWebllqnDkpRwaDTKgkK7wH%2BSeuUsLmYlrFAxmBhQVD2JAXdoxNmxtRm57qxHVQHjRDpr\"}]}",
+        "cf-ray": "a5e722a0cd3257a4-WLG"
+      },
+      "bodyFile": "body-2.json"
+    }
+  },
+  {
+    "id": "ex-3",
+    "request": {
+      "method": "GET",
+      "url": "https://umu.openwinecomponents.org/umu_api.php?codename=4500&store=steam",
+      "headers": {
+        "accept": "application/json, text/plain, */*"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:51 GMT",
+        "content-type": "application/json",
+        "connection": "keep-alive",
+        "server": "cloudflare",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "strict-transport-security": "max-age=31536000",
+        "cf-cache-status": "DYNAMIC",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=NsvpyAkPCYatB9lMePD8MYy9OnOnZ%2FZwgxLCkycmIfQn75P%2B%2BvXLS0jqPvDbIs%2F%2FnPYtmF00yl%2FFvtvilj075qQuq8%2BON3UMkSFcUEFsoLb37XY0Bl%2FiCuMiu9cBtkBsLP9MIoIpqN7BgLaZfA%3D%3D\"}]}",
+        "cf-ray": "a5e722a0bf4cd7c5-AKL",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-3.json"
+    }
+  },
+  {
+    "id": "ex-4",
+    "request": {
+      "method": "GET",
+      "url": "https://howlongtobeat.com/game/8038",
+      "headers": {
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "accept-language": "en-US,en;q=0.9",
+        "accept-encoding": "gzip, deflate, br",
+        "connection": "keep-alive",
+        "upgrade-insecure-requests": "1",
+        "referer": "https://howlongtobeat.com"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "content-type": "text/html; charset=utf-8",
+        "x-xss-protection": "1; mode=block",
+        "x-content-type-options": "nosniff",
+        "x-powered-by": "Next.js",
+        "cache-control": "public, max-age=75",
+        "etag": "\"3e1z6ibhjzl95\"",
+        "x-frame-options": "deny",
+        "accept-ranges": "bytes",
+        "date": "Sun, 22 Nov 2026 10:08:51 GMT",
+        "age": "57",
+        "x-served-by": "cache-bur-kbur8200076-BUR, cache-bur-kbur8200076-BUR, cache-bur-kbur8200120-BUR, cache-wlg10425-WLG",
+        "x-cache": "MISS, MISS, HIT",
+        "x-cache-hits": "0, 0, 1",
+        "x-timer": "S1795342132.512462,VS0,VE1",
+        "vary": "Accept-Encoding",
+        "strict-transport-security": "max-age=31557600"
+      },
+      "bodyFile": "body-4.html"
+    }
+  },
+  {
+    "id": "ex-5",
+    "request": {
+      "method": "GET",
+      "url": "https://www.protondb.com/api/v1/reports/summaries/4500.json",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": "bytes",
+        "access-control-allow-origin": "https://www.protondb.com",
+        "age": "44961",
+        "cache-control": "public,max-age=0,must-revalidate",
+        "cache-status": "\"Netlify Edge\"; hit; ttl=31491039",
+        "content-type": "application/json",
+        "date": "Sun, 22 Nov 2026 10:08:51 GMT",
+        "etag": "\"ce15a44d43869ead429ba3908f73b715-ssl\"",
+        "server": "Netlify",
+        "strict-transport-security": "max-age=31536000",
+        "x-nf-request-id": "01M81BNRATEETDFQTHZ0NN7GPE"
+      },
+      "bodyFile": "body-5.json"
+    }
+  },
+  {
+    "id": "ex-6",
+    "request": {
+      "method": "GET",
+      "url": "https://store.steampowered.com/saleaction/ajaxgetdeckappcompatibilityreport?nAppID=4500",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "server": "nginx",
+        "content-type": "application/json; charset=utf-8",
+        "expires": "Mon, 26 Jul 1997 05:00:00 GMT",
+        "cache-control": "no-cache",
+        "x-frame-options": "DENY",
+        "vary": "Accept-Encoding, Origin, Accept-Encoding",
+        "strict-transport-security": "max-age=63072000",
+        "date": "Sun, 22 Nov 2026 10:08:51 GMT",
+        "connection": "keep-alive"
+      },
+      "bodyFile": "body-6.json"
+    }
+  }
+]

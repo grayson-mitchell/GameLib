@@ -1,0 +1,13 @@
+{
+  "ops": [
+    {
+      "op": "umu",
+      "runner": "steam",
+      "app_name": "1091500",
+      "result": "umu-cached-fresh",
+      "requestsMade": 0
+    }
+  ],
+  "requests": [],
+  "gogApiInfoWrites": []
+}

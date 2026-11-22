@@ -1,0 +1,68 @@
+{
+	"Cyberpunk 2077": {
+		"pcgamingwiki": {
+			"steamID": "1091500",
+			"howLongToBeatID": "2127",
+			"metacritic": {
+				"score": "86",
+				"urlid": "cyberpunk-2077"
+			},
+			"opencritic": {
+				"score": "76",
+				"urlid": "8525/cyberpunk-2077"
+			},
+			"igdb": {
+				"score": "75",
+				"urlid": "cyberpunk-2077"
+			},
+			"direct3DVersions": [
+				"12"
+			],
+			"genres": [
+				"Action",
+				"RPG",
+				"Openworld"
+			],
+			"releaseDate": [
+				"Windows: December 10, 2020|ref=<ref name=\"date\">{{Refurl|url=https://twitter.com/CyberpunkGame/status/1321128432370176002|title=Cyberpunk 2077 on Twitter: \"We have important news to share with you\"|date=2020-10-27",
+				"OS X: July 16, 2025|ref=<ref name=\"update2-3\">{{Refurl|url=https://www.cyberpunk.net/en/news/51674/update-2-3-patch-notes|title=Update 2.3|date=2025-07-16"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "perfect",
+			"wineRating": "perfect",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": 5,
+			"linuxRating": null,
+			"slug": "cyberpunk-2077"
+		},
+		"howlongtobeat": {
+			"mainStory": 26,
+			"mainExtra": 63,
+			"completionist": 109,
+			"gameId": 2127,
+			"gameName": "Cyberpunk 2077",
+			"gameImageUrl": "https://howlongtobeat.com/games/Cyberpunk-2077-2.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/2127"
+		},
+		"gamesdb": {
+			"steamID": "1091500"
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"Cyberpunk 2077": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)"
+	}
+}

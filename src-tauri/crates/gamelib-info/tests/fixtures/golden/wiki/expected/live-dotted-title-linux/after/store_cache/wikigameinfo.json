@@ -1,0 +1,89 @@
+{
+	"S": {
+		"T": {
+			"A": {
+				"L": {
+					"K": {
+						"E": {
+							"R": {
+								" Shadow of Chernobyl": {
+									"pcgamingwiki": {
+										"steamID": "2427410",
+										"howLongToBeatID": "8038",
+										"metacritic": {
+											"score": "",
+											"urlid": ""
+										},
+										"opencritic": {
+											"score": "",
+											"urlid": ""
+										},
+										"igdb": {
+											"score": "",
+											"urlid": ""
+										},
+										"direct3DVersions": [
+											"12"
+										],
+										"genres": [
+											"Shooter",
+											"Survival"
+										],
+										"releaseDate": [
+											"Windows: May 20, 2025"
+										]
+									},
+									"applegamingwiki": null,
+									"codeweavers": null,
+									"howlongtobeat": {
+										"mainStory": 15,
+										"mainExtra": 24,
+										"completionist": 41,
+										"gameId": 8038,
+										"gameName": "S.T.A.L.K.E.R.: Shadow of Chernobyl",
+										"gameImageUrl": "https://howlongtobeat.com/games/8038_S.T.A.L.K.E.R._Shadow_of_Chernobyl.jpg",
+										"gameWebLink": "https://howlongtobeat.com/game/8038"
+									},
+									"gamesdb": {
+										"steamID": ""
+									},
+									"steamInfo": {
+										"compatibilityLevel": "platinum",
+										"steamDeckCatagory": 1
+									},
+									"umuId": null,
+									"fetchStatus": {
+										"pcgamingwiki": "ok",
+										"howlongtobeat": "ok"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"S": {
+			"T": {
+				"A": {
+					"L": {
+						"K": {
+							"E": {
+								"R": {
+									" Shadow of Chernobyl": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

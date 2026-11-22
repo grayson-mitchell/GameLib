@@ -93,7 +93,10 @@ export interface RecorderOptions {
   synthetic?: SyntheticResponse[]
   /** Fetched in record mode only, so the Rust replay has a response. Never served to TS. */
   rustOnly?: RustOnlyRequest[]
-  /** Request ids (`ex-<n>`) or `METHOD url` strings that TS makes and Rust will not. */
+  /**
+   * Request ids (`ex-<n>`), `METHOD url` strings, or a `METHOD url-prefix*` pattern, for requests
+   * that TS makes and Rust will not.
+   */
   tsOnly?: string[]
 }
 
@@ -271,8 +274,12 @@ function isTsOnly(
   method: string,
   url: string
 ): boolean {
-  const flagged = options.tsOnly ?? []
-  return flagged.includes(id) || flagged.includes(`${method} ${url}`)
+  const key = `${method} ${url}`
+  return (options.tsOnly ?? []).some((flag) =>
+    flag.endsWith('*')
+      ? key.startsWith(flag.slice(0, -1))
+      : flag === id || flag === key
+  )
 }
 
 async function realRequest(
@@ -492,10 +499,19 @@ export function installRecorder(options: RecorderOptions): Recorder {
       if (mode === 'record') {
         for (const extra of options.rustOnly ?? []) {
           const method = extra.method.toUpperCase()
+          // Headers default to those of the TS request for the same URL (the pinned user-agent
+          // Rust must send identically), when TS made one.
+          const twin = exchanges.find(
+            (e) =>
+              !e.rustOnly &&
+              e.request.method === method &&
+              e.request.url === redactUrl(extra.url)
+          )
+          const headers = extra.headers ?? twin?.request.headers ?? {}
           const config = {
             url: extra.url,
             method,
-            headers: new AxiosHeaders(extra.headers ?? {}),
+            headers: new AxiosHeaders(headers),
             data: extra.body,
             timeout: 15_000
           } as unknown as InternalAxiosRequestConfig
@@ -504,7 +520,7 @@ export function installRecorder(options: RecorderOptions): Recorder {
             {
               method,
               url: redactUrl(extra.url),
-              headers: redactHeaders(extra.headers ?? {}),
+              headers: redactHeaders(headers),
               ...(extra.body === undefined ? {} : { body: extra.body })
             },
             response,

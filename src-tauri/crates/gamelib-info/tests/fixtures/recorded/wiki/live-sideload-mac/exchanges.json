@@ -1,0 +1,185 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=Celeste&format=json",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:51 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=MFvshDIC3LSmN5DhEVPNxhIm2VUogn3Xqi%2Fq0P2RFWsUW6TzVstct6ueri%2FkfSqMgxJjIghWA4n1er9upO29%2F6usUis5DIwKvWeyxfxpkBn%2FDAg9fJRh6Osefw5c4oJdAi67gNfh\"}]}",
+        "cache-control": "private, must-revalidate, max-age=0",
+        "content-disposition": "inline; filename=api-result.json",
+        "server": "cloudflare",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "1234a535ba5b24a0c7c8648b",
+        "x-varnish": "199824210",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "59",
+        "last-modified": "Sun, 22 Nov 2026 10:07:52 GMT",
+        "cf-cache-status": "HIT",
+        "strict-transport-security": "max-age=15552000; includeSubDomains; preload",
+        "cf-ray": "a5e722a00c3e57a4-WLG"
+      },
+      "bodyFile": "body-1.json"
+    }
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://www.applegamingwiki.com/w/api.php?action=query&list=search&srsearch=Celeste&format=json",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:51 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=gco6gcMViv1un7pzR2hq%2BGKT3bTbGC9y0zU5tEEp%2F%2Fo6GUX77feNJXois0kJzcUVDzAkXBi8Uf8pIRVMrULjUcJO1QENCQJrnpzS5g8wHnwwx3BNQQqpzhjMmQlbkS6OVT6G%2Fwoz9Sq%2Fsg%3D%3D\"}]}",
+        "cache-control": "private, max-age=14400, must-revalidate",
+        "content-disposition": "inline; filename=api-result.json",
+        "server": "cloudflare",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "4074b478aa2c43901f712fea",
+        "x-varnish": "200479175",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "59",
+        "last-modified": "Sun, 22 Nov 2026 10:07:52 GMT",
+        "cf-cache-status": "HIT",
+        "cf-ray": "a5e722a01e5f1880-AKL",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-2.json"
+    }
+  },
+  {
+    "id": "ex-3",
+    "request": {
+      "method": "GET",
+      "url": "https://www.pcgamingwiki.com/w/api.php?action=parse&format=json&pageid=194526&redirects=true&prop=wikitext",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:51 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "cache-control": "private, must-revalidate, max-age=0",
+        "content-disposition": "inline; filename=api-result.json",
+        "server": "cloudflare",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "28069877e822f2e09886a84b",
+        "x-varnish": "199824216",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "58",
+        "last-modified": "Sun, 22 Nov 2026 10:07:52 GMT",
+        "cf-cache-status": "HIT",
+        "strict-transport-security": "max-age=15552000; includeSubDomains; preload",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=PEIpdV%2FuFvBWOh1pC%2B%2B7gVJL4DCIrEZWrVCrG0zgrBmrpxZLFu6sMB39KIuDpPM5HeoS%2Bm9y8aVp2Cx40ucaLXvOXHBg1DUyXUzVeywRc7b9XGnJzwBpXb4%2FfjkrsXE7hfxiaCvF\"}]}",
+        "cf-ray": "a5e722a01c5157a4-WLG"
+      },
+      "bodyFile": "body-3.json"
+    }
+  },
+  {
+    "id": "ex-4",
+    "request": {
+      "method": "GET",
+      "url": "https://www.applegamingwiki.com/w/api.php?action=parse&format=json&pageid=568&redirects=true&prop=wikitext",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:51 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=S4cHd2ZBHIQVKBMAPufO17Nx2YHYuyXoKZ3WcUCQLwCbT4GeboWzB09EqnJS15gJPJS0EteWP8typuj2x2xAWa434EiDtEFzrcTXPH6mH9e4Azxr24xmiyPTXm6Hi1cBnDaT6JmKD%2FC90A%3D%3D\"}]}",
+        "cache-control": "private, max-age=14400, must-revalidate",
+        "content-disposition": "inline; filename=api-result.json",
+        "server": "cloudflare",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "6e6402fc922636a34aedb2cb",
+        "x-varnish": "200479177",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "58",
+        "last-modified": "Sun, 22 Nov 2026 10:07:52 GMT",
+        "cf-cache-status": "HIT",
+        "cf-ray": "a5e722a03e971880-AKL",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-4.json"
+    }
+  },
+  {
+    "id": "ex-5",
+    "request": {
+      "method": "GET",
+      "url": "https://howlongtobeat.com/game/144955",
+      "headers": {
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "accept-language": "en-US,en;q=0.9",
+        "accept-encoding": "gzip, deflate, br",
+        "connection": "keep-alive",
+        "upgrade-insecure-requests": "1",
+        "referer": "https://howlongtobeat.com"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "content-type": "text/html; charset=utf-8",
+        "x-xss-protection": "1; mode=block",
+        "x-content-type-options": "nosniff",
+        "x-powered-by": "Next.js",
+        "cache-control": "public, max-age=75",
+        "etag": "\"c4u5q9vr76fum\"",
+        "x-frame-options": "deny",
+        "accept-ranges": "bytes",
+        "date": "Sun, 22 Nov 2026 10:08:51 GMT",
+        "age": "59",
+        "x-served-by": "cache-bur-kbur8200020-BUR, cache-bur-kbur8200020-BUR, cache-bur-kbur8200075-BUR, cache-wlg10425-WLG",
+        "x-cache": "MISS, HIT, HIT",
+        "x-cache-hits": "0, 0, 2",
+        "x-timer": "S1795342131.249184,VS0,VE0",
+        "vary": "Accept-Encoding",
+        "strict-transport-security": "max-age=31557600"
+      },
+      "bodyFile": "body-5.html"
+    }
+  }
+]

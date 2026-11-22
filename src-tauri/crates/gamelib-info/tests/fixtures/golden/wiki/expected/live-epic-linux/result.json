@@ -1,0 +1,75 @@
+{
+  "ops": [
+    {
+      "op": "wiki",
+      "game": "Cyberpunk 2077",
+      "forceRefresh": false,
+      "result": {
+        "pcgamingwiki": {
+          "steamID": "1091500",
+          "howLongToBeatID": "2127",
+          "metacritic": {
+            "score": "86",
+            "urlid": "cyberpunk-2077"
+          },
+          "opencritic": {
+            "score": "76",
+            "urlid": "8525/cyberpunk-2077"
+          },
+          "igdb": {
+            "score": "75",
+            "urlid": "cyberpunk-2077"
+          },
+          "direct3DVersions": [
+            "12"
+          ],
+          "genres": [
+            "Action",
+            "RPG",
+            "Openworld"
+          ],
+          "releaseDate": [
+            "Windows: December 10, 2020|ref=<ref name=\"date\">{{Refurl|url=https://twitter.com/CyberpunkGame/status/1321128432370176002|title=Cyberpunk 2077 on Twitter: \"We have important news to share with you\"|date=2020-10-27",
+            "OS X: July 16, 2025|ref=<ref name=\"update2-3\">{{Refurl|url=https://www.cyberpunk.net/en/news/51674/update-2-3-patch-notes|title=Update 2.3|date=2025-07-16"
+          ]
+        },
+        "applegamingwiki": null,
+        "codeweavers": null,
+        "howlongtobeat": {
+          "mainStory": 26,
+          "mainExtra": 63,
+          "completionist": 109,
+          "gameId": 2127,
+          "gameName": "Cyberpunk 2077",
+          "gameImageUrl": "https://howlongtobeat.com/games/Cyberpunk-2077-2.jpg",
+          "gameWebLink": "https://howlongtobeat.com/game/2127"
+        },
+        "gamesdb": {
+          "steamID": "1091500"
+        },
+        "steamInfo": {
+          "compatibilityLevel": "gold",
+          "steamDeckCatagory": 3
+        },
+        "umuId": "umu-1091500",
+        "fetchStatus": {
+          "pcgamingwiki": "ok",
+          "howlongtobeat": "ok"
+        }
+      },
+      "requestsMade": 7
+    }
+  ],
+  "requests": [
+    "GET https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=Cyberpunk%202077&format=json",
+    "GET https://gamesdb.gog.com/platforms/epic/external_releases/Ginger",
+    "GET https://umu.openwinecomponents.org/umu_api.php?codename=ginger&store=egs",
+    "GET https://www.pcgamingwiki.com/w/api.php?action=parse&format=json&pageid=97605&redirects=true&prop=wikitext",
+    "GET https://howlongtobeat.com/game/2127",
+    "GET https://www.protondb.com/api/v1/reports/summaries/1091500.json",
+    "GET https://store.steampowered.com/saleaction/ajaxgetdeckappcompatibilityreport?nAppID=1091500"
+  ],
+  "gogApiInfoWrites": [
+    "epic_Ginger"
+  ]
+}

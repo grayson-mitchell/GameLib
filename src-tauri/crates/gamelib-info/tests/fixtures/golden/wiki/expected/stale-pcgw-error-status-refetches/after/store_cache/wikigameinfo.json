@@ -1,0 +1,25 @@
+{
+	"Zzqx Qvbnm": {
+		"pcgamingwiki": null,
+		"applegamingwiki": null,
+		"codeweavers": null,
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "error",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"Zzqx Qvbnm": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)"
+	}
+}

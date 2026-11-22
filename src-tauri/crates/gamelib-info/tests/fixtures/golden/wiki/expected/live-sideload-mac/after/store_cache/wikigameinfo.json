@@ -1,0 +1,67 @@
+{
+	"Celeste": {
+		"pcgamingwiki": {
+			"steamID": "",
+			"howLongToBeatID": "144955",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				"Platform"
+			],
+			"releaseDate": [
+				"Windows: Jan 30, 2024",
+				"Linux: Jan 30, 2024",
+				"OS X: Feb 5, 2024"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "unplayable",
+			"wineRating": "unknown",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 1,
+			"mainExtra": 1,
+			"completionist": 2,
+			"gameId": 144955,
+			"gameName": "Celeste 64: Fragments of the Mountain",
+			"gameImageUrl": "https://howlongtobeat.com/games/144955_Celeste_64_Fragments_of_the_Mountain.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/144955"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"Celeste": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)"
+	}
+}

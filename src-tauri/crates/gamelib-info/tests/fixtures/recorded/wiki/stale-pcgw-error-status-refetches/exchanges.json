@@ -1,0 +1,60 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=Zzqx%20Qvbnm&format=json",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 403,
+      "headers": {
+        "content-type": "text/plain"
+      },
+      "bodyFile": "body-1.txt"
+    },
+    "synthetic": true
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://howlongtobeat.com/api/search/site/init?t=1795348800000",
+      "headers": {
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "accept-language": "en-US,en;q=0.9",
+        "accept-encoding": "gzip, deflate, br",
+        "connection": "keep-alive",
+        "upgrade-insecure-requests": "1",
+        "referer": "https://howlongtobeat.com/"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "content-type": "application/json; charset=utf-8",
+        "x-xss-protection": "1; mode=block",
+        "expires": "0",
+        "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        "etag": "\"opecckabe47k\"",
+        "x-frame-options": "deny",
+        "x-content-type-options": "nosniff",
+        "accept-ranges": "bytes",
+        "age": "0",
+        "date": "Sun, 22 Nov 2026 10:08:54 GMT",
+        "x-served-by": "cache-bur-kbur8200055-BUR, cache-bur-kbur8200055-BUR, cache-bur-kbur8200075-BUR, cache-wlg10425-WLG",
+        "x-cache": "MISS, MISS, MISS",
+        "x-cache-hits": "0, 0, 0",
+        "x-timer": "S1795342134.874429,VS0,VE177",
+        "vary": "Accept-Encoding",
+        "strict-transport-security": "max-age=31557600"
+      },
+      "bodyFile": "body-2.json"
+    }
+  }
+]

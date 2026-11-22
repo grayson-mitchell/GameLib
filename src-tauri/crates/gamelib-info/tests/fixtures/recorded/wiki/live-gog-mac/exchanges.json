@@ -1,0 +1,320 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://www.pcgamingwiki.com/w/api.php?action=cargoquery&tables=Infobox_game&fields=Infobox_game._pageID%3DpageID%2C&where=Infobox_game.GOGcom_ID%20HOLDS%201423049311&format=json",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=PR6N6zC0bjbTLf0fR%2BAFTpWVf6pnPqQIEMe7jZFNxs9FQNL5cMBTuclhg1GKtaZ2Z2zWHTpDCTGfucdkr08JuuaJG0hXx1iizAh5wKUwJv7DFKyr7pkxe2LIZFj2tGjvsL8PLnUk\"}]}",
+        "cache-control": "private, must-revalidate, max-age=0",
+        "content-disposition": "inline; filename=api-result.json",
+        "mediawiki-api-error": "permissiondenied",
+        "server": "cloudflare",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "60dd2fe15955c45457b1ec7d",
+        "x-varnish": "179355978",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "22582",
+        "last-modified": "Sun, 22 Nov 2026 10:07:46 GMT",
+        "cf-cache-status": "HIT",
+        "strict-transport-security": "max-age=15552000; includeSubDomains; preload",
+        "cf-ray": "a5e72289dda257a4-WLG"
+      },
+      "bodyFile": "body-1.json"
+    }
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://gamesdb.gog.com/platforms/gog/external_releases/1423049311",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "gdb-r-51811581085313589 gdb-rpp-gog_1423049311 gdb-g-51152725611062641 gdb-all gdb-c-51071842246821153 gdb-c-51154157012317521",
+        "edge-control": "!no-store, max-age=600",
+        "etag": "W/\"08e05fbdc64890503329415e0089d52b\"",
+        "cache-control": "public, max-age=540, must-revalidate, stale-while-revalidate=550, stale-if-error=550",
+        "via": "1.1 varnish, 1.1 varnish",
+        "accept-ranges": "bytes",
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "age": "1783",
+        "x-served-by": "cache-fra-eddf8230147-FRA, cache-wlg10424-WLG",
+        "x-cache": "HIT, HIT",
+        "x-cache-hits": "59, 1",
+        "vary": "Accept-Encoding"
+      },
+      "bodyFile": "body-2.json"
+    }
+  },
+  {
+    "id": "ex-3",
+    "request": {
+      "method": "GET",
+      "url": "https://www.applegamingwiki.com/w/api.php?action=query&list=search&srsearch=Cyberpunk%202077&format=json",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=fBR62FAudWLXWOPa9OjXjebUaeGP8XRHFl210SibUlAuvDT4esg6siVlNunngoudpx5JXGfm2OKhDiU2YOvxY8Bq5OljGjXSeAnlRCvBgRjelGaCOxsBNJZ8OgcVBCxsmj7B7EAN3ADjFQ%3D%3D\"}]}",
+        "cache-control": "private, max-age=14400, must-revalidate",
+        "content-disposition": "inline; filename=api-result.json",
+        "server": "cloudflare",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "c1915fd985d3c0060d2243d1",
+        "x-varnish": "202485307",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "62",
+        "last-modified": "Sun, 22 Nov 2026 10:07:45 GMT",
+        "cf-cache-status": "HIT",
+        "cf-ray": "a5e72289ecff1880-AKL",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-3.json"
+    }
+  },
+  {
+    "id": "ex-4",
+    "request": {
+      "method": "GET",
+      "url": "https://www.applegamingwiki.com/w/api.php?action=parse&format=json&pageid=285&redirects=true&prop=wikitext",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=LHHFDDDXzd01FBWwuw0JaPimiroIo4vLpSejYlVlsLpWfj8vr5WjD03JnpQT6UNIYdo3GiOcwLr3UUlU6XNal0NZ3riStRGoKGS9JMTkhO4CkGgi2GR2Y6Y7JQxUwlVJ3I8J08P097j3xw%3D%3D\"}]}",
+        "cache-control": "private, max-age=14400, must-revalidate",
+        "content-disposition": "inline; filename=api-result.json",
+        "server": "cloudflare",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "dfe3a323765ccb4a667a2db4",
+        "x-varnish": "202774306",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "61",
+        "last-modified": "Sun, 22 Nov 2026 10:07:45 GMT",
+        "cf-cache-status": "HIT",
+        "cf-ray": "a5e7228a1d511880-AKL",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-4.json"
+    }
+  },
+  {
+    "id": "ex-5",
+    "request": {
+      "method": "GET",
+      "url": "https://api.gog.com/v2/games/1423049311?locale=en-US",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/hal+json",
+        "access-control-allow-credentials": "true",
+        "access-control-allow-headers": "Authorization,Content-Type",
+        "access-control-allow-methods": "GET,OPTIONS",
+        "access-control-max-age": "86400",
+        "x-cache-adn-ttl": "180",
+        "xkey": "pnj8vvj",
+        "etag": "\"337edff63d4a7081e721f2c5b741d6f0\"",
+        "x-gog-debug": "k8s",
+        "cache-control": "max-age=86400",
+        "via": "1.1 varnish, 1.1 varnish",
+        "accept-ranges": "bytes",
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "age": "52701",
+        "x-served-by": "cache-fra-etou8220191-FRA, cache-wlg10425-WLG",
+        "x-cache": "HIT, HIT",
+        "x-cache-hits": "537, 1",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-5.json"
+    },
+    "tsOnly": true
+  },
+  {
+    "id": "ex-6",
+    "request": {
+      "method": "GET",
+      "url": "https://api.gog.com/products/1423049311?locale=undefined&expand=changelog",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "pnj8vvj",
+        "x-gog-debug": "k8s",
+        "cache-control": "max-age=86400",
+        "via": "1.1 varnish, 1.1 varnish",
+        "accept-ranges": "bytes",
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "age": "60",
+        "x-served-by": "cache-fra-etou8220055-FRA, cache-wlg10425-WLG",
+        "x-cache": "MISS, HIT",
+        "x-cache-hits": "0, 1",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-6.json"
+    },
+    "tsOnly": true
+  },
+  {
+    "id": "ex-7",
+    "request": {
+      "method": "GET",
+      "url": "https://api.gog.com/v2/games/1423049311?locale=en-US",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/hal+json",
+        "access-control-allow-credentials": "true",
+        "access-control-allow-headers": "Authorization,Content-Type",
+        "access-control-allow-methods": "GET,OPTIONS",
+        "access-control-max-age": "86400",
+        "x-cache-adn-ttl": "180",
+        "xkey": "pnj8vvj",
+        "etag": "\"337edff63d4a7081e721f2c5b741d6f0\"",
+        "x-gog-debug": "k8s",
+        "cache-control": "max-age=86400",
+        "via": "1.1 varnish, 1.1 varnish",
+        "accept-ranges": "bytes",
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "age": "52701",
+        "x-served-by": "cache-fra-etou8220191-FRA, cache-wlg10425-WLG",
+        "x-cache": "HIT, HIT",
+        "x-cache-hits": "537, 2",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-7.json"
+    },
+    "tsOnly": true
+  },
+  {
+    "id": "ex-8",
+    "request": {
+      "method": "GET",
+      "url": "https://af.gog.com/en/game/cyberpunk_2077?as=1838482841",
+      "headers": {
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "accept-language": "en-US,en;q=0.9",
+        "accept-encoding": "gzip, deflate, br",
+        "connection": "keep-alive",
+        "upgrade-insecure-requests": "1"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache",
+        "access-control-allow-origin": "*",
+        "x-traceid": "7cbb5826-f9d5-4d0d-a28e-a8e5d90bc429",
+        "set-cookie": "REDACTED",
+        "content-type": "text/html;charset=UTF-8",
+        "date": "Sun, 22 Nov 2026 10:08:49 GMT",
+        "connection": "close"
+      },
+      "bodyFile": "body-8.html"
+    }
+  },
+  {
+    "id": "ex-9",
+    "request": {
+      "method": "GET",
+      "url": "https://api.gog.com/v2/games/1423049311?locale=en-US",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/hal+json",
+        "access-control-allow-credentials": "true",
+        "access-control-allow-headers": "Authorization,Content-Type",
+        "access-control-allow-methods": "GET,OPTIONS",
+        "access-control-max-age": "86400",
+        "x-cache-adn-ttl": "180",
+        "xkey": "pnj8vvj",
+        "etag": "\"337edff63d4a7081e721f2c5b741d6f0\"",
+        "x-gog-debug": "k8s",
+        "cache-control": "max-age=86400",
+        "via": "1.1 varnish, 1.1 varnish",
+        "accept-ranges": "bytes",
+        "date": "Sun, 22 Nov 2026 10:08:49 GMT",
+        "age": "52702",
+        "x-served-by": "cache-fra-etou8220191-FRA, cache-wlg10422-WLG",
+        "x-cache": "HIT, HIT",
+        "x-cache-hits": "537, 1",
+        "vary": "Accept-Encoding",
+        "access-control-allow-origin": "https://www.gog.com"
+      },
+      "bodyFile": "body-9.json"
+    },
+    "rustOnly": true
+  }
+]

@@ -1,0 +1,23 @@
+{
+	"nile_amzn1": {
+		"adg": {
+			"product": {
+				"0000": null
+			}
+		}
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"nile_amzn1": {
+			"adg": {
+				"product": {
+					"0000": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)"
+				}
+			}
+		}
+	}
+}

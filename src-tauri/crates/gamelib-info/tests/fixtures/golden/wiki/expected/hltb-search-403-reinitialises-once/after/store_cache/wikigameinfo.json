@@ -1,0 +1,33 @@
+{
+	"Zzqx Qvbnm": {
+		"pcgamingwiki": null,
+		"applegamingwiki": null,
+		"codeweavers": null,
+		"howlongtobeat": {
+			"mainStory": 10,
+			"mainExtra": 20,
+			"completionist": 30,
+			"gameId": 4242,
+			"gameName": "Zzqx Qvbnm",
+			"gameImageUrl": "https://howlongtobeat.com/games/4242_zzqx.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/4242"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "notfound",
+			"howlongtobeat": "ok"
+		}
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"Zzqx Qvbnm": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)"
+	}
+}

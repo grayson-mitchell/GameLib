@@ -1,0 +1,13 @@
+{
+  "ops": [
+    {
+      "op": "umu",
+      "runner": "sideload",
+      "app_name": "anything",
+      "result": null,
+      "requestsMade": 0
+    }
+  ],
+  "requests": [],
+  "gogApiInfoWrites": []
+}

@@ -1,0 +1,127 @@
+{
+  "ops": [
+    {
+      "op": "wiki",
+      "game": "S.T.A.L.K.E.R.: Shadow of Chernobyl",
+      "forceRefresh": false,
+      "result": {
+        "pcgamingwiki": {
+          "steamID": "2427410",
+          "howLongToBeatID": "8038",
+          "metacritic": {
+            "score": "",
+            "urlid": ""
+          },
+          "opencritic": {
+            "score": "",
+            "urlid": ""
+          },
+          "igdb": {
+            "score": "",
+            "urlid": ""
+          },
+          "direct3DVersions": [
+            "12"
+          ],
+          "genres": [
+            "Shooter",
+            "Survival"
+          ],
+          "releaseDate": [
+            "Windows: May 20, 2025"
+          ]
+        },
+        "applegamingwiki": null,
+        "codeweavers": null,
+        "howlongtobeat": {
+          "mainStory": 15,
+          "mainExtra": 24,
+          "completionist": 41,
+          "gameId": 8038,
+          "gameName": "S.T.A.L.K.E.R.: Shadow of Chernobyl",
+          "gameImageUrl": "https://howlongtobeat.com/games/8038_S.T.A.L.K.E.R._Shadow_of_Chernobyl.jpg",
+          "gameWebLink": "https://howlongtobeat.com/game/8038"
+        },
+        "gamesdb": {
+          "steamID": ""
+        },
+        "steamInfo": {
+          "compatibilityLevel": "platinum",
+          "steamDeckCatagory": 1
+        },
+        "umuId": null,
+        "fetchStatus": {
+          "pcgamingwiki": "ok",
+          "howlongtobeat": "ok"
+        }
+      },
+      "requestsMade": 6
+    },
+    {
+      "op": "wiki",
+      "game": "S.T.A.L.K.E.R.: Shadow of Chernobyl",
+      "forceRefresh": false,
+      "result": {
+        "pcgamingwiki": {
+          "steamID": "2427410",
+          "howLongToBeatID": "8038",
+          "metacritic": {
+            "score": "",
+            "urlid": ""
+          },
+          "opencritic": {
+            "score": "",
+            "urlid": ""
+          },
+          "igdb": {
+            "score": "",
+            "urlid": ""
+          },
+          "direct3DVersions": [
+            "12"
+          ],
+          "genres": [
+            "Shooter",
+            "Survival"
+          ],
+          "releaseDate": [
+            "Windows: May 20, 2025"
+          ]
+        },
+        "applegamingwiki": null,
+        "codeweavers": null,
+        "howlongtobeat": {
+          "mainStory": 15,
+          "mainExtra": 24,
+          "completionist": 41,
+          "gameId": 8038,
+          "gameName": "S.T.A.L.K.E.R.: Shadow of Chernobyl",
+          "gameImageUrl": "https://howlongtobeat.com/games/8038_S.T.A.L.K.E.R._Shadow_of_Chernobyl.jpg",
+          "gameWebLink": "https://howlongtobeat.com/game/8038"
+        },
+        "gamesdb": {
+          "steamID": ""
+        },
+        "steamInfo": {
+          "compatibilityLevel": "platinum",
+          "steamDeckCatagory": 1
+        },
+        "umuId": null,
+        "fetchStatus": {
+          "pcgamingwiki": "ok",
+          "howlongtobeat": "ok"
+        }
+      },
+      "requestsMade": 0
+    }
+  ],
+  "requests": [
+    "GET https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=S.T.A.L.K.E.R.%20Shadow%20of%20Chernobyl&format=json",
+    "GET https://umu.openwinecomponents.org/umu_api.php?codename=4500&store=steam",
+    "GET https://www.pcgamingwiki.com/w/api.php?action=parse&format=json&pageid=204694&redirects=true&prop=wikitext",
+    "GET https://howlongtobeat.com/game/8038",
+    "GET https://www.protondb.com/api/v1/reports/summaries/4500.json",
+    "GET https://store.steampowered.com/saleaction/ajaxgetdeckappcompatibilityreport?nAppID=4500"
+  ],
+  "gogApiInfoWrites": []
+}

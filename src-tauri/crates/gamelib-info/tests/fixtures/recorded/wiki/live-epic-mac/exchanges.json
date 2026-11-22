@@ -1,0 +1,217 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=Cyberpunk%202077&format=json",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=4OgtHglKHUKqVEs4ShIIO9vIJTps%2BMxOA1VdBxpNBkoIwdqQgy0jl1nrgNIp6q%2BmrPlb%2BnuJn5s7OJ3cm5GeHleoQDKKhT1NmueuZsElGWYMxjQzFuhhwP1TvlyvSotv04d1NoNL\"}]}",
+        "cache-control": "private, must-revalidate, max-age=0",
+        "content-disposition": "inline; filename=api-result.json",
+        "server": "cloudflare",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "1f773290a2a93efadac031db",
+        "x-varnish": "196089155",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "39795",
+        "last-modified": "Sun, 22 Nov 2026 10:07:45 GMT",
+        "cf-cache-status": "HIT",
+        "strict-transport-security": "max-age=15552000; includeSubDomains; preload",
+        "cf-ray": "a5e722864aa757a4-WLG"
+      },
+      "bodyFile": "body-1.json"
+    }
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://www.applegamingwiki.com/w/api.php?action=query&list=search&srsearch=Cyberpunk%202077&format=json",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=gHwBD8BnBozcLWs2DAliZz%2Bz8k35N5SvS2ARNGFDttiwv%2FkGrr5KFnf4oVA4Mk5uuKwNzkxP36hd5NxojiRDBlPHQgaRr6ULRB8M0fro6EiTIEihWJ%2F1d2wcTUlyeps5ukTFleudFMgVVw%3D%3D\"}]}",
+        "cache-control": "private, max-age=14400, must-revalidate",
+        "content-disposition": "inline; filename=api-result.json",
+        "server": "cloudflare",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "c1915fd985d3c0060d2243d1",
+        "x-varnish": "202485307",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "61",
+        "last-modified": "Sun, 22 Nov 2026 10:07:45 GMT",
+        "cf-cache-status": "HIT",
+        "cf-ray": "a5e722865f131880-AKL",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-2.json"
+    }
+  },
+  {
+    "id": "ex-3",
+    "request": {
+      "method": "GET",
+      "url": "https://www.pcgamingwiki.com/w/api.php?action=parse&format=json&pageid=97605&redirects=true&prop=wikitext",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "cache-control": "private, must-revalidate, max-age=0",
+        "content-disposition": "inline; filename=api-result.json",
+        "server": "cloudflare",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "c490f2d6f3626a18bc5dedc8",
+        "x-varnish": "199821912",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "4210",
+        "last-modified": "Sun, 22 Nov 2026 10:07:45 GMT",
+        "cf-cache-status": "HIT",
+        "strict-transport-security": "max-age=15552000; includeSubDomains; preload",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=Sk6YU0y1jmeK0SDk1byg21Ehcgt3rUbCEuV6BHqgzwhxwAxKEft9kbzB%2B01EmETP%2B5ytuO2jv93v6x7K6J9rMG6XMDn3SiRMNkJJWGNocsObVMZ0KEP1ZnaqDIzU2ibZYXZxmsxI\"}]}",
+        "cf-ray": "a5e722865abf57a4-WLG"
+      },
+      "bodyFile": "body-3.json"
+    }
+  },
+  {
+    "id": "ex-4",
+    "request": {
+      "method": "GET",
+      "url": "https://gamesdb.gog.com/platforms/epic/external_releases/Ginger",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "server": "openresty/1.31.1.1",
+        "content-type": "application/json",
+        "xkey": "gdb-r-52501637373555127 gdb-rpp-epic_Ginger gdb-g-51152725611062641 gdb-all gdb-c-51071842246821153 gdb-c-51154157012317521",
+        "edge-control": "!no-store, max-age=600",
+        "etag": "W/\"9479deacb48173c5fb7528049611d6fa\"",
+        "cache-control": "public, max-age=540, must-revalidate, stale-while-revalidate=550, stale-if-error=550",
+        "via": "1.1 varnish, 1.1 varnish",
+        "accept-ranges": "bytes",
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "age": "1712",
+        "x-served-by": "cache-fra-eddf8230129-FRA, cache-wlg10424-WLG",
+        "x-cache": "HIT, HIT",
+        "x-cache-hits": "3, 2",
+        "vary": "Accept-Encoding"
+      },
+      "bodyFile": "body-4.json"
+    }
+  },
+  {
+    "id": "ex-5",
+    "request": {
+      "method": "GET",
+      "url": "https://www.applegamingwiki.com/w/api.php?action=parse&format=json&pageid=285&redirects=true&prop=wikitext",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=ahQ6NmSbQd2FfArZ2UkGyvTbceEmYpfDFr9QOHXjhHQfOQk7ihqBrszY%2Bepverm8aNvIN1yAuSUjaDaW8016RAHw3FLCPgS2xC5ofkot%2FpRqlhyko9lwfaeP2otVHT6saxCYtjrlS753Iw%3D%3D\"}]}",
+        "cache-control": "private, max-age=14400, must-revalidate",
+        "content-disposition": "inline; filename=api-result.json",
+        "server": "cloudflare",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "dfe3a323765ccb4a667a2db4",
+        "x-varnish": "202774306",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "61",
+        "last-modified": "Sun, 22 Nov 2026 10:07:45 GMT",
+        "cf-cache-status": "HIT",
+        "cf-ray": "a5e722868f631880-AKL",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-5.json"
+    }
+  },
+  {
+    "id": "ex-6",
+    "request": {
+      "method": "GET",
+      "url": "https://howlongtobeat.com/game/2127",
+      "headers": {
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "accept-language": "en-US,en;q=0.9",
+        "accept-encoding": "gzip, deflate, br",
+        "connection": "keep-alive",
+        "upgrade-insecure-requests": "1",
+        "referer": "https://howlongtobeat.com"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "connection": "keep-alive",
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "public, max-age=75",
+        "x-frame-options": "deny",
+        "x-xss-protection": "1; mode=block",
+        "x-powered-by": "Next.js",
+        "x-content-type-options": "nosniff",
+        "etag": "\"170r5408ayzpyn\"",
+        "accept-ranges": "bytes",
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "age": "179",
+        "x-served-by": "cache-bur-kbur8200035-BUR, cache-bur-kbur8200035-BUR, cache-bur-kbur8200152-BUR, cache-wlg10425-WLG",
+        "x-cache": "MISS, HIT, HIT",
+        "x-cache-hits": "0, 3, 2",
+        "x-timer": "S1795342127.145259,VS0,VE0",
+        "vary": "Accept-Encoding",
+        "strict-transport-security": "max-age=31557600"
+      },
+      "bodyFile": "body-6.html"
+    }
+  }
+]

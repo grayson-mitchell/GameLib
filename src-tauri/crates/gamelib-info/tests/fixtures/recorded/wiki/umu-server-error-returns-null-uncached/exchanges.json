@@ -1,0 +1,20 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://umu.openwinecomponents.org/umu_api.php?codename=1091500&store=steam",
+      "headers": {
+        "accept": "application/json, text/plain, */*"
+      }
+    },
+    "response": {
+      "status": 500,
+      "headers": {
+        "content-type": "text/plain"
+      },
+      "bodyFile": "body-1.txt"
+    },
+    "synthetic": true
+  }
+]

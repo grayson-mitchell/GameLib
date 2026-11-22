@@ -1,0 +1,15 @@
+{
+  "ops": [
+    {
+      "op": "umu",
+      "runner": "steam",
+      "app_name": "1091500",
+      "result": null,
+      "requestsMade": 1
+    }
+  ],
+  "requests": [
+    "GET https://umu.openwinecomponents.org/umu_api.php?codename=1091500&store=steam"
+  ],
+  "gogApiInfoWrites": []
+}

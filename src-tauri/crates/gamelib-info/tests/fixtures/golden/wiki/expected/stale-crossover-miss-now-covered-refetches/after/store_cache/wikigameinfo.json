@@ -1,0 +1,33 @@
+{
+	"#KILLALLZOMBIES": {
+		"pcgamingwiki": null,
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": 1,
+			"linuxRating": null,
+			"slug": "killallzombies"
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "error",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"#KILLALLZOMBIES": "Sun Nov 22 2026 12:00:00 GMT+0000 (Coordinated Universal Time)"
+	}
+}

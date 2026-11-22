@@ -1,0 +1,18 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://umu.openwinecomponents.org/umu_api.php?codename=ginger&store=egs",
+      "headers": {
+        "accept": "application/json, text/plain, */*"
+      }
+    },
+    "response": {
+      "status": 0,
+      "headers": {}
+    },
+    "synthetic": true,
+    "networkError": true
+  }
+]

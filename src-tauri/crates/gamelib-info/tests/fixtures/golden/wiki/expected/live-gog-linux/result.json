@@ -1,0 +1,42 @@
+{
+  "ops": [
+    {
+      "op": "wiki",
+      "game": "Cyberpunk 2077",
+      "forceRefresh": false,
+      "result": {
+        "pcgamingwiki": null,
+        "applegamingwiki": null,
+        "codeweavers": null,
+        "howlongtobeat": null,
+        "gamesdb": {
+          "steamID": "1091500"
+        },
+        "steamInfo": {
+          "compatibilityLevel": "gold",
+          "steamDeckCatagory": 3
+        },
+        "umuId": "umu-1091500",
+        "fetchStatus": {
+          "pcgamingwiki": "error",
+          "howlongtobeat": "notfound"
+        }
+      },
+      "requestsMade": 9
+    }
+  ],
+  "requests": [
+    "GET https://www.pcgamingwiki.com/w/api.php?action=cargoquery&tables=Infobox_game&fields=Infobox_game._pageID%3DpageID%2C&where=Infobox_game.GOGcom_ID%20HOLDS%201423049311&format=json",
+    "GET https://gamesdb.gog.com/platforms/gog/external_releases/1423049311",
+    "GET https://umu.openwinecomponents.org/umu_api.php?codename=1423049311&store=gog",
+    "GET https://api.gog.com/v2/games/1423049311?locale=en-US",
+    "GET https://api.gog.com/products/1423049311?locale=undefined&expand=changelog",
+    "GET https://api.gog.com/v2/games/1423049311?locale=en-US",
+    "GET https://af.gog.com/en/game/cyberpunk_2077?as=1838482841",
+    "GET https://www.protondb.com/api/v1/reports/summaries/1091500.json",
+    "GET https://store.steampowered.com/saleaction/ajaxgetdeckappcompatibilityreport?nAppID=1091500"
+  ],
+  "gogApiInfoWrites": [
+    "gog_1423049311"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "ops": [
+    {
+      "op": "umu",
+      "runner": "nile",
+      "app_name": "amzn1.adg.product.0000",
+      "result": null,
+      "requestsMade": 1
+    }
+  ],
+  "requests": [
+    "GET https://umu.openwinecomponents.org/umu_api.php?codename=amzn1.adg.product.0000&store=amazon"
+  ],
+  "gogApiInfoWrites": []
+}

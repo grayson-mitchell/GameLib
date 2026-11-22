@@ -1,0 +1,30 @@
+{
+  "ops": [
+    {
+      "op": "wiki",
+      "game": "Zzqx Qvbnm",
+      "forceRefresh": false,
+      "result": {
+        "pcgamingwiki": null,
+        "applegamingwiki": null,
+        "codeweavers": null,
+        "howlongtobeat": null,
+        "gamesdb": {
+          "steamID": ""
+        },
+        "steamInfo": null,
+        "umuId": null,
+        "fetchStatus": {
+          "pcgamingwiki": "notfound",
+          "howlongtobeat": "notfound"
+        }
+      },
+      "requestsMade": 2
+    }
+  ],
+  "requests": [
+    "GET https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=Zzqx%20Qvbnm&format=json",
+    "GET https://howlongtobeat.com/api/search/site/init?t=1795348800000"
+  ],
+  "gogApiInfoWrites": []
+}

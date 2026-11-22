@@ -1,0 +1,28 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://umu.openwinecomponents.org/umu_api.php?codename=1245620&store=steam",
+      "headers": {
+        "accept": "application/json, text/plain, */*"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:55 GMT",
+        "content-type": "application/json",
+        "connection": "keep-alive",
+        "server": "cloudflare",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "strict-transport-security": "max-age=31536000",
+        "cf-cache-status": "DYNAMIC",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=24HWv6hWPIdszxNWVrmHJ8p0u94m%2BQ5E0tJOMjQBJzgWkwbeh8y3w%2BbRz6m3%2Bg6DIy3M66cY9IdMMO8Gkzj7RNihra1dun19T5dS%2FZfVFSKAr5JxmNYa5CWHJDOAdlxYWeJ9G62z2CBp0LXEgw%3D%3D\"}]}",
+        "cf-ray": "a5e722b789f9d7c5-AKL",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "bodyFile": "body-1.json"
+    }
+  }
+]
