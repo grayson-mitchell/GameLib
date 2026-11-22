@@ -515,8 +515,12 @@ impl Dispatcher {
                 }
             };
             // A bug in one frame's handling must not strand the queue (and the registrant) forever.
+            // The frame is moved into `handle`, so what answers it is kept: without a reply the
+            // sidecar's mirror would hold that `seq` pending for good (B-WR-09).
+            let (seq, store) = (frame.seq, frame.store.clone());
             if catch_unwind(AssertUnwindSafe(|| self.handle(frame))).is_err() {
                 (self.log)("WARN: store frame worker recovered from a panic");
+                self.reply(&store, 0, "refused", seq, Some("rejected"));
             }
         }
     }
@@ -1264,6 +1268,39 @@ mod tests {
             String::from_utf8(gamelib_store::json::to_compact_bytes(&value)).unwrap(),
             text
         );
+    }
+
+    #[test]
+    fn store_frame_a_panic_while_applying_is_answered_refused_and_the_worker_goes_on() {
+        let panicked = Arc::new(AtomicBool::new(false));
+        let once = Arc::clone(&panicked);
+        let rig = rig_over(Arc::new(StoreHost::with_writer(Arc::new(
+            move |path, bytes, dur| {
+                if !once.swap(true, Ordering::SeqCst) {
+                    panic!("a writer bug");
+                }
+                gamelib_store::atomic::write_atomic(path, bytes, dur)
+            },
+        ))));
+        send(&rig, frame(1, TRACER, "set", Some("a"), Some("1")));
+        send(&rig, frame(2, TRACER, "set", Some("b"), Some("2")));
+        settle(&rig);
+        let events = lock(&rig.events).clone();
+        let first = events
+            .iter()
+            .find(|e| e["originSeq"] == 1)
+            .expect("the panicked frame is answered");
+        assert_eq!(first["op"], "refused");
+        assert_eq!(first["reason"], "rejected");
+        assert!(
+            events
+                .iter()
+                .any(|e| e["originSeq"] == 2 && e["op"] == "applied"),
+            "the worker applied the next frame: {events:?}"
+        );
+        assert!(lock(&rig.logs)
+            .iter()
+            .any(|l| l.contains("recovered from a panic")));
     }
 
     #[test]
