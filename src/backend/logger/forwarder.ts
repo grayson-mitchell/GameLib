@@ -336,7 +336,8 @@ export class LogForwarder {
 
   /**
    * Registers a pending link of a target writer's own chain, so `flush` waits for it (bounded, like
-   * the forwarder's own chains). Never throws; a link that rejects is still dropped from the set.
+   * the forwarder's own chains). Never throws. A link that rejects counts as settled: it is dropped
+   * from the set, and `flush` goes on waiting for the other links and the transport (WR-11).
    */
   trackSettle(link: Promise<unknown>): void {
     this.#writerLinks.add(link)
@@ -464,10 +465,13 @@ export class LogForwarder {
         // convention 3 (the sidecar's exit contract): never hold the loop.
         timer.unref?.()
       })
+      // allSettled, not all: a link that rejects must not end the wait for the other links or
+      // skip the transport wait that follows (WR-11).
       const timedOut = await Promise.race([
-        Promise.all([...this.#chains.values(), ...this.#writerLinks]).then(
-          () => false
-        ),
+        Promise.allSettled([
+          ...this.#chains.values(),
+          ...this.#writerLinks
+        ]).then(() => false),
         expired
       ])
       clearTimeout(timer)

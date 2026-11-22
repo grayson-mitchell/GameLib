@@ -537,6 +537,45 @@ describe('LogForwarder', () => {
     })
   })
 
+  describe('one rejecting link does not end the wait (WR-11)', () => {
+    it('flush still waits for a slow link and the transport when another link rejects early (WR-11)', async () => {
+      const fw = new LogForwarder()
+      const transport = new FakeTransport()
+      transport.autoWritten = false
+      fw.bind(transport)
+      fw.enqueue(GAME, false, { raw: 'queued' })
+      let slowDone = false
+      fw.trackSettle(
+        new Promise<void>((resolve) =>
+          setTimeout(() => {
+            slowDone = true
+            resolve()
+          }, 1500)
+        )
+      )
+      const failing = new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('link failed')), 20)
+      )
+      failing.catch(() => undefined)
+      fw.trackSettle(failing)
+      let flushed = false
+      const flushing = fw.flush().then(() => {
+        flushed = true
+      })
+      // Past the rejection: the wait for the slow link goes on.
+      await jest.advanceTimersByTimeAsync(100)
+      expect(flushed).toBe(false)
+      // Past the slow link: the wait for the transport's write callback goes on.
+      await jest.advanceTimersByTimeAsync(1450)
+      expect(slowDone).toBe(true)
+      expect(flushed).toBe(false)
+      expect(transport.writeCallbacks.length).toBeGreaterThan(0)
+      for (const cb of transport.writeCallbacks.splice(0)) cb()
+      await flushing
+      expect(flushed).toBe(true)
+    })
+  })
+
   describe('settle (logErrorSettled / logInfoSettled, the CR-01 contract)', () => {
     type Index = typeof import('../index')
     function freshIndex(): Index {
