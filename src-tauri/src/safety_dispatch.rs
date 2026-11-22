@@ -4,11 +4,12 @@
 //!
 //! Phase 85 plan 15 (T-85-38): a removal can delete store files the shell owns (a reset deletes
 //! `GamesConfig/` and `config.json`; an uninstall deletes `GamesConfig/<app>.json`). The store frame
-//! worker is paused across the delete, and when the reply's outcome is `removed` every `app-data`
-//! target is evicted: open stores at or under it take no more writes
+//! worker is paused across the delete, and when the reply's outcome is `removed` or `failed` (a
+//! failed removal may already have deleted an earlier target) every `app-data` target is evicted:
+//! open stores at or under it take no more writes
 //! (`StoreHost::evict_path`) and frames already queued for them are refused `evicted`
 //! (`store_dispatch::evict_queued`), so neither the queue nor the exit drain recreates a deleted
-//! settings file. A refused or failed removal evicts nothing.
+//! settings file. A refused removal deleted nothing and evicts nothing.
 
 use super::*;
 use std::path::PathBuf;
@@ -45,11 +46,16 @@ fn has_app_data_target(args: &[Value]) -> bool {
         })
 }
 
-/// The `app-data` target paths of a removal whose outcome is `removed`; none for any other outcome
-/// (`refused`, `failed`: a failed removal may have deleted an earlier target, but evicting on a
-/// partial result is not this function's call, the plan's rule is evict nothing).
+/// The `app-data` target paths of a removal whose outcome is `removed` or `failed`; none for a
+/// `refused` one, which deleted nothing. A `failed` removal may have deleted an earlier target, and
+/// eviction is idempotent and cheap (a later open reads the files as they are), so over-evicting on
+/// a partial result is harmless where under-evicting lets a queued write recreate the file the user
+/// just reset (B-WR-05).
 fn removed_app_data_targets(args: &[Value], reply: &Value) -> Vec<PathBuf> {
-    if reply.get("outcome").and_then(Value::as_str) != Some("removed") {
+    if !matches!(
+        reply.get("outcome").and_then(Value::as_str),
+        Some("removed" | "failed")
+    ) {
         return Vec::new();
     }
     args.first()
@@ -90,22 +96,23 @@ mod tests {
     }
 
     #[test]
-    fn safety_removed_app_data_targets_are_listed_only_for_a_removed_outcome() {
+    fn safety_removed_app_data_targets_are_listed_for_a_removed_or_failed_outcome() {
         let args = request(json!([
             { "id": "a", "path": "/x/GamesConfig", "kind": "app-data", "trustRoot": "/x" },
             { "id": "b", "path": "/x/pfx", "kind": "prefix" },
             { "id": "c", "path": "/x/config.json", "kind": "app-data", "trustRoot": "/x" }
         ]));
-        assert_eq!(
-            removed_app_data_targets(&args, &json!({ "outcome": "removed" })),
-            vec![
-                PathBuf::from("/x/GamesConfig"),
-                PathBuf::from("/x/config.json")
-            ]
-        );
-        for outcome in ["refused", "failed"] {
-            assert!(removed_app_data_targets(&args, &json!({ "outcome": outcome })).is_empty());
+        for outcome in ["removed", "failed"] {
+            assert_eq!(
+                removed_app_data_targets(&args, &json!({ "outcome": outcome })),
+                vec![
+                    PathBuf::from("/x/GamesConfig"),
+                    PathBuf::from("/x/config.json")
+                ],
+                "{outcome}"
+            );
         }
+        assert!(removed_app_data_targets(&args, &json!({ "outcome": "refused" })).is_empty());
         assert!(removed_app_data_targets(&args, &json!({})).is_empty());
         assert!(removed_app_data_targets(&[], &json!({ "outcome": "removed" })).is_empty());
     }
