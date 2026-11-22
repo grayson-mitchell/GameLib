@@ -496,6 +496,14 @@ describe('harvester redactValue', () => {
     })
   })
 
+  it('keeps a __proto__ key as an own key instead of setting the prototype (C-WR-05)', () => {
+    const parsed = JSON.parse('{"__proto__":{"a":"secret"},"b":1}') as unknown
+    const out = redactValue([], parsed, ctx()) as Record<string, unknown>
+    expect(Object.keys(out)).toEqual(['__proto__', 'b'])
+    expect(Object.getPrototypeOf(out)).toBe(Object.prototype)
+    expect(JSON.stringify(out)).toBe('{"__proto__":{"a":"secret"},"b":1}')
+  })
+
   it('replaces the OS account name in values and key names, case-insensitively', () => {
     expect(
       redactValue(

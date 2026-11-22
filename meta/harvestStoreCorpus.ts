@@ -171,6 +171,24 @@ export function isDenylistedKey(key: string): boolean {
 
 const PLACEHOLDER = 'REDACTED'
 
+/**
+ * `target[key] = value` for an arbitrary key. A plain assignment of `__proto__` (which `JSON.parse` can produce as an
+ * own key) sets the prototype instead and the key vanishes from `Object.entries` and `JSON.stringify`; defining the
+ * property keeps it, as the shape of the real file requires.
+ */
+function setOwn(
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown
+): void {
+  Object.defineProperty(target, key, {
+    value,
+    enumerable: true,
+    writable: true,
+    configurable: true
+  })
+}
+
 /** A value of the same JSON type with nothing in it: strings, numbers and booleans flatten, objects keep their keys. */
 function placeholderOf(value: unknown): unknown {
   // An empty string holds nothing to hide, and keeping it keeps the real default shape (`steamGridDbApiKey: ""`).
@@ -180,7 +198,7 @@ function placeholderOf(value: unknown): unknown {
   if (Array.isArray(value)) return []
   if (value !== null && typeof value === 'object') {
     const out: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(value)) out[k] = placeholderOf(v)
+    for (const [k, v] of Object.entries(value)) setOwn(out, k, placeholderOf(v))
     return out
   }
   return value
@@ -296,7 +314,7 @@ export function redactValue(
   if (value !== null && typeof value === 'object') {
     const out: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(value)) {
-      out[redactKey(k, ctx)] = redactValue([...keyPath, k], v, ctx)
+      setOwn(out, redactKey(k, ctx), redactValue([...keyPath, k], v, ctx))
     }
     return out
   }
