@@ -372,6 +372,12 @@ export async function hydrateStoreSnapshot(): Promise<void> {
   for (const [storeName, values] of Object.entries(result ?? {})) {
     if (storeName === STORE_REV_KEY) continue
     const readRev = typeof revs[storeName] === 'number' ? revs[storeName] : undefined
+    // An `invalidated` push that raced the snapshot and is newer than the rev it was read at left
+    // the store to the re-fetch it started: this snapshot predates the bulk change, so it must neither
+    // overwrite what that fetch returned nor mark the store hydrated (C-WR-06).
+    if (buffered.some((change) => change.store === storeName && change.invalidated && newerThanRead(change, readRev))) {
+      continue
+    }
     // WR-07: REPLACE, do not merge. See `hydrateStore` below for the rationale. A push that
     // arrived while the snapshot was in flight and is newer than the rev it was read at is
     // replayed over it, as a fetch does.

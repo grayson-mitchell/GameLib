@@ -696,6 +696,28 @@ describe('change events', () => {
     push({ store: 'steamConfigStore', key: 'isLoggedIn', value: false, rev: 52 })
     expect(snapshotGet('steamConfigStore', 'isLoggedIn')).toBe(false)
   })
+
+  it('C-WR-06: an `invalidated` push that raced the boot snapshot leaves the store to its re-fetch', async () => {
+    let resolveSnapshot: ((value: unknown) => void) | undefined
+    mockedInvoke.mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          resolveSnapshot = r
+        }) as never
+    )
+    const refetch = deferredFetchWithRev()
+    const hydrating = hydrateStoreSnapshot()
+    push({ store: 'steamConfigStore', key: '', invalidated: true, rev: 60 })
+    // The re-fetch read after the clear and comes back before the older snapshot does.
+    refetch.resolve({ isLoggedIn: false }, 60)
+    await settle()
+    resolveSnapshot?.({
+      steamConfigStore: { isLoggedIn: true },
+      '@rev': { steamConfigStore: 55 }
+    })
+    await hydrating
+    expect(snapshotGet('steamConfigStore', 'isLoggedIn')).toBe(false)
+  })
 })
 
 describe('allow-list', () => {
