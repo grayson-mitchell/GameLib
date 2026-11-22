@@ -633,6 +633,9 @@ Plans:
 **Wave 21** *(blocked on Wave 20 completion)*
 - [ ] 86-26-PLAN.md — Run the live macOS gate (signed Phase 85 -> signed Phase 86, D-14/D-15)
 
+**Cross-cutting constraints:** <!-- gsd:generated -->
+- Memory-note shape: any offline step turns the network off only for the action (off, act, on, report)
+
 ### Phase 87: Engine, Wine and tools
 
 **Goal**: Engine selection, bottles and Wine tooling run in Rust with the same behaviour on real engines.

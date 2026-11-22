@@ -167,6 +167,11 @@ ports its main callers.
 - **D-29:** **Execution order:** 86 executes after Phase 85's StoreHost ships (85-19/20). 86's first
   plan is a checkpoint that re-reads the shipped `gamelib-store` host API against what 86's plans
   assume.
+- **D-30:** **D-14 item 1 narrowed for ProtonDB and Steam Deck.** These are fetched only on Linux
+  (`isLinux` in `wiki_game_info.ts`), so on the macOS live gate they are scored "absent as before".
+  Their behaviour stays covered by the Linux CI golden cases (86-20, 86-22), and their live check
+  moves to Phase 99 with the other Linux live checks (D-16). (Plan-checker warning, user-confirmed
+  2026-11-22.)
 
 ### Claude's Discretion
 - The order slices port within the phase. Research suggests `wiki_game_info` first. Smaller,
