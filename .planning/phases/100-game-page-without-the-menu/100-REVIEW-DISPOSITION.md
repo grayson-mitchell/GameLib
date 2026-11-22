@@ -90,20 +90,45 @@ findings:
 open: 16
 total: 21
 recorded: 2026-11-21T19:00:33.145Z
+  - id: WR-09
+    severity: warning
+    disposition: open
+    title: "Opt-in DLC switches ignore `installActionGates`, so they stay live during a move, verify, uninstall, folder change, sync, launch, and while the game is running"
+  - id: WR-10
+    severity: warning
+    disposition: open
+    title: "A failed or unavailable re-read replaces `info` with `null`, which removes the whole group together with the failure message it just set"
+  - id: WR-11
+    severity: warning
+    disposition: open
+    title: "Pending/failure handling is hand-rolled instead of `useRowAction` / `reportRowActionFailure`; an unguarded `logError` in a catch can leave every row stuck busy"
+  - id: IN-12
+    severity: info
+    disposition: open
+    title: "`desired` is computed from the `info` snapshot taken at mount, and the update treats it as the complete set to keep"
+  - id: IN-13
+    severity: info
+    disposition: open
+    title: "Test coverage for the new rows skips the cases that carry the findings above"
 ---
 
 # Phase 100: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-06 | warning | open | - |
-| WR-07 | warning | open | - |
-| WR-08 | warning | open | - |
-| IN-07 | info | open | - |
-| IN-08 | info | open | - |
-| IN-09 | info | open | - |
-| IN-10 | info | open | - |
-| IN-11 | info | open | - |
+| WR-09 | warning | open | - |
+| WR-10 | warning | open | - |
+| WR-11 | warning | open | - |
+| IN-12 | info | open | - |
+| IN-13 | info | open | - |
+| WR-06 | warning | open | - (not in the current review) |
+| WR-07 | warning | open | - (not in the current review) |
+| WR-08 | warning | open | - (not in the current review) |
+| IN-07 | info | open | - (not in the current review) |
+| IN-08 | info | open | - (not in the current review) |
+| IN-09 | info | open | - (not in the current review) |
+| IN-10 | info | open | - (not in the current review) |
+| IN-11 | info | open | - (not in the current review) |
 | CR-01 | critical | fixed | 100-12-SUMMARY.md (not in the current review) |
 | CR-02 | critical | fixed | 100-11-SUMMARY.md and 100-13-SUMMARY.md (not in the current review) |
 | WR-01 | warning | open | - (not in the current review) |
