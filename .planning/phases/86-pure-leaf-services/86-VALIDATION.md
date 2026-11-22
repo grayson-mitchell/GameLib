@@ -127,7 +127,7 @@ created: "2026-11-22"
 | 86-24-T3 | 86-24 | 19 | SVC-01 | T-86-59 | oracle retired; nine describes pass (SC4) | delete gate | `jest infoPortComplete infoShimSchedule fixtureRedaction; cargo test -p gamelib-info --features testing` | ✅ extend | ✅ green |
 | 86-25-T1 | 86-25 | 20 | SVC-01 | T-86-62 | clean-worktree proof, SC4 sweep, drift run | phase proof | `full suite at P (see plan); grep '## Phase proof' '## SC4 sweep' '## Drift run'` | — | ⚠️ red at P; R1-R4 fixed (`dd7872126`, `1a58fe646`), R5 deferred |
 | 86-25-T2 | 86-25 | 20 | SVC-01 | T-86-60 | push and release authorised | manual | `checkpoint:decision` | — | ✅ green (`push-and-build-ask`) |
-| 86-25-T3 | 86-25 | 20 | SVC-01 | T-86-61 | three-OS CI (D-16); signed identity (D-15) | CI proof | `gh run view per leg; grep '## CI proof' 'Gate item 4:'` | — | ⚠️ CI green; identity blocked (no artifact) |
+| 86-25-T3 | 86-25 | 20 | SVC-01 | T-86-61 | three-OS CI (D-16); signed identity (D-15) | CI proof | `gh run view per leg; grep '## CI proof' 'Gate item 4:'` | — | ✅ CI green; identity matched at 86-26 (run 45056179067, v0.12.0; was blocked at 86-25: dry run, no artifact) |
 | 86-26-T1 | 86-26 | 21 | SVC-01 | — | literals re-checked before the run | uat | `grep '## Pre-run re-check'; no CONDITIONAL in Required literals` | — | ⬜ pending |
 | 86-26-T2 | 86-26 | 21 | SVC-01 | T-86-63, T-86-64 | operator runs the four items | manual | `checkpoint:human-action (blocking-human)` | — | ⬜ pending |
 | 86-26-T3 | 86-26 | 21 | SVC-01 | T-86-63 | items scored in UAT shape | uat parse | `node parseUatItemsWithStats; no result: pending; pnpm planning-gates` | — | ⬜ pending |
@@ -381,18 +381,42 @@ Every binary reported `0 failed; 0 ignored; 0 filtered out`. The ten `golden_*` 
 
 **Phase 85 build:** the block "### Phase 85 build (85-19 Task 3, 2026-11-22)" in `85-VALIDATION.md` § "Signed baseline (D-16)", by reference: release-tauri.yml run `44978855761` (`dry_run=false`, `main` at `ffb8573d2`), draft release `GameLib v0.11.0`; `Identifier=com.gamelib.shell`, leaf `Developer ID Application: grayson mitchell (S7U223QWXJ)`, `TeamIdentifier=S7U223QWXJ`, designated requirement `identifier "com.gamelib.shell" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = S7U223QWXJ`, `spctl` accepted (Notarized Developer ID), stapled.
 
-### Phase 86 build
+### Phase 86 build (86-26, 2026-11-23)
 
-- **Run:** release-tauri.yml `45051040572`, `workflow_dispatch` on `main`, `dry_run=true`, headSha `1a58fe646ef7ae0769bc42a8c5b979d3cb0fa6ad` (contains every Phase 86 source commit; `0f3e6e9e9` adds only the url bump). All three legs `success`.
-- **Artifact: none.** `gh api repos/{owner}/{repo}/actions/runs/45051040572/artifacts` returns `total_count: 0`. This is by design and was already recorded at the Phase 85 baseline ("A dry run uploads nothing"): the workflow header says a dry run delivers the build log, not a binary, it has no `upload-artifact` step, and the macOS log ends with `No releaseId or tagName provided, skipping all uploads...`. So the five checks cannot be run on an artifact, and nothing was downloaded, installed or run.
-- **`codesign -dv --verbose=4`:** not run (no artifact).
-- **`codesign -d -r-` (designated requirement):** not run (no artifact).
-- **`spctl -a -vv`:** not run (no artifact).
-- **`xcrun stapler validate`:** not run (no artifact).
-- **Log evidence only (supporting, not an identity record; the baseline rule is "from the downloaded artifact itself, never from the log"):** the macOS leg imported a keychain item labelled `Mac Developer ID Application: grayson mitchell`, signed `gamelib-sidecar`, `gamelib-shell`, `GameLib.app`, the updater zip and `GameLib_0.11.0_aarch64.dmg` with it (`found cert "***" with organization "grayson mitchell"`), notarized `GameLib.app` (`Notarizing Finished with status Accepted for id 155b67c6-c03f-4f22-be3d-458fa5688c58`) and printed `Stapling app...`. That is the same signing path as run 44978855761, which makes a match likely, but no TeamIdentifier, designated requirement, spctl or stapler result can be read from a masked log.
+The operator chose `bump-and-build` to unblock item 4 (the caveat recorded at 86-25 below). Same workflow (`release-tauri.yml`), same Apple secrets, run with `dry_run=false`, from a version-bumped release branch as Phase 85 did with `release/v0.10`.
 
-**Comparison:** not possible; there is no Phase 86 artifact to compare with the Phase 85 block above.
+- **Source:** branch `release/v0.12` at `7c50262f4aa5e30f6c0003e738614760e98f6f28` = `4e1af5463` (`origin/main`, contains every Phase 86 source commit and the quick fixes through `quick-261123-9i7`) + `7c50262f4` `chore(86-26): bump version to 0.12.0` (package.json, src-tauri/Cargo.toml, src-tauri/tauri.conf.json, and the `gamelib-shell` entry of src-tauri/Cargo.lock, one line each). Not in this build: the later `main` commits `aacc9c11f` (PCGamingWiki search term URL-encoding) and `31e9f7a2e`/`31bd2e304` (resetHeroic settings cells, `quick-261123-9x9`); everything else after `4e1af5463` is `.planning/` only.
+- **Run:** release-tauri.yml `45056179067`, `workflow_dispatch` on `release/v0.12`, headSha `7c50262f4aa5e30f6c0003e738614760e98f6f28`, `dry_run=false`. Leg conclusions: `release (ubuntu-22.04, x86_64-unknown-linux-gnu)` success (18:49:01Z), `release (windows-latest, x86_64-pc-windows-msvc)` success (18:52:48Z), `release (macos-latest, --target aarch64-apple-darwin, aarch64-apple-darwin)` success (2026-11-22T18:58:22Z).
+- **Artifact:** draft release `GameLib v0.12.0` (tag `v0.12.0`, draft and prerelease, NOT published; target `7c50262f4`). Downloaded with `gh release download v0.12.0 -p 'GameLib_0.12.0_aarch64.app.tar.gz' -p 'GameLib_0.12.0_aarch64.dmg'` into the session scratchpad:
+  - `GameLib_0.12.0_aarch64.app.tar.gz` (100232157 bytes), sha256 `3887a0e319b04f4f4c470324a3266a1bd81f3099443a6ebda327188922b32231`
+  - `GameLib_0.12.0_aarch64.dmg` (99173408 bytes), sha256 `e8699ad2754d94113b98d7e9c312c4297492ad507eef38a9e9308aa61c95f2f9`
+  - The checks below ran on `GameLib.app` extracted from the app tar (like with like with the Phase 85 record, which also inspected the app from the app tar). `CFBundleShortVersionString` = `0.12.0`. Nothing was installed, opened or launched.
+- **`codesign -dv --verbose=4 GameLib.app`:** `Identifier=com.gamelib.shell`; `Format=app bundle with Mach-O thin (arm64)`; `Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)` -> `Developer ID Certification Authority` -> `Apple Root CA`; `TeamIdentifier=S7U223QWXJ`; `Timestamp=23 Nov 2026 at 7:54:31 AM` (local); flags `0x10000(runtime)`; `Notarization Ticket=stapled`; `CDHash=06c8dcf06883e6e2ad44d47616b93e9eca7f685b`. `codesign --verify --deep --strict` passes.
+- **Designated requirement (`codesign -d -r-`):** `identifier "com.gamelib.shell" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = S7U223QWXJ`
+- **`spctl -a -vv GameLib.app`:** `accepted`, `source=Notarized Developer ID`, `origin=Developer ID Application: grayson mitchell (S7U223QWXJ)`.
+- **`xcrun stapler validate GameLib.app`:** stapled (`The validate action worked!`).
+- **Install-over source on this Mac (read-only check, not launched):** `/Applications/GameLib.app` is `0.11.0` with `CDHash=4ca4869a7ce92359eb2ca453ac9dcaf5978bfb4e`, the Phase 85 build's CDHash recorded in 85-VALIDATION.md, so the Phase 85 signed build is what item 4 upgrades from. The `GameLib v0.11.0` draft still holds its assets (uploaded 2026-11-22T03:23Z), untouched by run 45056179067.
 
-Gate item 4: blocked (no signed Phase 86 artifact: the authorised release run 45051040572 was a dry run, which uploads nothing by design; an artifact needs a `dry_run=false` dispatch, which this plan may not make without a new operator authorisation)
+**Comparison with the Phase 85 build:**
 
-To unblock (operator decision, not taken here): dispatch `gh workflow run release-tauri.yml --ref main -f dry_run=false`, then re-run the five checks on the downloaded app. Caveat before doing so: `src-tauri/tauri.conf.json` on `main` is still `"version": "0.11.0"`, and tauri-action's `tagName: v__VERSION__` resolves from it, so a non-dry run targets the existing draft release `GameLib v0.11.0`, which holds the Phase 85 build's assets (`GameLib_0.11.0_aarch64.app.tar.gz` and the rest, uploaded 2026-11-22T03:23Z). It would overwrite them with the Phase 86 build, and gate item 4 needs the Phase 85 build installed first. Either bump the version first (as Phase 85 did with `release/v0.10`), or install/keep a copy of the Phase 85 app before dispatching.
+| Property | Phase 85 build (run 44978855761) | Phase 86 build (run 45056179067) | Equal |
+|----------|----------------------------------|----------------------------------|-------|
+| Identifier | `com.gamelib.shell` | `com.gamelib.shell` | yes |
+| Leaf authority | Developer ID Application: grayson mitchell (S7U223QWXJ) | same | yes |
+| Chain | Developer ID Certification Authority -> Apple Root CA | same | yes |
+| TeamIdentifier | `S7U223QWXJ` | `S7U223QWXJ` | yes |
+| Designated requirement | (85-VALIDATION.md string) | byte-identical (compared by script: both sha256 `af622dc08488b1a2859794a68b60fdfe18f4fede01abbece63d126730527d131`) | yes |
+| spctl | accepted, Notarized Developer ID | accepted, Notarized Developer ID | yes |
+| stapler | stapled | stapled | yes |
+| Version | 0.11.0 | 0.12.0 | differs, as intended (an upgrade) |
+| CDHash | `4ca4869a...` | `06c8dcf0...` | differs, as expected for a different build; the Keychain ACL binds to the designated requirement, not the CDHash |
+
+The identities match, so item 4 is `pending`: the live upgrade gate is owed by 86-26 Task 2.
+
+Gate item 4: pending (signed Phase 86 build v0.12.0, run 45056179067, identity equal to the signed Phase 85 build v0.11.0, run 44978855761: same Identifier, Developer ID leaf, TeamIdentifier S7U223QWXJ and byte-identical designated requirement; both notarized and stapled)
+
+#### Superseded: the 86-25 dry run (kept for the record)
+
+- **Run:** release-tauri.yml `45051040572`, `workflow_dispatch` on `main`, `dry_run=true`, headSha `1a58fe646ef7ae0769bc42a8c5b979d3cb0fa6ad`. All three legs `success`. **No artifact** (`total_count: 0`): a dry run uploads nothing by design (no `upload-artifact` step; the macOS log ends with `No releaseId or tagName provided, skipping all uploads...`), so none of the five checks could run, and 86-25 recorded `Gate item 4: blocked`.
+- Log evidence only (not an identity record): the macOS leg signed with `Mac Developer ID Application: grayson mitchell`, notarized `GameLib.app` (`Accepted`, id `155b67c6-c03f-4f22-be3d-458fa5688c58`) and stapled it.
+- 86-25's unblock caveat: `tauri.conf.json` on `main` was still `0.11.0`, so a non-dry run from `main` would have overwritten the `GameLib v0.11.0` draft's Phase 85 assets. The operator resolved it by bumping on `release/v0.12` (above).
