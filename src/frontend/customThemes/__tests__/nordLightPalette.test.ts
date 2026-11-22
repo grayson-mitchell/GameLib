@@ -17,9 +17,9 @@ import { readFileSync, readdirSync } from 'fs'
 import { join, relative } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { cssBlock, customProps } from 'frontend/testUtils/scssTokenSource'
-import { parseColour } from '../colour'
+import { contrastRatio, parseColour } from '../colour'
 import { BUILTIN_TOKENS } from '../builtinTokens'
-import { BASE_PREVIEW_OVERRIDES } from '../thumbnailPalette'
+import { BASE_PREVIEW_OVERRIDES, thumbnailPalette } from '../thumbnailPalette'
 import preChange from './fixtures/nordLightPreChange.json'
 
 // __dirname is src/frontend/customThemes/__tests__
@@ -233,5 +233,96 @@ describe('GameLib Light is the pre-change Nord Light', () => {
     expect(collapse(cssBlock(notice, 'body.gamelib-light &'))).toBe(
       'color: #ffb3b8;'
     )
+  })
+})
+
+describe('Nord Light is Frost-forward (261122-rz8)', () => {
+  const seed = BUILTIN_TOKENS['nord-light'] ?? {}
+  const token = (name: string): string => seed[name] ?? ''
+  const themesBlock = (): string =>
+    cssBlock(readStripped(THEMES_SCSS), 'body.nord-light')
+
+  it('Frost navbar: nord9 bar, nord8 active row, nord0 labels', () => {
+    expect({
+      bar: token('--navbar-background'),
+      activeRow: token('--navbar-active-background'),
+      inactive: token('--navbar-inactive'),
+      active: token('--navbar-active'),
+      accent: token('--navbar-accent')
+    }).toEqual({
+      bar: '#81a1c1',
+      activeRow: '#88c0d0',
+      inactive: '#2e3440',
+      active: '#2e3440',
+      accent: '#2e3440'
+    })
+    const bar = token('--navbar-background')
+    expect(
+      contrastRatio(token('--navbar-inactive'), bar)
+    ).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(token('--navbar-accent'), bar)).toBeGreaterThanOrEqual(
+      4.5
+    )
+    expect(
+      contrastRatio(
+        token('--navbar-active'),
+        token('--navbar-active-background')
+      )
+    ).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('the thumbnail draws the Frost navbar', () => {
+    const palette = thumbnailPalette(seed, 'nord-light')
+    expect({
+      tabBar: palette.tabBar,
+      sidebar: palette.sidebar,
+      activeRow: palette.activeRow,
+      inactiveLabel: palette.inactiveLabel,
+      activeLabel: palette.activeLabel
+    }).toEqual({
+      tabBar: '#81a1c1',
+      sidebar: '#81a1c1',
+      activeRow: '#88c0d0',
+      inactiveLabel: '#2e3440',
+      activeLabel: '#2e3440'
+    })
+  })
+
+  it('dark-bar assumptions in themes.scss and the sign-in notice are re-paired', () => {
+    const block = themesBlock()
+    const flat = collapse(block)
+    const declared = customProps(block)
+    const notice = readStripped(
+      join(
+        FRONTEND_ROOT,
+        'screens/Library/components/LibrarySignInNotice/index.scss'
+      )
+    )
+    const checks: Record<string, boolean> = {
+      gameCardStatus: /\.gameCard > \.gameCardStatus \{ color: #88c0d0;/.test(
+        flat
+      ),
+      heroicVersion: /\.heroicVersion \{ color: var\(--navbar-inactive\);/.test(
+        flat
+      ),
+      heroicNewReleases:
+        /\.heroicNewReleases > a \{[^}]*color: var\(--navbar-inactive\)/.test(
+          flat
+        ),
+      menuItemHover:
+        /\.MuiMenuItem-root:hover \{ background-color: var\(--brand-primary\);/.test(
+          flat
+        ),
+      oskButtonBorder: declared.get('--osk-button-border') === '#4c566a',
+      statusDefaultHover: declared.get('--status-default-hover') === '#2e3440',
+      expiredIcon:
+        collapse(cssBlock(notice, 'body.nord-light &')) ===
+        'color: var(--navbar-inactive);'
+    }
+    expect(
+      Object.entries(checks)
+        .filter(([, ok]) => !ok)
+        .map(([name]) => name)
+    ).toEqual([])
   })
 })
