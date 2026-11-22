@@ -208,13 +208,16 @@ describe('storeSearch/handlers.ts', () => {
       expect(stripComments(source)).not.toMatch(/handler failed:/)
     })
 
-    it("sidecar/enrichmentFlowRegistration.ts references the shared module and contains no 'handler failed:' log string", () => {
+    // Phase 86 (86-16, D-17): the storeSearch trio are native `info` channels served by Rust, so the
+    // sidecar registration no longer imports this module (nothing there can re-merge the log strings);
+    // 86-17 deletes the module and this suite.
+    it("sidecar/enrichmentFlowRegistration.ts no longer references the shared module and contains no 'handler failed:' log string", () => {
       const source = readFileSync(
         join(__dirname, '..', '..', 'sidecar', 'enrichmentFlowRegistration.ts'),
         'utf-8'
       )
       const stripped = stripComments(source)
-      expect(stripped).toMatch(/storeSearch\/handlers/)
+      expect(stripped).not.toMatch(/storeSearch\/handlers/)
       expect(stripped).not.toMatch(/handler failed:/)
     })
 
