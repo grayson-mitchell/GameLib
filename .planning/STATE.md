@@ -2,14 +2,14 @@
 gsd_state_version: "1.0"
 milestone: v0.11
 milestone_name: Node Sidecar Retirement
-current_phase: 85
-current_phase_name: Store host, config and versioned migrations
+current_phase: 86
+current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 85-25-PLAN.md
-last_updated: "2026-11-22T07:49:52.900Z"
+stopped_at: Completed 86-01-PLAN.md
+last_updated: "2026-11-22T08:15:48.859Z"
 last_activity: 2026-11-22
-last_activity_desc: Phase 85 execution started
-state_head: 5714cafea4abc7a663a911ff87ba2fe189b13b26
+last_activity_desc: Phase 86 execution started
+state_head: 414e890a355cf5b9eaa1887a50bacf686ed9e803
 progress:
   total_phases: 20
   completed_phases: 23
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-20)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 85 — Store host, config and versioned migrations
+**Current focus:** Phase 86 — Pure leaf services
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 25 of 25
+Phase: 86 (Pure leaf services) — EXECUTING
+Plan: 2 of 26
 Status: Ready to execute
-Last activity: 2026-11-22 — Phase 85 execution started
+Last activity: 2026-11-22 — Phase 86 execution started
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -384,6 +384,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 85 P23 | 70 min | 2 tasks | 49 files |
 | Phase 85 P24 | 20min | 2 tasks | 84 files |
 | Phase 85 P25 | 44min | 3 tasks | 3 files |
+| Phase 86 P01 | 24min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -752,6 +753,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: Chain versions the TS side needs live in storeTable.json chainVersions (from genStoreTable's CHAIN_VERSIONS); cargo table_chain_versions_equal_the_shell_chains pins it to Chains::baseline, jest pins storeSchemaVersions.ts and CHAIN_CURRENT to it
 - [Phase 85]: storePolicyVectors' area section has no TS implementation since 85-24; write mode carries it over unchanged and cargo store_policy is its only proof
 - [Phase 85]: 85-25: push of the post-deletion head pre-authorised by the operator; first push blocked by the open-time check (quick-261122-qwk code), re-proven at D' 6ef75501d, pushed 88b48b70d from a clean worktree; CI green on all three legs
+- [Phase 86]: 86-01: Operator approved Phase 86 slice work on the shipped host; EXTRA_ROWS added by each delete plan (86-11/17/24) in the same commit keeping tsNames; Rust games.recent and overrides ops stay unreachable until 86-09/86-11 forwarding shims (precondition for 86-08/86-10)
 
 ### Pending Todos
 
@@ -1021,8 +1023,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T07:37:08.363Z
-Stopped at: Completed 85-25-PLAN.md
+Last session: 2026-11-22T08:15:41.823Z
+Stopped at: Completed 86-01-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
