@@ -655,8 +655,12 @@ pub(crate) fn start_reader(
             shell_eprintln!("[shell] unrecognized sidecar frame kind: {kind:?} id={id:?}");
         }
 
-        // stdout has ended (EOF, or a read error such as a non-UTF-8 line), so no response can
-        // arrive any more. Fail every invoke still waiting instead of leaving it parked forever.
+        // stdout has ended (EOF, or a read error such as a non-UTF-8 line): every frame it carried
+        // is enqueued. Signal first, before any teardown below that can take seconds, so the exit
+        // path's post-children store sample waits for exactly this point (Phase 85, D-WR-01).
+        state.reader_done.mark();
+
+        // No response can arrive any more. Fail every invoke still waiting instead of leaving it parked forever.
         for (id, channel) in drain_pending_invokes(&state.pending, &state.abandoned) {
             shell_log(&invoke_abandoned_message("sidecar exited", &id, &channel));
         }

@@ -39,10 +39,51 @@ pub(crate) struct SidecarState {
     /// Latches once `reap_dead_sidecar_tree` has killed and waited the tree, telling
     /// `shutdown_child` not to signal the (possibly recycled) pgid again.
     pub(crate) tree_reaped: AtomicBool,
+    /// Set by the stdout reader thread the moment `reader.lines()` ends, before any teardown. The
+    /// exit path waits on it (bounded) so a frame the sidecar wrote on its way out is enqueued
+    /// before the post-children store sample (Phase 85, D-WR-01).
+    pub(crate) reader_done: ReaderDone,
     /// Windows kill-on-close Job Object holding the sidecar tree (D-20). `None` if creation
     /// failed (shell then falls back to `child.kill()`).
     #[cfg(windows)]
     pub(crate) job: Mutex<Option<gamelib_proc::job::Job>>,
+}
+
+/// A one-shot "the sidecar's stdout reader has finished" signal: a flag and a condvar, so a waiter
+/// is woken the instant the reader ends and is never left parked past its own bound.
+#[derive(Default)]
+pub(crate) struct ReaderDone {
+    done: Mutex<bool>,
+    cv: std::sync::Condvar,
+}
+
+impl ReaderDone {
+    /// Latches the signal and wakes every waiter. Idempotent.
+    pub(crate) fn mark(&self) {
+        let mut done = self.done.lock().unwrap_or_else(|e| e.into_inner());
+        *done = true;
+        drop(done);
+        self.cv.notify_all();
+    }
+
+    /// Waits up to `bound` for the reader to finish. `true` when it has, `false` at the deadline.
+    /// A zero bound is a bare sample.
+    pub(crate) fn wait(&self, bound: Duration) -> bool {
+        let deadline = Instant::now() + bound;
+        let mut done = self.done.lock().unwrap_or_else(|e| e.into_inner());
+        while !*done {
+            let left = deadline.saturating_duration_since(Instant::now());
+            if left.is_zero() {
+                return false;
+            }
+            done = self
+                .cv
+                .wait_timeout(done, left)
+                .unwrap_or_else(|e| e.into_inner())
+                .0;
+        }
+        true
+    }
 }
 
 impl SidecarState {
@@ -360,4 +401,36 @@ pub(crate) fn time_left_to_write(
 ) -> Option<Duration> {
     let left = deadline.saturating_duration_since(now);
     (left > min_left).then_some(left)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_wait_before_the_reader_ends_times_out_and_a_zero_bound_is_a_bare_sample() {
+        let signal = ReaderDone::default();
+        let start = Instant::now();
+        assert!(!signal.wait(Duration::from_millis(60)));
+        assert!(start.elapsed() >= Duration::from_millis(50));
+        assert!(!signal.wait(Duration::ZERO));
+    }
+
+    #[test]
+    fn a_wait_returns_as_soon_as_the_reader_ends_and_stays_true() {
+        let signal = Arc::new(ReaderDone::default());
+        let marker = signal.clone();
+        let t = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(30));
+            marker.mark();
+        });
+        let start = Instant::now();
+        assert!(signal.wait(Duration::from_secs(10)));
+        assert!(
+            start.elapsed() < Duration::from_secs(5),
+            "woken, not timed out"
+        );
+        t.join().unwrap();
+        assert!(signal.wait(Duration::ZERO), "latched");
+    }
 }

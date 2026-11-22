@@ -968,10 +968,22 @@ fn handle_exit(
             state.shutdown_child(grace);
         }
         let _ = gamelib_proc::children::global().terminate_all(grace);
-        // Phase 85 (B-WR-02): the sidecar is the only source of store frames, and the `store` drain
-        // above sampled the queue while it was still alive. Frames it wrote while it handled the
-        // SIGTERM or the kill are in the queue now, so wait once more, inside this stage's grace
-        // and not on a budget of its own. A frame still pending is named, never joined.
+        // Phase 85 (B-WR-02, D-WR-01): the sidecar is the only source of store frames, and the
+        // `store` drain above sampled the queue while it was still alive. Frames it wrote while it
+        // handled the SIGTERM or the kill can still sit in the stdout pipe, so first wait for the
+        // reader thread to reach EOF (it enqueues store frames inline), then sample the queue once
+        // more. Both waits spend what is left of this stage's grace and no budget of their own.
+        // The sample is best-effort: a sidecar slow enough to use the whole grace leaves nothing
+        // to wait with, and a pending frame is named, never joined.
+        let left = grace.saturating_sub(stage.elapsed());
+        // A `match`, not `Option::is_none_or`: that is stable since 1.82 and the crate MSRV is 1.77.2.
+        let reader_ended = match app_handle.try_state::<Arc<SidecarState>>() {
+            Some(state) => state.reader_done.wait(left),
+            None => true,
+        };
+        if !reader_ended {
+            shell_log("sidecar stdout still open at the store frame sample");
+        }
         if store_boot::drain(grace.saturating_sub(stage.elapsed())) {
             shell_log("store frames still pending after the sidecar stopped");
         }
@@ -1087,6 +1099,7 @@ fn spawn_sidecar_state(
         shutting_down: AtomicBool::new(false),
         eof_surfaced: AtomicBool::new(false),
         tree_reaped: AtomicBool::new(false),
+        reader_done: shell_state::ReaderDone::default(),
         #[cfg(windows)]
         job: Mutex::new(job),
     });
