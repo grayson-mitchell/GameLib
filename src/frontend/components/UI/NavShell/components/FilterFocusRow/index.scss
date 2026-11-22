@@ -80,6 +80,10 @@
     // the dracula-only tier-2 divider (34.11-09): a measured per-theme
     // collision, not a general rule. Gated for all 10 themes by the divider
     // census in `themeTokens.test.ts`.
+    //
+    // 261122-qwk: nord-light is now palette-only; the same chain resolves to
+    // nord6 (#eceff4) on the nord3 (#4c566a) panel, 6.40:1. The 7.38 above is
+    // the pre-change palette, which gamelib-light keeps.
     body.dracula &,
     body.nord-light &,
     body.gamelib-light & {

@@ -3068,7 +3068,9 @@ describe('Button .is-link / .is-text families: render-site census and contrast i
       )
     expect(nestedRules(withoutOverrides)).toHaveLength(0)
     const preFixRatios: Record<string, number> = {
-      'nord-light': 3.356770572062584,
+      // nord6 on nord9 (the palette-only nord-light hover fill)
+      'nord-light': 2.3354075448387865,
+      // #eceff4 on #a17399 (the pre-change hover fill, kept by gamelib-light)
       'gamelib-light': 3.356770572062584,
       'nord-dark': 4.41083696523498
     }
@@ -3396,6 +3398,13 @@ describe('Phase 100 game page tokens in every theme (D-15, D-22)', () => {
       const merged = new Map(themeTokens(themesScss, selector))
       for (const [k, v] of customProps(cssBlock(css, '.mainInfoBody')))
         merged.set(k, v)
+      // A theme's own nested `.mainInfoBody` rule is applied last:
+      // `body.<theme> .mainInfoBody` outranks the bare `.mainInfoBody` by
+      // specificity (nord-light's 50% mix, quick 261122-qwk).
+      for (const block of allBlocksFor(themesScss, selector))
+        for (const rule of nestedRules(block))
+          if (rule.selector === '.mainInfoBody')
+            for (const [k, v] of customProps(rule.body)) merged.set(k, v)
       return merged
     }
 

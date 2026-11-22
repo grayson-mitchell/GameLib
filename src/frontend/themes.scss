@@ -586,14 +586,18 @@ body.gamelib-light {
 }
 
 body.nord-light {
+  /* Only the 16 official Nord colours (or alpha forms of them), per quick
+     261122-qwk. customThemes/__tests__/nordLightPalette.test.ts guards it.
+     --neutral-04 and --neutral-05 are the only exemption: themeTokens.test.ts
+     forbids any theme block from redeclaring them. */
   --background-light: #eceff4;
   --body-background: var(--background-light);
-  --fav: #a03a45;
+  --fav: #bf616a;
   --accent-overlay: #81a1c1;
   --navbar-accent: #81a1c1;
   --background-darker: var(--body-background);
   --current-background: var(--body-background);
-  --navbar-active-background: #60697a; /* lighter than --navbar-background, so the active row stands out */
+  --navbar-active-background: #3b4252; /* darker than --navbar-background, so the active row stands out */
   --gradient-body-background: linear-gradient(
     90deg,
     var(--background-light) -32px,
@@ -603,7 +607,7 @@ body.nord-light {
   --modal-background: var(--body-background);
   --modal-border: var(--body-background);
   --primary: #b48ead;
-  --primary-hover: #a17399;
+  --primary-hover: #81a1c1;
   --danger: #bf616a;
   --text-tertiary: var(--brand-text-01);
   --osk-background: var(--body-background);
@@ -611,39 +615,82 @@ body.nord-light {
   --osk-button-border: var(--navbar-background);
   --action-icon-hover: var(--accent);
   --action-icon-active: var(--text-default);
-  --navbar-inactive: #ffffff;
-  --navbar-active: #d0ddff;
-  --success-button: #3687a9;
-  --secondary-button: #15a3e0;
-  --icons-background: #6f738f;
-  --tertiary-button: #6f738f;
+  --navbar-inactive: #eceff4;
+  --navbar-active: #88c0d0;
+  --success-button: #81a1c1;
+  --secondary-button: #5e81ac;
+  --icons-background: #4c566a;
+  --tertiary-button: #4c566a;
 
-  --brand-text-01: #e0f9ff;
+  --brand-text-01: #eceff4;
 
   --neutral-06: #2e3440;
-  --neutral-03: #429ec5;
-  --accent: #30444a;
+  --neutral-03: #5e81ac;
+  --accent: #3b4252;
   --background: var(--background-light);
   --navbar-background: #4c566a;
   --input-background: #d8dee9;
-  --success: #3e532d;
-  --success-hover: #617550;
-  --text-title: #20242c;
+  --success: #434c5e;
+  --success-hover: #4c566a;
+  --text-title: #2e3440;
   --text-default: var(--text-title);
-  --text-secondary: #393b41;
+  --text-secondary: #4c566a;
   --text-hover: #5e81ac;
-  --action-icon: #748aa0;
-  --status-warning: #b86901;
-  --gamecard-title-color: #ccdaf8cc;
+  --action-icon: #5e81ac;
+  --status-warning: #d08770;
+  --gamecard-title-color: #e5e9f0cc;
   --install-button: var(--primary);
   --status-success-hover: #5e81ac;
-  --text-log: var(--status-warning);
+  --text-log: #4c566a;
   --tour-popup-background: var(--input-background);
   --tour-bullet-active: var(--accent);
   --tour-bullet-inactive: var(--accent-overlay);
   --tour-popup-title: var(--text-title);
   --tour-popup-skip-color: var(--text-secondary);
   --tour-popup-skip-color-hover: var(--text-title);
+
+  --border-color: #5e81ac;
+  --tertiary-button-overlay: #434c5e;
+  --cancel-button: #bf616a;
+  --cancel-button-overlay: #d08770;
+
+  --brand-primary: #88c0d0;
+  --brand-primary-hover: #8fbcbb;
+  --brand-secondary: #b48ead;
+  --brand-secondary-hover: #81a1c1;
+  --brand-text-02: #4c566a;
+  --brand-text-03: #88c0d0;
+  --brand-text-04: #b48ead;
+  --brand-text-05: #81a1c1;
+  --primary-active: #88c0d0;
+  --secondary-hover: #81a1c1;
+  --secondary-active: #5e81ac;
+  --accent-02: #5e81ac5b;
+
+  --neutral-01: #2e3440;
+  --neutral-02: #2e3440;
+  --neutral-07: #eceff4;
+  --neutral-08: #eceff4;
+  --base-06: #4c566a;
+  --eighty-percent-black: rgba(46, 52, 64, 0.8);
+  --sixty-percent-black: rgba(46, 52, 64, 0.6);
+  --gradient-01: linear-gradient(270.36deg, #81a1c1 1.57%, #88c0d0 96.46%);
+  --gradient-02: linear-gradient(270.36deg, #88c0d0 1.57%, #5e81ac 96.46%);
+  --gradient-gamecard: linear-gradient(
+    180deg,
+    rgba(46, 52, 64, 0.418) 1.8%,
+    var(--eighty-percent-black) 45%
+  );
+
+  --status-danger: #bf616a;
+  --status-danger-hover: #d08770;
+  --status-success: #a3be8c;
+  --status-warning-hover: #ebcb8b;
+  --status-info: #88c0d0;
+  --status-info-hover: #8fbcbb;
+  --status-default: #d8dee9;
+  --status-default-hover: #e5e9f0;
+  --anticheat-denied: #bf616a;
 
   .developer,
   .releaseDate,
@@ -716,7 +763,7 @@ body.nord-light {
   }
   .progressDialog.log-box,
   .errorDialog.error-box {
-    background-color: #dde1e7;
+    background-color: #e5e9f0;
   }
 
   .gameCard > .gameCardStatus {
@@ -728,7 +775,7 @@ body.nord-light {
       .Category {
         &:hover,
         &:focus-within {
-          background-color: rgba(0, 0, 0, 0.05);
+          background-color: rgba(46, 52, 64, 0.05);
         }
       }
     }
@@ -740,6 +787,16 @@ body.nord-light {
 
   .alternative > svg {
     fill: var(--accent) !important;
+  }
+
+  /* 50% because the shared 60% mix reads 4.31 with nord12 and nord0, under the
+     4.5 Hide-toggle floor. */
+  .mainInfoBody {
+    --leftcard-warning-text: color-mix(
+      in srgb,
+      var(--status-warning) 50%,
+      var(--text-default)
+    );
   }
 }
 

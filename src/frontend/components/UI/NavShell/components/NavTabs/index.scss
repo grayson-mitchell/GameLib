@@ -288,6 +288,12 @@
       // pixel-level Chromium reproduction four times in one investigation
       // because source gates and contrast math both said "correct" while a
       // live WKWebView sweep did not. A live look at `nord-light` is owed.
+      //
+      // 261122-qwk: nord-light is now palette-only. The rule is unchanged, but
+      // `--accent` is nord1 (#3b4252) there, reading 8.73:1 on the nord6 body,
+      // and `--navbar-active` is nord8 (#88c0d0), 5.03:1 on the nord1
+      // `--navbar-active-background`. The hexes quoted above are the
+      // pre-change palette, which gamelib-light keeps.
       body.nord-light & {
         color: var(--accent);
       }
