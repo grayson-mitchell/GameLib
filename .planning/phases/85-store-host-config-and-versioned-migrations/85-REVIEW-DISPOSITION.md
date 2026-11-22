@@ -2,7 +2,7 @@
 phase: 85-store-host-config-and-versioned-migrations
 source: 85-REVIEW.md
 created: 2026-11-22
-findings: 43
+findings: 50
 ---
 
 # Phase 85: Code Review Disposition
@@ -10,6 +10,8 @@ findings: 43
 One row per finding in `85-REVIEW.md`. Every finding starts as `open`. `open` means triaged into the post-phase decision (fix now or file as todos), not forgotten.
 
 Reconciled 2026-11-22 against `85-REVIEW-FIX.md` (iteration 1, scope critical_warning): 19 fixed, 2 skipped. B-WR-10 is a necessity finding, out of that scope, and stays `open` with the 21 info findings.
+
+Round 2 (review committed after the fixes; round 1 is at `5714cafea`) verified 16 of the 19 fixes and added seven `D-` rows, all `open`. D-WR-01, D-WR-02 and D-WR-03 reopen B-WR-02, B-WR-03 and C-WR-06.
 
 | ID | Severity | Finding | Disposition |
 |---|---|---|---|
@@ -56,3 +58,10 @@ Reconciled 2026-11-22 against `85-REVIEW-FIX.md` (iteration 1, scope critical_wa
 | C-IN-05 | info | Necessity: `tsEntries` is always `[]` | open |
 | C-IN-06 | info | Necessity: `StoreOptions` still carries options the mirror ignores | open |
 | C-IN-07 | info | `public/changelog.json` is internally inconsistent | open |
+| D-WR-01 | warning | The post-children store wait does not wait for the sidecar's reader, so late frames are still missed (reopens B-WR-02) | open |
+| D-WR-02 | warning | The capped `GAMELIB_STORE_BOOT` drops the core stores first, and the `truncated` marker has no reader (reopens B-WR-03) | open |
+| D-WR-03 | warning | `hydrateStoreSnapshot` now returns before the re-fetch it defers to has landed (reopens C-WR-06) | open |
+| D-IN-01 | info | The store slice's queue is now owned by the context its own worker holds, so the worker thread can never end | open |
+| D-IN-02 | info | The Rust game-config name rule is now closed, and the TS rule is still the old deny list | open |
+| D-IN-03 | info | The temp-collision test can pass without colliding | open |
+| D-IN-04 | info | The renderer still applies an empty-segment key to its own snapshot optimistically | open |
