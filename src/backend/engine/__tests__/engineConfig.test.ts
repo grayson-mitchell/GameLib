@@ -1,4 +1,3 @@
-import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import {
   mkdirSync,
   mkdtempSync,
@@ -66,23 +65,16 @@ const release = (over: Record<string, unknown> = {}) => ({
   installDir: WM_DIR,
   ...over
 })
-// One engine for the file: the config reads migrate through it.
-const versioning = createTestVersioning()
 const deps = (
   releases = [release()],
   global: Record<string, unknown> = {}
 ): Partial<EngineConfigDeps> &
   Pick<
     EngineConfigDeps,
-    | 'wineManagerReleases'
-    | 'globalSettings'
-    | 'gamesConfigPath'
-    | 'pinWineBin'
-    | 'versioning'
+    'wineManagerReleases' | 'globalSettings' | 'gamesConfigPath' | 'pinWineBin'
   > => ({
   wineManagerReleases: () => releases,
   gamesConfigPath: dir,
-  versioning,
   pinWineBin: (pin) => pinnedEnginePaths(pin as never).wineBin,
   globalSettings: () => global
 })
@@ -185,9 +177,7 @@ describe('resolveEffectiveEngine', () => {
 describe('readStoredGameConfig', () => {
   it('rejects traversal and bad names', () => {
     for (const n of ['../x', 'a/b', 'a\\b', '', 'a\0b', '..']) {
-      expect(
-        readStoredGameConfig(n, { gamesConfigPath: dir, versioning })
-      ).toBeUndefined()
+      expect(readStoredGameConfig(n, { gamesConfigPath: dir })).toBeUndefined()
     }
   })
   it('reads entries keyed by appName', () => {
@@ -196,12 +186,24 @@ describe('readStoredGameConfig', () => {
         join(dir, `${n}.json`),
         JSON.stringify({ [n]: { targetExe: n } })
       )
-      expect(
-        readStoredGameConfig(n, { gamesConfigPath: dir, versioning })
-      ).toEqual({
+      expect(readStoredGameConfig(n, { gamesConfigPath: dir })).toEqual({
         targetExe: n
       })
     }
+  })
+  it('returns a current (v2) document as it stands, with no versioning engine', () => {
+    writeFileSync(
+      join(dir, 'Current.json'),
+      JSON.stringify({
+        version: 'v2',
+        explicit: {},
+        Current: { targetExe: 'Current.exe', engineOverride: 'automatic' }
+      })
+    )
+    expect(readStoredGameConfig('Current', { gamesConfigPath: dir })).toEqual({
+      targetExe: 'Current.exe',
+      engineOverride: 'automatic'
+    })
   })
 })
 

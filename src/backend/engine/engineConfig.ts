@@ -11,12 +11,10 @@ import { isAbsolute, join, relative, resolve } from 'path'
 import type { AppPaths } from 'backend/process/context'
 import type { FallbackEngine } from './fallbackEngine'
 import {
-  prepareSettingsDoc,
   readSettingsDoc,
   settingsDocExists,
   type SettingsDocRoot
 } from 'backend/stores/settingsDocs'
-import type { StoreVersioning } from 'backend/storeVersioning/engine'
 import { hasCapability } from 'common/storeCapabilities'
 import type { WineInstallation } from 'common/types'
 import { ENGINE_PINS } from './enginePins'
@@ -35,12 +33,10 @@ export interface EngineConfigDeps {
   }>
   pinWineBin(pin: { id: string }): string
   gamesConfigPath: string
-  /** The boot's store-versioning engine: the game config is migrated through it before a read. */
-  versioning: StoreVersioning
   /**
    * The boot's store root (85-15): the game config is read through its mirror when the shell owns
    * the settings family, so a setting written a moment ago is seen. Absent (a test), the document
-   * is TS-owned over `versioning`.
+   * is read from the file as it stands: the shell migrated it at boot.
    */
   storeRoot?: SettingsDocRoot
   globalSettings(): Record<string, unknown>
@@ -53,19 +49,17 @@ function defaultDeps(): Pick<EngineConfigDeps, 'pins'> {
 /** The path reads the config helpers need (66.4-05): the games-config root and the pin's Wine binary. */
 export type ConfigPathDeps = Pick<
   EngineConfigDeps,
-  'gamesConfigPath' | 'pinWineBin' | 'versioning' | 'storeRoot'
+  'gamesConfigPath' | 'pinWineBin' | 'storeRoot'
 >
 
 /** Builds the path reads from the boot's `paths`, store root and fallback-engine owner. */
 export function configPathDepsFrom(source: {
   paths: Pick<AppPaths, 'gamesConfigPath'>
-  versioning: StoreVersioning
   storeRoot?: SettingsDocRoot
   engineRuntime: { fallback: Pick<FallbackEngine, 'pinnedEnginePaths'> }
 }): ConfigPathDeps {
   return {
     gamesConfigPath: source.paths.gamesConfigPath,
-    versioning: source.versioning,
     ...(source.storeRoot ? { storeRoot: source.storeRoot } : {}),
     pinWineBin: (pin) =>
       source.engineRuntime.fallback.pinnedEnginePaths(
@@ -95,12 +89,13 @@ const withDeps = (
  * The game's stored GamesConfig entry, read through the settings-document seam (never
  * `GameConfig.get`, which creates a missing file and fills asynchronously,
  * 59-UAT G11): the mirror's view, pending writes included, when the shell owns the
- * settings family; the file otherwise (85-15). Values are unvalidated. Undefined on a
+ * settings family; the file otherwise (85-15). The shell migrated every document at boot (85-15,
+ * research A4), so no TS migration runs. Values are unvalidated. Undefined on a
  * bad appName, a missing or corrupt file, or a non-object entry.
  */
 export function readStoredGameConfig(
   appName: string,
-  deps: Pick<EngineConfigDeps, 'gamesConfigPath' | 'versioning' | 'storeRoot'>
+  deps: Pick<EngineConfigDeps, 'gamesConfigPath' | 'storeRoot'>
 ): Record<string, unknown> | undefined {
   if (
     typeof appName !== 'string' ||
@@ -116,12 +111,9 @@ export function readStoredGameConfig(
   const rel = relative(root, target)
   if (rel.startsWith('..') || isAbsolute(rel)) return undefined
   const path = join(root, `${appName}.json`)
-  const docs: SettingsDocRoot = deps.storeRoot ?? {
-    versioning: deps.versioning
-  }
+  const docs: SettingsDocRoot = deps.storeRoot ?? {}
   if (!settingsDocExists(docs, path)) return undefined
   // Containment checks above passed (T-68-19).
-  prepareSettingsDoc(docs, path, 'settings/game')
   try {
     const raw = readSettingsDoc(docs, path)
     if (raw === undefined) return undefined

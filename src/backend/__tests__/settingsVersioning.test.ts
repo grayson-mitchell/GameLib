@@ -73,7 +73,7 @@ function freshGraph(): Graph {
       createGameConfigs: (deps) =>
         gameConfig.createGameConfigs({ ...deps, versioning, paths }),
       readStoredGameConfig: (appName, deps) =>
-        engineConfig.readStoredGameConfig(appName, { ...deps, versioning })
+        engineConfig.readStoredGameConfig(appName, deps)
     }
     /* eslint-enable @typescript-eslint/no-require-imports */
   })
@@ -241,9 +241,10 @@ describe('per-game settings', () => {
     expect(readFileSync(gameFile('app7')).equals(before)).toBe(true)
   })
 
-  it('readStoredGameConfig returns the entry and migrates once with one backup', () => {
+  it('readStoredGameConfig returns the entry and leaves the file alone (the shell migrated it at boot)', () => {
     seed('appr')
     const { readStoredGameConfig } = freshGraph()
+    const before = readFileSync(gameFile('appr'))
 
     expect(
       readStoredGameConfig('appr', {
@@ -255,10 +256,7 @@ describe('per-game settings', () => {
         gamesConfigPath: join(mockPaths.dir, 'GamesConfig')
       })
     ).toEqual({ targetExe: 'a.exe' })
-    expect(JSON.parse(readFileSync(gameFile('appr'), 'utf8')).version).toBe(
-      'v2'
-    )
-    expect(backups('appr')).toHaveLength(1)
-    expect(existsSync(gameFile('appr'))).toBe(true)
+    expect(readFileSync(gameFile('appr')).equals(before)).toBe(true)
+    expect(backups('appr')).toHaveLength(0)
   })
 })

@@ -108,7 +108,6 @@ function effectiveFor(
     !deps.wineManagerReleases ||
     !deps.globalSettings ||
     !deps.paths ||
-    !deps.versioning ||
     !deps.engineRuntime
   ) {
     throw new Error(
@@ -119,7 +118,6 @@ function effectiveFor(
     wineManagerReleases: deps.wineManagerReleases,
     ...configPathDepsFrom({
       paths: deps.paths,
-      versioning: deps.versioning,
       storeRoot: deps.storeRoot,
       engineRuntime: deps.engineRuntime
     }),
@@ -224,7 +222,6 @@ export type EngineStateDepsNoKill = Omit<
   | 'runner'
   | 'paths'
   | 'engineRuntime'
-  | 'versioning'
 > &
   Partial<KillDeps & ReleasesDeps & RunnerDeps>
 

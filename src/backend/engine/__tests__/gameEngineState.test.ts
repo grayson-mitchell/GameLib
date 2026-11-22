@@ -1,4 +1,3 @@
-import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import { mkdtempSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -25,7 +24,6 @@ const services = {
   spawnAsync: createTestServices().spawnAsync,
   paths: baseServices.paths,
   engineRuntime: baseServices.engineRuntime,
-  versioning: createTestVersioning(),
   runner: createScriptedRunner([]),
   wineManagerReleases: () => [],
   globalSettings: () => global,

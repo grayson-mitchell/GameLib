@@ -1,4 +1,3 @@
-import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import {
   ENGINE_PREFLIGHT_UNHEALTHY_TTL_MS,
   TRIAL_NOTICE_DAYS,
@@ -74,7 +73,6 @@ function toDeps(appId: string, o: SteamStyle): EngineStateDeps {
     wineManagerReleases: () => [],
     runner: createScriptedRunner([]),
     paths: rt.paths,
-    versioning: createTestVersioning(),
     engineRuntime: rt.engineRuntime,
     ...o,
     bottleFor: () =>
@@ -922,7 +920,6 @@ describe('generic identities (phase 61 D-12, D-15)', () => {
     wineManagerReleases: () => [],
     runner: createScriptedRunner([]),
     paths: rt.paths,
-    versioning: createTestVersioning(),
     engineRuntime: rt.engineRuntime,
     bottleFor: () => 'GameLibBottle-Fortnite',
     overrideEligible: () => true,

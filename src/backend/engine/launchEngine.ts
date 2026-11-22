@@ -255,7 +255,6 @@ export async function selectEngineForLaunch(
       wineManagerReleases: services.wineManagerReleases,
       runner: services.runner,
       paths: services.paths,
-      versioning: services.versioning,
       storeRoot: services.storeRoot,
       engineRuntime: services.engineRuntime
     }),

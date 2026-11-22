@@ -247,7 +247,6 @@ describe('the direct per-game readers see a document written a moment earlier', 
     expect(
       readStoredGameConfig(APP, {
         gamesConfigPath: gamesConfig(),
-        versioning: root.versioning,
         storeRoot: root
       })?.engineOverride
     ).toBe('automatic')
@@ -262,7 +261,6 @@ describe('the direct per-game readers see a document written a moment earlier', 
     expect(
       readStoredGameConfig(APP, {
         gamesConfigPath: gamesConfig(),
-        versioning: root.versioning,
         storeRoot: root
       })?.engineOverride
     ).toBe('crossover')
@@ -274,12 +272,9 @@ describe('the direct per-game readers see a document written a moment earlier', 
       join(gamesConfig(), `${APP}.json`),
       JSON.stringify(gameDoc('automatic'), null, 2)
     )
-    const { root } = build()
     expect(
-      readStoredGameConfig(APP, {
-        gamesConfigPath: gamesConfig(),
-        versioning: root.versioning
-      })?.engineOverride
+      readStoredGameConfig(APP, { gamesConfigPath: gamesConfig() })
+        ?.engineOverride
     ).toBe('automatic')
     expect(
       readStoredTitleConfig(APP, { paths: { gamesConfigPath: gamesConfig() } })
