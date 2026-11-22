@@ -289,7 +289,9 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         requestRustInvoke: deps.host.requestRustInvoke,
         appRuntime: deps.appRuntime,
         // 85-15: a removed settings document's mirror cell is dropped (dropSettingsDoc).
-        storeRoot: deps.storeRoot
+        storeRoot: deps.storeRoot,
+        // C-WR-02: and its cached per-game config instance is forgotten.
+        gameConfigs: deps.gameConfigs
       },
       event,
       args[0] as string,

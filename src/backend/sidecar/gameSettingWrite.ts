@@ -15,7 +15,7 @@ import type { SendFrontendMessage } from '../host/frontendMessage'
  */
 export function applyGameSetting(
   deps: {
-    gameConfigs: GameConfigs
+    gameConfigs: Pick<GameConfigs, 'get'>
     sendFrontendMessage: SendFrontendMessage
   },
   appName: string,

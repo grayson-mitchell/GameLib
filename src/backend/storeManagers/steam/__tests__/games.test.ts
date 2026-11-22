@@ -484,7 +484,8 @@ const steamTestDeps = createTestManagerDeps({
         jest.requireMock('backend/game_config').GameConfig.get as (
           appName: string
         ) => GameConfigSlice
-      )(appName)
+      )(appName),
+    forget: () => undefined
   },
   steamProcesses: createInertSteamProcesses({
     // The DRM instance: its launch setup is the jest.fn()-backed stand-in the

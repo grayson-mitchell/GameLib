@@ -3,6 +3,7 @@ import { notify } from 'backend/dialog/dialog'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { ManagerDeps } from 'backend/services/types'
 import type { GlobalConfigSlice } from 'backend/config'
+import type { GameConfigs } from 'backend/game_config'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { resolveGameTitle } from 'backend/utils/gameTitle'
 import { Runner } from 'common/types'
@@ -38,6 +39,11 @@ export type UninstallerDeps = Pick<
   | 'storeRoot'
 > & {
   config: Pick<GlobalConfigSlice, 'getSettings'>
+  /**
+   * The per-game config registry. When present, a removed settings document's cached instance is
+   * forgotten too (C-WR-02); a caller without one leaves the instance as it was.
+   */
+  gameConfigs?: Pick<GameConfigs, 'forget'>
 } & AppRuntimeSlice<'events'>
 
 /**
@@ -100,7 +106,12 @@ const removePrefix = async (
 /** What the app-data file deletes need: the guard's transport, the known installs and the roots. */
 type AppDataRemovalDeps = Pick<
   UninstallerDeps,
-  'paths' | 'requestRustInvoke' | 'libraryManagers' | 'config' | 'storeRoot'
+  | 'paths'
+  | 'requestRustInvoke'
+  | 'libraryManagers'
+  | 'config'
+  | 'storeRoot'
+  | 'gameConfigs'
 >
 
 /**
@@ -194,8 +205,11 @@ const removeSettingsAndLogs = async (
       path: join(gamesConfigPath, filename)
     }))
   )
-  if (removed?.outcome === 'removed' && deps.storeRoot) {
-    dropSettingsDoc(deps.storeRoot, settingsPath)
+  if (removed?.outcome === 'removed') {
+    if (deps.storeRoot) dropSettingsDoc(deps.storeRoot, settingsPath)
+    // The cached GameConfig instance serves `.config` straight from memory and would write the
+    // deleted overrides back on its next save (C-WR-02).
+    deps.gameConfigs?.forget(appName)
   }
   return removed
 }

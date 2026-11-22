@@ -278,7 +278,8 @@ describe('readSettingsDoc / writeSettingsDoc / dropSettingsDoc', () => {
 describe('uninstall drops the settings cell when the removal reports removed (T-85-38)', () => {
   function uninstallDeps(
     root: ReturnType<typeof build>['root'],
-    requestRustInvoke: RequestRustInvoke
+    requestRustInvoke: RequestRustInvoke,
+    gameConfigs?: ReturnType<typeof build>['gameConfigs']
   ) {
     const game = {
       uninstall: async () => ({}),
@@ -303,7 +304,8 @@ describe('uninstall drops the settings cell when the removal reports removed (T-
       },
       requestRustInvoke,
       appRuntime: createTestAppRuntime(),
-      storeRoot: root
+      storeRoot: root,
+      gameConfigs
     } as unknown as Parameters<typeof uninstallGameCallback>[0]
   }
 
@@ -329,6 +331,28 @@ describe('uninstall drops the settings cell when the removal reports removed (T-
     expect(existsSync(gamePath())).toBe(false)
     expect(root.mirrors.peek(gamePath())).toBeUndefined()
     expect(readSettingsDoc(root, gamePath())).toBeUndefined()
+  })
+
+  it('a removed settings document also drops the cached GameConfig, so its old overrides are gone (C-WR-02)', async () => {
+    seedGlobal()
+    const { root, gameConfigs } = build()
+    const before = gameConfigs.get(APP)
+    before.setSetting('maxSharpness', 3)
+    expect(before.config.maxSharpness).toBe(3)
+
+    const { requestRustInvoke } = fakeSafetyRustInvoke()
+    await uninstallGameCallback(
+      uninstallDeps(root, requestRustInvoke, gameConfigs),
+      undefined,
+      APP,
+      'sideload',
+      false,
+      true
+    )
+
+    const after = gameConfigs.get(APP)
+    expect(after).not.toBe(before)
+    expect(after.config.maxSharpness).not.toBe(3)
   })
 
   it('a written-but-unapplied document is sent for removal and its cell dropped too', async () => {

@@ -77,6 +77,9 @@ export function createTestGameConfigs(
         configs.set(appName, config)
       }
       return config
+    },
+    forget: (appName) => {
+      configs.delete(appName)
     }
   }
 }

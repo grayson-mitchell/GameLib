@@ -347,6 +347,12 @@ export type GameConfigSlice = Pick<
 
 export interface GameConfigs {
   get(appName: string): GameConfigSlice
+  /**
+   * Drops the cached instance of `appName`, so the next `get` loads the document afresh. A game's
+   * settings were removed (an uninstall's "remove settings"): the cached instance still holds the
+   * deleted overrides, and its next write would put them all back.
+   */
+  forget(appName: string): void
 }
 
 /**
@@ -380,6 +386,9 @@ export function createGameConfigs(deps: {
         instances.set(appName, instance)
       }
       return instance
+    },
+    forget: (appName) => {
+      instances.delete(appName)
     }
   }
 }
