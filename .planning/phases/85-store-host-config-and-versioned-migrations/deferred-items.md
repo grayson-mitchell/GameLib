@@ -56,3 +56,5 @@
 - The `outboundHttpRegistry.test.ts` WebSocket flake 85-17 recorded did not recur in any of the three 85-19 full runs.
 - `public/changelog.json` now carries the 0.11.0 identity but the 0.8.0 release prose; 0.11.0 notes are owed before a
   release is published.
+- CI-only (Task 3): `meta/__tests__/storeCorpus.test.ts` account-name scan collided with the hosted runner's `runner`
+  account; fixed in `c06a0c237` (scan off when `GITHUB_ACTIONS=true`). Not deferred, recorded for the trail.

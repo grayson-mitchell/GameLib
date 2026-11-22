@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
-stopped_at: Completed 85-17-PLAN.md
-last_updated: "2026-11-22T02:13:19.022Z"
+stopped_at: Completed 85-19-PLAN.md
+last_updated: "2026-11-22T03:34:53.733Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: c7234d13a1490e377c548e549d2d21f15c2b5aeb
+state_head: 482625eccf23729b9f819041ca91db23701d11c3
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 18 of 25
+Plan: 19 of 25
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
@@ -377,6 +377,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 85 P15 | 34 min | 3 tasks | 47 files |
 | Phase 85 P16 | 31min | 3 tasks | 35 files |
 | Phase 85 P17 | 42 min | 3 tasks | 22 files |
+| Phase 85 P19 | 2h 18m | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -730,6 +731,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: 85-16: the read-only notice is raised by Rust (store_read_only_notice) once per process under rust mode, TS entries merged and deduped by area+reason; TS keeps its log lines
 - [Phase 85]: 85-17: every sidecar-bound store event leaves from the StoreHost dispatcher thread: applied acks for sidecar changes and changed events for renderer/Rust changes come from a host listener in rev order; the frame worker posts refused/flushed/no-op acks behind earlier changes (StoreHost::post); MirrorCell folds an applied op only when its rev is above baseRev
 - [Phase 85]: 85-17: one push source per store: Rust's StoreHost listener pushes storeChanged {.., rev} for every store it owns (per renderer name, allow-list filtered); TS pushStoreChanged returns early for those under rust mode; the preload drops a push not newer than the snapshot/fetch/applied rev and never resyncs on a rev gap (filtered fields skip revs)
+- [Phase 85]: 85-19: operator chose push-and-build; draft v0.11.0 (run 44978855761) never published; identity equals the v0.10.0 baseline, SC3 pending the 85-20 live gate
+- [Phase 85]: 85-19: renderer zod guard admits .json data modules under common/types/ipc (operator kept it); storeChannels.json stays put
+- [Phase 85]: 85-19: version bumped to 0.11.0 so the Phase 85 build sorts above the v0.10.0 baseline
 
 ### Pending Todos
 
@@ -995,8 +999,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T02:13:17.016Z
-Stopped at: Completed 85-17-PLAN.md
+Last session: 2026-11-22T03:34:52.145Z
+Stopped at: Completed 85-19-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

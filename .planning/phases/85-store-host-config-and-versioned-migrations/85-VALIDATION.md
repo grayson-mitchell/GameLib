@@ -71,7 +71,7 @@ Task IDs bound by the planner (2026-11-21). `85-NN-Tk` = plan 85-NN, task k. Com
 | 85-16-T1..T3 | FND-06 / SC2 | Native reads; one owner per channel; policy TS = Rust; Rust read-only notice | unit + jest | `cd src-tauri && cargo test --bin gamelib-shell store_policy && cargo test --bin gamelib-shell store_native` ; `pnpm exec jest --runTestsByPath src/backend/__tests__/nativeSeamPortComplete.test.ts` ; `pnpm check:ipc-contract` | ✅ | ✅ green (85-19 proof at P) |
 | 85-17-T1..T3 | FND-06 | Native writes and storeChanged with rev; preload stale-push guard | unit + jest | `cd src-tauri && cargo test --bin gamelib-shell store_native` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/rendererWrites.test.ts src/preload/__tests__/tauriTransport.test.ts` | ✅ | ✅ green (85-19 proof at P) |
 | 85-18-T1..T2 | FND-06 | Bottle version gate (D-17) for marker and ledger | unit + jest | `cd src-tauri && cargo test -p gamelib-store version_gate && cargo test --bin gamelib-shell store_gate` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/bottleVersionGate.test.ts` | ✅ | ✅ green (85-19 proof at P) |
-| 85-19-T1..T3 | FND-06 / FND-07 | Clean-worktree proof; three-OS CI; Phase 85 signed identity recorded | proof | see 85-19 | — | ⬜ pending (T1 green at P `d90e33bc8`; T2 decision and T3 CI owed) |
+| 85-19-T1..T3 | FND-06 / FND-07 | Clean-worktree proof; three-OS CI; Phase 85 signed identity recorded | proof | see 85-19 | — | ✅ green (proof at P `d90e33bc8`; CI green at `482625ecc`; Phase 85 identity = baseline) |
 | 85-20-T1..T3 | FND-07 / SC3, SC1, SC2 | Live macOS gate on signed builds | manual | `85-HUMAN-UAT.md` | — | ⬜ pending |
 | 85-21-T1 | FND-06 / SC4, SC5 | Reachability recorded; migration system and migrationsStore deleted; mirror schedule pinned (D-19); migrations.json untouched (D-07) | jest + unit | `pnpm exec jest --runTestsByPath src/backend/__tests__/storeHostPortComplete.test.ts src/backend/__tests__/storeMirrorSchedule.test.ts` ; `cd src-tauri && cargo test --bin gamelib-shell store_boot_never_opens_migrations_json` | ❌ W0 | ⬜ pending |
 | 85-21-T2 | FND-06 / SC5 | Flag, TS owner path, oracle and `conf` deleted; census exemption closed | jest + unit | `pnpm exec jest --runTestsByPath src/backend/__tests__/storeHostPortComplete.test.ts src/backend/__tests__/nativeSeamPortComplete.test.ts` ; `cd src-tauri && cargo test --bin gamelib-shell store_` | ✅ update | ⬜ pending |
@@ -157,11 +157,61 @@ Plan 85-19 Task 1, 2026-11-22, on the macOS machine (aarch64-apple-darwin, `rust
 
 ---
 
+## CI proof
+
+Plan 85-19 Task 3, 2026-11-22, within the operator's push-and-build decision.
+
+**Pushes.** `git diff --name-only P HEAD` re-run immediately before the first push listed only
+`.planning/phases/85-store-host-config-and-versioned-migrations/85-VALIDATION.md` and `.../deferred-items.md`; `git push origin main`
+(pre-push hook ran and passed, never `--no-verify`) moved origin/main `a0401bbc6..ffb8573d2`. One CI-only fix followed
+(`c06a0c237`, below), pushed `ffb8573d2..c06a0c237`. Another session then pushed `482625ecc` (`docs(84)`, `.planning` only) on top,
+which cancelled the runs for `c06a0c237` (workflow concurrency, `cancel-in-progress`); the runs at `482625ecc` are therefore the
+CI proof of `c06a0c237`'s tree plus that one planning doc.
+
+**Round 1, head `ffb8573d2` (= P plus the Task 1 proof record):**
+
+| Workflow | Run id | Leg / job | Conclusion |
+|----------|--------|-----------|------------|
+| Rust test | 44978826059 | cargo-test (windows-latest) | success |
+| Rust test | 44978826059 | cargo-test (macos-latest) | success |
+| Rust test | 44978826059 | cargo-test (ubuntu-latest) | success |
+| Test | 44978826083 | ci (ubuntu) | **failure**: `meta/__tests__/storeCorpus.test.ts` "finds no account data in any committed file", 1 failed of 24594 |
+| Code check | 44978826070 | codecheck | success |
+| Lint | 44978826052 | lint | success |
+| Supply-chain audit | 44978826099 | cargo-deny, pnpm-audit | success, success |
+
+CI-only failure and fix: the corpus redaction scan checks every string and key against `os.userInfo().username`. On a
+GitHub-hosted runner that is `runner`, which is also the GameLib `runner` key (`runner: 'gog'`), so 128 findings were raised
+across the store files. That check guards the harvesting operator's own name and is meaningless on a hosted runner; it is
+disabled when `GITHUB_ACTIONS=true` and every other scan still runs (`c06a0c237`, verified locally in both modes, 21/21).
+
+**Round 2, head `482625ecc` (tree = `c06a0c237` + one `.planning` doc), all green:**
+
+| Workflow | Run id | Leg / job | Conclusion | Evidence from the step logs |
+|----------|--------|-----------|------------|------------------------------|
+| Rust test | 44980283910 | cargo-test (windows-latest) | success | multi-crate step (with `-p gamelib-store -p gamelib-store-cli`): 93 binaries, 1765 passed, 0 failed; **`atomic::windows::a_destination_held_without_share_delete_is_retried_then_written_directly ... ok`** (S2); shell step **`tests::keyring_names_are_pinned ... ok`** (D-10); clippy ratchet `PASS (win32, toolchain 1.99.1)` |
+| Rust test | 44980283910 | cargo-test (macos-latest) | success | multi-crate 1810 passed, 0 failed; `keyring_names_are_pinned ... ok`; clippy `PASS (darwin, toolchain 1.99.1)` |
+| Rust test | 44980283910 | cargo-test (ubuntu-latest) | success | multi-crate 1808 passed, 0 failed; **`tests::keyring_names_are_pinned ... ok`** (D-10); no clippy on Linux by design |
+| Test | 44980283964 | ci (ubuntu) | success | 1139 suites passed, 12 skipped; 24377 passed, 217 skipped, 0 failed |
+| Code check | 44980283978 | codecheck | success | |
+| Lint | 44980284019 | lint | success | |
+| Supply-chain audit | 44980284022 | cargo-deny, pnpm-audit | success, success | |
+
+No clippy ceiling changed: both platforms passed at their existing ceilings.
+
+**Release build:** `gh workflow run release-tauri.yml --ref main -f dry_run=false`, run 44978855761, head `ffb8573d2` (P's code;
+`c06a0c237` is a test-only change and does not alter the artifact). macOS `aarch64-apple-darwin` success (completed
+2026-11-22T03:24:19Z), Windows `x86_64-pc-windows-msvc` success, Linux `ubuntu-22.04` success. Output: draft prerelease
+`GameLib v0.11.0` (tag `v0.11.0`, target `ffb8573d2`, **not published**), assets `GameLib_0.11.0_aarch64.app.tar.gz`(+`.sig`),
+`GameLib_0.11.0_aarch64.dmg`, `GameLib_0.11.0_amd64.AppImage`(+`.sig`), `GameLib_0.11.0_x64-setup.exe`(+`.sig`), `latest.json`.
+
+---
+
 ## Signed baseline (D-16)
 
 Inventory taken 2026-11-22 by plan 85-05 Task 1. Commands and short outputs only; no secret values.
 
-**SC3: pending (baseline recorded; Phase 85 build identity owed by 85-19)**
+**SC3: pending (identities match; live gate owed by 85-20)**
 
 ### Inventory
 
@@ -213,6 +263,32 @@ The operator chose the version bump: branch `release/v0.10` at `10c85ed72` bumps
 - **`xcrun stapler validate GameLib.app`:** stapled (`The validate action worked!`).
 - **DMG (note, not a blocker):** the dmg container itself has no stapled ticket and `spctl -t open` rejects it as `Unnotarized Developer ID`. The app inside is notarized and stapled, and the Keychain ACL binds to the app's designated requirement, so this does not affect SC3. Recorded so 85-19 compares like with like.
 - Downloaded files deleted from the scratchpad after recording.
+
+### Phase 85 build (85-19 Task 3, 2026-11-22)
+
+Same workflow (`release-tauri.yml`), same Apple secrets, run with `dry_run=false` on `main`.
+
+- **Run:** release-tauri.yml `44978855761`, workflow_dispatch on `main`, headSha `ffb8573d2b0eb7e10edcfda57113d02632f5f04d`. All three legs `success` (macOS completed 2026-11-22T03:24:19Z).
+- **Artifact:** draft release `GameLib v0.11.0` (tag `v0.11.0`, not published). Inspected `GameLib_0.11.0_aarch64.app.tar.gz` (sha256 `88b57a68fbd736e2829aba98f833189b41e11bc0120e4980511389bae87ad8f7`), downloaded with `gh release download v0.11.0 -p 'GameLib_0.11.0_aarch64.app.tar.gz'`. The app is compared like with like with the baseline's app (the dmg container was not stapled at the baseline either).
+- **`codesign -dv --verbose=4 GameLib.app`:** `Identifier=com.gamelib.shell`; `Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)` -> `Developer ID Certification Authority` -> `Apple Root CA`; `TeamIdentifier=S7U223QWXJ`; `Timestamp=22 Nov 2026 at 4:20:44 PM` (local); flags `0x10000(runtime)`; `CDHash=4ca4869a7ce92359eb2ca453ac9dcaf5978bfb4e`. `codesign --verify --deep --strict` passes.
+- **Designated requirement (`codesign -d -r-`):** `identifier "com.gamelib.shell" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = S7U223QWXJ`
+- **`spctl -a -vv GameLib.app`:** `accepted`, `source=Notarized Developer ID`, `origin=Developer ID Application: grayson mitchell (S7U223QWXJ)`.
+- **`xcrun stapler validate GameLib.app`:** stapled (`The validate action worked!`).
+- Downloaded files deleted from the scratchpad after recording.
+
+**Comparison with the baseline:**
+
+| Property | v0.10.0 baseline (run 44925761249) | Phase 85 build (run 44978855761) | Equal |
+|----------|------------------------------------|----------------------------------|-------|
+| Identifier | `com.gamelib.shell` | `com.gamelib.shell` | yes |
+| Leaf authority | Developer ID Application: grayson mitchell (S7U223QWXJ) | same | yes |
+| TeamIdentifier | `S7U223QWXJ` | `S7U223QWXJ` | yes |
+| Designated requirement | (string above, baseline record) | byte-identical string (compared by script) | yes |
+| spctl | accepted, Notarized Developer ID | accepted, Notarized Developer ID | yes |
+| stapler | stapled | stapled | yes |
+| CDHash | `67b2149a...` | `4ca4869a...` | differs, as expected for a different build; the Keychain ACL binds to the designated requirement, not the CDHash |
+
+The identities match, so SC3 is `pending`: the live upgrade gate is owed by 85-20.
 
 ### Identity rule for the Phase 85 build
 
