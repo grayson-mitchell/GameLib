@@ -603,6 +603,50 @@ describe('LogForwarder', () => {
     })
   })
 
+  describe('the transport wait gets only what is left of the one deadline (WR-13)', () => {
+    /**
+     * A writer link that settles at 1,500 ms, then a frame whose write callback is never called:
+     * flush runs the chain wait, then the transport wait. Only 500 ms of the one deadline is left
+     * for the second leg, so the call ends at 2,000 ms, not 1,500 + 2,000.
+     */
+    function bothLegs(): { flushed: () => boolean; flushing: Promise<void> } {
+      const fw = new LogForwarder()
+      const transport = new FakeTransport()
+      transport.autoWritten = false
+      fw.bind(transport)
+      fw.enqueue(GAME, false, { raw: 'queued' })
+      fw.trackSettle(new Promise<void>((resolve) => setTimeout(resolve, 1500)))
+      let flushed = false
+      const flushing = fw.flush().then(() => {
+        flushed = true
+      })
+      return { flushed: () => flushed, flushing }
+    }
+
+    it('both legs together end at LOG_FLUSH_TIMEOUT_MS (WR-06, WR-12, WR-13)', async () => {
+      const { flushed, flushing } = bothLegs()
+      await jest.advanceTimersByTimeAsync(LOG_FLUSH_TIMEOUT_MS - 1)
+      expect(flushed()).toBe(false)
+      await jest.advanceTimersByTimeAsync(2)
+      // Asserted before awaiting, so a regression fails here rather than hanging the test.
+      expect(flushed()).toBe(true)
+      await flushing
+    })
+
+    it('a wall-clock step back during the chain wait does not stretch the transport wait (WR-12, WR-13)', async () => {
+      const { flushed, flushing } = bothLegs()
+      // Inside the chain wait: the transport leg computes what is left after this step. (A step
+      // taken inside the transport wait could not fail any code: its timer is already armed.)
+      await jest.advanceTimersByTimeAsync(1000)
+      jest.setSystemTime(Date.now() - 60_000)
+      await jest.advanceTimersByTimeAsync(LOG_FLUSH_TIMEOUT_MS - 1000 - 1)
+      expect(flushed()).toBe(false)
+      await jest.advanceTimersByTimeAsync(2)
+      expect(flushed()).toBe(true)
+      await flushing
+    })
+  })
+
   describe('settle (logErrorSettled / logInfoSettled, the CR-01 contract)', () => {
     type Index = typeof import('../index')
     function freshIndex(): Index {
