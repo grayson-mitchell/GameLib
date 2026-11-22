@@ -6,10 +6,10 @@ current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
 stopped_at: Completed 85-25-PLAN.md
-last_updated: "2026-11-22T07:37:09.825Z"
+last_updated: "2026-11-22T07:49:52.900Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 0a4e4a05ae32da47e3176cf8eb485ed5ece9a728
+state_head: 5714cafea4abc7a663a911ff87ba2fe189b13b26
 progress:
   total_phases: 20
   completed_phases: 23
@@ -822,6 +822,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261122-n4q | Steam Move option 1: add a picked non-library folder as a Steam library, folder-gap fix, post-move verify nudge | 2026-11-22 | 1f9f0cd2c | — | [261122-n4q-steam-move-option-1-add-picked-folder-as](./quick/261122-n4q-steam-move-option-1-add-picked-folder-as/) |
 | 261122-qwk | Copy nord-light as new GameLib Light theme, then rework nord-light to the official Nord palette | 2026-11-22 | 126567da4 | — | [261122-qwk-copy-nord-light-as-new-gamelib-light-the](./quick/261122-qwk-copy-nord-light-as-new-gamelib-light-the/) |
 | 261122-rz8 | Make Nord Light bluer: Frost navbar, Frost primary buttons, Snow Storm panels | 2026-11-22 | 7c58276b2 | — | [261122-rz8-make-nord-light-bluer-with-frost-navbar-](./quick/261122-rz8-make-nord-light-bluer-with-frost-navbar-/) |
+| 261122-rgi | Opt-in DLC enable path in the install dialog and Install tab (follow-up to quick 261120-tbr) | 2026-11-22 | 93e6d145e | — | [261122-rgi-opt-in-dlc-enable-path-in-the-install-di](./quick/261122-rgi-opt-in-dlc-enable-path-in-the-install-di/) |
 
 ## Deferred Items
 
