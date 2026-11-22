@@ -25,7 +25,7 @@ const deps = {
 
 // ── recent_games — the side effect under test. ────────────────────────────────────────────
 const addRecentGameMock = jest.fn()
-jest.mock('backend/recent_games/recent_games', () => ({
+jest.mock('backend/info/recentGames', () => ({
   addRecentGame: (...args: unknown[]) => addRecentGameMock(...args)
 }))
 

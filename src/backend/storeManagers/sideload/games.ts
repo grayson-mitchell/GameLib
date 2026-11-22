@@ -30,7 +30,7 @@ import {
 import { protectedRootsFor } from 'backend/safety/protectedRoots'
 import { pushRemovalRefusal } from 'backend/safety/refusal'
 import type { SafetyRequest } from 'common/types/safety'
-import { removeRecentGame } from 'backend/recent_games/recent_games'
+import { removeRecentGame } from 'backend/info/recentGames'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import { removeNonSteamGame } from 'backend/shortcuts/nonesteamgame/nonesteamgame'
 import type { ManagerDeps } from 'backend/services/types'

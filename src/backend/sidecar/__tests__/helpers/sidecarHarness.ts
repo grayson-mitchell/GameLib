@@ -193,6 +193,18 @@ export function bootFresh(opts?: {
       input.write(`${JSON.stringify({ id: frame.id, ok: true, result: {} })}\n`)
       return
     }
+    // 86-09: the recent-games writes are Rust's now, and a Steam launch awaits the shim, so the
+    // double acknowledges them (the frames stay in `frames` for a case to assert on).
+    if (
+      frame.kind === 'rustInvoke' &&
+      (frame.channel === 'info_recent_add' ||
+        frame.channel === 'info_recent_remove')
+    ) {
+      input.write(
+        `${JSON.stringify({ id: frame.id, ok: true, result: null })}\n`
+      )
+      return
+    }
     if (
       frame.kind !== 'rustInvoke' ||
       typeof frame.channel !== 'string' ||

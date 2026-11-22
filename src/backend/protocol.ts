@@ -14,6 +14,7 @@ import type { AppPaths } from './process/context'
 import type { AppState } from './host/appState'
 import type { Dialogs } from './host/dialogs'
 import type { Notifications } from './host/notifications'
+import type { RustInvokeDeps } from './host/rustInvokeDeps'
 import { assertContainedPath } from './sidecar/rendererPathGuard'
 
 // `steam` is a deliberate addition (D-35-19-05): widening this enum also widens the accepted
@@ -78,7 +79,7 @@ function isColdStartLink(deps: Pick<ProtocolDeps, 'appRuntime'>): boolean {
 }
 
 /** What a protocol launch reads: the library managers and the launcher's launch callback (66.1, R3). */
-export interface ProtocolDeps {
+export interface ProtocolDeps extends RustInvokeDeps {
   managers: Pick<StoreManagers, 'library'>
   launcher: Pick<Launcher, 'launchEventCallback'>
   stores: Pick<Stores, 'kvs'>
@@ -299,6 +300,7 @@ async function handleLaunch(deps: ProtocolDeps, url: URL) {
           stores: deps.stores,
           notifications: deps.notifications,
           sendFrontendMessage: deps.sendFrontendMessage,
+          requestRustInvoke: deps.requestRustInvoke,
           appRuntime: deps.appRuntime
         },
         appName

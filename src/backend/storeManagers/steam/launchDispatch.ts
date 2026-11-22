@@ -30,13 +30,16 @@ import type { AppRuntimeSlice } from 'backend/appRuntime'
 import i18next from 'i18next'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
-import { addRecentGame } from 'backend/recent_games/recent_games'
+import { addRecentGame } from 'backend/info/recentGames'
 import type LogWriter from 'backend/logger/targetWriter'
 import type { ManagerDeps } from 'backend/services/types'
 
 type LaunchDispatchDeps = Pick<
   ManagerDeps,
-  'libraryManagers' | 'notifications' | 'sendFrontendMessage'
+  | 'libraryManagers'
+  | 'notifications'
+  | 'sendFrontendMessage'
+  | 'requestRustInvoke'
 > & {
   stores: Pick<ManagerDeps['stores'], 'kvs'>
 } & AppRuntimeSlice<'events' | 'launchFlights'>

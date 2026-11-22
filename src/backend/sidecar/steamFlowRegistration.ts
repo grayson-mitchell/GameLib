@@ -371,6 +371,7 @@ async function handleLaunch(
         stores: deps.stores,
         notifications: deps.notifications,
         sendFrontendMessage: deps.sendFrontendMessage,
+        requestRustInvoke: deps.launcher.requestRustInvoke,
         appRuntime: deps.appRuntime
       },
       appName
@@ -445,6 +446,7 @@ async function handleLaunchWithoutSteamOnce(
         libraryManagers: deps.managers.library,
         notifications: deps.notifications,
         sendFrontendMessage: deps.sendFrontendMessage,
+        requestRustInvoke: deps.launcher.requestRustInvoke,
         stores: deps.stores,
         appRuntime: deps.appRuntime
       },
@@ -477,7 +479,11 @@ export type SteamFlowDeps = Pick<
     appState: Pick<AppState, 'hideMainWindow'>
     notifications: Pick<BootServices['host']['notifications'], 'show'>
     sendFrontendMessage: SendFrontendMessage
-    launcher: Pick<BootServices['launcher'], 'launchEventCallback'>
+    /** `requestRustInvoke` is the launcher's own Rust leg: the recent-games shim reads it from here (86-09). */
+    launcher: Pick<
+      BootServices['launcher'],
+      'launchEventCallback' | 'requestRustInvoke'
+    >
     /** The boot-owned keyring auth-unlock latches the refresh dispatch notes into (D-66.3-13). */
     steamSession: Pick<BootServices['steamSession'], 'authTrigger'>
     /** The boot's Humble library, recomputed after a Steam-inclusive refresh (D-66.3-17). */

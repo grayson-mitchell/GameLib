@@ -22,7 +22,6 @@
  * non-Steam launch succeeding end to end.
  */
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
-import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 
 // Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
@@ -95,19 +94,22 @@ const launchEventCallbackMock = jest.fn()
 jest.mock('../../launcher', () => ({
   // The boot builds the launcher through createLauncher (66.1-23); the mock hands back only the
   // member this file asserts on.
-  createLauncher: () => ({
+  // `requestRustInvoke` is the one real member: the Steam launch dispatch reads it from the launcher
+  // (86-09), so the recent-games shim reaches the booted transport and Test D can see its frame.
+  createLauncher: (deps: { requestRustInvoke: unknown }) => ({
     launchEventCallback: (...args: unknown[]) =>
-      launchEventCallbackMock(...args)
+      launchEventCallbackMock(...args),
+    requestRustInvoke: deps.requestRustInvoke
   })
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────────────────
 import { bootFresh, writeInvoke } from './helpers/sidecarHarness'
 import type { SteamGameInfo } from 'common/types/steam'
-// Type-only namespace import: the runtime handles are rebound per case from the
-// fresh registry (freshRegistry), but this keeps the static import edge knip sees.
-import type * as RecentGamesModule from 'backend/recent_games/recent_games'
-import { RUST_MAIN_WINDOW_HIDE } from 'common/types/sidecarTransport'
+import {
+  RUST_INFO_RECENT_ADD,
+  RUST_MAIN_WINDOW_HIDE
+} from 'common/types/sidecarTransport'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
@@ -115,15 +117,10 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset.
 let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
-let getRecentGames: typeof RecentGamesModule.getRecentGames
-let testingExportsRecentGames: typeof RecentGamesModule.testingExportsRecentGames
 let steamLibraryStore: ReturnType<
   typeof import('backend/storeManagers/steam/stores').createSteamStores
 >['steamLibraryStore']
 let createGlobalConfig: typeof import('backend/config').createGlobalConfig
-let recentGamesDeps: RecentGamesModule.RecentGamesDeps & {
-  appRuntime: ReturnType<typeof createTestAppRuntime>
-}
 
 function freshRegistry(): void {
   jest.resetModules()
@@ -131,26 +128,12 @@ function freshRegistry(): void {
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
   ;({ getSteamLibraries } = require('backend/utils'))
-  ;({
-    getRecentGames,
-    testingExportsRecentGames
-  } = require('backend/recent_games/recent_games'))
   ;({ steamLibraryStore } =
     require('backend/storeManagers/steam/stores').createSteamStores({
       registry: createStoreRegistry(),
       root: testRoot
     }))
   ;({ createGlobalConfig } = require('backend/config'))
-  recentGamesDeps = {
-    sendFrontendMessage: jest.fn(),
-    appRuntime: createTestAppRuntime(),
-    stores: {
-      kvs: require('backend/constants/key_value_stores').createKvsStores({
-        registry: createStoreRegistry(),
-        root: testRoot
-      })
-    }
-  }
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
@@ -183,10 +166,6 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
     jest.mocked(getSteamLibraries).mockResolvedValue([])
     launchEventCallbackMock.mockReset()
     launchEventCallbackMock.mockResolvedValue({ status: 'done' })
-    // D-35-19-06 / Test D below: `addRecentGame` is real and unmocked in this suite (it is
-    // NOT store-manager-adjacent), and its store is the same disposable per-PID homedir the
-    // `os` mock above redirects. Cleared here so Test D observes ONLY its own launch.
-    testingExportsRecentGames.setRecentGames(recentGamesDeps, [])
     // Same reasoning for the library cache Test D seeds: cleared here so no other test in this
     // file (run before or after it) can observe a leaked '999003' library entry.
     steamLibraryStore.set('games', [])
@@ -298,8 +277,8 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
   // gap-closure plan exists to fix. Before `dispatchSteamLaunch`, `handleLaunch`'s Steam branch
   // called `game.launch()` and returned directly, writing NO `games.recent` entry — the exact
   // A/B gap the live gate recorded (`store/config.json` written for a GOG launch, not for two
-  // Steam launches). `addRecentGame` and its store are real and unmocked here, so this proves
-  // the effect end-to-end through the production sidecar wiring, not through a mock.
+  // Steam launches). The `addRecentGame` shim is real and unmocked here (its write is now Rust's), so
+  // this proves the effect reaches the booted transport through the production sidecar wiring.
   it("Test D: a launch invoke for runner='steam' records exactly one recent-games entry with runner='steam' (D-35-19-06)", async () => {
     // `SteamGame.launch()` (games.ts) dispatches purely off the numeric appId — it never reads
     // the library cache, which is why Test C above needs no seeding. `getGameInfo()` (called by
@@ -334,12 +313,16 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
       result: { status: 'done' }
     })
 
-    const recentGames = await getRecentGames(recentGamesDeps)
-    expect(recentGames).toHaveLength(1)
-    expect(recentGames[0]).toMatchObject({
-      appName: '999003',
-      runner: 'steam'
-    })
+    // 86-09: the recent list lives in Rust now. The launch records it through the one typed
+    // `info_recent_add` call, so the proof is the rustInvoke frame the booted transport emitted.
+    const recentAdds = frames.filter(
+      (frame) =>
+        frame.kind === 'rustInvoke' && frame.channel === RUST_INFO_RECENT_ADD
+    )
+    expect(recentAdds).toHaveLength(1)
+    expect(recentAdds[0]?.args).toEqual([
+      { appName: '999003', title: 'Test D Steam Game', runner: 'steam' }
+    ])
   })
 
   // quick 261108-kpc: "Hide GameLib for every launch" must also cover in-app Steam launches,

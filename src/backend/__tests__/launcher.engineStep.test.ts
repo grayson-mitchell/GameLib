@@ -33,7 +33,7 @@ jest.mock('backend/config', () => ({
   GlobalConfig: { get: () => ({ getSettings: () => globalSettingsMock() }) }
 }))
 
-jest.mock('backend/recent_games/recent_games', () => ({
+jest.mock('backend/info/recentGames', () => ({
   addRecentGame: jest.fn().mockResolvedValue(undefined)
 }))
 jest.mock('backend/runsForMe', () => ({ recordPlaySession: jest.fn() }))

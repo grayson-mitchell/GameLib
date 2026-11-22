@@ -771,6 +771,7 @@ function protocolDepsOf(services: BootServices): ProtocolDeps {
     config: services.config,
     dialogs: services.host.dialogs,
     sendFrontendMessage: services.host.sendFrontendMessage,
+    requestRustInvoke: services.host.requestRustInvoke,
     appState: services.host.appState,
     notifications: services.host.notifications,
     appRuntime: services.appRuntime,

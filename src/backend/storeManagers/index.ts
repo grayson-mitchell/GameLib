@@ -230,6 +230,7 @@ export function createStoreManagers(
     appInfo: deps.appInfo,
     dialogs: deps.dialogs,
     sendFrontendMessage: deps.sendFrontendMessage,
+    requestRustInvoke: deps.requestRustInvoke,
     appState: deps.appState,
     notifications: deps.notifications,
     onlineMonitor: deps.onlineMonitor,

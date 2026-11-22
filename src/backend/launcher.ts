@@ -68,7 +68,7 @@ import { download, isInstalled } from './wine/runtimes/runtimes'
 import { recordPlaySession } from './runsForMe'
 import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
 import { copyFile } from 'fs/promises'
-import { addRecentGame } from './recent_games/recent_games'
+import { addRecentGame } from './info/recentGames'
 import { readKnownFixes } from './knownFixes'
 import { applyKnownFixProfileRegistry } from './knownFixesRegistry'
 import { knownFixProfileOverlayEnv, logKnownFixEnv } from './knownFixOverlays'
@@ -95,11 +95,13 @@ import type { AppRuntimeSlice } from './appRuntime'
 import type { PartialDeep } from 'type-fest'
 import type LogWriter from './logger/targetWriter'
 import { Game } from 'common/types/game_manager'
+import type { RustInvokeDeps } from './host/rustInvokeDeps'
 
 /** What the launcher is built from (66.1, D-02): constructed once per boot by createStoreManagers. */
 export interface LauncherDeps
   extends
     DialogBoxDeps,
+    RustInvokeDeps,
     AppRuntimeSlice<'events' | 'launchFlights' | 'overlayInstalls'> {
   /** Also the boot's display-ack table (the engine step's refused-launch dialogs, 66.4-18). */
   dialogs: DialogBoxDeps['dialogs'] & Pick<Dialogs, 'displayAcks'>
@@ -468,14 +470,7 @@ async function runLaunchEventCallback(
       )
     }
   }
-  await addRecentGame(
-    {
-      stores: { kvs: deps.stores.kvs },
-      sendFrontendMessage: deps.sendFrontendMessage,
-      appRuntime: deps.appRuntime
-    },
-    gameInfo
-  )
+  await addRecentGame(deps, gameInfo)
 
   if (autoSyncSaves && deps.onlineMonitor.isOnline()) {
     sendGameStatusUpdate(deps, {
@@ -1711,6 +1706,12 @@ export interface Launcher {
   verifyWinePrefix(
     ...a: DropFirst<Parameters<typeof verifyWinePrefix>>
   ): ReturnType<typeof verifyWinePrefix>
+  /**
+   * The boot's sidecar -> Rust request leg, which the launcher already holds (LauncherDeps extends
+   * RustInvokeDeps). Exposed so a flow that builds `RustInvokeDeps` for a Rust-backed shim (the
+   * recent-games writes in the Steam launch dispatch) reads it from the launcher it already receives.
+   */
+  readonly requestRustInvoke: RustInvokeDeps['requestRustInvoke']
 }
 
 type DropFirst<T extends unknown[]> = T extends [unknown, ...infer R]
@@ -1734,6 +1735,10 @@ export function createLauncher(deps: LauncherDeps): Launcher {
     launchEventCallback: (params) => launchEventCallback(ctx, params),
     getKnownFixesEnvVariables: (...a) => getKnownFixesEnvVariables(deps, ...a),
     validWine,
-    verifyWinePrefix: (...a) => verifyWinePrefix(deps, ...a)
+    verifyWinePrefix: (...a) => verifyWinePrefix(deps, ...a),
+    // A getter, so a getter-backed deps object stays call-time like the members above.
+    get requestRustInvoke() {
+      return deps.requestRustInvoke
+    }
   }
 }
