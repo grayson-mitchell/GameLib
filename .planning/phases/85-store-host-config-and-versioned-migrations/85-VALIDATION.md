@@ -3,8 +3,8 @@ phase: "85"
 slug: "store-host-config-and-versioned-migrations"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
-status: draft
-nyquist_compliant: false
+status: validated
+nyquist_compliant: true
 wave_0_complete: true
 created: "2026-11-21"
 ---
@@ -375,11 +375,19 @@ The Phase 85 build must come from the same workflow (`release-tauri.yml`), the s
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 180s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 180s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** validated 2026-11-22 by /gsd-validate-phase 85. All 40 per-task rows are green: proven at P `d90e33bc8`, at D `92495cd50` and D' `6ef75501d`, and CI green at `88b48b70d` on all three legs. The one manual-only behaviour (SC3) was executed in the 85-20 live gate (`85-HUMAN-UAT.md`). Its two `issue` items are behaviour findings, not coverage gaps: Humble and Epic were signed out on both builds, and the GOG offline emptying is filed as `.planning/todos/pending/2026-11-22-gog-offline-launch-empties-library-cache.md`.
+
+## Validation Audit 2026-11-22
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
