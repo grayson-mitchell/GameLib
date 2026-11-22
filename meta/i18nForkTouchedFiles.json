@@ -1,7 +1,7 @@
 {
   "baseCommit": "b5b5cad3fa2e822602d320b70788d87240fc056e",
   "baseVersion": "2.22.0",
-  "generatedAt": "2026-11-21T11:02:05.432Z",
+  "generatedAt": "2026-11-22T08:15:32.648Z",
   "generatedBy": "pnpm gen-i18n-gate-scope",
   "purpose": "A-17: the CI-readable input to the i18n scope staleness ratchet — every fork-touched src/frontend source file eligible for the hardcoded-string gate (D-17 deferrals already removed, exactly the operand the ratchet compares against), INCLUDING those not yet listed in i18nGateScope.json. Regenerate with `pnpm gen-i18n-gate-scope`.",
   "files": [
@@ -204,6 +204,7 @@
     "src/frontend/screens/Game/GamePage/components/InstallTab/IntegrationRows.tsx",
     "src/frontend/screens/Game/GamePage/components/InstallTab/LocationRow.tsx",
     "src/frontend/screens/Game/GamePage/components/InstallTab/NotInstalledFacts.tsx",
+    "src/frontend/screens/Game/GamePage/components/InstallTab/OptInDlcRows.tsx",
     "src/frontend/screens/Game/GamePage/components/InstallTab/SizeRow.tsx",
     "src/frontend/screens/Game/GamePage/components/InstallTab/StaticFactRows.tsx",
     "src/frontend/screens/Game/GamePage/components/InstallTab/SwitchRow.tsx",
@@ -283,6 +284,7 @@
     "src/frontend/screens/Library/components/InstallModal/SteamDialog/EligibilityLoadingRow.tsx",
     "src/frontend/screens/Library/components/InstallModal/SteamDialog/index.tsx",
     "src/frontend/screens/Library/components/InstallModal/SteamDialog/installTarget.ts",
+    "src/frontend/screens/Library/components/InstallModal/SteamDialog/optInDlc.ts",
     "src/frontend/screens/Library/components/InstallModal/ThirdPartyDialog/index.tsx",
     "src/frontend/screens/Library/components/InstallModal/WineSelector/engineFilter.ts",
     "src/frontend/screens/Library/components/InstallModal/WineSelector/engineInstallChoice.ts",
