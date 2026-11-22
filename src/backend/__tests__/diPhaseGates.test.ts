@@ -625,7 +625,7 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
 // 66.4 end state (plan 21): the long tail is at zero, the census is a jest test, the path shim is gone.
 describe('66.4 end state: long tail at zero, census is a test, path shim gone', () => {
   // Every file the 66.4 conversion plans took off the census and that still exists (the 85 shard
-  // entries at the start of 66.4, less the two modules deleted outright).
+  // entries at the start of 66.4, less the modules deleted outright).
   const OWNED_66_4 = [
     'src/backend/backend_events.ts',
     'src/backend/crossover_index/fetcher.ts',
@@ -644,7 +644,6 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     'src/backend/engine/launchSettings.ts',
     'src/backend/engine/perGameBottle.ts',
     'src/backend/gamedetails/overrides.ts',
-    'src/backend/images_cache.ts',
     'src/backend/knownFixOverlayInstall.ts',
     'src/backend/knownFixesFetcher.ts',
     'src/backend/launchSingleFlight.ts',
@@ -749,7 +748,8 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     // Quick 261121-pwt deleted sidecar/fileStore.ts (the Phase 82 criterion 5 file-store clause): 77 -> 76.
     // Phase 85 Plan 24 deleted storeMigrations/index.ts, storeVersioning/engine.ts and
     // storeVersioning/readOnlyStores.ts (D-03, SC5): 76 -> 73.
-    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 73)
+    // Phase 86 Plan 05 deleted images_cache.ts (D-22, a deliberate deletion, not a lowered floor): 73 -> 72.
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 72)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {

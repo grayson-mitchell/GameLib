@@ -1,6 +1,6 @@
 /**
  * 66.4-17: the boot-owned app runtime. Two runtimes share nothing (event bus, launch flights,
- * image fetches, index memo, overlay installs); launch single-flight joins per instance; the
+ * index memo, overlay installs); launch single-flight joins per instance; the
  * CrossOver index backs off on the injected clock; the frontend-ready flag flips once per
  * instance; construction arms nothing.
  */
