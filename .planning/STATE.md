@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 86
 current_phase_name: Pure leaf services
 status: executing
-stopped_at: Completed 86-14-PLAN.md
-last_updated: "2026-11-22T12:02:23.670Z"
+stopped_at: Completed 86-15-PLAN.md
+last_updated: "2026-11-22T12:34:21.347Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 86 execution started
-state_head: 1c9174dc7b0b26f8d7fd06b1c2feb0416d0bd4ac
+state_head: c3001289a217ebfe3947950e506e1b613ad1850b
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 86 (Pure leaf services) — EXECUTING
-Plan: 14 of 26
+Plan: 15 of 26
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 86 execution started
 Progress: [██████████] 100%
@@ -398,6 +398,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 86 P12 | 60min | 3 tasks | 28 files |
 | Phase 86 P13 | 30min | 2 tasks | 12 files |
 | Phase 86 P14 | ~60min | 3 tasks | 9 files |
+| Phase 86 P15 | not measured | 3 tasks | 46 files |
 
 ## Accumulated Context
 
@@ -788,6 +789,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 86]: 86-12: drift compares JSON shape in two modes (Whole document, EntryOfList) and is opt-in: never run by tests or CI, env key source only
 - [Phase 86]: 86-13: the anticheat download callback carries its own .catch because runOnceWhenOnline drops the callback's return; shims resolve unknown and callers cast
 - [Phase 86]: 86-14: key owners live in InfoCtx (itad_key, sgdb_key); get memoises a failed read 120 s; migration clears mirror then document, trims and never clears on whitespace
+- [Phase 86]: 86-15: Replay treats a secret header recorded as the bare word REDACTED as matched by any non-empty value; SteamGridDB setApiKey surfaces a failed keyring write (TS swallowed it); the boot plaintext migration is crate-owned bounded work (registrant info-sgdb-migrate, 10 s wait)
 
 ### Pending Todos
 
@@ -1057,8 +1059,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-22T12:02:21.899Z
-Stopped at: Completed 86-14-PLAN.md
+Last session: 2026-11-22T12:34:19.627Z
+Stopped at: Completed 86-15-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
