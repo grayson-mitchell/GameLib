@@ -207,8 +207,18 @@ fn reason_word(reason: ReadOnlyReason) -> &'static str {
     }
 }
 
+/// The most bytes of store entries `GAMELIB_STORE_BOOT` carries (B-WR-03). One environment variable
+/// is capped at 32,767 characters on Windows and one string at 131,072 bytes on Linux, and past
+/// either `Command::spawn` fails, so a downgrade that opens thousands of `GamesConfig/<app>`
+/// documents read-only would otherwise leave GameLib unable to start. The variable is only the
+/// mirror's synchronous boot hint: the host's own `changed`/`refused` events and the read-only
+/// notice carry the rest, and a write to an omitted store is refused by the shell and dropped by
+/// the mirror.
+pub(crate) const BOOT_ENV_MAX_BYTES: usize = 16 * 1024;
+
 /// The `GAMELIB_STORE_BOOT` value: `{"readOnly":[{"store":"<key>","reason":"newer"|"failed"}],
-/// "startEmpty":["<key>"]}`, or `None` when no store is read-only or empty.
+/// "startEmpty":["<key>"]}`, or `None` when no store is read-only or empty. Entries beyond
+/// [`BOOT_ENV_MAX_BYTES`] are left out and `"truncated":true` is appended after `startEmpty`.
 pub(crate) fn boot_env_value(report: &BootReport) -> Option<String> {
     if report.read_only.is_empty() && report.start_empty.is_empty() {
         return None;
@@ -216,20 +226,36 @@ pub(crate) fn boot_env_value(report: &BootReport) -> Option<String> {
     // Written by hand so the documented key order holds; each key goes through serde_json's string
     // escaping.
     let quoted = |s: &str| serde_json::to_string(s).unwrap_or_else(|_| "\"\"".to_string());
+    let mut used = 0usize;
+    let mut truncated = false;
+    let mut take = |entry: String| -> Option<String> {
+        // One byte for the separating comma.
+        if truncated || used + entry.len() + 1 > BOOT_ENV_MAX_BYTES {
+            truncated = true;
+            return None;
+        }
+        used += entry.len() + 1;
+        Some(entry)
+    };
     let read_only: Vec<String> = report
         .read_only
         .iter()
-        .map(|(key, reason)| {
-            format!(
+        .map_while(|(key, reason)| {
+            take(format!(
                 "{{\"store\":{},\"reason\":\"{}\"}}",
                 quoted(key),
                 reason_word(*reason)
-            )
+            ))
         })
         .collect();
-    let start_empty: Vec<String> = report.start_empty.iter().map(|k| quoted(k)).collect();
+    let start_empty: Vec<String> = report
+        .start_empty
+        .iter()
+        .map_while(|k| take(quoted(k)))
+        .collect();
+    let marker = if truncated { ",\"truncated\":true" } else { "" };
     Some(format!(
-        "{{\"readOnly\":[{}],\"startEmpty\":[{}]}}",
+        "{{\"readOnly\":[{}],\"startEmpty\":[{}]{marker}}}",
         read_only.join(","),
         start_empty.join(",")
     ))
@@ -321,6 +347,30 @@ mod tests {
         let parsed: serde_json::Value = serde_json::from_str(&value).unwrap();
         assert_eq!(parsed["readOnly"][1]["reason"], "failed");
         assert_eq!(parsed["startEmpty"][0], "store_cache/steam_metadata");
+    }
+
+    #[test]
+    fn a_huge_downgrade_report_is_capped_and_marked_truncated() {
+        let report = BootReport {
+            read_only: (0..10_000)
+                .map(|i| (format!("GamesConfig/{i}"), ReadOnlyReason::Newer))
+                .collect(),
+            start_empty: vec!["store_cache/steam_metadata".to_string()],
+            ..BootReport::default()
+        };
+        let value = boot_env_value(&report).unwrap();
+        assert!(value.len() <= BOOT_ENV_MAX_BYTES + 64, "{}", value.len());
+        let parsed: serde_json::Value = serde_json::from_str(&value).unwrap();
+        assert_eq!(parsed["truncated"], true);
+        let kept = parsed["readOnly"].as_array().unwrap().len();
+        assert!(kept > 100 && kept < 10_000, "{kept}");
+        assert_eq!(parsed["readOnly"][0]["store"], "GamesConfig/0");
+        // A report that fits carries no marker.
+        let small = BootReport {
+            read_only: vec![("store/config".to_string(), ReadOnlyReason::Newer)],
+            ..BootReport::default()
+        };
+        assert!(!boot_env_value(&small).unwrap().contains("truncated"));
     }
 
     #[test]
