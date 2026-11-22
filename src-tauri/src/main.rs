@@ -963,10 +963,18 @@ fn handle_exit(
         ),
     ];
     let children = |grace: Duration| {
+        let stage = std::time::Instant::now();
         if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
             state.shutdown_child(grace);
         }
         let _ = gamelib_proc::children::global().terminate_all(grace);
+        // Phase 85 (B-WR-02): the sidecar is the only source of store frames, and the `store` drain
+        // above sampled the queue while it was still alive. Frames it wrote while it handled the
+        // SIGTERM or the kill are in the queue now, so wait once more, inside this stage's grace
+        // and not on a budget of its own. A frame still pending is named, never joined.
+        if store_boot::drain(grace.saturating_sub(stage.elapsed())) {
+            shell_log("store frames still pending after the sidecar stopped");
+        }
     };
     let finish = |ctx: &FinishContext| {
         // The reaper is told first: from here a graceful quit signals nothing (D-11).
