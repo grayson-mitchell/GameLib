@@ -42,8 +42,8 @@ On-disk path is `<userData>/<dir>/<file>.json` (a store with no `name` is `confi
 | `gameOverridesStore` | user-state | `store`/`game-overrides` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 86 | renderer mirror; game_overrides leaf | user-state; absolute cwd under userData; clearInvalidConfig set |
 | `migrationsStore` | user-state | `store`/`migrations` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 85 | the TS migration system only | holds applied-migration ids; read by the ported migration step; mirror deleted in 85 with the TS migration code |
 | `wineDownloaderInfoStore` | cache | `store`/`wine-downloader-info` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 87 | wine manager and dxmt tool | cache: discard on shape change; the one cache kind that lives in `store/` not `store_cache/` |
-| `macArchStore` | user-state | `store`/`mac-arch` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 86 | macArch leaf | user-state; clearInvalidConfig set |
-| `runsForMeStore` | user-state | `store`/`runs-for-me` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 86 | runsForMe leaf | user-state; clearInvalidConfig set |
+| `macArchStore` | user-state | `store`/`mac-arch` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 89 | macArch leaf | user-state; clearInvalidConfig set |
+| `runsForMeStore` | user-state | `store`/`runs-for-me` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 96 | runsForMe leaf | user-state; clearInvalidConfig set |
 | `uploadedLogs` | cache | `store`/`uploadedLogs` | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 84 | the logger's upload and delete-uploaded list | cache; flips at 84 so the native logger need not call back into TS (see Sequencing rule, risk R1); accessPropertiesByDotNotation false. 2026-11-21: the TS-mirror deletion cell moved from 85 to 84; 84-06 deleted the TS store slice (D-09) |
 | `steam_library` | user-state | `store_cache`/`steam_library` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 89 | renderer mirror (library); Steam library state | user-state: the owned library list, never discarded |
 | `gog_library` | user-state | `store_cache`/`gog_library` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 92 | renderer mirror (library); GOG library | user-state |
@@ -80,7 +80,7 @@ On-disk path is `<userData>/<dir>/<file>.json` (a store with no `name` is `confi
 | `pci_ids_device` | cache | `store_cache`/`pci_ids_device` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 87 | GPU system information | cache; 7-day TTL; registered twice in the fixture (one name, two registrations) |
 | `pci_ids_vendor` | cache | `store_cache`/`pci_ids_vendor` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 87 | GPU system information | cache; 7-day TTL; registered twice in the fixture |
 | `wikigameinfo` | cache | `store_cache`/`wikigameinfo` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 86 | wiki_game_info leaf; the clear-cache op | cache; 30-day TTL |
-| `umu` | cache | `store_cache`/`umu` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 87 | umu lookup (wine from Proton, wiki_game_info/umu) | cache; 6 h TTL |
+| `umu` | cache | `store_cache`/`umu` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 86 | umu lookup (wine from Proton, wiki_game_info/umu) | cache; 6 h TTL |
 
 ### Persisted state outside the store registry
 
@@ -170,3 +170,17 @@ Assumptions the table rests on, stated so the operator can contradict them:
 - R5: `isEpicServiceOffline`, the launcher's Epic gate (88), needs the 86 connectivity leaf, and `sendGameStatusUpdate` and `sendProgressUpdate` (inventory) keep a TS emitter until the last TS caller (97); no state changes owner, but slices 88-97 each need both the Rust `FrontendEmitter` and the TS bus emit to keep working for their respective callers.
 
 Conclusion for the roadmap: with option (a) for R1 the table has zero double moves. Under (b) the single row `uploadedLogs` moves twice; no other row is exposed.
+
+## Amendments
+
+### 2026-11-22 (Phase 86 planning, D-04 and D-27)
+
+Three "TS mirror deleted" cells in "Persisted stores" changed. Only that column moved: no owner token (the 83 to 99 columns) changed, so each row still has at most one `*` and the Sequencing rule holds. The writer is `RH` throughout, and these are cache deletions (A2).
+
+| store | old | new | reason |
+| --- | --- | --- | --- |
+| `umu` | 87 | 86 | The Rust wiki port calls the umu lookup, so `umu` ports with wiki in Phase 86 (86-CONTEXT D-04). Its TS callers in `storeManagers/{gog,nile,legendary}/games.ts` reach it through a `rustInvoke` shim scheduled for deletion by 91 and 92. |
+| `macArchStore` | 86 | 89 | macArch ports with Steam library state, not as a pure leaf (86-CONTEXT D-01 and its deferred list), so its TS mirror lives until Phase 89 (D-27). |
+| `runsForMeStore` | 86 | 96 | runsForMe is not an 86 slice (D-01). Its non-test importers are `launcher.ts` (Phase 88), `storeManagers/steam/bottledSteam.ts` and `storeManagers/steam/bottleProcessMonitor.ts` (Phase 96); the cell takes the latest, 96 (D-27). |
+
+`src/backend/__tests__/storeMirrorSchedule.test.ts` copies this column and fails when the two disagree, so its `SCHEDULE` moved with the table in the same change.

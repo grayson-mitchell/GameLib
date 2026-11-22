@@ -50,8 +50,8 @@ const SCHEDULE: Readonly<Record<string, number>> = {
   gameOverridesStore: 86,
   migrationsStore: 85,
   wineDownloaderInfoStore: 87,
-  macArchStore: 86,
-  runsForMeStore: 86,
+  macArchStore: 89,
+  runsForMeStore: 96,
   uploadedLogs: 84,
   steam_library: 89,
   gog_library: 92,
@@ -88,7 +88,7 @@ const SCHEDULE: Readonly<Record<string, number>> = {
   pci_ids_device: 87,
   pci_ids_vendor: 87,
   wikigameinfo: 86,
-  umu: 87
+  umu: 86
 }
 
 /**
