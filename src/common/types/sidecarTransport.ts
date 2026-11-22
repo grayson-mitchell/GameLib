@@ -1008,6 +1008,18 @@ export const RUST_INFO_ANTICHEAT_DOWNLOAD = 'info_anticheat_download' as const
 export const RUST_INFO_GOG_DISCOUNTS = 'info_gog_discounts' as const
 
 /**
+ * Phase 86 (SVC-01, 86-19): the CrossOver rating map of the whole library, served by `gamelib-info`
+ * `crossover`. Args `{ games: [{ appName, title, runner }] }`, at most 20000 games, every `runner` one
+ * of the five runners: the TS resolver `getCrossoverIndex` (info/crossover.ts) only gathers that list
+ * from every library manager (D-24). Resolves `{ [appName]: number | null }`: a number is the rating
+ * 1 to 5, `null` is looked up and not found, an absent key was never looked up; `{}` off macOS. The
+ * index fetch, its bounds, the cache and the 5 minute back-off are all in Rust. Rejects with a fixed
+ * `info_crossover_rating_map:<reason>` word.
+ */
+export const RUST_INFO_CROSSOVER_RATING_MAP =
+  'info_crossover_rating_map' as const
+
+/**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
  * the macOS bridge helper loads: the GameLib cache, else a snapshot of the Steam client's own copy
  * when it already hashes to the pin, else a fetch from Valve's client-update CDN (sha2vz, VZ decode,
@@ -1337,7 +1349,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_INFO_ANTICHEAT_INFO,
   RUST_INFO_ANTICHEAT_STATUS,
   RUST_INFO_ANTICHEAT_DOWNLOAD,
-  RUST_INFO_GOG_DISCOUNTS
+  RUST_INFO_GOG_DISCOUNTS,
+  RUST_INFO_CROSSOVER_RATING_MAP
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
@@ -1463,7 +1476,8 @@ export const RUST_INFO_CHANNELS = [
   RUST_INFO_ANTICHEAT_INFO,
   RUST_INFO_ANTICHEAT_STATUS,
   RUST_INFO_ANTICHEAT_DOWNLOAD,
-  RUST_INFO_GOG_DISCOUNTS
+  RUST_INFO_GOG_DISCOUNTS,
+  RUST_INFO_CROSSOVER_RATING_MAP
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */

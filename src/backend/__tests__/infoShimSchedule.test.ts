@@ -174,6 +174,21 @@ const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_INFO_GOG_DISCOUNTS',
     callers: ['src/backend/sidecar/enrichmentFlowRegistration.ts'],
     deletedBy: 92
+  },
+  // 86-19, the CrossOver rating map: a RESOLVER (D-24), not a shim. The index fetch, its bounds, the
+  // cache, the back-off and the lookups are Rust; the one input Rust cannot gather is the library's game
+  // list, which lives in every library manager's memory, so the resolver reads it (`const games`) and
+  // makes the one call. `getCrossoverIndex` stays TS-registered for that reason (and in main.rs's
+  // LONG_RUNNING_CHANNELS); phase 92 ports the last library manager (GOG/Amazon/sideload), after which
+  // Rust holds the library itself and the registration goes native.
+  {
+    name: 'getCrossoverIndex',
+    file: 'src/backend/info/crossover.ts',
+    shape: 'resolver',
+    inputs: ['games'],
+    channel: 'RUST_INFO_CROSSOVER_RATING_MAP',
+    callers: ['src/backend/sidecar/enrichmentFlowRegistration.ts'],
+    deletedBy: 92
   }
 ]
 

@@ -13,12 +13,14 @@
 
 pub mod anticheat;
 pub mod cache_view;
+pub mod crossover;
 pub mod ctx;
 pub mod discounts;
 pub mod http;
 pub mod itad;
 pub mod overrides;
 pub mod recent;
+pub mod runner_caps;
 pub mod secrets;
 pub mod steamgrid;
 
@@ -37,6 +39,7 @@ pub const OPS: &[&str] = &[
     "info_anticheat_download",
     "info_anticheat_info",
     "info_anticheat_status",
+    "info_crossover_rating_map",
     "info_gog_discounts",
     "info_itad_deals",
     "info_itad_gids",
@@ -71,6 +74,9 @@ async fn route(op: &str, args: &[Value], ctx: &InfoCtx) -> Result<Value, String>
         "info_anticheat_download" => anticheat::download(ctx, decode(op, args)?).await,
         "info_anticheat_info" => anticheat::info(ctx, decode(op, args)?),
         "info_anticheat_status" => anticheat::status(ctx, decode(op, args)?),
+        "info_crossover_rating_map" => {
+            crossover::rating_map::rating_map_op(ctx, decode(op, args)?).await
+        }
         "info_gog_discounts" => discounts::gog_discounts(ctx, decode(op, args)?).await,
         "info_itad_deals" => itad::deals(ctx, decode(op, args)?).await,
         "info_itad_gids" => itad::steam_gids(ctx, decode(op, args)?).await,

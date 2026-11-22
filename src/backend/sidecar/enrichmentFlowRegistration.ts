@@ -25,9 +25,9 @@
  *     - `getRunsForMeMap` / `setRunsForMe` -> `runsForMe/index.ts`'s
  *       `getRunsForMeMap()` / `setRunsForMeByUser(appName, runner, on)`
  *       (quick 261029-mkz; brand new, backend-persisted per-game override)
- *     - `getCrossoverIndex` -> `crossover_index/crossoverRatingMap.ts`'s
- *       `buildCrossoverRatingMap()` (Plan 34.2-03 extraction; registered at
- *       `crossover_index/ipc_handler.ts:47` today)
+ *     - `getCrossoverIndex` -> `info/crossover.ts`'s `getCrossoverIndex(deps)` (Phase 86, 86-19, D-24: a
+ *       resolver that gathers every library manager's games and makes the one `info_crossover_rating_map`
+ *       call; the index, its cache and the three-state map are Rust)
  *     - `searchStores` / `getStoreSearchDeals` / `getItadSteamGids`
  *       Phase 86 (86-16, D-17): these three are native `info` channels served by Rust now and are
  *       no longer registered here; the TS bodies (`backend/storeSearch`) were deleted in 86-17.
@@ -62,13 +62,11 @@
  * rejected promise into the "provider failed" state, and a swallowed error
  * would be indistinguishable from "no results".
  *
- * `getCrossoverIndex` D-10 note: this channel is exempted from the 60s
- * invoke bound in `src-tauri/src/main.rs`'s `LONG_RUNNING_CHANNELS` (Task 2
- * of this plan) because `buildCrossoverRatingMap()` fans out over every
- * game in every library manager AND calls `loadIndex`/`buildMaps`
- * (`crossover_index/index.ts:99`) once PER GAME rather than once overall —
- * hoisting that build out of the per-game loop is a recorded deferred
- * optimization (34.2-03-SUMMARY.md), not a fix this slice makes.
+ * `getCrossoverIndex` D-10 note: this channel stays exempt from the 60s invoke bound in `src-tauri/src/main.rs`'s
+ * `LONG_RUNNING_CHANNELS`: the resolver enumerates every game in every library manager, and the first call after a
+ * stale cache fetches the index. Phase 86 (86-19) moved the index fetch, the lookups and the rating map to Rust
+ * (`gamelib-info` `crossover`), which loads the index once per call and memoizes its lookup maps; the TS
+ * `crossover_index/` module stays only for the TS wiki that still reads it, and goes with it (86-24).
  *
  * Phase 86 (86-08, D-17): `removeRecent` is no longer registered here. It is a
  * native `info` channel served by Rust (`nativeChannels.json`), so it has exactly
@@ -84,7 +82,7 @@
  * set of electron-importing modules actually reachable from this slice's
  * four gated entry points. Every import below reaches an
  * UNDERLYING module (`../knownFixes`,
- * `../crossover_index/crossoverRatingMap`,
+ * `../info/crossover`,
  * `../wiki_game_info/wiki_game_info`,
  * `../utils`) — NEVER a feature module's `ipc_handler.ts`.
  *
@@ -124,7 +122,7 @@ import type { AppInfo } from '../process/context'
 import type { IpcRegistry } from './ipcRegistry'
 import { getWikiGameInfo } from '../wiki_game_info/wiki_game_info'
 import { readGamelibFixStatus, readKnownFixes } from '../knownFixes'
-import { buildCrossoverRatingMap } from '../crossover_index/crossoverRatingMap'
+import { getCrossoverIndex } from '../info/crossover'
 import { getRunsForMeMap, setRunsForMeByUser } from '../runsForMe'
 import { getGogDiscounts } from '../info/discounts'
 import { logWarning, LogPrefix } from '../logger'
@@ -263,14 +261,14 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
     }
   )
 
-  // D-10: exempted from the 60s invoke bound in main.rs's
-  // LONG_RUNNING_CHANNELS (Task 2) — fans out over every game in every
-  // manager AND calls loadIndex/buildMaps per game. See module docstring.
+  // D-10: stays in main.rs's LONG_RUNNING_CHANNELS (its resolver still enumerates every library
+  // manager, and the first call after a stale cache may fetch the index). Phase 86 (86-19, D-24): the
+  // rating map is Rust's (`info_crossover_rating_map`); this forwards to the resolver
+  // `info/crossover.ts` `getCrossoverIndex`, which only gathers the games. See module docstring.
   deps.ipc.handle('getCrossoverIndex', async () =>
-    buildCrossoverRatingMap({
+    getCrossoverIndex({
       libraryManagers: deps.managers.library,
-      stores: deps.stores,
-      appRuntime: deps.appRuntime
+      requestRustInvoke: deps.miscRuntime.requestRustInvoke
     })
   )
 

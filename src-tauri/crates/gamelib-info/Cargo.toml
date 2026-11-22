@@ -32,6 +32,12 @@ md-5 = "0.10"
 # The ITAD search cache key is the first 32 hex of a SHA-256 over the normalised query (86-16). Not a
 # security control. The version `gamelib-depot` already locks.
 sha2 = "0.10"
+# The CrossOver index is a gzip asset (86-19): `MultiGzDecoder`, as Node's `gunzipSync` reads every member.
+# The same pin and backend as gamelib-depot, so no new lockfile package name.
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
+# NFKD for the CrossOver matching key and the CodeWeavers slug (`String.prototype.normalize('NFKD')`).
+# The version gamelib-safety already locks.
+unicode-normalization = "0.1"
 # Fixed-offset civil time only (the cache timestamps): no tz database is read.
 jiff = { version = "0.2", default-features = false, features = ["std"] }
 

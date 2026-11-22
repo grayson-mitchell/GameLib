@@ -481,14 +481,15 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 133 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 134 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
     // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
     // Phase 86 plan 10: 125 -> 129, the four info_overrides_* ops.
     // Phase 86 plan 12: 129 -> 132, the three info_anticheat_* ops.
     // Phase 86 plan 18: 132 -> 133, info_gog_discounts.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(133)
+    // Phase 86 plan 19: 133 -> 134, info_crossover_rating_map.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(134)
     expect(router).not.toContain('_ =>')
   })
 
@@ -871,7 +872,15 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // and a SHA-256 of the products) against the crate's op, and `info_dispatch::tests` drives
       // the arm's validation and the token's absence from logs. The one caller is the TS resolver
       // `getGogDiscounts` (info/discounts.ts), whose request is proven by its own jest test.
-      'info_gog_discounts'
+      'info_gog_discounts',
+
+      // Phase 86 plan 19 -- the CrossOver rating map, a pass-through arm into `gamelib-info`. PROVEN:
+      // `golden_crossover.rs` replays every 86-06 TS golden (19 cases: the live index by entry count
+      // and canonical-JSON SHA-256, the five rejections leaving the cache bytes identical, the
+      // back-off, the bundled fallback, the rating map on three platforms) and `info_dispatch::tests`
+      // drives the arm's validation. The one caller is the TS resolver `getCrossoverIndex`
+      // (info/crossover.ts), whose request is proven by its own jest test.
+      'info_crossover_rating_map'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

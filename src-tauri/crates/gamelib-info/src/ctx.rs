@@ -8,6 +8,7 @@ use gamelib_core::clock::Clock;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_store::host::StoreHost;
 
+use crate::crossover::CrossoverState;
 use crate::http::Http;
 use crate::itad::gate::ItadGate;
 use crate::recent::RecentSink;
@@ -72,6 +73,8 @@ pub struct InfoCtx {
     pub itad_gate: ItadGate,
     /// Where [`InfoCtx::note`] writes; `None` in the CLI and in tests that do not read it (86-18).
     pub log: Option<Arc<dyn InfoLog>>,
+    /// The CrossOver index's in-memory state: the failure back-off and the memoized lookup maps (86-19).
+    pub crossover: CrossoverState,
 }
 
 impl InfoCtx {
@@ -100,6 +103,7 @@ impl InfoCtx {
             sgdb_key: SgdbKey::new(),
             itad_gate: ItadGate::new(),
             log: None,
+            crossover: CrossoverState::new(),
         }
     }
 

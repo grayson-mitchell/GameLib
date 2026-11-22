@@ -177,6 +177,7 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::InfoAnticheatStatus => rpc_info_anticheat_status(args),
         RustInvokeChannel::InfoAnticheatDownload => rpc_info_anticheat_download(args),
         RustInvokeChannel::InfoGogDiscounts => rpc_info_gog_discounts(args),
+        RustInvokeChannel::InfoCrossoverRatingMap => rpc_info_crossover_rating_map(args),
         RustInvokeChannel::SteamApiPinResolve => rpc_steam_api_pin_resolve(args),
         RustInvokeChannel::DepotFinalize => rpc_depot_finalize(args, app),
         RustInvokeChannel::DepotJobCancel => rpc_depot_job_cancel(args),

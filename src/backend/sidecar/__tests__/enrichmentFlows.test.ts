@@ -37,18 +37,15 @@
  *   - `axios` — scriptable, so no boot path or channel body reaches a real network call. (The GOG
  *     discounts body that once ran against it is Rust now, 86-18; the registration is a forward.)
  *   - `backend/storeManagers` (`libraryManagerMap`) — scriptable managers,
- *     the boundary `buildCrossoverRatingMap`'s enumeration walks and
- *     `getGame` (real, from `backend/utils`) resolves through.
+ *     the boundary `getGame` (real, from `backend/utils`) resolves through.
  *   - `backend/constants/environment` — a MUTABLE double (mirrors
  *     `ratingMap.test.ts`'s own `envMock` pattern) so `isMac`/`isWindows` can
  *     be flipped per test for the D-10/D-16 crossover-map states and the
  *     anticheat Windows rider.
- *   - `backend/crossover_index/index` (`isCrossoverIndexEligible`,
- *     `buildIndexResolver` — WR-07 replaced the per-game
- *     `getCodeweaversFromIndex`) — the SAME boundary `ratingMap.test.ts`
- *     itself uses: this suite asserts `crossoverRatingMap.ts`'s own
- *     three-state RESOLVER contract, not `index.ts`'s internal name-matching
- *     algorithm (already covered by `index.test.ts`).
+ *   - `backend/crossover_index/index` — only its `createCrossoverIndex` factory, which the boot calls
+ *     (66.4-17); the lookups it returns are not exercised here. (`getCrossoverIndex` is the D-24
+ *     resolver `info/crossover.ts` since 86-19 and runs for real: the harness answers its one
+ *     `info_crossover_rating_map` Rust frame.)
  *   - `backend/config` (`GlobalConfig.get`) — avoids a real on-disk
  *     config.json write while bootstrap.ts's real i18next init still runs.
  *   - `backend/online_monitor` (full surface) — deterministic, no real
@@ -64,7 +61,7 @@
  *
  * Deliberately NOT mocked (the bodies actually under test — mocking them
  * would prove only that a jest.fn() was called, per this plan's own
- * instruction): `crossover_index/crossoverRatingMap`, `knownFixes`.
+ * instruction): `knownFixes`.
  */
 
 // ── os — GAP FIX precedent: redirect homedir() to a disposable per-process
@@ -169,23 +166,11 @@ jest.mock('backend/storeManagers', () => {
   }
 })
 
-// ── backend/crossover_index/index mock — the SAME boundary ratingMap.test.ts
-// itself uses: this suite asserts crossoverRatingMap.ts's own three-state
-// resolver, not index.ts's internal name-matching algorithm ─────────────────
-// WR-07: the boundary moved from a per-game `getCodeweaversFromIndex` to a
-// once-per-pass `buildIndexResolver` returning a sync resolver. Two mocks so
-// "was the index consulted AT ALL" stays separately assertable from "what did
-// each game resolve to" -- the non-macOS test below depends on the former.
-const mockIsCrossoverIndexEligible = jest.fn()
-const mockResolveRatingFor = jest.fn()
-const mockBuildIndexResolver = jest.fn()
+// ── backend/crossover_index/index mock — the boot builds its lookups with `createCrossoverIndex`
+// (66.4-17), which the TS wiki still reads; the lookups are not under test here. ───────────────
 jest.mock('../../crossover_index/index', () => ({
-  isCrossoverIndexEligible: (...args: unknown[]) =>
-    mockIsCrossoverIndexEligible(...args),
-  // The boot builds its lookups with this factory (66.4-17): the mock exposes the factory name and
-  // hands back lookups whose resolver is the scripted one.
   createCrossoverIndex: () => ({
-    buildIndexResolver: (...args: unknown[]) => mockBuildIndexResolver(...args),
+    buildIndexResolver: jest.fn(),
     getCodeweaversFromIndex: jest.fn(),
     crossoverIndexHas: jest.fn()
   })
@@ -248,7 +233,6 @@ const {
   userData: userDataPath
 } = createContainedHomeAppPaths()
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
-import type { GameInfo } from 'common/types'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 
@@ -328,9 +312,10 @@ function freshRegistry(): void {
 
 // The monitor the boot hands out: the two members this suite drives are the jest.fns above, read
 // at call time so a per-test re-arm is honoured.
-const boot = () =>
+const boot = (rustAnswers?: Record<string, (args: unknown[]) => unknown>) =>
   bootFresh({
     reuseRegistry: true,
+    rustAnswers,
     // The anticheat data path is ctx.paths.appFolder (66.4-14): the shimmed app folder. The known-fix
     // layers are ctx.paths too (66.4-17): the remote layer is the shimmed `fixesPath` this suite writes
     // its fixtures under, the local layer nests inside it.
@@ -388,20 +373,6 @@ async function waitForResponse(
   return response
 }
 
-function makeGameInfo(overrides: Partial<GameInfo> = {}): GameInfo {
-  return {
-    app_name: 'default-app',
-    runner: 'legendary',
-    title: 'Default Game',
-    art_cover: '',
-    art_square: '',
-    install: {},
-    is_installed: false,
-    canRunOffline: false,
-    ...overrides
-  } as GameInfo
-}
-
 // Behavioural pin for the os-mock shadowing rule (quick 260905-jg4), rehomed here from the deleted
 // loggerFlows.test.ts by Phase 84 plan 84-06: `structuralContainment.test.ts` leg 3 holds this test
 // in place and needs a suite that declares a per-suite `os` mock in code. It sits in its own
@@ -438,13 +409,6 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     mockAppSettings({ language: 'en' })
     mockAxiosGet.mockReset()
     mockAxiosPost.mockReset()
-    mockIsCrossoverIndexEligible.mockReset()
-    mockResolveRatingFor.mockReset()
-    // Re-armed after mockReset per the WR-08 gotcha documented below:
-    // `resetMocks: true` strips implementations, so a factory default would
-    // not survive to the test body.
-    mockBuildIndexResolver.mockReset()
-    mockBuildIndexResolver.mockResolvedValue(mockResolveRatingFor)
 
     // WR-08 GOTCHA (this project's shared jest.config.js sets
     // `resetMocks: true`, which strips even a jest.mock FACTORY's own
@@ -602,71 +566,80 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     })
   })
 
-  // ── REQ-34.2-11/D-16: getCrossoverIndex three-state map ───────────────────
+  // ── REQ-34.2-11/D-16: getCrossoverIndex three-state map. Since Phase 86 (86-19) the map is built
+  // in Rust (`info_crossover_rating_map`: key absent for a game never looked up, null for looked up
+  // and not found, a number for a match, `{}` off macOS) and pinned by `golden_crossover.rs`; the
+  // registration stays TS-registered as a D-24 resolver because the games come from the library
+  // managers. This suite runs the real resolver and answers its one Rust frame.
   describe('REQ-34.2-11/D-16 getCrossoverIndex (invoke)', () => {
-    it('REQ-34.2-11/D-16 resolves the three-state map: ineligible key-absent, eligible-unmatched null, eligible-matched number', async () => {
+    const game = (app_name: string, title: string, runner: string) => ({
+      app_name,
+      title,
+      runner
+    })
+
+    it('Phase 86 (86-19, D-24) getCrossoverIndex sends every library manager’s games to Rust in one call and answers the map it returns', async () => {
+      for (const manager of [legendaryManager, nileManager, sideloadManager]) {
+        manager.getListOfGames.mockReturnValue([])
+      }
       gogManager.getListOfGames.mockReturnValue([
-        makeGameInfo({ app_name: 'ineligible-1', runner: 'gog' })
+        game('ineligible-1', 'Some GOG Game', 'gog')
       ])
       steamManager.getListOfGames.mockReturnValue([
-        makeGameInfo({ app_name: 'unmatched-1', runner: 'steam' }),
-        makeGameInfo({ app_name: 'matched-1', runner: 'steam' })
+        game('unmatched-1', 'Unmatched', 'steam'),
+        game('matched-1', 'Matched', 'steam')
       ])
+      const asked: unknown[][] = []
 
-      mockIsCrossoverIndexEligible.mockImplementation(
-        (gameInfo: GameInfo) => gameInfo.app_name !== 'ineligible-1'
-      )
-      mockResolveRatingFor.mockImplementation((gameInfo: GameInfo) =>
-        gameInfo.app_name === 'matched-1' ? 5 : null
-      )
-
-      const { input, frames } = boot()
-      // Set AFTER the boot has settled: a macOS boot starts the dxmt release
-      // check, which is not what this case exercises; the handler reads isMac
-      // per call.
-      await flush()
-      envMock.isMac = true
+      const { input, frames } = boot({
+        info_crossover_rating_map: (args) => {
+          asked.push(args)
+          return { 'matched-1': 5, 'unmatched-1': null }
+        }
+      })
       writeInvoke(input, 'gci-1', 'getCrossoverIndex', [])
       await flush()
 
+      expect(asked).toEqual([
+        [
+          {
+            games: [
+              {
+                appName: 'ineligible-1',
+                title: 'Some GOG Game',
+                runner: 'gog'
+              },
+              { appName: 'unmatched-1', title: 'Unmatched', runner: 'steam' },
+              { appName: 'matched-1', title: 'Matched', runner: 'steam' }
+            ]
+          }
+        ]
+      ])
       const response = findResponse(frames, 'gci-1')
       expect(response?.ok).toBe(true)
-      const map = response?.result as Record<string, number | null>
-
-      // key-ABSENT, not merely falsy — Object.prototype.hasOwnProperty, not a
-      // truthiness check (D-16).
-      expect(Object.prototype.hasOwnProperty.call(map, 'ineligible-1')).toBe(
-        false
-      )
-      expect(Object.prototype.hasOwnProperty.call(map, 'unmatched-1')).toBe(
-        true
-      )
-      expect(map['unmatched-1']).toBeNull()
-      expect(Object.prototype.hasOwnProperty.call(map, 'matched-1')).toBe(true)
-      expect(map['matched-1']).toBe(5)
+      expect(response?.result).toEqual({ 'matched-1': 5, 'unmatched-1': null })
     })
 
-    it('REQ-34.2-11/D-16 returns {} on non-macOS regardless of eligibility, and never consults the index', async () => {
-      envMock.isMac = false
+    it('Phase 86 (86-19) a rejected Rust call reaches the renderer as a rejection, not as an empty map', async () => {
+      for (const manager of [
+        legendaryManager,
+        gogManager,
+        steamManager,
+        nileManager,
+        sideloadManager
+      ]) {
+        manager.getListOfGames.mockReturnValue([])
+      }
 
-      steamManager.getListOfGames.mockReturnValue([
-        makeGameInfo({ app_name: 'would-be-eligible', runner: 'steam' })
-      ])
-      mockIsCrossoverIndexEligible.mockReturnValue(true)
-      mockResolveRatingFor.mockReturnValue(5)
-
-      const { input, frames } = boot()
+      const { input, frames } = boot({
+        info_crossover_rating_map: () => {
+          throw new Error('info_crossover_rating_map:bad-args')
+        }
+      })
       writeInvoke(input, 'gci-2', 'getCrossoverIndex', [])
       await flush()
 
-      const response = findResponse(frames, 'gci-2')
-      expect(response?.ok).toBe(true)
-      expect(response?.result).toEqual({})
-      expect(mockIsCrossoverIndexEligible).not.toHaveBeenCalled()
-      expect(mockResolveRatingFor).not.toHaveBeenCalled()
-      // WR-07: stronger than the old assertion -- the index is not merely
-      // unqueried per game, it is never LOADED.
-      expect(mockBuildIndexResolver).not.toHaveBeenCalled()
+      expect(findResponse(frames, 'gci-2')?.ok).toBe(false)
     })
   })
 
@@ -823,7 +796,10 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
           Promise.reject(new Error('boundary rejection, not a marker'))
         )
 
-        const { input, frames } = boot()
+        // getCrossoverIndex awaits its one Rust frame (86-19), so the double answers it.
+        const { input, frames } = boot({
+          info_crossover_rating_map: () => ({})
+        })
         writeInvoke(input, `all7-${channel}`, channel, args)
         // waitForResponse(), not flush(): see its docstring above.
         const response = await waitForResponse(frames, `all7-${channel}`)

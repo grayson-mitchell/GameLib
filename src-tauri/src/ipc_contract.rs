@@ -156,6 +156,7 @@ pub(crate) enum RustInvokeChannel {
     InfoAnticheatStatus,
     InfoAnticheatDownload,
     InfoGogDiscounts,
+    InfoCrossoverRatingMap,
 }
 
 impl RustInvokeChannel {
@@ -293,6 +294,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::InfoAnticheatStatus,
         RustInvokeChannel::InfoAnticheatDownload,
         RustInvokeChannel::InfoGogDiscounts,
+        RustInvokeChannel::InfoCrossoverRatingMap,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -430,6 +432,7 @@ impl RustInvokeChannel {
             "info_anticheat_status" => Some(RustInvokeChannel::InfoAnticheatStatus),
             "info_anticheat_download" => Some(RustInvokeChannel::InfoAnticheatDownload),
             "info_gog_discounts" => Some(RustInvokeChannel::InfoGogDiscounts),
+            "info_crossover_rating_map" => Some(RustInvokeChannel::InfoCrossoverRatingMap),
             _ => None,
         }
     }
@@ -569,6 +572,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::InfoAnticheatStatus => "info_anticheat_status",
             RustInvokeChannel::InfoAnticheatDownload => "info_anticheat_download",
             RustInvokeChannel::InfoGogDiscounts => "info_gog_discounts",
+            RustInvokeChannel::InfoCrossoverRatingMap => "info_crossover_rating_map",
         }
     }
 }
@@ -2979,5 +2983,25 @@ impl InfoGogDiscountsArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "info_gog_discounts:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "info_gog_discounts:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoCrossoverRatingMapArgs {
+    pub(crate) games: Vec<InfoCrossoverRatingMapArgsGamesItem>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct InfoCrossoverRatingMapArgsGamesItem {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) title: String,
+    pub(crate) runner: String,
+}
+
+impl InfoCrossoverRatingMapArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "info_crossover_rating_map:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "info_crossover_rating_map:bad-args".to_string())
     }
 }

@@ -61,6 +61,7 @@ import {
   RUST_INFO_ANTICHEAT_DOWNLOAD,
   RUST_INFO_ANTICHEAT_INFO,
   RUST_INFO_ANTICHEAT_STATUS,
+  RUST_INFO_CROSSOVER_RATING_MAP,
   RUST_INFO_GOG_DISCOUNTS,
   RUST_INFO_OVERRIDES_ATTACH,
   RUST_INFO_OVERRIDES_GET,
@@ -744,6 +745,25 @@ export const rustInvokeArgs = {
         hideOwned: z.boolean(),
         wishlistOnly: z.boolean(),
         token: z.string().nullable()
+      })
+      .strict()
+  ]),
+  // Phase 86 (SVC-01): the CrossOver rating map. The crate re-validates every arg (deny_unknown_fields,
+  // at most 20000 games, a runner that is not one of the five rejects the call).
+  [RUST_INFO_CROSSOVER_RATING_MAP]: z.tuple([
+    z
+      .object({
+        games: z
+          .array(
+            z
+              .object({
+                appName: z.string(),
+                title: z.string(),
+                runner: z.string()
+              })
+              .strict()
+          )
+          .max(20000)
       })
       .strict()
   ]),

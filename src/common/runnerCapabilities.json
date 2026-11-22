@@ -1,0 +1,23 @@
+{
+  "runners": {
+    "legendary": { "appNameIsSteamAppId": false, "hasStoreCatalog": true },
+    "gog": { "appNameIsSteamAppId": false, "hasStoreCatalog": true },
+    "sideload": { "appNameIsSteamAppId": false, "hasStoreCatalog": false },
+    "nile": { "appNameIsSteamAppId": false, "hasStoreCatalog": true },
+    "steam": { "appNameIsSteamAppId": true, "hasStoreCatalog": true }
+  },
+  "storeMap": {
+    "legendary": "epic",
+    "gog": "gog",
+    "nile": "amazon",
+    "sideload": null,
+    "steam": "steam"
+  },
+  "umuStore": {
+    "legendary": "egs",
+    "gog": "gog",
+    "nile": "amazon",
+    "sideload": "sideload",
+    "steam": "steam"
+  }
+}

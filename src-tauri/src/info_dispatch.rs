@@ -311,6 +311,18 @@ pub(crate) fn rpc_info_gog_discounts(args: &[Value]) -> Result<Value, String> {
     gog_discounts_with(installed("info_gog_discounts")?, args)
 }
 
+/// `info_crossover_rating_map`: validated by the generated args struct, then the crate (which validates
+/// again: its own `deny_unknown_fields` structs, the 20000-game bound and the runner names). The one
+/// caller is the TS resolver `getCrossoverIndex` (86-19, D-24), which gathers the library's games.
+fn crossover_rating_map_with(ctx: &InfoCtx, args: &[Value]) -> Result<Value, String> {
+    InfoCrossoverRatingMapArgs::from_args(args)?;
+    gamelib_info::dispatch_sync("info_crossover_rating_map", args, ctx)
+}
+
+pub(crate) fn rpc_info_crossover_rating_map(args: &[Value]) -> Result<Value, String> {
+    crossover_rating_map_with(installed("info_crossover_rating_map")?, args)
+}
+
 /// What a rejected `removeRecent` argument looks like: the JSON path and the zod-vocabulary code.
 /// Fixed literals only, never the renderer's value (T-86-15).
 type Rejection = (&'static str, &'static str);
@@ -2251,6 +2263,54 @@ mod tests {
         assert_eq!(
             rpc_info_gog_discounts(&[json!({})]),
             Err("info_gog_discounts:not-ready".to_string())
+        );
+    }
+
+    #[test]
+    fn the_crossover_rating_map_rpc_op_validates_first_and_answers_the_crates_map() {
+        let home = FakeHome::new("info-dispatch-");
+        let mut ctx = test_ctx(&home, None);
+        let canned = Arc::new(CannedCatalog(Mutex::new(Vec::new())));
+        ctx.http = canned.clone();
+        let game = json!({ "appName": "1245620", "title": "Elden Ring", "runner": "steam" });
+        for bad in [
+            vec![],
+            vec![json!({})],
+            vec![json!({ "games": "none" })],
+            vec![json!({ "games": [{ "appName": "1", "title": "t" }] })],
+            vec![json!({ "games": [], "extra": true })],
+            vec![json!({ "games": [{ "appName": "1", "title": "t", "runner": "steam", "x": 1 }] })],
+            // A name that is not a runner rejects the whole call, as the TS table lookup threw.
+            vec![json!({ "games": [{ "appName": "1", "title": "t", "runner": "humble" }] })],
+            vec![json!({ "games": [] }), json!({ "games": [] })],
+        ] {
+            assert_eq!(
+                crossover_rating_map_with(&ctx, &bad),
+                Err("info_crossover_rating_map:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+        // Off macOS the map is empty and the index is never asked for.
+        assert_eq!(
+            crossover_rating_map_with(&ctx, &[json!({ "games": [game.clone()] })]),
+            Ok(json!({}))
+        );
+        assert!(canned.0.lock().unwrap().is_empty());
+        // On macOS the index is fetched once for the pass; this server's answer is not a gzip, so the
+        // index is unavailable and the eligible game is "looked up, not found".
+        ctx.platform = Platform::Mac;
+        assert_eq!(
+            crossover_rating_map_with(&ctx, &[json!({ "games": [game.clone(), game] })]),
+            Ok(json!({ "1245620": null }))
+        );
+        let seen = canned.0.lock().unwrap();
+        assert_eq!(seen.len(), 1);
+        assert_eq!(seen[0].url, gamelib_info::crossover::INDEX_URL);
+        // No test installs the global context, so this is the pre-install answer.
+        assert!(info_ctx().is_none());
+        assert_eq!(
+            rpc_info_crossover_rating_map(&[json!({ "games": [] })]),
+            Err("info_crossover_rating_map:not-ready".to_string())
         );
     }
 
