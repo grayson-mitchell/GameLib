@@ -28,7 +28,11 @@
  * a data-flow analysis. It cannot see error text that reaches a message under another name
  * (`let msg = e.to_string();` then `{msg}`), through a helper that returns a `String`
  * (`keyring_outcome_message`), through a macro, or through the `set_diag_sink` function pointer.
- * Bind every category to a named local whose name is not one of the above (`kind`,
+ * That last path is covered at its producers (IN-09): every `diag(` call in `gamelib-steamcm`, the
+ * only crate that feeds `steamcm_diag` into `gamelib.log`, is held to the same rule by a second
+ * test below. The tracing and `log` bridges (steam-vent, reqwest, other crates) are NOT gated: their
+ * text is crate-authored, WARN and above, escaped for CR/LF only and uploaded as is (see section 13
+ * of `src-tauri/crates/README.md`). Bind every category to a named local whose name is not one of the above (`kind`,
  * `error_category`) and keep the error itself in the detail argument, which is the discipline this
  * gate can enforce. Line numbers below are those of the comment-stripped text (the shared stripper
  * drops whole comment lines), so each failure also carries the call's first line.
@@ -42,6 +46,16 @@ import {
 
 const SHELL_SRC = join(__dirname, '..', '..', '..', 'src-tauri', 'src')
 const GENERATED = ['ipc_contract.rs']
+const STEAMCM_SRC = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'src-tauri',
+  'crates',
+  'gamelib-steamcm',
+  'src'
+)
 
 /** Names that denote an error, a description or a path/env value in this crate. */
 const FORBIDDEN_NAMES = [
@@ -118,6 +132,28 @@ function readArgs(
   }
 }
 
+/** The `diag(` calls of the steamcm crate (`diag(..)` and `crate::error::diag(..)`), as a `shell_log` shape. */
+function listDiagCalls(code: string): ShellLogCall[] {
+  const calls: ShellLogCall[] = []
+  // `\b` keeps `steamcm_diag(` (and any `*_diag(`) out: `_` is a word character.
+  const callRe = /\bdiag\(/g
+  let match: RegExpExecArray | null
+  while ((match = callRe.exec(code)) !== null) {
+    if (code.slice(Math.max(0, match.index - 3), match.index) === 'fn ') {
+      continue // the definition, not a call
+    }
+    const openIdx = match.index + match[0].length - 1
+    const { args } = readArgs(code, openIdx)
+    calls.push({
+      name: 'shell_log',
+      message: args,
+      line: code.slice(0, match.index).split('\n').length,
+      head: (code.slice(match.index).split('\n')[0] ?? '').trim()
+    })
+  }
+  return calls
+}
+
 function listShellLogCalls(code: string): ShellLogCall[] {
   const calls: ShellLogCall[] = []
   const callRe = /\bshell_log(_detail)?\(/g
@@ -154,6 +190,9 @@ function externalTextIn(message: string): string | null {
       i = skipped
     }
   }
+  // `kind_name(&e)` is the crate's classifier: it turns an error into a fixed category name
+  // (`liveness.rs`), so the error identifier inside it is not external text reaching the message.
+  codeText = codeText.replace(/\bkind_name\([^()]*\)/g, ' ')
   const placeholder = PLACEHOLDER_RE.exec(literalText)
   if (placeholder) return `placeholder ${placeholder[0]}`
   const ident = IDENT_RE.exec(codeText)
@@ -175,8 +214,8 @@ function shellRsFiles(): string[] {
   return all.filter((p) => !GENERATED.includes(p)).sort()
 }
 
-function readCode(rel: string): string {
-  const raw = readFileSync(join(SHELL_SRC, rel), 'utf-8').replace(/\r\n/g, '\n')
+function readCode(rel: string, root: string = SHELL_SRC): string {
+  const raw = readFileSync(join(root, rel), 'utf-8').replace(/\r\n/g, '\n')
   return stripSourceComments(raw)
     .split('\n')
     .map(stripTrailingLineComment)
@@ -208,6 +247,59 @@ describe('no shell_log message carries external text (WR-02, privacy half)', () 
     expect(
       all.filter((c) => c.name === 'shell_log_detail').length
     ).toBeGreaterThan(10)
+  })
+})
+
+describe('no steamcm diagnostic carries external text (IN-09, privacy half)', () => {
+  const steamcmFiles = (): string[] => {
+    const all: string[] = []
+    walkRs(STEAMCM_SRC, '', all)
+    return all.sort()
+  }
+
+  test('every diag( message in gamelib-steamcm is category-only', () => {
+    const offences: string[] = []
+    for (const rel of steamcmFiles()) {
+      for (const call of listDiagCalls(readCode(rel, STEAMCM_SRC))) {
+        const why = externalTextIn(call.message)
+        if (why !== null) {
+          offences.push(`${rel}:${call.line} diag ${why}: ${call.head}`)
+        }
+      }
+    }
+    expect(offences).toEqual([])
+  })
+
+  test('non-vacuity: the walk reaches the crate and finds many diag( calls', () => {
+    const files = steamcmFiles()
+    expect(files).toContain('session.rs')
+    expect(files).toContain('webauth/mod.rs')
+    const all = files.flatMap((rel) =>
+      listDiagCalls(readCode(rel, STEAMCM_SRC))
+    )
+    expect(all.length).toBeGreaterThan(20)
+  })
+
+  test('the matcher flags an external-text diag( and skips the definition and steamcm_diag', () => {
+    const flaggedDiag = (code: string): string | null => {
+      const calls = listDiagCalls(code)
+      expect(calls).toHaveLength(1)
+      return externalTextIn(calls[0]?.message ?? '')
+    }
+    expect(flaggedDiag('diag(&format!("logon failed: {e}"))')).not.toBeNull()
+    expect(
+      flaggedDiag('crate::error::diag(&format!("x {}", err))')
+    ).not.toBeNull()
+    expect(flaggedDiag('diag(&format!("CM logon reason={reason}"))')).toBeNull()
+    // The classifier turns an error into a category, so passing the error to it is fine.
+    expect(
+      flaggedDiag('diag(&format!("rebuild failed cause={}", kind_name(&e)))')
+    ).toBeNull()
+    expect(
+      flaggedDiag('diag(&format!("rebuild failed: {e:?}", kind_name(&e)))')
+    ).not.toBeNull()
+    expect(listDiagCalls('pub(crate) fn diag(msg: &str) {}')).toHaveLength(0)
+    expect(listDiagCalls('steamcm_diag(message)')).toHaveLength(0)
   })
 })
 

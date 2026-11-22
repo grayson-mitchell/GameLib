@@ -18,6 +18,7 @@ use serde_json::{Map, Value};
 
 use crate::backend::{CmConn, LicenseEntry, OwnedOpts};
 use crate::error::{diag, CmError};
+use crate::liveness::kind_name;
 use crate::ops::{account, pics};
 
 /// Apps per PICS product-info request (`APP_BATCH_SIZE` in licensedDemos.ts).
@@ -213,8 +214,11 @@ pub async fn collect_owned_and_demos<C: CmConn>(
         {
             Ok(Ok(d)) => (d, None),
             Ok(Err(e)) => {
+                // The category only (IN-09): `gamelib.log` is uploaded, and an error's own text
+                // (a peer, a URL) must not reach it. The text still goes to the caller below.
                 diag(&format!(
-                    "Steam licensed demos lookup failed, continuing owned-only: {e:?}"
+                    "Steam licensed demos lookup failed, continuing owned-only: {}",
+                    kind_name(&e)
                 ));
                 (Vec::new(), Some(format!("{e:?}")))
             }
@@ -645,7 +649,34 @@ mod tests {
         assert!(
             lines
                 .iter()
-                .any(|l| l == "Steam licensed demos lookup failed, continuing owned-only: Timeout"),
+                .any(|l| l == "Steam licensed demos lookup failed, continuing owned-only: timeout"),
+            "{lines:?}"
+        );
+    }
+
+    /// IN-09: a failure's own text (here a stand-in for a peer address) never reaches the diag sink,
+    /// which feeds the uploaded `gamelib.log`; only the failure's category does.
+    #[tokio::test]
+    async fn a_demos_failure_diag_names_the_category_never_the_error_text() {
+        let b = FakeBackend::new();
+        b.script(|s| {
+            s.owned.queue.push_back(Ok(owned_rows()));
+            s.pics
+                .queue
+                .push_back(Err(CmError::Protocol("peer 203.0.113.7:27017".to_string())));
+        });
+        let c = conn(&b).await;
+        crate::error::test_capture::take();
+        collect_owned_and_demos(&c, 7, &[lic(1)]).await.unwrap();
+        let lines = crate::error::test_capture::take();
+        assert!(
+            lines
+                .iter()
+                .any(|l| l == "Steam licensed demos lookup failed, continuing owned-only: protocol"),
+            "{lines:?}"
+        );
+        assert!(
+            lines.iter().all(|l| !l.contains("203.0.113.7")),
             "{lines:?}"
         );
     }

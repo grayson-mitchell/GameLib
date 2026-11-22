@@ -382,6 +382,14 @@ timezone source come in through `LogConfig`. The recipe grew in these ways:
   at finish entry, so the flush gets only what finish's own steps left), so the writer flushes
   last, inside the one 5 s budget, with no wait of its own.
 
+- **What reaches the uploaded file.** `gamelib.log` is posted to a public paste service, so its
+  text has a boundary. The shell's own diagnostics (`shell_log`, `shell_log_detail`) and the steamcm
+  crate's `diag(` lines are category-only, and `shellLogCategoryOnly.test.ts` gates both sources.
+  The tracing and `log` bridges are different: their text is authored by steam-vent, reqwest and
+  the other crates, WARN and above (DEBUG only under `GAMELIB_LOG_LEVEL=debug`), and is uploaded as
+  is. Only CR and LF are escaped there (`Logger::log` does it), and nothing redacts a peer or URL a
+  crate puts in a message. Treat a new crate dependency's WARN text as published.
+
 Deliberate deviations from the TS writer:
 
 - New log files are created 0600; the TS writer never set a mode.
