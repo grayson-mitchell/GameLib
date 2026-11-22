@@ -46,7 +46,25 @@ type Json = Record<string, any> // eslint-disable-line @typescript-eslint/no-exp
 function fixture(name: string): any {
   // eslint-disable-line @typescript-eslint/no-explicit-any
   return JSON.parse(
-    readFileSync(join(__dirname, 'fixtures', 'itad', `${name}.json`), 'utf8')
+    readFileSync(
+      join(
+        __dirname,
+        '..',
+        '..',
+        '..',
+        '..',
+        'src-tauri',
+        'crates',
+        'gamelib-info',
+        'tests',
+        'fixtures',
+        'state',
+        'storeSearch',
+        'itad-samples',
+        `${name}.json`
+      ),
+      'utf8'
+    )
   )
 }
 

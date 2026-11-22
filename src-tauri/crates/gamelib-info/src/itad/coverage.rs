@@ -1,19 +1,54 @@
-//! Measured IsThereAnyDeal coverage constants for the store search (`itadCoverage.ts`), copied
-//! verbatim. The Phase 47 Wave 0 sweep is their source (`47-ITAD-COVERAGE.json`, measuredAt
-//! 2026-11-17).
+//! Measured IsThereAnyDeal coverage constants for the store search. The countries, the fallback and the
+//! shop ids live in `src/common/itadCoverage.json`, the file the renderer's price-region list reads
+//! through `src/common/itadCoverage.ts`, so the two sides cannot drift. The Phase 47 Wave 0 sweep is
+//! their source (`47-ITAD-COVERAGE.json`, measuredAt 2026-11-17).
 
-/// Countries ITAD prices in their own currency. Any other country gets [`FALLBACK_COUNTRY`] (D-13):
+use std::sync::OnceLock;
+
+use serde::Deserialize;
+
+const COVERAGE_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../../src/common/itadCoverage.json"
+));
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Coverage {
+    priced_countries: Vec<String>,
+    fallback_country: String,
+    shop_ids: ShopIds,
+}
+
+#[derive(Deserialize)]
+struct ShopIds {
+    steam: String,
+    gog: String,
+    epic: String,
+}
+
+fn coverage() -> &'static Coverage {
+    static COVERAGE: OnceLock<Coverage> = OnceLock::new();
+    COVERAGE.get_or_init(|| {
+        serde_json::from_str(COVERAGE_JSON).expect("src/common/itadCoverage.json is valid")
+    })
+}
+
+/// Countries ITAD prices in their own currency. Any other country gets [`fallback_country`] (D-13):
 /// there is no nearest-region table.
-pub const PRICED_COUNTRIES: &[&str] = &[
-    "US", "AU", "BR", "CA", "CN", "CZ", "DK", "FI", "FR", "DE", "GR", "HU", "IT", "JP", "NL", "NO",
-    "PL", "PT", "RO", "KR", "ES", "SE", "CH", "TW", "TR", "GB", "AR", "NZ", "IE", "AT", "BE", "IN",
-];
+pub fn priced_countries() -> &'static [String] {
+    &coverage().priced_countries
+}
 
 /// D-13: unpriced countries fall back to this one.
-pub const FALLBACK_COUNTRY: &str = "US";
+pub fn fallback_country() -> &'static str {
+    &coverage().fallback_country
+}
 
 /// The Steam shop id from `GET /service/shops/v1` (sweep `shops`).
-pub const SHOP_ID_STEAM: &str = "61";
+pub fn shop_id_steam() -> &'static str {
+    &coverage().shop_ids.steam
+}
 
 /// The query parameter that caps `/games/search/v1` results (graded SPEC: the official OpenAPI
 /// spec defines `results`, 1..100, default 20, and has no `limit`).
@@ -31,11 +66,15 @@ pub const PRICE_AMOUNT_SOURCE: &str = "amount";
 
 /// The ITAD shop id to GameLib `Runner` mapping (`common/discounts/storeMapping.ts`).
 pub fn runner_for(store_id: &str) -> Option<&'static str> {
-    match store_id {
-        "61" => Some("steam"),
-        "35" => Some("gog"),
-        "16" => Some("legendary"),
-        _ => None,
+    let ids = &coverage().shop_ids;
+    if store_id == ids.steam {
+        Some("steam")
+    } else if store_id == ids.gog {
+        Some("gog")
+    } else if store_id == ids.epic {
+        Some("legendary")
+    } else {
+        None
     }
 }
 
@@ -45,13 +84,21 @@ mod tests {
 
     #[test]
     fn the_constants_are_the_swept_ones() {
-        assert_eq!(PRICED_COUNTRIES.len(), 32);
-        assert!(PRICED_COUNTRIES.contains(&FALLBACK_COUNTRY));
+        assert_eq!(priced_countries().len(), 32);
+        assert!(priced_countries().iter().any(|c| c == fallback_country()));
         assert_eq!(LOOKUP_BATCH_SIZE, 200);
         assert_eq!(SEARCH_RESULT_COUNT, 20);
         assert_eq!(SEARCH_RESULTS_PARAM, "results");
         assert_eq!(PRICE_AMOUNT_SOURCE, "amount");
-        assert_eq!(SHOP_ID_STEAM, "61");
+        assert_eq!(shop_id_steam(), "61");
+    }
+
+    #[test]
+    fn the_country_count_is_the_json_array_length() {
+        let raw: serde_json::Value = serde_json::from_str(COVERAGE_JSON).unwrap();
+        let listed = raw["pricedCountries"].as_array().unwrap().len();
+        assert_eq!(priced_countries().len(), listed);
+        assert_eq!(fallback_country(), raw["fallbackCountry"].as_str().unwrap());
     }
 
     #[test]

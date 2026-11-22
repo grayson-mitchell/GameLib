@@ -60,10 +60,16 @@ const ITAD_FIXTURES = join(
   '..',
   '..',
   '..',
-  'storeSearch',
-  '__tests__',
+  '..',
+  '..',
+  'src-tauri',
+  'crates',
+  'gamelib-info',
+  'tests',
   'fixtures',
-  'itad'
+  'state',
+  'storeSearch',
+  'itad-samples'
 )
 
 interface SyntheticSpec {

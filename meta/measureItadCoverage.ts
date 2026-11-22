@@ -8,7 +8,7 @@
  * HTTP only: this script spawns no child process. It reads the key exactly once,
  * never prints it, and refuses to write any output that contains it.
  * Output: 47-ITAD-COVERAGE.json (summary) plus response fixtures under
- * src/backend/storeSearch/__tests__/fixtures/itad/.
+ * src-tauri/crates/gamelib-info/tests/fixtures/state/storeSearch/itad-samples/.
  */
 
 import axios from 'axios'
@@ -18,7 +18,8 @@ import { join } from 'path'
 const BASE = 'https://api.isthereanydeal.com'
 const PHASE_DIR =
   '.planning/phases/47-migrate-aggregated-store-search-from-cheapshark-to-istherean'
-const FIXTURE_DIR = 'src/backend/storeSearch/__tests__/fixtures/itad'
+const FIXTURE_DIR =
+  'src-tauri/crates/gamelib-info/tests/fixtures/state/storeSearch/itad-samples'
 
 // Hand-copied countryCode values of REGION_OPTIONS in
 // src/frontend/screens/Discounts/helpers.ts (not imported: frontend module).

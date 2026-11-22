@@ -14,7 +14,7 @@ import {
   ITAD_SHOP_ID_EPIC,
   ITAD_SHOP_ID_GOG,
   ITAD_SHOP_ID_STEAM
-} from 'backend/storeSearch/itadCoverage'
+} from 'common/itadCoverage'
 import {
   STORE_SEARCH_ERROR_MARKER,
   storeSearchErrorCode

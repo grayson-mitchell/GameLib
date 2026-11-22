@@ -41,8 +41,8 @@ use cache::{
     search_cache_key, write_gid_entry, write_price_entry, Entry, FRESH_MS,
 };
 use coverage::{
-    FALLBACK_COUNTRY, LOOKUP_BATCH_SIZE, PRICED_COUNTRIES, SEARCH_RESULTS_PARAM,
-    SEARCH_RESULT_COUNT, SHOP_ID_STEAM,
+    fallback_country, priced_countries, shop_id_steam, LOOKUP_BATCH_SIZE, SEARCH_RESULTS_PARAM,
+    SEARCH_RESULT_COUNT,
 };
 use mapping::{is_uuid, map_search_results, prices_by_id, search_items, Deal};
 
@@ -157,16 +157,16 @@ pub struct SearchArgs {
 fn normalize_country(country: Option<&str>) -> &str {
     match country {
         Some(c) if c.len() == 2 && c.bytes().all(|b| b.is_ascii_uppercase()) => c,
-        _ => FALLBACK_COUNTRY,
+        _ => fallback_country(),
     }
 }
 
 /// D-13: a country ITAD does not price in its own currency is priced as the fallback.
 fn priced_country_for(requested: &str) -> &str {
-    if PRICED_COUNTRIES.contains(&requested) {
+    if priced_countries().iter().any(|c| c == requested) {
         requested
     } else {
-        FALLBACK_COUNTRY
+        fallback_country()
     }
 }
 
@@ -322,13 +322,13 @@ async fn prices_with_key(
     match prices_call(ctx, key, gids, country).await {
         Ok(by_id) => Ok((by_id, country.to_string())),
         Err(fail) => {
-            let fallbackable = country != FALLBACK_COUNTRY
+            let fallbackable = country != fallback_country()
                 && matches!(fail.status(), Some(s) if (400..500).contains(&s) && !matches!(s, 401 | 403 | 429));
             if !fallbackable {
                 return Err(fail);
             }
-            let by_id = prices_call(ctx, key, gids, FALLBACK_COUNTRY).await?;
-            Ok((by_id, FALLBACK_COUNTRY.to_string()))
+            let by_id = prices_call(ctx, key, gids, fallback_country()).await?;
+            Ok((by_id, fallback_country().to_string()))
         }
     }
 }
@@ -726,7 +726,7 @@ pub async fn steam_gids(ctx: &InfoCtx, args: GidsArgs) -> Result<Value, String> 
     }
     for chunk in to_fetch.chunks(LOOKUP_BATCH_SIZE) {
         let body: Vec<String> = chunk.iter().map(|id| format!("app/{id}")).collect();
-        let url = format!("{ITAD_BASE}/lookup/id/shop/{SHOP_ID_STEAM}/v1");
+        let url = format!("{ITAD_BASE}/lookup/id/shop/{}/v1", shop_id_steam());
         let Ok(data) = send(ctx, post_request(ctx, url, &body)).await else {
             // A failed batch keeps what the cache gave; the next call tries again.
             continue;

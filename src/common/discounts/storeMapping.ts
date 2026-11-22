@@ -6,11 +6,11 @@ import type { Runner } from '../types'
  * GameLib identifies stores by the `Runner` union. This is the single source
  * of truth for that mapping — do not restring store names anywhere else.
  *
- * The ids are copied from `src/backend/storeSearch/itadCoverage.ts`
+ * The ids are copied from `src/common/itadCoverage.ts`
  * (ITAD_SHOP_ID_STEAM / _GOG / _EPIC, measured in 47-ITAD-COVERAGE.json) as
- * literals: src/common only imports backend/ as `import type`, so the
- * renderer bundle cannot pull a backend module. storeMapping.test.ts asserts
- * each literal equals the matching constant so they cannot drift.
+ * literals (the shared JSON is read by both sides, and Rust includes it too).
+ * storeMapping.test.ts asserts each literal equals the matching constant so
+ * they cannot drift.
  *
  * Amazon has no entry: ITAD does not track Amazon. The "Owned on Amazon"
  * badge reads GameLib's own `amazon.library` and is unaffected.

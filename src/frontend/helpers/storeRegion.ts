@@ -7,7 +7,7 @@
  * plan 47-16 Task 1). A code outside a screen's list reads as Auto there.
  */
 import type { CatalogLocaleSettings } from 'common/types/discounts'
-import { ITAD_PRICED_COUNTRIES } from 'backend/storeSearch/itadCoverage'
+import { ITAD_PRICED_COUNTRIES } from 'common/itadCoverage'
 
 // Only country and currency vary by language. GOG's catalog API rejects
 // most locale values, so we always send en-US — the locale doesn't affect
