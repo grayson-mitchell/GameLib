@@ -750,6 +750,47 @@ describe('change events', () => {
     expect(warnSpy).not.toHaveBeenCalled()
   })
 
+  it('E-WR-01: a second `invalidated` push after the boot wait parked on the running re-fetch is still waited for', async () => {
+    // Revs sit between the two D-WR-03 cases': the stale-push guard is per store and module state, and
+    // the next case leaves a never-answered fetch in `inflight`, so this one must run before it.
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    let resolveSnapshot: ((value: unknown) => void) | undefined
+    mockedInvoke.mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          resolveSnapshot = r
+        }) as never
+    )
+    const first = deferredFetchWithRev()
+    const second = deferredFetchWithRev()
+    const hydrating = hydrateStoreSnapshot()
+    push({ store: 'steamConfigStore', key: '', invalidated: true, rev: 82 })
+    resolveSnapshot?.({
+      steamConfigStore: { isLoggedIn: true },
+      '@rev': { steamConfigStore: 81 }
+    })
+    let returned = false
+    void hydrating.then(() => {
+      returned = true
+    })
+    // The boot wait is now parked on the first re-fetch. A second bulk invalidation arrives and
+    // queues another fetch behind it.
+    await settle()
+    push({ store: 'steamConfigStore', key: '', invalidated: true, rev: 83 })
+    // The first re-fetch lands (and is discarded, it predates the second invalidation). The boot
+    // wait must not return in the gap before the queued second fetch has started.
+    first.resolve({ isLoggedIn: 'from-first' }, 82)
+    await settle()
+    expect(returned).toBe(false)
+    second.resolve({ isLoggedIn: 'from-second' }, 83)
+    await hydrating
+    expect(returned).toBe(true)
+    expect(fetchCallCount()).toBe(2)
+    // Hydrated from the second fetch, and a synchronous read neither misses nor warns.
+    expect(snapshotGet('steamConfigStore', 'isLoggedIn')).toBe('from-second')
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
   it('D-WR-03: a re-fetch that never answers does not hold boot past the bound', async () => {
     jest.useFakeTimers()
     try {

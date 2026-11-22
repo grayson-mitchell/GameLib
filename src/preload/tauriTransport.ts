@@ -162,6 +162,12 @@ const hydrated = new Set<string>()
 
 /** D-03: de-dupes concurrent `hydrateStore()` calls for the same store (T-29-22). */
 const inflight = new Map<string, Promise<void>>()
+/**
+ * E-WR-01: the re-fetch an `invalidated` push queued behind a running fetch, until it has run. It is
+ * recorded here rather than inferred from `inflight` because it only enters `inflight` once the
+ * running fetch's reactions have run, and `settleRefetches` must not look in that gap.
+ */
+const queuedRefetch = new Map<string, Promise<void>>()
 
 /**
  * Per-store invalidation counter (todo 2026-10-05 tauri-rpc-transport-minor-defects, defect
@@ -265,7 +271,11 @@ function ensureChangeListenerAttached(): void {
       invalidationEpoch.set(store, (invalidationEpoch.get(store) ?? 0) + 1)
       const running = inflight.get(store)
       if (running) {
-        void running.then(() => hydrateStore(store))
+        const next = running.then(() => hydrateStore(store))
+        queuedRefetch.set(store, next)
+        void next.finally(() => {
+          if (queuedRefetch.get(store) === next) queuedRefetch.delete(store)
+        })
       } else {
         void hydrateStore(store)
       }
@@ -417,7 +427,14 @@ const BOOT_REFETCH_WAIT_MS = 5000
 async function settleRefetches(stores: string[]): Promise<void> {
   const drained = Promise.all(
     stores.map(async (storeName) => {
-      for (let task = inflight.get(storeName); task; task = inflight.get(storeName)) {
+      // A queued re-fetch is awaited before `inflight` is read: the waiter's own continuation on a
+      // settled fetch runs before the queued `hydrateStore` has started, so `inflight` alone can look
+      // empty while a second fetch is about to begin (E-WR-01).
+      for (
+        let task = queuedRefetch.get(storeName) ?? inflight.get(storeName);
+        task;
+        task = queuedRefetch.get(storeName) ?? inflight.get(storeName)
+      ) {
         await task
       }
     })
