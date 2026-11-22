@@ -16,6 +16,9 @@ use std::time::Duration;
 
 static TMP_SEQ: AtomicU64 = AtomicU64::new(0);
 
+/// How many temp names are tried before a persistent `AlreadyExists` is surfaced.
+const TMP_CREATE_ATTEMPTS: usize = 8;
+
 /// Sleeps before each retry of a refused rename: three retries after the first attempt.
 const RENAME_RETRY_DELAYS_MS: [u64; 3] = [25, 50, 100];
 
@@ -141,14 +144,32 @@ pub fn write_atomic_with(
     let name = target.file_name().ok_or_else(invalid)?;
     create_dir_private(parent)?;
 
-    let mut tmp_name = name.to_os_string();
-    tmp_name.push(format!(
-        ".{}.{}.tmp",
-        std::process::id(),
-        TMP_SEQ.fetch_add(1, Ordering::Relaxed)
-    ));
-    let tmp = parent.join(tmp_name);
-    let file = private_options().create_new(true).open(&tmp)?;
+    // A crash orphan with the same pid and seq (pids are small and constant in containers) makes
+    // `create_new` fail with `AlreadyExists`: take the next seq and try again (A-WR-06).
+    let mut created = None;
+    for _ in 0..TMP_CREATE_ATTEMPTS {
+        let mut tmp_name = name.to_os_string();
+        tmp_name.push(format!(
+            ".{}.{}.tmp",
+            std::process::id(),
+            TMP_SEQ.fetch_add(1, Ordering::Relaxed)
+        ));
+        let tmp = parent.join(tmp_name);
+        match private_options().create_new(true).open(&tmp) {
+            Ok(file) => {
+                created = Some((tmp, file));
+                break;
+            }
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e),
+        }
+    }
+    let (tmp, file) = created.ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "no unused temp file name after repeated collisions",
+        )
+    })?;
     if let Err(e) = finish(file, bytes, durability) {
         let _ = fs::remove_file(&tmp);
         return Err(e);
@@ -222,6 +243,20 @@ mod tests {
         fs::set_permissions(&p, fs::Permissions::from_mode(0o644)).unwrap();
         write_atomic(&p, b"new", Durability::Synced).unwrap();
         assert_eq!(mode(&p), 0o600);
+    }
+
+    #[test]
+    fn a_leftover_temp_with_the_next_name_is_skipped_not_fatal() {
+        let d = tempfile::tempdir().unwrap();
+        let p = d.path().join("x.json");
+        // Orphans a crashed process would leave, squatting on the names this one is about to try.
+        let next = TMP_SEQ.load(Ordering::Relaxed);
+        for seq in next..next + 3 {
+            let orphan = format!("x.json.{}.{}.tmp", std::process::id(), seq);
+            fs::write(d.path().join(orphan), b"orphan").unwrap();
+        }
+        write_atomic(&p, b"fresh", Durability::Unsynced).unwrap();
+        assert_eq!(fs::read(&p).unwrap(), b"fresh");
     }
 
     #[test]
