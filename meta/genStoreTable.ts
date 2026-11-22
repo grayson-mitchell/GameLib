@@ -109,7 +109,10 @@ const ACCOUNT_CONFIG_DIRS = new Set([
  * dot paths are off. `store/migrations` lost its TS store in 85-21 with the TS migration system (D-06);
  * the file stays on disk (D-07) and its row stays so the table still records that Rust never opens it
  * (the `excluded` family) and the corpus's `migrations.json` files still resolve to a row. The two
- * settings rows are the documents `config.json` and `GamesConfig/<app>.json`.
+ * settings rows are the documents `config.json` and `GamesConfig/<app>.json`. `store/game-overrides` lost
+ * its TS store in Phase 86 (86-11, D-29 row 5): per-game overrides are Rust's (`gamelib-info`), the
+ * `StoreHost` keeps opening the file as user-state, and `gameOverridesStore` stays in `tsNames` so the
+ * renderer's own store resolves to this row. Each later 86 delete (86-17, 86-24) adds its store here.
  */
 const EXTRA_ROWS: Omit<Row, 'family' | 'chain'>[] = [
   ...['steam_update_prompt_ack', 'steam_engine_notices'].map((name) => ({
@@ -127,6 +130,16 @@ const EXTRA_ROWS: Omit<Row, 'family' | 'chain'>[] = [
     dir: 'store',
     name: 'migrations',
     tsNames: [],
+    kind: 'user-state',
+    tokenBearing: false,
+    dotPaths: true,
+    flavour: 'store'
+  },
+  {
+    key: 'store/game-overrides',
+    dir: 'store',
+    name: 'game-overrides',
+    tsNames: ['gameOverridesStore'],
     kind: 'user-state',
     tokenBearing: false,
     dotPaths: true,

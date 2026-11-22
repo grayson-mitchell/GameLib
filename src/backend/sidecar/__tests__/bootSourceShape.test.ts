@@ -77,7 +77,6 @@ describe('stores modules construct nothing at import (66.1-25, MH-1)', () => {
     'constants/key_value_stores.ts',
     'crossover_index/stores.ts',
     'downloadmanager/stores.ts',
-    'game_overrides/stores.ts',
     'humble/stores.ts',
     'macArch/stores.ts',
     'runsForMe/stores.ts',

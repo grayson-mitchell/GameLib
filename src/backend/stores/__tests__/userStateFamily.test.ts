@@ -18,8 +18,17 @@ import { isRustOwnedStoreKey } from '../storeFrames'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { storeSchemaVersionOf } from '../../testUtils/storeSchemaVersions'
 
+/**
+ * Rows whose TS store a Phase 86 plan deleted: the row stays (D-29 row 5) so the shell still opens
+ * the file as user-state, but `createStores` builds nothing over it, so there is no mirror to probe.
+ */
+const NO_TS_STORE: readonly string[] = ['store/game-overrides']
+
 const USER_STATE_ROWS = tableFile.rows.filter(
-  (row) => row.family === 'user-state' && row.name !== null
+  (row) =>
+    row.family === 'user-state' &&
+    row.name !== null &&
+    !NO_TS_STORE.includes(row.key)
 )
 
 interface Probe {
@@ -61,7 +70,10 @@ afterEach(() => {
 
 describe(`the user-state family (${USER_STATE_ROWS.length} user-state rows)`, () => {
   it('names every store the plan moves (D-11)', () => {
-    const keys = USER_STATE_ROWS.map((row) => row.key)
+    // Every user-state row, the ones whose TS store is gone included: the plan still moves them.
+    const keys = tableFile.rows
+      .filter((row) => row.family === 'user-state' && row.name !== null)
+      .map((row) => row.key)
     expect(keys.length).toBeGreaterThanOrEqual(26)
     expect(keys).toEqual(
       expect.arrayContaining([
@@ -147,8 +159,20 @@ describe('store/migrations has no TS store (85-21, D-06) and stays on disk (D-07
   })
 })
 
+describe('store/game-overrides has no TS store (86-11, D-29 row 5) and keeps its user-state row', () => {
+  it('createStores builds no store over it, and the table still lists it as user-state', () => {
+    const { stores } = build(userData, [])
+    expect(() => storeOfRow(userData, 'store/game-overrides', stores)).toThrow(
+      /built no store/
+    )
+    expect(
+      tableFile.rows.find((r) => r.key === 'store/game-overrides')
+    ).toMatchObject({ family: 'user-state', kind: 'user-state' })
+  })
+})
+
 describe('stores with an absolute `<userData>/store` cwd resolve to the same file', () => {
-  it.each(['game-overrides', 'mac-arch', 'runs-for-me'])(
+  it.each(['mac-arch', 'runs-for-me'])(
     'store/%s resolves to <userData>/store/<name>.json',
     (name) => {
       const { stores } = build(userData, [])

@@ -76,7 +76,6 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   sideloadedStore: 'user-state',
   humbleConfigStore: 'user-state',
   downloadManager: 'user-state',
-  gameOverridesStore: 'user-state',
   wineDownloaderInfoStore: 'cache',
   macArchStore: 'user-state',
   runsForMeStore: 'user-state',
@@ -289,8 +288,34 @@ describe('renderer mirror parity (D-02)', () => {
     expect(mirrors.length).toBeGreaterThanOrEqual(MIN_MIRRORS)
   })
 
-  test('every mirror maps to a backend declaration with a kind', () => {
-    expect(mirrors.filter((n) => !(n in EXPECTED_KINDS))).toEqual([])
+  // A store whose TS registration a Phase 86 plan deleted (86-11: `gameOverridesStore`) keeps its
+  // renderer mirror, and its kind now lives only on its `storeTable.json` row (D-29 row 5).
+  const tableKinds = new Map<string, Kind>(
+    (
+      JSON.parse(
+        readFileSync(
+          join(REPO_ROOT, 'src', 'common', 'types', 'ipc', 'storeTable.json'),
+          'utf8'
+        )
+      ) as { rows: { tsNames: string[]; kind: Kind }[] }
+    ).rows.flatMap((row) =>
+      row.tsNames.map((name): [string, Kind] => [name, row.kind])
+    )
+  )
+
+  test('every mirror maps to a backend declaration or a store-table row with a kind', () => {
+    expect(
+      mirrors.filter((n) => !(n in EXPECTED_KINDS) && !tableKinds.has(n))
+    ).toEqual([])
+  })
+
+  test('a mirror with no backend declaration is a store-table row of a known kind', () => {
+    const rustOwned = mirrors.filter((n) => !(n in EXPECTED_KINDS))
+    expect(rustOwned).toContain('gameOverridesStore')
+    expect(tableKinds.get('gameOverridesStore')).toBe('user-state')
+    for (const name of rustOwned) {
+      expect(['cache', 'user-state']).toContain(tableKinds.get(name))
+    }
   })
 
   test.each([

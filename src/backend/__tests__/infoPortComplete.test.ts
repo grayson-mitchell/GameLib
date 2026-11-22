@@ -71,14 +71,13 @@ const manifest = JSON.parse(
   )
 ) as Manifest
 
-const storeTableKeys = (
-  JSON.parse(
-    readFileSync(
-      join(REPO_ROOT, 'src', 'common', 'types', 'ipc', 'storeTable.json'),
-      'utf8'
-    )
-  ) as { rows: { key: string }[] }
-).rows.map((r) => r.key)
+const storeTable = JSON.parse(
+  readFileSync(
+    join(REPO_ROOT, 'src', 'common', 'types', 'ipc', 'storeTable.json'),
+    'utf8'
+  )
+) as { rows: { key: string; kind: string; tsNames: string[] }[] }
+const storeTableKeys = storeTable.rows.map((r) => r.key)
 
 const tsWalk = walkStripped(['src', 'meta'])
 const flagWalk = walkStripped(['src', 'src-tauri/src'])
@@ -201,6 +200,53 @@ describe('recentGamesPortComplete', () => {
       f.path.startsWith('src/backend/')
     )
     expect(findIdentifiers(backend, ['games.recent'])).toEqual([])
+  })
+})
+
+/**
+ * 86-11, SC4, D-13, D-18 and D-29 row 5: per-game overrides are Rust's. The TS module, its store
+ * registration and its oracle are deleted; the golden fixtures stay for the Rust golden. The two
+ * renderer read channels are native (86-10) and the write is one of four scheduled shims. The
+ * `store/game-overrides` table row outlives the TS registration (it moved into EXTRA_ROWS), so the
+ * Rust host keeps opening the user's file as user-state.
+ */
+const GAME_OVERRIDES: SliceSpec = {
+  deleted: [
+    'src/backend/game_overrides/index.ts',
+    'src/backend/game_overrides/stores.ts',
+    'src/backend/info/__tests__/oracle/gameOverrides.oracle.test.ts'
+  ],
+  kept: ['src-tauri/crates/gamelib-info/tests/fixtures/golden/overrides'],
+  forbiddenIdentifiers: [
+    'createGameOverridesStores',
+    'GameOverridesDeps',
+    'GameOverridesWriteDeps',
+    'removeImagesMatching',
+    'gameOverridesStore'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_GAME_OVERRIDES',
+  storeRowKeys: ['store/game-overrides']
+}
+
+describe('gameOverridesPortComplete', () => {
+  runSlice(GAME_OVERRIDES)
+
+  it('getGameMetadataOverride and getAllGameOverrides have no sidecar ipc.on or ipc.handle (they are native info channels)', () => {
+    expect(
+      findTsRegistrations(tsWalk.files, [
+        'getGameMetadataOverride',
+        'getAllGameOverrides'
+      ])
+    ).toEqual([])
+  })
+
+  it('the store/game-overrides row keeps its user-state kind and the renderer name after the TS store went', () => {
+    const row = storeTable.rows.find((r) => r.key === 'store/game-overrides')
+    expect(row).toMatchObject({
+      kind: 'user-state',
+      tsNames: ['gameOverridesStore']
+    })
   })
 })
 

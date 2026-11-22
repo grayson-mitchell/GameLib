@@ -48,7 +48,8 @@ describe('createTestStores', () => {
     const stores = createTestStores()
     // 19 -> 18 at Phase 84 plan 84-06 (2026-11-21): the `logger` family was deleted.
     // 18 -> 17 at Phase 85 plan 85-21 (2026-11-22): the `migration` family was deleted (D-06).
-    expect(Object.keys(stores)).toHaveLength(17)
+    // 17 -> 16 at Phase 86 plan 86-11 (2026-11-23): the `gameOverrides` family was deleted.
+    expect(Object.keys(stores)).toHaveLength(16)
     const desc = Object.getOwnPropertyDescriptor(stores, 'steam')
     expect(typeof desc?.get).toBe('function')
   })

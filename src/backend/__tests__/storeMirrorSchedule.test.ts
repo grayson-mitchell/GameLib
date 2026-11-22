@@ -31,6 +31,15 @@ const REGISTERED = 'src/backend/stores/__tests__/fixtures/registeredStores.json'
 /** The phase this plan runs in: mirrors due here are gone, mirrors due later must still exist. */
 const CURRENT_PHASE = 85
 
+/**
+ * Mirrors a Phase 86 plan has already deleted. Their schedule cell is still 86 (the slice that
+ * deletes them, 82-STATE-OWNERSHIP.md), but 86 is not finished, so `CURRENT_PHASE` stays 85 and the
+ * "due after 85 still exists" rule would fail them. Each 86 plan that deletes a registration adds its
+ * store here (86-11: `gameOverridesStore`) and its `storeTable.json` row moves to `EXTRA_ROWS`
+ * (D-29 row 5); when 86 closes, `CURRENT_PHASE` moves to 86 and this set empties.
+ */
+const DELETED_IN_PHASE_86: ReadonlySet<string> = new Set(['gameOverridesStore'])
+
 /** Store (TS name) -> the slice that deletes its TS mirror (82-STATE-OWNERSHIP.md). */
 const SCHEDULE: Readonly<Record<string, number>> = {
   configStore: 98,
@@ -168,14 +177,15 @@ function mirrorExists(store: string, registered: ReadonlySet<string>): boolean {
 function scheduleViolations(
   schedule: Readonly<Record<string, number>>,
   registered: ReadonlySet<string>,
-  phase: number
+  phase: number,
+  deletedEarly: ReadonlySet<string> = new Set()
 ): string[] {
   const out: string[] = []
   for (const [store, due] of Object.entries(schedule)) {
     const exists = mirrorExists(store, registered)
-    if (due > phase && !exists) out.push(`${store}: due ${due}, mirror missing`)
-    if (due <= phase && exists)
-      out.push(`${store}: due ${due}, mirror still present`)
+    const gone = due <= phase || deletedEarly.has(store)
+    if (!gone && !exists) out.push(`${store}: due ${due}, mirror missing`)
+    if (gone && exists) out.push(`${store}: due ${due}, mirror still present`)
   }
   return out
 }
@@ -258,9 +268,17 @@ describe('TS-mirror deletion schedule (D-19)', () => {
       scheduleViolations(
         { ...SCHEDULE, ...SETTINGS_SCHEDULE },
         registered,
-        CURRENT_PHASE
+        CURRENT_PHASE,
+        DELETED_IN_PHASE_86
       )
     ).toEqual([])
+  })
+
+  it('every store a Phase 86 plan deleted is scheduled for 86 and has no registration', () => {
+    for (const store of DELETED_IN_PHASE_86) {
+      expect([store, SCHEDULE[store]]).toEqual([store, 86])
+      expect([store, registered.has(store)]).toEqual([store, false])
+    }
   })
 
   it('the migrations store has no registration and no TS class (D-06)', () => {
@@ -289,6 +307,21 @@ describe('TS-mirror deletion schedule (D-19)', () => {
       'gogConfigStore: due 92, mirror missing',
       'migrationsStore: due 85, mirror still present'
     ])
+  })
+
+  it('self-test: a store deleted early in 86 passes, and one still registered while listed fails', () => {
+    const early = new Set(['crossover_index'])
+    expect(
+      scheduleViolations({ crossover_index: 86 }, new Set(), 85, early)
+    ).toEqual([])
+    expect(
+      scheduleViolations(
+        { crossover_index: 86 },
+        new Set(['crossover_index']),
+        85,
+        early
+      )
+    ).toEqual(['crossover_index: due 86, mirror still present'])
   })
 
   it('self-test: the doc parser reads a store row and its phase', () => {

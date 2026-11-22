@@ -99,7 +99,7 @@ describe('createStores', () => {
         unknown
       >
       const { schema, ...actualOptions } = actual
-      // An absolute cwd (game_overrides, runsForMe, macArch) is pinned relative to userData.
+      // An absolute cwd (runsForMe, macArch) is pinned relative to userData.
       // The declared pins are `/`-separated, so a win32 host's `\` is read in that form.
       const cwd = String(actualOptions.cwd)
         .replace(testUserDataDir(), '<userData>')

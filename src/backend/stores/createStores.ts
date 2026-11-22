@@ -7,7 +7,6 @@
 import { createKvsStores } from 'backend/constants/key_value_stores'
 import { createCrossoverIndexStores } from 'backend/crossover_index/stores'
 import { createDownloadManagerStores } from 'backend/downloadmanager/stores'
-import { createGameOverridesStores } from 'backend/game_overrides/stores'
 import { createHumbleStores } from 'backend/humble/stores'
 import { createMacArchStores } from 'backend/macArch/stores'
 import { createStoreSearchStores } from 'backend/storeSearch/stores'
@@ -30,7 +29,6 @@ export function createStores(deps: StoreFamilyDeps): Stores {
     crossoverIndex: createCrossoverIndexStores(deps),
     storeSearch: createStoreSearchStores(deps),
     downloadManager: createDownloadManagerStores(deps),
-    gameOverrides: createGameOverridesStores(deps),
     humble: createHumbleStores(deps),
     macArch: createMacArchStores(deps),
     runsForMe: createRunsForMeStores(deps),

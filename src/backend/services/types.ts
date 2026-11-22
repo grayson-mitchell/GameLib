@@ -88,9 +88,6 @@ export interface Stores {
   downloadManager: ReturnType<
     typeof import('backend/downloadmanager/stores').createDownloadManagerStores
   >
-  gameOverrides: ReturnType<
-    typeof import('backend/game_overrides/stores').createGameOverridesStores
-  >
   humble: ReturnType<typeof import('backend/humble/stores').createHumbleStores>
   macArch: ReturnType<
     typeof import('backend/macArch/stores').createMacArchStores

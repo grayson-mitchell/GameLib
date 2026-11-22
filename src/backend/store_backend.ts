@@ -153,7 +153,7 @@ export function translateStoreOptions<T extends Record<string, unknown>>(
 
   // ANCHOR 2 — only when `cwd` was relative, i.e. when WE derived it from
   // userData just above. Deliberately NOT applied to an absolute caller-supplied
-  // `cwd`: `game_overrides/stores.ts` passes an absolute
+  // `cwd`: `runsForMe/stores.ts` and `macArch/stores.ts` pass an absolute
   // `join(userDataPath, 'store')` where `userDataPath` is Electron's
   // Electron's userData path, which is NOT string-identical to the root's
   // (Electron derives the leaf from the app name -- 'gamelib' unpackaged vs

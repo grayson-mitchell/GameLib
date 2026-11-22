@@ -453,18 +453,6 @@
     }
   },
   {
-    "registeredAs": "gameOverridesStore",
-    "options": {
-      "cwd": "<userData>/store",
-      "name": "game-overrides",
-      "clearInvalidConfig": true,
-      "schemaKeys": null
-    },
-    "declaration": {
-      "kind": "user-state"
-    }
-  },
-  {
     "registeredAs": "gogConfigStore",
     "options": {
       "cwd": "gog_store",

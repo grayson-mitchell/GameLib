@@ -163,8 +163,10 @@ describe('66.1 end state: stores modules', () => {
   // `uploadedLogs`, is owned by Rust now); the walk found one fewer module, not a parse miss.
   // 16 -> 15 at Phase 85 plan 85-21 (2026-11-22): migration/stores.ts was deleted with the TS
   // migration system (D-06).
-  it('finds the 15 stores modules', () => {
-    expect(STORES_MODULES).toHaveLength(15)
+  // 15 -> 14 at Phase 86 plan 86-11 (2026-11-23): game_overrides/stores.ts was deleted (per-game
+  // overrides are Rust's).
+  it('finds the 14 stores modules', () => {
+    expect(STORES_MODULES).toHaveLength(14)
     for (const m of STORES_MODULES) {
       expect(existsSync(join(BACKEND, m))).toBe(true)
     }
@@ -234,7 +236,9 @@ describe('66.1 end state: stores modules', () => {
 
   it('storeManagers/index.ts and every stores module have no top-level new', () => {
     const files = ['storeManagers/index.ts', ...STORES_MODULES]
-    assertAtOrAboveFloor('66.1 stores modules', files.length, 16)
+    // 16 -> 15 at Phase 86 plan 86-11 (2026-11-23): index.ts plus 14 stores modules now, after
+    // game_overrides/stores.ts was deleted with the slice. The deletion is the only change.
+    assertAtOrAboveFloor('66.1 stores modules', files.length, 15)
     const offenders: string[] = []
     for (const f of files) {
       const text = source(join(BACKEND, f))

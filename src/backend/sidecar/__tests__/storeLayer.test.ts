@@ -154,7 +154,7 @@ describe('round-trip', () => {
     // resolve it — it round-trips through the same mechanism as the D-13
     // cache stores instead, immediately below.
     //
-    'gameOverridesStore',
+    // 'gameOverridesStore' is not listed: Phase 86 (86-11) deleted its TS registration; Rust owns it.
     'runsForMeStore'
   ] as const
 

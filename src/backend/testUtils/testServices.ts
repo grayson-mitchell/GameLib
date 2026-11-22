@@ -17,7 +17,6 @@ import { createCrossoverIndexStores } from '../crossover_index/stores'
 import { createStoreSearchStores } from '../storeSearch/stores'
 import { createItadSecrets } from '../storeSearch/itadSecrets'
 import { createDownloadManagerStores } from '../downloadmanager/stores'
-import { createGameOverridesStores } from '../game_overrides/stores'
 import { createHumbleStores } from '../humble/stores'
 import { createMacArchStores } from '../macArch/stores'
 import { createRunsForMeStores } from '../runsForMe/stores'
@@ -149,7 +148,6 @@ const STORE_KEYS = [
   'crossoverIndex',
   'storeSearch',
   'downloadManager',
-  'gameOverrides',
   'humble',
   'macArch',
   'runsForMe',
@@ -181,7 +179,6 @@ function familyBuilders(): FamilyBuilders {
     crossoverIndex: (deps) => createCrossoverIndexStores(deps),
     storeSearch: (deps) => createStoreSearchStores(deps),
     downloadManager: (deps) => createDownloadManagerStores(deps),
-    gameOverrides: (deps) => createGameOverridesStores(deps),
     humble: (deps) => createHumbleStores(deps),
     macArch: (deps) => createMacArchStores(deps),
     runsForMe: (deps) => createRunsForMeStores(deps),
