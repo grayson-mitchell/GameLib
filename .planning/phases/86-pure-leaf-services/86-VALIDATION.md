@@ -125,9 +125,9 @@ created: "2026-11-22"
 | 86-24-T1 | 86-24 | 19 | SVC-01 | T-86-58 | wiki + crossover TS deleted; rows byte-identical | delete gate | `genStoreTable --check; git diff --quiet storeTable.json; codecheck; jest storeTable storeKinds createStores appRuntime` | ✅ extend | ✅ green |
 | 86-24-T2 | 86-24 | 19 | SVC-01 | T-86-59 | census agrees with the tree | census | `jest diPhaseGates bootSourceShape storeLayer shortcutsFlows enrichmentFlows; find-deadcode` | ✅ extend | ✅ green |
 | 86-24-T3 | 86-24 | 19 | SVC-01 | T-86-59 | oracle retired; nine describes pass (SC4) | delete gate | `jest infoPortComplete infoShimSchedule fixtureRedaction; cargo test -p gamelib-info --features testing` | ✅ extend | ✅ green |
-| 86-25-T1 | 86-25 | 20 | SVC-01 | T-86-62 | clean-worktree proof, SC4 sweep, drift run | phase proof | `full suite at P (see plan); grep '## Phase proof' '## SC4 sweep' '## Drift run'` | — | ❌ red |
-| 86-25-T2 | 86-25 | 20 | SVC-01 | T-86-60 | push and release authorised | manual | `checkpoint:decision` | — | ⬜ pending |
-| 86-25-T3 | 86-25 | 20 | SVC-01 | T-86-61 | three-OS CI (D-16); signed identity (D-15) | CI proof | `gh run view per leg; grep '## CI proof' 'Gate item 4:'` | — | ⬜ pending |
+| 86-25-T1 | 86-25 | 20 | SVC-01 | T-86-62 | clean-worktree proof, SC4 sweep, drift run | phase proof | `full suite at P (see plan); grep '## Phase proof' '## SC4 sweep' '## Drift run'` | — | ⚠️ red at P; R1-R4 fixed (`dd7872126`, `1a58fe646`), R5 deferred |
+| 86-25-T2 | 86-25 | 20 | SVC-01 | T-86-60 | push and release authorised | manual | `checkpoint:decision` | — | ✅ green (`push-and-build-ask`) |
+| 86-25-T3 | 86-25 | 20 | SVC-01 | T-86-61 | three-OS CI (D-16); signed identity (D-15) | CI proof | `gh run view per leg; grep '## CI proof' 'Gate item 4:'` | — | ⚠️ CI green; identity blocked (no artifact) |
 | 86-26-T1 | 86-26 | 21 | SVC-01 | — | literals re-checked before the run | uat | `grep '## Pre-run re-check'; no CONDITIONAL in Required literals` | — | ⬜ pending |
 | 86-26-T2 | 86-26 | 21 | SVC-01 | T-86-63, T-86-64 | operator runs the four items | manual | `checkpoint:human-action (blocking-human)` | — | ⬜ pending |
 | 86-26-T3 | 86-26 | 21 | SVC-01 | T-86-63 | items scored in UAT shape | uat parse | `node parseUatItemsWithStats; no result: pending; pnpm planning-gates` | — | ⬜ pending |
@@ -253,6 +253,8 @@ How R1-R3 were attributed: each flagged `file:line` from the ratchet's `--list` 
 
 Fix status: **none of R1-R5 is fixed at P** (86-25 Task 1 records them; a source edit to `info_dispatch.rs` / `native_router.rs` was attempted and refused by the permission system, so it was not retried). Landing R1-R3 at once brings the counts to exactly the ceilings (2 / 2 / 1) with no ceiling change; R5 needs a regenerated artifact; R4 needs a baseline decision before any push, because the hook runs it.
 
+Fix status after Task 2 (operator decision `push-and-build-ask`, fixes authorised before the push): **R1-R3 fixed** in `dd7872126` (`std::slice::from_ref` at the four sites, two type aliases, `#[cfg(test)]` on `spawn_slice_worker`; local darwin ratchet on 1.99.1 PASS at `cloned_ref_to_slice_refs` 2/2, `type_complexity` 2/2, `dead_code` 1/1, no ceiling changed). **R4 fixed** in `1a58fe646` by removing the `jest.mock` calls (DI seams in `optInDlc.ts` and `tauriIpcRoute.ts`), not by baselining them; `pnpm backend-di-ceilings` PASS. **R5 deferred** by the operator ("later"): `meta/i18nForkTouchedFiles.json` is still stale and is an open item; it does not turn CI red because A-17's git-based ANTI-ROT block skips in CI's shallow clone (the Test run below shows `PASS Meta meta/__tests__/genI18nGateScope.test.ts`), so it is red locally only.
+
 ---
 
 ## SC4 sweep
@@ -301,3 +303,96 @@ PASS wiki-umu
 ```
 
 14 PASS, 6 SKIP (all keyed, as designed), 0 FAIL. The six keyed cases stay unproved live until the operator runs them in their own terminal with their own keys; their replay proofs are in `cargo test -p gamelib-info --features testing` (row 6 above).
+
+---
+
+## CI proof
+
+Collected 2026-11-23 (86-25 Task 3) with `gh run list --commit <sha>` and `gh run view <id> --json jobs`; times are UTC.
+
+**Pushes (operator decision `push-and-build-ask`).** Immediately before the first push, `git diff --name-only P HEAD` listed `86-VALIDATION.md` plus the six R1-R4 fix paths (`src-tauri/src/info_dispatch.rs`, `src-tauri/src/native_router.rs`, `src/backend/storeManagers/steam/optInDlc.ts`, its `__tests__/optInDlc.test.ts`, `src/frontend/state/__tests__/libraryStoreFollowers.test.ts`, `src/frontend/testUtils/tauriIpcRoute.ts`). The plan's rule is to push only if every path is under `.planning/`; the non-`.planning` paths were exactly the fixes the operator authorised before the push, so the push went ahead on that authorisation. The verbatim list is in 86-25-SUMMARY.md.
+
+| Push | Range | Pre-push hook | Contents |
+|------|-------|---------------|----------|
+| 1 | `88b48b70d..1a58fe646` | passed (never `--no-verify`) | 86-25 Task 1 (`5303061fa`), R1-R3 (`dd7872126`), R4 (`1a58fe646`) |
+| 2 | `1a58fe646..0f3e6e9e9` | passed | `0f3e6e9e9` (url 2.5.8 -> 2.5.9, form_urlencoded 1.2.3, for RUSTSEC-2026-0592; authorised by the operator after push 1's Supply-chain audit failed on that advisory) plus another session's commits `49f03ab67..f7c4f6b18` (quick-261123-928 and fast tasks) |
+| (foreign) | `0f3e6e9e9..4e1af5463` | n/a | another session's quick-261123-9i7 (`3a4d64220`, `4e1af5463`), pushed seconds later; GitHub triggered no runs for `0f3e6e9e9` itself |
+
+**Runs at `1a58fe646`** (push 1):
+
+| Workflow | Run id | Leg | Conclusion |
+|----------|--------|-----|------------|
+| Test (test.yml) | 45051034925 | ci | success |
+| Code check (codecheck.yml) | 45051034871 | codecheck | success |
+| Lint | 45051034868 | lint | success |
+| Rust test (rust-test.yml) | 45051034867 | cargo-test (ubuntu-latest) | success |
+| | | cargo-test (macos-latest) | success |
+| | | cargo-test (windows-latest) | cancelled (superseded by the push-2 run) |
+| Supply-chain audit | 45051034887 | cargo-deny | **failure** (RUSTSEC-2026-0592, url 2.5.8; fixed by `0f3e6e9e9`) |
+| | | pnpm-audit | success |
+| Release Tauri (release-tauri.yml, `workflow_dispatch`, `dry_run=true`) | 45051040572 | macOS `aarch64-apple-darwin` | success (completed 17:58:40) |
+| | | Linux `ubuntu-22.04` | success |
+| | | Windows `windows-latest` | success |
+
+**Runs at `4e1af5463`** (the first head with runs that contains every 86-25 commit; its only commits above `0f3e6e9e9` are the foreign quick-261123-9i7 pair):
+
+| Workflow | Run id | Leg | Conclusion |
+|----------|--------|-----|------------|
+| Rust test (rust-test.yml) | 45052890985 | cargo-test (ubuntu-latest) | success |
+| | | cargo-test (windows-latest) | success |
+| | | cargo-test (macos-latest) | success |
+| Code check (codecheck.yml) | 45052890933 | codecheck | success |
+| Test (test.yml) | 45052890886 | ci | success (1118 suites passed, 13 skipped; 24152 tests passed, 245 skipped) |
+| Lint | 45052891061 | lint | success |
+| Supply-chain audit | 45052890967 | cargo-deny | success |
+| | | pnpm-audit | success |
+
+The clippy ratchet is the last step of the macOS and Windows rust-test legs, so both legs being green is the CI measurement of R1-R3 on darwin and win32 (the win32 ceiling map was never measured locally).
+
+**gamelib-info golden replay per leg** (run 45052890985, step "cargo test (gamelib-core, ... gamelib-store and gamelib-info crates)", read from each job's log with ANSI stripped; one row per test binary):
+
+| Binary | ubuntu-latest | windows-latest | macos-latest |
+|--------|---------------|----------------|--------------|
+| `gamelib-info` unit tests (`src/lib.rs`) | 129 passed | 128 passed | 129 passed |
+| `tests/cache_view.rs` | 20 | 20 | 20 |
+| `tests/golden_anticheat.rs` | 12 | 12 | 12 |
+| `tests/golden_crossover.rs` | 7 | 7 | 7 |
+| `tests/golden_discounts.rs` | 13 | 13 | 13 |
+| `tests/golden_overrides.rs` | 16 | 16 | 16 |
+| `tests/golden_recent.rs` | 8 | 8 | 8 |
+| `tests/golden_steamgrid.rs` | 13 | 13 | 13 |
+| `tests/golden_storeSearch.rs` | 24 | 24 | 24 |
+| `tests/golden_umu.rs` | 6 | 6 | 6 |
+| `tests/golden_wiki.rs` | 11 | 11 | 11 |
+| `tests/golden_wiki_sources.rs` | 8 | 8 | 8 |
+| `tests/http_replay.rs` | 31 | 31 | 31 |
+| `tests/regex_vectors.rs` | 5 | 5 | 5 |
+| `tests/secrets.rs` | 36 | 36 | 36 |
+| `tests/wiki_hltb_edges.rs` | 13 | 13 | 13 |
+| `tests/wiki_source_edges.rs` | 12 | 12 | 12 |
+| `gamelib-info-cli` unit tests + `tests/cli.rs` | 21 + 11 | 21 + 11 | 21 + 11 |
+| **gamelib-info total** | **364** | **363** | **364** |
+
+Every binary reported `0 failed; 0 ignored; 0 filtered out`. The ten `golden_*` binaries (118 tests per leg) ran on windows-latest and ubuntu-latest, including `golden_overrides` (the override images' Windows path handling) and `golden_crossover` (the bundled crossover path), which is D-16's Windows/Linux proof. The one Windows difference is `overrides::tests::a_symlink_out_of_the_folder_loses_the_link_and_keeps_the_target`, a unix-only symlink unit test (diffed by name against the ubuntu list). On macOS the job log interleaves cargo's stderr `Running` lines with each binary's stdout, so its per-binary counts were matched in log order; they equal the ubuntu numbers.
+
+---
+
+## Signed builds (D-15)
+
+**Phase 85 build:** the block "### Phase 85 build (85-19 Task 3, 2026-11-22)" in `85-VALIDATION.md` § "Signed baseline (D-16)", by reference: release-tauri.yml run `44978855761` (`dry_run=false`, `main` at `ffb8573d2`), draft release `GameLib v0.11.0`; `Identifier=com.gamelib.shell`, leaf `Developer ID Application: grayson mitchell (S7U223QWXJ)`, `TeamIdentifier=S7U223QWXJ`, designated requirement `identifier "com.gamelib.shell" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = S7U223QWXJ`, `spctl` accepted (Notarized Developer ID), stapled.
+
+### Phase 86 build
+
+- **Run:** release-tauri.yml `45051040572`, `workflow_dispatch` on `main`, `dry_run=true`, headSha `1a58fe646ef7ae0769bc42a8c5b979d3cb0fa6ad` (contains every Phase 86 source commit; `0f3e6e9e9` adds only the url bump). All three legs `success`.
+- **Artifact: none.** `gh api repos/{owner}/{repo}/actions/runs/45051040572/artifacts` returns `total_count: 0`. This is by design and was already recorded at the Phase 85 baseline ("A dry run uploads nothing"): the workflow header says a dry run delivers the build log, not a binary, it has no `upload-artifact` step, and the macOS log ends with `No releaseId or tagName provided, skipping all uploads...`. So the five checks cannot be run on an artifact, and nothing was downloaded, installed or run.
+- **`codesign -dv --verbose=4`:** not run (no artifact).
+- **`codesign -d -r-` (designated requirement):** not run (no artifact).
+- **`spctl -a -vv`:** not run (no artifact).
+- **`xcrun stapler validate`:** not run (no artifact).
+- **Log evidence only (supporting, not an identity record; the baseline rule is "from the downloaded artifact itself, never from the log"):** the macOS leg imported a keychain item labelled `Mac Developer ID Application: grayson mitchell`, signed `gamelib-sidecar`, `gamelib-shell`, `GameLib.app`, the updater zip and `GameLib_0.11.0_aarch64.dmg` with it (`found cert "***" with organization "grayson mitchell"`), notarized `GameLib.app` (`Notarizing Finished with status Accepted for id 155b67c6-c03f-4f22-be3d-458fa5688c58`) and printed `Stapling app...`. That is the same signing path as run 44978855761, which makes a match likely, but no TeamIdentifier, designated requirement, spctl or stapler result can be read from a masked log.
+
+**Comparison:** not possible; there is no Phase 86 artifact to compare with the Phase 85 block above.
+
+Gate item 4: blocked (no signed Phase 86 artifact: the authorised release run 45051040572 was a dry run, which uploads nothing by design; an artifact needs a `dry_run=false` dispatch, which this plan may not make without a new operator authorisation)
+
+To unblock (operator decision, not taken here): dispatch `gh workflow run release-tauri.yml --ref main -f dry_run=false`, then re-run the five checks on the downloaded app. Caveat before doing so: `src-tauri/tauri.conf.json` on `main` is still `"version": "0.11.0"`, and tauri-action's `tagName: v__VERSION__` resolves from it, so a non-dry run targets the existing draft release `GameLib v0.11.0`, which holds the Phase 85 build's assets (`GameLib_0.11.0_aarch64.app.tar.gz` and the rest, uploaded 2026-11-22T03:23Z). It would overwrite them with the Phase 86 build, and gate item 4 needs the Phase 85 build installed first. Either bump the version first (as Phase 85 did with `release/v0.10`), or install/keep a copy of the Phase 85 app before dispatching.
