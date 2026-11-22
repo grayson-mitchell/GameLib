@@ -24,6 +24,18 @@ button {
   max-height: 40px;
   text-align: center;
   transition: 500ms;
+
+  // nord-light's primary is Frost nord8, where the nord6 --text-tertiary label
+  // reads 1.74:1; nord0 reads 6.24:1 (4.64:1 on the nord9 hover), 261122-rz8.
+  // `:where()` keeps this at (0,1,0) and it is emitted right after `.button`,
+  // so only the base label changes and every modifier that sets its own
+  // colour (.is-secondary, .is-tertiary, .is-text, .is-link, .is-footer,
+  // disabled) still wins. `.is-danger` is excluded: nord0 on nord11 reads
+  // 3.05:1, below the nord6 label's 3.55:1. --text-tertiary itself must stay
+  // nord6, because it also labels the dark --accent and --success badges.
+  :where(body.nord-light) &:where(:not(.is-danger)) {
+    color: var(--text-default);
+  }
 }
 
 .button:disabled {
@@ -205,7 +217,7 @@ button {
   // since the hover fill is the same hex regardless of theme.
   //
   // 261122-qwk: nord-light now uses only the official Nord palette, so its
-  // hover fill is nord9 (#81a1c1) and the base nord6 label reads 2.34:1 there.
+  // hover fill is nord9 (#81a1c1) and since 261122-rz8 the base label is --background nord5, which reads 2.21:1 there.
   // Its override is `--text-default` (nord0), which reads 4.64:1, so the rule
   // still earns its place. gamelib-light keeps the pre-change rule below.
   //

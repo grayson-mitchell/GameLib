@@ -607,13 +607,13 @@ body.nord-light {
     var(--body-background) 64px,
     var(--body-background) 100%
   );
-  --modal-background: var(--body-background);
-  --modal-border: var(--body-background);
-  --primary: #b48ead;
+  --modal-background: var(--background);
+  --modal-border: var(--input-background);
+  --primary: #88c0d0;
   --primary-hover: #81a1c1;
   --danger: #bf616a;
   --text-tertiary: var(--brand-text-01);
-  --osk-background: var(--body-background);
+  --osk-background: var(--background);
   --osk-button-background: var(--input-background);
   --osk-button-border: #4c566a; /* decoupled from the bar: nord9 would read 1.99 on the nord4 keys, nord3 reads 5.46 */
   --action-icon-hover: var(--accent);
@@ -630,7 +630,10 @@ body.nord-light {
   --neutral-06: #2e3440;
   --neutral-03: #5e81ac;
   --accent: #3b4252;
-  --background: var(--background-light);
+  /* Snow Storm layering: L0 page nord6 (--body-background), L1 raised
+     surfaces nord5 (--background, dialogs, OSK panel), L2 controls and
+     floating overlays nord4 (--input-background, context menu, log boxes). */
+  --background: #e5e9f0;
   --navbar-background: #81a1c1;
   --input-background: #d8dee9;
   --success: #434c5e;
@@ -702,7 +705,7 @@ body.nord-light {
   }
 
   .MuiDialog-paper {
-    background-color: var(--background-light);
+    background-color: var(--modal-background);
     color: var(--text-default);
   }
 
@@ -780,7 +783,7 @@ body.nord-light {
   }
   .progressDialog.log-box,
   .errorDialog.error-box {
-    background-color: #e5e9f0;
+    background-color: #d8dee9;
   }
 
   .gameCard > .gameCardStatus {
@@ -798,6 +801,18 @@ body.nord-light {
         }
       }
     }
+  }
+
+  /* nord0 on the nord8 active letter reads 6.24:1; nord6 read 1.74. */
+  .alphabet-filter-button--active {
+    color: var(--text-default);
+  }
+
+  /* Text painted in --primary: nord8 on nord6 would read 1.74:1, --accent
+     (nord1) reads 8.73:1. */
+  .diskLabel,
+  .dlcItem .action {
+    color: var(--accent);
   }
 
   .tour-button {

@@ -3072,8 +3072,8 @@ describe('Button .is-link / .is-text families: render-site census and contrast i
       )
     expect(nestedRules(withoutOverrides)).toHaveLength(0)
     const preFixRatios: Record<string, number> = {
-      // nord6 on nord9 (the palette-only nord-light hover fill)
-      'nord-light': 2.3354075448387865,
+      // nord5 on nord9 (261122-rz8: --background is nord5)
+      'nord-light': 2.2105479406777806,
       // #eceff4 on #a17399 (the pre-change hover fill, kept by gamelib-light)
       'gamelib-light': 3.356770572062584,
       'nord-dark': 4.41083696523498
