@@ -25,7 +25,7 @@ use gamelib_core::clock::Clock;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_info::ctx::{InfoCtx, InfoPaths, Platform};
 use gamelib_info::http::{Http, HttpError, HttpFuture, Replay, Request, Response};
-use gamelib_info::secrets::{MemorySecretSource, Slot};
+use gamelib_info::secrets::{MemorySecretSource, SecretSource, Slot};
 use gamelib_info::{dispatch, dispatch_sync, OPS};
 use gamelib_store::host::StoreHost;
 use gamelib_testutil::FakeHome;
@@ -126,7 +126,13 @@ fn an_empty_case_list_fails_the_manifest_guard() {
 
 #[test]
 fn the_itad_ops_are_in_the_sorted_op_table() {
-    for op in ["info_itad_deals", "info_itad_gids", "info_itad_search"] {
+    for op in [
+        "info_itad_deals",
+        "info_itad_gids",
+        "info_itad_key_status",
+        "info_itad_search",
+        "info_itad_set_key",
+    ] {
         assert!(OPS.contains(&op), "{op}");
     }
     let mut sorted = OPS.to_vec();
@@ -1029,4 +1035,208 @@ fn a_failed_lookup_batch_keeps_the_expired_mapping_and_never_fails() {
     );
     let answer = dispatch_sync("info_itad_gids", &[json!({ "appIds": ["220"] })], &ctx).unwrap();
     assert!(answer["220"].is_string(), "{answer}");
+}
+
+// ---------------------------------------------------------------------------------------------
+// The user key channels
+// ---------------------------------------------------------------------------------------------
+
+/// A secret source whose every call fails with a category, as a locked or denied Keychain does.
+struct FailingSource;
+
+impl SecretSource for FailingSource {
+    fn get(&self, _slot: Slot) -> Result<Option<String>, String> {
+        Err("unavailable".to_string())
+    }
+    fn set(&self, _slot: Slot, _value: &str) -> Result<(), String> {
+        Err("unavailable".to_string())
+    }
+    fn delete(&self, _slot: Slot) -> Result<(), String> {
+        Err("unavailable".to_string())
+    }
+}
+
+fn status(ctx: &InfoCtx) -> Value {
+    dispatch_sync("info_itad_key_status", &[json!({})], ctx).unwrap()
+}
+
+#[test]
+fn key_status_is_exactly_two_booleans_and_never_the_key() {
+    let (_home, _user_data, ctx) = context(
+        Arc::new(LeakyFailure),
+        TestClock::at(ORACLE_NOW),
+        &json!({ "user": true, "env": true, "baked": true }),
+        None,
+    );
+    let answer = status(&ctx);
+    assert_eq!(answer, json!({ "hasKey": true, "rejected": false }));
+    let object = answer.as_object().unwrap();
+    assert_eq!(object.len(), 2);
+    assert!(object.values().all(Value::is_boolean));
+    let text = answer.to_string();
+    for key in [KEY_USER, KEY_ENV, KEY_BAKED] {
+        assert!(!text.contains(key), "{text}");
+    }
+}
+
+#[test]
+fn has_key_reflects_the_user_slot_only_not_the_env_or_baked_key() {
+    let (_home, _user_data, ctx) = context(
+        Arc::new(LeakyFailure),
+        TestClock::at(ORACLE_NOW),
+        &json!({ "env": true, "baked": true }),
+        None,
+    );
+    assert_eq!(status(&ctx), json!({ "hasKey": false, "rejected": false }));
+}
+
+#[test]
+fn a_rejected_user_key_is_reported_and_saving_a_key_clears_it() {
+    let (_home, _user_data, ctx) = context(
+        Arc::new(LeakyFailure),
+        TestClock::at(ORACLE_NOW),
+        &json!({ "user": true }),
+        None,
+    );
+    ctx.itad_key.mark_rejected();
+    assert_eq!(status(&ctx), json!({ "hasKey": true, "rejected": true }));
+    assert_eq!(
+        dispatch_sync(
+            "info_itad_set_key",
+            &[json!({ "key": "  new-key  " })],
+            &ctx
+        ),
+        Ok(Value::Null)
+    );
+    assert_eq!(status(&ctx), json!({ "hasKey": true, "rejected": false }));
+    // The stored value is trimmed.
+    assert_eq!(
+        ctx.itad_key.get(&ctx, "t").unwrap().as_deref(),
+        Some("new-key")
+    );
+}
+
+#[test]
+fn an_empty_or_blank_key_clears_the_slot_and_the_rejected_flag() {
+    for blank in ["", "   ", "\t\n"] {
+        let (_home, _user_data, ctx) = context(
+            Arc::new(LeakyFailure),
+            TestClock::at(ORACLE_NOW),
+            &json!({ "user": true }),
+            None,
+        );
+        ctx.itad_key.mark_rejected();
+        assert_eq!(
+            dispatch_sync("info_itad_set_key", &[json!({ "key": blank })], &ctx),
+            Ok(Value::Null)
+        );
+        assert_eq!(
+            status(&ctx),
+            json!({ "hasKey": false, "rejected": false }),
+            "{blank:?}"
+        );
+    }
+}
+
+#[test]
+fn set_key_bounds_the_key_and_rejects_unknown_fields_without_echoing_them() {
+    let (_home, _user_data, ctx) = context(
+        Arc::new(LeakyFailure),
+        TestClock::at(ORACLE_NOW),
+        &json!({}),
+        None,
+    );
+    let bad = "info_itad_set_key:bad-args".to_string();
+    let secret = "SECRET".repeat(50);
+    assert_eq!(
+        dispatch_sync("info_itad_set_key", &[json!({ "key": secret })], &ctx),
+        Err(bad.clone())
+    );
+    assert_eq!(
+        dispatch_sync("info_itad_set_key", &[json!({ "key": "k", "x": 1 })], &ctx),
+        Err(bad.clone())
+    );
+    assert_eq!(
+        dispatch_sync("info_itad_set_key", &[json!({ "key": 5 })], &ctx),
+        Err(bad.clone())
+    );
+    assert_eq!(dispatch_sync("info_itad_set_key", &[], &ctx), Err(bad));
+    // 256 UTF-16 units are accepted: 128 astral characters.
+    assert_eq!(
+        dispatch_sync(
+            "info_itad_set_key",
+            &[json!({ "key": "\u{1F511}".repeat(128) })],
+            &ctx
+        ),
+        Ok(Value::Null)
+    );
+    assert_eq!(
+        dispatch_sync("info_itad_key_status", &[json!({ "x": 1 })], &ctx),
+        Err("info_itad_key_status:bad-args".to_string())
+    );
+}
+
+#[test]
+fn a_keychain_that_fails_is_no_key_for_the_status_and_a_category_for_the_write() {
+    let (_home, _user_data, mut ctx) = context(
+        Arc::new(LeakyFailure),
+        TestClock::at(ORACLE_NOW),
+        &json!({}),
+        None,
+    );
+    ctx.secrets = Some(Arc::new(FailingSource));
+    assert_eq!(status(&ctx), json!({ "hasKey": false, "rejected": false }));
+    let written = dispatch_sync("info_itad_set_key", &[json!({ "key": "k-secret" })], &ctx);
+    assert_eq!(
+        written,
+        Err("info_itad_set_key:secret-unavailable".to_string())
+    );
+    assert!(!format!("{written:?}").contains("k-secret"));
+    // No secret source at all is the same: no key, and a fixed error for the write.
+    ctx.secrets = None;
+    assert_eq!(status(&ctx), json!({ "hasKey": false, "rejected": false }));
+    assert_eq!(
+        dispatch_sync("info_itad_set_key", &[json!({ "key": "k" })], &ctx),
+        Err("info_itad_set_key:no-secret-source".to_string())
+    );
+}
+
+#[test]
+fn a_user_key_set_through_the_channel_is_the_key_the_next_search_sends() {
+    let (_dir, replay) = synthetic_replay(
+        json!([
+            search_exchange("s", 200, json!({}), Some("search.json")),
+            prices_exchange("p", "prices.json")
+        ]),
+        &[("search.json", SEARCH_BODY), ("prices.json", PRICES_BODY)],
+    );
+    let tap = Tap::new(
+        Arc::clone(&replay) as Arc<dyn Http>,
+        vec![
+            ("user", "typed-in-settings".to_string()),
+            ("env", KEY_ENV.to_string()),
+        ],
+    );
+    let (_home, _user_data, ctx) = context(
+        Arc::clone(&tap) as Arc<dyn Http>,
+        TestClock::at(ORACLE_NOW),
+        &env_only_keys(),
+        None,
+    );
+    assert_eq!(status(&ctx), json!({ "hasKey": false, "rejected": false }));
+    dispatch_sync(
+        "info_itad_set_key",
+        &[json!({ "key": "typed-in-settings" })],
+        &ctx,
+    )
+    .unwrap();
+    assert_eq!(status(&ctx), json!({ "hasKey": true, "rejected": false }));
+    dispatch_sync("info_itad_search", &[json!({ "query": "portal" })], &ctx).unwrap();
+    assert_eq!(
+        tap.key_per_request(),
+        vec![json!("user"), json!("user")],
+        "{:?}",
+        tap.requests()
+    );
+    replay.finish().unwrap();
 }

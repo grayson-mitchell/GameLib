@@ -45,12 +45,10 @@ export const enrichmentAsyncArgs = {
     localeSettings,
     optionalArg(z.boolean()),
     optionalArg(z.boolean())
-  ]),
-  // Phase 47 D-05: the optional ITAD user key. Status is booleans only; the key is bounded.
-  'itad.getKeyStatus': noArgs,
-  'itad.setApiKey': z.tuple([z.string().max(256)])
+  ])
   // Phase 86 (86-15, D-17): the five `steamgriddb.*` channels are native `info` channels
-  // (`nativeChannels.json`); their bounds live in the Rust decode. So are `searchStores`, `getStoreSearchDeals` and `getItadSteamGids` (86-16).
+  // (`nativeChannels.json`); their bounds live in the Rust decode. So are the five ITAD channels (86-16): `searchStores`, `getStoreSearchDeals`, `getItadSteamGids`,
+  // `itad.getKeyStatus` and `itad.setApiKey`.
 }
 
 interface EnrichmentAsyncReturns {
@@ -63,8 +61,6 @@ interface EnrichmentAsyncReturns {
   getCrossoverIndex: Promise<Record<string, number | null>>
   getWikiGameInfo: Promise<WikiInfo | null>
   getGogDiscounts: Promise<CatalogProduct[]>
-  'itad.getKeyStatus': Promise<{ hasKey: boolean; rejected: boolean }>
-  'itad.setApiKey': Promise<void>
 }
 
 export type EnrichmentAsync = InvokeFns<

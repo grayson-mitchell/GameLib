@@ -4735,30 +4735,23 @@
     {
       "channel": "itad.getKeyStatus",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [],
-        "items": false,
-        "maxItems": 0
-      }
+      "owner": "native",
+      "args": [],
+      "returns": "{ hasKey: boolean, rejected: boolean }"
     },
     {
       "channel": "itad.setApiKey",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "maxLength": 256
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "key",
+          "type": "string",
+          "maxLength": 256,
+          "maxLengthUnit": "utf16"
+        }
+      ],
+      "returns": "void"
     },
     {
       "channel": "kill",

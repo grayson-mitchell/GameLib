@@ -459,6 +459,10 @@ impl NativeRouter {
         // lookup, run by the same `info` slice. The sidecar no longer registers them.
         invoke.insert("getStoreSearchDeals", info_dispatch::get_store_search_deals);
         invoke.insert("getItadSteamGids", info_dispatch::get_itad_steam_gids);
+        // Phase 86 (86-16, D-17): the optional ITAD user key (status as two booleans, and the
+        // write), over the Keychain owner. The sidecar no longer registers `itad.*`.
+        invoke.insert("itad.getKeyStatus", info_dispatch::itad_get_key_status);
+        invoke.insert("itad.setApiKey", info_dispatch::itad_set_api_key);
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -824,6 +828,8 @@ mod tests {
             "searchStores",
             "getStoreSearchDeals",
             "getItadSteamGids",
+            "itad.getKeyStatus",
+            "itad.setApiKey",
         ] {
             assert!(info.contains(&name), "{name}: {info:?}");
         }

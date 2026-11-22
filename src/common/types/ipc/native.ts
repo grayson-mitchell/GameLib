@@ -103,6 +103,13 @@ export interface NativeAsync {
     country?: string | null
   ) => Promise<StoreSearchDeal[]>
   getItadSteamGids: (appIds: string[]) => Promise<Record<string, string>>
+  // Phase 86 (86-16, D-17): the optional ITAD user key, over the Rust Keychain owner (the `itad-api-key`
+  // slot). `itad.getKeyStatus` is two booleans and never the key: `hasKey` is the user slot only (not
+  // the built-in key) and `rejected` is the session memory of ITAD refusing it. `itad.setApiKey` takes
+  // 0 to 256 UTF-16 units, trims, clears the slot for an empty value and forgets any rejection; a
+  // Keychain that cannot be written rejects with a fixed category, never the key.
+  'itad.getKeyStatus': () => Promise<{ hasKey: boolean; rejected: boolean }>
+  'itad.setApiKey': (key: string) => Promise<void>
 }
 
 export interface NativeSync {

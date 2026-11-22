@@ -2,7 +2,7 @@
  * Curated enrichment-channel registration (Phase 34.2 Plan 06, D-04/D-07/
  * D-10, REQ-34.2-04/REQ-34.2-11/REQ-34.2-12/REQ-34.2-14).
  *
- * Registers the 9 enrichment channels the game-details page and store
+ * Registers the 7 enrichment channels the game-details page and store
  * search container depend on, onto platformApi's own `ipcMain` recorder,
  * importing the REAL underlying bodies plans 34.2-01/34.2-03 already
  * extracted or wired unchanged (mirrors `gameDetailsFlowRegistration.ts`'s
@@ -110,10 +110,9 @@
  * rejected promise, which is the existing Electron contract for every one
  * of these five channels.
  *
- * `itad.*` (2) — Phase 47 D-05/D-06: `itad.getKeyStatus` returns `{ hasKey, rejected }` booleans
- * only, `itad.setApiKey` saves or clears the optional user key through `deps.itadSecrets`. The
- * key value never leaves the sidecar; the adapter (`storeSearch/itad.ts`) reads the same owner
- * through `deps` for its user > env > baked key precedence.
+ * `itad.*` (2) — Phase 47 D-05/D-06: Phase 86 (86-16, D-17) moved `itad.getKeyStatus` and
+ * `itad.setApiKey` to the native `info` slice (a `{ hasKey, rejected }` pair of booleans and the key
+ * write over the Rust Keychain owner), so they are no longer registered here.
  *
  * Phase 86 (86-15, D-17): the five `steamgriddb.*` channels are no longer registered here. They
  * are native `info` channels served by Rust (`nativeChannels.json`), so each has exactly one owner.
@@ -200,7 +199,7 @@ const RUNS_FOR_ME_RUNNERS: readonly string[] = Object.freeze([
 ] as const)
 
 /**
- * Registers the 9 enrichment channels. Called once from `handlers.ts`
+ * Registers the 7 enrichment channels. Called once from `handlers.ts`
  * — this module owns no side effects at import time beyond the imports
  * above; the caller decides when registration onto the handler registry
  * happens.
@@ -314,27 +313,8 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
       )
   )
 
-  // ── itad.* (2) — the optional user key (Phase 47 D-05, D-06). The renderer gets two booleans,
-  // never the key (T-47-41); the adapter reads the same owner through `deps` for key precedence.
-
-  deps.ipc.handle('itad.getKeyStatus', async () => ({
-    hasKey: !!(await deps.itadSecrets.getApiKey()),
-    rejected: deps.itadSecrets.isRejected()
-  }))
-
-  deps.ipc.handle(
-    'itad.setApiKey',
-    async (_event: unknown, ...args: unknown[]) => {
-      // Same WR-01 boundary guard as steamgriddb.setApiKey: a cast is not a check (T-47-42).
-      const key = args[0]
-      if (typeof key !== 'string') {
-        logWarning(
-          'itad.setApiKey: ignored a non-string key',
-          LogPrefix.Backend
-        )
-        return
-      }
-      await deps.itadSecrets.setApiKey(key)
-    }
-  )
+  // Phase 86 (86-16, D-17): `itad.getKeyStatus` and `itad.setApiKey` are native `info` channels served
+  // by Rust over the Keychain owner (`info_itad_key_status`, `info_itad_set_key`), so they are no
+  // longer registered here. `deps.itadSecrets` is left on `EnrichmentFlowDeps` only because the
+  // foreign-dirty `handlers.ts` still passes it; nothing in this file reads it (86-17 removes it).
 }

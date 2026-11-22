@@ -56,6 +56,8 @@ pub const QUERY_MAX_UTF16: usize = 256;
 pub const COUNTRY_MAX_UTF16: usize = 16;
 /// The longest game id `getStoreSearchDeals` accepts (the zod regex was `{1,64}`).
 pub const GAME_ID_MAX_UTF16: usize = 64;
+/// The longest ITAD key `itad.setApiKey` accepts.
+pub const KEY_MAX_UTF16: usize = 256;
 /// The most Steam app ids one `getItadSteamGids` call takes, each of 1 to 10 digits.
 pub const GIDS_MAX: usize = 5000;
 pub const APP_ID_MAX_DIGITS: usize = 10;
@@ -750,6 +752,54 @@ pub async fn steam_gids(ctx: &InfoCtx, args: GidsArgs) -> Result<Value, String> 
         }
     }
     Ok(Value::Object(out))
+}
+
+// --- the optional user key --------------------------------------------------------------------
+
+/// `{}`: the key-status check takes nothing. Unknown fields are rejected.
+#[derive(Debug, Clone, Default, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct KeyStatusArgs {}
+
+/// `{key}`: the user key to store; an empty (after trimming) value clears it. Unknown fields are
+/// rejected.
+#[derive(Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct SetKeyArgs {
+    pub key: String,
+}
+
+impl std::fmt::Debug for SetKeyArgs {
+    /// Never the key.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SetKeyArgs").finish_non_exhaustive()
+    }
+}
+
+/// `itad.getKeyStatus`: `{ hasKey, rejected }` and nothing else, never the key (T-47-41). `hasKey` is
+/// whether the user key slot holds a key (the built-in env and baked keys do not count, as in TS);
+/// a slot the Keychain cannot read is the same as no key (the TS owner was total). `rejected` is the
+/// session memory of ITAD refusing the user key.
+pub fn key_status(ctx: &InfoCtx, _args: KeyStatusArgs) -> Result<Value, String> {
+    let has_key = matches!(
+        ctx.itad_key.get(ctx, "info_itad_key_status"),
+        Ok(Some(key)) if !key.is_empty()
+    );
+    Ok(json!({ "hasKey": has_key, "rejected": ctx.itad_key.is_rejected() }))
+}
+
+/// `itad.setApiKey`: stores the key trimmed, or clears the slot for a value that is empty after
+/// trimming, and clears the session `rejected` flag either way. A failed Keychain write is an `Err`
+/// naming only the category (`<op>:secret-timeout|unavailable`); TS swallowed it and told the
+/// renderer it had worked, which left the user believing a key was saved (as `steamgriddb.setApiKey`
+/// was fixed in 86-15).
+pub fn set_key(ctx: &InfoCtx, args: SetKeyArgs) -> Result<Value, String> {
+    const OP: &str = "info_itad_set_key";
+    if utf16_len(&args.key) > KEY_MAX_UTF16 {
+        return Err(format!("{OP}:bad-args"));
+    }
+    ctx.itad_key.set(ctx, OP, &args.key)?;
+    Ok(Value::Null)
 }
 
 #[cfg(test)]

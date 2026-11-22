@@ -814,6 +814,59 @@ pub(crate) fn get_itad_steam_gids(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> Nat
     })
 }
 
+/// `itad.getKeyStatus` takes no argument.
+fn parse_itad_key_status(args: &[Value]) -> Result<(), Rejection> {
+    if args.is_empty() {
+        Ok(())
+    } else {
+        Err(("(args)", "too_big"))
+    }
+}
+
+/// The native `itad.getKeyStatus` handler (slice `info`, D-17): `{ hasKey, rejected }`, two booleans
+/// and never the key (T-47-41). `hasKey` is the user key slot only.
+pub(crate) fn itad_get_key_status(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        parse_itad_key_status(&args)
+            .map_err(|(path, code)| invalid_args("itad.getKeyStatus", &[path], &[code]))?;
+        let info = info_ctx().ok_or_else(|| "itad.getKeyStatus: not ready".to_string())?;
+        run_info_op(
+            Arc::clone(info),
+            "info_itad_key_status",
+            vec![serde_json::json!({})],
+            "itad.getKeyStatus: the check did not finish",
+        )
+        .await
+    })
+}
+
+/// Decodes the one `key` argument of `itad.setApiKey`: exactly one string of 0 to
+/// [`gamelib_info::itad::KEY_MAX_UTF16`] UTF-16 code units (an empty one clears the key). The value is
+/// never echoed into a rejection.
+fn parse_itad_set_key(args: &[Value]) -> Result<&str, Rejection> {
+    // The same shape and bound as the search term.
+    parse_steamgrid_search(args)
+}
+
+/// The native `itad.setApiKey` handler (slice `info`, D-17): stores the trimmed user key in the `itad-api-key`
+/// slot, or clears it for an empty value, and forgets any earlier rejection. The key is never in a log
+/// line, an error or a rejection (T-47-42).
+pub(crate) fn itad_set_api_key(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        let key = parse_itad_set_key(&args)
+            .map_err(|(path, code)| invalid_args("itad.setApiKey", &[path], &[code]))?
+            .to_string();
+        let info = info_ctx().ok_or_else(|| "itad.setApiKey: not ready".to_string())?;
+        run_info_op(
+            Arc::clone(info),
+            "info_itad_set_key",
+            vec![serde_json::json!({ "key": key })],
+            "itad.setApiKey: the write did not finish",
+        )
+        .await
+    })
+}
+
 #[cfg(test)]
 use gamelib_store::host::StoreHost;
 #[cfg(test)]
@@ -1765,6 +1818,103 @@ mod tests {
             );
             assert!(!error.contains("SECRET"), "{error}");
         }
+    }
+
+    #[test]
+    fn the_itad_key_channels_accept_exactly_their_shapes() {
+        assert_eq!(parse_itad_key_status(&[]), Ok(()));
+        for args in [vec![json!(null)], vec![json!({})], vec![json!("x")]] {
+            assert_eq!(
+                parse_itad_key_status(&args),
+                Err(("(args)", "too_big")),
+                "{args:?}"
+            );
+        }
+        assert_eq!(parse_itad_set_key(&[json!("k")]), Ok("k"));
+        assert_eq!(parse_itad_set_key(&[json!("")]), Ok(""));
+        assert_eq!(
+            parse_itad_set_key(&[json!("x".repeat(256))]).map(str::len),
+            Ok(256)
+        );
+        for (args, want) in [
+            (vec![], ("(args)", "invalid_type")),
+            (vec![json!(1)], ("0", "invalid_type")),
+            (vec![json!(null)], ("0", "invalid_type")),
+            (vec![json!(["k"])], ("0", "invalid_type")),
+            (vec![json!("a"), json!("b")], ("(args)", "invalid_type")),
+            (vec![json!("x".repeat(257))], ("0", "too_big")),
+        ] {
+            assert_eq!(parse_itad_set_key(&args), Err(want), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn the_itad_key_handlers_validate_first_and_never_echo_the_key() {
+        assert!(info_ctx().is_none());
+        let router_ctx = Arc::new(crate::native_router::NativeCtx::for_tests(
+            Arc::new(NoHost),
+            None,
+        ));
+        assert_eq!(
+            tauri::async_runtime::block_on(itad_get_key_status(Arc::clone(&router_ctx), vec![])),
+            Err("itad.getKeyStatus: not ready".to_string())
+        );
+        assert_eq!(
+            tauri::async_runtime::block_on(itad_set_api_key(
+                Arc::clone(&router_ctx),
+                vec![json!("a-key")]
+            )),
+            Err("itad.setApiKey: not ready".to_string())
+        );
+        let secret = "SECRET-KEY-".repeat(40);
+        for bad in [
+            tauri::async_runtime::block_on(itad_set_api_key(
+                Arc::clone(&router_ctx),
+                vec![json!(secret)],
+            )),
+            tauri::async_runtime::block_on(itad_set_api_key(Arc::clone(&router_ctx), vec![])),
+            tauri::async_runtime::block_on(itad_get_key_status(
+                Arc::clone(&router_ctx),
+                vec![json!("SECRET")],
+            )),
+        ] {
+            let error = bad.unwrap_err();
+            assert!(
+                error.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+                "{error}"
+            );
+            assert!(!error.contains("SECRET"), "{error}");
+        }
+    }
+
+    #[test]
+    fn the_key_status_json_has_exactly_two_boolean_keys_and_not_the_key() {
+        let home = FakeHome::new("info-dispatch-");
+        let mut ctx = test_ctx(&home, None);
+        ctx.secrets = Some(Arc::new(OneKey("stored-user-key")));
+        ctx.itad_env_key = Some("env-built-in-key".to_string());
+        let info = Arc::new(ctx);
+        let status = tauri::async_runtime::block_on(run_info_op(
+            Arc::clone(&info),
+            "info_itad_key_status",
+            vec![json!({})],
+            "x",
+        ))
+        .unwrap();
+        assert_eq!(status, json!({ "hasKey": true, "rejected": false }));
+        let object = status.as_object().unwrap();
+        assert_eq!(object.len(), 2);
+        assert!(object.values().all(Value::is_boolean));
+        let text = status.to_string();
+        assert!(!text.contains("stored-user-key") && !text.contains("env-built-in-key"));
+        // A write clears a stored key and the answer follows.
+        let cleared = tauri::async_runtime::block_on(run_info_op(
+            Arc::clone(&info),
+            "info_itad_set_key",
+            vec![json!({ "key": "  " })],
+            "x",
+        ));
+        assert_eq!(cleared, Ok(Value::Null));
     }
 
     #[test]

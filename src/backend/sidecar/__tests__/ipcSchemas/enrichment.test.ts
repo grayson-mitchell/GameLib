@@ -1,17 +1,11 @@
 import { enrichmentAsyncArgs } from 'common/types/ipc/enrichment'
 import { channelSchemas } from 'common/types/ipc/channelSchemas'
 import {
-  formatRejectionLog,
-  validateInbound
-} from 'backend/sidecar/ipcValidation'
-import {
   expectFixtureCoverage,
-  roundTrip,
   runFixtureTable,
   type FixtureTable
 } from 'backend/testUtils/ipcSchemaFixtures'
 
-const SENTINEL = 'SENTINEL-API-KEY-77c1'
 const noArgs = { valid: [[]], invalid: [['x']] }
 const locale = { countryCode: 'US', locale: 'en-US', currencyCode: 'USD' }
 
@@ -54,18 +48,13 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
       [{ ...locale, extra: 1 }],
       [locale, 'y']
     ]
-  },
-  'itad.getKeyStatus': noArgs,
-  'itad.setApiKey': {
-    valid: [['k'], ['']],
-    invalid: [[], [1], ['x'.repeat(257)]]
   }
 }
 
 describe('enrichment channel schemas', () => {
-  it('has a fixture for every key (9 total)', () => {
+  it('has a fixture for every key (7 total)', () => {
     expectFixtureCoverage(enrichmentAsyncArgs, table)
-    expect(Object.keys(enrichmentAsyncArgs).length).toBe(9)
+    expect(Object.keys(enrichmentAsyncArgs).length).toBe(7)
   })
   runFixtureTable(enrichmentAsyncArgs, table)
 
@@ -75,23 +64,7 @@ describe('enrichment channel schemas', () => {
     }
   })
 
-  // T-67-50: a rejected API key never reaches the log (itad.setApiKey; the steamgriddb.* key channel
-  // is native since Phase 86 Plan 15 and its rejections are fixed literals in the Rust handler).
-  describe.each([
-    [[{ [SENTINEL]: SENTINEL }]],
-    [[SENTINEL.repeat(20)]],
-    [[SENTINEL, SENTINEL]]
-  ])('itad.setApiKey rejection %#', (badArgs) => {
-    it('is value-free', () => {
-      const verdict = validateInbound(
-        'itad.setApiKey',
-        'invoke',
-        roundTrip(badArgs) as unknown[]
-      )
-      expect(verdict.ok).toBe(false)
-      if (verdict.ok) return
-      expect(JSON.stringify(verdict)).not.toContain(SENTINEL)
-      expect(formatRejectionLog('invoke', verdict)).not.toContain(SENTINEL)
-    })
-  })
+  // T-67-50 / T-47-42: a rejected API key never reaches the log. The key channels (`steamgriddb.*` since
+  // Phase 86 Plan 15, `itad.setApiKey` since Plan 16) are native `info` channels; their rejections are
+  // fixed literals in the Rust handlers (`info_dispatch.rs` tests assert the value is never echoed).
 })

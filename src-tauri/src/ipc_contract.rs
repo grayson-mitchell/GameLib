@@ -830,6 +830,8 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "getLogContent",
     "getStoreSearchDeals",
     "getUploadedLogFiles",
+    "itad.getKeyStatus",
+    "itad.setApiKey",
     "removeRecent",
     "searchStores",
     "sidecar:store-fetch",

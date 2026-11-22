@@ -772,70 +772,21 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     expect(handlerRegistry.has('getAnticheatInfo')).toBe(false)
   })
 
-  // ── Phase 47 D-05/D-06 (T-47-41/42): itad.getKeyStatus / itad.setApiKey go through the boot's
-  // one deps.itadSecrets owner and never return or log the key.
-  describe('Phase 47 itad.getKeyStatus + itad.setApiKey (invoke)', () => {
-    const SEEDED = 'itad-seeded-test-value'
-
-    it('reports hasKey false and rejected false with no key set', async () => {
-      const { input, frames } = boot()
-      writeInvoke(input, 'itad-status-0', 'itad.getKeyStatus', [])
-      await flush()
-      expect(findResponse(frames, 'itad-status-0')?.result).toEqual({
-        hasKey: false,
-        rejected: false
-      })
-    })
-
-    it('setApiKey then getKeyStatus reports hasKey true, and the frame never carries the key', async () => {
-      const { input, frames } = boot()
-      writeInvoke(input, 'itad-set-1', 'itad.setApiKey', [SEEDED])
-      await flush()
-      expect(findResponse(frames, 'itad-set-1')?.ok).toBe(true)
-
-      writeInvoke(input, 'itad-status-1', 'itad.getKeyStatus', [])
-      await flush()
-      const status = findResponse(frames, 'itad-status-1')
-      expect(status?.result).toEqual({ hasKey: true, rejected: false })
-      expect(JSON.stringify(status)).not.toContain(SEEDED)
-    })
-
-    it('reports rejected true after the owner marks the key rejected, and clearing resets it', async () => {
-      const owner = inMemoryItadSecrets()
-      const { input, frames } = boot(owner)
-      writeInvoke(input, 'itad-set-2', 'itad.setApiKey', [SEEDED])
-      await flush()
-      owner.markRejected()
-      writeInvoke(input, 'itad-status-2', 'itad.getKeyStatus', [])
-      await flush()
-      expect(findResponse(frames, 'itad-status-2')?.result).toEqual({
-        hasKey: true,
-        rejected: true
-      })
-
-      writeInvoke(input, 'itad-clear', 'itad.setApiKey', [''])
-      await flush()
-      writeInvoke(input, 'itad-status-3', 'itad.getKeyStatus', [])
-      await flush()
-      expect(findResponse(frames, 'itad-status-3')?.result).toEqual({
-        hasKey: false,
-        rejected: false
-      })
-    })
-
-    it('ignores a non-string key: the call is rejected and the status is unchanged', async () => {
-      const { input, frames } = boot()
-      writeInvoke(input, 'itad-bad', 'itad.setApiKey', [42])
-      await flush()
-      expect(findResponse(frames, 'itad-bad')?.ok).toBe(false)
-
-      writeInvoke(input, 'itad-status-4', 'itad.getKeyStatus', [])
-      await flush()
-      expect(findResponse(frames, 'itad-status-4')?.result).toEqual({
-        hasKey: false,
-        rejected: false
-      })
-    })
+  // ── Phase 86 (86-16, D-17): `itad.getKeyStatus` and `itad.setApiKey` are native `info` channels over
+  // the Rust Keychain owner, so the sidecar no longer registers them. Their behaviour (two booleans,
+  // the key never in a frame, trim and clear, a failed write as a fixed category) is pinned by the
+  // Rust `golden_storeSearch.rs` and `info_dispatch.rs` tests and the native manifest vectors.
+  it('Phase 86 (D-17) the ITAD channels are native `info` channels: the sidecar no longer registers them', () => {
+    boot()
+    for (const channel of [
+      'searchStores',
+      'getStoreSearchDeals',
+      'getItadSteamGids',
+      'itad.getKeyStatus',
+      'itad.setApiKey'
+    ]) {
+      expect(handlerRegistry.has(channel)).toBe(false)
+    }
   })
 
   // ── REQ-34.6-08: getGogDiscounts (invoke). The five steamgriddb.* channels left this

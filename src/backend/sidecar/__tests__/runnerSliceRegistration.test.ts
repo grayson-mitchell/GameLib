@@ -297,10 +297,9 @@ const ENRICHMENT_CHANNELS = [
   'getGamelibFixStatus',
   // Quick 261029-mkz (d601ff705): +2 invoke, the 16th/17th enrichment channels
   'getRunsForMeMap',
-  'setRunsForMe',
-  // Phase 47-12: +2 invoke, the 18th/19th enrichment channels (optional ITAD user key)
-  'itad.getKeyStatus',
-  'itad.setApiKey'
+  'setRunsForMe'
+  // Phase 47-12: +2 invoke, the 18th/19th enrichment channels (optional ITAD user key); Phase 86 Plan
+  // 16 (D-17): `itad.getKeyStatus` and `itad.setApiKey` left this list -- they are native `info` channels.
 ]
 
 const ALL_CHANNELS = [
@@ -609,7 +608,7 @@ describe('completeness — all 66 channels are registered with the right kind, a
     restoreCanonicalRegistrations()
   })
 
-  it('exactly 62 channels are handle-kind and exactly 2 are listen-kind (Phase 86 Plan 16: 65/2 -> 62/2, the storeSearch trio are native `info` channels; Phase 86 Plan 15: 70/2 -> 65/2, the five steamgriddb.* channels are native `info` channels; Phase 47 Plan 12: 70/2 -> 72/2, +2 invoke itad.getKeyStatus/itad.setApiKey; Quick 261029-mkz, d601ff705: 68/2 -> 70/2, +2 invoke getRunsForMeMap/setRunsForMe, +0 send; Quick 261027-ch9, a2385f6bf: 67/2 -> 68/2, +1 invoke getGamelibFixStatus, +0 send; Quick 261012-ca6, 2026-10-12: 65/4 -> 67/2, +2 invoke -2 send, kind-swapped not added, total channels unchanged; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
+  it('exactly 60 channels are handle-kind and exactly 2 are listen-kind (Phase 86 Plan 16: 65/2 -> 60/2, the five ITAD channels are native `info` channels; Phase 86 Plan 15: 70/2 -> 65/2, the five steamgriddb.* channels are native `info` channels; Phase 47 Plan 12: 70/2 -> 72/2, +2 invoke itad.getKeyStatus/itad.setApiKey; Quick 261029-mkz, d601ff705: 68/2 -> 70/2, +2 invoke getRunsForMeMap/setRunsForMe, +0 send; Quick 261027-ch9, a2385f6bf: 67/2 -> 68/2, +1 invoke getGamelibFixStatus, +0 send; Quick 261012-ca6, 2026-10-12: 65/4 -> 67/2, +2 invoke -2 send, kind-swapped not added, total channels unchanged; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
     const handleChannels = [...handlerRegistry.keys()]
     const listenChannels = [...listenerRegistry.entries()]
       .filter(([, listeners]) => listeners.length > 0)
@@ -631,8 +630,8 @@ describe('completeness — all 66 channels are registered with the right kind, a
     // Phase 86 Plan 08 (D-17): removeRecent is a native `info` channel, no longer registered -- 72-1=71.
     // Phase 86 Plan 12 (D-17): getAnticheatInfo is a native `info` channel too -- 71-1=70.
     // Phase 86 Plan 15 (D-17): the five steamgriddb.* channels are native `info` channels too -- 70-5=65.
-    // Phase 86 Plan 16 (D-17): the storeSearch trio are native `info` channels too -- 65-3=62.
-    expect(handleChannels.length).toBe(62)
+    // Phase 86 Plan 16 (D-17): the five ITAD channels are native `info` channels too -- 65-5=60.
+    expect(handleChannels.length).toBe(60)
     expect(listenChannels.length).toBe(2)
   })
 
@@ -663,16 +662,16 @@ describe('completeness — all 66 channels are registered with the right kind, a
     }
   )
 
-  it('per-module declared counts are exactly 11 / 12 / 7 / 14 / 8 / 9, totalling 61 (Phase 86 Plan 16: enrichment 12 -> 9, the storeSearch trio are native `info` channels; Phase 86 Plan 15: enrichment 17 -> 12, the five steamgriddb.* channels are native `info` channels; Phase 86 Plan 12: enrichment 18 -> 17, getAnticheatInfo is a native `info` channel; Phase 86 Plan 08: enrichment 19 -> 18, removeRecent is a native `info` channel; Phase 47 Plan 12: enrichment 17 -> 19; Quick 261029-mkz, d601ff705: enrichment 15 -> 17; Quick 261027-ch9, a2385f6bf: enrichment 14 -> 15; Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12)', () => {
+  it('per-module declared counts are exactly 11 / 12 / 7 / 14 / 8 / 7, totalling 59 (Phase 86 Plan 16: enrichment 12 -> 7, the five ITAD channels are native `info` channels; Phase 86 Plan 15: enrichment 17 -> 12, the five steamgriddb.* channels are native `info` channels; Phase 86 Plan 12: enrichment 18 -> 17, getAnticheatInfo is a native `info` channel; Phase 86 Plan 08: enrichment 19 -> 18, removeRecent is a native `info` channel; Phase 47 Plan 12: enrichment 17 -> 19; Quick 261029-mkz, d601ff705: enrichment 15 -> 17; Quick 261027-ch9, a2385f6bf: enrichment 14 -> 15; Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12)', () => {
     const counts = MODULES.map((m) => m.declaredChannels.length)
     // Measured (jest failure ACTUAL) and independently re-derived (64 prior total + 3 new = 67,
     // then -1 for winetricksInstall's retirement = 66, then +1 getGamelibFixStatus = 67, then +2 getRunsForMeMap/setRunsForMe = 69, then +2 itad.getKeyStatus/itad.setApiKey = 71) — agree.
     // Phase 86 Plan 08 (D-17): 71 - 1 (removeRecent) = 70.
     // Phase 86 Plan 12 (D-17): 70 - 1 (getAnticheatInfo) = 69.
     // Phase 86 Plan 15 (D-17): 69 - 5 (the steamgriddb.* channels) = 64.
-    // Phase 86 Plan 16 (D-17): 64 - 3 (searchStores, getStoreSearchDeals, getItadSteamGids) = 61.
-    expect(counts).toEqual([11, 12, 7, 14, 8, 9])
-    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(61)
+    // Phase 86 Plan 16 (D-17): 64 - 5 (the five ITAD channels) = 59.
+    expect(counts).toEqual([11, 12, 7, 14, 8, 7])
+    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(59)
   })
 
   afterAll(() => {
