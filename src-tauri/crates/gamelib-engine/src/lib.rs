@@ -121,3 +121,125 @@ pub fn dispatch_sync(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value,
         .map_err(|e| format!("{op}:no-runtime ({e})"))?
         .block_on(dispatch(op, args, ctx))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gamelib_core::clock::SystemClock;
+    use gamelib_core::shutdown::Shutdown;
+    use gamelib_store::host::StoreHost;
+    use gamelib_testutil::FakeHome;
+    use serde_json::json;
+    use std::sync::Arc;
+
+    fn ctx(home: &FakeHome) -> EngineCtx {
+        let root = home.root().to_path_buf();
+        EngineCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            ctx::Platform::Linux,
+            ctx::EnginePaths {
+                app_folder: root.clone(),
+                user_data: root.clone(),
+                tools_path: root.join("tools"),
+                user_home: root.join("home"),
+                temp: root.join("temp"),
+            },
+            Shutdown::new(),
+        )
+    }
+
+    /// A future that panics when polled: the shape of an op that hits a bug.
+    fn panicking() -> impl Future<Output = Result<Value, String>> {
+        std::future::poll_fn(|_| -> Poll<Result<Value, String>> { panic!("test-only op panic") })
+    }
+
+    #[test]
+    fn ops_are_sorted_and_unique() {
+        let mut sorted = OPS.to_vec();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted, OPS);
+        assert!(OPS.contains(&"engine_pins"));
+    }
+
+    #[tokio::test]
+    async fn an_unknown_op_is_named_in_the_error() {
+        let home = FakeHome::new("engine-lib-");
+        let err = dispatch("nope", &[], &ctx(&home)).await.unwrap_err();
+        assert_eq!(err, "unknown op: nope");
+    }
+
+    #[tokio::test]
+    async fn engine_pins_answers_the_shared_table() {
+        let home = FakeHome::new("engine-lib-");
+        let value = dispatch("engine_pins", &[], &ctx(&home)).await.unwrap();
+        assert_eq!(value["current"]["id"], "wine-staging-11.20");
+        assert!(value["previous"].is_null());
+    }
+
+    #[tokio::test]
+    async fn a_two_argument_call_is_bad_args() {
+        let home = FakeHome::new("engine-lib-");
+        let args = [json!(1), json!(2)];
+        let err = dispatch("engine_pins", &args, &ctx(&home))
+            .await
+            .unwrap_err();
+        assert_eq!(err, "engine_pins:bad-args");
+    }
+
+    #[test]
+    fn decode_takes_exactly_one_strict_argument() {
+        #[derive(serde::Deserialize, Debug)]
+        #[serde(deny_unknown_fields)]
+        struct Args {
+            #[allow(dead_code)]
+            id: String,
+        }
+        assert!(decode::<Args>("engine_x", &[json!({"id": "a"})]).is_ok());
+        assert_eq!(
+            decode::<Args>("engine_x", &[]).unwrap_err(),
+            "engine_x:bad-args"
+        );
+        assert_eq!(
+            decode::<Args>("engine_x", &[json!({"id": "a", "extra": 1})]).unwrap_err(),
+            "engine_x:bad-args"
+        );
+    }
+
+    #[tokio::test]
+    async fn dispatch_sync_inside_a_runtime_is_wrong_thread() {
+        let home = FakeHome::new("engine-lib-");
+        let err = dispatch_sync("engine_pins", &[], &ctx(&home)).unwrap_err();
+        assert_eq!(err, "engine_pins:wrong-thread");
+    }
+
+    #[test]
+    fn dispatch_sync_on_a_plain_thread_runs_the_op() {
+        let home = FakeHome::new("engine-lib-");
+        let value = dispatch_sync("engine_pins", &[], &ctx(&home)).unwrap();
+        assert_eq!(value["current"]["id"], "wine-staging-11.20");
+    }
+
+    #[tokio::test]
+    async fn a_panicking_op_answers_panic() {
+        let home = FakeHome::new("engine-lib-");
+        let err = guarded("engine_pins", &ctx(&home), panicking())
+            .await
+            .unwrap_err();
+        assert_eq!(err, "engine_pins:panic");
+    }
+
+    #[tokio::test]
+    async fn a_cancelled_shutdown_answers_shutdown_and_releases_its_registrant() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        ctx.shutdown.token().cancel();
+        let err = dispatch("engine_pins", &[], &ctx).await.unwrap_err();
+        assert_eq!(err, "engine_pins:shutdown");
+        assert!(ctx
+            .shutdown
+            .drain(std::time::Duration::from_millis(50))
+            .is_empty());
+    }
+}

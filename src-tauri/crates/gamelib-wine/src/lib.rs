@@ -111,3 +111,110 @@ pub fn dispatch_sync(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, S
         .map_err(|e| format!("{op}:no-runtime ({e})"))?
         .block_on(dispatch(op, args, ctx))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gamelib_core::clock::SystemClock;
+    use gamelib_core::shutdown::Shutdown;
+    use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
+    use gamelib_store::host::StoreHost;
+    use gamelib_testutil::FakeHome;
+    use serde_json::json;
+    use std::sync::Arc;
+
+    fn ctx(home: &FakeHome) -> WineCtx {
+        let root = home.root().to_path_buf();
+        let engine = EngineCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            Platform::Linux,
+            EnginePaths {
+                app_folder: root.clone(),
+                user_data: root.clone(),
+                tools_path: root.join("tools"),
+                user_home: root.join("home"),
+                temp: root.join("temp"),
+            },
+            Shutdown::new(),
+        );
+        WineCtx::new(Arc::new(engine), root.join("tools").join("runtime"))
+    }
+
+    /// A future that panics when polled: the shape of an op that hits a bug.
+    fn panicking() -> impl Future<Output = Result<Value, String>> {
+        std::future::poll_fn(|_| -> Poll<Result<Value, String>> { panic!("test-only op panic") })
+    }
+
+    #[test]
+    fn ops_are_sorted_and_unique() {
+        let mut sorted = OPS.to_vec();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted, OPS);
+    }
+
+    #[tokio::test]
+    async fn an_unknown_op_is_named_in_the_error() {
+        let home = FakeHome::new("wine-lib-");
+        let err = dispatch("nope", &[], &ctx(&home)).await.unwrap_err();
+        assert_eq!(err, "unknown op: nope");
+    }
+
+    #[test]
+    fn decode_takes_exactly_one_strict_argument() {
+        #[derive(serde::Deserialize, Debug)]
+        #[serde(deny_unknown_fields)]
+        struct Args {
+            #[allow(dead_code)]
+            id: String,
+        }
+        assert!(decode::<Args>("wine_x", &[json!({"id": "a"})]).is_ok());
+        assert_eq!(
+            decode::<Args>("wine_x", &[json!(1), json!(2)]).unwrap_err(),
+            "wine_x:bad-args"
+        );
+        assert_eq!(
+            decode::<Args>("wine_x", &[json!({"id": "a", "extra": 1})]).unwrap_err(),
+            "wine_x:bad-args"
+        );
+    }
+
+    #[tokio::test]
+    async fn dispatch_sync_inside_a_runtime_is_wrong_thread() {
+        let home = FakeHome::new("wine-lib-");
+        let err = dispatch_sync("wine_probe", &[], &ctx(&home)).unwrap_err();
+        assert_eq!(err, "wine_probe:wrong-thread");
+    }
+
+    #[test]
+    fn dispatch_sync_on_a_plain_thread_answers_unknown_op() {
+        let home = FakeHome::new("wine-lib-");
+        let err = dispatch_sync("nope", &[], &ctx(&home)).unwrap_err();
+        assert_eq!(err, "unknown op: nope");
+    }
+
+    #[tokio::test]
+    async fn a_panicking_op_answers_panic() {
+        let home = FakeHome::new("wine-lib-");
+        let err = guarded("wine_probe", &ctx(&home), panicking())
+            .await
+            .unwrap_err();
+        assert_eq!(err, "wine_probe:panic");
+    }
+
+    #[tokio::test]
+    async fn a_cancelled_shutdown_answers_shutdown_and_releases_its_registrant() {
+        let home = FakeHome::new("wine-lib-");
+        let ctx = ctx(&home);
+        ctx.engine.shutdown.token().cancel();
+        let work = async { Ok(Value::Null) };
+        let err = guarded("wine_probe", &ctx, work).await.unwrap_err();
+        assert_eq!(err, "wine_probe:shutdown");
+        assert!(ctx
+            .engine
+            .shutdown
+            .drain(std::time::Duration::from_millis(50))
+            .is_empty());
+    }
+}
