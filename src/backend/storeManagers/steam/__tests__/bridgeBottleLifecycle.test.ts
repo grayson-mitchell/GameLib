@@ -35,10 +35,8 @@ import { readFileSync as readRealFile } from 'node:fs'
 import { basename as basenameOf, join as joinPath } from 'node:path'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
-import * as engineServicesModule from 'backend/services/engineServices'
 import * as bottlesModule from 'backend/enginewine/bottles'
 import { ENGINE_PINS, getBottleDir } from 'backend/enginewine/twin'
-import type { EngineServicesSource } from 'backend/services/engineServices'
 import {
   createTestManagers,
   createTestStores
@@ -194,8 +192,6 @@ const bridgeDeps = {
 }
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
-// provisionBridgeBottle also takes the manager slices engineServicesFrom reads; only the fallback
-// cases reach them, and those spy engineServicesFrom (below), so the spawn fake is all that is real.
 // Phase 82: the removal asks the Rust guard first; every manager answers an empty library so the
 // known-installs list reads, and the fake answers the two safety channels (`yes` unless a case says so).
 const emptyLibraries = Object.fromEntries(
@@ -225,7 +221,9 @@ const withSafety = (
         : (
             bottleRust.requestRustInvoke as (c: string, a: unknown[]) => unknown
           )(channel, args)) as RequestRustInvoke
-  }) as unknown as BottleRemovalDeps & EngineServicesSource
+  }) as unknown as BottleRemovalDeps & {
+    config: { getSettings(): GameSettings }
+  }
 const spawnDeps = withSafety()
 const depsWithSafety = (options: FakeSafetyOptions) =>
   withSafety(fakeSafetyRustInvoke(options).requestRustInvoke)
@@ -1202,9 +1200,6 @@ describe('Phase 59 engine registry', () => {
     })
   })
   describe('provisionBridgeBottle with a fallback engine (D-01/D-02/D-03/D-12)', () => {
-    afterEach(() => {
-      servicesSpy.mockRestore()
-    })
     const engine = {
       wineBin: '/pins/bin/wine',
       wineserverBin: '/pins/bin/wineserver',
@@ -1214,28 +1209,11 @@ describe('Phase 59 engine registry', () => {
     }
     const name = 'GameLibSteamBridge-620'
     const order: string[] = []
-    const mockedInstallRemove = jest.fn()
-    let servicesSpy: jest.SpyInstance
     let dxvkMarker: boolean
 
     beforeEach(() => {
       order.length = 0
       dxvkMarker = false
-      mockedInstallRemove.mockReset()
-      servicesSpy = jest
-        .spyOn(engineServicesModule, 'engineServicesFrom')
-        .mockImplementation((d) => ({
-          spawnAsync: d.spawnAsync,
-          runner: d.runner,
-          onlineMonitor: d.onlineMonitor,
-          engineState: d.engineState,
-          paths: d.paths,
-          notices: d,
-          installRemove: mockedInstallRemove,
-          wineManagerReleases: () => [],
-          globalSettings: () => ({}),
-          globalGameSettings: () => ({}) as GameSettings
-        }))
       mockedExistsSync.mockReset()
       mockedExistsSync.mockImplementation((p: string) =>
         String(p).endsWith('current_dxvk-macOS') ? dxvkMarker : false

@@ -37,7 +37,6 @@ export type SetupDeps = StatusUpdateDeps &
     GOGManagerDeps,
     | 'libraryManagers'
     | 'onlineMonitor'
-    | 'engineState'
     | 'paths'
     | 'steamBottle'
     | 'steamLaunchRuntime'

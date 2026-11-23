@@ -179,7 +179,6 @@ export async function provisionBottle(
         AppPaths,
         'userHome' | 'steamSupportPath' | 'toolsPath' | 'configPath'
       >
-      requestRustInvoke: RustInvokeDeps['requestRustInvoke']
       steamLaunchRuntime: Pick<SteamLaunchRuntime, 'raiser'>
       config: Pick<
         GlobalConfigSlice,

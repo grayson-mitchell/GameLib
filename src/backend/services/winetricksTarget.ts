@@ -19,7 +19,15 @@ import { hasCapability } from 'common/storeCapabilities'
 import type { ToolSettingsResult } from 'common/types/engine'
 import { resolveEngineToolSettings } from 'backend/enginewine/toolSettings'
 import { logError, LogPrefix } from 'backend/logger'
-import type { EngineServicesSource } from './engineServices'
+import type { SteamWineToolsSource } from 'backend/storeManagers/steam/bridgeWineTools'
+import type { ManagerDeps } from './types'
+
+/**
+ * What the tool-target resolver reads (87-56c, replacing the engine services' source): the Steam Wine-tool slice and
+ * the library, which names a non-Steam game's runner and settings. A tool's environment itself is Rust's.
+ */
+export type ToolTargetSource = SteamWineToolsSource &
+  Pick<ManagerDeps, 'libraryManagers'>
 
 /** What Rust's `TargetArg` takes: the game and exactly one of the tool settings or the reason there are none. */
 export type WinetricksTarget =
@@ -84,7 +92,7 @@ export function toolSettingsResultFrom(reply: unknown): ToolSettingsResult {
  * (`services/gameCommandFacts.ts`), where the TS handler let a failure reach the renderer.
  */
 export async function resolveToolTarget(
-  source: EngineServicesSource,
+  source: ToolTargetSource,
   runner: Runner,
   appName: string,
   { ensureBottle }: { ensureBottle: boolean }
@@ -122,7 +130,7 @@ export async function resolveToolTarget(
 
 /** [`resolveToolTarget`] that never rejects: a failure is logged and answers `unavailable` ("no-engine"). */
 export async function resolveWinetricksTarget(
-  source: EngineServicesSource,
+  source: ToolTargetSource,
   runner: Runner,
   appName: string,
   opts: { ensureBottle: boolean }

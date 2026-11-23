@@ -52,7 +52,8 @@ describe('createTestStores', () => {
     // 16 -> 15 at Phase 86 plan 86-17 (2026-11-23): the `storeSearch` family was deleted.
     // 15 -> 13 at Phase 86 plan 86-24 (2026-11-23): the `crossoverIndex` and `wikiGameInfo` families were deleted.
     // 13 -> 12 at Phase 87 plan 87-37 (2026-11-24): the `wineManager` family was deleted (Rust owns the store).
-    expect(Object.keys(stores)).toHaveLength(12)
+    // 12 -> 11 at Phase 87 plan 87-56c (2026-11-24): the `engine` family was deleted (Rust owns the engine state and its notices).
+    expect(Object.keys(stores)).toHaveLength(11)
     const desc = Object.getOwnPropertyDescriptor(stores, 'steam')
     expect(typeof desc?.get).toBe('function')
   })

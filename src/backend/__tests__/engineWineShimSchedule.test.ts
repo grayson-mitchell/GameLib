@@ -155,11 +155,10 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
 ]
 /**
  * Every non-test importer of `enginewine/tools.ts` (the check is per file, so every row of that file lists them all):
- * the launcher, the Steam bridge's known fixes and the still-TS engine's `installRemove` (87-56 deletes the last).
+ * the launcher and the Steam bridge's known fixes (87-56c deleted the still-TS engine's `installRemove`, `services/engineServices.ts`).
  */
 const TOOLS_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/launcher.ts',
-  'src/backend/services/engineServices.ts',
   'src/backend/storeManagers/steam/bridgeKnownFixes.ts'
 ]
 /** Every non-test importer of `enginewine/bottles.ts` (the check is per file, so every row of that file lists them all). */
@@ -719,8 +718,8 @@ const SCHEDULE: readonly ScheduleRow[] = [
     callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
-  // 87-34 (D-15): the DXVK shim. The launcher's DXVK step and the still-TS engine's `installRemove`
-  // (`services/engineServices.ts`, which 87-56 deletes with the engine TS) reach the Rust op through it; Phase 88
+  // 87-34 (D-15): the DXVK shim. The launcher's DXVK step and the Steam bridge's known fixes reach the Rust op through it
+  // (the still-TS engine's `installRemove` went with `services/engineServices.ts` in 87-56c); Phase 88
   // moves launch into Rust and deletes it.
   {
     name: 'dxvkInstallRemove',

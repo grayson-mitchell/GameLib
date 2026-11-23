@@ -22,17 +22,18 @@ import { createLegendaryStores } from '../storeManagers/legendary/stores'
 import { createNileStores } from '../storeManagers/nile/stores'
 import { createSideloadStores } from '../storeManagers/sideload/stores'
 import { createSteamStores } from '../storeManagers/steam/stores'
-import { createEngineStores } from '../engine/engineNoticeStore'
 import { createPciIdCaches } from '../utils/systeminfo/gpu/pci_ids'
 import type { StoreFamilyDeps, StoreRoot } from '../stores/storeRoot'
 import { createTestStoreRoot } from './testStoreRoot'
 import type { EngineServices } from '../engine/engineServices'
 import { createFakeClock } from './fakeClock'
 import { createTestOnlineMonitor } from './testOnlineMonitor'
-import { createTestEngineState } from './testEngineState'
 import { createTestAppRuntime } from './testAppRuntime'
 import { createTestMiscRuntime } from './testMiscRuntime'
-import { interimEngineRuntime } from './testInterimEngineRuntime'
+import {
+  interimEngineRuntime,
+  interimEngineState
+} from './testInterimEngineRuntime'
 import { createTestSteamLaunchRuntime } from './testSteamLaunchRuntime'
 import { createTestBridgeRuntime } from './testBridgeRuntime'
 import { createTestGogRuntime } from './testGogRuntime'
@@ -148,7 +149,6 @@ const STORE_KEYS = [
   'nile',
   'sideload',
   'steam',
-  'engine',
   'systemInfo'
 ] as const satisfies readonly (keyof Stores)[]
 
@@ -175,7 +175,6 @@ function familyBuilders(): FamilyBuilders {
     nile: (deps) => createNileStores(deps),
     sideload: (deps) => createSideloadStores(deps),
     steam: (deps) => createSteamStores(deps),
-    engine: (deps) => createEngineStores(deps),
     systemInfo: (deps) => createPciIdCaches(deps)
   }
 }
@@ -249,7 +248,6 @@ export function createTestServices(
     paths: overrides.paths ?? createTestPaths(),
     appInfo: overrides.appInfo ?? TEST_APP_INFO,
     onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor(),
-    engineState: overrides.engineState ?? createTestEngineState(),
     steamLaunchRuntime:
       overrides.steamLaunchRuntime ?? createTestSteamLaunchRuntime(),
     bridgeRuntime: overrides.bridgeRuntime ?? createTestBridgeRuntime(),
@@ -370,7 +368,6 @@ export function createTestManagerDeps(
     appState: overrides.appState ?? host.appState,
     imageTools: overrides.imageTools ?? host.imageTools,
     onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor(),
-    engineState: overrides.engineState ?? createTestEngineState(),
     steamLaunchRuntime:
       overrides.steamLaunchRuntime ?? createTestSteamLaunchRuntime(),
     bridgeRuntime: overrides.bridgeRuntime ?? createTestBridgeRuntime(),
@@ -412,7 +409,7 @@ export function createTestEngineServices(
     notices: unscriptedMembers<EngineServices['notices']>('notices', {}),
     runner: unscriptedMembers<EngineServices['runner']>('process runner', {}),
     onlineMonitor: createTestOnlineMonitor(),
-    engineState: createTestEngineState(),
+    engineState: interimEngineState(),
     engineRuntime: interimEngineRuntime(),
     paths: createTestPaths(),
     ...overrides
@@ -439,7 +436,6 @@ export function createTestToolsSlices(
     appState: host.appState,
     notifications: host.notifications,
     onlineMonitor: createTestOnlineMonitor(),
-    engineState: createTestEngineState(),
     steamLaunchRuntime: createTestSteamLaunchRuntime(),
     bridgeRuntime: createTestBridgeRuntime(),
     steamInstallRuntime: createTestSteamInstallRuntime(),

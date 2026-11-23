@@ -142,7 +142,6 @@ function bootedWorld(opts?: {
         appState: fakes.host.appState,
         imageTools: fakes.host.imageTools,
         onlineMonitor: fakes.onlineMonitor,
-        engineState: fakes.engineState,
         steamLaunchRuntime: fakes.steamLaunchRuntime,
         bridgeRuntime: fakes.bridgeRuntime,
         steamInstallRuntime: fakes.steamInstallRuntime,

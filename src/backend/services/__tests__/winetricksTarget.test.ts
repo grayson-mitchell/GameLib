@@ -3,7 +3,7 @@
  * live selection, over an injected transport (no module mock). A native game never asks Rust.
  */
 import type { Runner } from 'common/types'
-import type { EngineServicesSource } from '../engineServices'
+import type { ToolTargetSource } from '../winetricksTarget'
 import {
   resolveToolTarget,
   resolveWinetricksTarget,
@@ -19,7 +19,7 @@ interface FakeGame {
 function sourceFor(
   game: FakeGame,
   reply: () => Promise<unknown>
-): { source: EngineServicesSource; calls: Array<[string, unknown[]]> } {
+): { source: ToolTargetSource; calls: Array<[string, unknown[]]> } {
   const calls: Array<[string, unknown[]]> = []
   const source = {
     libraryManagers: {
@@ -39,7 +39,7 @@ function sourceFor(
       calls.push([channel, args])
       return reply()
     }
-  } as unknown as EngineServicesSource
+  } as unknown as ToolTargetSource
   return { source, calls }
 }
 

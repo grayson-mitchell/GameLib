@@ -26,7 +26,8 @@ import {
   toolSettingsResultFrom,
   type WinetricksTarget
 } from './winetricksTarget'
-import type { EngineServicesSource } from './engineServices'
+import type { GameConfigs } from '../game_config'
+import type { ToolTargetSource } from './winetricksTarget'
 
 /**
  * What Rust's `ForGameArgs` takes beyond the command: the game, exactly one of the tool settings or the reason there
@@ -43,8 +44,9 @@ export type GameCommandFacts = WinetricksTarget & {
   installPath?: string
 }
 
-/** The source this module reads: the engine services' source, with the path roots the Steam bottle markers need. */
-export type GameCommandSource = EngineServicesSource & {
+/** The source this module reads: the tool-target source, the game config registry and the path roots the Steam bottle markers need. */
+export type GameCommandSource = ToolTargetSource & {
+  gameConfigs: Pick<GameConfigs, 'get'>
   paths: Pick<AppPaths, 'userHome'>
 }
 

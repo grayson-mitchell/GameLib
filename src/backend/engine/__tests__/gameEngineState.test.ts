@@ -16,7 +16,7 @@ import {
   createTestEngineServices,
   createTestServices
 } from 'backend/testUtils/testServices'
-import { createTestEngineState } from 'backend/testUtils/testEngineState'
+import { interimEngineState } from 'backend/testUtils/testInterimEngineRuntime'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 const baseServices = createTestEngineServices()
@@ -28,7 +28,7 @@ const services = {
   wineManagerReleases: () => [],
   globalSettings: () => global,
   // A fresh owner per test (beforeEach): no state crosses a test.
-  engineState: createTestEngineState()
+  engineState: interimEngineState()
 }
 
 jest.mock('backend/logger', () => ({
@@ -87,7 +87,7 @@ beforeEach(() => {
     trialDaysRemaining: null,
     build: '24.0.0.1'
   } as CrossoverPreflight)
-  services.engineState = createTestEngineState()
+  services.engineState = interimEngineState()
 })
 
 afterEach(() => rmSync(dir, { recursive: true, force: true }))

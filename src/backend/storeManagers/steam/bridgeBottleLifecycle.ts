@@ -6,11 +6,10 @@
  */
 import { dirname, isAbsolute, relative, resolve } from 'path'
 import { existsSync } from 'graceful-fs'
-import type { WineInstallation } from 'common/types'
+import type { GameSettings, WineInstallation } from 'common/types'
 import type { GlobalConfigSlice } from 'backend/config'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { SteamLaunchRuntime } from './steamLaunchRuntime'
-import type { EngineServicesSource } from 'backend/services/engineServices'
 import {
   killBottleWineServer,
   type KillBottleDeps,
@@ -607,7 +606,7 @@ export async function discardNewBridgeBottle(
 }
 
 export async function provisionBridgeBottle(
-  deps: KillBottleDeps & EngineServicesSource,
+  deps: KillBottleDeps & { config: { getSettings(): GameSettings } },
   opts: {
     bottleName: string
     wineVersion?: WineInstallation

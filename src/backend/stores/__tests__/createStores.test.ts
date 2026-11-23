@@ -145,10 +145,10 @@ describe('createStores', () => {
     return built
   }
 
-  // The fixture predates the engine family: `steam_engine_notices` joined createStores in 66.4
-  // plan 04 (its on-disk name is unchanged), the pci_ids_* caches joined as `systemInfo`.
+  // The fixture predates the `systemInfo` family: the pci_ids_* caches joined as `systemInfo`.
+  // 87-56c: the `steam_engine_notices` cache lost its TS registration (the engine state is Rust's); its file name
+  // stays on disk and its `storeTable.json` row stays for the Rust host, so no cache of that name is built here.
   const fixtureCaches = fixture.filter((entry) => entry.registeredAs === null)
-  const ENGINE_NOTICE_CACHE = 'steam_engine_notices'
   // Phase 74 (D-06) added the pre-launch update prompt's "don't ask again" acknowledgements.
   const UPDATE_PROMPT_ACK_CACHE = 'steam_update_prompt_ack'
 
@@ -157,12 +157,8 @@ describe('createStores', () => {
     expect([...built.keys()].sort()).toEqual(
       [
         ...new Set(fixtureCaches.map((entry) => entry.options.name)),
-        ENGINE_NOTICE_CACHE,
         UPDATE_PROMPT_ACK_CACHE
       ].sort()
-    )
-    expect(kindOf(defined(built.get(ENGINE_NOTICE_CACHE), 'notices'))).toBe(
-      'user-state'
     )
     expect(
       kindOf(defined(built.get(UPDATE_PROMPT_ACK_CACHE), 'update prompt ack'))
@@ -173,6 +169,11 @@ describe('createStores', () => {
         entry.declaration.kind
       )
     }
+  })
+
+  it('builds no steam_engine_notices cache: the engine state and its notices are Rust-owned (87-56c)', () => {
+    const built = builtCacheStores()
+    expect(built.has('steam_engine_notices')).toBe(false)
   })
 
   it('builds no umu, wikigameinfo or crossover_index cache: the wiki and CrossOver slices are Rust-owned (86-24)', () => {
@@ -196,12 +197,11 @@ describe('createStores', () => {
     expect(built.has('itad_steam_gids')).toBe(false)
   })
 
-  it('two roots build independent stores: engine notices and pci caches do not share cells', () => {
+  it('two roots build independent stores: pci caches do not share cells', () => {
     const rootA = createTestStoreRoot()
     const rootB = createTestStoreRoot()
     const a = createStores({ registry: createStoreRegistry(), root: rootA })
     const b = createStores({ registry: createStoreRegistry(), root: rootB })
-    expect(a.engine.noticeStore).not.toBe(b.engine.noticeStore)
     expect(a.systemInfo.deviceNameCache).not.toBe(b.systemInfo.deviceNameCache)
   })
 

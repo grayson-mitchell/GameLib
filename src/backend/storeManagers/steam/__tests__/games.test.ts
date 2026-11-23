@@ -7,7 +7,6 @@ import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import type { GameConfigSlice } from 'backend/game_config'
 import type { SteamDrm } from '../bridge/drm/drmLaunchSetup'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
-import { createTestEngineState } from 'backend/testUtils/testEngineState'
 import {
   createTestManagerDeps,
   createInertSteamProcesses,
@@ -498,7 +497,6 @@ const steamTestDeps = createTestManagerDeps({
     isCrossoverInstalled: async () => crossoverInstalled() !== false
   } as never,
   bridgeHelpers: { ...createTestBridgeHelpers(), stop: stopBridgeHelper },
-  engineState: createTestEngineState(),
   // The i386-recovery confirm goes through deps.dialogs; hostFakes records it.
   dialogs: {
     ...createTestHostServices().dialogs,

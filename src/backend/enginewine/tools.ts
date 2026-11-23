@@ -11,8 +11,7 @@ import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
  * DXVK-NVAPI, vkd3d and the macOS DXVK) with its release lookup, download, extraction and the prefix's DLL and
  * registry bookkeeping, and Winetricks with its catalog, its installs and its apply queue. This file is the
  * async TS reach into them for a caller that is not a renderer
- * channel: the launcher's DXVK step and the still-TS engine's `installRemove` (`services/engineServices.ts`,
- * alive until 87-56 deletes the engine TS). Its body is one typed call (D-06); the shim schedule in
+ * channel: the launcher's DXVK step and the Steam bridge's known fixes. Its body is one typed call (D-06); the shim schedule in
  * `engineWineShimSchedule.test.ts` pins that and the phase that deletes it. The renderer's three toggles
  * are the scheduled resolvers in `sidecar/engineWineResolvers.ts` over the same op, so a prefix's DXVK DLLs
  * have one writer.

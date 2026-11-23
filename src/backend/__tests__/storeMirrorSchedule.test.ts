@@ -55,9 +55,12 @@ const DELETED_IN_PHASE_86: ReadonlySet<string> = new Set([
  * Mirrors a Phase 87 plan has already deleted, on the same terms as `DELETED_IN_PHASE_86`: the schedule cell is 87,
  * 87 is not finished, and `CURRENT_PHASE` stays 85. 87-37: `wineDownloaderInfoStore` (the wine manager and its store
  * are Rust's; the engine's synchronous release read opens the file itself), its `storeTable.json` row in `EXTRA_ROWS`.
+ * 87-56c: `steam_engine_notices` (the engine state and its notices are Rust's; the TS registration in `createStores` is
+ * gone, the file keeps its name on disk and its `storeTable.json` row stays in `EXTRA_ROWS` for the Rust host).
  */
 const DELETED_IN_PHASE_87: ReadonlySet<string> = new Set([
-  'wineDownloaderInfoStore'
+  'wineDownloaderInfoStore',
+  'steam_engine_notices'
 ])
 
 /** Store (TS name) -> the slice that deletes its TS mirror (82-STATE-OWNERSHIP.md). */
@@ -147,10 +150,6 @@ const DOCUMENTED_CLASSES: Readonly<
   steam_update_prompt_ack: {
     file: 'src/backend/storeManagers/steam/stores.ts',
     code: "'steam_update_prompt_ack'"
-  },
-  steam_engine_notices: {
-    file: 'src/backend/engine/engineNoticeStore.ts',
-    code: "new CacheStore<unknown>('steam_engine_notices'"
   },
   'settings/global': {
     file: 'src/backend/config.ts',

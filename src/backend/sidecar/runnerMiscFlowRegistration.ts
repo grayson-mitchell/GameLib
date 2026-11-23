@@ -91,7 +91,7 @@ import type { Runner } from 'common/types'
 import type { GOGCloudSavesLocation } from 'common/types/gog'
 import type { Game } from 'common/types/game_manager'
 import type { AppPaths } from '../process/context'
-import type { EngineSourceSlices } from '../services/engineServices'
+import type { ManagerDeps } from '../services/types'
 import { isEpicServiceOffline } from '../utils'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 import { getDefaultSavePath } from '../save_sync'
@@ -109,7 +109,7 @@ import type { SaveSyncDeps } from '../save_sync'
  * `getDefaultSavePath` and `getPlaytimeFromRunner` (Phase 34.6 Plan 10, D-14).
  */
 export function registerRunnerMiscFlows(
-  deps: Pick<EngineSourceSlices, 'config' | 'onlineMonitor' | 'notifications'> &
+  deps: Pick<ManagerDeps, 'config' | 'onlineMonitor' | 'notifications'> &
     SaveSyncDeps & {
       paths: Pick<AppPaths, 'publicDir'>
       ipc: Pick<IpcRegistry, 'handle'>

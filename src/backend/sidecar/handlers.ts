@@ -96,7 +96,7 @@ import { registerStoreEmbedFlows } from './storeEmbedFlowRegistration'
 import { registerDepotHostFlows } from './depotHostRegistration'
 import { registerSteamPollEventFlows } from './steamPollEventRegistration'
 import { managerDepsFromServices } from '../services/managerDeps'
-import type { EngineServicesSource } from '../services/engineServices'
+import type { GameCommandSource } from '../services/gameCommandFacts'
 import { resolveWinetricksTarget } from '../services/winetricksTarget'
 import { gatherGameCommandFacts } from '../services/gameCommandFacts'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
@@ -117,7 +117,6 @@ function toolSlices(services: BootServices) {
     appState: services.host.appState,
     notifications: services.host.notifications,
     onlineMonitor: services.onlineMonitor,
-    engineState: services.engineState,
     requestRustInvoke: services.host.requestRustInvoke,
     storeRoot: services.storeRoot,
     paths: services.paths,
@@ -128,14 +127,10 @@ function toolSlices(services: BootServices) {
   }
 }
 
-/** The engine-services source the Winetricks target resolver reads (`services/winetricksTarget.ts`). */
-function engineSourceFrom(services: BootServices): EngineServicesSource {
+/** The source the Winetricks target resolver and the game-command facts read (`services/winetricksTarget.ts`). */
+function engineSourceFrom(services: BootServices): GameCommandSource {
   return {
     libraryManagers: services.managers.library,
-    commandRunner: services.commandRunner,
-    spawnAsync: services.spawnAsync,
-    runner: services.runner,
-    launcher: services.launcher,
     ...toolSlices(services)
   }
 }

@@ -131,7 +131,6 @@ export interface CreateStoreManagersDeps {
   appState: ManagerDeps['appState']
   imageTools: ManagerDeps['imageTools']
   onlineMonitor: ManagerDeps['onlineMonitor']
-  engineState: ManagerDeps['engineState']
   /** The boot's store root: the settings documents are read through it (85-15). */
   storeRoot?: ManagerDeps['storeRoot']
   signIn: ManagerDeps['signIn']
@@ -190,7 +189,6 @@ export function createStoreManagers(
     appState: deps.appState,
     imageTools: deps.imageTools,
     onlineMonitor: deps.onlineMonitor,
-    engineState: deps.engineState,
     signIn: deps.signIn,
     steamSession: deps.steamSession,
     tokenStore: deps.tokenStore,
@@ -230,7 +228,6 @@ export function createStoreManagers(
     appState: deps.appState,
     notifications: deps.notifications,
     onlineMonitor: deps.onlineMonitor,
-    engineState: deps.engineState,
     paths: deps.paths,
     aborts: deps.aborts,
     appRuntime: deps.appRuntime,

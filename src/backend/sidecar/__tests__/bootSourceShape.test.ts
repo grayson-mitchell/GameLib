@@ -53,7 +53,7 @@ describe('bootstrap.ts source shape (D-08)', () => {
       'command-runner',
       'humble-services',
       'online-monitor-owner',
-      'engine-state',
+      // 87-56c: 'engine-state' left the anchors with its boot step (the engine state is Rust's).
       'store-managers',
       'i18n',
       'register-handlers',

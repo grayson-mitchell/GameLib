@@ -19,10 +19,14 @@ import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { storeSchemaVersionOf } from '../../testUtils/storeSchemaVersions'
 
 /**
- * Rows whose TS store a Phase 86 plan deleted: the row stays (D-29 row 5) so the shell still opens
+ * Rows whose TS store a Phase 86 or 87 plan deleted: the row stays (D-29 row 5) so the shell still opens
  * the file as user-state, but `createStores` builds nothing over it, so there is no mirror to probe.
+ * 87-56c added `store_cache/steam_engine_notices` (the engine state and its notices are Rust's).
  */
-const NO_TS_STORE: readonly string[] = ['store/game-overrides']
+const NO_TS_STORE: readonly string[] = [
+  'store/game-overrides',
+  'store_cache/steam_engine_notices'
+]
 
 const USER_STATE_ROWS = tableFile.rows.filter(
   (row) =>

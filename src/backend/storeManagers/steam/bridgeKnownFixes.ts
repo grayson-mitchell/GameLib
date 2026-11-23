@@ -53,7 +53,7 @@ import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { AppPaths } from 'backend/process/context'
 import { isAbsolute, relative, resolve } from 'node:path'
 import type { EnviromentVariable, GameSettings } from 'common/types'
-import type { EngineServicesSource } from 'backend/services/engineServices'
+import type { ManagerDeps } from 'backend/services/types'
 import { winetricksInstallVerbs } from 'backend/enginewine/tools'
 import {
   readKnownFixes,
@@ -190,7 +190,7 @@ async function gameMakerGraphicsDefault(
 }
 
 /** What the bridge known-fix applier reaches through a slice (66.1 R3). */
-export type BridgeKnownFixDeps = EngineServicesSource &
+export type BridgeKnownFixDeps = Pick<ManagerDeps, 'commandRunner'> &
   StatusUpdateDeps &
   AppRuntimeSlice<'overlayInstalls'> &
   RustInvokeDeps & {

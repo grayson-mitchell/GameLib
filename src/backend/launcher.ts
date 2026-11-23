@@ -43,9 +43,10 @@ import {
   LogPrefix,
   logWarning
 } from './logger'
-import type { EngineStateService } from './engine/engineState'
-import type { EngineServicesSource } from './services/engineServices'
-import { gatherGameCommandFacts } from './services/gameCommandFacts'
+import {
+  gatherGameCommandFacts,
+  type GameCommandSource
+} from './services/gameCommandFacts'
 import { runWineCommandForGame } from './sidecar/engineWineResolvers'
 import type {
   CommandRunner,
@@ -122,12 +123,15 @@ export interface LauncherDeps
   infoCaches: Pick<InfoCaches, 'systemInfo'>
   appInfo: Pick<AppInfo, 'version'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
-  engineState: EngineStateService
   /** The boot's store root: the stored game config is read through it (85-15). */
-  storeRoot?: EngineServicesSource['storeRoot']
-  paths: EngineServicesSource['paths'] &
+  storeRoot?: GameCommandSource['storeRoot']
+  paths: GameCommandSource['paths'] &
     Pick<
       AppPaths,
+      | 'toolsPath'
+      | 'configPath'
+      | 'userData'
+      | 'publicDir'
       | 'runtimePath'
       | 'appFolder'
       | 'flatpakHome'
@@ -144,8 +148,8 @@ export interface LauncherDeps
   /** The boot-owned abort registry the tool downloads and known-fix overlay downloads register in (66.4-13). */
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
   /** The Steam bottle slice the Steam Wine-tool resolver reads (66.3-15). */
-  steamBottle: EngineServicesSource['steamBottle']
-  steamLaunchRuntime: EngineServicesSource['steamLaunchRuntime']
+  steamBottle: GameCommandSource['steamBottle']
+  steamLaunchRuntime: GameCommandSource['steamLaunchRuntime']
   notifications: Pick<Notifications, 'show'>
   appState: Pick<
     AppState,
@@ -164,37 +168,17 @@ interface PowerState {
 
 type LaunchCtx = LauncherDeps & { power: PowerState }
 
-/** The tool wrappers bound to this launcher's own deps (tools module state is still module-level until 66.3). */
-function engineSource(deps: LauncherDeps): EngineServicesSource {
+/** What the game-command facts read from this launcher's own deps (the wine command's settings, decided in Rust). */
+function gameCommandSource(deps: LauncherDeps): GameCommandSource {
   return {
     libraryManagers: deps.libraryManagers,
-    commandRunner: deps.commandRunner,
-    spawnAsync: deps.spawnAsync,
-    aborts: deps.aborts,
-    appRuntime: deps.appRuntime,
-    config: deps.config,
     gameConfigs: deps.gameConfigs,
-    appInfo: deps.appInfo,
-    dialogs: deps.dialogs,
-    appState: deps.appState,
-    notifications: deps.notifications,
-    sendFrontendMessage: deps.sendFrontendMessage,
-    onlineMonitor: deps.onlineMonitor,
-    engineState: deps.engineState,
+    config: deps.config,
     requestRustInvoke: deps.requestRustInvoke,
     storeRoot: deps.storeRoot,
     paths: deps.paths,
-    runner: deps.runner,
     steamBottle: deps.steamBottle,
-    steamLaunchRuntime: deps.steamLaunchRuntime,
-    // The pure env/validation helpers are module functions, so the tools need no handle on the
-    // launcher being built (checker warning 6).
-    launcher: {
-      setupEnvVars,
-      setupWineEnvVars: (gameSettings, gameId) =>
-        setupWineEnvVars(deps, gameSettings, gameId),
-      validWine: (wineVersion) => validWine(deps, wineVersion)
-    }
+    steamLaunchRuntime: deps.steamLaunchRuntime
   }
 }
 
@@ -1237,7 +1221,7 @@ async function installFixes(
         {
           requestRustInvoke: deps.requestRustInvoke,
           gameCommandFacts: (r, a, opts) =>
-            gatherGameCommandFacts(engineSource(deps), r, a, opts)
+            gatherGameCommandFacts(gameCommandSource(deps), r, a, opts)
         },
         {
           runner,

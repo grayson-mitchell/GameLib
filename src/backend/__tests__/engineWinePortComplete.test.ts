@@ -556,17 +556,14 @@ const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
   engineDecision: [],
   engineEligibility: [],
   engineIds: [],
-  engineNoticeStore: ['src/backend/stores/createStores.ts'],
+  engineNoticeStore: [],
   enginePins: [],
   engineRegistry: [],
   // 87-56c Task 1: the boot step, the deps member and every Steam slice that typed the runtime are gone.
   engineRuntime: [],
-  engineServices: ['src/backend/services/engineServices.ts'],
-  engineState: [
-    'src/backend/launcher.ts',
-    'src/backend/services/types.ts',
-    'src/backend/sidecar/bootstrap.ts'
-  ],
+  engineServices: [],
+  // 87-56c Task 2: the 'engine-state' step, the deps member and the notices store registration are gone.
+  engineState: [],
   engineTypes: [],
   fallbackEngine: [],
   gameEngineState: [],
@@ -577,7 +574,7 @@ const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
   pinnedEngineProgress: [],
   testedCrossoverVersions: [],
   toolSettings: [],
-  wineManagerReleases: ['src/backend/services/engineServices.ts']
+  wineManagerReleases: []
 }
 
 /**

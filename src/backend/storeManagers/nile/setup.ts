@@ -25,7 +25,6 @@ type NileSetupDeps = StatusUpdateDeps &
     ManagerDeps,
     | 'libraryManagers'
     | 'onlineMonitor'
-    | 'engineState'
     | 'paths'
     | 'steamBottle'
     | 'steamLaunchRuntime'

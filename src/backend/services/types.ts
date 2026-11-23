@@ -32,7 +32,6 @@ import type { GameConfigs } from 'backend/game_config'
 import type { AppInfo, AppPaths } from 'backend/process/context'
 import type { Clock, ProcessRunner } from 'backend/process/types'
 import type { OnlineMonitor } from 'backend/online_monitor'
-import type { EngineStateService } from 'backend/engine/engineState'
 import type { SteamLaunchRuntime } from 'backend/storeManagers/steam/steamLaunchRuntime'
 import type { BridgeRuntime } from 'backend/storeManagers/steam/bridge/bridgeRuntime'
 import type { GogRuntime } from 'backend/storeManagers/gog/gogRuntime'
@@ -97,9 +96,6 @@ export interface Stores {
   >
   steam: ReturnType<
     typeof import('backend/storeManagers/steam/stores').createSteamStores
-  >
-  engine: ReturnType<
-    typeof import('backend/engine/engineNoticeStore').createEngineStores
   >
   systemInfo: ReturnType<
     typeof import('backend/utils/systeminfo/gpu/pci_ids').createPciIdCaches
@@ -178,8 +174,6 @@ export interface ManagerDeps {
   requestRustInvoke: HostServices['requestRustInvoke']
   /** Typed backend -> frontend push over this boot's transport (66.4-15). */
   sendFrontendMessage: HostServices['sendFrontendMessage']
-  /** The boot-owned engine decision/notice state (D-66.3-12). */
-  engineState: EngineStateService
   /** The boot-owned Steam launch-path runtime: monitors, raise loop, DRM runners, notice latch, capture chain (66.4-06). */
   steamLaunchRuntime: SteamLaunchRuntime
   /** The boot-owned Steam bridge runtime: runner clone flights, entitlement signer, shared-redist installer (66.4-08). */
@@ -323,9 +317,7 @@ export interface BootServices {
   appInfo: AppInfo
   /** Built by the 'online-monitor-owner' boot step, started by 'online-monitor' (D-66.3-11). */
   onlineMonitor: OnlineMonitor
-  /** Built by the 'engine-state' boot step, before 'store-managers' (D-66.3-12). */
-  engineState: EngineStateService
-  /** Built by the 'steam-launch-runtime' boot step, after 'engine-state' and before 'store-managers' (66.4-06). */
+  /** Built by the 'steam-launch-runtime' boot step, after 'online-monitor-owner' and before 'store-managers' (66.4-06). */
   steamLaunchRuntime: SteamLaunchRuntime
   /** Built by the 'steam-bridge-runtime' boot step, after 'steam-launch-runtime' and before 'store-managers' (66.4-08). */
   bridgeRuntime: BridgeRuntime

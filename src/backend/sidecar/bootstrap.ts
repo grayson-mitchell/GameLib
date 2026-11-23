@@ -125,7 +125,6 @@ import axios from 'axios'
 import { randomUUID } from 'node:crypto'
 import { createOnlineMonitor } from '../online_monitor'
 import { checkConnectivityNow } from '../connectivityNow'
-import { createEngineState } from '../engine/engineState'
 import { createSteamLaunchRuntime } from '../storeManagers/steam/steamLaunchRuntime'
 import { createBridgeRuntime } from '../storeManagers/steam/bridge/bridgeRuntime'
 import { createGogRuntime } from '../storeManagers/gog/gogRuntime'
@@ -312,7 +311,6 @@ export const BOOT_STEP_NAMES = [
   'steam-user',
   'humble-services',
   'online-monitor-owner',
-  'engine-state',
   'steam-launch-runtime',
   'steam-bridge-runtime',
   'steam-install-runtime',
@@ -527,7 +525,6 @@ function requireServices(state: BootState): BootServices {
     paths,
     appInfo,
     onlineMonitor,
-    engineState,
     steamLaunchRuntime,
     bridgeRuntime,
     steamInstallRuntime,
@@ -567,7 +564,6 @@ function requireServices(state: BootState): BootServices {
     !paths ||
     !appInfo ||
     !onlineMonitor ||
-    !engineState ||
     !steamLaunchRuntime ||
     !bridgeRuntime ||
     !steamInstallRuntime ||
@@ -608,7 +604,6 @@ function requireServices(state: BootState): BootServices {
         'paths',
         'appInfo',
         'onlineMonitor',
-        'engineState',
         'steamLaunchRuntime',
         'bridgeRuntime',
         'steamInstallRuntime',
@@ -651,7 +646,6 @@ function requireServices(state: BootState): BootServices {
     paths,
     appInfo,
     onlineMonitor,
-    engineState,
     steamLaunchRuntime,
     bridgeRuntime,
     steamInstallRuntime,
@@ -2036,32 +2030,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
-      name: 'engine-state',
-      // Builds the one engine decision/notice owner of this boot (D-05, D-66.3-12). Construction
-      // does no I/O and arms no timers; the notice store is read from 'stores' on first use. Before
-      // 'store-managers' so ManagerDeps and the launcher can carry it.
-      run: (ctx, _io, state) => {
-        const host = requireHost(state)
-        const { stores } = state.services
-        if (!stores) throw new Error('boot: stores step must run first')
-        state.services.engineState =
-          prebuilt.engineState ??
-          createEngineState({
-            publish: (engineState) =>
-              host.pushFrontendMessage('engineStateChanged', engineState),
-            now: () => ctx.clock.now(),
-            isMac: () => isMac,
-            noticeStore: () => stores.engine.noticeStore
-          })
-      }
-    },
-    {
       name: 'steam-launch-runtime',
       // Builds the one Steam launch-path runtime of this boot (D-05, 66.4-06): bottle process monitors,
       // the bottled-Steam raise loop, the DRM / overlay runner registry, the DRM-mode notice latch and
       // the platform-capture chain. Construction allocates empty collections only: no I/O and no timer;
       // the monitor and raise-loop timers a launch arms later run on ctx.clock, whose timers are
-      // unref'd, so nothing here can hold the sidecar open at stdin EOF. After 'engine-state' and
+      // unref'd, so nothing here can hold the sidecar open at stdin EOF. After 'online-monitor-owner' and
       // before 'store-managers' so ManagerDeps carries it.
       run: (ctx, _io, state) => {
         state.services.steamLaunchRuntime =
@@ -2154,7 +2128,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           appInfo,
           host,
           onlineMonitor,
-          engineState,
           steamLaunchRuntime,
           bridgeRuntime,
           steamInstallRuntime,
@@ -2186,7 +2159,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !appInfo ||
           !host ||
           !onlineMonitor ||
-          !engineState ||
           !steamLaunchRuntime ||
           !bridgeRuntime ||
           !steamInstallRuntime ||
@@ -2241,7 +2213,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           appState: host.appState,
           imageTools: host.imageTools,
           onlineMonitor,
-          engineState,
           steamLaunchRuntime,
           bridgeRuntime,
           steamInstallRuntime,
