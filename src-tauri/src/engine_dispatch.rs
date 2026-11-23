@@ -4,8 +4,9 @@
 //! D-20: one `Arc<EngineCtx>` is built in `run_setup` right after the store host opens, from the
 //! shell's own paths, `SystemClock`, the platform, the app version, the process-wide
 //! `gamelib_core::shutdown::global()`, `SpecProcRunner` (every child starts through `gamelib-proc`),
-//! `ReqwestFetch` and the shell's `FrontendEmitter`. `NoDxvk` stays the DXVK installer until 87-29
-//! injects the real one. The context's `ui` is the [`ShellEngineUi`] (87-18, D-02, D-10): the one shell
+//! `ReqwestFetch` and the shell's `FrontendEmitter`. The DXVK installer is [`ShellDxvk`] (87-29, D-25 (a)):
+//! it resolves the wine context at call time and hands the request to `gamelib-wine`'s
+//! `WineDxvkInstaller`, so the engine crate never names the wine crate. The context's `ui` is the [`ShellEngineUi`] (87-18, D-02, D-10): the one shell
 //! path for a notification, an in-app dialog, a main-window raise and a frame for the sidecar, so every
 //! Rust slice that needs one (the wine manager first, 87-20) reaches it through `ctx.ui`. Building the
 //! context spawns nothing, connects to nothing and waits for nothing: the HTTP client is built on
@@ -23,15 +24,22 @@ use std::path::{Path, PathBuf};
 
 use gamelib_core::clock::SystemClock;
 use gamelib_core::emitter::FrontendEmitter;
+use gamelib_core::process::BoxFuture;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::ctx::{
     CrossoverBinDirHook, DefaultWineHook, EngineCtx, EnginePaths, Platform, WineInstallationView,
 };
+use gamelib_engine::dxvk::{DxvkInstaller, DxvkRequest};
 use gamelib_engine::fetch::ReqwestFetch;
 use gamelib_engine::sinks::EngineUi;
 use gamelib_proc::spec::SpecProcRunner;
 use gamelib_store::host::StoreHost;
+use gamelib_wine::ctx::WineCtx;
 use gamelib_wine::discovery::default_wine::{default_wine_from_path, is_executable_file};
+use gamelib_wine::tools::{ToolsHost, WineRunner};
+use gamelib_wine::wine_cmd::env::EnvSnapshot;
+use gamelib_wine::wine_cmd::WineHost;
+use gamelib_wine::WineDxvkInstaller;
 
 /// The one context, set once by [`install`].
 static ENGINE_CTX: OnceLock<Arc<EngineCtx>> = OnceLock::new();
@@ -186,6 +194,74 @@ fn send_frame_to_sidecar(channel: &str, args: Vec<Value>) {
     let _ = state.write_frame(&frame);
 }
 
+/// Where [`ShellDxvk`] looks the wine context up, each call.
+type WineLookup = Box<dyn Fn() -> Option<Arc<WineCtx>> + Send + Sync>;
+
+/// The shell's `EngineCtx.dxvk` (87-29, D-25 (a)): DXVK, DXVK-NVAPI and vkd3d installs for the engine
+/// switch and the fallback bottle, answered by `gamelib-wine`'s [`WineDxvkInstaller`].
+///
+/// The wine context is built after the engine context and holds it, so the installer cannot own the
+/// wine context. It resolves `wine_dispatch::wine_ctx()` on every call instead, which keeps the
+/// dependency one way (the engine crate names neither this type nor the wine crate) and means boot
+/// order can neither deadlock nor leave a stale handle. Before the wine context exists (or when no
+/// engine context could be built, so none ever will) a call answers `false` with one fixed log line.
+///
+/// The wine commands run with the shell's process environment, which the crate may not read. The Vulkan
+/// helper's directory and the online answer stay at their defaults until 87-34 builds the full
+/// `ToolsHost`, the same step that flips the TS writers.
+pub(crate) struct ShellDxvk {
+    wine: WineLookup,
+    runner: Option<Arc<dyn WineRunner>>,
+}
+
+impl ShellDxvk {
+    /// The production installer: the wine context is the one [`wine_dispatch::install`] stored.
+    pub(crate) fn new() -> ShellDxvk {
+        ShellDxvk {
+            wine: Box::new(|| wine_dispatch::wine_ctx().cloned()),
+            runner: None,
+        }
+    }
+
+    /// An installer that looks the wine context up through `wine` and runs the tool's wine commands
+    /// through `runner`, for a test.
+    #[cfg(test)]
+    pub(crate) fn with_lookup(wine: WineLookup, runner: Arc<dyn WineRunner>) -> ShellDxvk {
+        ShellDxvk {
+            wine,
+            runner: Some(runner),
+        }
+    }
+}
+
+/// The host facts a wine command needs from the shell: the process environment, as the TS read
+/// `process.env`. Non-Unicode entries are left out.
+fn process_tools_host() -> ToolsHost {
+    let env = std::env::vars_os()
+        .filter_map(|(key, value)| Some((key.into_string().ok()?, value.into_string().ok()?)));
+    ToolsHost {
+        wine: WineHost {
+            env: EnvSnapshot::from_pairs(env),
+            ..WineHost::default()
+        },
+        ..ToolsHost::default()
+    }
+}
+
+impl DxvkInstaller for ShellDxvk {
+    fn install_remove(&self, req: DxvkRequest) -> BoxFuture<bool> {
+        let Some(wine) = (self.wine)() else {
+            shell_log("DXVK install skipped: the wine context is not installed");
+            return Box::pin(async { false });
+        };
+        let mut installer = WineDxvkInstaller::new(wine).with_host(process_tools_host());
+        if let Some(runner) = &self.runner {
+            installer = installer.with_runner(Arc::clone(runner));
+        }
+        installer.install_remove(req)
+    }
+}
+
 /// Builds the context from its parts. Split from [`install`] so a unit test can build one without an
 /// `AppHandle`. Nothing here spawns, connects or waits.
 pub(crate) fn build_ctx(
@@ -218,6 +294,7 @@ pub(crate) fn build_ctx(
     .with_emitter(emitter)
     .with_ui(ui)
     .with_app_version(native_handlers::app_version())
+    .with_dxvk(Arc::new(ShellDxvk::new()))
     .with_default_wine(default_wine_hook(Arc::new(|| std::env::var("PATH").ok())))
     .with_crossover_bin_dir(crossover_bin_dir_hook())
 }
@@ -486,7 +563,8 @@ pub(crate) fn get_default_engine(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> Nati
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gamelib_engine::dxvk::{DxvkAction, DxvkRequest, DxvkTool};
+    use gamelib_engine::dxvk::{DxvkAction, DxvkSource, DxvkTool};
+    use gamelib_wine::tools::{WineCall, WineFuture};
 
     /// Keeps the channels pushed through it.
     #[derive(Default)]
@@ -567,20 +645,130 @@ mod tests {
         assert_eq!(ctx.app_version, env!("CARGO_PKG_VERSION"));
     }
 
-    #[test]
-    fn dxvk_stays_unwired_until_its_plan_and_the_ui_is_installed() {
-        let ctx = built(Arc::new(Pushes::default()));
-        // 87-18 wires the window-facing sinks, 87-29 the DXVK installer.
-        assert!(ctx.ui.is_some());
-        let request = DxvkRequest {
-            settings: serde_json::json!({}),
+    fn dxvk_request(prefix: &Path, source: Option<DxvkSource>) -> DxvkRequest {
+        DxvkRequest {
+            settings: serde_json::json!({
+                "winePrefix": prefix.to_string_lossy(),
+                "wineVersion": {"bin": "/usr/bin/wine", "name": "Wine", "type": "wine"},
+            }),
             tool: DxvkTool::Dxvk,
             action: DxvkAction::Backup,
-            source: None,
-        };
+            source,
+        }
+    }
+
+    /// Records the wine commands the DXVK tool asks for and answers success.
+    #[derive(Default)]
+    struct RecordingWine(Mutex<Vec<Vec<String>>>);
+
+    impl WineRunner for RecordingWine {
+        fn run<'a>(&'a self, _ctx: &'a WineCtx, call: WineCall) -> WineFuture<'a, Option<i32>> {
+            self.0
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .push(call.command_parts);
+            Box::pin(async { Some(0) })
+        }
+    }
+
+    #[test]
+    fn the_context_dxvk_is_the_shell_installer_and_answers_false_before_the_wine_context_exists() {
+        // The installed ui and the shell installer are both wired by `build_ctx`; no wine context has
+        // been stored in a unit test, so the call answers false instead of panicking or waiting
+        // (T-87-74).
+        let ctx = built(Arc::new(Pushes::default()));
+        assert!(ctx.ui.is_some());
+        let request = dxvk_request(Path::new("/fake/prefix"), None);
         assert!(!tauri::async_runtime::block_on(
             ctx.dxvk.install_remove(request)
         ));
+    }
+
+    #[test]
+    fn a_lookup_that_finds_no_wine_context_answers_false_and_reaches_no_wine() {
+        let runner = Arc::new(RecordingWine::default());
+        let dxvk = ShellDxvk::with_lookup(Box::new(|| None), runner.clone());
+        let request = dxvk_request(Path::new("/fake/prefix"), None);
+        assert!(!tauri::async_runtime::block_on(
+            dxvk.install_remove(request)
+        ));
+        assert!(runner.0.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn the_context_dxvk_reaches_gamelib_wine_once_the_wine_context_exists() {
+        let home = gamelib_testutil::FakeHome::new("gamelib-shell-dxvk-");
+        let root = home.root().to_path_buf();
+        // The engine context the wine context is built over, and the wine context the installer looks
+        // up at call time (the production lookup reads the `wine_dispatch` static, which a unit test
+        // cannot fill because it has no `AppHandle`).
+        let engine = EngineCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            Platform::Linux,
+            EnginePaths {
+                app_folder: root.join("userData"),
+                user_data: root.join("userData"),
+                tools_path: root.join("userData").join("tools"),
+                user_home: root.clone(),
+                temp: root.join("tmp"),
+            },
+            Shutdown::new(),
+        );
+        let wine = Arc::new(WineCtx::new(Arc::new(engine), root.join("runtimes")));
+        let runner = Arc::new(RecordingWine::default());
+        let lookup: WineLookup = {
+            let wine = Arc::clone(&wine);
+            Box::new(move || Some(Arc::clone(&wine)))
+        };
+        let shell = ShellDxvk::with_lookup(lookup, runner.clone());
+        let ctx = built(Arc::new(Pushes::default())).with_dxvk(Arc::new(shell));
+
+        // A pinned build (the fallback engine's case: no release lookup, a synchronous copy) in a fresh
+        // prefix.
+        let source = root.join("src");
+        for arch in ["x32", "x64"] {
+            for dll in ["d3d9.dll", "d3d11.dll"] {
+                let path = source.join(arch).join(dll);
+                std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+                std::fs::write(path, arch).unwrap();
+            }
+        }
+        let prefix = root.join("prefix");
+        for dir in ["system32", "syswow64"] {
+            std::fs::create_dir_all(prefix.join("drive_c/windows").join(dir)).unwrap();
+        }
+        std::fs::write(prefix.join("system.reg"), "").unwrap();
+
+        let request = dxvk_request(
+            &prefix,
+            Some(DxvkSource {
+                dir: source.to_string_lossy().into_owned(),
+                version: "pinned-1".to_string(),
+            }),
+        );
+        assert!(tauri::async_runtime::block_on(
+            ctx.dxvk.install_remove(request)
+        ));
+
+        // The crate did the install: the DLLs and the version marker are in the prefix and the wine
+        // core was asked for one `reg add` per DLL name.
+        assert_eq!(
+            std::fs::read_to_string(prefix.join("drive_c/windows/system32/d3d11.dll")).unwrap(),
+            "x64"
+        );
+        assert_eq!(
+            std::fs::read_to_string(prefix.join("current_dxvk")).unwrap(),
+            "pinned-1"
+        );
+        let adds = runner
+            .0
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|c| c.starts_with(&["reg".to_string(), "add".to_string()]))
+            .count();
+        assert_eq!(adds, 2);
     }
 
     #[test]
