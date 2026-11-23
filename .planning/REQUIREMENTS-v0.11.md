@@ -23,7 +23,7 @@ Every requirement below is a "still works after the port" guarantee unless it sa
 ### Services
 
 - [x] **SVC-01**: Wiki game info, the CrossOver compatibility index, store search and discounts, anti-cheat info, recent games, per-game overrides and the artwork caches work as before
-- [ ] **SVC-02**: Engine selection, per-game bottles, Wine/CrossOver/Staging downloads, Winetricks and DXVK tools work as before
+- [x] **SVC-02**: Engine selection, per-game bottles, Wine/CrossOver/Staging downloads, Winetricks and DXVK tools work as before
 - [ ] **SVC-03**: Launching any game produces the same command line and environment as before (golden traces): native, Wine/Proton/CrossOver, gamescope/mangohud, known-fix overlays, pre/post scripts
 - [ ] **SVC-04**: Humble key sync, claim and redeem work as before
 - [ ] **SVC-05**: Shortcuts are created and removed as before
@@ -75,7 +75,7 @@ Every requirement below is a "still works after the port" guarantee unless it sa
 | FND-06 | Phase 85 | Complete |
 | FND-07 | Phase 85 | Complete |
 | SVC-01 | Phase 86 | Complete |
-| SVC-02 | Phase 87 | Pending |
+| SVC-02 | Phase 87 | Complete |
 | SVC-03 | Phase 88 | Pending |
 | STM-01 | Phase 89 | Pending |
 | STM-02 | Phase 90 | Pending |
