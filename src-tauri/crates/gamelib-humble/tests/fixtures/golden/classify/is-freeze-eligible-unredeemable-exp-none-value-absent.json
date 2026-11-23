@@ -1,0 +1,10 @@
+{
+  "fn": "isFreezeEligible",
+  "input": {
+    "key": {
+      "state": "UNREDEEMABLE",
+      "expiration": null
+    }
+  },
+  "output": true
+}

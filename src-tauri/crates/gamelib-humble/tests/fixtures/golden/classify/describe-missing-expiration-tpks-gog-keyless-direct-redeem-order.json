@@ -1,0 +1,33 @@
+{
+  "fn": "describeMissingExpirationTpks",
+  "input": {
+    "order": {
+      "gamekey": "order-gog-keyless-direct",
+      "product": {
+        "category": "bundle",
+        "human_name": "Synthetic GOG Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "synthetic_gog_keyless_game",
+            "gamekey": "order-gog-keyless-direct",
+            "key_type": "gog_keyless",
+            "key_type_human_name": "GOG Keyless",
+            "human_name": "Synthetic GOG Keyless Game",
+            "is_expired": false,
+            "direct_redeem": true,
+            "visible": true,
+            "sold_out": false,
+            "display_separately": false,
+            "exclusive_countries": [],
+            "disallowed_countries": [],
+            "keyindex": 0
+          }
+        ]
+      }
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": "tpksMissingExpiration=1 candidateFields=[machine_name,gamekey,key_type,key_type_human_name,human_name,is_expired,direct_redeem,visible,sold_out,display_separately,exclusive_countries,disallowed_countries,keyindex]"
+}

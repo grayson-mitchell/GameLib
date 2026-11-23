@@ -1,0 +1,7 @@
+{
+  "fn": "isServerTerminal",
+  "input": {
+    "state": "UNREVEALED"
+  },
+  "output": false
+}

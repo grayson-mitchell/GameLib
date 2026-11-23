@@ -1,0 +1,62 @@
+{
+  "fn": "recomputeOwnership",
+  "input": {
+    "keys": [
+      {
+        "gamekey": "order-1",
+        "machineName": "somegame_steam",
+        "state": "UNREVEALED",
+        "title": "DOOM",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "Some Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "steamGames": [
+      {
+        "app_name": "1",
+        "title": "Portal 2 Remastered"
+      },
+      {
+        "app_name": "2",
+        "title": "Hades II DLC"
+      },
+      {
+        "app_name": "3",
+        "title": "Pokémon Café"
+      },
+      {
+        "app_name": "4",
+        "title": "日本語のタイトル"
+      },
+      {
+        "app_name": "5",
+        "title": "The Witcher 3: Wild Hunt - Game of the Year Edition"
+      },
+      {
+        "app_name": "6",
+        "title": "DOOM™"
+      },
+      {
+        "app_name": "7",
+        "title": "Remake Tactics"
+      }
+    ],
+    "overridden": []
+  },
+  "output": [
+    {
+      "gamekey": "order-1",
+      "machineName": "somegame_steam",
+      "state": "UNREVEALED",
+      "title": "DOOM",
+      "platform": "steam",
+      "expiration": null,
+      "origin": "Some Bundle",
+      "ownedElsewhere": true,
+      "matchConfidence": "fuzzy"
+    }
+  ]
+}

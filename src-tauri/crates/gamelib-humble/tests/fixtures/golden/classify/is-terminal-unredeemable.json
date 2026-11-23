@@ -1,0 +1,7 @@
+{
+  "fn": "isTerminal",
+  "input": {
+    "state": "UNREDEEMABLE"
+  },
+  "output": true
+}

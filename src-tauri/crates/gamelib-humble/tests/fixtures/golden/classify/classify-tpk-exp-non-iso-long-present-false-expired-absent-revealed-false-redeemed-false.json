@@ -1,0 +1,13 @@
+{
+  "fn": "classifyTpk",
+  "input": {
+    "tpk": {
+      "redeemedKeyValuePresent": false,
+      "expiration": "March 5, 2020"
+    },
+    "isLocallyRevealed": false,
+    "isLocallyRedeemed": false,
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": "UNREDEEMABLE"
+}

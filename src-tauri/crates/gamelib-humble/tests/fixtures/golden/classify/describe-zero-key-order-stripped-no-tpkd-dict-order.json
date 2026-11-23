@@ -1,0 +1,18 @@
+{
+  "fn": "describeZeroKeyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-stripped",
+      "uid": "uid-stripped",
+      "product": {
+        "category": "bundle",
+        "human_name": "Stripped Order"
+      },
+      "subproducts": []
+    }
+  },
+  "output": {
+    "anomalous": true,
+    "detail": "tpkd_dict=absent order_fields=[gamekey,uid,product,subproducts]"
+  }
+}

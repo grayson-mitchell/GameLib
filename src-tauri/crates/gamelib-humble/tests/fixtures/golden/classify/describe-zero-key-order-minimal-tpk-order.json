@@ -1,0 +1,19 @@
+{
+  "fn": "describeZeroKeyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-minimal",
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "key_type": "steam"
+          }
+        ]
+      }
+    }
+  },
+  "output": {
+    "anomalous": true,
+    "detail": "tpkd_dict.all_tpks=array(1) skipped=[[0]:object-skipped-by-defensive-catch fields=[key_type]]"
+  }
+}

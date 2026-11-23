@@ -1,0 +1,10 @@
+{
+  "fn": "isFreezeEligible",
+  "input": {
+    "key": {
+      "state": "UNPICKED",
+      "expiration": null
+    }
+  },
+  "output": false
+}

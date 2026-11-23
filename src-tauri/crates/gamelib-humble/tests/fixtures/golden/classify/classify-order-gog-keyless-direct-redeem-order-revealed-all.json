@@ -1,0 +1,60 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-gog-keyless-direct",
+      "product": {
+        "category": "bundle",
+        "human_name": "Synthetic GOG Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "synthetic_gog_keyless_game",
+            "gamekey": "order-gog-keyless-direct",
+            "key_type": "gog_keyless",
+            "key_type_human_name": "GOG Keyless",
+            "human_name": "Synthetic GOG Keyless Game",
+            "is_expired": false,
+            "direct_redeem": true,
+            "visible": true,
+            "sold_out": false,
+            "display_separately": false,
+            "exclusive_countries": [],
+            "disallowed_countries": [],
+            "keyindex": 0
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "all": true
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-gog-keyless-direct",
+    "keys": [
+      {
+        "gamekey": "order-gog-keyless-direct",
+        "machineName": "synthetic_gog_keyless_game",
+        "state": "REVEALED",
+        "title": "Synthetic GOG Keyless Game",
+        "platform": "gog_keyless",
+        "expiration": null,
+        "origin": "Synthetic GOG Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {
+      "order-gog-keyless-direct:synthetic_gog_keyless_game": 0
+    },
+    "revealedKeyValueByComposite": {}
+  }
+}

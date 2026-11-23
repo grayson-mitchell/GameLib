@@ -1,0 +1,25 @@
+{
+  "fn": "describeSkippedEntitlements",
+  "input": {
+    "order": {
+      "gamekey": "order-relative-expiry",
+      "product": {
+        "category": "bundle",
+        "human_name": "Relative Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "relativegame_steam",
+            "gamekey": "order-relative-expiry",
+            "key_type": "steam",
+            "human_name": "Relative Game",
+            "is_expired": false,
+            "num_days_until_expired": 30
+          }
+        ]
+      }
+    }
+  },
+  "output": null
+}

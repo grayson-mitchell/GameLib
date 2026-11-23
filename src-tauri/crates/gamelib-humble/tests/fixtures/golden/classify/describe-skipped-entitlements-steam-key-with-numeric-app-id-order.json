@@ -1,0 +1,26 @@
+{
+  "fn": "describeSkippedEntitlements",
+  "input": {
+    "order": {
+      "gamekey": "order-steam-appid-numeric",
+      "product": {
+        "category": "bundle",
+        "human_name": "Numeric AppID Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "halflife2_steam",
+            "gamekey": "order-steam-appid-numeric",
+            "key_type": "steam",
+            "key_type_human_name": "Steam",
+            "human_name": "Half-Life 2",
+            "is_expired": false,
+            "steam_app_id": 620
+          }
+        ]
+      }
+    }
+  },
+  "output": null
+}

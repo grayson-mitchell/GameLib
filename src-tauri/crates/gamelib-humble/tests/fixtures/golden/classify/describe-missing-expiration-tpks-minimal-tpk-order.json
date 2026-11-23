@@ -1,0 +1,17 @@
+{
+  "fn": "describeMissingExpirationTpks",
+  "input": {
+    "order": {
+      "gamekey": "order-minimal",
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "key_type": "steam"
+          }
+        ]
+      }
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": "tpksMissingExpiration=1 candidateFields=[key_type]"
+}

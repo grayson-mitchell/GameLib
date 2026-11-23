@@ -1,0 +1,22 @@
+{
+  "fn": "describeZeroKeyOrder",
+  "input": {
+    "order": {
+      "gamekey": "choice-2026-03",
+      "human_name": "Humble Choice — March 2026",
+      "product": {
+        "category": "subscriptioncontent",
+        "choice_url": "home/march-2026",
+        "human_name": "Humble Choice — March 2026",
+        "deadline_date": "2026-03-31T23:59:59Z"
+      },
+      "tpkd_dict": {
+        "all_tpks": []
+      }
+    }
+  },
+  "output": {
+    "anomalous": false,
+    "detail": "tpkd_dict.all_tpks=array(0)"
+  }
+}

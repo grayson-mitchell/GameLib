@@ -1,0 +1,23 @@
+{
+  "fn": "describeSkippedEntitlements",
+  "input": {
+    "order": {
+      "gamekey": "order-malformed",
+      "human_name": "Malformed Bundle",
+      "tpkd_dict": {
+        "all_tpks": [
+          null,
+          "not-an-object",
+          {
+            "machine_name": "goodgame_steam",
+            "human_name": "Good Game",
+            "key_type": "steam",
+            "redeemed_key_value": null,
+            "expiration": null
+          }
+        ]
+      }
+    }
+  },
+  "output": null
+}

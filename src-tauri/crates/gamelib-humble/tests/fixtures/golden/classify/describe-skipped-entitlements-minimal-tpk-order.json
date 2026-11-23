@@ -1,0 +1,16 @@
+{
+  "fn": "describeSkippedEntitlements",
+  "input": {
+    "order": {
+      "gamekey": "order-minimal",
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "key_type": "steam"
+          }
+        ]
+      }
+    }
+  },
+  "output": null
+}

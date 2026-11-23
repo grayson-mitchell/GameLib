@@ -1,0 +1,28 @@
+{
+  "fn": "describeZeroKeyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-undatable",
+      "product": {
+        "category": "bundle",
+        "human_name": "Undatable Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "undatablegame_steam",
+            "gamekey": "order-undatable",
+            "key_type": "steam",
+            "human_name": "Undatable Game",
+            "is_expired": false,
+            "some_unknown_date_field": "2027-01-01T00:00:00Z"
+          }
+        ]
+      }
+    }
+  },
+  "output": {
+    "anomalous": true,
+    "detail": "tpkd_dict.all_tpks=array(1) skipped=[[0]:object-skipped-by-defensive-catch fields=[machine_name,gamekey,key_type,human_name,is_expired,some_unknown_date_field]]"
+  }
+}

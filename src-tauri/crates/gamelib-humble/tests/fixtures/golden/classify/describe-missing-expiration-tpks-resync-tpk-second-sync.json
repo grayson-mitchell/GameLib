@@ -1,0 +1,22 @@
+{
+  "fn": "describeMissingExpirationTpks",
+  "input": {
+    "order": {
+      "gamekey": "order-resync",
+      "human_name": "Resync Bundle",
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "resyncgame_steam",
+            "human_name": "Resync Game",
+            "key_type": "steam",
+            "redeemed_key_value": null,
+            "expiration": "2020-01-01T00:00:00Z"
+          }
+        ]
+      }
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": null
+}

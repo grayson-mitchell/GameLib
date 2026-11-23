@@ -1,0 +1,51 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-relative-expiry",
+      "product": {
+        "category": "bundle",
+        "human_name": "Relative Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "relativegame_steam",
+            "gamekey": "order-relative-expiry",
+            "key_type": "steam",
+            "human_name": "Relative Game",
+            "is_expired": false,
+            "num_days_until_expired": 30
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "all": false
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-relative-expiry",
+    "keys": [
+      {
+        "gamekey": "order-relative-expiry",
+        "machineName": "relativegame_steam",
+        "state": "UNREVEALED",
+        "title": "Relative Game",
+        "platform": "steam",
+        "expiration": "2026-12-24T12:00:00.000Z",
+        "origin": "Relative Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

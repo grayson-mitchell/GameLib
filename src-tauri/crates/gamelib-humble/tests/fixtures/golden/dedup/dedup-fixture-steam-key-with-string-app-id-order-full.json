@@ -1,0 +1,64 @@
+{
+  "fn": "recomputeOwnership",
+  "input": {
+    "keys": [
+      {
+        "gamekey": "order-steam-appid-string",
+        "machineName": "halflife2b_steam",
+        "state": "UNREVEALED",
+        "title": "Half-Life 2",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "String AppID Bundle",
+        "steamAppId": "620",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "steamGames": [
+      {
+        "app_name": "620",
+        "title": "Portal 2"
+      },
+      {
+        "app_name": "250110",
+        "title": "Assault Android Cactus"
+      },
+      {
+        "app_name": "388390",
+        "title": "Framed Collection"
+      },
+      {
+        "app_name": "590380",
+        "title": "Into The Breach (Steam)"
+      },
+      {
+        "app_name": "900001",
+        "title": "Game X"
+      },
+      {
+        "app_name": "208650",
+        "title": "Batman: Arkham Knight"
+      },
+      {
+        "app_name": "413150",
+        "title": "Stardew Valley"
+      }
+    ],
+    "overridden": []
+  },
+  "output": [
+    {
+      "gamekey": "order-steam-appid-string",
+      "machineName": "halflife2b_steam",
+      "state": "UNREVEALED",
+      "title": "Half-Life 2",
+      "platform": "steam",
+      "expiration": null,
+      "origin": "String AppID Bundle",
+      "steamAppId": "620",
+      "ownedElsewhere": true,
+      "matchConfidence": "exact"
+    }
+  ]
+}

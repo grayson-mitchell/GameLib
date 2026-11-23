@@ -1,0 +1,30 @@
+{
+  "fn": "describeZeroKeyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-real-gift",
+      "product": {
+        "category": "bundle",
+        "human_name": "Gifted Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "giftgame_steam",
+            "gamekey": "order-real-gift",
+            "key_type": "steam",
+            "key_type_human_name": "Steam",
+            "human_name": "Gifted Game",
+            "is_gift": true,
+            "is_expired": false,
+            "steam_app_id": "99999"
+          }
+        ]
+      }
+    }
+  },
+  "output": {
+    "anomalous": true,
+    "detail": "tpkd_dict.all_tpks=array(1) skipped=[[0]:object-skipped-by-defensive-catch fields=[machine_name,gamekey,key_type,key_type_human_name,human_name,is_gift,is_expired,steam_app_id]]"
+  }
+}

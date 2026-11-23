@@ -1,0 +1,56 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-real-gift",
+      "product": {
+        "category": "bundle",
+        "human_name": "Gifted Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "giftgame_steam",
+            "gamekey": "order-real-gift",
+            "key_type": "steam",
+            "key_type_human_name": "Steam",
+            "human_name": "Gifted Game",
+            "is_gift": true,
+            "is_expired": false,
+            "steam_app_id": "99999"
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "only": [
+        "giftgame_steam"
+      ]
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-real-gift",
+    "keys": [
+      {
+        "gamekey": "order-real-gift",
+        "machineName": "giftgame_steam",
+        "state": "REVEALED",
+        "title": "Gifted Game",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "Gifted Bundle",
+        "steamAppId": "99999",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

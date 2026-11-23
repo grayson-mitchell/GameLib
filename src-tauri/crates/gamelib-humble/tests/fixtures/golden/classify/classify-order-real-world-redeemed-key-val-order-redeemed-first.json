@@ -1,0 +1,58 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-real-redeemed",
+      "product": {
+        "category": "bundle",
+        "human_name": "Real Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "realredeemed_steam",
+            "gamekey": "order-real-redeemed",
+            "key_type": "steam",
+            "key_type_human_name": "Steam",
+            "human_name": "Real Redeemed Game",
+            "steam_app_id": "54321",
+            "is_expired": false,
+            "redeemed_key_val": "REDACTED"
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "all": false
+    },
+    "redeemed": {
+      "only": [
+        "order-real-redeemed:realredeemed_steam"
+      ]
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-real-redeemed",
+    "keys": [
+      {
+        "gamekey": "order-real-redeemed",
+        "machineName": "realredeemed_steam",
+        "state": "REDEEMED",
+        "title": "Real Redeemed Game",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "Real Bundle",
+        "steamAppId": "54321",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": true,
+    "freezeEligible": true,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {
+      "order-real-redeemed:realredeemed_steam": "REDACTED"
+    }
+  }
+}

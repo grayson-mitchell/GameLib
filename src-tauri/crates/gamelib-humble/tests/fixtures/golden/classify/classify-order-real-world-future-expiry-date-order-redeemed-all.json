@@ -1,0 +1,52 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-future-expiry",
+      "product": {
+        "category": "bundle",
+        "human_name": "Expiring Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "settlementsurvival_steam",
+            "gamekey": "order-future-expiry",
+            "key_type": "steam",
+            "key_type_human_name": "Steam",
+            "human_name": "Settlement Survival",
+            "is_expired": false,
+            "expiry_date": "2026-08-03T00:00:00Z"
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "all": false
+    },
+    "redeemed": {
+      "all": true
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-future-expiry",
+    "keys": [
+      {
+        "gamekey": "order-future-expiry",
+        "machineName": "settlementsurvival_steam",
+        "state": "UNREDEEMABLE",
+        "title": "Settlement Survival",
+        "platform": "steam",
+        "expiration": "2026-08-03T00:00:00.000Z",
+        "origin": "Expiring Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": true,
+    "freezeEligible": true,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

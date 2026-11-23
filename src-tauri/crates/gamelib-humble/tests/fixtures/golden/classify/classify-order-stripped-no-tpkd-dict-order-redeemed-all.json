@@ -1,0 +1,29 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-stripped",
+      "uid": "uid-stripped",
+      "product": {
+        "category": "bundle",
+        "human_name": "Stripped Order"
+      },
+      "subproducts": []
+    },
+    "revealed": {
+      "all": false
+    },
+    "redeemed": {
+      "all": true
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-stripped",
+    "keys": [],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "fn": "describeSkippedEntitlements",
+  "input": {
+    "order": {
+      "gamekey": "order-real-uplay-direct",
+      "product": {
+        "category": "bundle",
+        "human_name": "Ubisoft Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "raymanlegends_uplay",
+            "gamekey": "order-real-uplay-direct",
+            "key_type": "uplay",
+            "key_type_human_name": "Uplay",
+            "human_name": "Rayman Legends",
+            "direct_redeem": true,
+            "instructions_html": "<a href='https://support.humblebundle.com/'>Uplay Key Instructions</a>",
+            "preinstruction_text": "Copy this key into the uPlay client.",
+            "class": "uplaybutton",
+            "keyindex": 0,
+            "visible": true,
+            "sold_out": false,
+            "exclusive_countries": [],
+            "disallowed_countries": [],
+            "show_custom_instructions_in_user_libraries": false,
+            "redeemed_key_val": "REDACTED"
+          }
+        ]
+      }
+    }
+  },
+  "output": null
+}

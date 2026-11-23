@@ -1,0 +1,24 @@
+{
+  "fn": "describeZeroKeyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-gog",
+      "human_name": "GOG Bundle",
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "goggame_gog",
+            "human_name": "GOG Game",
+            "key_type": "gog",
+            "redeemed_key_value": null,
+            "expiration": null
+          }
+        ]
+      }
+    }
+  },
+  "output": {
+    "anomalous": true,
+    "detail": "tpkd_dict.all_tpks=array(1) skipped=[[0]:object-skipped-by-defensive-catch fields=[machine_name,human_name,key_type,redeemed_key_value,expiration]]"
+  }
+}

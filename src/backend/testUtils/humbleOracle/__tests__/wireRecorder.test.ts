@@ -90,30 +90,6 @@ describe('the Humble wire recorder: committed cases replay against the real TS',
     expect(humbleConstants.HUMBLE_BASE_URL).toBe('https://www.humblebundle.com')
   })
 
-  it('pointSteamStoreSearchAt only rewrites the Steam store origin and its undo ejects it', async () => {
-    const recorder = await startWireRecorder({
-      slice: 's',
-      caseId: 'steam-interceptor',
-      mode: 'write',
-      synthetic: [{ target: '/other', status: 200 }]
-    })
-    const unpoint = pointSteamStoreSearchAt(recorder.baseUrl)
-    try {
-      // Another origin passes through untouched (here: straight to the recorder, by its own URL).
-      const response = await axios.get(`${recorder.baseUrl}/other`)
-      expect(response.status).toBe(200)
-      expect(recorder.requests).toHaveLength(1)
-    } finally {
-      unpoint()
-      await recorder.close()
-    }
-    expect(
-      (
-        axios.interceptors.request as unknown as { handlers: unknown[] }
-      ).handlers.filter(Boolean)
-    ).toHaveLength(0)
-  })
-
   it('a stored ory_session cookie is sent as given and redacted by value', async () => {
     const status = await withWireRecorder(
       {
@@ -194,6 +170,30 @@ describe('the Humble wire recorder: self-tests on a temporary fixtures root', ()
   afterEach(() => {
     restoreRoot()
     dispose()
+  })
+
+  it('pointSteamStoreSearchAt only rewrites the Steam store origin and its undo ejects it', async () => {
+    const recorder = await startWireRecorder({
+      slice: 's',
+      caseId: 'steam-interceptor',
+      mode: 'write',
+      synthetic: [{ target: '/other', status: 200 }]
+    })
+    const unpoint = pointSteamStoreSearchAt(recorder.baseUrl)
+    try {
+      // Another origin passes through untouched (here: straight to the recorder, by its own URL).
+      const response = await axios.get(`${recorder.baseUrl}/other`)
+      expect(response.status).toBe(200)
+      expect(recorder.requests).toHaveLength(1)
+    } finally {
+      unpoint()
+      await recorder.close()
+    }
+    expect(
+      (
+        axios.interceptors.request as unknown as { handlers: unknown[] }
+      ).handlers.filter(Boolean)
+    ).toHaveLength(0)
   })
 
   it('the mode comes from the environment, forward wins over write', () => {

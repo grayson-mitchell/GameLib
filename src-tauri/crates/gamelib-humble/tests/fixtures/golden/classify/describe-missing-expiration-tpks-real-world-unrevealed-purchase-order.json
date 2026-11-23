@@ -1,0 +1,36 @@
+{
+  "fn": "describeMissingExpirationTpks",
+  "input": {
+    "order": {
+      "gamekey": "order-real-direct",
+      "uid": "uid-real-direct",
+      "product": {
+        "category": "storefront",
+        "machine_name": "directgame_storefront",
+        "human_name": "Direct Purchase"
+      },
+      "subproducts": [],
+      "path_ids": [
+        "12345"
+      ],
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "directgame_steam",
+            "gamekey": "order-real-direct",
+            "key_type": "steam",
+            "visible": true,
+            "key_type_human_name": "Steam",
+            "human_name": "Direct Game",
+            "class": "holiday",
+            "library_family_name": "directgame",
+            "steam_app_id": "123450",
+            "is_expired": false
+          }
+        ]
+      }
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": "tpksMissingExpiration=1 candidateFields=[machine_name,gamekey,key_type,visible,key_type_human_name,human_name,class,library_family_name,steam_app_id,is_expired]"
+}

@@ -1,0 +1,49 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-malformed",
+      "human_name": "Malformed Bundle",
+      "tpkd_dict": {
+        "all_tpks": [
+          null,
+          "not-an-object",
+          {
+            "machine_name": "goodgame_steam",
+            "human_name": "Good Game",
+            "key_type": "steam",
+            "redeemed_key_value": null,
+            "expiration": null
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "all": true
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-malformed",
+    "keys": [
+      {
+        "gamekey": "order-malformed",
+        "machineName": "goodgame_steam",
+        "state": "REVEALED",
+        "title": "Good Game",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "Malformed Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-ebooks",
+      "product": {
+        "category": "bundle",
+        "human_name": "Book Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "cookbook_pdf",
+            "gamekey": "order-ebooks",
+            "human_name": "Cook Book (PDF)",
+            "visible": true
+          },
+          {
+            "machine_name": "novel_epub",
+            "gamekey": "order-ebooks",
+            "human_name": "Novel (EPUB)",
+            "visible": true
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "all": false
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2099-06-01T00:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-ebooks",
+    "keys": [],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

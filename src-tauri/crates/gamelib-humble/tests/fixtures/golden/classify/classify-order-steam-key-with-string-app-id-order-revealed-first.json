@@ -1,0 +1,55 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-steam-appid-string",
+      "product": {
+        "category": "bundle",
+        "human_name": "String AppID Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "halflife2b_steam",
+            "gamekey": "order-steam-appid-string",
+            "key_type": "steam",
+            "key_type_human_name": "Steam",
+            "human_name": "Half-Life 2",
+            "is_expired": false,
+            "steam_app_id": "620"
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "only": [
+        "halflife2b_steam"
+      ]
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-steam-appid-string",
+    "keys": [
+      {
+        "gamekey": "order-steam-appid-string",
+        "machineName": "halflife2b_steam",
+        "state": "REVEALED",
+        "title": "Half-Life 2",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "String AppID Bundle",
+        "steamAppId": "620",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

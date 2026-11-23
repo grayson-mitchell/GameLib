@@ -1,0 +1,7 @@
+{
+  "fn": "isServerTerminal",
+  "input": {
+    "state": "REDEEMED"
+  },
+  "output": true
+}

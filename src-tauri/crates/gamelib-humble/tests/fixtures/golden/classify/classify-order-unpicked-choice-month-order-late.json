@@ -1,0 +1,45 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "choice-2026-03",
+      "human_name": "Humble Choice — March 2026",
+      "product": {
+        "category": "subscriptioncontent",
+        "choice_url": "home/march-2026",
+        "human_name": "Humble Choice — March 2026",
+        "deadline_date": "2026-03-31T23:59:59Z"
+      },
+      "tpkd_dict": {
+        "all_tpks": []
+      }
+    },
+    "revealed": {
+      "all": false
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2099-06-01T00:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "choice-2026-03",
+    "keys": [
+      {
+        "gamekey": "choice-2026-03",
+        "machineName": "choice-2026-03:unpicked",
+        "state": "UNPICKED",
+        "title": "Humble Choice — March 2026",
+        "platform": "humble-choice",
+        "expiration": "2026-03-31T23:59:59.000Z",
+        "origin": "Humble Choice — March 2026",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

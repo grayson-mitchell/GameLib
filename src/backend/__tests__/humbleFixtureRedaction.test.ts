@@ -37,10 +37,11 @@ const FIXTURES_ROOT = join(
 )
 
 /**
- * The files committed so far: the three recorded wire cases of 94-06 Task 1 (an exchanges.json and
- * a body each, one of them bodiless). A half-scanned tree fails. Later tasks and plans raise it.
+ * The files committed so far: the three recorded wire cases of 94-06 Task 1 (6 files), the 492 classify
+ * goldens and the 61 dedup goldens of Task 2 with their two MANIFEST.json (561 in all). A half-scanned
+ * tree fails. Later plans raise it.
  */
-const FILE_FLOOR = 6
+const FILE_FLOOR = 555
 
 /** Account names that name a role, never a person. */
 const SYNTHETIC_ACCOUNTS: readonly string[] = ['shared', 'public', 'default']

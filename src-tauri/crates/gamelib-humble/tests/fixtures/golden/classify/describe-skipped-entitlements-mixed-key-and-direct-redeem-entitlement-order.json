@@ -1,0 +1,37 @@
+{
+  "fn": "describeSkippedEntitlements",
+  "input": {
+    "order": {
+      "gamekey": "order-mixed-direct-redeem",
+      "product": {
+        "category": "bundle",
+        "human_name": "Mixed PDF Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "actualgame2_steam",
+            "gamekey": "order-mixed-direct-redeem",
+            "key_type": "steam",
+            "key_type_human_name": "Steam",
+            "human_name": "Actual Game 2",
+            "is_expired": false
+          },
+          {
+            "machine_name": "artbook2_pdf_download",
+            "gamekey": "order-mixed-direct-redeem",
+            "key_type": "download",
+            "key_type_human_name": "Download",
+            "human_name": "Art Book 2 (PDF)",
+            "is_expired": false,
+            "direct_redeem": true,
+            "custom_instructions_html": "<p>Available in your library.</p>",
+            "show_custom_instructions_in_user_libraries": true,
+            "redeemed_key_val": "REDACTED"
+          }
+        ]
+      }
+    }
+  },
+  "output": "skippedNoKeyType=0 skippedDirectRedeem=1 skipped=[[1]:direct-redeem-entitlement(key_type=download key_type_human_name=Download)]"
+}

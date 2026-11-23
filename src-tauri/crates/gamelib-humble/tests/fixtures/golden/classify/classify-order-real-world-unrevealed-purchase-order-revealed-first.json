@@ -1,0 +1,64 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-real-direct",
+      "uid": "uid-real-direct",
+      "product": {
+        "category": "storefront",
+        "machine_name": "directgame_storefront",
+        "human_name": "Direct Purchase"
+      },
+      "subproducts": [],
+      "path_ids": [
+        "12345"
+      ],
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "directgame_steam",
+            "gamekey": "order-real-direct",
+            "key_type": "steam",
+            "visible": true,
+            "key_type_human_name": "Steam",
+            "human_name": "Direct Game",
+            "class": "holiday",
+            "library_family_name": "directgame",
+            "steam_app_id": "123450",
+            "is_expired": false
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "only": [
+        "directgame_steam"
+      ]
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-real-direct",
+    "keys": [
+      {
+        "gamekey": "order-real-direct",
+        "machineName": "directgame_steam",
+        "state": "REVEALED",
+        "title": "Direct Game",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "Direct Purchase",
+        "steamAppId": "123450",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}
