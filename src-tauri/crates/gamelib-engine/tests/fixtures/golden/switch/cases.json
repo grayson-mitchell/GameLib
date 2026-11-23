@@ -1,0 +1,79 @@
+[
+  {
+    "id": "crossover-to-pin-switched",
+    "note": "a CrossOver bottle switched to the pinned engine with DXVK: the CrossOver wineserver is stopped (CX_ROOT), DXVK is installed through the scripted installer, the marker becomes pinned:<current> with its DXVK copy",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "newer-marker-refused-to-crossover",
+    "note": "a version: 2 marker (a newer build wrote it) with a real engine change asked: refused as marker-newer, nothing stopped or installed, the marker bytes unchanged",
+    "bottles": [
+      "fx-marker-newer"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-marker-newer",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerUnchanged": [
+      "fx-marker-newer"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "unreadable-marker-rewritten-to-pin",
+    "note": "a marker cut off mid-write: the gate reports unreadable, which is writable, so the engine is inferred (the pin) and the marker rewritten; the prefix itself is untouched",
+    "bottles": [
+      "fx-marker-unreadable"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-marker-unreadable",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "gate-unavailable-marker-kept",
+    "note": "Rust cannot be asked about the marker: the gate is treated as newer, an engine change is refused and the marker bytes stay as they were",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "gate": {
+      "reject": true
+    },
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerUnchanged": [
+      "fx-crossover-marker"
+    ],
+    "markerWrites": 0
+  }
+]
