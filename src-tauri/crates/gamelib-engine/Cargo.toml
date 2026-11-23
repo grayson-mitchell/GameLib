@@ -29,15 +29,28 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"
 tokio-util = "0.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# The Fetch seam (D-08): the shell's pin (no default features, the TLS provider is installed by
+# `fetch::install_crypto_provider`), plus `stream` for the chunked download body. The `query` feature
+# stays OFF: reqwest's `.query()` encodes differently from axios, so a URL is always built whole.
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "stream"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+futures-util = "0.3"
+# The SHA-256 of a downloaded archive, hashed while it streams to disk. Not a new lockfile name.
+sha2 = "0.10"
+# Replay's request matching only (feature `testing`).
+url = { version = "2", optional = true }
 
 [features]
-# Test seams for the golden tests and the CLI (later slices add theirs).
-testing = []
+# Test seams for the golden tests and the CLI: `Replay` for `Fetch`, and the scripted fakes in
+# `testing` (later slices add theirs).
+testing = ["dep:url"]
 
 [dev-dependencies]
 gamelib-engine = { path = ".", features = ["testing"] }
 gamelib-testutil = { path = "../gamelib-testutil" }
 tempfile = "3"
+# The ReqwestFetch tests talk to a local socket server.
+tokio = { version = "1", features = ["net"] }
 
 [lints.clippy]
 dbg_macro = "deny"

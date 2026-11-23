@@ -1,0 +1,17 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "HEAD",
+      "url": "https://downloads.example.test/acme/tool/tool-2.1.0.tar.xz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 404,
+      "headers": {}
+    }
+  }
+]

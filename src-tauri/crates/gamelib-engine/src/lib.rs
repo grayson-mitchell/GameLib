@@ -9,6 +9,7 @@
 //! This crate never depends on `gamelib-wine` (D-04): the dependency runs the other way.
 
 pub mod ctx;
+pub mod fetch;
 pub mod pins;
 
 use ctx::EngineCtx;

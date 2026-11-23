@@ -1,0 +1,38 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "HEAD",
+      "url": "https://downloads.example.test/acme/tool/tool-2.1.0.tar.xz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "5000"
+      }
+    }
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://downloads.example.test/acme/tool/tool-2.1.0.tar.xz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/x-xz",
+        "content-length": "5000"
+      },
+      "bodyFile": "body-2.bin"
+    }
+  }
+]

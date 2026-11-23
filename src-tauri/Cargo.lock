@@ -1655,6 +1655,7 @@ dependencies = [
 name = "gamelib-engine"
 version = "0.1.0"
 dependencies = [
+ "futures-util",
  "gamelib-core",
  "gamelib-engine",
  "gamelib-i18n",
@@ -1662,11 +1663,15 @@ dependencies = [
  "gamelib-safety",
  "gamelib-store",
  "gamelib-testutil",
+ "reqwest",
+ "rustls",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
  "tokio",
  "tokio-util",
+ "url",
 ]
 
 [[package]]
