@@ -1,0 +1,34 @@
+{
+  "input": {
+    "about": "outcome healthy, the persisted expired flag set",
+    "outcome": "healthy",
+    "expiredBefore": true,
+    "userData": true,
+    "epochMoves": false
+  },
+  "result": "cleared",
+  "pushes": [
+    {
+      "channel": "humbleAuthState",
+      "payload": {
+        "isLoggedIn": true,
+        "username": "REDACTED",
+        "expired": false
+      }
+    }
+  ],
+  "logs": [
+    "[signInProbe] humble verdict=cleared"
+  ],
+  "expiredAfter": null,
+  "stateBefore": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"isLoggedIn\": true,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"userData\": {\n\t\t\"username\": \"REDACTED\"\n\t},\n\t\"expired\": true\n}"
+    }
+  },
+  "stateAfter": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"isLoggedIn\": true,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"userData\": {\n\t\t\"username\": \"REDACTED\"\n\t}\n}"
+    }
+  }
+}

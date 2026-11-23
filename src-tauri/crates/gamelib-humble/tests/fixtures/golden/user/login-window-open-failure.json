@@ -1,0 +1,53 @@
+{
+  "input": {
+    "about": "open() rejects: one warning, the watch settles error without closing anything",
+    "keyringInitial": {},
+    "seed": {}
+  },
+  "steps": [
+    {
+      "seq": 2,
+      "atMs": 0,
+      "kind": "startLogin settled",
+      "data": {
+        "status": "error"
+      }
+    }
+  ],
+  "seamCalls": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "op": "open",
+      "args": [
+        "https://auth.humblebundle.com/login",
+        {
+          "visible": true,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36"
+        }
+      ],
+      "threw": "window build failed"
+    }
+  ],
+  "requests": [],
+  "secretOps": [],
+  "outcomeNotes": [],
+  "outcomePushes": [],
+  "outcomesAfter": {},
+  "pushes": [],
+  "fenceCalls": [],
+  "logs": [
+    {
+      "seq": 1,
+      "atMs": 0,
+      "level": "warn",
+      "message": "Humble login window open failed: window build failed"
+    }
+  ],
+  "result": {
+    "status": "error"
+  },
+  "stateBefore": {},
+  "stateAfter": {},
+  "keyringAfter": {}
+}

@@ -1,0 +1,245 @@
+{
+  "input": {
+    "about": "Off macOS the cookie-clear window opens https://gamelib.invalid/",
+    "keyringInitial": {
+      "humble-session": "ory_session_fake=REDACTED",
+      "humble-csrf": "REDACTED"
+    },
+    "seed": {}
+  },
+  "steps": [],
+  "seamCalls": [
+    {
+      "seq": 6,
+      "atMs": 0,
+      "op": "clearStorage",
+      "args": [
+        "https://www.humblebundle.com",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36"
+      ],
+      "result": {
+        "localStorage": 0,
+        "sessionStorage": 0,
+        "indexedDB": 0,
+        "caches": 0,
+        "serviceWorkers": 0
+      }
+    },
+    {
+      "seq": 8,
+      "atMs": 0,
+      "op": "open",
+      "args": [
+        "https://gamelib.invalid/",
+        {
+          "visible": false,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36"
+        }
+      ],
+      "result": "login-humble-0"
+    },
+    {
+      "seq": 9,
+      "atMs": 0,
+      "op": "cookiesForDomain",
+      "args": [
+        "login-humble-0",
+        "humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 33,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "fake_tracking",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 10,
+      "atMs": 0,
+      "op": "clearCookies",
+      "args": [
+        "login-humble-0",
+        "humblebundle.com"
+      ],
+      "result": 3
+    },
+    {
+      "seq": 11,
+      "atMs": 0,
+      "op": "cookiesForDomain",
+      "args": [
+        "login-humble-0",
+        "humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 30,
+        "matched": []
+      }
+    },
+    {
+      "seq": 14,
+      "atMs": 0,
+      "op": "close",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": true
+    }
+  ],
+  "requests": [],
+  "secretOps": [
+    {
+      "seq": 2,
+      "atMs": 0,
+      "op": "invalidateCache",
+      "slot": "humble-session"
+    },
+    {
+      "op": "keyring_delete",
+      "slot": "humble-session",
+      "seq": 3,
+      "atMs": 0,
+      "answered": null
+    },
+    {
+      "seq": 4,
+      "atMs": 0,
+      "op": "invalidateCache",
+      "slot": "humble-csrf"
+    },
+    {
+      "op": "keyring_delete",
+      "slot": "humble-csrf",
+      "seq": 5,
+      "atMs": 0,
+      "answered": null
+    }
+  ],
+  "outcomeNotes": [
+    {
+      "seq": 1,
+      "atMs": 0,
+      "call": "noteSignedOut",
+      "store": "humble"
+    }
+  ],
+  "outcomePushes": [
+    {}
+  ],
+  "outcomesAfter": {},
+  "pushes": [],
+  "fenceCalls": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "call": "invalidate"
+    }
+  ],
+  "logs": [
+    {
+      "seq": 7,
+      "atMs": 0,
+      "level": "info",
+      "message": "Humble disconnect: cleared storage — localStorage=0, sessionStorage=0, indexedDB=0, caches=0, serviceWorkers=0"
+    },
+    {
+      "seq": 12,
+      "atMs": 0,
+      "level": "info",
+      "message": "Humble disconnect: cookie census before(total=33, matched=3, verdict=SUPPORTED_NONEMPTY) after(total=30, matched=0, verdict=SUPPORTED_NONEMPTY) deleted=3 survivingNonHumble=30"
+    },
+    {
+      "seq": 13,
+      "atMs": 0,
+      "level": "info",
+      "message": "Humble disconnect: cleared 3 humblebundle.com cookie(s)"
+    }
+  ],
+  "stateBefore": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"isLoggedIn\": true,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"encryptionDegraded\": false,\n\t\"userData\": {\n\t\t\"username\": \"REDACTED\"\n\t}\n}"
+    },
+    "store_cache/humble_audit.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:fake_game_one_steam\": [\n\t\t{\n\t\t\t\"event\": \"reveal\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"outcome\": \"ok\",\n\t\t\t\"title\": \"Fake Game One\",\n\t\t\t\"platform\": \"steam\"\n\t\t}\n\t],\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:fake_game_one_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_gifted_at.json": {
+      "utf8": "{\n\t\"fake_game_one_steam\": {\n\t\t\"giftedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake_game_one_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_library.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001\": {\n\t\t\"gamekey\": \"fake-gamekey-0001\",\n\t\t\"keys\": []\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_local_redeemed.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:fake_game_one_steam\": {\n\t\t\"redeemedAt\": 1795521600000,\n\t\t\"source\": \"user\"\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:fake_game_one_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_notified_expiration.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:fake_game_one_steam\": {\n\t\t\"expiration\": \"2027-01-01T00:00:00.000Z\"\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:fake_game_one_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_ownership_override.json": {
+      "utf8": "{\n\t\"fake_game_one_steam\": {\n\t\t\"overriddenAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake_game_one_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_revealed.json": {
+      "utf8": "{\n\t\"fake_game_one_steam\": {\n\t\t\"revealedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake_game_one_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_settle_declined.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:fake_game_one_steam\": {\n\t\t\"declinedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:fake_game_one_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_steam_appid.json": {
+      "utf8": "{\n\t\"fake game one\": {\n\t\t\"appId\": \"1\",\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake game one\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_sync.json": {
+      "utf8": "{\n\t\"state\": {\n\t\t\"syncedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"state\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    }
+  },
+  "stateAfter": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}"
+    },
+    "store_cache/humble_audit.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:fake_game_one_steam\": [\n\t\t{\n\t\t\t\"event\": \"reveal\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"outcome\": \"ok\",\n\t\t\t\"title\": \"Fake Game One\",\n\t\t\t\"platform\": \"steam\"\n\t\t}\n\t],\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:fake_game_one_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_gifted_at.json": {
+      "utf8": "{\n\t\"fake_game_one_steam\": {\n\t\t\"giftedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake_game_one_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_library.json": {
+      "utf8": "{\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}"
+    },
+    "store_cache/humble_local_redeemed.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:fake_game_one_steam\": {\n\t\t\"redeemedAt\": 1795521600000,\n\t\t\"source\": \"user\"\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:fake_game_one_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_notified_expiration.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:fake_game_one_steam\": {\n\t\t\"expiration\": \"2027-01-01T00:00:00.000Z\"\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:fake_game_one_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_ownership_override.json": {
+      "utf8": "{\n\t\"fake_game_one_steam\": {\n\t\t\"overriddenAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake_game_one_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_revealed.json": {
+      "utf8": "{\n\t\"fake_game_one_steam\": {\n\t\t\"revealedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake_game_one_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_settle_declined.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:fake_game_one_steam\": {\n\t\t\"declinedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:fake_game_one_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_steam_appid.json": {
+      "utf8": "{\n\t\"fake game one\": {\n\t\t\"appId\": \"1\",\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake game one\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_sync.json": {
+      "utf8": "{\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}"
+    }
+  },
+  "keyringAfter": {}
+}

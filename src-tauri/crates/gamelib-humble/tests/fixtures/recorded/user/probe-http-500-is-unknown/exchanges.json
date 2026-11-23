@@ -1,0 +1,45 @@
+[
+  {
+    "id": 1,
+    "request": {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 500,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-1.json"
+    }
+  }
+]

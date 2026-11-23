@@ -1,0 +1,174 @@
+{
+  "input": {
+    "about": "disconnect on a profile that never signed in: the wipes run over empty state without throwing",
+    "keyringInitial": {},
+    "seed": {}
+  },
+  "steps": [],
+  "seamCalls": [
+    {
+      "seq": 6,
+      "atMs": 0,
+      "op": "clearStorage",
+      "args": [
+        "https://www.humblebundle.com",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36"
+      ],
+      "result": {
+        "localStorage": 0,
+        "sessionStorage": 0,
+        "indexedDB": 0,
+        "caches": 0,
+        "serviceWorkers": 0
+      }
+    },
+    {
+      "seq": 8,
+      "atMs": 0,
+      "op": "open",
+      "args": [
+        "https://gamelib.invalid/",
+        {
+          "visible": false,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36"
+        }
+      ],
+      "result": "login-humble-0"
+    },
+    {
+      "seq": 9,
+      "atMs": 0,
+      "op": "cookiesForDomain",
+      "args": [
+        "login-humble-0",
+        "humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 31,
+        "matched": [
+          {
+            "name": "fake_tracking",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 10,
+      "atMs": 0,
+      "op": "clearCookies",
+      "args": [
+        "login-humble-0",
+        "humblebundle.com"
+      ],
+      "result": 1
+    },
+    {
+      "seq": 11,
+      "atMs": 0,
+      "op": "cookiesForDomain",
+      "args": [
+        "login-humble-0",
+        "humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 30,
+        "matched": []
+      }
+    },
+    {
+      "seq": 14,
+      "atMs": 0,
+      "op": "close",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": true
+    }
+  ],
+  "requests": [],
+  "secretOps": [
+    {
+      "seq": 2,
+      "atMs": 0,
+      "op": "invalidateCache",
+      "slot": "humble-session"
+    },
+    {
+      "op": "keyring_delete",
+      "slot": "humble-session",
+      "seq": 3,
+      "atMs": 0,
+      "answered": null
+    },
+    {
+      "seq": 4,
+      "atMs": 0,
+      "op": "invalidateCache",
+      "slot": "humble-csrf"
+    },
+    {
+      "op": "keyring_delete",
+      "slot": "humble-csrf",
+      "seq": 5,
+      "atMs": 0,
+      "answered": null
+    }
+  ],
+  "outcomeNotes": [
+    {
+      "seq": 1,
+      "atMs": 0,
+      "call": "noteSignedOut",
+      "store": "humble"
+    }
+  ],
+  "outcomePushes": [
+    {}
+  ],
+  "outcomesAfter": {},
+  "pushes": [],
+  "fenceCalls": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "call": "invalidate"
+    }
+  ],
+  "logs": [
+    {
+      "seq": 7,
+      "atMs": 0,
+      "level": "info",
+      "message": "Humble disconnect: cleared storage — localStorage=0, sessionStorage=0, indexedDB=0, caches=0, serviceWorkers=0"
+    },
+    {
+      "seq": 12,
+      "atMs": 0,
+      "level": "info",
+      "message": "Humble disconnect: cookie census before(total=31, matched=1, verdict=SUPPORTED_NONEMPTY) after(total=30, matched=0, verdict=SUPPORTED_NONEMPTY) deleted=1 survivingNonHumble=30"
+    },
+    {
+      "seq": 13,
+      "atMs": 0,
+      "level": "info",
+      "message": "Humble disconnect: cleared 1 humblebundle.com cookie(s)"
+    }
+  ],
+  "stateBefore": {},
+  "stateAfter": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}"
+    },
+    "store_cache/humble_library.json": {
+      "utf8": "{\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}"
+    },
+    "store_cache/humble_sync.json": {
+      "utf8": "{\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}"
+    }
+  },
+  "keyringAfter": {}
+}

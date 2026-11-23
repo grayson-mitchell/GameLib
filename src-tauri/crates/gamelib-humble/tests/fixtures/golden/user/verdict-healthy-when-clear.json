@@ -1,0 +1,25 @@
+{
+  "input": {
+    "about": "outcome healthy, the persisted expired flag not set",
+    "outcome": "healthy",
+    "expiredBefore": false,
+    "userData": true,
+    "epochMoves": false
+  },
+  "result": "unchanged",
+  "pushes": [],
+  "logs": [
+    "[signInProbe] humble verdict=unchanged"
+  ],
+  "expiredAfter": null,
+  "stateBefore": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"isLoggedIn\": true,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"userData\": {\n\t\t\"username\": \"REDACTED\"\n\t}\n}"
+    }
+  },
+  "stateAfter": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"isLoggedIn\": true,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"userData\": {\n\t\t\"username\": \"REDACTED\"\n\t}\n}"
+    }
+  }
+}

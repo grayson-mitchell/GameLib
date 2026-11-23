@@ -1,0 +1,33 @@
+{
+  "input": {
+    "about": "The push carries username only when userData is stored",
+    "outcome": "expired",
+    "expiredBefore": false,
+    "userData": false,
+    "epochMoves": false
+  },
+  "result": "latched",
+  "pushes": [
+    {
+      "channel": "humbleAuthState",
+      "payload": {
+        "isLoggedIn": true,
+        "expired": true
+      }
+    }
+  ],
+  "logs": [
+    "[signInProbe] humble verdict=latched"
+  ],
+  "expiredAfter": true,
+  "stateBefore": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"isLoggedIn\": true,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}"
+    }
+  },
+  "stateAfter": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"isLoggedIn\": true,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"expired\": true\n}"
+    }
+  }
+}

@@ -1,0 +1,194 @@
+{
+  "input": {
+    "about": "The csrf_cookie read rejects after the session was accepted: one warning, the sign-in is kept",
+    "keyringInitial": {},
+    "seed": {}
+  },
+  "steps": [
+    {
+      "seq": 3,
+      "atMs": 1500,
+      "kind": "session-status request",
+      "data": {
+        "call": 0
+      }
+    },
+    {
+      "seq": 12,
+      "atMs": 1500,
+      "kind": "startLogin settled",
+      "data": {
+        "status": "done"
+      }
+    }
+  ],
+  "seamCalls": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "op": "open",
+      "args": [
+        "https://auth.humblebundle.com/login",
+        {
+          "visible": true,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36"
+        }
+      ],
+      "result": "login-humble-0"
+    },
+    {
+      "seq": 1,
+      "atMs": 1500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 2,
+      "atMs": 1500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 33,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 8,
+      "atMs": 1500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        [
+          "csrf_cookie"
+        ]
+      ],
+      "threw": "cookie jar closed"
+    },
+    {
+      "seq": 11,
+      "atMs": 1500,
+      "op": "close",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": true
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    }
+  ],
+  "secretOps": [
+    {
+      "seq": 4,
+      "atMs": 1500,
+      "op": "invalidateCache",
+      "slot": "humble-session"
+    },
+    {
+      "op": "keyring_set",
+      "slot": "humble-session",
+      "value": "ory_session_fake=REDACTED",
+      "seq": 5,
+      "atMs": 1500,
+      "answered": null
+    },
+    {
+      "op": "keyring_available",
+      "slot": "humble-session",
+      "seq": 6,
+      "atMs": 1500,
+      "answered": true
+    }
+  ],
+  "outcomeNotes": [
+    {
+      "seq": 7,
+      "atMs": 1500,
+      "call": "noteSignInSucceeded",
+      "store": "humble"
+    }
+  ],
+  "outcomePushes": [
+    {
+      "humble": "healthy"
+    }
+  ],
+  "outcomesAfter": {
+    "humble": "healthy"
+  },
+  "pushes": [
+    {
+      "seq": 10,
+      "atMs": 1500,
+      "channel": "humbleAuthState",
+      "payload": {
+        "isLoggedIn": true,
+        "expired": false
+      }
+    }
+  ],
+  "fenceCalls": [],
+  "logs": [
+    {
+      "seq": 9,
+      "atMs": 1500,
+      "level": "warn",
+      "message": "Humble csrf_cookie capture failed (non-fatal, optional): cookie jar closed"
+    }
+  ],
+  "result": {
+    "status": "done"
+  },
+  "stateBefore": {},
+  "stateAfter": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"encryptionDegraded\": false,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"isLoggedIn\": true,\n\t\"expired\": false\n}"
+    }
+  },
+  "keyringAfter": {
+    "humble-session": "ory_session_fake=REDACTED"
+  }
+}

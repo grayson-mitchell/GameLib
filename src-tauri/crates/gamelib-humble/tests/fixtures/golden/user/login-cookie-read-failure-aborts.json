@@ -1,0 +1,88 @@
+{
+  "input": {
+    "about": "The first cookie read throws: UNSUPPORTED_OR_ERROR settles error and closes the window",
+    "keyringInitial": {},
+    "seed": {}
+  },
+  "steps": [
+    {
+      "seq": 6,
+      "atMs": 1500,
+      "kind": "startLogin settled",
+      "data": {
+        "status": "error"
+      }
+    }
+  ],
+  "seamCalls": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "op": "open",
+      "args": [
+        "https://auth.humblebundle.com/login",
+        {
+          "visible": true,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36"
+        }
+      ],
+      "result": "login-humble-0"
+    },
+    {
+      "seq": 1,
+      "atMs": 1500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 2,
+      "atMs": 1500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "threw": "humble_login:no-window:login-humble-0"
+    },
+    {
+      "seq": 5,
+      "atMs": 1500,
+      "op": "close",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": true
+    }
+  ],
+  "requests": [],
+  "secretOps": [],
+  "outcomeNotes": [],
+  "outcomePushes": [],
+  "outcomesAfter": {},
+  "pushes": [],
+  "fenceCalls": [],
+  "logs": [
+    {
+      "seq": 3,
+      "atMs": 1500,
+      "level": "warn",
+      "message": "Humble login-window cookie read failed: humble_login:no-window:login-humble-0"
+    },
+    {
+      "seq": 4,
+      "atMs": 1500,
+      "level": "warn",
+      "message": "Humble login-window cookie read UNSUPPORTED_OR_ERROR for window login-humble-0 — aborting watch"
+    }
+  ],
+  "result": {
+    "status": "error"
+  },
+  "stateBefore": {},
+  "stateAfter": {},
+  "keyringAfter": {}
+}

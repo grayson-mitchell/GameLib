@@ -1,0 +1,1507 @@
+{
+  "input": {
+    "about": "Identical rejections log once, then a liveness line every 30 s with the suppressed count; the status change to unknown logs at once",
+    "keyringInitial": {},
+    "seed": {}
+  },
+  "steps": [
+    {
+      "seq": 3,
+      "atMs": 1500,
+      "kind": "session-status request",
+      "data": {
+        "call": 0
+      }
+    },
+    {
+      "seq": 9,
+      "atMs": 4500,
+      "kind": "session-status request",
+      "data": {
+        "call": 1
+      }
+    },
+    {
+      "seq": 14,
+      "atMs": 7500,
+      "kind": "session-status request",
+      "data": {
+        "call": 2
+      }
+    },
+    {
+      "seq": 19,
+      "atMs": 10500,
+      "kind": "session-status request",
+      "data": {
+        "call": 3
+      }
+    },
+    {
+      "seq": 24,
+      "atMs": 13500,
+      "kind": "session-status request",
+      "data": {
+        "call": 4
+      }
+    },
+    {
+      "seq": 29,
+      "atMs": 16500,
+      "kind": "session-status request",
+      "data": {
+        "call": 5
+      }
+    },
+    {
+      "seq": 34,
+      "atMs": 19500,
+      "kind": "session-status request",
+      "data": {
+        "call": 6
+      }
+    },
+    {
+      "seq": 39,
+      "atMs": 22500,
+      "kind": "session-status request",
+      "data": {
+        "call": 7
+      }
+    },
+    {
+      "seq": 44,
+      "atMs": 25500,
+      "kind": "session-status request",
+      "data": {
+        "call": 8
+      }
+    },
+    {
+      "seq": 49,
+      "atMs": 28500,
+      "kind": "session-status request",
+      "data": {
+        "call": 9
+      }
+    },
+    {
+      "seq": 54,
+      "atMs": 31500,
+      "kind": "session-status request",
+      "data": {
+        "call": 10
+      }
+    },
+    {
+      "seq": 60,
+      "atMs": 34500,
+      "kind": "session-status request",
+      "data": {
+        "call": 11
+      }
+    },
+    {
+      "seq": 66,
+      "atMs": 37500,
+      "kind": "session-status request",
+      "data": {
+        "call": 12
+      }
+    },
+    {
+      "seq": 76,
+      "atMs": 37500,
+      "kind": "startLogin settled",
+      "data": {
+        "status": "done"
+      }
+    }
+  ],
+  "seamCalls": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "op": "open",
+      "args": [
+        "https://auth.humblebundle.com/login",
+        {
+          "visible": true,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36"
+        }
+      ],
+      "result": "login-humble-0"
+    },
+    {
+      "seq": 1,
+      "atMs": 1500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 2,
+      "atMs": 1500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 5,
+      "atMs": 3000,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 6,
+      "atMs": 3000,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 7,
+      "atMs": 4500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 8,
+      "atMs": 4500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 10,
+      "atMs": 6000,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 11,
+      "atMs": 6000,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 12,
+      "atMs": 7500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 13,
+      "atMs": 7500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 15,
+      "atMs": 9000,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 16,
+      "atMs": 9000,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 17,
+      "atMs": 10500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 18,
+      "atMs": 10500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 20,
+      "atMs": 12000,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 21,
+      "atMs": 12000,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 22,
+      "atMs": 13500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 23,
+      "atMs": 13500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 25,
+      "atMs": 15000,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 26,
+      "atMs": 15000,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 27,
+      "atMs": 16500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 28,
+      "atMs": 16500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 30,
+      "atMs": 18000,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 31,
+      "atMs": 18000,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 32,
+      "atMs": 19500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 33,
+      "atMs": 19500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 35,
+      "atMs": 21000,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 36,
+      "atMs": 21000,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 37,
+      "atMs": 22500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 38,
+      "atMs": 22500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 40,
+      "atMs": 24000,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 41,
+      "atMs": 24000,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 42,
+      "atMs": 25500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 43,
+      "atMs": 25500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 45,
+      "atMs": 27000,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 46,
+      "atMs": 27000,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 47,
+      "atMs": 28500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 48,
+      "atMs": 28500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 50,
+      "atMs": 30000,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 51,
+      "atMs": 30000,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 52,
+      "atMs": 31500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 53,
+      "atMs": 31500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 56,
+      "atMs": 33000,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 57,
+      "atMs": 33000,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 58,
+      "atMs": 34500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 59,
+      "atMs": 34500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 62,
+      "atMs": 36000,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 63,
+      "atMs": 36000,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 64,
+      "atMs": 37500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 65,
+      "atMs": 37500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 71,
+      "atMs": 37500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        [
+          "csrf_cookie"
+        ]
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 75,
+      "atMs": 37500,
+      "op": "close",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": true
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    }
+  ],
+  "secretOps": [
+    {
+      "seq": 67,
+      "atMs": 37500,
+      "op": "invalidateCache",
+      "slot": "humble-session"
+    },
+    {
+      "op": "keyring_set",
+      "slot": "humble-session",
+      "value": "ory_session_fake=REDACTED",
+      "seq": 68,
+      "atMs": 37500,
+      "answered": null
+    },
+    {
+      "op": "keyring_available",
+      "slot": "humble-session",
+      "seq": 69,
+      "atMs": 37500,
+      "answered": true
+    },
+    {
+      "seq": 72,
+      "atMs": 37500,
+      "op": "invalidateCache",
+      "slot": "humble-csrf"
+    },
+    {
+      "op": "keyring_set",
+      "slot": "humble-csrf",
+      "value": "REDACTED",
+      "seq": 73,
+      "atMs": 37500,
+      "answered": null
+    }
+  ],
+  "outcomeNotes": [
+    {
+      "seq": 70,
+      "atMs": 37500,
+      "call": "noteSignInSucceeded",
+      "store": "humble"
+    }
+  ],
+  "outcomePushes": [
+    {
+      "humble": "healthy"
+    }
+  ],
+  "outcomesAfter": {
+    "humble": "healthy"
+  },
+  "pushes": [
+    {
+      "seq": 74,
+      "atMs": 37500,
+      "channel": "humbleAuthState",
+      "payload": {
+        "isLoggedIn": true,
+        "expired": false
+      }
+    }
+  ],
+  "fenceCalls": [],
+  "logs": [
+    {
+      "seq": 4,
+      "atMs": 1500,
+      "level": "warn",
+      "message": "Humble login validation rejected candidate session: anonymous"
+    },
+    {
+      "seq": 55,
+      "atMs": 31500,
+      "level": "warn",
+      "message": "Humble login still waiting (status unchanged; 9 rejection(s) suppressed since the last line): anonymous"
+    },
+    {
+      "seq": 61,
+      "atMs": 34500,
+      "level": "warn",
+      "message": "Humble login validation rejected candidate session: unknown"
+    }
+  ],
+  "result": {
+    "status": "done"
+  },
+  "stateBefore": {},
+  "stateAfter": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"encryptionDegraded\": false,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"isLoggedIn\": true,\n\t\"expired\": false\n}"
+    }
+  },
+  "keyringAfter": {
+    "humble-session": "ory_session_fake=REDACTED",
+    "humble-csrf": "REDACTED"
+  }
+}

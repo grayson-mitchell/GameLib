@@ -1,0 +1,23 @@
+{
+  "input": {
+    "about": "stopLogin() and notifyLoginNavigated() with no watch make no seam call and no write",
+    "keyringInitial": {},
+    "seed": {}
+  },
+  "steps": [],
+  "seamCalls": [],
+  "requests": [],
+  "secretOps": [],
+  "outcomeNotes": [],
+  "outcomePushes": [],
+  "outcomesAfter": {},
+  "pushes": [],
+  "fenceCalls": [],
+  "logs": [],
+  "result": {
+    "loggedIn": false
+  },
+  "stateBefore": {},
+  "stateAfter": {},
+  "keyringAfter": {}
+}

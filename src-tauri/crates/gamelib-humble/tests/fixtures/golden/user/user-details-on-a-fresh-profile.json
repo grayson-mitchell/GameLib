@@ -1,0 +1,24 @@
+{
+  "input": {
+    "about": "No account: not logged in and no user data (never a default)",
+    "keyringInitial": {},
+    "seed": {}
+  },
+  "steps": [],
+  "seamCalls": [],
+  "requests": [],
+  "secretOps": [],
+  "outcomeNotes": [],
+  "outcomePushes": [],
+  "outcomesAfter": {},
+  "pushes": [],
+  "fenceCalls": [],
+  "logs": [],
+  "result": {
+    "isLoggedIn": false,
+    "userDetails": null
+  },
+  "stateBefore": {},
+  "stateAfter": {},
+  "keyringAfter": {}
+}

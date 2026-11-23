@@ -1,0 +1,125 @@
+{
+  "input": {
+    "about": "stopLogin() while waiting is a silent cancel: waiting, no store writes, the window closed",
+    "keyringInitial": {},
+    "seed": {}
+  },
+  "steps": [
+    {
+      "seq": 6,
+      "atMs": 3000,
+      "kind": "stopLogin()"
+    },
+    {
+      "seq": 8,
+      "atMs": 3000,
+      "kind": "startLogin settled",
+      "data": {
+        "status": "waiting"
+      }
+    }
+  ],
+  "seamCalls": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "op": "open",
+      "args": [
+        "https://auth.humblebundle.com/login",
+        {
+          "visible": true,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36"
+        }
+      ],
+      "result": "login-humble-0"
+    },
+    {
+      "seq": 1,
+      "atMs": 1500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 2,
+      "atMs": 1500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 31,
+        "matched": [
+          {
+            "name": "fake_tracking",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 4,
+      "atMs": 3000,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 5,
+      "atMs": 3000,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 31,
+        "matched": [
+          {
+            "name": "fake_tracking",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 7,
+      "atMs": 3000,
+      "op": "close",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": true
+    }
+  ],
+  "requests": [],
+  "secretOps": [],
+  "outcomeNotes": [],
+  "outcomePushes": [],
+  "outcomesAfter": {},
+  "pushes": [],
+  "fenceCalls": [],
+  "logs": [
+    {
+      "seq": 3,
+      "atMs": 1500,
+      "level": "warn",
+      "message": "Humble login-window cookie jar is live but no Humble session cookie (ory_session_* / _simpleauth_sess) was found in the filtered set: total=31 matchedCount=1"
+    }
+  ],
+  "result": {
+    "status": "waiting"
+  },
+  "stateBefore": {},
+  "stateAfter": {},
+  "keyringAfter": {}
+}

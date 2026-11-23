@@ -144,7 +144,7 @@ const realProcess = runInThisContext('process') as NodeJS.Process
 
 class OracleHostError extends Error {}
 
-async function withUtc<T>(fn: () => Promise<T>): Promise<T> {
+export async function withUtc<T>(fn: () => Promise<T>): Promise<T> {
   const before = realProcess.env.TZ
   realProcess.env.TZ = 'UTC'
   try {
@@ -228,7 +228,7 @@ function plain(value: unknown): unknown {
 }
 
 /** A snapshot as the exact text of each file (base64 only for bytes that are not UTF-8). */
-function readableSnapshot(
+export function readableSnapshot(
   userData: string
 ): Record<string, { utf8: string } | { base64: string }> {
   const out: Record<string, { utf8: string } | { base64: string }> = {}

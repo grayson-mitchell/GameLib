@@ -1,0 +1,39 @@
+{
+  "input": {
+    "about": "An absent session slot behind a connected flag is not proof of expiry: no request",
+    "keyringInitial": {},
+    "seed": {}
+  },
+  "steps": [],
+  "seamCalls": [],
+  "requests": [],
+  "secretOps": [
+    {
+      "op": "keyring_get",
+      "slot": "humble-session",
+      "seq": 0,
+      "atMs": 0,
+      "answered": null
+    }
+  ],
+  "outcomeNotes": [],
+  "outcomePushes": [],
+  "outcomesAfter": {},
+  "pushes": [],
+  "fenceCalls": [],
+  "logs": [],
+  "result": {
+    "outcome": "unknown"
+  },
+  "stateBefore": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"isLoggedIn\": true,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}"
+    }
+  },
+  "stateAfter": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"isLoggedIn\": true,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}"
+    }
+  },
+  "keyringAfter": {}
+}

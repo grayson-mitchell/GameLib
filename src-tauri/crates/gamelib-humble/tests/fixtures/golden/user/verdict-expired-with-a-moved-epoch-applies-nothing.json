@@ -1,0 +1,25 @@
+{
+  "input": {
+    "about": "outcome expired after a sign-in landed: a stale epoch writes nothing and pushes nothing",
+    "outcome": "expired",
+    "expiredBefore": false,
+    "userData": true,
+    "epochMoves": true
+  },
+  "result": "stale",
+  "pushes": [],
+  "logs": [
+    "[signInProbe] humble verdict=stale"
+  ],
+  "expiredAfter": null,
+  "stateBefore": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"isLoggedIn\": true,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"userData\": {\n\t\t\"username\": \"REDACTED\"\n\t}\n}"
+    }
+  },
+  "stateAfter": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"isLoggedIn\": true,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"userData\": {\n\t\t\"username\": \"REDACTED\"\n\t}\n}"
+    }
+  }
+}
