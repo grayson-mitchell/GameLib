@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-22-PLAN.md
-last_updated: "2026-11-23T05:53:51.721Z"
+stopped_at: Completed 87-23-PLAN.md
+last_updated: "2026-11-23T06:08:57.883Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 8a1cf7e695481dd3889fddedfb7f9e59910a713c
+state_head: efef03ce397f57ee8bbe8c091a8c0534e58a0a94
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 23 of 59
+Plan: 24 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -432,6 +432,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P20 | 33 min | 3 tasks | 31 files |
 | Phase 87 P21 | 35 min | 2 tasks | 7 files |
 | Phase 87 P22 | 25 min | 2 tasks | 22 files |
+| Phase 87 P23 | 35min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -888,6 +889,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: D-22: the wine command core (valid_wine, env builders, run_wine_command with prefix check) is Rust in gamelib-wine; the process env, Darwin release, default settings and a cancel arrive as a WineHost the shell supplies, since the crate reads no environment
 - [Phase 87]: 87-21: run_wine_command spawns as a wine-command Helper child, 4 MiB output cap, shutdown registrant, argv only; trackKey and resolveOnExit are accepted and ignored until Phase 88 (deltas.json)
 - [Phase 87]: 87-22: stores.ts and the wineDownloaderInfoStore mirror stay after the TS wine manager deletion (TS DXMT reads it until 87-37); the single-stream download is a filed todo (D-16)
+- [Phase 87]: 87-23: discovery takes a DiscoveryHost (roots, PATH, settings, Steam-library answer) from the shell; no applications root exists because the TS reads no /Applications of its own
+- [Phase 87]: 87-23: default_wine_from_path takes two probes (executable for wine, exists for the wineserver); plist (already locked via tauri) reads bundle plists
 
 ### Pending Todos
 
@@ -1167,8 +1170,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T05:53:49.503Z
-Stopped at: Completed 87-22-PLAN.md
+Last session: 2026-11-23T06:08:55.521Z
+Stopped at: Completed 87-23-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

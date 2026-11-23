@@ -648,7 +648,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 22/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
+**Plans:** 23/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
 
 Plans:
 **Wave 1**
@@ -686,7 +686,7 @@ Plans:
 
 **Wave 7** *(blocked on Wave 6 completion)*
 - [x] 87-22-PLAN.md — Wine-manager TS deleted; single-stream quirk todo
-- [ ] 87-23-PLAN.md — Wine discovery and the PATH default in the crate
+- [x] 87-23-PLAN.md — Wine discovery and the PATH default in the crate
 
 **Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 87-24-PLAN.md — `wine.isValidVersion` native, validWine shim, sync env builders as pinned twins
