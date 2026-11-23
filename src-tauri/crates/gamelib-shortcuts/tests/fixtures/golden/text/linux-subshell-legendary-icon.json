@@ -1,0 +1,35 @@
+{
+  "platform": "linux",
+  "input": {
+    "title": "Game $(touch pwned)",
+    "appName": "$(touch pwned)",
+    "runner": "legendary",
+    "settings": {
+      "addDesktopShortcuts": true,
+      "addStartMenuShortcuts": true,
+      "addSteamShortcuts": false
+    },
+    "fromMenu": false,
+    "withIcon": true
+  },
+  "outcome": "resolved",
+  "tree": {
+    "Applications": [],
+    "Desktop": [
+      {
+        "path": "Game $(touch pwned).desktop",
+        "kind": "file",
+        "mode": "0777",
+        "utf8": "[Desktop Entry]\nName=Game $(touch pwned)\nExec=xdg-open gamelib://launch?appName=$(touch pwned)&runner=legendary\nTerminal=false\nType=Application\nIcon=<ICONS>/$(touch pwned).jpg\nCategories=Game;\n"
+      }
+    ],
+    ".local/share/applications": [
+      {
+        "path": "Game $(touch pwned).desktop",
+        "kind": "file",
+        "mode": null,
+        "utf8": "[Desktop Entry]\nName=Game $(touch pwned)\nExec=xdg-open gamelib://launch?appName=$(touch pwned)&runner=legendary\nTerminal=false\nType=Application\nIcon=<ICONS>/$(touch pwned).jpg\nCategories=Game;\n"
+      }
+    ]
+  }
+}

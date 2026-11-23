@@ -31,3 +31,7 @@ src-tauri/crates/gamelib-log/tests/fixtures/golden/expected/** -text
 # Phase 85-02: the store corpus is byte-exact (a CRLF edge case, a BOM, tab versus 2-space layout) and pinned by sha256 in
 # MANIFEST.json, so it must never be normalised by the `* text=auto eol=lf` rule above. This line must stay AFTER it.
 src-tauri/crates/gamelib-store/tests/fixtures/corpus/** -text
+
+# Phase 94-05: the shortcut goldens are byte-exact records of what the TS wrote (run.sh, Info.plist and
+# .desktop text carry exact whitespace); never normalise them.
+src-tauri/crates/gamelib-shortcuts/tests/fixtures/** -text

@@ -1,0 +1,35 @@
+{
+  "platform": "linux",
+  "input": {
+    "title": "\"Quoted\" Title",
+    "appName": "a\"b\"; touch pwned; \"",
+    "runner": "legendary",
+    "settings": {
+      "addDesktopShortcuts": true,
+      "addStartMenuShortcuts": true,
+      "addSteamShortcuts": false
+    },
+    "fromMenu": false,
+    "withIcon": false
+  },
+  "outcome": "resolved",
+  "tree": {
+    "Applications": [],
+    "Desktop": [
+      {
+        "path": "Quoted Title.desktop",
+        "kind": "file",
+        "mode": "0777",
+        "utf8": "[Desktop Entry]\nName=\"Quoted\" Title\nExec=xdg-open gamelib://launch?appName=a\"b\"; touch pwned; \"&runner=legendary\nTerminal=false\nType=Application\nCategories=Game;\n"
+      }
+    ],
+    ".local/share/applications": [
+      {
+        "path": "Quoted Title.desktop",
+        "kind": "file",
+        "mode": null,
+        "utf8": "[Desktop Entry]\nName=\"Quoted\" Title\nExec=xdg-open gamelib://launch?appName=a\"b\"; touch pwned; \"&runner=legendary\nTerminal=false\nType=Application\nCategories=Game;\n"
+      }
+    ]
+  }
+}

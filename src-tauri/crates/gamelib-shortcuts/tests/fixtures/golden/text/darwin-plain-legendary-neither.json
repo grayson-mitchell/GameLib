@@ -1,0 +1,21 @@
+{
+  "platform": "darwin",
+  "input": {
+    "title": "Plain Game",
+    "appName": "plainapp",
+    "runner": "legendary",
+    "settings": {
+      "addDesktopShortcuts": false,
+      "addStartMenuShortcuts": false,
+      "addSteamShortcuts": false
+    },
+    "fromMenu": false,
+    "withIcon": false
+  },
+  "outcome": "resolved",
+  "tree": {
+    "Applications": [],
+    "Desktop": [],
+    ".local/share/applications": []
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "platform": "linux",
+  "input": {
+    "title": "  spaced   out  ",
+    "appName": " a  b ",
+    "runner": "legendary",
+    "settings": {
+      "addDesktopShortcuts": true,
+      "addStartMenuShortcuts": true,
+      "addSteamShortcuts": false
+    },
+    "fromMenu": false,
+    "withIcon": false
+  },
+  "outcome": "resolved",
+  "tree": {
+    "Applications": [],
+    "Desktop": [
+      {
+        "path": "  spaced   out.desktop",
+        "kind": "file",
+        "mode": "0777",
+        "utf8": "[Desktop Entry]\nName=  spaced   out  \nExec=xdg-open gamelib://launch?appName= a  b &runner=legendary\nTerminal=false\nType=Application\nCategories=Game;\n"
+      }
+    ],
+    ".local/share/applications": [
+      {
+        "path": "  spaced   out.desktop",
+        "kind": "file",
+        "mode": null,
+        "utf8": "[Desktop Entry]\nName=  spaced   out  \nExec=xdg-open gamelib://launch?appName= a  b &runner=legendary\nTerminal=false\nType=Application\nCategories=Game;\n"
+      }
+    ]
+  }
+}
