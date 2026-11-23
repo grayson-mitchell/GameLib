@@ -5,10 +5,12 @@
 //! These are the one-way on-disk state of the phase: the markers and the conf are written byte for
 //! byte as the released TS builds wrote them, and a marker a newer build wrote is never overwritten.
 //! The ledger and the registry are in memory only (no file); [`crate::ctx::EngineCtx`] holds them.
-//! CrossOver bottle creation, the wineserver kill and the guarded removal are the next slice.
+//! [`lifecycle`] is the destructive half: CrossOver bottle creation, the wineserver kill and the guarded,
+//! sibling-safe removal (D-17, D-19).
 
 pub mod conf;
 pub mod ledger;
+pub mod lifecycle;
 pub mod marker;
 pub mod paths;
 pub mod pin_marker;

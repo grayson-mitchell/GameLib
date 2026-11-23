@@ -12,18 +12,26 @@
 //! golden. A count floor lives here beside the replay, so editing the JSON alone cannot lower the
 //! bar, and an empty case list fails. POSIX only, as the TS oracle's replays are.
 //!
-//! The cases of the create, kill and removal ops (`create-crossover`, `create-fallback`, `ensure`,
-//! `kill`, `remove-created`) are listed in [`LATER_OPS`] and replay in 87-39; a case whose op is in
-//! neither list fails the suite.
+//! The CrossOver create, wineserver kill and guarded removal cases (`create-crossover`, `kill`,
+//! `remove-created`, 87-39) replay here too, against a scripted `SpecRunner` whose spawn trace and time
+//! limits are compared as well. The fallback create and the per-game ensure cases (`create-fallback`,
+//! `ensure`) are listed in [`LATER_OPS`] and replay in 87-40; a case whose op is in none of the lists
+//! fails the suite.
 #![cfg(unix)]
 
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use gamelib_core::clock::SystemClock;
+use gamelib_core::process::{BoxFuture, LineSink, ProcSpec, SpecOutput, SpecRunner};
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::bottles::conf::{build_cxbottle_conf, write_cxbottle_conf};
+use gamelib_engine::bottles::lifecycle::{
+    create_crossover_bottle, kill_bottle_wineserver, remove_created_bottle_dir, CreateOptions,
+    KILL_TIMEOUT_MS,
+};
 use gamelib_engine::bottles::marker::{
     self, read_marker_summary, reconcile_with, record_crossover_with, record_pinned_with,
     restore_needs_absent_pin, Gate,
@@ -36,12 +44,13 @@ use gamelib_engine::engines::{
     is_bottle_provisioned, read_bottle_engine_marker_kind, DxvkBuild, NonCrossoverEngine,
 };
 use gamelib_engine::offline::MarkerKind;
-use gamelib_engine::testing::RecordingLog;
+use gamelib_engine::testing::{RecordingLog, ScriptedSpecRunner};
 use gamelib_store::host::StoreHost;
 use gamelib_store::version_gate::GateState;
 use gamelib_testutil::FakeHome;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+use tokio_util::sync::CancellationToken;
 
 /// `golden/bottles` holds 146 cases; a later edit may raise this, never lower it.
 const CASE_FLOOR: usize = 140;
@@ -59,21 +68,20 @@ const STATE_OPS: [&str; 9] = [
     "resolve-prefix",
 ];
 
-/// The ops 87-39 ports (CrossOver and fallback bottle creation, the per-game flight, the wineserver
-/// kill, guarded removal). Listed so a new op in the case list cannot go unnoticed.
-const LATER_OPS: [&str; 5] = [
-    "create-crossover",
-    "create-fallback",
-    "ensure",
-    "kill",
-    "remove-created",
-];
+/// The ops 87-39 ports: CrossOver bottle creation, the wineserver kill and the guarded removal.
+const LIFECYCLE_OPS: [&str; 3] = ["create-crossover", "kill", "remove-created"];
+
+/// The ops 87-40 ports (the fallback bottle creation and the per-game flight). Listed so a new op in
+/// the case list cannot go unnoticed.
+const LATER_OPS: [&str; 2] = ["create-fallback", "ensure"];
 
 /// The two replayed ops of the pinned engine the fixture markers name.
 const SYNTHETIC_PIN_LABEL: &str = "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)";
 const CURRENT_PIN_ID: &str = "wine-staging-11.20";
 const CURRENT_PIN_WINE_VERSION: &str = "11.20";
 const CURRENT_PIN_DXVK_VERSION: &str = "v1.10.3-20230507-repack";
+const WINESERVER_BIN: &str =
+    "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver";
 const CX_BIN_DIR: &str = "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin";
 const BOTTLE_ID_3: &str = "AAAAAAAA-0000-4000-8000-000000000003";
 const BOTTLES_REL: &str = "Library/Application Support/CrossOver/Bottles";
@@ -163,11 +171,11 @@ fn a_shrunken_case_list_fails_the_floor() {
 }
 
 #[test]
-fn every_case_op_is_replayed_here_or_scheduled_for_87_39() {
+fn every_case_op_is_replayed_here_or_scheduled_for_87_40() {
     for case in cases() {
         let op = case["op"].as_str().unwrap();
         assert!(
-            STATE_OPS.contains(&op) || LATER_OPS.contains(&op),
+            STATE_OPS.contains(&op) || LIFECYCLE_OPS.contains(&op) || LATER_OPS.contains(&op),
             "case {} has op {op}, which neither list names",
             case["id"]
         );
@@ -330,14 +338,23 @@ impl Profile {
     /// A fixture bottle: the committed `state/bottles/<name>` tree under the Bottles root, with the
     /// `<TOOLS>` and `<HOME>` placeholders of its text expanded and its modes kept.
     fn build_bottle(&self, name: &str) {
+        self.build_bottle_as(name, name);
+    }
+
+    /// The fixture bottle `fixture` laid down under the name `name` (what a scripted `cxbottle` leaves).
+    fn build_bottle_as(&self, fixture: &str, name: &str) {
         copy_tree(
-            &fixtures().join("state/bottles").join(name),
+            &fixtures().join("state/bottles").join(fixture),
             &self.bottles_root().join(name),
             Some(self),
         );
     }
 
     fn ctx(&self, log: Arc<RecordingLog>) -> EngineCtx {
+        self.ctx_with(log, None)
+    }
+
+    fn ctx_with(&self, log: Arc<RecordingLog>, proc: Option<Arc<dyn SpecRunner>>) -> EngineCtx {
         let paths = EnginePaths {
             app_folder: self.app_folder.clone(),
             user_data: self.user_data.clone(),
@@ -345,14 +362,18 @@ impl Profile {
             user_home: self.root().to_path_buf(),
             temp: self.root().join("tmp"),
         };
-        EngineCtx::new(
+        let ctx = EngineCtx::new(
             Arc::new(StoreHost::new()),
             Arc::new(SystemClock),
             Platform::Mac,
             paths,
             Shutdown::new(),
-        )
-        .with_log(log)
+        );
+        let ctx = match proc {
+            Some(proc) => ctx.with_proc(proc),
+            None => ctx,
+        };
+        ctx.with_log(log)
     }
 
     /// `snapshotNormalised`: every entry under the profile, sorted by path, with each file's sha256
@@ -480,6 +501,132 @@ fn materialise(value: &Value) -> Value {
         }
         other => other.clone(),
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The scripted spawn seam of the lifecycle cases (what the oracle's spawn tracer did)
+// ---------------------------------------------------------------------------------------------
+
+/// The program an effect fires on, and what it does.
+type Effect = (String, Box<dyn FnOnce() + Send>);
+
+/// A scripted runner that also runs one effect when its program is first spawned (what
+/// `cxbottle --create` leaves in the bottle, or a signal that fires while it runs) and records the
+/// time limit and the cancel wiring of every spawn (the oracle's `spawnLimits`).
+struct EffectRunner {
+    inner: ScriptedSpecRunner,
+    effect: Mutex<Option<Effect>>,
+    limits: Mutex<Vec<Value>>,
+}
+
+impl SpecRunner for EffectRunner {
+    fn run(&self, spec: ProcSpec, on_line: Option<LineSink>) -> BoxFuture<SpecOutput> {
+        self.limits.lock().unwrap().push(json!({
+            "program": spec.program,
+            "argv": spec.argv,
+            "timeoutMs": spec.timeout.map(|d| d.as_millis() as u64),
+            "unbounded": spec.timeout.is_none(),
+            "signal": spec.cancel.is_some(),
+        }));
+        let fire = {
+            let mut slot = self.effect.lock().unwrap();
+            if slot
+                .as_ref()
+                .is_some_and(|(program, _)| *program == spec.program)
+            {
+                slot.take().map(|(_, effect)| effect)
+            } else {
+                None
+            }
+        };
+        if let Some(effect) = fire {
+            effect();
+        }
+        self.inner.run(spec, on_line)
+    }
+}
+
+/// What a case's scripted process answers: `code` (an exit code, or `null` for a run cut by its
+/// timeout), `stderr`, or `throws` (the spawn failed, as Node's `String(error)` says it).
+fn scripted_output(script: &Value) -> SpecOutput {
+    if let Some(reason) = script["throws"].as_str() {
+        return SpecOutput {
+            code: None,
+            stderr: format!("Error: {reason}"),
+            ..SpecOutput::default()
+        };
+    }
+    match script.get("code") {
+        Some(Value::Null) => SpecOutput {
+            code: None,
+            timed_out: true,
+            ..SpecOutput::default()
+        },
+        code => SpecOutput {
+            code: Some(code.and_then(Value::as_i64).unwrap_or(0) as i32),
+            stderr: script["stderr"].as_str().unwrap_or_default().to_string(),
+            ..SpecOutput::default()
+        },
+    }
+}
+
+/// The scripts, the effect and the cancel token a lifecycle case runs under (`scriptsFor`).
+fn lifecycle_runner(
+    profile: &Arc<Profile>,
+    case: &Value,
+    args: &Value,
+    cancel: &CancellationToken,
+) -> Arc<EffectRunner> {
+    let base: Vec<(String, String)> = profile
+        .home
+        .env()
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v.to_string_lossy().into_owned()))
+        .collect();
+    let mut inner = ScriptedSpecRunner::new(base);
+    let mut effect: Option<Effect> = None;
+    match case["op"].as_str().unwrap_or_default() {
+        "kill" => {
+            let answer = match args["script"].as_str() {
+                Some("throws") => scripted_output(&json!({"throws": "spawn wineserver ENOENT"})),
+                Some("timeout") => scripted_output(&json!({"code": null})),
+                _ => scripted_output(&json!({"code": 0})),
+            };
+            inner = inner.on_program(&profile.expand(WINESERVER_BIN), answer);
+        }
+        "create-crossover" => {
+            let bin_dir = args["binDir"].as_str().unwrap_or(CX_BIN_DIR);
+            let cxbottle = format!("{bin_dir}/cxbottle");
+            let script = &args["cxbottle"];
+            inner = inner
+                .on_program(&cxbottle, scripted_output(script))
+                .on_program(
+                    &format!("{bin_dir}/wineserver"),
+                    scripted_output(&json!({"code": 0})),
+                );
+            let fixture = script["writes"].as_str().map(str::to_string);
+            let bottle = args["bottle"].as_str().unwrap_or_default().to_string();
+            let (during, cancel) = (args["abort"] == "during", cancel.clone());
+            let profile = profile.clone();
+            effect = Some((
+                cxbottle,
+                Box::new(move || {
+                    if let Some(fixture) = &fixture {
+                        profile.build_bottle_as(fixture, &bottle);
+                    }
+                    if during {
+                        cancel.cancel();
+                    }
+                }),
+            ));
+        }
+        _ => {}
+    }
+    Arc::new(EffectRunner {
+        inner,
+        effect: Mutex::new(effect),
+        limits: Mutex::new(Vec::new()),
+    })
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -612,10 +759,13 @@ struct Replayed {
     markers: Value,
     logs: Vec<String>,
     after: Value,
+    /// The spawn trace (program, argv, env diff) and the time limit and cancel wiring of each spawn.
+    spawns: Value,
+    limits: Value,
 }
 
 fn run_case(case: &Value) -> Replayed {
-    let profile = Profile::new();
+    let profile = Arc::new(Profile::new());
     if let Some(variant) = case["engines"].as_str() {
         if variant != "none" {
             profile.build_engines(variant);
@@ -626,9 +776,14 @@ fn run_case(case: &Value) -> Replayed {
     }
     profile.seed(&case["seed"]);
     let log = Arc::new(RecordingLog::new());
-    let ctx = profile.ctx(log.clone());
-    let before = profile.snapshot();
     let args = profile.expand_value(&materialise(&case["args"]));
+    let cancel = CancellationToken::new();
+    if args["abort"] == "before" {
+        cancel.cancel();
+    }
+    let runner = lifecycle_runner(&profile, case, &args, &cancel);
+    let ctx = profile.ctx_with(log.clone(), Some(runner.clone()));
+    let before = profile.snapshot();
     let gate = gate_of(case);
     let gate: Gate<'_> = &*gate;
     let op = case["op"].as_str().unwrap();
@@ -714,14 +869,77 @@ fn run_case(case: &Value) -> Replayed {
                 .map(|input| json!({"input": input, "returned": resolve_game_prefix_value(input)}))
                 .collect(),
         ),
+        "kill" => {
+            let extra_env: Vec<(String, String)> = args["extraEnv"].as_object().map_or_else(
+                || vec![("USER".to_string(), "crossover".to_string())],
+                |map| {
+                    map.iter()
+                        .map(|(k, v)| (k.clone(), v.as_str().unwrap_or_default().to_string()))
+                        .collect()
+                },
+            );
+            let timeout =
+                Duration::from_millis(args["timeoutMs"].as_u64().unwrap_or(KILL_TIMEOUT_MS));
+            let wineserver = profile.expand(WINESERVER_BIN);
+            let mut out = Vec::new();
+            for name in names_of(&args) {
+                let returned = block_on(kill_bottle_wineserver(
+                    &ctx,
+                    &name,
+                    &wineserver,
+                    &extra_env,
+                    timeout,
+                ));
+                out.push(json!({"name": name, "returned": returned}));
+            }
+            Value::Array(out)
+        }
+        "remove-created" => Value::Array(
+            names_of(&args)
+                .into_iter()
+                .map(|name| {
+                    remove_created_bottle_dir(&ctx, &name);
+                    json!({"name": name, "returned": null})
+                })
+                .collect(),
+        ),
+        "create-crossover" => {
+            let mut opts = CreateOptions {
+                cancel: Some(cancel.clone()),
+                ..CreateOptions::default()
+            };
+            if let Some(ms) = args["createTimeoutMs"].as_u64() {
+                opts.create_timeout = Duration::from_millis(ms);
+            }
+            let bin_dir = args["binDir"].as_str().unwrap_or(CX_BIN_DIR);
+            block_on(create_crossover_bottle(&ctx, bottle, bin_dir, &opts)).to_value()
+        }
         other => panic!("op {other} is not ported by this build"),
     };
 
+    let spawns = Value::Array(
+        runner
+            .inner
+            .spawns()
+            .iter()
+            .map(|spawn| {
+                let mut entry = spawn.to_json();
+                // The scripted answer is an input, not an observation.
+                entry["result"] = Value::Null;
+                entry
+            })
+            .collect(),
+    );
+    let limits = Value::Array(runner.limits.lock().unwrap().clone());
     let logs = log
         .lines()
         .into_iter()
         .map(|(level, line)| {
-            let level = if level == "warn" { "WARNING" } else { "INFO" };
+            let level = match level {
+                "warn" => "WARNING",
+                "error" => "ERROR",
+                _ => "INFO",
+            };
             format!("{level}: {}", profile.normalise_text(&line))
         })
         .collect();
@@ -731,14 +949,34 @@ fn run_case(case: &Value) -> Replayed {
         markers: profile.marker_bytes(),
         logs,
         after: profile.snapshot(),
+        spawns: profile.normalise(spawns),
+        limits: profile.normalise(limits),
     }
 }
+
+/// Runs one future to its end on a small runtime of its own (the scripted runner never blocks).
+fn block_on<F: std::future::Future>(future: F) -> F::Output {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(future)
+}
+
+/// The first half of the log line a refused removal writes.
+const REMOVAL_REFUSED: &str =
+    "provisionBridgeBottle: not removing partial bottle outside the Bottles root: ";
 
 /// The golden's log lines as `<LEVEL>: <message>`, with the two documented deltas applied
 /// (`deltas.json`): the TS asked Rust over a channel and logged when it could not (an in-process
 /// gate cannot fail), and the conf writer names its bottle's directory name, not its path.
 fn expected_logs(golden: &Value) -> Vec<String> {
     let bottles_prefix = "<HOME>/Library/Application Support/CrossOver/Bottles/";
+    let mut refused_names = golden["args"]["names"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|n| n.as_str().unwrap_or_default().to_string());
     golden["logs"]
         .as_array()
         .unwrap()
@@ -750,10 +988,20 @@ fn expected_logs(golden: &Value) -> Vec<String> {
                 .starts_with("bottle version gate: Rust could not be asked")
         })
         .map(|l| {
+            let message = l["message"].as_str().unwrap();
+            // The removal's refusal names the bottle name it was given, not the path it resolved to
+            // (T-86-15: the engine log carries no profile path); the golden's line has the path.
+            if message.starts_with(REMOVAL_REFUSED) {
+                let name = refused_names.next().unwrap_or_default();
+                return format!(
+                    "{}: {REMOVAL_REFUSED}\"{name}\"",
+                    l["level"].as_str().unwrap()
+                );
+            }
             format!(
                 "{}: {}",
                 l["level"].as_str().unwrap(),
-                l["message"].as_str().unwrap().replace(bottles_prefix, "")
+                message.replace(bottles_prefix, "")
             )
         })
         .collect()
@@ -805,6 +1053,31 @@ fn replay(ops: &[&str], floor: usize) {
             "the golden's before tree".into(),
             first_difference(&golden["before"], &actual.before),
         );
+        if LIFECYCLE_OPS.contains(&case["op"].as_str().unwrap()) {
+            let want_spawns: Vec<Value> = read_json(&dir.join("spawns.json"))
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|spawn| {
+                    // The scripted answer is an input; the trace is program, argv and env diff.
+                    let mut spawn = spawn.clone();
+                    spawn["result"] = Value::Null;
+                    spawn
+                })
+                .collect();
+            check(
+                "spawn trace",
+                actual.spawns == Value::Array(want_spawns.clone()),
+                text(&Value::Array(want_spawns)),
+                text(&actual.spawns),
+            );
+            check(
+                "spawn limits",
+                actual.limits == golden["spawnLimits"],
+                text(&golden["spawnLimits"]),
+                text(&actual.limits),
+            );
+        }
         let want_after = read_json(&dir.join("tree.json"));
         check(
             "tree after",
@@ -846,6 +1119,14 @@ fn every_state_golden_replays() {
     replay(&STATE_OPS, 98);
 }
 
+/// The 21 CrossOver create, wineserver kill and removal goldens (12 + 5 + 4): outcome, logs, the
+/// before and after trees (a sibling bottle is byte-identical), the spawn trace and the time limit and
+/// cancel wiring of every spawn.
+#[test]
+fn every_lifecycle_golden_replays() {
+    replay(&LIFECYCLE_OPS, 21);
+}
+
 #[test]
 fn the_documented_deltas_are_exactly_those_this_replay_treats_differently() {
     let deltas = read_json(&golden_dir().join("deltas.json"));
@@ -861,6 +1142,9 @@ fn the_documented_deltas_are_exactly_those_this_replay_treats_differently() {
         [
             "conf-log-lines-name-the-bottle-not-its-path",
             "gate-is-in-process-and-cannot-fail",
+            "removal-goes-through-the-safety-guard",
+            "removal-refusal-names-the-bottle-not-its-path",
+            "spawn-failure-text-is-the-runners-not-nodes",
             "unreadable-marker-is-rewritten-as-the-ts-did",
         ]
     );
@@ -872,9 +1156,9 @@ fn the_documented_deltas_are_exactly_those_this_replay_treats_differently() {
 #[test]
 fn the_replayed_ops_each_have_a_case() {
     let all = cases();
-    for op in STATE_OPS {
+    for op in STATE_OPS.iter().chain(LIFECYCLE_OPS.iter()) {
         assert!(
-            all.iter().any(|c| c["op"] == op),
+            all.iter().any(|c| c["op"] == *op),
             "no golden case for op {op}"
         );
     }

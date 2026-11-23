@@ -30,15 +30,20 @@ use ctx::EngineCtx;
 use serde_json::Value;
 use std::future::Future;
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::path::Path;
 use std::pin::Pin;
 use std::sync::OnceLock;
 use std::task::{Context, Poll};
+use std::time::Duration;
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
 pub const OPS: &[&str] = &[
+    "engine_bottle_create_crossover",
     "engine_bottle_is_provisioned",
+    "engine_bottle_kill_wineserver",
     "engine_bottle_record_pinned",
+    "engine_bottle_remove_created",
     "engine_default_engine",
     "engine_list_options",
     "engine_per_game_bottle_name",
@@ -81,6 +86,57 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
             let recorded =
                 bottles::marker::record_pinned(ctx, &request.bottle_name, &request.pin_id, &engine);
             Ok(Value::Bool(recorded))
+        }
+        // `cxbottle --create` for a per-game bottle, capped; on a failure what this call made is cleaned.
+        // The answer is the sidecar's `CreateBottleResult`. Only an app shutdown cancels it early.
+        "engine_bottle_create_crossover" => {
+            let request: CreateCrossoverRequest = decode(op, args)?;
+            if !Path::new(&request.bin_dir).is_absolute() {
+                return Err(format!("{op}:bad-args"));
+            }
+            let mut opts = bottles::lifecycle::CreateOptions::default();
+            if let Some(ms) = request.create_timeout_ms {
+                opts.create_timeout = Duration::from_millis(ms.min(MAX_SPAWN_CAP_MS));
+            }
+            let result = bottles::lifecycle::create_crossover_bottle(
+                ctx,
+                &request.bottle_name,
+                &request.bin_dir,
+                &opts,
+            )
+            .await;
+            Ok(result.to_value())
+        }
+        // `wineserver -k` against a per-game bottle; `true` when it ran to an exit. An unsafe name spawns
+        // nothing. The child inherits the real environment (the declared real-profile arm).
+        "engine_bottle_kill_wineserver" => {
+            let request: KillWineserverRequest = decode(op, args)?;
+            if !Path::new(&request.wineserver_bin).is_absolute() {
+                return Err(format!("{op}:bad-args"));
+            }
+            let extra_env = bottles::lifecycle::env_pairs(&request.extra_env)
+                .ok_or_else(|| format!("{op}:bad-args"))?;
+            let timeout_ms = request
+                .timeout_ms
+                .unwrap_or(bottles::lifecycle::KILL_TIMEOUT_MS)
+                .min(MAX_SPAWN_CAP_MS);
+            let killed = bottles::lifecycle::kill_bottle_wineserver(
+                ctx,
+                &request.bottle_name,
+                &request.wineserver_bin,
+                &extra_env,
+                Duration::from_millis(timeout_ms),
+            )
+            .await;
+            Ok(Value::Bool(killed))
+        }
+        // The guarded removal of a bottle this process created (D-19): `true` when the bottle is gone
+        // (an absent one counts), `false` when the name or the guard refused or the delete failed.
+        "engine_bottle_remove_created" => {
+            let request: BottleNameRequest = decode(op, args)?;
+            let removed = bottles::lifecycle::remove_created_bottle_dir(ctx, &request.bottle_name)
+                == bottles::lifecycle::RemoveCreated::Removed;
+            Ok(Value::Bool(removed))
         }
         // D-09: the global default engine, derived or stored, Legacy included.
         "engine_default_engine" => {
@@ -146,6 +202,31 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct BottleNameRequest {
     bottle_name: String,
+}
+
+/// The longest cap an op argument may ask of one spawn: the TS callers' longest was 120 s.
+const MAX_SPAWN_CAP_MS: u64 = 300_000;
+
+/// The argument of `engine_bottle_create_crossover`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct CreateCrossoverRequest {
+    bottle_name: String,
+    bin_dir: String,
+    #[serde(default)]
+    create_timeout_ms: Option<u64>,
+}
+
+/// The argument of `engine_bottle_kill_wineserver`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct KillWineserverRequest {
+    bottle_name: String,
+    wineserver_bin: String,
+    #[serde(default)]
+    extra_env: serde_json::Map<String, Value>,
+    #[serde(default)]
+    timeout_ms: Option<u64>,
 }
 
 /// The argument of `engine_bottle_record_pinned`: the bottle, the pin's id and the engine the bottle
@@ -303,8 +384,11 @@ mod tests {
         assert_eq!(sorted, OPS);
         assert!(OPS.contains(&"engine_pins"));
         for op in [
+            "engine_bottle_create_crossover",
             "engine_bottle_is_provisioned",
+            "engine_bottle_kill_wineserver",
             "engine_bottle_record_pinned",
+            "engine_bottle_remove_created",
             "engine_default_engine",
             "engine_list_options",
             "engine_per_game_bottle_name",
@@ -623,5 +707,123 @@ mod tests {
             .shutdown
             .drain(std::time::Duration::from_millis(50))
             .is_empty());
+    }
+
+    #[tokio::test]
+    async fn the_remove_op_deletes_only_the_named_bottle_and_refuses_an_unsafe_name() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        let mine = lay_bottle(&home, "GameLib-gog-1", true, false);
+        let sibling = lay_bottle(&home, "GameLib-gog-2", true, false);
+        let ask = |name: &str| {
+            let ctx = &ctx;
+            let args = [json!({"bottleName": name})];
+            async move { dispatch("engine_bottle_remove_created", &args, ctx).await }
+        };
+        assert_eq!(ask("../GameLib-gog-2").await.unwrap(), json!(false));
+        assert!(sibling.join("system.reg").exists());
+        assert_eq!(ask("GameLib-gog-1").await.unwrap(), json!(true));
+        assert!(!mine.exists());
+        assert!(sibling.join("system.reg").exists());
+        let err = dispatch("engine_bottle_remove_created", &[json!({})], &ctx)
+            .await
+            .unwrap_err();
+        assert_eq!(err, "engine_bottle_remove_created:bad-args");
+    }
+
+    #[tokio::test]
+    async fn the_kill_and_create_ops_take_strict_arguments() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        for (op, bad) in [
+            // A relative program is not a path GameLib launched.
+            (
+                "engine_bottle_kill_wineserver",
+                json!({"bottleName": "a", "wineserverBin": "wineserver"}),
+            ),
+            (
+                "engine_bottle_kill_wineserver",
+                json!({"bottleName": "a", "wineserverBin": "/w", "extraEnv": {"A=B": "x"}}),
+            ),
+            (
+                "engine_bottle_kill_wineserver",
+                json!({"bottleName": "a", "wineserverBin": "/w", "extra": 1}),
+            ),
+            (
+                "engine_bottle_create_crossover",
+                json!({"bottleName": "a", "binDir": "bin"}),
+            ),
+            (
+                "engine_bottle_create_crossover",
+                json!({"bottleName": "a", "binDir": "/bin", "createTimeoutMs": "5"}),
+            ),
+        ] {
+            let err = dispatch(op, std::slice::from_ref(&bad), &ctx)
+                .await
+                .unwrap_err();
+            assert_eq!(err, format!("{op}:bad-args"), "{bad}");
+        }
+    }
+
+    #[tokio::test]
+    async fn the_create_and_kill_ops_spawn_through_the_context_runner() {
+        use gamelib_core::process::SpecOutput;
+        let home = FakeHome::new("engine-lib-");
+        let runner = Arc::new(
+            testing::ScriptedSpecRunner::new(Vec::new())
+                .on_program(
+                    "/cx/bin/cxbottle",
+                    SpecOutput {
+                        code: Some(0),
+                        ..SpecOutput::default()
+                    },
+                )
+                .on_program(
+                    "/cx/bin/wineserver",
+                    SpecOutput {
+                        code: Some(0),
+                        ..SpecOutput::default()
+                    },
+                ),
+        );
+        let ctx = ctx(&home).with_proc(runner.clone());
+        // cxbottle "creates" the bottle: the scripted run leaves nothing, so the create reports the
+        // missing conf, and an unsafe name never reaches a spawn.
+        let created = dispatch(
+            "engine_bottle_create_crossover",
+            &[json!({"bottleName": "GameLib-gog-1", "binDir": "/cx/bin", "createTimeoutMs": 5000})],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(created["status"], "error");
+        assert_eq!(created["errorCode"], "crossover-create-failed");
+        let rejected = dispatch(
+            "engine_bottle_create_crossover",
+            &[json!({"bottleName": "a/b", "binDir": "/cx/bin"})],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(rejected["error"], "Invalid bottle name: \"a/b\"");
+        let spawns = runner.spawns();
+        assert_eq!(spawns[0].label, "engine-cxbottle");
+        assert_eq!(
+            spawns[0].timeout,
+            Some(std::time::Duration::from_millis(5000))
+        );
+        assert_eq!(spawns[1].label, "engine-wineserver-kill");
+        assert_eq!(spawns[1].env_set["CX_ROOT"], "/cx");
+        assert_eq!(spawns.len(), 2);
+
+        let killed = dispatch(
+            "engine_bottle_kill_wineserver",
+            &[json!({"bottleName": "GameLib-gog-1", "wineserverBin": "/cx/bin/wineserver"})],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(killed, json!(true));
+        assert_eq!(runner.spawns().len(), 3);
     }
 }
