@@ -1,21 +1,25 @@
 /**
- * The sidecar's side of the Rust version gate for the two bottle-local versioned files (Phase 85,
- * D-17): `<bottle>/.gamelib-engine.json` and `<bottle>/gamelib-shared-redists.json`.
+ * The sidecar's side of the Rust version gate for the bottle-local versioned file the TS still writes (Phase 85,
+ * D-17): `<bottle>/gamelib-shared-redists.json`, the Phase 95 shared-redist ledger.
  *
- * Both carry a top-level numeric `version` and both chains are empty (current v1), so the gate never
+ * `<bottle>/.gamelib-engine.json`, the engine marker, was the gate's other file. Its last TS writer went with the TS
+ * bottle switch (87-43): Rust writes the marker in-process and asks its own gate (`store_version_gate` stays a Rust
+ * decision, and `roundtrip_state.rs` proves the marker round trip), so no engine-marker chain is named here.
+ *
+ * The ledger carries a top-level numeric `version` and its chain is empty (current v1), so the gate never
  * migrates or rewrites anything. Rust (`store_version_gate`) decides one thing: whether the file was
  * written by a newer GameLib and so must not be overwritten (the Phase 68 refuse-newer rule). The
  * file's own readers and writers stay in TS. `store_backup_file` has Rust copy an unreadable ledger
  * aside (`<name>.v<from>.<stamp>.bak.json`, 0600, at most 3).
  *
- * Gate states, with the TS engine's parity for these two files:
+ * Gate states, with the TS parity for this file:
  *   absent      no file                                         writable
  *   ok          version at or below the current one             writable
  *   unreadable  not a JSON object (TS never marked this read-only; the ledger backs itself up)
  *                                                               writable
  *   newer       version above the current one                   read-only, never rewritten
  *
- * The writers here are synchronous (`engineSwitch`'s marker writes) but the gate is a rustInvoke
+ * The writer here is synchronous (the shared-redist ledger's) but the gate is a rustInvoke
  * round trip, so an async entry point primes the answer first and the synchronous code reads it back
  * with `state()`. The memo is an object the boot owns (`createBottleVersionGate`), not module state:
  * `moduleStateCensus` allows none. A write to a path nobody primed is refused, so a possibly-newer
@@ -30,17 +34,12 @@ import {
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { logWarning, LogPrefix } from 'backend/logger'
 
-/** The engine marker's chain key (`gamelib-store`'s `Chains` table). */
-export const ENGINE_MARKER_CHAIN = 'engine/gamelib-engine-marker' as const
-
 /** The shared-redist ledger's chain key. */
 export const SHARED_REDIST_LEDGER_CHAIN = 'steam_bridge/shared-redists' as const
 
-type BottleFileChain =
-  | typeof ENGINE_MARKER_CHAIN
-  | typeof SHARED_REDIST_LEDGER_CHAIN
+type BottleFileChain = typeof SHARED_REDIST_LEDGER_CHAIN
 
-/** The version both files are written at: the baseline, as both chains have no steps. */
+/** The version the ledger is written at: the baseline, as its chain has no steps. */
 export const BOTTLE_FILE_VERSION = 1
 
 export type GateState = 'absent' | 'ok' | 'unreadable' | 'newer'

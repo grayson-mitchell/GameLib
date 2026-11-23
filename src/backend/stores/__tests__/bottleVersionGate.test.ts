@@ -16,7 +16,6 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import {
   BOTTLE_FILE_VERSION,
-  ENGINE_MARKER_CHAIN,
   SHARED_REDIST_LEDGER_CHAIN,
   backupBottleFile,
   createBottleVersionGate,
@@ -31,7 +30,7 @@ let marker: string
 let ledger: string
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'gamelib-bottle-gate-'))
-  marker = join(root, '.gamelib-engine.json')
+  marker = join(root, 'other-bottle-file.json')
   ledger = join(root, 'gamelib-shared-redists.json')
 })
 afterEach(() => rmSync(root, { recursive: true, force: true }))
@@ -47,14 +46,20 @@ describe('createBottleVersionGate', () => {
     const gate = createBottleVersionGate()
     expect(gate.state(marker)).toBeUndefined()
 
-    expect(await gate.prime(rust, marker, ENGINE_MARKER_CHAIN)).toBe('absent')
+    expect(await gate.prime(rust, marker, SHARED_REDIST_LEDGER_CHAIN)).toBe(
+      'absent'
+    )
     expect(gate.state(marker)).toBe('absent')
 
     writeFileSync(marker, JSON.stringify({ version: 1, kind: 'pinned' }))
-    expect(await gate.prime(rust, marker, ENGINE_MARKER_CHAIN)).toBe('ok')
+    expect(await gate.prime(rust, marker, SHARED_REDIST_LEDGER_CHAIN)).toBe(
+      'ok'
+    )
 
     writeFileSync(marker, JSON.stringify({ kind: 'pinned' }))
-    expect(await gate.prime(rust, marker, ENGINE_MARKER_CHAIN)).toBe('ok')
+    expect(await gate.prime(rust, marker, SHARED_REDIST_LEDGER_CHAIN)).toBe(
+      'ok'
+    )
 
     writeFileSync(ledger, '{torn')
     expect(await gate.prime(rust, ledger, SHARED_REDIST_LEDGER_CHAIN)).toBe(
@@ -62,14 +67,16 @@ describe('createBottleVersionGate', () => {
     )
 
     writeFileSync(marker, JSON.stringify({ version: 2, kind: 'pinned' }))
-    expect(await gate.prime(rust, marker, ENGINE_MARKER_CHAIN)).toBe('newer')
+    expect(await gate.prime(rust, marker, SHARED_REDIST_LEDGER_CHAIN)).toBe(
+      'newer'
+    )
     expect(gate.state(marker)).toBe('newer')
     // One memo entry per path: the ledger's answer was not disturbed.
     expect(gate.state(ledger)).toBe('unreadable')
 
     expect(rust.calls.at(-1)).toEqual({
       channel: 'store_version_gate',
-      args: [{ path: marker, chain: 'engine/gamelib-engine-marker' }]
+      args: [{ path: marker, chain: 'steam_bridge/shared-redists' }]
     })
     expect(rust.calls.at(-2)).toEqual({
       channel: 'store_version_gate',
@@ -81,10 +88,14 @@ describe('createBottleVersionGate', () => {
     const rust = createFakeBottleGateRust()
     const gate = createBottleVersionGate()
     writeFileSync(marker, JSON.stringify({ version: 1 }))
-    expect(await gate.prime(rust, marker, ENGINE_MARKER_CHAIN)).toBe('ok')
+    expect(await gate.prime(rust, marker, SHARED_REDIST_LEDGER_CHAIN)).toBe(
+      'ok'
+    )
     writeFileSync(marker, JSON.stringify({ version: 3 }))
     expect(gate.state(marker)).toBe('ok')
-    expect(await gate.prime(rust, marker, ENGINE_MARKER_CHAIN)).toBe('newer')
+    expect(await gate.prime(rust, marker, SHARED_REDIST_LEDGER_CHAIN)).toBe(
+      'newer'
+    )
     expect(rust.calls).toHaveLength(2)
   })
 
@@ -93,12 +104,16 @@ describe('createBottleVersionGate', () => {
     writeFileSync(marker, JSON.stringify({ version: 1 }))
     const ok = createFakeBottleGateRust().requestRustInvoke
     expect(
-      await gate.prime({ requestRustInvoke: ok }, marker, ENGINE_MARKER_CHAIN)
+      await gate.prime(
+        { requestRustInvoke: ok },
+        marker,
+        SHARED_REDIST_LEDGER_CHAIN
+      )
     ).toBe('ok')
 
     const rejecting = createFakeBottleGateRust({ rejectGate: true })
     expect(
-      await gate.prime(rejecting, marker, ENGINE_MARKER_CHAIN)
+      await gate.prime(rejecting, marker, SHARED_REDIST_LEDGER_CHAIN)
     ).toBeUndefined()
     expect(gate.state(marker)).toBeUndefined()
     expect(gateAllowsWrite(gate.state(marker))).toBe(false)
@@ -116,7 +131,7 @@ describe('createBottleVersionGate', () => {
       await gate.prime(
         { requestRustInvoke: reply(body) },
         marker,
-        ENGINE_MARKER_CHAIN
+        SHARED_REDIST_LEDGER_CHAIN
       )
     ).toBeUndefined()
     expect(gate.state(marker)).toBeUndefined()
@@ -125,7 +140,7 @@ describe('createBottleVersionGate', () => {
   it('forget drops the memo for one path only', async () => {
     const rust = createFakeBottleGateRust({ answer: 'newer' })
     const gate = createBottleVersionGate()
-    await gate.prime(rust, marker, ENGINE_MARKER_CHAIN)
+    await gate.prime(rust, marker, SHARED_REDIST_LEDGER_CHAIN)
     await gate.prime(rust, ledger, SHARED_REDIST_LEDGER_CHAIN)
     gate.forget(marker)
     expect(gate.state(marker)).toBeUndefined()
@@ -136,7 +151,7 @@ describe('createBottleVersionGate', () => {
     const rust = createFakeBottleGateRust({ answer: 'newer' })
     const a = createBottleVersionGate()
     const b = createBottleVersionGate()
-    await a.prime(rust, marker, ENGINE_MARKER_CHAIN)
+    await a.prime(rust, marker, SHARED_REDIST_LEDGER_CHAIN)
     expect(b.state(marker)).toBeUndefined()
   })
 })
@@ -145,7 +160,7 @@ describe('gateAllowsWrite', () => {
   it.each<[GateState | undefined, boolean]>([
     ['absent', true],
     ['ok', true],
-    // The TS engine never marked an unparseable bottle file read-only.
+    // TS never marked an unparseable bottle file read-only.
     ['unreadable', true],
     ['newer', false],
     // Nobody asked: a possibly-newer file is never overwritten on a guess.
@@ -156,8 +171,7 @@ describe('gateAllowsWrite', () => {
 })
 
 describe('the constants the two consumers write with', () => {
-  it('names the chains Rust knows and the baseline version both files are written at', () => {
-    expect(ENGINE_MARKER_CHAIN).toBe('engine/gamelib-engine-marker')
+  it('names the chain Rust knows and the baseline version the ledger is written at', () => {
     expect(SHARED_REDIST_LEDGER_CHAIN).toBe('steam_bridge/shared-redists')
     expect(BOTTLE_FILE_VERSION).toBe(1)
   })
@@ -223,7 +237,7 @@ describe('the fake answers as the crate does', () => {
     const state = await createBottleVersionGate().prime(
       createFakeBottleGateRust(),
       marker,
-      ENGINE_MARKER_CHAIN
+      SHARED_REDIST_LEDGER_CHAIN
     )
     expect(state).toBe(expected)
   })

@@ -1,6 +1,6 @@
 /**
  * Phase 85 (D-17): a jest-mock-free fake of the two bottle-file rustInvoke channels
- * (`store_version_gate`, `store_backup_file`), so a test of the engine switch or the shared-redist
+ * (`store_version_gate`, `store_backup_file`), so a test of the engine launch or the shared-redist
  * installer can drive them end to end without the Rust shell.
  *
  * `store_version_gate` answers from the real file at the path the way `gamelib-store`'s

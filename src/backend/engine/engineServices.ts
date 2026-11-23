@@ -21,7 +21,7 @@ import type { AppPaths } from 'backend/process/context'
  * merged settings, the tool, backup or restore, and the engine's pinned `{ dir, version }` when it has one (Phase 59:
  * the tools-dir `latest_<tool>` lookup is then skipped). Resolves whether the install went through.
  */
-export type InstallRemove = (
+type InstallRemove = (
   gameSettings: GameSettings,
   tool: 'dxvk' | 'dxvk-nvapi' | 'vkd3d' | 'dxvk-macOS',
   action: 'backup' | 'restore',

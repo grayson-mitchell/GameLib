@@ -28,8 +28,6 @@ import { createLaunchEngineState } from './launchEngine'
 import type { LaunchEngineState } from './launchEngine'
 import { createLaunchSettingsRegistry } from './launchSettings'
 import type { LaunchSettingsRegistry } from './launchSettings'
-import { createBottleVersionGate } from 'backend/stores/bottleVersionGate'
-import type { BottleVersionGate } from 'backend/stores/bottleVersionGate'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { createPerGameBottleFlights } from './perGameBottle'
 import type { PerGameBottleFlights } from './perGameBottle'
@@ -43,10 +41,8 @@ export interface EngineRuntime {
   launchState: LaunchEngineState
   launchSettings: LaunchSettingsRegistry
   perGameBottle: PerGameBottleFlights
-  /** The sidecar -> Rust transport, for the bottle marker's version gate (Phase 85 D-17). */
+  /** The sidecar -> Rust transport the engine's bottle, ledger and selection shims send through (87-42). */
   requestRustInvoke: RustInvokeDeps['requestRustInvoke']
-  /** What the gate last said per bottle marker; the engine switch's synchronous writers read it. */
-  bottleGate: BottleVersionGate
 }
 
 export interface EngineRuntimeDeps {
@@ -80,7 +76,6 @@ export function createEngineRuntime(deps: EngineRuntimeDeps): EngineRuntime {
       paths: deps.paths
     }),
     perGameBottle: createPerGameBottleFlights(),
-    requestRustInvoke: deps.requestRustInvoke,
-    bottleGate: createBottleVersionGate()
+    requestRustInvoke: deps.requestRustInvoke
   }
 }
