@@ -1,0 +1,55 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/.gamelib-pin.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "bd17f01ed41eb5de957c3570531cf59c16b47a99f127a8e32a2e0961ecd8c4f4"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x32/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "770f4aa2c23c9c3bcbf4b9d63b6979822a4ec406496323c44386d3ba5455b4c6"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x64/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "d53e0ed2bbf0e6a73713306bdd5e94ac11e1785cad3e4fe74efb3ae49acc6bc8"
+  }
+]

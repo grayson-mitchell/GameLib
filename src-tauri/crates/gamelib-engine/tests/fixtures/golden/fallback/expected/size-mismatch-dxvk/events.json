@@ -1,0 +1,45 @@
+[
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "oracle-app",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:0"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "oracle-app",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:9"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "oracle-app",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:37"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "oracle-app",
+        "runner": "nile",
+        "status": "done"
+      }
+    ]
+  }
+]

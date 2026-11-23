@@ -1,0 +1,26 @@
+{
+  "op": "sweep",
+  "pin": "current",
+  "online": true,
+  "before": [
+    ".tmp-dxvk-interrupted",
+    ".tmp-link",
+    ".tmp-note",
+    ".tmp-wine-interrupted",
+    "keep-dir"
+  ],
+  "after": [
+    ".tmp-link",
+    ".tmp-note",
+    "keep-dir"
+  ],
+  "abortControllerReleased": true,
+  "markers": {},
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: removed 2 stale engine temp dir(s) at boot"
+    }
+  ]
+}

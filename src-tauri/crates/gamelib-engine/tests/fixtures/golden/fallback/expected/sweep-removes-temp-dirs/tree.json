@@ -1,0 +1,56 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/.tmp-link",
+    "kind": "symlink",
+    "mode": "0755",
+    "symlink": "<HOME>/outside"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/.tmp-note",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "0ae96b3c3edef4d93180cf1ff5727270a60975435760ef4cce693af96899fa50"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/keep-dir",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/keep-dir/z",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1aaade0bc97d48490954e93251b649743e6a3e5562ebfb46d155abc8f9b1bd6c"
+  },
+  {
+    "path": "outside",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "outside/keep.txt",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2c0f6ab70ba162ccd5f3c45ae10ecaede6b4218800642a80a49939641123c22e"
+  }
+]

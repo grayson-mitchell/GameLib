@@ -1,0 +1,22 @@
+[
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-a",
+        "runner": "nile",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-b",
+        "runner": "nile",
+        "status": "done"
+      }
+    ]
+  }
+]

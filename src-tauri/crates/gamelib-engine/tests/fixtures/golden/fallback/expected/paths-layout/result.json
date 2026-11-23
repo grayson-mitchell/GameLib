@@ -1,0 +1,27 @@
+{
+  "op": "paths",
+  "pin": "current",
+  "online": true,
+  "root": "<TOOLS>/steam-engines",
+  "current": {
+    "wineDir": "<TOOLS>/steam-engines/wine-staging-11.20",
+    "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+    "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+    "dxvkDir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack"
+  },
+  "previous": {
+    "wineDir": "<TOOLS>/steam-engines/wine-staging-11.1",
+    "wineBin": "<TOOLS>/steam-engines/wine-staging-11.1/Contents/Resources/wine/bin/wine",
+    "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.1/Contents/Resources/wine/bin/wineserver",
+    "dxvkDir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.2-20230101-repack"
+  },
+  "other": {
+    "wineDir": "<TOOLS>/steam-engines/wine-staging-9.0",
+    "wineBin": "<TOOLS>/steam-engines/wine-staging-9.0/Contents/Resources/wine/bin/wine",
+    "wineserverBin": "<TOOLS>/steam-engines/wine-staging-9.0/Contents/Resources/wine/bin/wineserver",
+    "dxvkDir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.0-20220101-repack"
+  },
+  "abortControllerReleased": true,
+  "markers": {},
+  "logs": []
+}

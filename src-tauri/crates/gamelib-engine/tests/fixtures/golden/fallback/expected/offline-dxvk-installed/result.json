@@ -1,0 +1,34 @@
+{
+  "op": "ensure",
+  "pin": "current",
+  "online": false,
+  "callers": [
+    {
+      "app": "oracle-app",
+      "abort": null,
+      "reporting": {
+        "ok": false,
+        "aborted": false,
+        "reason": "offline",
+        "error": "offline no network connection"
+      },
+      "raw": {
+        "ok": false,
+        "reason": "offline",
+        "detail": "no network connection"
+      },
+      "progress": []
+    }
+  ],
+  "abortControllerReleased": true,
+  "markers": {
+    "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/.gamelib-pin.json": "{\"sha256\":\"7650fd8ded41ca091ca6d3f9596d03cc75d95e4da8a15f5c8f13574d183a9c5e\",\"version\":\"v1.10.3-20230507-repack\"}"
+  },
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "built-in engine unavailable for nile oracle-app: offline no network connection"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+[
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "oracle-app",
+        "runner": "nile",
+        "status": "done"
+      }
+    ]
+  }
+]

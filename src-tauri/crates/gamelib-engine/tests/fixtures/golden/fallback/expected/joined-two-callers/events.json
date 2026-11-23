@@ -1,0 +1,244 @@
+[
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-a",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:0"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-b",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:0"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-a",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:9"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-b",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:9"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-a",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:37"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-b",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:37"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-a",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "verifying"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-b",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "verifying"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-a",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "extracting"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-b",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "extracting"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-a",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:37"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-b",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:37"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-a",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:53"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-b",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:53"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-a",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:100"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-b",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "downloading:100"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-a",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "verifying"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-b",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "verifying"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-a",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "extracting"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-b",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "extracting"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-a",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "setting-up"
+      }
+    ]
+  },
+  {
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "app-b",
+        "runner": "nile",
+        "status": "engine-download",
+        "context": "setting-up"
+      }
+    ]
+  }
+]

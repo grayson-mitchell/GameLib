@@ -1,0 +1,53 @@
+{
+  "op": "ensure",
+  "pin": "current",
+  "online": true,
+  "callers": [
+    {
+      "app": "app-a",
+      "abort": "sync",
+      "reporting": {
+        "ok": false,
+        "aborted": true,
+        "reason": "aborted",
+        "error": "aborted"
+      },
+      "raw": {
+        "ok": false,
+        "reason": "aborted",
+        "detail": "aborted"
+      },
+      "progress": []
+    },
+    {
+      "app": "app-b",
+      "abort": "sync",
+      "reporting": {
+        "ok": false,
+        "aborted": true,
+        "reason": "aborted",
+        "error": "aborted"
+      },
+      "raw": {
+        "ok": false,
+        "reason": "aborted",
+        "detail": "aborted"
+      },
+      "progress": []
+    }
+  ],
+  "abortControllerReleased": true,
+  "markers": {},
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "built-in engine download aborted for nile app-a"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "built-in engine download aborted for nile app-b"
+    }
+  ]
+}

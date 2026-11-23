@@ -1,0 +1,17 @@
+{
+  "op": "installed",
+  "pin": "current",
+  "online": true,
+  "installed": false,
+  "paths": {
+    "wineDir": "<TOOLS>/steam-engines/wine-staging-11.20",
+    "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+    "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+    "dxvkDir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack"
+  },
+  "abortControllerReleased": true,
+  "markers": {
+    "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/.gamelib-pin.json": "{\"sha256\":\"7650fd8ded41ca091ca6d3f9596d03cc75d95e4da8a15f5c8f13574d183a9c5e\",\"version\":\"v1.10.3-20230507-repack\"}"
+  },
+  "logs": []
+}

@@ -1,0 +1,120 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/.tmp-wine-interrupted",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/.tmp-wine-interrupted/out",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/.tmp-wine-interrupted/out/partial",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "d512d96ea31ab0b9bb9b66da70c4d675f7db657518f4b6c0cc6d5823e6da5509"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.0-20220101-repack",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.0-20220101-repack/.gamelib-pin.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1b0f10322e936e3b6fe8b87aa62f2631720892e11452018acb306aaa44d4e690"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.0-20220101-repack/x32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.0-20220101-repack/x32/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "770f4aa2c23c9c3bcbf4b9d63b6979822a4ec406496323c44386d3ba5455b4c6"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.0-20220101-repack/x64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.0-20220101-repack/x64/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "d53e0ed2bbf0e6a73713306bdd5e94ac11e1785cad3e4fe74efb3ae49acc6bc8"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-9.0",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-9.0/.gamelib-pin.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "fc43b6b18c54a3af3a5a559a14c307aa2012aa01a0162119ebff3050358519ce"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-9.0/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-9.0/Contents/Resources",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-9.0/Contents/Resources/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-9.0/Contents/Resources/wine/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-9.0/Contents/Resources/wine/bin/wine",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "edd8374bda6328cd709649332027af4e5bc4884e269a438a3b0bac193738bf17"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-9.0/Contents/Resources/wine/bin/wine64",
+    "kind": "symlink",
+    "mode": "0755",
+    "symlink": "wine"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-9.0/Contents/Resources/wine/bin/wineserver",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "b350d456e508985a75dd2ead5b5355844dbabc714e15b9e8f1a04d8177539e05"
+  }
+]

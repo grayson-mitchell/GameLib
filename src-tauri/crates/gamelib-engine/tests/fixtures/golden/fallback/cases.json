@@ -1,0 +1,302 @@
+[
+  {
+    "id": "download-ok-fresh",
+    "op": "ensure",
+    "note": "nothing installed: DXVK then Wine download, verify and extract; the status sequence runs downloading:N -> verifying -> extracting -> setting-up, and both markers are written",
+    "downloads": { "dxvk": "ok", "wine": "ok" }
+  },
+  {
+    "id": "download-ok-dxvk-already-installed",
+    "op": "ensure",
+    "note": "DXVK is installed and marked: only Wine downloads",
+    "installed": { "dxvk": "ok" },
+    "downloads": { "wine": "ok" }
+  },
+  {
+    "id": "download-ok-wine-already-installed",
+    "op": "ensure",
+    "note": "Wine is installed and marked: only DXVK downloads",
+    "installed": { "wine": "ok" },
+    "downloads": { "dxvk": "ok" }
+  },
+  {
+    "id": "already-installed-no-download",
+    "op": "ensure",
+    "note": "both installed and marked: ok with no download and no status update at all (no setting-up)",
+    "installed": { "wine": "ok", "dxvk": "ok" },
+    "downloads": {}
+  },
+  {
+    "id": "offline-nothing-installed",
+    "op": "ensure",
+    "note": "offline with nothing installed: reason offline, no request, a done status",
+    "online": false,
+    "downloads": {}
+  },
+  {
+    "id": "offline-dxvk-installed",
+    "op": "ensure",
+    "note": "offline with only DXVK installed: Wine is still missing, so reason offline",
+    "online": false,
+    "installed": { "dxvk": "ok" },
+    "downloads": {}
+  },
+  {
+    "id": "size-mismatch-dxvk",
+    "op": "ensure",
+    "note": "the DXVK archive on disk is not the pinned size: hash-mismatch 'unexpected archive size', nothing installed, no temp dir left",
+    "downloads": { "dxvk": "wrong-size" }
+  },
+  {
+    "id": "size-mismatch-wine",
+    "op": "ensure",
+    "note": "DXVK installs, then the Wine archive is not the pinned size: hash-mismatch, DXVK stays installed",
+    "downloads": { "dxvk": "ok", "wine": "wrong-size" }
+  },
+  {
+    "id": "sha256-mismatch-dxvk",
+    "op": "ensure",
+    "note": "the DXVK archive is the pinned size with the wrong sha256: hash-mismatch, the archive is deleted, nothing installed",
+    "downloads": { "dxvk": "wrong-sha" }
+  },
+  {
+    "id": "sha256-mismatch-wine",
+    "op": "ensure",
+    "note": "DXVK installs, then the Wine sha256 differs: hash-mismatch 'wine: sha256 mismatch'",
+    "downloads": { "dxvk": "ok", "wine": "wrong-sha" }
+  },
+  {
+    "id": "download-failed-network",
+    "op": "ensure",
+    "note": "the downloader rejects with a network error after some progress: download-failed carrying the message",
+    "downloads": { "dxvk": "fail-network" }
+  },
+  {
+    "id": "download-stopped-without-signal",
+    "op": "ensure",
+    "note": "the downloader reports 'Download stopped or paused' with no abort signal: classified aborted by the message alone",
+    "downloads": { "dxvk": "fail-stopped" }
+  },
+  {
+    "id": "abort-before-start",
+    "op": "ensure",
+    "note": "the caller's signal is already aborted: aborted before any download, the single caller aborts the shared flight, a done status",
+    "callers": [{ "app": "oracle-app", "abort": "before" }],
+    "downloads": {}
+  },
+  {
+    "id": "abort-during-download-progress",
+    "op": "ensure",
+    "note": "the signal fires on the first progress update after 0%: the download stops, aborted, nothing installed",
+    "callers": [{ "app": "oracle-app", "abort": "downloading-progress" }],
+    "downloads": { "dxvk": "ok" }
+  },
+  {
+    "id": "abort-during-verify",
+    "op": "ensure",
+    "note": "the signal fires when verifying starts: aborted during verify, nothing installed",
+    "callers": [{ "app": "oracle-app", "abort": "verifying" }],
+    "downloads": { "dxvk": "ok" }
+  },
+  {
+    "id": "abort-during-extract",
+    "op": "ensure",
+    "note": "the signal fires when extracting starts: tar still runs, then aborted during extract, nothing installed",
+    "callers": [{ "app": "oracle-app", "abort": "extracting" }],
+    "downloads": { "dxvk": "ok" }
+  },
+  {
+    "id": "extract-failed-tar-error-dxvk",
+    "op": "ensure",
+    "note": "tar exits 2 on the DXVK archive (scripted): extract-failed 'dxvk: tar failed', the tar spawn recorded",
+    "downloads": { "dxvk": "tar-fails" }
+  },
+  {
+    "id": "extract-failed-tar-error-wine",
+    "op": "ensure",
+    "note": "DXVK extracts, then tar exits 2 on the Wine archive (scripted): extract-failed 'wine: tar failed'",
+    "downloads": { "dxvk": "ok", "wine": "tar-fails" }
+  },
+  {
+    "id": "symlink-escape-wine",
+    "op": "ensure",
+    "note": "the Wine archive holds a symlink resolving to a path inside the fake profile but outside the extraction root: extract-failed 'symlink escapes extraction root', the extraction is removed, DXVK stays installed (T-87-16)",
+    "downloads": { "dxvk": "ok", "wine": "escape" }
+  },
+  {
+    "id": "stale-wine-dir-replaced",
+    "op": "ensure",
+    "note": "a Wine dir exists with a marker for another sha256 (not installed): the download replaces the directory",
+    "installed": { "wine": "wrong-sha", "dxvk": "ok" },
+    "downloads": { "wine": "ok" }
+  },
+  {
+    "id": "stale-dxvk-no-x64-replaced",
+    "op": "ensure",
+    "note": "a DXVK dir exists without x64 (not installed): the download replaces the directory",
+    "installed": { "wine": "ok", "dxvk": "no-x64" },
+    "downloads": { "dxvk": "ok" }
+  },
+  {
+    "id": "joined-two-callers",
+    "op": "ensure",
+    "note": "two callers in one tick share one flight: two downloads (one per artifact, not four), both callers receive the same status sequence",
+    "callers": [{ "app": "app-a" }, { "app": "app-b" }],
+    "downloads": { "dxvk": "ok", "wine": "ok" }
+  },
+  {
+    "id": "joined-caller-aborts-early",
+    "op": "ensure",
+    "note": "three callers share a flight and the third aborts at once: the third resolves 'aborted by caller', the flight continues for the other two",
+    "callers": [
+      { "app": "app-a" },
+      { "app": "app-b" },
+      { "app": "app-c", "abort": "sync" }
+    ],
+    "downloads": { "dxvk": "ok", "wine": "ok" }
+  },
+  {
+    "id": "joined-all-abort",
+    "op": "ensure",
+    "note": "two callers share a flight and both abort at once: the shared download is aborted, nothing downloads",
+    "callers": [
+      { "app": "app-a", "abort": "sync" },
+      { "app": "app-b", "abort": "sync" }
+    ],
+    "downloads": {}
+  },
+  {
+    "id": "prune-after-install-keeps-current-and-previous",
+    "op": "ensure",
+    "note": "a successful install of the current pin prunes: the current and previous pins stay, an old pin, an old DXVK, a stale temp dir and a symlink to a directory outside are handled, a plain file is left",
+    "seed": [
+      { "path": "<TOOLS>/steam-engines/wine-staging-11.1/Contents/keep.txt", "text": "previous" },
+      { "path": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.2-20230101-repack/x32/a.dll", "text": "previous" },
+      { "path": "<TOOLS>/steam-engines/wine-staging-9.0/bin/wine", "text": "retired" },
+      { "path": "<TOOLS>/steam-engines/dxvk-macOS-old/x64/a.dll", "text": "retired" },
+      { "path": "<TOOLS>/steam-engines/.tmp-wine-interrupted/out/partial", "text": "interrupted" },
+      { "path": "<TOOLS>/steam-engines/readme.txt", "text": "a file is never removed" },
+      { "path": "<TOOLS>/steam-engines/link", "symlink": "<HOME>/outside" },
+      { "path": "<HOME>/outside/keep.txt", "text": "outside the root" }
+    ],
+    "downloads": { "dxvk": "ok", "wine": "ok" }
+  },
+  {
+    "id": "no-prune-after-install-of-other-pin",
+    "op": "ensure",
+    "note": "a pin that is neither current nor previous installs without pruning: the unpinned directories and the stale temp dir stay",
+    "pin": "other",
+    "seed": [
+      { "path": "<TOOLS>/steam-engines/wine-staging-9.0/bin/wine", "text": "retired" },
+      { "path": "<TOOLS>/steam-engines/.tmp-wine-interrupted/out/partial", "text": "interrupted" }
+    ],
+    "downloads": { "dxvk": "ok", "wine": "ok" }
+  },
+  {
+    "id": "prune-direct-seeded",
+    "op": "prune",
+    "note": "pruneUnpinnedEngines on its own: the current pin installed and the previous pin's directories stay; unpinned directories and a temp dir go; a file and a symlink stay and the symlink's target is untouched",
+    "installed": { "wine": "ok", "dxvk": "ok" },
+    "seed": [
+      { "path": "<TOOLS>/steam-engines/wine-staging-11.1/Contents/keep.txt", "text": "previous" },
+      { "path": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.2-20230101-repack/x32/a.dll", "text": "previous" },
+      { "path": "<TOOLS>/steam-engines/wine-staging-9.0/bin/wine", "text": "retired" },
+      { "path": "<TOOLS>/steam-engines/dxvk-macOS-old/x64/a.dll", "text": "retired" },
+      { "path": "<TOOLS>/steam-engines/.tmp-dxvk-interrupted/dl/partial", "text": "interrupted" },
+      { "path": "<TOOLS>/steam-engines/readme.txt", "text": "a file is never removed" },
+      { "path": "<TOOLS>/steam-engines/link", "symlink": "<HOME>/outside" },
+      { "path": "<HOME>/outside/keep.txt", "text": "outside the root" }
+    ],
+    "downloads": {}
+  },
+  {
+    "id": "prune-no-root",
+    "op": "prune",
+    "note": "no steam-engines directory: nothing happens and nothing is created",
+    "downloads": {}
+  },
+  {
+    "id": "sweep-removes-temp-dirs",
+    "op": "sweep",
+    "note": "the boot sweep removes every .tmp-* directory under the root and logs how many; a .tmp-* file, a symlink named .tmp-* and ordinary directories stay",
+    "seed": [
+      { "path": "<TOOLS>/steam-engines/.tmp-wine-interrupted/out/partial", "text": "interrupted" },
+      { "path": "<TOOLS>/steam-engines/.tmp-dxvk-interrupted/dl/partial", "text": "interrupted" },
+      { "path": "<TOOLS>/steam-engines/.tmp-note", "text": "a file, not a directory" },
+      { "path": "<TOOLS>/steam-engines/.tmp-link", "symlink": "<HOME>/outside" },
+      { "path": "<TOOLS>/steam-engines/keep-dir/z", "text": "ordinary directory" },
+      { "path": "<HOME>/outside/keep.txt", "text": "outside the root" }
+    ],
+    "downloads": {}
+  },
+  {
+    "id": "sweep-no-root",
+    "op": "sweep",
+    "note": "no steam-engines directory: nothing happens, no log line",
+    "downloads": {}
+  },
+  {
+    "id": "sweep-skipped-while-download-in-flight",
+    "op": "sweep-inflight",
+    "note": "a sweep called while a download is in flight returns at once and removes nothing; the install then finishes (a pin that does not prune) and the stale temp dir is still there",
+    "pin": "other",
+    "seed": [
+      { "path": "<TOOLS>/steam-engines/.tmp-wine-interrupted/out/partial", "text": "interrupted" }
+    ],
+    "downloads": { "dxvk": "ok", "wine": "ok" }
+  },
+  {
+    "id": "installed-both",
+    "op": "installed",
+    "note": "both artifacts present with matching markers",
+    "installed": { "wine": "ok", "dxvk": "ok" },
+    "downloads": {}
+  },
+  {
+    "id": "installed-nothing",
+    "op": "installed",
+    "note": "an empty tools folder",
+    "downloads": {}
+  },
+  {
+    "id": "installed-marker-wrong-sha",
+    "op": "installed",
+    "note": "Wine's marker names another sha256: not installed",
+    "installed": { "wine": "wrong-sha", "dxvk": "ok" },
+    "downloads": {}
+  },
+  {
+    "id": "installed-corrupt-marker",
+    "op": "installed",
+    "note": "Wine's marker is not JSON: not installed, and the file is left as it was",
+    "installed": { "wine": "corrupt-marker", "dxvk": "ok" },
+    "downloads": {}
+  },
+  {
+    "id": "installed-no-marker",
+    "op": "installed",
+    "note": "Wine's binaries exist with no marker: not installed",
+    "installed": { "wine": "no-marker", "dxvk": "ok" },
+    "downloads": {}
+  },
+  {
+    "id": "installed-no-wineserver",
+    "op": "installed",
+    "note": "wine and the marker exist but wineserver does not: not installed",
+    "installed": { "wine": "no-wineserver", "dxvk": "ok" },
+    "downloads": {}
+  },
+  {
+    "id": "installed-missing-x64",
+    "op": "installed",
+    "note": "DXVK without x64: not installed",
+    "installed": { "wine": "ok", "dxvk": "no-x64" },
+    "downloads": {}
+  },
+  {
+    "id": "paths-layout",
+    "op": "paths",
+    "note": "pinnedEngineRoot and pinnedEnginePaths for the current, previous and an unlisted pin",
+    "downloads": {}
+  }
+]

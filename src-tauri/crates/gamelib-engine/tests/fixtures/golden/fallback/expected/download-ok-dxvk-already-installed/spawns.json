@@ -1,0 +1,24 @@
+[
+  {
+    "program": "tar",
+    "argv": [
+      "-xf",
+      "<TOOLS>/steam-engines/.tmp-wine-XXXXXX/dl/wine-staging-11.20-osx64.tar.xz",
+      "-C",
+      "<TOOLS>/steam-engines/.tmp-wine-XXXXXX/out",
+      "--strip-components=1"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "op": "prune",
+  "pin": "current",
+  "online": true,
+  "before": null,
+  "after": null,
+  "abortControllerReleased": true,
+  "markers": {},
+  "logs": []
+}

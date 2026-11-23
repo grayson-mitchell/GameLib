@@ -1,0 +1,64 @@
+{
+  "op": "ensure",
+  "pin": "current",
+  "online": true,
+  "callers": [
+    {
+      "app": "oracle-app",
+      "abort": null,
+      "reporting": {
+        "ok": false,
+        "aborted": false,
+        "reason": "hash-mismatch",
+        "error": "hash-mismatch dxvk: sha256 mismatch"
+      },
+      "raw": {
+        "ok": false,
+        "reason": "hash-mismatch",
+        "detail": "dxvk: sha256 mismatch"
+      },
+      "progress": [
+        {
+          "phase": "downloading",
+          "percentage": 0,
+          "artifact": "dxvk"
+        },
+        {
+          "phase": "downloading",
+          "percentage": 25,
+          "eta": "00:00:13",
+          "artifact": "dxvk"
+        },
+        {
+          "phase": "downloading",
+          "percentage": 100,
+          "eta": "00:00:00",
+          "artifact": "dxvk"
+        },
+        {
+          "phase": "verifying",
+          "artifact": "dxvk"
+        }
+      ]
+    }
+  ],
+  "abortControllerReleased": true,
+  "markers": {},
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: downloading dxvk v1.10.3-20230507-repack"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: verifying dxvk"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "built-in engine unavailable for nile oracle-app: hash-mismatch dxvk: sha256 mismatch"
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "op": "ensure",
+  "pin": "current",
+  "online": true,
+  "callers": [
+    {
+      "app": "oracle-app",
+      "abort": null,
+      "reporting": {
+        "ok": false,
+        "aborted": false,
+        "reason": "extract-failed",
+        "error": "extract-failed symlink escapes extraction root: <TOOLS>/steam-engines/.tmp-wine-XXXXXX/out/evil"
+      },
+      "raw": {
+        "ok": false,
+        "reason": "extract-failed",
+        "detail": "symlink escapes extraction root: <TOOLS>/steam-engines/.tmp-wine-XXXXXX/out/evil"
+      },
+      "progress": [
+        {
+          "phase": "downloading",
+          "percentage": 0,
+          "artifact": "dxvk"
+        },
+        {
+          "phase": "downloading",
+          "percentage": 25,
+          "eta": "00:00:13",
+          "artifact": "dxvk"
+        },
+        {
+          "phase": "downloading",
+          "percentage": 100,
+          "eta": "00:00:00",
+          "artifact": "dxvk"
+        },
+        {
+          "phase": "verifying",
+          "artifact": "dxvk"
+        },
+        {
+          "phase": "extracting",
+          "artifact": "dxvk"
+        },
+        {
+          "phase": "downloading",
+          "percentage": 0,
+          "artifact": "wine"
+        },
+        {
+          "phase": "downloading",
+          "percentage": 25,
+          "eta": "00:00:23",
+          "artifact": "wine"
+        },
+        {
+          "phase": "downloading",
+          "percentage": 100,
+          "eta": "00:00:00",
+          "artifact": "wine"
+        },
+        {
+          "phase": "verifying",
+          "artifact": "wine"
+        },
+        {
+          "phase": "extracting",
+          "artifact": "wine"
+        }
+      ]
+    }
+  ],
+  "abortControllerReleased": true,
+  "markers": {
+    "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/.gamelib-pin.json": "{\"sha256\":\"7650fd8ded41ca091ca6d3f9596d03cc75d95e4da8a15f5c8f13574d183a9c5e\",\"version\":\"v1.10.3-20230507-repack\"}"
+  },
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: downloading dxvk v1.10.3-20230507-repack"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: verifying dxvk"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: extracting dxvk"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: downloading wine 11.20"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: verifying wine"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: extracting wine"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "built-in engine unavailable for nile oracle-app: extract-failed symlink escapes extraction root: <TOOLS>/steam-engines/.tmp-wine-XXXXXX/out/evil"
+    }
+  ]
+}

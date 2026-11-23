@@ -1,0 +1,46 @@
+[
+  {
+    "program": "tar",
+    "argv": [
+      "-xf",
+      "<TOOLS>/steam-engines/.tmp-dxvk-XXXXXX/dl/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+      "-C",
+      "<TOOLS>/steam-engines/.tmp-dxvk-XXXXXX/out",
+      "--strip-components=1"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "tar",
+    "argv": [
+      "-xf",
+      "<TOOLS>/steam-engines/.tmp-wine-XXXXXX/dl/wine-staging-11.20-osx64.tar.xz",
+      "-C",
+      "<TOOLS>/steam-engines/.tmp-wine-XXXXXX/out",
+      "--strip-components=1"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 2,
+      "stdout": "",
+      "stderr": "tar: synthetic extraction failure\n"
+    }
+  }
+]

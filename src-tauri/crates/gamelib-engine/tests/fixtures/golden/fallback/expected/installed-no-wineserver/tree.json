@@ -1,0 +1,92 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/.gamelib-pin.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "bd17f01ed41eb5de957c3570531cf59c16b47a99f127a8e32a2e0961ecd8c4f4"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x32/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "40f4a39fd00e0f49e288f0320331cdc7fd3dd2c7e043f556c34cec32464b62be"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x64/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "5609f728403e197bb255ef50c62aeabb1f93b09f7b7c379903440b65cd4319cb"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/.gamelib-pin.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "36134d9547418418b6859eeb4d37c1f8e40551b3f2df2d28fa15a53cef681364"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "32c4feed996880bc92a062dc476f9b8cdb2596a989f2cc5246e9cef605bd5c78"
+  }
+]

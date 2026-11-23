@@ -1,0 +1,32 @@
+{
+  "op": "ensure",
+  "pin": "current",
+  "online": false,
+  "callers": [
+    {
+      "app": "oracle-app",
+      "abort": null,
+      "reporting": {
+        "ok": false,
+        "aborted": false,
+        "reason": "offline",
+        "error": "offline no network connection"
+      },
+      "raw": {
+        "ok": false,
+        "reason": "offline",
+        "detail": "no network connection"
+      },
+      "progress": []
+    }
+  ],
+  "abortControllerReleased": true,
+  "markers": {},
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "built-in engine unavailable for nile oracle-app: offline no network connection"
+    }
+  ]
+}
