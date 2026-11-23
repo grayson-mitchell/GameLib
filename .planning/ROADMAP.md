@@ -1093,7 +1093,7 @@ Plans:
   3. The Humble and shortcut test oracles are ported as Rust tests or recorded fixtures
   4. The Humble and shortcuts TypeScript and their sidecar registrations are deleted in this phase, except scheduled survivors listed in the schedule test (D-03, D-04, D-24, D-27)
 
-**Plans:** 4/32 plans executed in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
+**Plans:** 5/32 plans executed in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
 
 Plans:
 **Wave 1**
@@ -1103,7 +1103,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [x] 94-04-PLAN.md — Login-window seam and user agent relocated to src/backend/login/ unchanged, with the slot install moved out (D-03)
-- [ ] 94-05-PLAN.md — Shortcuts TS oracle; byte-exact text goldens with hostile names, sanitize vectors, paths and exists (D-14)
+- [x] 94-05-PLAN.md — Shortcuts TS oracle; byte-exact text goldens with hostile names, sanitize vectors, paths and exists (D-14)
 - [ ] 94-06-PLAN.md — Humble TS oracle: the wire-level recorder, redaction scan, classify/dedup vectors and the shared title-match vectors
 
 **Wave 3** *(blocked on Wave 2 completion)*

@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 94
 current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 94-04-PLAN.md
-last_updated: "2026-11-23T21:04:11.179Z"
+stopped_at: Completed 94-05-PLAN.md
+last_updated: "2026-11-23T21:19:48.446Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 94 execution started
-state_head: 9cc5986194f852e97471c286e5d991c7598c745e
+state_head: b76fcdbe01c66b4801bc7b15cc5c30a0a6696981
 progress:
   total_phases: 22
   completed_phases: 23
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
-Plan: 5 of 32
-Status: Ready to execute (94-03 next; worktree-local STATE, D-02)
-Last activity: 2026-11-24 — Completed 94-02 (gamelib-humble and gamelib-shortcuts crates, CI wiring, ProcSpec::hide_window)
+Plan: 6 of 32
+Status: Ready to execute (94-06 next; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-05 (shortcut TS oracle: 346 byte-exact goldens, harness, redaction scan)
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -475,6 +475,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P02 | 25min | 2 tasks | 15 files |
 | Phase 94 P03 | 25min | 2 tasks | 3 files |
 | Phase 94 P04 | 55min | 2 tasks | 45 files |
+| Phase 94 P05 | 90min | 2 tasks | 365 files |
 
 ## Accumulated Context
 
@@ -1020,6 +1021,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-02: test-only ops chained into dispatch under cfg(test), never in a release OPS; hide_window applied via pure creation_flags in the Windows arm only; jiff declared in gamelib-humble only
 - [Phase 94]: 94-03: schedule starts with one relocated row (createRustLoginWindowSeam at humbleLoginFlowRegistration.ts, deletedBy 92) because the tree already held RUST_HUMBLE_LOGIN_* calls; relocated rows cover the calls inside the export they name; 94-04 repoints the row
 - [Phase 94]: 94-04: registerLoginWindowSeam takes appInfo as a third argument (the smoke hook needs the browser user agent); the login seam slot is BootServices.loginWindowSeam only, built in the humble-services step
+- [Phase 94]: 94-05: shortcut goldens record the file mode the TS requested (writeFile mode option, chmodSync), not the on-disk mode, so they are identical on NTFS and POSIX hosts
+- [Phase 94]: 94-05: shortcut oracle case ids are checked for case-insensitive collisions (NTFS and default macOS fold them)
 
 ### Pending Todos
 
@@ -1301,8 +1304,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T21:04:11.047Z
-Stopped at: Completed 94-04-PLAN.md
+Last session: 2026-11-23T21:19:43.522Z
+Stopped at: Completed 94-05-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
