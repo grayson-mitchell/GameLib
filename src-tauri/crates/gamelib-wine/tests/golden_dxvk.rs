@@ -965,3 +965,67 @@ async fn the_macos_dxvk_install_replays_the_golden() {
         replay_case(case).await;
     }
 }
+
+/// Every golden case: remove with and without a backup, nvapi and vkd3d, the Linux prefixes, the
+/// pinned tag, the download failures with their dialog, the offline and 32-bit prefixes, the strict
+/// restores and the skipped bottles.
+#[tokio::test]
+async fn every_dxvk_golden_case_replays() {
+    let all = cases();
+    assert!(all.len() >= FLOOR, "{} cases", all.len());
+    for case in &all {
+        replay_case(case).await;
+    }
+}
+
+/// The places the Rust port deliberately differs from the TS golden (D-19), each explained in
+/// `golden/dxvk/deltas.json`, which this list must match key for key.
+const DELTAS: &[&str] = &[
+    "archive-with-no-repack-asset",
+    "concurrent-tools",
+    "copies-finish-before-the-call-returns",
+    "dialog-keys",
+    "dll-names-are-sorted",
+    "error-text",
+    "extract-failure-cleans-up",
+    "feed-failure-is-not-fatal-to-the-others",
+    "log-lines-carry-the-prefix-path",
+    "log-prefix",
+    "missing-latest-is-an-error-value",
+    "replaced-version-removed",
+];
+
+#[test]
+fn every_difference_from_the_ts_is_explained() {
+    let deltas = read_json(&golden_dir().join("deltas.json"));
+    let mut keys: Vec<&str> = deltas
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect();
+    keys.sort_unstable();
+    assert_eq!(keys, DELTAS);
+    for (key, text) in deltas.as_object().unwrap() {
+        assert!(
+            text.as_str().is_some_and(|t| t.len() > 40),
+            "{key} has no explanation"
+        );
+    }
+}
+
+/// Every case the oracle recorded is one of the three shapes the replay can state a result for.
+#[test]
+fn every_case_is_an_install_a_remove_or_a_strict_restore() {
+    let all = cases();
+    let count = |f: &dyn Fn(&Value) -> bool| all.iter().filter(|c| f(c)).count();
+    let installs = count(&|c| c["action"] == "backup");
+    let removes = count(&|c| c["action"] == "restore" && c["source"].is_null());
+    let strict = count(&|c| c["action"] == "restore" && !c["source"].is_null());
+    assert_eq!(installs + removes + strict, all.len());
+    // The MANIFEST floor of the plan is 10; these are the shapes the plan names.
+    assert!(
+        installs >= 20 && removes >= 4 && strict >= 5,
+        "{installs}/{removes}/{strict}"
+    );
+}
