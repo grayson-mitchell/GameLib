@@ -1,7 +1,7 @@
 {
   "baseCommit": "b5b5cad3fa2e822602d320b70788d87240fc056e",
   "baseVersion": "2.22.0",
-  "generatedAt": "2026-11-22T08:15:32.648Z",
+  "generatedAt": "2026-11-23T08:57:34.930Z",
   "generatedBy": "pnpm gen-i18n-gate-scope",
   "purpose": "A-17: the CI-readable input to the i18n scope staleness ratchet — every fork-touched src/frontend source file eligible for the hardcoded-string gate (D-17 deferrals already removed, exactly the operand the ratchet compares against), INCLUDING those not yet listed in i18nGateScope.json. Regenerate with `pnpm gen-i18n-gate-scope`.",
   "files": [
@@ -93,6 +93,7 @@
     "src/frontend/components/UI/UninstallModal/index.tsx",
     "src/frontend/components/UI/WelcomeModal/index.tsx",
     "src/frontend/components/UI/WelcomeModal/welcomeState.ts",
+    "src/frontend/components/UI/WikiGameInfo/components/HowLongToBeat/index.tsx",
     "src/frontend/components/UI/WindowControls/CaptionGlyphs.tsx",
     "src/frontend/components/UI/WindowControls/index.tsx",
     "src/frontend/components/UI/index.tsx",
@@ -135,6 +136,7 @@
     "src/frontend/hooks/hasAnticheatInfo.ts",
     "src/frontend/hooks/hasProgress.ts",
     "src/frontend/hooks/hasStatus.ts",
+    "src/frontend/hooks/useMinimumSpin.ts",
     "src/frontend/hooks/useOpenDialog.ts",
     "src/frontend/hooks/useSettingsContext.ts",
     "src/frontend/index.tsx",
@@ -476,6 +478,7 @@
     "src/frontend/testUtils/jsdomNoticeEnv.ts",
     "src/frontend/testUtils/scssTokenSource.ts",
     "src/frontend/testUtils/storeHookReact.ts",
+    "src/frontend/testUtils/tauriIpcRoute.ts",
     "src/frontend/testUtils/tauriWindow.ts",
     "src/frontend/types.ts"
   ]

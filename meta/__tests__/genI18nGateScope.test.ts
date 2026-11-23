@@ -665,6 +665,12 @@ const FIXTURE_DIFF_LINES = [
  * sorted position -- `GamePage/components/InstallTab/OptInDlcRows.tsx` and
  * `InstallModal/SteamDialog/optInDlc.ts`. SCANNED, not declared debt.
  * DECLARED_UNSCANNED_DEBT unchanged.
+ *
+ * 2026-11-23 (Phase 86 validation audit, R5): fork-touched 473 -> 476, scope 350 -> 352
+ * (`pnpm gen-i18n-gate-scope`). SCANNED: `WikiGameInfo/components/HowLongToBeat/index.tsx`
+ * (86-23) and `hooks/useMinimumSpin.ts` (quick 261123-bbi), 0 violations in audit mode.
+ * DECLARED DEBT +1: `testUtils/tauriIpcRoute.ts` (86-25), whose two hits are the Tauri IPC
+ * command names `plugin:event|listen` and `plugin:event|unlisten`, not rendered text.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
@@ -805,6 +811,8 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/state/SteamRequestNotice.ts',
   'src/frontend/state/sleepAssertion.ts',
   'src/frontend/testUtils/storeHookReact.ts',
+  // Phase 86 R5: tauriIpcRoute.ts holds two Tauri IPC command names (:26, :32), not rendered text
+  'src/frontend/testUtils/tauriIpcRoute.ts',
   'src/frontend/testUtils/tauriWindow.ts'
 ]
 
@@ -1522,9 +1530,9 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 350-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 473-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(350)
-    expect(forkTouchedSnapshot.files.length).toBe(473)
+  it('A0 fixture sanity: the seeded scope is the REAL 352-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 476-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(352)
+    expect(forkTouchedSnapshot.files.length).toBe(476)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
     // despite what this assertion used to claim. The live derivation is
@@ -1565,7 +1573,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 350 -> 473 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 352 -> 476 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1588,7 +1596,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 473', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 476', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1601,12 +1609,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(473)
+    expect(rewritten.files.length).toBe(476)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 473 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 476 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1619,7 +1627,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(473)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(476)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
