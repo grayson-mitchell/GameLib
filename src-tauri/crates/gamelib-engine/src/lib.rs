@@ -40,6 +40,8 @@ use tokio::runtime::{Builder, Handle, Runtime};
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
 pub const OPS: &[&str] = &[
     "engine_bottle_create_crossover",
+    "engine_bottle_create_fallback",
+    "engine_bottle_ensure_per_game",
     "engine_bottle_is_provisioned",
     "engine_bottle_kill_wineserver",
     "engine_bottle_prepare",
@@ -89,13 +91,7 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
         // gate, `false` when nothing was written (a newer marker, an absent bottle, an unsafe name).
         "engine_bottle_record_pinned" => {
             let request: RecordPinnedRequest = decode(op, args)?;
-            let engine = engines::NonCrossoverEngine {
-                wine_bin: request.engine.wine_bin,
-                wineserver_bin: request.engine.wineserver_bin,
-                label: request.engine.label,
-                version: request.engine.version,
-                dxvk: request.engine.dxvk,
-            };
+            let engine = request.engine.into_engine();
             let recorded =
                 bottles::marker::record_pinned(ctx, &request.bottle_name, &request.pin_id, &engine);
             Ok(Value::Bool(recorded))
@@ -119,6 +115,38 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
             )
             .await;
             Ok(result.to_value())
+        }
+        // `wineboot -i` and `wineserver -w` with the built-in engine, its DXVK, then the conf, for a bottle
+        // that does not exist yet (or is half made); on a failure what this call made is cleaned. The
+        // answer is the sidecar's `FallbackBottleResult`. Only an app shutdown cancels it early.
+        "engine_bottle_create_fallback" => {
+            let request: CreateFallbackRequest = decode(op, args)?;
+            let engine = request.engine.into_engine();
+            if !request.fallback_settings.is_object() || !engine_is_trusted(ctx, &engine) {
+                return Err(format!("{op}:bad-args"));
+            }
+            let result = bottles::fallback_bottle::create_fallback_bottle(
+                ctx,
+                &request.bottle_name,
+                &engine,
+                &request.fallback_settings,
+                None,
+            )
+            .await;
+            Ok(result.to_value())
+        }
+        // Creates a game's bottle once (concurrent callers share one creation): with CrossOver when the
+        // caller's decision says so and CrossOver is found, else with the built-in engine, which must be
+        // installed already (the download is a later plan's). The answer is the sidecar's
+        // `EnsureGameBottleResult`.
+        "engine_bottle_ensure_per_game" => {
+            let request: EnsureRequest = decode(op, args)?;
+            let (ensure, decision, settings) = request
+                .into_args()
+                .ok_or_else(|| format!("{op}:bad-args"))?;
+            let deps = bottles::per_game::CtxPerGameDeps::new(ctx, decision, settings);
+            let outcome = bottles::per_game::ensure_per_game_bottle(ctx, &deps, &ensure).await;
+            Ok(outcome.to_value())
         }
         // `wineserver -k` against a per-game bottle; `true` when it ran to an exit. An unsafe name spawns
         // nothing. The child inherits the real environment (the declared real-profile arm).
@@ -263,6 +291,110 @@ struct RecordedEngine {
     dxvk: Option<engines::DxvkBuild>,
 }
 
+/// The argument of `engine_bottle_create_fallback`: the bottle and the built-in engine that creates it.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct CreateFallbackRequest {
+    bottle_name: String,
+    engine: RecordedEngine,
+    #[serde(default = "empty_object")]
+    fallback_settings: Value,
+}
+
+/// The argument of `engine_bottle_ensure_per_game`: the game, the engine the caller's decision chose
+/// and the global settings the DXVK step builds over.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct EnsureRequest {
+    key: String,
+    bottle_name: String,
+    app_name: String,
+    runner: String,
+    decision: DecisionRequest,
+    #[serde(default = "empty_object")]
+    fallback_settings: Value,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+enum DecisionRequest {
+    #[serde(rename_all = "camelCase")]
+    Crossover {
+        #[serde(default)]
+        create_timeout_ms: Option<u64>,
+    },
+    #[serde(rename_all = "camelCase")]
+    Pinned { pin_id: String },
+}
+
+impl EnsureRequest {
+    /// The library arguments, the decision and the settings, or `None` for a key the runner and app name
+    /// do not make, a pin the table does not hold, or settings that are not an object.
+    fn into_args(
+        self,
+    ) -> Option<(
+        bottles::per_game::EnsureArgs,
+        bottles::per_game::CreationDecision,
+        Value,
+    )> {
+        if !self.fallback_settings.is_object()
+            || key::engine_key_for(&self.runner, &self.app_name).as_deref() != Some(&self.key)
+        {
+            return None;
+        }
+        let decision = match self.decision {
+            DecisionRequest::Crossover { create_timeout_ms } => {
+                bottles::per_game::CreationDecision::Crossover {
+                    create_timeout: create_timeout_ms
+                        .map_or_else(bottles::per_game::default_create_timeout, |ms| {
+                            Duration::from_millis(ms.min(MAX_SPAWN_CAP_MS))
+                        }),
+                }
+            }
+            DecisionRequest::Pinned { pin_id } => bottles::per_game::CreationDecision::Pinned {
+                pin: Box::new(ids::pin_by_id(&pin_id)?.clone()),
+            },
+        };
+        let args = bottles::per_game::EnsureArgs {
+            key: self.key,
+            bottle_name: self.bottle_name,
+            app_name: self.app_name,
+            runner: self.runner,
+            cancel: None,
+        };
+        Some((args, decision, self.fallback_settings))
+    }
+}
+
+/// An engine the sidecar names is run (its Wine, its wineserver, its DXVK installer), so each program
+/// must sit inside a root GameLib installs engines under: the pinned engines or the Wine Manager tools,
+/// and its DXVK inside the pinned engines (T-87-82, T-87-36).
+fn engine_is_trusted(ctx: &EngineCtx, engine: &engines::NonCrossoverEngine) -> bool {
+    let pinned = engines::pinned_engine_root(ctx);
+    let wine_tools = jsutil::path_join(&[&ctx.paths.tools_path.to_string_lossy(), "wine"]);
+    let inside = |path: &str| {
+        bottles::paths::is_inside(&pinned, path) || bottles::paths::is_inside(&wine_tools, path)
+    };
+    inside(&engine.wine_bin)
+        && inside(&engine.wineserver_bin)
+        && match &engine.dxvk {
+            Some(build) => bottles::paths::is_inside(&pinned, &build.dir),
+            None => true,
+        }
+}
+
+impl RecordedEngine {
+    fn into_engine(self) -> engines::NonCrossoverEngine {
+        engines::NonCrossoverEngine {
+            wine_bin: self.wine_bin,
+            wineserver_bin: self.wineserver_bin,
+            label: self.label,
+            version: self.version,
+            dxvk: self.dxvk,
+        }
+    }
+}
+
 /// The argument of `engine_bottle_prepare`: the bottle, the engine it must be on and the facts the TS
 /// switch read through callbacks (the monitor phase, the title's own bottle, the settings).
 #[derive(serde::Deserialize)]
@@ -321,15 +453,8 @@ impl PrepareRequest {
             }
             EngineSelection::Pinned { engine, .. }
             | EngineSelection::WineManager { engine, .. } => {
-                if !Path::new(&engine.wine_bin).is_absolute()
-                    || !Path::new(&engine.wineserver_bin).is_absolute()
-                {
+                if !engine_is_trusted(ctx, engine) {
                     return None;
-                }
-                if let Some(dxvk) = &engine.dxvk {
-                    if !bottles::paths::is_inside(&engines::pinned_engine_root(ctx), &dxvk.dir) {
-                        return None;
-                    }
                 }
             }
         }
@@ -488,6 +613,8 @@ mod tests {
         assert!(OPS.contains(&"engine_pins"));
         for op in [
             "engine_bottle_create_crossover",
+            "engine_bottle_create_fallback",
+            "engine_bottle_ensure_per_game",
             "engine_bottle_is_provisioned",
             "engine_bottle_kill_wineserver",
             "engine_bottle_prepare",
@@ -661,10 +788,12 @@ mod tests {
         )
         .unwrap();
         let tools = home.root().join("tools/steam-engines");
+        let wine_bin = home.root().join("tools/wine/m/bin/wine");
+        let wineserver_bin = home.root().join("tools/wine/m/bin/wineserver");
         let engine = |dxvk_dir: &str| {
             json!({
                 "kind": "wine-manager", "managerVersion": "Wine-Staging-10.5", "reason": "override",
-                "wineBin": "/t/wine", "wineserverBin": "/t/wineserver", "label": "Wine Manager",
+                "wineBin": wine_bin, "wineserverBin": wineserver_bin, "label": "Wine Manager",
                 "version": "10.5", "dxvk": {"dir": dxvk_dir, "version": "v1"}
             })
         };
@@ -698,6 +827,10 @@ mod tests {
         let spawned = runner.spawns().len();
         for bad in [
             base(json!({"key": "not a key"})),
+            base(json!({"next": {
+                "kind": "wine-manager", "managerVersion": "m", "reason": "override",
+                "wineBin": "/usr/bin/wine", "wineserverBin": "/usr/bin/wineserver", "label": "x",
+                "version": "1", "dxvk": null}})),
             base(json!({"next": engine("/elsewhere/dxvk")})),
             base(json!({"fallbackSettings": []})),
             base(json!({"monitorPhase": "paused"})),
@@ -713,6 +846,104 @@ mod tests {
         }
         assert!(dispatch("engine_bottle_prepare", &[], &ctx).await.is_err());
         assert_eq!(runner.spawns().len(), spawned);
+    }
+
+    #[tokio::test]
+    async fn the_ensure_op_reuses_a_provisioned_bottle_and_takes_strict_arguments() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        lay_bottle(&home, "GameLib-gog-1", true, false);
+        let request = |patch: Value| {
+            let mut request = json!({
+                "key": "gog:1", "bottleName": "GameLib-gog-1", "appName": "1", "runner": "gog",
+                "decision": {"kind": "crossover", "createTimeoutMs": 1000}
+            });
+            for (k, v) in patch.as_object().unwrap() {
+                request[k] = v.clone();
+            }
+            request
+        };
+        // A provisioned bottle is reused: no process starts, nothing changes.
+        let reused = dispatch("engine_bottle_ensure_per_game", &[request(json!({}))], &ctx)
+            .await
+            .unwrap();
+        assert_eq!(
+            reused,
+            json!({"status": "done", "createdHere": false, "engine": "existing"})
+        );
+        // An unsafe name is an error answer (as the TS answered), not a bad argument, and nothing is made.
+        let answer = dispatch(
+            "engine_bottle_ensure_per_game",
+            &[request(json!({"bottleName": "a/b"}))],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(answer["status"], json!("error"));
+        // The pin must be one the table holds, and the key must be the runner's and app name's.
+        for bad in [
+            request(json!({"decision": {"kind": "pinned", "pinId": "no-such-pin"}})),
+            request(json!({"key": "gog:2"})),
+            request(json!({"runner": "nope"})),
+            request(json!({"fallbackSettings": 1})),
+            request(json!({"decision": {"kind": "other"}})),
+            request(json!({"extra": 1})),
+        ] {
+            let err = dispatch(
+                "engine_bottle_ensure_per_game",
+                std::slice::from_ref(&bad),
+                &ctx,
+            )
+            .await
+            .unwrap_err();
+            assert_eq!(err, "engine_bottle_ensure_per_game:bad-args", "{bad}");
+        }
+    }
+
+    #[tokio::test]
+    async fn the_create_fallback_op_refuses_an_engine_outside_the_engine_roots() {
+        use crate::testing::ScriptedSpecRunner;
+
+        let home = FakeHome::new("engine-lib-");
+        let runner = std::sync::Arc::new(ScriptedSpecRunner::new(Vec::new()));
+        let ctx = ctx(&home).with_proc(runner.clone());
+        let engine = |wine: &str, dxvk: Value| {
+            json!({
+                "bottleName": "GameLib-gog-1",
+                "engine": {"wineBin": wine, "wineserverBin": wine, "label": "x", "version": "1", "dxvk": dxvk}
+            })
+        };
+        for bad in [
+            engine("/usr/bin/wine", Value::Null),
+            engine("wine", Value::Null),
+            engine(
+                &home.root().join("tools/wine/m/bin/wine").to_string_lossy(),
+                json!({"dir": "/elsewhere", "version": "v1"}),
+            ),
+        ] {
+            let err = dispatch(
+                "engine_bottle_create_fallback",
+                std::slice::from_ref(&bad),
+                &ctx,
+            )
+            .await
+            .unwrap_err();
+            assert_eq!(err, "engine_bottle_create_fallback:bad-args", "{bad}");
+        }
+        assert!(runner.spawns().is_empty());
+        // A trusted engine is run: the scripted wineboot answers nothing, so the creation fails after
+        // it spawned, and the answer is the sidecar's error shape.
+        let wine = home.root().join("tools/wine/m/bin/wine");
+        let answer = dispatch(
+            "engine_bottle_create_fallback",
+            &[engine(&wine.to_string_lossy(), Value::Null)],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(answer["status"], json!("error"));
+        assert!(!runner.spawns().is_empty());
+        assert_eq!(runner.spawns()[0].argv, ["wineboot", "-i"]);
     }
 
     #[tokio::test]

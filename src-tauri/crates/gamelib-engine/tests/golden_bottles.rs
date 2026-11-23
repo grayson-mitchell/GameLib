@@ -14,9 +14,10 @@
 //!
 //! The CrossOver create, wineserver kill and guarded removal cases (`create-crossover`, `kill`,
 //! `remove-created`, 87-39) replay here too, against a scripted `SpecRunner` whose spawn trace and time
-//! limits are compared as well. The fallback create and the per-game ensure cases (`create-fallback`,
-//! `ensure`) are listed in [`LATER_OPS`] and replay in 87-40; a case whose op is in none of the lists
-//! fails the suite.
+//! limits are compared as well, and so do the fallback create and the per-game ensure cases
+//! (`create-fallback`, `ensure`, 87-40), which add a scripted DXVK installer whose requests are compared
+//! and a cancel that fires from inside a spawn or the installer. A case whose op is in none of the
+//! lists fails the suite.
 #![cfg(unix)]
 
 use std::os::unix::fs::PermissionsExt;
@@ -24,10 +25,12 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use futures_util::FutureExt;
 use gamelib_core::clock::SystemClock;
 use gamelib_core::process::{BoxFuture, LineSink, ProcSpec, SpecOutput, SpecRunner};
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::bottles::conf::{build_cxbottle_conf, write_cxbottle_conf};
+use gamelib_engine::bottles::fallback_bottle::create_fallback_bottle_with;
 use gamelib_engine::bottles::lifecycle::{
     create_crossover_bottle, kill_bottle_wineserver, remove_created_bottle_dir, CreateOptions,
     KILL_TIMEOUT_MS,
@@ -37,19 +40,25 @@ use gamelib_engine::bottles::marker::{
     restore_needs_absent_pin, Gate,
 };
 use gamelib_engine::bottles::paths::bottle_dir;
+use gamelib_engine::bottles::per_game::{
+    ensure_per_game_bottle, CreationDecision, EnsureArgs, PerGameDeps, PinOutcome,
+};
 use gamelib_engine::bottles::prefix::resolve_game_prefix_value;
 use gamelib_engine::bottles::registry::EngineSelection;
 use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
+use gamelib_engine::dxvk::{DxvkInstaller, DxvkRequest};
 use gamelib_engine::engines::{
     is_bottle_provisioned, read_bottle_engine_marker_kind, DxvkBuild, NonCrossoverEngine,
 };
 use gamelib_engine::offline::MarkerKind;
+use gamelib_engine::pins::{pins, EnginePin};
 use gamelib_engine::testing::{RecordingLog, ScriptedSpecRunner};
 use gamelib_store::host::StoreHost;
 use gamelib_store::version_gate::GateState;
 use gamelib_testutil::FakeHome;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+use std::panic::AssertUnwindSafe;
 use tokio_util::sync::CancellationToken;
 
 /// `golden/bottles` holds 146 cases; a later edit may raise this, never lower it.
@@ -71,9 +80,8 @@ const STATE_OPS: [&str; 9] = [
 /// The ops 87-39 ports: CrossOver bottle creation, the wineserver kill and the guarded removal.
 const LIFECYCLE_OPS: [&str; 3] = ["create-crossover", "kill", "remove-created"];
 
-/// The ops 87-40 ports (the fallback bottle creation and the per-game flight). Listed so a new op in
-/// the case list cannot go unnoticed.
-const LATER_OPS: [&str; 2] = ["create-fallback", "ensure"];
+/// The ops 87-40 ports: the fallback bottle creation and the per-game flight.
+const FALLBACK_OPS: [&str; 2] = ["create-fallback", "ensure"];
 
 /// The two replayed ops of the pinned engine the fixture markers name.
 const SYNTHETIC_PIN_LABEL: &str = "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)";
@@ -84,6 +92,9 @@ const WINESERVER_BIN: &str =
     "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver";
 const CX_BIN_DIR: &str = "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin";
 const BOTTLE_ID_3: &str = "AAAAAAAA-0000-4000-8000-000000000003";
+/// The BottleID the TS oracle's generator answered for the fallback creations.
+const BOTTLE_ID_4: &str = "AAAAAAAA-0000-4000-8000-000000000004";
+const WINE_BIN: &str = "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine";
 const BOTTLES_REL: &str = "Library/Application Support/CrossOver/Bottles";
 
 fn fixtures() -> PathBuf {
@@ -171,12 +182,12 @@ fn a_shrunken_case_list_fails_the_floor() {
 }
 
 #[test]
-fn every_case_op_is_replayed_here_or_scheduled_for_87_40() {
+fn every_case_op_is_replayed_here() {
     for case in cases() {
         let op = case["op"].as_str().unwrap();
         assert!(
-            STATE_OPS.contains(&op) || LIFECYCLE_OPS.contains(&op) || LATER_OPS.contains(&op),
-            "case {} has op {op}, which neither list names",
+            STATE_OPS.contains(&op) || LIFECYCLE_OPS.contains(&op) || FALLBACK_OPS.contains(&op),
+            "case {} has op {op}, which no list names",
             case["id"]
         );
     }
@@ -510,12 +521,13 @@ fn materialise(value: &Value) -> Value {
 /// The program an effect fires on, and what it does.
 type Effect = (String, Box<dyn FnOnce() + Send>);
 
-/// A scripted runner that also runs one effect when its program is first spawned (what
-/// `cxbottle --create` leaves in the bottle, or a signal that fires while it runs) and records the
-/// time limit and the cancel wiring of every spawn (the oracle's `spawnLimits`).
+/// A scripted runner that also runs an effect when its program is first spawned (what `cxbottle
+/// --create` or `wineboot` leaves in the bottle, or a signal that fires while it runs) and records the
+/// time limit and the cancel wiring of every spawn (the oracle's `spawnLimits`). A run yields once
+/// before it answers, as a real child does, so two callers started together really overlap.
 struct EffectRunner {
     inner: ScriptedSpecRunner,
-    effect: Mutex<Option<Effect>>,
+    effects: Mutex<Vec<Effect>>,
     limits: Mutex<Vec<Value>>,
 }
 
@@ -529,20 +541,20 @@ impl SpecRunner for EffectRunner {
             "signal": spec.cancel.is_some(),
         }));
         let fire = {
-            let mut slot = self.effect.lock().unwrap();
-            if slot
-                .as_ref()
-                .is_some_and(|(program, _)| *program == spec.program)
-            {
-                slot.take().map(|(_, effect)| effect)
-            } else {
-                None
-            }
+            let mut effects = self.effects.lock().unwrap();
+            effects
+                .iter()
+                .position(|(program, _)| *program == spec.program)
+                .map(|i| effects.remove(i).1)
         };
         if let Some(effect) = fire {
             effect();
         }
-        self.inner.run(spec, on_line)
+        let run = self.inner.run(spec, on_line);
+        Box::pin(async move {
+            tokio::task::yield_now().await;
+            run.await
+        })
     }
 }
 
@@ -584,8 +596,72 @@ fn lifecycle_runner(
         .map(|(k, v)| (k.to_string(), v.to_string_lossy().into_owned()))
         .collect();
     let mut inner = ScriptedSpecRunner::new(base);
-    let mut effect: Option<Effect> = None;
-    match case["op"].as_str().unwrap_or_default() {
+    let mut effects: Vec<Effect> = Vec::new();
+    let op = case["op"].as_str().unwrap_or_default();
+    let bottle = args["bottle"].as_str().unwrap_or_default().to_string();
+    if op == "create-fallback" || op == "ensure" {
+        // `cxbottle --create` first when the ensure's decision is CrossOver and a bin dir resolves.
+        if op == "ensure" && args["decision"] == "crossover" && args["binDirPresent"] != false {
+            let bin_dir = args["binDir"].as_str().unwrap_or(CX_BIN_DIR);
+            let cxbottle = format!("{bin_dir}/cxbottle");
+            let script = &args["cxbottle"];
+            inner = inner
+                .on_program(&cxbottle, scripted_output(script))
+                .on_program(
+                    &format!("{bin_dir}/wineserver"),
+                    scripted_output(&json!({"code": 0})),
+                );
+            let fixture = script["writes"].as_str().map(str::to_string);
+            let (during, cancel, profile, bottle) = (
+                args["abort"] == "during",
+                cancel.clone(),
+                profile.clone(),
+                bottle.clone(),
+            );
+            effects.push((
+                cxbottle,
+                Box::new(move || {
+                    if let Some(fixture) = &fixture {
+                        profile.build_bottle_as(fixture, &bottle);
+                    }
+                    if during {
+                        cancel.cancel();
+                    }
+                }),
+            ));
+        }
+        // Then the built-in engine: wineboot, the wait (cut by its cap when the case says so), the stop.
+        let wine = profile.expand(WINE_BIN);
+        let wineserver = profile.expand(WINESERVER_BIN);
+        let boot = &args["boot"];
+        let wait = if args["wait"] == "timeout" {
+            json!({"code": null})
+        } else {
+            json!({"code": 0})
+        };
+        inner = inner
+            .on(&wine, &["wineboot", "-i"], scripted_output(boot))
+            .on(&wineserver, &["-w"], scripted_output(&wait))
+            .on(&wineserver, &["-k"], scripted_output(&json!({"code": 0})));
+        let fixture = boot["writes"].as_str().map(str::to_string);
+        let (after_boot, cancel, profile) = (
+            args["abort"] == "after-boot",
+            cancel.clone(),
+            profile.clone(),
+        );
+        effects.push((
+            wine,
+            Box::new(move || {
+                if let Some(fixture) = &fixture {
+                    profile.build_bottle_as(fixture, &bottle);
+                }
+                if after_boot {
+                    cancel.cancel();
+                }
+            }),
+        ));
+    }
+    match op {
         "kill" => {
             let answer = match args["script"].as_str() {
                 Some("throws") => scripted_output(&json!({"throws": "spawn wineserver ENOENT"})),
@@ -608,7 +684,7 @@ fn lifecycle_runner(
             let bottle = args["bottle"].as_str().unwrap_or_default().to_string();
             let (during, cancel) = (args["abort"] == "during", cancel.clone());
             let profile = profile.clone();
-            effect = Some((
+            effects.push((
                 cxbottle,
                 Box::new(move || {
                     if let Some(fixture) = &fixture {
@@ -624,8 +700,117 @@ fn lifecycle_runner(
     }
     Arc::new(EffectRunner {
         inner,
-        effect: Mutex::new(effect),
+        effects: Mutex::new(effects),
         limits: Mutex::new(Vec::new()),
+    })
+}
+
+// ---------------------------------------------------------------------------------------------
+// The DXVK installer and the ensure collaborators of the fallback cases
+// ---------------------------------------------------------------------------------------------
+
+/// The oracle's installer double: one outcome (`ok` writes `current_dxvk-macOS` the way the real tool
+/// does, `fails`, `no-marker` answers true and writes nothing, `throws`), and a cancel that fires when
+/// the case says the abort comes during the DXVK step. A TS throw is a panic here; the creation reports
+/// it as the TS reported a throw.
+struct BottleInstaller {
+    how: String,
+    abort_after: Option<CancellationToken>,
+    requests: Mutex<Vec<Value>>,
+}
+
+impl DxvkInstaller for BottleInstaller {
+    fn install_remove(&self, req: DxvkRequest) -> BoxFuture<bool> {
+        self.requests.lock().unwrap().push(json!({
+            "tool": req.tool.as_str(),
+            "action": req.action.as_str(),
+            "source": req.source.as_ref().map(|s| json!({"dir": s.dir, "version": s.version})),
+            "settings": req.settings,
+        }));
+        if self.how == "throws" {
+            panic!("Error: DXVK installer blew up");
+        }
+        let answer = match self.how.as_str() {
+            "fails" => false,
+            how => {
+                if how == "ok" {
+                    let prefix = req.settings["winePrefix"].as_str().unwrap_or_default();
+                    std::fs::write(
+                        Path::new(prefix).join("current_dxvk-macOS"),
+                        format!("{CURRENT_PIN_DXVK_VERSION}\n"),
+                    )
+                    .unwrap();
+                }
+                if let Some(cancel) = &self.abort_after {
+                    cancel.cancel();
+                }
+                true
+            }
+        };
+        Box::pin(async move { answer })
+    }
+}
+
+/// The collaborators of `ensure` the oracle replaced: the decision, where CrossOver is, how the pin is
+/// made available (`ok`, `offline`, `aborted`) and the global settings.
+struct EnsureHarness {
+    crossover: bool,
+    bin_dir: Option<String>,
+    pin: String,
+    engine: NonCrossoverEngine,
+}
+
+impl PerGameDeps for EnsureHarness {
+    fn decide(&self, _key: &str) -> BoxFuture<CreationDecision> {
+        let decision = if self.crossover {
+            CreationDecision::Crossover {
+                create_timeout: Duration::from_millis(120_000),
+            }
+        } else {
+            CreationDecision::Pinned {
+                pin: Box::new(pins().unwrap().current.clone()),
+            }
+        };
+        Box::pin(async move { decision })
+    }
+
+    fn resolve_bin_dir(&self) -> BoxFuture<Option<String>> {
+        let bin_dir = self.bin_dir.clone();
+        Box::pin(async move { bin_dir })
+    }
+
+    fn ensure_pin(&self, _pin: EnginePin, _args: &EnsureArgs) -> BoxFuture<PinOutcome> {
+        let outcome = match self.pin.as_str() {
+            "offline" => PinOutcome::Failed("offline: the pinned engine is not installed".into()),
+            "aborted" => PinOutcome::Aborted,
+            _ => PinOutcome::Ready(self.engine.clone()),
+        };
+        Box::pin(async move { outcome })
+    }
+
+    fn current_pin(&self) -> Option<EnginePin> {
+        pins().ok().map(|t| t.current.clone())
+    }
+
+    fn global_game_settings(&self) -> Value {
+        global_settings()
+    }
+
+    fn new_bottle_id(&self) -> String {
+        BOTTLE_ID_4.to_lowercase()
+    }
+}
+
+/// The global settings the oracle's fallback settings were built over.
+fn global_settings() -> Value {
+    json!({
+        "enviromentOptions": [
+            {"key": "FOO", "value": "bar"},
+            {"key": "user", "value": "someone"},
+            {"key": "WINEDEBUG", "value": "+all"}
+        ],
+        "autoInstallDxvk": true,
+        "launcherArgs": "-skip"
     })
 }
 
@@ -762,6 +947,8 @@ struct Replayed {
     /// The spawn trace (program, argv, env diff) and the time limit and cancel wiring of each spawn.
     spawns: Value,
     limits: Value,
+    /// The DXVK installer's requests (fallback and ensure cases).
+    installer: Value,
 }
 
 fn run_case(case: &Value) -> Replayed {
@@ -782,7 +969,14 @@ fn run_case(case: &Value) -> Replayed {
         cancel.cancel();
     }
     let runner = lifecycle_runner(&profile, case, &args, &cancel);
-    let ctx = profile.ctx_with(log.clone(), Some(runner.clone()));
+    let installer = Arc::new(BottleInstaller {
+        how: args["installer"].as_str().unwrap_or("ok").to_string(),
+        abort_after: (args["abort"] == "after-installer").then(|| cancel.clone()),
+        requests: Mutex::new(Vec::new()),
+    });
+    let ctx = profile
+        .ctx_with(log.clone(), Some(runner.clone()))
+        .with_dxvk(installer.clone());
     let before = profile.snapshot();
     let gate = gate_of(case);
     let gate: Gate<'_> = &*gate;
@@ -914,6 +1108,81 @@ fn run_case(case: &Value) -> Replayed {
             let bin_dir = args["binDir"].as_str().unwrap_or(CX_BIN_DIR);
             block_on(create_crossover_bottle(&ctx, bottle, bin_dir, &opts)).to_value()
         }
+        "create-fallback" => {
+            let engine = engine_of(
+                &profile,
+                Some(if args["dxvk"] == false {
+                    "no-dxvk"
+                } else {
+                    "with-dxvk"
+                }),
+            );
+            let settings = global_settings();
+            let new_id = || BOTTLE_ID_4.to_lowercase();
+            block_on(async {
+                match AssertUnwindSafe(create_fallback_bottle_with(
+                    &ctx,
+                    bottle,
+                    &engine,
+                    &settings,
+                    Some(&cancel),
+                    &new_id,
+                ))
+                .catch_unwind()
+                .await
+                {
+                    Ok(result) => result.to_value(),
+                    Err(_) => json!({"status": "error", "error": "the creation panicked"}),
+                }
+            })
+        }
+        "ensure" => {
+            let runner_name = args["runner"].as_str().unwrap_or("gog").to_string();
+            let app_name = args["appName"].as_str().unwrap_or("1207658924").to_string();
+            let key = if runner_name == "steam" {
+                app_name.clone()
+            } else {
+                format!("{runner_name}:{app_name}")
+            };
+            let deps = EnsureHarness {
+                crossover: args["decision"] == "crossover",
+                bin_dir: (args["binDirPresent"] != false)
+                    .then(|| args["binDir"].as_str().unwrap_or(CX_BIN_DIR).to_string()),
+                pin: args["pin"].as_str().unwrap_or("ok").to_string(),
+                engine: engine_of(
+                    &profile,
+                    Some(if args["dxvk"] == false {
+                        "no-dxvk"
+                    } else {
+                        "with-dxvk"
+                    }),
+                ),
+            };
+            let ensure = EnsureArgs {
+                key,
+                bottle_name: bottle.to_string(),
+                app_name,
+                runner: runner_name,
+                cancel: Some(cancel.clone()),
+            };
+            let call = || async {
+                ensure_per_game_bottle(&ctx, &deps, &ensure)
+                    .await
+                    .to_value()
+            };
+            match args["mode"].as_str() {
+                Some("twice") => block_on(async {
+                    let first = call().await;
+                    let second = call().await;
+                    json!({"first": first, "second": second})
+                }),
+                Some("concurrent") => block_on(async {
+                    let (first, second) = tokio::join!(call(), call());
+                    json!({"first": first, "second": second})
+                }),
+                _ => block_on(call()),
+            }
+        }
         other => panic!("op {other} is not ported by this build"),
     };
 
@@ -931,6 +1200,7 @@ fn run_case(case: &Value) -> Replayed {
             .collect(),
     );
     let limits = Value::Array(runner.limits.lock().unwrap().clone());
+    let installer_requests = Value::Array(installer.requests.lock().unwrap().clone());
     let logs = log
         .lines()
         .into_iter()
@@ -951,6 +1221,7 @@ fn run_case(case: &Value) -> Replayed {
         after: profile.snapshot(),
         spawns: profile.normalise(spawns),
         limits: profile.normalise(limits),
+        installer: profile.normalise(installer_requests),
     }
 }
 
@@ -1053,7 +1324,8 @@ fn replay(ops: &[&str], floor: usize) {
             "the golden's before tree".into(),
             first_difference(&golden["before"], &actual.before),
         );
-        if LIFECYCLE_OPS.contains(&case["op"].as_str().unwrap()) {
+        let op = case["op"].as_str().unwrap();
+        if LIFECYCLE_OPS.contains(&op) || FALLBACK_OPS.contains(&op) {
             let want_spawns: Vec<Value> = read_json(&dir.join("spawns.json"))
                 .as_array()
                 .unwrap()
@@ -1076,6 +1348,15 @@ fn replay(ops: &[&str], floor: usize) {
                 actual.limits == golden["spawnLimits"],
                 text(&golden["spawnLimits"]),
                 text(&actual.limits),
+            );
+        }
+        if FALLBACK_OPS.contains(&op) {
+            let want = golden.get("installRemove").cloned().unwrap_or(json!([]));
+            check(
+                "installer requests",
+                actual.installer == want,
+                text(&want),
+                text(&actual.installer),
             );
         }
         let want_after = read_json(&dir.join("tree.json"));
@@ -1127,6 +1408,14 @@ fn every_lifecycle_golden_replays() {
     replay(&LIFECYCLE_OPS, 21);
 }
 
+/// The 27 fallback create and per-game ensure goldens (16 + 11): outcome, logs, the before and after
+/// trees, the spawn trace and the time limit and cancel wiring of every spawn (wineboot 180 s and the
+/// wait 60 s with the creation's cancel, the stops 15 s with none) and the DXVK installer's requests.
+#[test]
+fn every_fallback_golden_replays() {
+    replay(&FALLBACK_OPS, 27);
+}
+
 #[test]
 fn the_documented_deltas_are_exactly_those_this_replay_treats_differently() {
     let deltas = read_json(&golden_dir().join("deltas.json"));
@@ -1142,6 +1431,7 @@ fn the_documented_deltas_are_exactly_those_this_replay_treats_differently() {
         [
             "conf-log-lines-name-the-bottle-not-its-path",
             "gate-is-in-process-and-cannot-fail",
+            "installer-answers-a-bool-and-a-throw-is-a-panic",
             "removal-goes-through-the-safety-guard",
             "removal-refusal-names-the-bottle-not-its-path",
             "spawn-failure-text-is-the-runners-not-nodes",
@@ -1156,7 +1446,11 @@ fn the_documented_deltas_are_exactly_those_this_replay_treats_differently() {
 #[test]
 fn the_replayed_ops_each_have_a_case() {
     let all = cases();
-    for op in STATE_OPS.iter().chain(LIFECYCLE_OPS.iter()) {
+    for op in STATE_OPS
+        .iter()
+        .chain(LIFECYCLE_OPS.iter())
+        .chain(FALLBACK_OPS.iter())
+    {
         assert!(
             all.iter().any(|c| c["op"] == *op),
             "no golden case for op {op}"

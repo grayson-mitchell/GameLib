@@ -15,6 +15,7 @@ use gamelib_store::host::StoreHost;
 use serde::{Deserialize, Serialize};
 
 use crate::bottles::ledger::Ledger;
+use crate::bottles::per_game::PerGameFlights;
 use crate::bottles::registry::Registry;
 use crate::dxvk::{DxvkInstaller, NoDxvk};
 use crate::fetch::{Fetch, ReqwestFetch};
@@ -116,6 +117,9 @@ pub struct EngineCtx {
     pub ledger: Ledger,
     /// The engine each running title launched with (D-07). In memory only: empty at construction.
     pub registry: Registry,
+    /// The per-game bottle creations in flight, by bottle name (the single flight of `ensureGameBottle`).
+    /// In memory only: empty at construction.
+    pub flights: PerGameFlights,
 }
 
 impl EngineCtx {
@@ -141,6 +145,7 @@ impl EngineCtx {
             online: Arc::new(AtomicBool::new(false)),
             ledger: Ledger::new(),
             registry: Registry::new(),
+            flights: PerGameFlights::new(),
             host,
             clock,
             platform,

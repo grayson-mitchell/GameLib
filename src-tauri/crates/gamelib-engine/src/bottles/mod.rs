@@ -7,13 +7,16 @@
 //! The ledger and the registry are in memory only (no file); [`crate::ctx::EngineCtx`] holds them.
 //! [`lifecycle`] is the destructive half: CrossOver bottle creation, the wineserver kill and the guarded,
 //! sibling-safe removal (D-17, D-19). [`switch`] is the engine switch: a bottle moves from one engine to
-//! another (the tracer path, D-07).
+//! another (the tracer path, D-07). [`fallback_bottle`] creates a bottle with the built-in engine and
+//! [`per_game`] creates a game's bottle once, with CrossOver or the built-in engine.
 
 pub mod conf;
+pub mod fallback_bottle;
 pub mod ledger;
 pub mod lifecycle;
 pub mod marker;
 pub mod paths;
+pub mod per_game;
 pub mod pin_marker;
 pub mod prefix;
 pub mod registry;
