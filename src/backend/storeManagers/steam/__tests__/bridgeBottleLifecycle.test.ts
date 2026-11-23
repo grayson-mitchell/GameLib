@@ -8,15 +8,17 @@
  *    re-established in each test
  *  - graceful-fs mocked (existsSync) — no real filesystem access
  */
-import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
 import { createFakeBottleRust } from 'backend/testUtils/fakeBottleRust'
+import { setSteamEngineSelection } from '../engine/engineSync'
 import {
   RUST_ENGINE_BOTTLE_CANCEL_CREATE,
   RUST_ENGINE_BOTTLE_CREATE_FALLBACK,
   RUST_ENGINE_BOTTLE_KILL_WINESERVER,
   RUST_ENGINE_BOTTLE_RECORD_PINNED,
-  RUST_ENGINE_BOTTLE_REMOVE_CREATED
+  RUST_ENGINE_BOTTLE_REMOVE_CREATED,
+  RUST_SAFETY_CHECK_REMOVAL,
+  RUST_SAFETY_REMOVE_TREE
 } from 'common/types/sidecarTransport'
 import {
   existsSync,
@@ -68,11 +70,8 @@ import { getBridgeBottleSettings } from '../bridgeBottle'
 import type { DrmBridgeRunner } from '../bridgeBottle'
 import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
 import { createGlobalTimerClock } from 'backend/testUtils/globalTimerClock'
-const setEngineSelection = (
-  ...a: Parameters<typeof engineRuntime.registry.setEngineSelection>
-) => engineRuntime.registry.setEngineSelection(...a)
-const clearEngineSelection = (key: string) =>
-  engineRuntime.registry.clearEngineSelection(key)
+const setEngineSelection = setSteamEngineSelection
+const clearEngineSelection = (key: string) => engineSelectionView.clear(key)
 import type { NonCrossoverSelection } from 'common/types/engine'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
@@ -157,9 +156,7 @@ const killCalls = () =>
           timeoutMs?: number
         }
     )
-const engineRuntime = {
-  crossover,
-  registry: createEngineRegistry(engineSelectionView),
+const rustTransport = {
   requestRustInvoke: bottleRust.requestRustInvoke
 }
 // One per-boot Steam launch runtime for this suite, on the global-timer clock so jest fake timers drive it (66.4-06).
@@ -193,7 +190,6 @@ const bridgeDeps = {
   config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
   steamBottle,
   paths,
-  engineRuntime,
   steamLaunchRuntime
 }
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
@@ -208,19 +204,27 @@ const emptyLibraries = Object.fromEntries(
     { ...manager, getListOfGames: () => [] }
   ])
 ) as unknown as ManagerDeps['libraryManagers']
+// One transport on the deps: the two safety channels go to the safety fake, every other channel to the bottle fake.
 const withSafety = (
-  requestRustInvoke: RequestRustInvoke = fakeSafetyRustInvoke()
-    .requestRustInvoke
+  safetyRustInvoke: RequestRustInvoke = fakeSafetyRustInvoke().requestRustInvoke
 ) =>
   ({
     spawnAsync: mockedSpawnAsync,
     config: bridgeDeps.config,
     steamBottle,
     paths,
-    engineRuntime,
     steamLaunchRuntime,
     libraryManagers: emptyLibraries,
-    requestRustInvoke
+    requestRustInvoke: ((channel: string, args: unknown[]) =>
+      channel === RUST_SAFETY_CHECK_REMOVAL ||
+      channel === RUST_SAFETY_REMOVE_TREE
+        ? (safetyRustInvoke as (c: string, a: unknown[]) => unknown)(
+            channel,
+            args
+          )
+        : (
+            bottleRust.requestRustInvoke as (c: string, a: unknown[]) => unknown
+          )(channel, args)) as RequestRustInvoke
   }) as unknown as BottleRemovalDeps & EngineServicesSource
 const spawnDeps = withSafety()
 const depsWithSafety = (options: FakeSafetyOptions) =>
@@ -1225,7 +1229,6 @@ describe('Phase 59 engine registry', () => {
           runner: d.runner,
           onlineMonitor: d.onlineMonitor,
           engineState: d.engineState,
-          engineRuntime: d.engineRuntime,
           paths: d.paths,
           notices: d,
           installRemove: mockedInstallRemove,
@@ -1628,7 +1631,7 @@ describe('Phase 59 engine registry', () => {
     // Which names the removal refuses and that a sibling bottle is never touched are Rust's (`golden_bottles.rs`,
     // cases `remove-created-refused-names` and `remove-created-inside-root-sibling-untouched`).
     test('discardNewBridgeBottle asks Rust to remove the bottle it created', async () => {
-      await discardNewBridgeBottle(engineRuntime, name)
+      await discardNewBridgeBottle(rustTransport, name)
       expect(removeCalls()).toEqual([name])
     })
 

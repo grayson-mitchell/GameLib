@@ -56,7 +56,7 @@ import type {
   RunnerEntitlementSigner
 } from '../drm/runnerEntitlements'
 import type { RunTool } from 'common/types/engine'
-import type { EngineRuntime } from 'backend/engine/engineRuntime'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import type { ProcessRunner } from 'backend/process/types'
 import {
   overlayStepError,
@@ -135,7 +135,7 @@ export async function detectCrossoverForOverlay(
     resolveCrossoverBinDir?: () => Promise<string | undefined>
     runTool: RunTool
     runner: Pick<ProcessRunner, 'run'>
-    engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
+    requestRustInvoke: RustInvokeDeps['requestRustInvoke']
     platform?: NodeJS.Platform
   }
 ): Promise<OverlayStepResult<{ crossover: OverlayCrossover }>> {

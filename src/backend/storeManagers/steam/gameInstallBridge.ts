@@ -430,7 +430,7 @@ export async function resolveInstallEngineSettings(
   const prep = await prepareBottle(
     {
       paths: steamGame.deps.paths,
-      requestRustInvoke: steamGame.deps.engineRuntime.requestRustInvoke
+      requestRustInvoke: steamGame.deps.requestRustInvoke
     },
     {
       key: steamGame.appId,

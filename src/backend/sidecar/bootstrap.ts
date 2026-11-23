@@ -126,7 +126,6 @@ import { randomUUID } from 'node:crypto'
 import { createOnlineMonitor } from '../online_monitor'
 import { checkConnectivityNow } from '../connectivityNow'
 import { createEngineState } from '../engine/engineState'
-import { createEngineRuntime } from '../engine/engineRuntime'
 import { createSteamLaunchRuntime } from '../storeManagers/steam/steamLaunchRuntime'
 import { createBridgeRuntime } from '../storeManagers/steam/bridge/bridgeRuntime'
 import { createGogRuntime } from '../storeManagers/gog/gogRuntime'
@@ -253,7 +252,6 @@ import { createSteamUser } from '../storeManagers/steam/user'
 import { setupEnvVars, setupWineEnvVars, verifyWinePrefix } from '../launcher'
 import { validWine } from '../enginewine/wineCore'
 import { setEngineOnline } from '../enginewine/engineOnline'
-import { engineSelectionView } from '../enginewine/selectionView'
 import { crossoverBinDirSync } from '../enginewine/twin'
 import { getUmuPath, isUmuSupported } from '../utils/compatibility_layers'
 import { searchForExecutableOnPath } from '../utils/os/path'
@@ -315,7 +313,6 @@ export const BOOT_STEP_NAMES = [
   'humble-services',
   'online-monitor-owner',
   'engine-state',
-  'engine-runtime',
   'steam-launch-runtime',
   'steam-bridge-runtime',
   'steam-install-runtime',
@@ -468,12 +465,6 @@ function requireBridgeHelpers(state: BootState): BootServices['bridgeHelpers'] {
   return bridgeHelpers
 }
 
-function requireEngineRuntime(state: BootState): BootServices['engineRuntime'] {
-  const { engineRuntime } = state.services
-  if (!engineRuntime) throw new Error('engine-runtime step has not run')
-  return engineRuntime
-}
-
 function requireHost(state: BootState): HostServices {
   const { host } = state.services
   if (!host) throw new Error('host-services step has not run')
@@ -537,7 +528,6 @@ function requireServices(state: BootState): BootServices {
     appInfo,
     onlineMonitor,
     engineState,
-    engineRuntime,
     steamLaunchRuntime,
     bridgeRuntime,
     steamInstallRuntime,
@@ -578,7 +568,6 @@ function requireServices(state: BootState): BootServices {
     !appInfo ||
     !onlineMonitor ||
     !engineState ||
-    !engineRuntime ||
     !steamLaunchRuntime ||
     !bridgeRuntime ||
     !steamInstallRuntime ||
@@ -620,7 +609,6 @@ function requireServices(state: BootState): BootServices {
         'appInfo',
         'onlineMonitor',
         'engineState',
-        'engineRuntime',
         'steamLaunchRuntime',
         'bridgeRuntime',
         'steamInstallRuntime',
@@ -664,7 +652,6 @@ function requireServices(state: BootState): BootServices {
     appInfo,
     onlineMonitor,
     engineState,
-    engineRuntime,
     steamLaunchRuntime,
     bridgeRuntime,
     steamInstallRuntime,
@@ -1759,7 +1746,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             stores,
             config,
             paths: ctx.paths,
-            // 'engine-runtime' runs after this step: resolve the locator at call time.
+            // Resolve the host's transport at call time.
             crossover: {
               // The synchronous lookup is the twin of Rust's `resolve_bin_dir_sync` (87-56b, D-24).
               resolveCrossoverBinDir: (opts) =>
@@ -1767,9 +1754,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
                   ctx.paths.userHome,
                   crossoverHintWineBins(opts ?? {})
                 ) ?? undefined,
-              // Rust finds CrossOver (87-55, D-04): the engine runtime's transport carries the call.
+              // Rust finds CrossOver (87-55, D-04): the host's transport carries the call.
               resolveCrossoverBinDirAsync: (_d, opts) =>
-                crossoverBinDir(requireEngineRuntime(state), opts)
+                crossoverBinDir(requireHost(state), opts)
             }
           })
       }
@@ -1778,8 +1765,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       name: 'abort-registry',
       // Builds the abort-controller registry and the Wine window raiser of this boot (D-05, 66.4-13).
       // No I/O, no timer, no handle: the raiser arms its (unref'd, ctx.clock) timers only when a game
-      // launches. After 'steam-bottle', before 'command-runner' (which registers its commands in it) and 'engine-runtime'
-      // (the Steam engine download registers in it). Stdin EOF aborts the registry
+      // launches. After 'steam-bottle', before 'command-runner' (which registers its commands in it).
+      // Stdin EOF aborts the registry
       // ('rpc-server' wires releaseOnStdinEof) after pausing the download queue.
       run: (ctx, _io, state) => {
         state.services.aborts = prebuilt.aborts ?? createAbortRegistry()
@@ -2069,32 +2056,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
-      name: 'engine-runtime',
-      // Builds the one engine runtime of this boot (D-05, 66.4-05): ledger, selection registry,
-      // launch overlay contexts, switch / bottle-creation / pinned-download
-      // single-flight maps, the CrossOver bin-dir memo, the bottle version-gate memo (it asks Rust only when a
-      // marker is about to be written). Construction only allocates empty maps: no
-      // I/O and no timer. After 'engine-state'
-      // and before 'store-managers' so ManagerDeps and the launcher carry it.
-      run: (ctx, _io, state) => {
-        state.services.engineRuntime =
-          prebuilt.engineRuntime ??
-          createEngineRuntime({
-            paths: ctx.paths,
-            aborts: requireAborts(state),
-            requestRustInvoke: requireHost(state).requestRustInvoke,
-            // 87-42 (D-24): the boot's selections are the view Rust's registry is mirrored into.
-            selections: engineSelectionView
-          })
-      }
-    },
-    {
       name: 'steam-launch-runtime',
       // Builds the one Steam launch-path runtime of this boot (D-05, 66.4-06): bottle process monitors,
       // the bottled-Steam raise loop, the DRM / overlay runner registry, the DRM-mode notice latch and
       // the platform-capture chain. Construction allocates empty collections only: no I/O and no timer;
       // the monitor and raise-loop timers a launch arms later run on ctx.clock, whose timers are
-      // unref'd, so nothing here can hold the sidecar open at stdin EOF. After 'engine-runtime' and
+      // unref'd, so nothing here can hold the sidecar open at stdin EOF. After 'engine-state' and
       // before 'store-managers' so ManagerDeps carries it.
       run: (ctx, _io, state) => {
         state.services.steamLaunchRuntime =
@@ -2188,7 +2155,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           host,
           onlineMonitor,
           engineState,
-          engineRuntime,
           steamLaunchRuntime,
           bridgeRuntime,
           steamInstallRuntime,
@@ -2221,7 +2187,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !host ||
           !onlineMonitor ||
           !engineState ||
-          !engineRuntime ||
           !steamLaunchRuntime ||
           !bridgeRuntime ||
           !steamInstallRuntime ||
@@ -2277,7 +2242,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           imageTools: host.imageTools,
           onlineMonitor,
           engineState,
-          engineRuntime,
           steamLaunchRuntime,
           bridgeRuntime,
           steamInstallRuntime,
@@ -2319,7 +2283,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             onlineMonitor,
             steamSession,
             steamBottle,
-            engineRuntime,
             steamLaunchRuntime,
             aborts,
             appRuntime,
@@ -2331,7 +2294,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             !onlineMonitor ||
             !steamSession ||
             !steamBottle ||
-            !engineRuntime ||
             !steamLaunchRuntime ||
             !aborts ||
             !appRuntime ||
@@ -2353,7 +2315,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             requestRustInvoke: host.requestRustInvoke,
             steamSession,
             steamBottle,
-            engineRuntime,
             steamLaunchRuntime,
             aborts,
             appRuntime,

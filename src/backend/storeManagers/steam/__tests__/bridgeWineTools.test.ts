@@ -136,11 +136,9 @@ describe('resolveSteamWineToolSettings engine lookup through Rust (87-56a)', () 
   function withTransport(reply: () => Promise<unknown>) {
     const calls: Array<[string, unknown[]]> = []
     const source = {
-      engineRuntime: {
-        requestRustInvoke: (channel: string, args: unknown[]) => {
-          calls.push([channel, args])
-          return reply()
-        }
+      requestRustInvoke: (channel: string, args: unknown[]) => {
+        calls.push([channel, args])
+        return reply()
       }
     } as unknown as SteamWineToolsSource
     return { source, calls }

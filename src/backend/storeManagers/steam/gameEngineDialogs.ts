@@ -126,7 +126,7 @@ export async function prepareDrmBottleForCrossover(
   const prep = await prepareBottle(
     {
       paths: steamGame.deps.paths,
-      requestRustInvoke: steamGame.deps.engineRuntime.requestRustInvoke
+      requestRustInvoke: steamGame.deps.requestRustInvoke
     },
     {
       key: steamGame.appId,

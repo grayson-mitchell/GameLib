@@ -8,8 +8,6 @@
  *    re-established in each test
  *  - graceful-fs mocked (existsSync) — no real filesystem access
  */
-import { createEngineRegistry } from 'backend/engine/engineRegistry'
-import { engineSelectionView } from 'backend/enginewine/selectionView'
 import { createFakeBottleRust } from 'backend/testUtils/fakeBottleRust'
 import {
   existsSync,
@@ -110,9 +108,7 @@ const crossover = {
 }
 // 87-42: the selections the bridge reads are the process-wide view, and the bottle kill is Rust's, answered by the TS
 // reference over this file's spawn fake (`fakeBottleRust`).
-const engineRuntime = {
-  crossover,
-  registry: createEngineRegistry(engineSelectionView),
+const rustTransport = {
   requestRustInvoke: createFakeBottleRust().requestRustInvoke
 }
 // One per-boot Steam launch runtime for this suite, on the global-timer clock so jest fake timers drive it (66.4-06).
@@ -151,7 +147,6 @@ const bridgeDeps = {
   config: { getSettings: () => mockedGlobalConfigGet().getSettings() },
   steamBottle,
   paths,
-  engineRuntime,
   steamLaunchRuntime
 }
 // Recording fake handed to the code under test through its deps slice (66.1 R5).
@@ -160,7 +155,7 @@ const spawnDeps = {
   config: bridgeDeps.config,
   steamBottle,
   paths,
-  engineRuntime,
+  ...rustTransport,
   steamLaunchRuntime,
   spawnAsync: mockedSpawnAsync,
   runner: createScriptedRunner([])

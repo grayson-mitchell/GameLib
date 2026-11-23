@@ -8,7 +8,6 @@ import { existsSync, readdirSync } from 'graceful-fs'
 import type { GameSettings, WineInstallation } from 'common/types'
 import { logInfo, LogPrefix } from 'backend/logger'
 import type { AppPaths } from 'backend/process/context'
-import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
 import type { NonCrossoverSelection } from 'common/types/engine'
 import {
@@ -204,7 +203,6 @@ export type BridgeBottleDeps = {
   steamBottle: Pick<SteamBottle, 'resolveCrossoverWine'>
   /** The path roots and the boot's selection registry the fallback settings read (66.4-05). */
   paths: Pick<AppPaths, 'userHome'>
-  engineRuntime: Pick<EngineRuntime, 'registry'>
   /** The boot's DRM / overlay runner registry (66.4-06). */
   steamLaunchRuntime: { drmRunners: DrmBridgeRunners }
 }

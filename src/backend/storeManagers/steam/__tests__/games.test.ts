@@ -2,6 +2,7 @@ import * as bottlesModule from 'backend/enginewine/bottles'
 import * as prepareBottleModule from '../engine/prepareBottle'
 import * as engineSyncModule from '../engine/engineSync'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
+import type { EngineSelection } from 'common/types/engine'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import type { GameConfigSlice } from 'backend/game_config'
 import type { SteamDrm } from '../bridge/drm/drmLaunchSetup'
@@ -202,7 +203,10 @@ import * as stateModule from 'backend/enginewine/state'
 import * as deadlineModule from 'backend/enginewine/deadline'
 import { LAUNCH_DEADLINE_MS } from 'common/types/engine'
 import { createFakeClock } from 'backend/testUtils/fakeClock'
-import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
+import {
+  createTestEngineTransport,
+  isTestEngineChannel
+} from 'backend/testUtils/testEngineTransport'
 import {
   RUST_ENGINE_CANCEL,
   RUST_ENGINE_FALLBACK_ENSURE
@@ -336,24 +340,32 @@ const mockEnsurePinnedEngine = jest.fn()
 const mockCancelEnsure = jest.fn()
 const mockIsPinnedEngineInstalled = jest.fn()
 const gamesClock = createFakeClock()
-const defaultEngineTransport = createTestEngineRuntime().requestRustInvoke
-const testRuntime = createTestEngineRuntime({
-  requestRustInvoke: ((channel: string, args: unknown[]) => {
+const defaultEngineTransport = createTestEngineTransport().requestRustInvoke
+// The one transport the Steam deps carry: the engine's first-need download and its cancel answer from the mocks above, the
+// bottle gate, ledger, selection clear and CrossOver lookup from the test transport, and every other channel from the
+// safety and Steam-files fakes (`steamTestDeps` below).
+const engineTransportFor = (
+  rest: RustInvokeDeps['requestRustInvoke']
+): RustInvokeDeps['requestRustInvoke'] =>
+  ((channel: string, args: unknown[]) => {
     if (channel === RUST_ENGINE_FALLBACK_ENSURE) {
       return Promise.resolve(mockEnsurePinnedEngine(args[0]))
     }
     if (channel === RUST_ENGINE_CANCEL) {
       return Promise.resolve(mockCancelEnsure(args[0]))
     }
-    return (
-      defaultEngineTransport as (c: string, a: unknown[]) => Promise<unknown>
-    )(channel, args)
+    if (isTestEngineChannel(channel)) {
+      return (
+        defaultEngineTransport as (c: string, a: unknown[]) => Promise<unknown>
+      )(channel, args)
+    }
+    return (rest as (c: string, a: unknown[]) => Promise<unknown>)(
+      channel,
+      args
+    )
   }) as unknown as RustInvokeDeps['requestRustInvoke']
-})
-const getEngineSelection = (k: string) =>
-  testRuntime.registry.getEngineSelection(k)
-const clearEngineSelection = (k: string) =>
-  testRuntime.registry.clearEngineSelection(k)
+const getEngineSelection = (k: string) => engineSelectionView.get(k)
+const clearEngineSelection = (k: string) => engineSelectionView.clear(k)
 // 87-54: a bridge launch's deadline timer is Rust's. This fake stands in for it on the runtime's fake clock (the file-level
 // beforeEach spies the `enginewine/deadline.ts` arm and cancel shims over it), and its firing is the `engineDeadlineFired`
 // frame: the same `bridgeDeadlines.fire` the registered listener calls.
@@ -460,7 +472,7 @@ const safetyRust = fakeSafetyRustInvoke({
   base: rustSteamFiles.requestRustInvoke
 })
 const steamTestDeps = createTestManagerDeps({
-  requestRustInvoke: safetyRust.requestRustInvoke,
+  requestRustInvoke: engineTransportFor(safetyRust.requestRustInvoke),
   config: createTestGlobalConfig({ defaultSteamPath: '/steam' }),
   sendFrontendMessage,
   aborts: {
@@ -471,7 +483,6 @@ const steamTestDeps = createTestManagerDeps({
     getSignal: (id: string) => getAbortSignal(id),
     abortAll: () => undefined
   },
-  engineRuntime: testRuntime,
   steamLaunchRuntime: testSteamLaunchRuntime,
   paths: {
     ...createTestServices().paths,
@@ -15025,7 +15036,8 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         { key: 'SteamAppId', value: id }
       ]
       const pinStaging = (id: string) => {
-        const { setEngineSelection } = testRuntime.registry
+        const setEngineSelection = (k: string, v: EngineSelection) =>
+          engineSelectionView.apply(k, v)
         setEngineSelection(id, {
           kind: 'pinned',
           pinId: 'staging-11',
@@ -15477,7 +15489,8 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
 
       it('fallback engine after an overlay launch ends the clone wineserver', async () => {
         const id = freshId()
-        const { setEngineSelection } = testRuntime.registry
+        const setEngineSelection = (k: string, v: EngineSelection) =>
+          engineSelectionView.apply(k, v)
         setEngineSelection(id, {
           kind: 'pinned',
           pinId: 'staging-11',

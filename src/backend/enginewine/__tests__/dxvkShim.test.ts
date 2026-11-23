@@ -65,7 +65,7 @@ describe('engineServicesFrom().installRemove (the still-TS engine until 87-56)',
   const servicesOver = (answer: unknown) => {
     const transport = fakeTransport(answer)
     const services = engineServicesFrom({
-      engineRuntime: { requestRustInvoke: transport.requestRustInvoke },
+      requestRustInvoke: transport.requestRustInvoke,
       stores: {}
     } as unknown as EngineServicesSource)
     return { transport, services }

@@ -344,7 +344,6 @@ type RedistDeps = StatusUpdateDeps &
     | 'steamBottle'
     | 'steamUser'
     | 'paths'
-    | 'engineRuntime'
     | 'steamLaunchRuntime'
     | 'steamInstallRuntime'
     | 'requestRustInvoke'

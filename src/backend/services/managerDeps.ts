@@ -24,7 +24,6 @@ export type ManagerDepsSource = Pick<
   | 'appInfo'
   | 'onlineMonitor'
   | 'engineState'
-  | 'engineRuntime'
   | 'steamLaunchRuntime'
   | 'bridgeRuntime'
   | 'steamInstallRuntime'
@@ -73,7 +72,6 @@ export function managerDepsFromServices(
     requestRustInvoke: source.host.requestRustInvoke,
     onlineMonitor: source.onlineMonitor,
     engineState: source.engineState,
-    engineRuntime: source.engineRuntime,
     steamLaunchRuntime: source.steamLaunchRuntime,
     bridgeRuntime: source.bridgeRuntime,
     steamInstallRuntime: source.steamInstallRuntime,

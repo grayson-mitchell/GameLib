@@ -8,7 +8,6 @@ import type { SendFrontendMessage } from '../../host/frontendMessage'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { GlobalConfigSlice } from 'backend/config'
 import type { AppPaths } from 'backend/process/context'
-import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import { crossoverBinDir } from './engine/crossoverBinDir'
 import type { GameConfigs } from 'backend/game_config'
 import type { AppState } from 'backend/host/appState'
@@ -102,7 +101,7 @@ export type KillBottleDeps = SpawnDeps & {
   paths: Pick<AppPaths, 'userHome'>
   steamBottle: Pick<SteamBottle, 'persistedWineBins'>
   /** The boot's sidecar -> Rust transport: Rust finds CrossOver (87-55, D-04). */
-  engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
+  requestRustInvoke: RustInvokeDeps['requestRustInvoke']
 }
 
 export async function killBottleWineServer(
@@ -113,7 +112,7 @@ export async function killBottleWineServer(
 ): Promise<boolean> {
   const binDir =
     knownBinDir ??
-    (await crossoverBinDir(deps.engineRuntime, {
+    (await crossoverBinDir(deps, {
       hintWineBins: deps.steamBottle.persistedWineBins()
     }))
   if (!binDir) {
@@ -180,7 +179,7 @@ export async function provisionBottle(
         AppPaths,
         'userHome' | 'steamSupportPath' | 'toolsPath' | 'configPath'
       >
-      engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
+      requestRustInvoke: RustInvokeDeps['requestRustInvoke']
       steamLaunchRuntime: Pick<SteamLaunchRuntime, 'raiser'>
       config: Pick<
         GlobalConfigSlice,
@@ -262,7 +261,7 @@ export async function provisionBottle(
   // CrossOver since uninstalled still short-circuits 'done' (step 3), so the
   // missing-CrossOver error is returned only when a recreate or a create is
   // actually needed.
-  const binDir = await crossoverBinDir(deps.engineRuntime, {
+  const binDir = await crossoverBinDir(deps, {
     wineVersion: opts?.wineVersion,
     hintWineBins: deps.steamBottle.persistedWineBins()
   })

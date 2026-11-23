@@ -439,7 +439,7 @@ export async function selectLaunchEngine(
   const { recordLaunchDecision } = await import('backend/enginewine/state')
   const { launchDecisionFrom } = await import('./engine/engineDecisionReply')
   const clearEngineSelection = (key: string) =>
-    dropEngineSelection(steamGame.deps.engineRuntime, key)
+    dropEngineSelection(steamGame.deps, key)
   const { prepareBottle } = await import('./engine/prepareBottle')
   const { STEAM_ENGINE_RUNNER, steamEngineStateFacts } =
     await import('./engine/steamEngineDeps')
@@ -570,7 +570,7 @@ export async function selectLaunchEngine(
   const prep = await prepareBottle(
     {
       paths: steamGame.deps.paths,
-      requestRustInvoke: steamGame.deps.engineRuntime.requestRustInvoke
+      requestRustInvoke: steamGame.deps.requestRustInvoke
     },
     {
       key: steamGame.appId,
@@ -757,7 +757,7 @@ export async function onBridgeLaunchDeadline(
   await killBridgeBottleWineServer(steamGame.deps, steamGame.appId, 15_000)
   steamGame.deps.bridgeHelpers.stop(steamGame.appId)
   clearLaunchRecord()
-  await dropEngineSelection(steamGame.deps.engineRuntime, steamGame.appId)
+  await dropEngineSelection(steamGame.deps, steamGame.appId)
   sendLaunchDone(steamGame)
   showEngineDialog(
     steamGame,
@@ -815,7 +815,7 @@ export async function prefetchBridgeDrmDownloads(
       runner: steamGame.deps.runner,
       sendFrontendMessage: steamGame.deps.sendFrontendMessage,
       appRuntime: steamGame.deps.appRuntime,
-      engineRuntime: steamGame.deps.engineRuntime,
+      requestRustInvoke: steamGame.deps.requestRustInvoke,
       paths: steamGame.deps.paths,
       bridgeRuntime: steamGame.deps.bridgeRuntime
     }

@@ -12,7 +12,7 @@ import type { Stats } from 'fs'
 import { basename, dirname, isAbsolute, join, relative, sep } from 'path'
 
 import type { RunTool } from 'common/types/engine'
-import type { EngineRuntime } from 'backend/engine/engineRuntime'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { crossoverBinDir } from '../../engine/crossoverBinDir'
 import type { ProcessRunner } from 'backend/process/types'
 import { buildDrmPaths } from './drmPaths'
@@ -102,7 +102,7 @@ export type DetectCrossoverDeps = {
   /** No longer read here: Rust runs the Spotlight search for the bin-dir lookup (87-55). Kept for the callers' deps shape. */
   runner: Pick<ProcessRunner, 'run'>
   /** The boot's sidecar -> Rust transport, for the default bin-dir lookup (87-55). */
-  engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
+  requestRustInvoke: RustInvokeDeps['requestRustInvoke']
   findRow?: (build: string, cleanSha256: string) => NtdllPatchRow | null
   supportedBuilds?: () => string[]
   platform?: NodeJS.Platform
@@ -111,10 +111,10 @@ export type DetectCrossoverDeps = {
 export const CX_ROOT_SUFFIX = `${sep}Contents${sep}SharedSupport${sep}CrossOver`
 
 export async function defaultResolveBinDir(deps: {
-  engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
+  requestRustInvoke: RustInvokeDeps['requestRustInvoke']
 }): Promise<string | undefined> {
   try {
-    return await crossoverBinDir(deps.engineRuntime)
+    return await crossoverBinDir(deps)
   } catch {
     return undefined
   }

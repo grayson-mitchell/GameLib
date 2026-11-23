@@ -17,7 +17,11 @@ import {
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import type { RequestRustInvoke } from 'backend/host'
-import { RUST_ENGINE_CX_RESOLVE_BIN_DIR } from 'common/types/sidecarTransport'
+import {
+  RUST_ENGINE_CX_RESOLVE_BIN_DIR,
+  RUST_SAFETY_CHECK_REMOVAL,
+  RUST_SAFETY_REMOVE_TREE
+} from 'common/types/sidecarTransport'
 import { initHeadless } from 'backend/logger'
 import {
   fakeSafetyRustInvoke,
@@ -33,7 +37,7 @@ import type { ManagerDeps } from 'backend/services/types'
 import type { GameInfo } from 'common/types'
 import type { RemovalRefusalPayload } from 'common/types/removalRefusal'
 import type { SafetyRequest } from 'common/types/safety'
-import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
+import { createTestEngineTransport } from 'backend/testUtils/testEngineTransport'
 import { getBottleDir } from 'backend/enginewine/twin'
 import { setBridgeLaunchTarget } from '../bridge/bridgeVerdict'
 import { DEFAULT_BRIDGE_BOTTLE_NAME, getBottleSteamappsDir } from '../bottle'
@@ -84,12 +88,26 @@ function makeHarness(
   const paths = createTestAppPaths(root)
   const sent: Sent[] = []
   const spawned: { bin: string; args: string[] }[] = []
+  // 87-55: Rust finds CrossOver (a fixed bin dir); every other non-safety channel keeps the test transport's own answers.
+  const engineTransport = createTestEngineTransport()
   const safety = fakeSafetyRustInvoke({
     ...options,
-    base: () => Promise.reject(new Error('unexpected non-safety rustInvoke'))
+    base: ((channel: string, args: unknown[]) =>
+      channel === RUST_ENGINE_CX_RESOLVE_BIN_DIR
+        ? Promise.resolve(CX_BIN_DIR)
+        : (
+            engineTransport.requestRustInvoke as (
+              c: string,
+              a: unknown[]
+            ) => Promise<unknown>
+          )(channel, args)) as RequestRustInvoke
   })
   const events: string[] = []
   const requestRustInvoke: RequestRustInvoke = async (channel, args) => {
+    const isSafety =
+      channel === RUST_SAFETY_CHECK_REMOVAL ||
+      channel === RUST_SAFETY_REMOVE_TREE
+    if (!isSafety) return safety.requestRustInvoke(channel, args)
     events.push(`safety:${channel}`)
     const reply = (await safety.requestRustInvoke(channel, args)) as {
       items?: { id: string; verdict: string }[]
@@ -108,7 +126,6 @@ function makeHarness(
       }))
     }
   }
-  const engineRuntime = createTestEngineRuntime()
   const managers = createTestManagers().library
   const otherGames = options.otherGames ?? []
   // Every manager answers its list (a manager that throws reads as an unknown known-installs list).
@@ -132,20 +149,7 @@ function makeHarness(
     sendFrontendMessage: ((name: string, payload: unknown) => {
       sent.push([name, payload])
     }) as ManagerDeps['sendFrontendMessage'],
-    // CrossOver is installed (a fixed bin dir); its cxbottle --delete removes the bottle like the real one.
-    engineRuntime: {
-      ...engineRuntime,
-      // 87-55: Rust finds CrossOver; every other channel keeps the test runtime's own answers.
-      requestRustInvoke: ((channel: string, args: unknown[]) =>
-        channel === RUST_ENGINE_CX_RESOLVE_BIN_DIR
-          ? Promise.resolve(CX_BIN_DIR)
-          : (
-              engineRuntime.requestRustInvoke as (
-                c: string,
-                a: unknown[]
-              ) => Promise<unknown>
-            )(channel, args)) as RequestRustInvoke
-    } as unknown as ManagerDeps['engineRuntime'],
+    // CrossOver is installed (a fixed bin dir, answered above); its cxbottle --delete removes the bottle like the real one.
     spawnAsync: ((bin: string, args: string[]) => {
       spawned.push({ bin, args })
       events.push(`spawn:${basename(bin)}`)

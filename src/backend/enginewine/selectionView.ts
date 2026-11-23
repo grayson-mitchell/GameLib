@@ -14,7 +14,7 @@ import type { IpcRegistry } from 'backend/sidecar/ipcRegistry'
  *   its registry by itself: a launch deadline, a game exit) are applied here too, by {@link registerEngineSelectionView}.
  *
  * Until the launch moves into Rust (Phase 88) the still-TS launch step also registers a selection before the switch
- * (`engineRuntime.registry.setEngineSelection`, which validates it and writes here), because the switch refusal
+ * (`setSteamEngineSelection`, which validates it and writes here), because the switch refusal
  * `dxvk-failed` keeps launching on the selection that was set, as the TS always did.
  *
  * The cross-language vectors are `selection_registry.json` (replayed by `selectionView.test.ts`). A module Map: no

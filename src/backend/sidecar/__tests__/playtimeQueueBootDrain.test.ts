@@ -143,7 +143,6 @@ function bootedWorld(opts?: {
         imageTools: fakes.host.imageTools,
         onlineMonitor: fakes.onlineMonitor,
         engineState: fakes.engineState,
-        engineRuntime: fakes.engineRuntime,
         steamLaunchRuntime: fakes.steamLaunchRuntime,
         bridgeRuntime: fakes.bridgeRuntime,
         steamInstallRuntime: fakes.steamInstallRuntime,

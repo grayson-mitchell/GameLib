@@ -150,7 +150,8 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/gameLaunch.ts',
   'src/backend/storeManagers/steam/gameLaunchOverlay.ts',
   'src/backend/storeManagers/steam/provisionBottle.ts',
-  'src/backend/storeManagers/storeManagerCommon/games.ts'
+  'src/backend/storeManagers/storeManagerCommon/games.ts',
+  'src/backend/testUtils/testEngineTransport.ts'
 ]
 /**
  * Every non-test importer of `enginewine/tools.ts` (the check is per file, so every row of that file lists them all):
@@ -659,7 +660,6 @@ const SCHEDULE: readonly ScheduleRow[] = [
     vectors: 'src/backend/enginewine/__tests__/selectionView.test.ts',
     wiring: ['registerEngineSelectionView'],
     callers: [
-      'src/backend/sidecar/bootstrap.ts',
       'src/backend/sidecar/handlers.ts',
       'src/backend/storeManagers/steam/bridgeBottle.ts',
       'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
@@ -669,7 +669,10 @@ const SCHEDULE: readonly ScheduleRow[] = [
       'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts',
       'src/backend/storeManagers/steam/gameLaunch.ts',
       'src/backend/storeManagers/steam/gameLaunchOverlay.ts',
-      'src/backend/testUtils/testEngineRuntime.ts'
+      // 87-56c: the test transport empties the view per test; the interim engine runtime the engine TS's own tests
+      // still build does the same (Task 3 deletes it with them).
+      'src/backend/testUtils/testEngineTransport.ts',
+      'src/backend/testUtils/testInterimEngineRuntime.ts'
     ],
     deletedBy: 96
   },

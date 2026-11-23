@@ -53,8 +53,7 @@ export interface DownloadQueueDeps
   steamSession: Pick<SteamSessionServices, 'libraryState' | 'gameSession'>
   /** The boot-owned Steam bottle helpers the cancelled-install cleanup resolves the bottle root through (D-66.3-15). */
   steamBottle: BottleSettingsDeps['steamBottle']
-  /** The boot-owned engine runtime and path roots the bridge-bottle settings read (66.4-05). */
-  engineRuntime: BottleSettingsDeps['engineRuntime']
+  /** The boot-owned Steam launch runtime and path roots the bridge-bottle settings read (66.4-05). */
   steamLaunchRuntime: BottleSettingsDeps['steamLaunchRuntime']
   paths: BottleSettingsDeps['paths'] &
     Pick<
@@ -107,7 +106,6 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
     notifications: deps.notifications,
     steamSession: deps.steamSession,
     steamBottle: deps.steamBottle,
-    engineRuntime: deps.engineRuntime,
     steamLaunchRuntime: deps.steamLaunchRuntime,
     paths: deps.paths,
     sendFrontendMessage: deps.sendFrontendMessage,

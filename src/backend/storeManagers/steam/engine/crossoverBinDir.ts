@@ -20,7 +20,7 @@ export function crossoverHintWineBins(hint: CrossoverHint): string[] {
 /**
  * Where CrossOver's `bin` directory is, answered by Rust (Phase 87, 87-55, D-04, D-15).
  *
- * The bridge's call sites used the boot's TS locator (`engineRuntime.crossover.resolveCrossoverBinDirAsync`), which never
+ * The bridge's call sites used the boot's TS locator (the engine runtime's `crossover.resolveCrossoverBinDirAsync`), which never
  * rejected: a failed Spotlight search was `undefined`. The shim in `enginewine/decision.ts` is one returned call that
  * resolves `unknown` and can reject, so this narrows the reply and keeps that "never rejects" behaviour in one place.
  * A `wineVersion` of type `crossover` is one more hint (the TS locator tried its bin first); only the persisted bin and

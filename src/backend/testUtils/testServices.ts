@@ -32,7 +32,7 @@ import { createTestOnlineMonitor } from './testOnlineMonitor'
 import { createTestEngineState } from './testEngineState'
 import { createTestAppRuntime } from './testAppRuntime'
 import { createTestMiscRuntime } from './testMiscRuntime'
-import { createTestEngineRuntime } from './testEngineRuntime'
+import { interimEngineRuntime } from './testInterimEngineRuntime'
 import { createTestSteamLaunchRuntime } from './testSteamLaunchRuntime'
 import { createTestBridgeRuntime } from './testBridgeRuntime'
 import { createTestGogRuntime } from './testGogRuntime'
@@ -250,7 +250,6 @@ export function createTestServices(
     appInfo: overrides.appInfo ?? TEST_APP_INFO,
     onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor(),
     engineState: overrides.engineState ?? createTestEngineState(),
-    engineRuntime: overrides.engineRuntime ?? createTestEngineRuntime(),
     steamLaunchRuntime:
       overrides.steamLaunchRuntime ?? createTestSteamLaunchRuntime(),
     bridgeRuntime: overrides.bridgeRuntime ?? createTestBridgeRuntime(),
@@ -372,7 +371,6 @@ export function createTestManagerDeps(
     imageTools: overrides.imageTools ?? host.imageTools,
     onlineMonitor: overrides.onlineMonitor ?? createTestOnlineMonitor(),
     engineState: overrides.engineState ?? createTestEngineState(),
-    engineRuntime: overrides.engineRuntime ?? createTestEngineRuntime(),
     steamLaunchRuntime:
       overrides.steamLaunchRuntime ?? createTestSteamLaunchRuntime(),
     bridgeRuntime: overrides.bridgeRuntime ?? createTestBridgeRuntime(),
@@ -415,7 +413,7 @@ export function createTestEngineServices(
     runner: unscriptedMembers<EngineServices['runner']>('process runner', {}),
     onlineMonitor: createTestOnlineMonitor(),
     engineState: createTestEngineState(),
-    engineRuntime: createTestEngineRuntime(),
+    engineRuntime: interimEngineRuntime(),
     paths: createTestPaths(),
     ...overrides
   }
@@ -442,7 +440,6 @@ export function createTestToolsSlices(
     notifications: host.notifications,
     onlineMonitor: createTestOnlineMonitor(),
     engineState: createTestEngineState(),
-    engineRuntime: createTestEngineRuntime(),
     steamLaunchRuntime: createTestSteamLaunchRuntime(),
     bridgeRuntime: createTestBridgeRuntime(),
     steamInstallRuntime: createTestSteamInstallRuntime(),

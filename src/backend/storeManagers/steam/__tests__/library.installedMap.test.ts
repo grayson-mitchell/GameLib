@@ -4,7 +4,6 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
-import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import type { AcfRecord, ScanResult } from '../localFiles/steamFilesTypes'
 import {
@@ -41,7 +40,6 @@ const libDeps = {
   config: createTestGlobalConfig(),
   steamBottle: { getSteamBottleSettings, resolveCrossoverWine: jest.fn() },
   paths: { userHome: '/test-gamelib/home' },
-  engineRuntime: { registry: createEngineRegistry() },
   steamLaunchRuntime: createTestSteamLaunchRuntime()
 }
 

@@ -362,7 +362,7 @@ export async function prepareTcpOverlay(
         },
         {
           runTool: createRustRunTool(steamGame.deps),
-          engineRuntime: steamGame.deps.engineRuntime,
+          requestRustInvoke: steamGame.deps.requestRustInvoke,
           runner: steamGame.deps.runner,
           bridgeRuntime: steamGame.deps.bridgeRuntime
         }

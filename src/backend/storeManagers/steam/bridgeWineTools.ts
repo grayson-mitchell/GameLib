@@ -42,16 +42,14 @@ import type { BridgeBottleDeps } from './bridgeBottle'
 
 /**
  * What the Steam Wine-tool path reads (87-56a): the path roots, the Steam bottle and launch slices, the global settings
- * and the engine runtime's selection registry and Rust transport. A slice of the engine services' source, so the caller
+ * and the sidecar -> Rust transport. A slice of the engine services' source, so the caller
  * hands its own source straight through.
  */
 export type SteamWineToolsSource = SteamEngineBottle & {
   paths: BridgeBottleDeps['paths'] &
     Pick<AppPaths, 'toolsPath' | 'gamesConfigPath'>
   config: { getSettings(): GameSettings }
-  engineRuntime: BridgeBottleDeps['engineRuntime'] & {
-    requestRustInvoke: RustInvokeDeps['requestRustInvoke']
-  }
+  requestRustInvoke: RustInvokeDeps['requestRustInvoke']
   storeRoot?: Parameters<typeof readSteamEngineOverride>[0]['storeRoot']
 }
 
@@ -102,7 +100,6 @@ function defaultSteamWineToolsDeps(
           config: services.config,
           steamBottle: services.steamBottle,
           paths: services.paths,
-          engineRuntime: services.engineRuntime,
           steamLaunchRuntime: services.steamLaunchRuntime
         },
         appId
@@ -119,7 +116,7 @@ function defaultSteamWineToolsDeps(
     nonCrossoverEngine: async (id) =>
       nonCrossoverEngineFrom(
         await resolveNonCrossoverEngine(
-          { requestRustInvoke: services.engineRuntime.requestRustInvoke },
+          { requestRustInvoke: services.requestRustInvoke },
           { engineId: id }
         )
       ),

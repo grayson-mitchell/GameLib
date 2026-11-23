@@ -249,7 +249,7 @@ export async function launchBridgeGameBody(
     // is never inferred as CrossOver and the offline pre-check reads the real
     // engine.
     await reconcileBottleEngineMarker(
-      steamGame.deps.engineRuntime,
+      steamGame.deps,
       bridgeBottleSettings.wineCrossoverBottle
     )
     const offlineOk = await drmOfflinePrecheck(

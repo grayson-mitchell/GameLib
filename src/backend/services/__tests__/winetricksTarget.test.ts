@@ -35,11 +35,9 @@ function sourceFor(
         })
       }
     },
-    engineRuntime: {
-      requestRustInvoke: (channel: string, args: unknown[]) => {
-        calls.push([channel, args])
-        return reply()
-      }
+    requestRustInvoke: (channel: string, args: unknown[]) => {
+      calls.push([channel, args])
+      return reply()
     }
   } as unknown as EngineServicesSource
   return { source, calls }

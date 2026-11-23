@@ -8,7 +8,7 @@
  *    re-established in each test
  *  - graceful-fs mocked (existsSync) — no real filesystem access
  */
-import { createEngineRegistry } from 'backend/engine/engineRegistry'
+import { okBottleGateTransport } from 'backend/testUtils/testEngineTransport'
 import {
   existsSync,
   mkdirSync,
@@ -88,12 +88,11 @@ const CX_BIN_DIR =
   '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'
 const cxState: { binDir: string | undefined } = { binDir: CX_BIN_DIR }
 // 66.4-05: the locator is a plain fake over that state, handed to the code under test through
-// the engine-runtime slice (a fresh selection registry per suite).
+// the Steam bottle's deps.
 const crossover = {
   resolveCrossoverBinDir: () => cxState.binDir,
   resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir)
 }
-const engineRuntime = { crossover, registry: createEngineRegistry() }
 // One per-boot Steam launch runtime for this suite, on the global-timer clock so jest fake timers drive it (66.4-06).
 const steamLaunchRuntime = createTestSteamLaunchRuntime({
   clock: createGlobalTimerClock()
@@ -635,7 +634,7 @@ describe('quick 261024-cjq: CrossOver precondition', () => {
       stores: createTestStores(),
       steamBottle,
       paths,
-      engineRuntime,
+      requestRustInvoke: okBottleGateTransport,
       steamLaunchRuntime,
       spawnAsync: mockedSpawnAsync,
       commandRunner: { runWineCommand: mockedRunWineCommand }

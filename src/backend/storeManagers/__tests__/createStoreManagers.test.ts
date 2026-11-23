@@ -57,7 +57,6 @@ function build(over: Partial<Parameters<typeof createStoreManagers>[0]> = {}) {
     imageTools: fakes.host.imageTools,
     onlineMonitor: fakes.onlineMonitor,
     engineState: fakes.engineState,
-    engineRuntime: fakes.engineRuntime,
     steamLaunchRuntime: fakes.steamLaunchRuntime,
     bridgeRuntime: fakes.bridgeRuntime,
     steamInstallRuntime: fakes.steamInstallRuntime,

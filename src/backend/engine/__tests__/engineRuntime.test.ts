@@ -7,10 +7,46 @@
 import type { GameSettings } from 'common/types'
 import * as logger from 'backend/logger'
 
-import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
+import { join } from 'path'
+import type { AppPaths } from 'backend/process/context'
+import { createTestAbortRegistry } from 'backend/testUtils/testAbortRegistry'
+import { engineSelectionView } from 'backend/enginewine/selectionView'
+import { okBottleGateTransport } from 'backend/testUtils/testEngineTransport'
+import { createEngineRuntime, type EngineRuntimeDeps } from '../engineRuntime'
 import { createTestEngineServices } from 'backend/testUtils/testServices'
 import { buildFallbackGameSettings } from 'backend/enginewine/twin'
 import type { EngineSelection } from '../engineTypes'
+
+/**
+ * A fresh, isolated engine runtime (the factory the shared test helper held until 87-56c moved the Steam tests to the
+ * transport alone; this file goes with the engine TS in the same plan). Paths under `/test-gamelib`, and the fake transport
+ * that answers the bottle version gate with `ok`.
+ */
+function createTestEngineRuntime(
+  opts: {
+    paths?: Partial<Pick<AppPaths, 'userHome' | 'toolsPath'>>
+    aborts?: EngineRuntimeDeps['aborts']
+    requestRustInvoke?: EngineRuntimeDeps['requestRustInvoke']
+    /** A registry of its own instead of the process-wide selection view (a test of instance isolation). */
+    privateSelections?: boolean
+  } = {}
+) {
+  const root = '/test-gamelib'
+  return createEngineRuntime({
+    aborts: opts.aborts ?? createTestAbortRegistry(),
+    requestRustInvoke: opts.requestRustInvoke ?? okBottleGateTransport,
+    selections: opts.privateSelections
+      ? undefined
+      : (() => {
+          engineSelectionView.reset()
+          return engineSelectionView
+        })(),
+    paths: {
+      userHome: opts.paths?.userHome ?? join(root, 'home'),
+      toolsPath: opts.paths?.toolsPath ?? join(root, 'tools')
+    }
+  })
+}
 
 const cx: EngineSelection = {
   kind: 'crossover',

@@ -38,7 +38,7 @@ export type StageDrmBottleSlices = Pick<
   | 'steamBottle'
   | 'steamUser'
   | 'paths'
-  | 'engineRuntime'
+  | 'requestRustInvoke'
   | 'steamLaunchRuntime'
   | 'steamInstallRuntime'
 >

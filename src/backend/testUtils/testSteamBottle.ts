@@ -33,14 +33,15 @@ export function createTestSteamBottle(
         require('../storeManagers/steam/bottle') as typeof import('../storeManagers/steam/bottle')
       /* eslint-enable @typescript-eslint/no-require-imports */
       /* eslint-disable @typescript-eslint/no-require-imports */
-      const { createTestEngineRuntime } =
-        require('./testEngineRuntime') as typeof import('./testEngineRuntime')
+      const { createTestCrossoverLocator } =
+        require('./testEngineTransport') as typeof import('./testEngineTransport')
       /* eslint-enable @typescript-eslint/no-require-imports */
+      // A placeholder home nothing exists under; a suite that reads real dirs passes its own.
+      const paths = deps.paths ?? { userHome: '/test-gamelib/home' }
       real = createSteamBottle({
         ...deps,
-        // A placeholder home nothing exists under; a suite that reads real dirs passes its own.
-        paths: deps.paths ?? { userHome: '/test-gamelib/home' },
-        crossover: deps.crossover ?? createTestEngineRuntime().crossover
+        paths,
+        crossover: deps.crossover ?? createTestCrossoverLocator(paths.userHome)
       })
     }
     return real

@@ -34,7 +34,7 @@ function makeSource(
 ): GameCommandSource {
   const source = {
     paths: { userHome: '/home/u' },
-    engineRuntime: { requestRustInvoke },
+    requestRustInvoke,
     gameConfigs: {
       get: () => ({ getSettings: () => Promise.resolve({ stored: true }) })
     },

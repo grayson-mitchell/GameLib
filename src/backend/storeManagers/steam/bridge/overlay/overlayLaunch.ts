@@ -20,7 +20,7 @@ import {
 } from './overlayRunnerClone'
 import type { BridgeRuntime } from '../bridgeRuntime'
 import type { RunTool } from 'common/types/engine'
-import type { EngineRuntime } from 'backend/engine/engineRuntime'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import type { ProcessRunner } from 'backend/process/types'
 
 export type EnvVar = { key: string; value: string }
@@ -310,7 +310,7 @@ export async function prepareOverlayLaunch(
     bridgeRuntime: Pick<BridgeRuntime, 'overlayRunnerClone'>
     runTool: RunTool
     runner: Pick<ProcessRunner, 'run'>
-    engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
+    requestRustInvoke: RustInvokeDeps['requestRustInvoke']
   }
 ): Promise<
   OverlayStepResult<{ runner: OverlayRunnerReady; tokens: string[] }>
@@ -323,7 +323,7 @@ export async function prepareOverlayLaunch(
       {
         runTool: deps.runTool,
         runner: deps.runner,
-        engineRuntime: deps.engineRuntime
+        requestRustInvoke: deps.requestRustInvoke
       }
     )
     if (detected.status === 'error') return detected

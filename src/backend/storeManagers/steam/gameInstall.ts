@@ -602,7 +602,7 @@ export async function ensureBuiltInEngineForInstall(
 ): Promise<NonCrossoverEngine | InstallResult> {
   // 87-56a (D-01, D-10): Rust downloads and sends the engine-download statuses itself; an abort reaches it as a cancel id.
   const result = await ensurePinnedEngineThroughRust(
-    { requestRustInvoke: steamGame.deps.engineRuntime.requestRustInvoke },
+    { requestRustInvoke: steamGame.deps.requestRustInvoke },
     {
       pin,
       appName: steamGame.appId,

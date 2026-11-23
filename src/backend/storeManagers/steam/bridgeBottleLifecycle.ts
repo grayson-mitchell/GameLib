@@ -43,7 +43,6 @@ import {
   removeCreatedBottleDir
 } from 'backend/enginewine/bottles'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
-import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import {
   checkRemoval,
   firstBlockingItem,
@@ -51,7 +50,7 @@ import {
 } from 'backend/safety/rustSafety'
 import type { RemovalReason } from 'common/types/safety'
 import { steamSafetyRequest, type SteamSafetyDeps } from './safeSteamRemove'
-import type { EngineRuntime } from 'backend/engine/engineRuntime'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { crossoverBinDir } from './engine/crossoverBinDir'
 
 /**
@@ -62,7 +61,7 @@ import { crossoverBinDir } from './engine/crossoverBinDir'
  */
 /** SpawnDeps plus the config slice the shared-bottle guard reads (66.3-08). */
 export type BottleLifecycleDeps = KillBottleDeps & {
-  engineRuntime: Pick<EngineRuntime, 'registry' | 'requestRustInvoke'>
+  requestRustInvoke: RustInvokeDeps['requestRustInvoke']
   steamLaunchRuntime: Pick<SteamLaunchRuntime, 'drmRunners'>
   config: Pick<GlobalConfigSlice, 'getSettings'>
   steamBottle: Pick<SteamBottle, 'configStore' | 'persistedWineBins'>
@@ -247,7 +246,7 @@ export async function removePerGameBridgeBottle(
     // cxbottle mechanism provisionBottle uses, with a guarded delete if the dir survives.
     await killBottleWineServer(deps, name)
 
-    const removeBinDir = await crossoverBinDir(deps.engineRuntime, {
+    const removeBinDir = await crossoverBinDir(deps, {
       hintWineBins: deps.steamBottle.persistedWineBins()
     })
     if (!removeBinDir) {
@@ -350,14 +349,14 @@ function refusedOrError(
  * the boolean the TS function resolved.
  */
 async function killWith(
-  deps: { engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'> },
+  deps: { requestRustInvoke: RustInvokeDeps['requestRustInvoke'] },
   bottleName: string,
   wineserverBin: string,
   extraEnv: Record<string, string>,
   timeoutMs: number
 ): Promise<boolean> {
   const killed = await killBottleWineServerWith(
-    { requestRustInvoke: deps.engineRuntime.requestRustInvoke },
+    { requestRustInvoke: deps.requestRustInvoke },
     bottleName,
     wineserverBin,
     extraEnv,
@@ -373,7 +372,7 @@ async function killWith(
  */
 async function killForRegisteredEngine(
   deps: KillBottleDeps & {
-    engineRuntime: Pick<EngineRuntime, 'registry' | 'requestRustInvoke'>
+    requestRustInvoke: RustInvokeDeps['requestRustInvoke']
     steamLaunchRuntime: Pick<SteamLaunchRuntime, 'drmRunners'>
   },
   appId: string,
@@ -628,7 +627,7 @@ export async function provisionBridgeBottle(
   const rawName = opts.bottleName
   const bottleName = sanitizeBottleName(rawName)
   const rust: RustInvokeDeps = {
-    requestRustInvoke: deps.engineRuntime.requestRustInvoke
+    requestRustInvoke: deps.requestRustInvoke
   }
 
   // (1) Reject unsafe names before any path/argv construction (T-24-06,
@@ -692,7 +691,7 @@ export async function provisionBridgeBottle(
 
   // (3b) quick 261024-cjq: CrossOver precondition, after the ready
   // short-circuit and before any spawn.
-  const binDir = await crossoverBinDir(deps.engineRuntime, {
+  const binDir = await crossoverBinDir(deps, {
     wineVersion: opts.wineVersion,
     hintWineBins: deps.steamBottle.persistedWineBins()
   })

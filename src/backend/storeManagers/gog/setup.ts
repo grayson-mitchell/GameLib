@@ -38,7 +38,6 @@ export type SetupDeps = StatusUpdateDeps &
     | 'libraryManagers'
     | 'onlineMonitor'
     | 'engineState'
-    | 'engineRuntime'
     | 'paths'
     | 'steamBottle'
     | 'steamLaunchRuntime'

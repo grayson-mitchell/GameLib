@@ -82,7 +82,6 @@ export function steamWineBinHints(services: {
 export function steamPrepareFacts(
   services: SteamEngineBottle & {
     paths: BridgeBottleDeps['paths']
-    engineRuntime: BridgeBottleDeps['engineRuntime']
     config: { getSettings(): GameSettings }
   },
   appId: string,
@@ -108,7 +107,6 @@ export function steamPrepareFacts(
               config: services.config,
               steamBottle: services.steamBottle,
               paths: services.paths,
-              engineRuntime: services.engineRuntime,
               steamLaunchRuntime: services.steamLaunchRuntime
             },
             appId

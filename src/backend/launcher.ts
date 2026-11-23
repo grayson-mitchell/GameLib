@@ -123,8 +123,6 @@ export interface LauncherDeps
   appInfo: Pick<AppInfo, 'version'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   engineState: EngineStateService
-  /** The boot-owned engine runtime and the path roots the engine reads (66.4-05). */
-  engineRuntime: EngineServicesSource['engineRuntime']
   /** The boot's store root: the stored game config is read through it (85-15). */
   storeRoot?: EngineServicesSource['storeRoot']
   paths: EngineServicesSource['paths'] &
@@ -183,7 +181,7 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
     sendFrontendMessage: deps.sendFrontendMessage,
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
-    engineRuntime: deps.engineRuntime,
+    requestRustInvoke: deps.requestRustInvoke,
     storeRoot: deps.storeRoot,
     paths: deps.paths,
     runner: deps.runner,

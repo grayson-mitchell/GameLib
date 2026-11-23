@@ -105,7 +105,7 @@ export async function resolveToolTarget(
   // Rust decides from the live selection (the launch's engine) before the stored override (87-56a, D-23).
   const resolved = toolSettingsResultFrom(
     await resolveEngineToolSettings(
-      { requestRustInvoke: source.engineRuntime.requestRustInvoke },
+      { requestRustInvoke: source.requestRustInvoke },
       {
         runner: info.runner,
         appName: info.app_name,

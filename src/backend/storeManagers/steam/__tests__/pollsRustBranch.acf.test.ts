@@ -47,7 +47,6 @@ function makeDeps(handler: (channel: string) => unknown = () => null) {
         steamLibraryStore: { set: jest.fn() }
       }
     },
-    engineRuntime: { registry: { getEngineSelection: () => undefined } },
     steamLaunchRuntime: {
       drmRunners: { getDrmBridgeRunner: () => undefined }
     },

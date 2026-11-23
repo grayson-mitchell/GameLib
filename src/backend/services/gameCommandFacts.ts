@@ -99,7 +99,7 @@ export async function gatherGameCommandFacts(
     // Rust decides, creating the bottle the installer is about to run in (87-56a, D-23).
     const resolved = toolSettingsResultFrom(
       await resolveEngineToolSettings(
-        { requestRustInvoke: source.engineRuntime.requestRustInvoke },
+        { requestRustInvoke: source.requestRustInvoke },
         {
           runner: 'sideload',
           appName,

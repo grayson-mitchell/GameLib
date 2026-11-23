@@ -86,7 +86,7 @@ export async function runBridgeLaunch(
     return started
   } finally {
     if (!started) {
-      await dropEngineSelection(steamGame.deps.engineRuntime, steamGame.appId)
+      await dropEngineSelection(steamGame.deps, steamGame.appId)
     }
   }
 }

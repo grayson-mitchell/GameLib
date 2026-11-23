@@ -126,7 +126,6 @@ describe('sidecar bootstrap (headless boot)', () => {
         'commandRunner',
         'config',
         'downloadQueue',
-        'engineRuntime',
         'engineState',
         'gameConfigs',
         'gogRuntime',

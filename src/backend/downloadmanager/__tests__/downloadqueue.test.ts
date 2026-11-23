@@ -74,7 +74,6 @@ const hostSlices = {
   notifications: {} as never,
   steamSession: {} as never,
   steamBottle: {} as never,
-  engineRuntime: {} as never,
   steamLaunchRuntime: {} as never,
   appRuntime: {} as never,
   paths: {} as never

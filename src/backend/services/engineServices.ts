@@ -62,8 +62,8 @@ export type EngineServicesSource = Pick<
   > & {
     /** The boot-owned engine decision/notice state (D-66.3-12). */
     engineState: EngineServices['engineState']
-    /** The boot-owned engine runtime (66.4-05). */
-    engineRuntime: EngineServices['engineRuntime']
+    /** The boot's sidecar -> Rust transport (the engine runtime that carried it is gone, 87-56c). */
+    requestRustInvoke: ManagerDeps['requestRustInvoke']
     /** The boot's store root: the stored game config is read through it (85-15). */
     storeRoot?: EngineServices['storeRoot']
     /** The path roots the engine reads (66.4-05). */
@@ -75,19 +75,20 @@ export type EngineServicesSource = Pick<
     launcher: Pick<Launcher, 'setupEnvVars' | 'setupWineEnvVars' | 'validWine'>
   }
 
-export function engineServicesFrom(deps: EngineServicesSource): EngineServices {
+export function engineServicesFrom(
+  deps: EngineServicesSource
+): Omit<EngineServices, 'engineRuntime'> {
   return {
     spawnAsync: deps.spawnAsync,
     runner: deps.runner,
     onlineMonitor: deps.onlineMonitor,
     engineState: deps.engineState,
-    engineRuntime: deps.engineRuntime,
     storeRoot: deps.storeRoot,
     paths: deps.paths,
     // The TS `installRemove` resolved a boolean; the Rust op does too, and anything else is a failure.
     installRemove: async (settings, tool, action, source) =>
       (await dxvkInstallRemove(
-        { requestRustInvoke: deps.engineRuntime.requestRustInvoke },
+        { requestRustInvoke: deps.requestRustInvoke },
         { settings, tool, action, source }
       )) === true,
     wineManagerReleases: wineManagerReleasesFrom(deps),
@@ -107,7 +108,7 @@ export function engineServicesFrom(deps: EngineServicesSource): EngineServices {
 /** The engine services plus the bottle slice the Steam engine deps read (66.3-15). */
 export function steamEngineServicesFrom(
   deps: EngineServicesSource
-): EngineServices & SteamEngineBottle {
+): Omit<EngineServices, 'engineRuntime'> & SteamEngineBottle {
   return {
     ...engineServicesFrom(deps),
     steamBottle: deps.steamBottle,

@@ -8,7 +8,6 @@
  *    re-established in each test
  *  - graceful-fs mocked (existsSync) — no real filesystem access
  */
-import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { createFakeBottleRust } from 'backend/testUtils/fakeBottleRust'
 import {
@@ -90,9 +89,7 @@ const crossover = {
   resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir)
 }
 // 87-55: the async CrossOver lookup is Rust's, answered from the same state.
-const engineRuntime = {
-  crossover,
-  registry: createEngineRegistry(),
+const rustTransport = {
   requestRustInvoke: createFakeBottleRust({
     crossoverBinDir: () => cxState.binDir
   }).requestRustInvoke
@@ -133,7 +130,7 @@ const provisionDeps = {
   stores: createTestStores(),
   steamBottle,
   paths,
-  engineRuntime,
+  ...rustTransport,
   steamLaunchRuntime,
   spawnAsync: mockedSpawnAsync,
   commandRunner: { runWineCommand: mockedRunWineCommand }

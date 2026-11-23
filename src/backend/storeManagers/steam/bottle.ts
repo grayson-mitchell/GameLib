@@ -29,7 +29,6 @@ import { logWarning, LogPrefix } from 'backend/logger'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import { getBottleDir, isBottleProvisioned } from 'backend/enginewine/twin'
 import type { AppPaths } from 'backend/process/context'
-import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { SteamLaunchRuntime } from './steamLaunchRuntime'
 
 // ── Phase 24 (24-04): dedicated bridge bottle (macOS native Steam bridge) ──
@@ -213,8 +212,8 @@ export interface SteamCrossoverLocator {
 /** What the bottle helpers read: the bottle config store and the global settings. */
 export interface SteamBottleDeps {
   /**
-   * The boot's CrossOver locator. Read lazily: the 'steam-bottle' boot step runs before
-   * 'engine-runtime', so the boot passes a facade that resolves the runtime at call time.
+   * The boot's CrossOver locator: a facade over the twin (sync) and the host's Rust transport (async), resolved at
+   * call time.
    */
   crossover: SteamCrossoverLocator
   stores: { steam: Pick<Stores['steam'], 'steamBottleConfigStore'> }
@@ -462,7 +461,6 @@ export type SteamBottle = ReturnType<typeof createSteamBottle>
 /** What a consumer that only resolves the bottle's settings (for example its steamapps dir) needs. */
 export type BottleSettingsDeps = {
   paths: Pick<AppPaths, 'userHome'>
-  engineRuntime: Pick<EngineRuntime, 'registry'>
   steamLaunchRuntime: Pick<SteamLaunchRuntime, 'drmRunners'>
   steamBottle: Pick<
     SteamBottle,

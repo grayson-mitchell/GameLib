@@ -145,7 +145,7 @@ export async function defaultEndStageSession(
     | 'config'
     | 'steamBottle'
     | 'paths'
-    | 'engineRuntime'
+    | 'requestRustInvoke'
     | 'steamLaunchRuntime'
   >,
   args: {

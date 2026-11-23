@@ -221,8 +221,7 @@ describe('launchWithoutSteam (setting-driven, never fails the launch)', () => {
         appId: '10',
         deps: {
           runner: createScriptedRunner([]),
-          steamSession: { gameSession: { bridgeLaunchesInFlight: inFlight } },
-          engineRuntime: { registry: { clearEngineSelection: jest.fn() } }
+          steamSession: { gameSession: { bridgeLaunchesInFlight: inFlight } }
         },
         getGameInfo: () => ({
           title: 'T',
@@ -362,8 +361,7 @@ describe('launchWithoutSteam Mac-native start failure (quick 261120-8hb)', () =>
             gameSession: { bridgeLaunchesInFlight: new Map() },
             libraryState: { library: new Map([['10', { title: 'T' }]]) }
           },
-          appRuntime: { events: { emit: jest.fn() } },
-          engineRuntime: { registry: { clearEngineSelection: jest.fn() } }
+          appRuntime: { events: { emit: jest.fn() } }
         },
         getGameInfo: () => ({
           title: 'T',

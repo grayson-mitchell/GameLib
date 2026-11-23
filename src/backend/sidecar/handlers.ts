@@ -118,7 +118,7 @@ function toolSlices(services: BootServices) {
     notifications: services.host.notifications,
     onlineMonitor: services.onlineMonitor,
     engineState: services.engineState,
-    engineRuntime: services.engineRuntime,
+    requestRustInvoke: services.host.requestRustInvoke,
     storeRoot: services.storeRoot,
     paths: services.paths,
     aborts: services.aborts,

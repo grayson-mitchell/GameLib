@@ -187,11 +187,11 @@ export async function fireBridgeWineLaunch(
       await import('./engine/bridgeDeadline')
     // 87-42: the selection is read through the sync view; the clears and the ledger writes land locally at once and
     // in Rust after (`engineSync`), so the callbacks below, which cannot await, only start the Rust half.
-    const { engineRuntime } = steamGame.deps
+    const engineTransport = steamGame.deps
     const clearEngineSelection = (key: string) =>
-      void dropEngineSelection(engineRuntime, key)
+      void dropEngineSelection(engineTransport, key)
     const markGameStopped = (bottle: string, key: string) =>
-      void recordGameStopped(engineRuntime, bottle, key)
+      void recordGameStopped(engineTransport, bottle, key)
     const { applySteamBridgeKnownFixes, steamBridgeLaunchCommandParts } =
       await import('./bridgeKnownFixes')
     const { applyBridgeBottleDllOverrides } =
@@ -544,7 +544,7 @@ export async function fireBridgeWineLaunch(
     let handle: ReturnType<typeof startBottleProcessMonitor> = null
     const ledgerBottle = bridgeBottleSettings.wineCrossoverBottle
     if (installRoot) {
-      await recordGameRunning(engineRuntime, ledgerBottle, steamGame.appId)
+      await recordGameRunning(engineTransport, ledgerBottle, steamGame.appId)
       handle = bindDeadlineToMonitor(
         deadline,
         startBottleProcessMonitor(steamGame.deps, {
@@ -750,9 +750,9 @@ export async function fireBridgeWineLaunch(
     return true
   } catch (error) {
     deadline?.cancel('launch-error')
-    await dropEngineSelection(steamGame.deps.engineRuntime, steamGame.appId)
+    await dropEngineSelection(steamGame.deps, steamGame.appId)
     await recordGameStopped(
-      steamGame.deps.engineRuntime,
+      steamGame.deps,
       bridgeBottleSettings.wineCrossoverBottle,
       steamGame.appId
     )
