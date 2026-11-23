@@ -1788,6 +1788,8 @@ mod tests {
         );
     }
 
+    // POSIX fixture paths (`/cx/bin`); CrossOver is macOS-only, like the crate's other unix-gated suites.
+    #[cfg(unix)]
     #[tokio::test]
     async fn the_crossover_ops_take_strict_arguments_and_probe_through_the_spawn_seam() {
         let home = FakeHome::new("engine-lib-");
@@ -2189,6 +2191,8 @@ mod tests {
         );
     }
 
+    // POSIX fixture paths (`/cx/bin`); CrossOver is macOS-only, like the crate's other unix-gated suites.
+    #[cfg(unix)]
     #[tokio::test]
     async fn the_record_crossover_op_writes_the_marker_and_the_reconcile_op_reports_what_it_wrote()
     {
@@ -2280,6 +2284,8 @@ mod tests {
         );
     }
 
+    // POSIX fixture paths (`/cx/bin`); CrossOver is macOS-only, like the crate's other unix-gated suites.
+    #[cfg(unix)]
     #[tokio::test]
     async fn the_prepare_op_switches_a_bottle_and_takes_strict_arguments() {
         use crate::testing::{ScriptedDxvk, ScriptedSpecRunner};
@@ -2418,6 +2424,8 @@ mod tests {
         }
     }
 
+    // POSIX fixture paths (`/cx/bin`); CrossOver is macOS-only, like the crate's other unix-gated suites.
+    #[cfg(unix)]
     #[tokio::test]
     async fn the_create_fallback_op_refuses_an_engine_outside_the_engine_roots() {
         use crate::testing::ScriptedSpecRunner;
@@ -2734,6 +2742,8 @@ mod tests {
         }
     }
 
+    // POSIX fixture paths (`/cx/bin`); CrossOver is macOS-only, like the crate's other unix-gated suites.
+    #[cfg(unix)]
     #[tokio::test]
     async fn the_create_and_kill_ops_spawn_through_the_context_runner() {
         use gamelib_core::process::SpecOutput;
