@@ -34,7 +34,6 @@ use crate::manager::{log_error, log_info, log_warn};
 /// The registry key DLL overrides live under.
 const DLL_OVERRIDES_KEY: &str = "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides";
 /// The batched override removal of the strict restore (G30, 261103-wtm), written under `drive_c`.
-#[allow(dead_code)] // the remove half (Task 2)
 const RESTORE_REG_FILE: &str = "gamelib-dxvk-restore.reg";
 
 const DXVK_LATEST_URL: &str = "https://api.github.com/repos/doitsujin/dxvk/releases/latest";
@@ -91,7 +90,6 @@ fn override_name(dll: &str) -> String {
 }
 
 /// An exit code as the TS printed it: `undefined` when there was none.
-#[allow(dead_code)] // the remove half (Task 2)
 fn code_text(code: Option<i32>) -> String {
     code.map_or_else(|| "undefined".to_string(), |c| c.to_string())
 }
@@ -121,7 +119,6 @@ impl Target<'_> {
 
     /// The DLLs the tool put in the prefix: the 64-bit set in `system32` and the 32-bit set in
     /// `syswow64`, or the 32-bit set alone in `system32` on a 32-bit prefix.
-    #[allow(dead_code)] // the remove half (Task 2)
     fn installed_dlls(&self) -> Vec<String> {
         if self.is64 {
             self.dlls64
@@ -559,14 +556,157 @@ async fn install_nvngx(
     wine.run(ctx, call).await;
 }
 
-/// The remove half (`restore`, plain and strict) lands with Task 2; until then a remove answers
-/// `false`, which is not a result any golden carries.
-async fn restore(_ctx: &WineCtx, _wine: &dyn WineRunner, _target: &Target<'_>) -> bool {
-    false
+/// The toggle's remove (`restore` without a source): drop the version marker, delete each override
+/// with its own `reg delete`, delete the DLLs, then `wineboot -u` to bring the stock ones back.
+/// Nothing in it fails the call: a DLL that is not there is logged and the rest goes on.
+async fn restore(ctx: &WineCtx, wine: &dyn WineRunner, target: &Target<'_>) -> bool {
+    let name = target.tool;
+    log_info(ctx, &format!("Removing {name} version information"));
+    let version_file = target.current_version_file();
+    if exists(&version_file) {
+        if let Err(error) = std::fs::remove_file(&version_file) {
+            log_error(
+                ctx,
+                &format!("Error removing {name} version information {error}"),
+            );
+        }
+    }
+
+    log_info(ctx, "Removing DLL overrides");
+    // One at a time: `wineboot -u` below must not race these deletes.
+    for dll in target.override_names() {
+        let call = wine_call(
+            target,
+            &["reg", "delete", DLL_OVERRIDES_KEY, "/v", &dll, "/f"],
+            false,
+        );
+        wine.run(ctx, call).await;
+    }
+
+    log_info(ctx, "Removing DXVK DLLs");
+    for dll_file in target.installed_dlls() {
+        if let Err(error) = std::fs::remove_file(&dll_file) {
+            log_error(ctx, &format!("Error removing {dll_file} {error}"));
+        }
+    }
+
+    log_info(ctx, "Restoring Wine stock DLLs");
+    wine.run(ctx, wine_call(target, &["wineboot", "-u"], false))
+        .await;
+    true
 }
 
-async fn restore_strict(_ctx: &WineCtx, _wine: &dyn WineRunner, _target: &Target<'_>) -> bool {
-    false
+/// The source-pinned restore (`restoreDxvkStrict`, the Steam engine switch): any failed step makes
+/// the call `false` and keeps the version file, so a half-done restore is visible and retried
+/// (59-REVIEW WR-01).
+///
+/// The DLLs go first: an engine flip leaves a mismatched `.update-timestamp`, so the first wine
+/// process runs the automatic prefix update, which puts the stock DLLs back when they are gone, and
+/// `wineboot -u` then only runs when they are still missing (G30). The overrides go in one
+/// `reg import`; an import that matches nothing still exits 0, so each override is checked
+/// afterwards with `reg query ... /v <name>`, judged by exit code (1 for missing, 0 for present)
+/// because `resolveOnExit` may cut the output short. Every wine step settles on the process exit.
+async fn restore_strict(ctx: &WineCtx, wine: &dyn WineRunner, target: &Target<'_>) -> bool {
+    let name = target.tool;
+    let mut failed: Vec<String> = Vec::new();
+
+    log_info(ctx, "Removing DXVK DLLs");
+    let to_remove = target.installed_dlls();
+    for dll_file in &to_remove {
+        match std::fs::remove_file(dll_file) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => {
+                log_error(ctx, &format!("Error removing {dll_file} {error}"));
+                failed.push(format!("rm {dll_file}"));
+            }
+        }
+    }
+
+    log_info(ctx, "Removing DLL overrides");
+    let overrides = target.override_names();
+    let reg_file = Path::new(&target.wine_prefix)
+        .join("drive_c")
+        .join(RESTORE_REG_FILE);
+    let mut import_succeeded = false;
+    let mut lines: Vec<String> = vec![
+        "Windows Registry Editor Version 5.00".to_string(),
+        String::new(),
+        format!("[{DLL_OVERRIDES_KEY}]"),
+    ];
+    lines.extend(overrides.iter().map(|dll| format!("\"{dll}\"=-")));
+    lines.push(String::new());
+    match std::fs::write(&reg_file, lines.join("\r\n")) {
+        Ok(()) => {
+            let import = format!("C:\\{RESTORE_REG_FILE}");
+            let code = wine
+                .run(ctx, wine_call(target, &["reg", "import", &import], true))
+                .await;
+            if code == Some(0) {
+                import_succeeded = true;
+            } else {
+                failed.push(format!("reg import code={}", code_text(code)));
+            }
+        }
+        Err(error) => {
+            log_error(
+                ctx,
+                &format!("Error importing {} {error}", reg_file.display()),
+            );
+            failed.push("reg import".to_string());
+        }
+    }
+    let _ = std::fs::remove_file(&reg_file);
+
+    if import_succeeded {
+        // Sequential: the wine processes must not race on one wineserver.
+        let mut left: Vec<&str> = Vec::new();
+        for dll in &overrides {
+            let query = wine_call(
+                target,
+                &["reg", "query", DLL_OVERRIDES_KEY, "/v", dll],
+                true,
+            );
+            let code = wine.run(ctx, query).await;
+            match code {
+                Some(0) => left.push(dll),
+                Some(1) => {}
+                other => failed.push(format!("reg query {dll} code={}", code_text(other))),
+            }
+        }
+        if !left.is_empty() {
+            failed.push(format!("overrides left: {}", left.join(", ")));
+        }
+    }
+
+    let missing = to_remove.iter().any(|dll_file| !exists(dll_file));
+    if missing {
+        log_info(ctx, "Restoring Wine stock DLLs");
+        let code = wine
+            .run(ctx, wine_call(target, &["wineboot", "-u"], true))
+            .await;
+        if code != Some(0) {
+            failed.push(format!("wineboot -u code={}", code_text(code)));
+        }
+    } else {
+        log_info(ctx, "Wine stock DLLs restored by the prefix update");
+    }
+
+    if !failed.is_empty() {
+        log_error(
+            ctx,
+            &format!(
+                "DXVK restore failed for {}: {}",
+                target.wine_prefix,
+                failed.join("; ")
+            ),
+        );
+        return false;
+    }
+    // Last: the version file is the "DXVK is installed" signal.
+    log_info(ctx, &format!("Removing {name} version information"));
+    let _ = std::fs::remove_file(target.current_version_file());
+    true
 }
 
 /// `installRemove` for a game that is named, not given settings: the settings the tool acts on are

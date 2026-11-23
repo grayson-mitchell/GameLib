@@ -453,6 +453,43 @@ mod tests {
         assert_eq!(err, "unknown op: nope");
     }
 
+    #[tokio::test]
+    async fn the_dxvk_op_checks_its_arguments_and_answers_a_category_on_failure() {
+        let home = FakeHome::new("wine-lib-");
+        let ctx = ctx(&home);
+        let op = "wine_dxvk_install_remove";
+        let request = |tool: &str| {
+            json!({
+                "settings": {"winePrefix": home.root().join("nope").to_string_lossy()},
+                "tool": tool,
+                "action": "backup"
+            })
+        };
+        // No arguments, an unknown tool and an unknown host key are fixed `bad-args`.
+        for args in [
+            vec![],
+            vec![request("dxmt")],
+            vec![request("dxvk"), json!({"nope": 1})],
+            vec![request("dxvk"), json!({}), json!({})],
+        ] {
+            assert_eq!(
+                dispatch(op, &args, &ctx).await.unwrap_err(),
+                format!("{op}:bad-args")
+            );
+        }
+        // A prefix that is not one is the TS answer: warned about, and true so a toggle is not stuck.
+        assert_eq!(
+            dispatch(op, &[request("dxvk")], &ctx).await,
+            Ok(Value::Bool(true))
+        );
+        // Settings without a prefix are a category word, never the settings.
+        let no_prefix = json!({"settings": {}, "tool": "dxvk", "action": "backup"});
+        assert_eq!(
+            dispatch(op, &[no_prefix], &ctx).await.unwrap_err(),
+            format!("{op}:bad-settings")
+        );
+    }
+
     #[test]
     fn decode_takes_exactly_one_strict_argument() {
         #[derive(serde::Deserialize, Debug)]
