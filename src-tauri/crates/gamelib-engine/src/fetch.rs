@@ -9,19 +9,23 @@
 //!
 //! The behaviour is the TS `downloadFile` (`src/backend/utils.ts`): a HEAD for the length first
 //! (a failed one is `failed-to-get-headers`), then the body, progress at most once a second, a
-//! cancel that stops the transfer. The TS used five connections; this uses one (research A8).
+//! cancel that stops the transfer. The TS handed the transfer to EasyDl: a download whose HEAD
+//! advertises byte ranges (`Accept-Ranges: bytes`) and a length arrives in EasyDl's ranges over at
+//! most five connections ([`DOWNLOAD_CONNECTIONS`], [`plan_ranges`]); anything else is the single
+//! stream (quick 261123-txk).
 
 use std::fmt;
 use std::future::Future;
+use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
-use futures_util::{Stream, StreamExt};
+use futures_util::{stream, Stream, StreamExt};
 use gamelib_core::clock::{Clock, SystemClock};
 use sha2::{Digest, Sha256};
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use tokio_util::sync::CancellationToken;
 
 /// A boxed, sendable future that may borrow from its caller (a download borrows its destination
@@ -51,6 +55,10 @@ pub const DOWNLOAD_IDLE_LIMIT: Duration = Duration::from_secs(60);
 /// The least time between two progress reports (the TS throttle, `1000` ms).
 pub const PROGRESS_INTERVAL_MS: u64 = 1000;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
+/// The most ranged GETs one download has in flight at once (EasyDl's `connections`).
+pub const DOWNLOAD_CONNECTIONS: usize = 5;
+/// The cap in EasyDl's default chunk size, `min(size / 10, 10 MiB)`.
+pub const RANGE_CHUNK_MAX: u64 = 10 * 1024 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Method {
@@ -211,7 +219,8 @@ pub trait Fetch: Send + Sync + 'static {
     /// `req` streamed to `dest`. The body goes to `<dest>.part` and is renamed over `dest` once
     /// complete, so `dest` is never half written; on any failure, and on cancel, the partial file is
     /// removed. `progress` is called at most once a second (by the injected clock) and once more with
-    /// 100% at the end. A failed HEAD is `failed-to-get-headers`, a cancel is `aborted`.
+    /// 100% at the end. A failed HEAD is `failed-to-get-headers`, a cancel is `aborted`. The sha256
+    /// is over the whole joined file whether it arrived on one stream or in ranges.
     fn download<'a>(
         &'a self,
         req: FetchRequest,
@@ -368,9 +377,436 @@ fn header_length(headers: &reqwest::header::HeaderMap) -> u64 {
         .unwrap_or(0)
 }
 
+/// EasyDl's `_calcRanges` with its default chunk size: inclusive `(start, end)` byte ranges that
+/// cover `0..size`, at least [`DOWNLOAD_CONNECTIONS`] of them. The chunk is `min(size / 10,
+/// RANGE_CHUNK_MAX)`; the last range is the remainder, and when it is under half a chunk, half of
+/// the shortfall moves into it from the range before. `None` for a file under 10 bytes, where the
+/// chunk is 0 (EasyDl divides by zero there).
+pub fn plan_ranges(size: u64) -> Option<Vec<(u64, u64)>> {
+    let chunk = (size / 10).min(RANGE_CHUNK_MAX);
+    if chunk == 0 {
+        return None;
+    }
+    let count = size.div_ceil(chunk);
+    let mut lengths: Vec<u64> = (0..count)
+        .map(|i| {
+            if i + 1 < count {
+                chunk
+            } else {
+                size - chunk * (count - 1)
+            }
+        })
+        .collect();
+    let last = lengths[lengths.len() - 1];
+    if count > 1 && 2 * last < chunk {
+        let shift = (chunk - 2 * last) / 2;
+        let before = lengths.len() - 2;
+        lengths[before] -= shift;
+        let end = lengths.len() - 1;
+        lengths[end] += shift;
+    }
+    let mut start = 0u64;
+    Some(
+        lengths
+            .into_iter()
+            .map(|length| {
+                let range = (start, start + length - 1);
+                start += length;
+                range
+            })
+            .collect(),
+    )
+}
+
+/// Whether a HEAD's `Accept-Ranges` value is `bytes` (EasyDl's own condition, case-insensitive and
+/// trimmed here because a header value is not).
+fn accepts_ranges(value: Option<&str>) -> bool {
+    value.is_some_and(|v| v.trim().eq_ignore_ascii_case("bytes"))
+}
+
+/// The range plan a download takes, or `None` for the single stream: the HEAD must advertise
+/// `Accept-Ranges: bytes` and a non-zero length that [`plan_ranges`] can split.
+fn ranged_plan(head_length: u64, accept_ranges: Option<&str>) -> Option<Vec<(u64, u64)>> {
+    if head_length > 0 && accepts_ranges(accept_ranges) {
+        plan_ranges(head_length)
+    } else {
+        None
+    }
+}
+
+/// A response body as owned chunks (`Vec<u8>`: `bytes` is not a direct dependency).
+type ChunkStream = Pin<Box<dyn Stream<Item = Result<Vec<u8>, FetchError>> + Send>>;
+
+/// An opened GET: its status line and the headers the ranged download reads, and its body.
+struct Opened {
+    status: u16,
+    /// `Content-Length`, `0` when absent.
+    length: u64,
+    content_range: Option<String>,
+    body: ChunkStream,
+}
+
+/// Opens one GET. [`ReqwestFetch`] and `Replay` both implement it, so the ranged download below is
+/// the one engine the goldens exercise and the app runs.
+trait OpenGet: Send + Sync {
+    fn open(&self, req: FetchRequest) -> FetchFuture<'_, Result<Opened, FetchError>>;
+}
+
+/// What opening a range found.
+enum Opening {
+    /// A 206 whose `Content-Range` is the range asked for.
+    Range(Opened),
+    /// A 200: the server ignored `Range`.
+    Whole(Opened),
+}
+
+/// Why a range stopped the transfer. Crate-private on purpose: [`FetchError`] is matched by every
+/// caller and gains no variant for this.
+enum RangeStop {
+    Fail(FetchError),
+    /// A later range was answered 200: drop the ranges and stream the file once.
+    Whole,
+}
+
+impl From<FetchError> for RangeStop {
+    fn from(error: FetchError) -> RangeStop {
+        RangeStop::Fail(error)
+    }
+}
+
+/// Whether `text` is the `Content-Range` `bytes <start>-<end>/<total>`.
+fn content_range_is(text: &str, start: u64, end: u64, total: u64) -> bool {
+    let Some((unit, spec)) = text.trim().split_once(char::is_whitespace) else {
+        return false;
+    };
+    let Some((span, size)) = spec.trim().split_once('/') else {
+        return false;
+    };
+    let Some((first, last)) = span.split_once('-') else {
+        return false;
+    };
+    let number = |s: &str| s.trim().parse::<u64>().ok();
+    unit.eq_ignore_ascii_case("bytes")
+        && number(first) == Some(start)
+        && number(last) == Some(end)
+        && number(size) == Some(total)
+}
+
+/// Opens `req`, cancel first and bounded by [`DOWNLOAD_IDLE_LIMIT`].
+async fn open_bounded(
+    opener: &dyn OpenGet,
+    req: FetchRequest,
+    cancel: &CancellationToken,
+) -> Result<Opened, FetchError> {
+    let opened = tokio::select! {
+        biased;
+        _ = cancel.cancelled() => return Err(FetchError::Aborted),
+        opened = tokio::time::timeout(DOWNLOAD_IDLE_LIMIT, opener.open(req)) => opened,
+    };
+    opened.map_err(|_| FetchError::Network)?
+}
+
+/// Opens `req` for `range` (to the request's own URL, so each range follows any redirect itself:
+/// a signed redirect target can expire) and checks the answer against it and the HEAD length.
+async fn open_range(
+    opener: &dyn OpenGet,
+    req: &FetchRequest,
+    (start, end): (u64, u64),
+    head_length: u64,
+    cancel: &CancellationToken,
+) -> Result<Opening, FetchError> {
+    let mut ranged = FetchRequest {
+        method: Method::Get,
+        ..req.clone()
+    };
+    ranged
+        .headers
+        .push(("Range".to_string(), format!("bytes={start}-{end}")));
+    let opened = open_bounded(opener, ranged, cancel).await?;
+    match opened.status {
+        206 => {
+            let matches = opened
+                .content_range
+                .as_deref()
+                .is_some_and(|c| content_range_is(c, start, end, head_length));
+            if matches {
+                Ok(Opening::Range(opened))
+            } else {
+                // The wrong range, or a file that changed since the HEAD.
+                Err(FetchError::Network)
+            }
+        }
+        200 => Ok(Opening::Whole(opened)),
+        status if !is_success(status) => Err(FetchError::Status(status)),
+        _ => Err(FetchError::Network),
+    }
+}
+
+/// The progress state the ranges share.
+struct Shared {
+    bytes: u64,
+    last_report: u64,
+}
+
+/// What every range of one download needs. All borrows, so it is `Copy`: a range is a future the
+/// download's own future polls (never a spawned task), and so it cannot outlive the download.
+#[derive(Clone, Copy)]
+struct RangeJob<'a> {
+    opener: &'a dyn OpenGet,
+    req: &'a FetchRequest,
+    head_length: u64,
+    part: &'a Path,
+    shared: &'a Mutex<Shared>,
+    progress: &'a (dyn Fn(Progress) + Send + Sync),
+    cancel: &'a CancellationToken,
+    clock: &'a dyn Clock,
+}
+
+impl RangeJob<'_> {
+    /// One range: its body (`pre`, the already open probe, or a fresh GET) written at its offset.
+    async fn run(self, range: (u64, u64), pre: Option<Opened>) -> Result<(), RangeStop> {
+        let opened = match pre {
+            Some(opened) => opened,
+            None => {
+                match open_range(self.opener, self.req, range, self.head_length, self.cancel)
+                    .await?
+                {
+                    Opening::Range(opened) => opened,
+                    Opening::Whole(_) => return Err(RangeStop::Whole),
+                }
+            }
+        };
+        self.write(opened.body, range)
+            .await
+            .map_err(RangeStop::Fail)
+    }
+
+    /// Writes `body` at `start` in `.part`: cancel first, [`DOWNLOAD_IDLE_LIMIT`] per chunk. A body
+    /// longer or shorter than its range is `network`.
+    async fn write(
+        &self,
+        mut body: ChunkStream,
+        (start, end): (u64, u64),
+    ) -> Result<(), FetchError> {
+        let expected = end - start + 1;
+        let mut file = tokio::fs::OpenOptions::new()
+            .write(true)
+            .open(self.part)
+            .await
+            .map_err(|_| FetchError::Io)?;
+        file.seek(SeekFrom::Start(start))
+            .await
+            .map_err(|_| FetchError::Io)?;
+        let mut written = 0u64;
+        loop {
+            let next = tokio::select! {
+                biased;
+                _ = self.cancel.cancelled() => return Err(FetchError::Aborted),
+                next = tokio::time::timeout(DOWNLOAD_IDLE_LIMIT, body.next()) => next,
+            };
+            let Ok(next) = next else {
+                return Err(FetchError::Network);
+            };
+            let Some(chunk) = next else {
+                break;
+            };
+            let chunk = chunk?;
+            written += chunk.len() as u64;
+            if written > expected {
+                return Err(FetchError::Network);
+            }
+            file.write_all(&chunk).await.map_err(|_| FetchError::Io)?;
+            self.report(chunk.len() as u64);
+        }
+        file.flush().await.map_err(|_| FetchError::Io)?;
+        if written != expected {
+            return Err(FetchError::Network);
+        }
+        Ok(())
+    }
+
+    /// Adds `added` bytes and reports at most once per [`PROGRESS_INTERVAL_MS`]. The report is made
+    /// under the lock, so reports never go backwards, and none fires once the token is cancelled.
+    fn report(&self, added: u64) {
+        let mut shared = self.shared.lock().unwrap_or_else(|e| e.into_inner());
+        shared.bytes += added;
+        let now = self.clock.now_ms();
+        if now.saturating_sub(shared.last_report) >= PROGRESS_INTERVAL_MS
+            && !self.cancel.is_cancelled()
+        {
+            shared.last_report = now;
+            (self.progress)(Progress {
+                bytes: shared.bytes,
+                total: self.head_length,
+                percentage: percentage(shared.bytes, self.head_length),
+            });
+        }
+    }
+}
+
+/// The SHA-256 (lowercase hex) of the file at `path`, read in blocks with the token checked between.
+async fn hash_file(path: &Path, cancel: &CancellationToken) -> Result<String, FetchError> {
+    let mut file = tokio::fs::File::open(path)
+        .await
+        .map_err(|_| FetchError::Io)?;
+    let mut hasher = Sha256::new();
+    let mut block = vec![0u8; 1024 * 1024];
+    loop {
+        if cancel.is_cancelled() {
+            return Err(FetchError::Aborted);
+        }
+        let read = file.read(&mut block).await.map_err(|_| FetchError::Io)?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&block[..read]);
+    }
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect())
+}
+
+/// The ranged transfer proper: size `.part`, fetch every range over at most
+/// [`DOWNLOAD_CONNECTIONS`] connections, hash the joined file, report 100% and rename. Any error
+/// leaves `.part` for the caller to remove.
+async fn transfer(
+    job: RangeJob<'_>,
+    probe: Opened,
+    plan: &[(u64, u64)],
+    dest: &Path,
+) -> Result<DownloadOutcome, RangeStop> {
+    if let Some(parent) = dest.parent() {
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|_| FetchError::Io)?;
+    }
+    {
+        let file = tokio::fs::File::create(job.part)
+            .await
+            .map_err(|_| FetchError::Io)?;
+        file.set_len(job.head_length)
+            .await
+            .map_err(|_| FetchError::Io)?;
+    }
+    let mut probe = Some(probe);
+    let mut ranges = Box::pin(
+        stream::iter(plan.iter().copied().enumerate())
+            .map(|(index, range)| job.run(range, if index == 0 { probe.take() } else { None }))
+            .buffer_unordered(DOWNLOAD_CONNECTIONS),
+    );
+    let mut stop = None;
+    while let Some(done) = ranges.next().await {
+        if let Err(error) = done {
+            stop = Some(error);
+            break;
+        }
+    }
+    // Dropping the stream drops every range still in flight, closing its handle and connection.
+    drop(ranges);
+    if let Some(stop) = stop {
+        return Err(stop);
+    }
+    let sha256 = hash_file(job.part, job.cancel).await?;
+    if job.cancel.is_cancelled() {
+        return Err(FetchError::Aborted.into());
+    }
+    (job.progress)(Progress {
+        bytes: job.head_length,
+        total: job.head_length,
+        percentage: 100.0,
+    });
+    tokio::fs::rename(job.part, dest)
+        .await
+        .map_err(|_| FetchError::Io)?;
+    Ok(DownloadOutcome {
+        bytes: job.head_length,
+        sha256,
+    })
+}
+
+/// A response streamed as the whole file (a server that answered a ranged GET with 200).
+async fn stream_whole(
+    opened: Opened,
+    head_length: u64,
+    dest: &Path,
+    progress: &(dyn Fn(Progress) + Send + Sync),
+    cancel: &CancellationToken,
+    clock: &dyn Clock,
+) -> Result<DownloadOutcome, FetchError> {
+    let total = match opened.length {
+        0 => head_length,
+        n => n,
+    };
+    write_body(opened.body, total, dest, progress, cancel, clock).await
+}
+
+/// The ranged download (quick 261123-txk), shared by [`ReqwestFetch`] and `Replay`: EasyDl's ranges
+/// over at most [`DOWNLOAD_CONNECTIONS`] GETs written at their offsets into `<dest>.part`, renamed
+/// over `dest` once every range is in. The first range is opened alone as a probe: a 200 there is
+/// the whole file, streamed as it is with no further request; a 200 to a later range drops every
+/// range and streams one GET without a `Range` header. `req` is the GET (its URL and headers).
+#[allow(clippy::too_many_arguments)]
+async fn download_ranged(
+    opener: &dyn OpenGet,
+    req: FetchRequest,
+    head_length: u64,
+    plan: Vec<(u64, u64)>,
+    dest: &Path,
+    progress: &(dyn Fn(Progress) + Send + Sync),
+    cancel: &CancellationToken,
+    clock: &dyn Clock,
+) -> Result<DownloadOutcome, FetchError> {
+    let Some(first) = plan.first().copied() else {
+        return Err(FetchError::Network);
+    };
+    let probe = match open_range(opener, &req, first, head_length, cancel).await? {
+        Opening::Whole(opened) => {
+            return stream_whole(opened, head_length, dest, progress, cancel, clock).await;
+        }
+        Opening::Range(opened) => opened,
+    };
+    let part = part_path(dest);
+    let shared = Mutex::new(Shared {
+        bytes: 0,
+        last_report: clock.now_ms(),
+    });
+    let job = RangeJob {
+        opener,
+        req: &req,
+        head_length,
+        part: &part,
+        shared: &shared,
+        progress,
+        cancel,
+        clock,
+    };
+    let stop = match transfer(job, probe, &plan, dest).await {
+        Ok(outcome) => return Ok(outcome),
+        Err(stop) => stop,
+    };
+    let _ = tokio::fs::remove_file(&part).await;
+    match stop {
+        RangeStop::Fail(error) => Err(error),
+        RangeStop::Whole => {
+            let plain = FetchRequest {
+                method: Method::Get,
+                ..req
+            };
+            let opened = open_bounded(opener, plain, cancel).await?;
+            if !is_success(opened.status) {
+                return Err(FetchError::Status(opened.status));
+            }
+            stream_whole(opened, head_length, dest, progress, cancel, clock).await
+        }
+    }
+}
+
 /// The reqwest-backed [`Fetch`]: one client, built on first use after the rustls provider is
-/// installed (a client built earlier would have no provider), at most five redirects as axios does,
-/// a single connection per download.
+/// installed (a client built earlier would have no provider), at most five redirects as axios does.
+/// A download whose HEAD advertises byte ranges and a length arrives in EasyDl's ranges over at most
+/// five connections; anything else is the single stream (quick 261123-txk).
 pub struct ReqwestFetch {
     client: OnceLock<Result<reqwest::Client, FetchError>>,
     clock: Arc<dyn Clock>,
@@ -484,14 +920,34 @@ impl Fetch for ReqwestFetch {
                     .timeout(head.timeout.unwrap_or(DEFAULT_GET_TIMEOUT))
                     .send() => sent,
             };
-            let head_length = match head_response {
-                Ok(r) if is_success(r.status().as_u16()) => header_length(r.headers()),
+            let (head_length, plan) = match head_response {
+                Ok(r) if is_success(r.status().as_u16()) => {
+                    let length = header_length(r.headers());
+                    let accept = r
+                        .headers()
+                        .get(reqwest::header::ACCEPT_RANGES)
+                        .and_then(|v| v.to_str().ok());
+                    (length, ranged_plan(length, accept))
+                }
                 _ => return Err(FetchError::FailedToGetHeaders),
             };
             let get = FetchRequest {
                 method: Method::Get,
                 ..req
             };
+            if let Some(plan) = plan {
+                return download_ranged(
+                    self,
+                    get,
+                    head_length,
+                    plan,
+                    dest,
+                    progress,
+                    &cancel,
+                    &*self.clock,
+                )
+                .await;
+            }
             let response = tokio::select! {
                 biased;
                 _ = cancel.cancelled() => return Err(FetchError::Aborted),
@@ -507,6 +963,32 @@ impl Fetch for ReqwestFetch {
             };
             let body = Box::pin(response.bytes_stream().map(|r| r.map_err(classify)));
             write_body(body, total, dest, progress, &cancel, &*self.clock).await
+        })
+    }
+}
+
+impl OpenGet for ReqwestFetch {
+    fn open(&self, req: FetchRequest) -> FetchFuture<'_, Result<Opened, FetchError>> {
+        Box::pin(async move {
+            let response = self.builder(&req)?.send().await.map_err(classify)?;
+            let status = response.status().as_u16();
+            let length = header_length(response.headers());
+            let content_range = response
+                .headers()
+                .get(reqwest::header::CONTENT_RANGE)
+                .and_then(|v| v.to_str().ok())
+                .map(str::to_string);
+            let body: ChunkStream = Box::pin(
+                response
+                    .bytes_stream()
+                    .map(|r| r.map(|b| b.to_vec()).map_err(classify)),
+            );
+            Ok(Opened {
+                status,
+                length,
+                content_range,
+                body,
+            })
         })
     }
 }
@@ -527,14 +1009,15 @@ mod replay {
     use url::Url;
 
     use super::{
-        is_success, write_body, DownloadOutcome, Fetch, FetchError, FetchFuture, FetchRequest,
-        FetchResponse, Method, Progress,
+        accepts_ranges, download_ranged, is_success, plan_ranges, write_body, ChunkStream,
+        DownloadOutcome, Fetch, FetchError, FetchFuture, FetchRequest, FetchResponse, Method,
+        OpenGet, Opened, Progress,
     };
 
     /// The request headers a recorded request pins (D-10), as `gamelib-info`'s `Replay` pins them.
     /// Transport headers (`Accept-Encoding`, `Connection`, `Host`, `Content-Length`) are left out:
     /// axios and reqwest add them differently and servers decode them the same.
-    const PINNED_HEADERS: [&str; 9] = [
+    const PINNED_HEADERS: [&str; 10] = [
         "user-agent",
         "authorization",
         "referer",
@@ -544,6 +1027,7 @@ mod replay {
         "x-hp-val",
         "accept-language",
         "x-gog-library-cert",
+        "range",
     ];
 
     /// Header values a message must never print.
@@ -608,7 +1092,11 @@ mod replay {
     ///
     /// A download makes a HEAD only when the case recorded one for that URL (the TS recordings of a
     /// download are a GET), then the GET, whose body is delivered in chunks of
-    /// [`Replay::with_chunk_size`] through the same writer [`super::ReqwestFetch`] uses.
+    /// [`Replay::with_chunk_size`] through the same writer [`super::ReqwestFetch`] uses. When the
+    /// recorded HEAD advertises `accept-ranges: bytes` and a `content-length`, the download takes the
+    /// ranged arm, the same engine the app runs (quick 261123-txk): each ranged GET is matched to the
+    /// exchange recording the same `range` header, whatever order the parallel GETs arrive in, and
+    /// `range` is one of the pinned headers, so drift in a range is reported like any other.
     pub struct Replay {
         state: Mutex<State>,
         clock: Arc<dyn Clock>,
@@ -800,7 +1288,12 @@ mod replay {
             let name = request_name(method, &url);
             let wanted = pairs(&url);
             let free = |e: &Exchange| !e.consumed && e.method == method && same_path(&e.url, &url);
-            let twin = |e: &Exchange| free(e) && query_matches(&pairs(&e.url), &wanted);
+            let wanted_range = header(&request.headers, "range");
+            let twin = |e: &Exchange| {
+                free(e)
+                    && query_matches(&pairs(&e.url), &wanted)
+                    && header(&e.headers, "range") == wanted_range
+            };
             let index = st
                 .exchanges
                 .iter()
@@ -856,13 +1349,23 @@ mod replay {
                 if cancel.is_cancelled() {
                     return Err(FetchError::Aborted);
                 }
+                let mut ranged = None;
                 if self.has_free(Method::Head, &req.url) {
                     let head = FetchRequest {
                         method: Method::Head,
                         ..req.clone()
                     };
                     match self.serve(&head) {
-                        Ok(served) if is_success(served.status) => {}
+                        Ok(served) if is_success(served.status) => {
+                            let length = header(&served.headers, "content-length")
+                                .and_then(|v| v.trim().parse::<u64>().ok())
+                                .unwrap_or(0);
+                            if length > 0
+                                && accepts_ranges(header(&served.headers, "accept-ranges"))
+                            {
+                                ranged = plan_ranges(length).map(|plan| (length, plan));
+                            }
+                        }
                         _ => return Err(FetchError::FailedToGetHeaders),
                     }
                 }
@@ -870,6 +1373,19 @@ mod replay {
                     method: Method::Get,
                     ..req
                 };
+                if let Some((length, plan)) = ranged {
+                    return download_ranged(
+                        self,
+                        get,
+                        length,
+                        plan,
+                        dest,
+                        progress,
+                        &cancel,
+                        &*self.clock,
+                    )
+                    .await;
+                }
                 let served = self.serve(&get)?;
                 if !is_success(served.status) {
                     return Err(FetchError::Status(served.status));
@@ -879,6 +1395,26 @@ mod replay {
                     served.body.chunks(self.chunk).map(<[u8]>::to_vec).collect();
                 let body = stream::iter(chunks.into_iter().map(Ok::<_, FetchError>));
                 write_body(body, total, dest, progress, &cancel, &*self.clock).await
+            })
+        }
+    }
+
+    impl OpenGet for Replay {
+        fn open(&self, req: FetchRequest) -> FetchFuture<'_, Result<Opened, FetchError>> {
+            Box::pin(async move {
+                let served = self.serve(&req)?;
+                let content_range = header(&served.headers, "content-range").map(str::to_string);
+                let length = served.body.len() as u64;
+                let chunks: Vec<Vec<u8>> =
+                    served.body.chunks(self.chunk).map(<[u8]>::to_vec).collect();
+                let body: ChunkStream =
+                    Box::pin(stream::iter(chunks.into_iter().map(Ok::<_, FetchError>)));
+                Ok(Opened {
+                    status: served.status,
+                    length,
+                    content_range,
+                    body,
+                })
             })
         }
     }
@@ -986,5 +1522,92 @@ mod replay {
             }
         }
         diffs
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn lengths(plan: &[(u64, u64)]) -> Vec<u64> {
+        plan.iter().map(|(a, b)| b - a + 1).collect()
+    }
+
+    #[test]
+    fn two_hundred_bytes_is_ten_twenty_byte_ranges() {
+        let plan = plan_ranges(200).expect("a plan");
+        assert_eq!(plan.len(), 10);
+        assert_eq!(plan[0], (0, 19));
+        assert_eq!(plan[9], (180, 199));
+        assert!(lengths(&plan).iter().all(|l| *l == 20));
+    }
+
+    #[test]
+    fn five_thousand_bytes_is_ten_five_hundred_byte_ranges() {
+        let plan = plan_ranges(5000).expect("a plan");
+        assert_eq!(plan.len(), 10);
+        assert!(lengths(&plan).iter().all(|l| *l == 500));
+        assert_eq!(plan[9], (4500, 4999));
+    }
+
+    #[test]
+    fn a_short_last_range_takes_half_the_shortfall_from_the_one_before() {
+        let plan = plan_ranges(104_857_601).expect("a plan");
+        assert_eq!(plan.len(), 11);
+        assert_eq!(plan[9].0, 94_371_840);
+        assert_eq!(plan[9].1 - plan[9].0 + 1, 5_242_881);
+        assert_eq!(plan[10].1 - plan[10].0 + 1, 5_242_880);
+        assert_eq!(plan[10].1, 104_857_600);
+    }
+
+    #[test]
+    fn under_ten_bytes_has_no_plan() {
+        assert_eq!(plan_ranges(9), None);
+        assert_eq!(plan_ranges(0), None);
+    }
+
+    #[test]
+    fn every_plan_is_contiguous_and_at_least_five_ranges() {
+        let sizes = (10..=3000u64).chain([239_861_234]);
+        for size in sizes {
+            let plan = plan_ranges(size).expect("a plan");
+            assert_eq!(plan[0].0, 0, "size {size}");
+            assert_eq!(plan[plan.len() - 1].1, size - 1, "size {size}");
+            for pair in plan.windows(2) {
+                assert_eq!(pair[1].0, pair[0].1 + 1, "size {size}");
+            }
+            assert!(
+                plan.iter().all(|(a, b)| b >= a),
+                "size {size}: an empty range"
+            );
+            assert!(plan.len() >= DOWNLOAD_CONNECTIONS, "size {size}");
+        }
+    }
+
+    #[test]
+    fn accept_ranges_must_be_bytes() {
+        assert!(accepts_ranges(Some("bytes")));
+        assert!(accepts_ranges(Some(" Bytes ")));
+        assert!(!accepts_ranges(Some("none")));
+        assert!(!accepts_ranges(None));
+    }
+
+    #[test]
+    fn a_range_plan_needs_a_length_and_accept_ranges() {
+        assert!(ranged_plan(200, Some("bytes")).is_some());
+        assert!(ranged_plan(0, Some("bytes")).is_none());
+        assert!(ranged_plan(9, Some("bytes")).is_none());
+        assert!(ranged_plan(200, None).is_none());
+        assert!(ranged_plan(200, Some("none")).is_none());
+    }
+
+    #[test]
+    fn content_range_must_name_the_range_and_the_total() {
+        assert!(content_range_is("bytes 0-19/200", 0, 19, 200));
+        assert!(!content_range_is("bytes 0-19/201", 0, 19, 200));
+        assert!(!content_range_is("bytes 1-19/200", 0, 19, 200));
+        assert!(!content_range_is("bytes 0-19/*", 0, 19, 200));
+        assert!(!content_range_is("items 0-19/200", 0, 19, 200));
+        assert!(!content_range_is("", 0, 19, 200));
     }
 }

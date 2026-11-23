@@ -571,5 +571,52 @@
       "installDir": "<HOME>/precious"
     },
     "note": "a version the store does not hold: nothing is removed whatever installDir the renderer sent, no event, no notification"
+  },
+  {
+    "id": "install-ranged-checksum-match",
+    "op": "install",
+    "platform": "linux",
+    "checksum": "match",
+    "flow": "full",
+    "progress": [
+      { "bytes": 50, "speed": 40, "percentage": 25 },
+      { "bytes": 100, "speed": 40, "percentage": 50 },
+      { "bytes": 200, "speed": 40, "percentage": 100 }
+    ],
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "downsize": 200,
+      "disksize": 0,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/notes",
+      "isInstalled": false,
+      "hasUpdate": false,
+      "installDir": ""
+    },
+    "note": "Rust-only (quick 261123-txk): the archive HEAD advertises byte ranges, so the archive arrives as ten 20-byte ranged GETs joined before the sha512 check; everything else is the golden of install-checksum-match"
+  },
+  {
+    "id": "install-ranged-checksum-mismatch",
+    "op": "install",
+    "platform": "linux",
+    "checksum": "mismatch",
+    "flow": "full",
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "downsize": 200,
+      "disksize": 0,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/notes",
+      "isInstalled": false,
+      "hasUpdate": false,
+      "installDir": ""
+    },
+    "note": "Rust-only (quick 261123-txk): the archive HEAD advertises byte ranges, so the archive arrives as ten 20-byte ranged GETs joined before the sha512 check; everything else is the golden of install-checksum-mismatch"
   }
 ]

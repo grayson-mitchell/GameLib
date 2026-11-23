@@ -37,7 +37,7 @@ use tokio_util::sync::CancellationToken;
 
 /// The floor this test carries; the committed MANIFEST must be at or above it, so editing the JSON
 /// alone cannot lower the bar.
-const FLOOR: usize = 19;
+const FLOOR: usize = 21;
 
 /// The app version the oracle's recordings were made under (the `User-Agent` they pin).
 const RECORDED_APP_VERSION: &str = "0.11.0";
@@ -1076,7 +1076,7 @@ async fn replay_remove(case: &Value) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn every_install_case_matches_the_ts_tree_store_events_and_requests() {
     let wanted = cases_of_op("install");
-    assert!(wanted.len() >= 12, "{} install cases", wanted.len());
+    assert!(wanted.len() >= 14, "{} install cases", wanted.len());
     for case in &wanted {
         replay_install(case).await;
     }
@@ -1107,5 +1107,64 @@ fn the_documented_deltas_are_exactly_the_cases_the_test_treats_differently() {
     for (id, why) in deltas.as_object().unwrap() {
         assert!(why.as_str().is_some_and(|w| w.len() > 40), "{id}: say why");
         assert!(cases().iter().any(|c| c["id"] == *id), "{id} is not a case");
+    }
+}
+
+/// The ranged install cases (Rust-only, quick 261123-txk) must really record a ranged download: one
+/// archive HEAD advertising `accept-ranges: bytes` and ten ranged archive GETs, each a 206, whose
+/// bodies join into the archive the single-GET twin serves. Without this a later edit that flattened
+/// the fixture to one GET would leave the install cases green and prove nothing ranged.
+#[test]
+fn the_ranged_install_cases_record_a_ranged_download() {
+    let archive = "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz";
+    let whole =
+        std::fs::read(fixtures().join("recorded/wine_manager/install-checksum-match/body-3.bin"))
+            .unwrap();
+    for id in [
+        "install-ranged-checksum-match",
+        "install-ranged-checksum-mismatch",
+    ] {
+        assert!(cases().iter().any(|c| c["id"] == id), "{id} is not a case");
+        let dir = fixtures().join("recorded/wine_manager").join(id);
+        let exchanges = read_json(&dir.join("exchanges.json"));
+        let of_archive = |method: &str| -> Vec<&Value> {
+            exchanges
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|e| e["request"]["method"] == method && e["request"]["url"] == archive)
+                .collect()
+        };
+        let heads = of_archive("HEAD");
+        assert_eq!(heads.len(), 1, "{id}: one archive HEAD");
+        assert_eq!(
+            heads[0]["response"]["headers"]["accept-ranges"], "bytes",
+            "{id}: the HEAD advertises ranges"
+        );
+        assert_eq!(
+            heads[0]["response"]["headers"]["content-length"], "200",
+            "{id}: the HEAD length"
+        );
+        let gets = of_archive("GET");
+        assert_eq!(gets.len(), 10, "{id}: ten archive GETs");
+        let mut parts: Vec<(u64, Vec<u8>)> = gets
+            .iter()
+            .map(|e| {
+                let range = e["request"]["headers"]["range"]
+                    .as_str()
+                    .unwrap_or_else(|| panic!("{id}: a GET without a range header"));
+                let start = range
+                    .strip_prefix("bytes=")
+                    .and_then(|r| r.split('-').next())
+                    .and_then(|n| n.parse::<u64>().ok())
+                    .unwrap_or_else(|| panic!("{id}: range {range}"));
+                assert_eq!(e["response"]["status"], 206, "{id}: {range} is a 206");
+                let file = e["response"]["bodyFile"].as_str().unwrap();
+                (start, std::fs::read(dir.join(file)).unwrap())
+            })
+            .collect();
+        parts.sort_by_key(|(start, _)| *start);
+        let joined: Vec<u8> = parts.into_iter().flat_map(|(_, body)| body).collect();
+        assert_eq!(joined, whole, "{id}: the ranges join into the archive");
     }
 }
