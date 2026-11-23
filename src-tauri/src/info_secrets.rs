@@ -16,6 +16,18 @@
 //! it is used only when `GAMELIB_DEV_SECRET_VAULT` is exactly `1` AND `tauri::is_dev()` is true
 //! ([`use_dev_vault`]): a packaged build can never reach it (T-86-28). It shares
 //! `<temp>/gamelib-dev-secret-vault.json` with the sidecar's vault and keeps every other slot in it.
+//!
+//! The file holds plaintext credentials in a directory other users can share, so it is never followed
+//! through a link and never written in place (WR-21): a read opens it with `O_NOFOLLOW`, a write goes to
+//! a sibling file created exclusively with mode `0600` and is `rename`d over the vault, so a link planted
+//! at the vault path is replaced and not followed, and a crash or a concurrent reader never sees a
+//! half-written file. A vault that does not parse is not treated as empty by a write (that would erase
+//! the Steam and Humble slots that live in the same file): the write refuses with `corrupt`.
+//!
+//! Known limit: the in-process `rmw` mutex serialises only this process. The TS vault makes an unlocked
+//! read-modify-write on the same file, so a Rust save racing a sidecar Steam token save can still lose
+//! one of them. There is no lock the TS side would honour; the two writers must not save at the same
+//! moment. This is dev-only (`GAMELIB_DEV_SECRET_VAULT=1`).
 
 use super::*;
 
@@ -197,8 +209,12 @@ impl DevVaultSecretSource {
         if std::fs::symlink_metadata(&path).is_ok_and(|m| m.file_type().is_symlink()) {
             return Err("symlink".to_string());
         }
-        if !path.exists() {
-            write_owner_only(&path, b"{}")?;
+        match std::fs::symlink_metadata(&path) {
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                write_owner_only(&path, b"{}")?;
+            }
+            Err(_) => return Err("write-failed".to_string()),
         }
         assert_owner_only(&path)?;
         Ok(DevVaultSecretSource {
@@ -207,23 +223,40 @@ impl DevVaultSecretSource {
         })
     }
 
-    /// The file as a JSON object: a missing, unreadable or corrupt file is "nothing stored yet".
+    /// The file as a JSON object. A missing file is an empty store; a file that cannot be opened
+    /// (a link included, as it is opened with `O_NOFOLLOW`) is `read-failed`, and one that is not a JSON
+    /// object is `corrupt`.
+    fn read_map_strict(&self) -> Result<serde_json::Map<String, Value>, String> {
+        use std::io::Read;
+        let mut options = std::fs::OpenOptions::new();
+        options.read(true);
+        no_follow(&mut options);
+        let mut file = match options.open(&self.path) {
+            Ok(file) => file,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(serde_json::Map::new()),
+            Err(_) => return Err("read-failed".to_string()),
+        };
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes)
+            .map_err(|_| "read-failed".to_string())?;
+        match serde_json::from_slice::<Value>(&bytes) {
+            Ok(Value::Object(map)) => Ok(map),
+            _ => Err("corrupt".to_string()),
+        }
+    }
+
+    /// A read is total, as the TS vault's was: whatever [`Self::read_map_strict`] refuses is "nothing
+    /// stored".
     fn read_map(&self) -> serde_json::Map<String, Value> {
-        std::fs::read(&self.path)
-            .ok()
-            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
-            .and_then(|v| match v {
-                Value::Object(map) => Some(map),
-                _ => None,
-            })
-            .unwrap_or_default()
+        self.read_map_strict().unwrap_or_default()
     }
 
     fn write_slot(&self, slot: Slot, value: &str, wipe: bool) -> Result<(), String> {
         shell_log(&vault_write_line(slot, wipe));
         let _guard = self.rmw.lock().unwrap_or_else(|e| e.into_inner());
-        // Every other slot in the file (Steam, Humble) is kept as it is.
-        let mut map = self.read_map();
+        // Every other slot in the file (Steam, Humble) is kept as it is, so a vault that cannot be read
+        // back is refused and never rebuilt from nothing.
+        let mut map = self.read_map_strict()?;
         map.insert(
             vault_key(slot).to_string(),
             Value::String(value.to_string()),
@@ -254,31 +287,71 @@ impl SecretSource for DevVaultSecretSource {
     }
 }
 
-/// Writes `bytes`, creating the file with owner-only permissions on Unix. Errors are a fixed
-/// category.
+/// `O_NOFOLLOW` on Unix, so a link at the path fails the open instead of being followed. A no-op
+/// elsewhere.
+fn no_follow(options: &mut std::fs::OpenOptions) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NOFOLLOW);
+    }
+    #[cfg(not(unix))]
+    let _ = options;
+}
+
+/// Writes `bytes` to `path` atomically: a sibling file is created exclusively (never through a link)
+/// with owner-only permissions on Unix, filled, synced, and `rename`d over `path`. A link at `path` is
+/// replaced by the rename and never written through, and a reader sees the old file or the new one,
+/// not a truncated one. Errors are a fixed category.
 fn write_owner_only(path: &Path, bytes: &[u8]) -> Result<(), String> {
     use std::io::Write;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+
+    let (Some(dir), Some(name)) = (path.parent(), path.file_name()) else {
+        return Err("write-failed".to_string());
+    };
+    let temp = dir.join(format!(
+        ".{}.{}.{}.tmp",
+        name.to_string_lossy(),
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    ));
     let mut options = std::fs::OpenOptions::new();
-    options.write(true).create(true).truncate(true);
+    options.write(true).create_new(true);
+    no_follow(&mut options);
     #[cfg(unix)]
     {
         use std::os::unix::fs::OpenOptionsExt;
         options.mode(0o600);
     }
-    options
-        .open(path)
-        .and_then(|mut file| file.write_all(bytes))
-        .map_err(|_| "write-failed".to_string())
+    let written = options.open(&temp).and_then(|mut file| {
+        file.write_all(bytes)?;
+        file.sync_all()
+    });
+    match written.and_then(|()| std::fs::rename(&temp, path)) {
+        Ok(()) => Ok(()),
+        Err(_) => {
+            let _ = std::fs::remove_file(&temp);
+            Err("write-failed".to_string())
+        }
+    }
 }
 
 /// Re-asserts `0600` after every write: a mode set once can be widened later by another tool, and
-/// `mode` on `open` only applies at creation. A no-op off Unix.
+/// `mode` on `open` only applies at creation. The file is opened with `O_NOFOLLOW` and the mode is set
+/// and read through that handle, so a link swapped in at the path is not chmod'ed. A no-op off Unix.
 #[cfg(unix)]
 fn assert_owner_only(path: &Path) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
-    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    no_follow(&mut options);
+    let file = options.open(path).map_err(|_| "mode-failed".to_string())?;
+    file.set_permissions(std::fs::Permissions::from_mode(0o600))
         .map_err(|_| "mode-failed".to_string())?;
-    let mode = std::fs::metadata(path)
+    let mode = file
+        .metadata()
         .map_err(|_| "mode-failed".to_string())?
         .permissions()
         .mode()
@@ -486,15 +559,56 @@ mod tests {
         assert_eq!(file["itadApiKey"], "itad-1");
     }
 
+    /// WR-21: a vault that does not parse reads as empty, but a write refuses instead of rebuilding
+    /// the file from one slot, which would erase the Steam and Humble slots the sidecar keeps in it.
     #[test]
-    fn a_corrupt_vault_reads_as_empty_and_the_next_write_repairs_it() {
+    fn a_corrupt_vault_reads_as_empty_and_a_write_refuses_and_leaves_the_file_alone() {
         let home = gamelib_testutil::FakeHome::new("info-vault-");
         let path = home.root().join(VAULT_FILE_NAME);
         std::fs::write(&path, "not json {").unwrap();
         let vault = DevVaultSecretSource::create(path.clone()).unwrap();
         assert_eq!(vault.get(Slot::Itad).unwrap(), None);
+        assert_eq!(vault.set(Slot::Itad, "itad-1"), Err("corrupt".to_string()));
+        assert_eq!(vault.delete(Slot::Itad), Err("corrupt".to_string()));
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "not json {");
+    }
+
+    /// WR-21: a write goes to a sibling file and is renamed over the vault, so nothing is left behind
+    /// and the vault is never open for truncation.
+    #[test]
+    fn a_vault_write_is_atomic_and_leaves_no_temporary_file() {
+        let home = gamelib_testutil::FakeHome::new("info-vault-");
+        let vault = vault_in(&home);
+        for n in 0..5 {
+            vault.set(Slot::Itad, &format!("itad-{n}")).unwrap();
+        }
+        let mut names: Vec<String> = std::fs::read_dir(home.root())
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        assert_eq!(names, vec![VAULT_FILE_NAME.to_string()]);
+    }
+
+    /// WR-21: a link planted at the vault path after `create` is never read or written through.
+    #[cfg(unix)]
+    #[test]
+    fn a_link_planted_after_create_is_not_followed_by_a_read_or_a_write() {
+        let home = gamelib_testutil::FakeHome::new("info-vault-");
+        let path = home.root().join(VAULT_FILE_NAME);
+        let vault = vault_in(&home);
         vault.set(Slot::Itad, "itad-1").unwrap();
-        assert_eq!(vault.get(Slot::Itad).unwrap().as_deref(), Some("itad-1"));
+        let target = home.root().join("elsewhere.json");
+        std::fs::write(&target, r#"{"itadApiKey":"planted"}"#).unwrap();
+        std::fs::remove_file(&path).unwrap();
+        std::os::unix::fs::symlink(&target, &path).unwrap();
+        assert_eq!(vault.get(Slot::Itad).unwrap(), None, "the link is not read");
+        assert!(vault.set(Slot::SteamGridDb, "sgdb-1").is_err());
+        assert_eq!(
+            std::fs::read_to_string(&target).unwrap(),
+            r#"{"itadApiKey":"planted"}"#,
+            "the link target is not written"
+        );
     }
 
     #[cfg(unix)]
