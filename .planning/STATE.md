@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-17-PLAN.md
-last_updated: "2026-11-23T04:09:17.228Z"
+stopped_at: Completed 87-18-PLAN.md
+last_updated: "2026-11-23T04:29:16.036Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 879ce055bac7398432ee16da79c3ca0f2170a597
+state_head: c782ee7fb40d9d7072ff4f208a7757860f000865
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 18 of 59
+Plan: 19 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -427,6 +427,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P15 | 14 min | 2 tasks | 4 files |
 | Phase 87 P16 | 45 min | 2 tasks | 3 files |
 | Phase 87 P17 | 22 min | 2 tasks | 18 files |
+| Phase 87 P18 | 28 min | 3 tasks | 27 files |
 
 ## Accumulated Context
 
@@ -870,6 +871,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-17: crate runtime ops accept any plain-component name, the shell restricts to eac_runtime, battleye_runtime and umu; downloadRuntime and the launcher's TS current_version read stay until 87-18 so a runtime download never has a TS and a Rust writer at once
 - [Phase 87]: 87-17: a failed tar, an unsafe archive file name and an archive that links out of its folder each stop a runtime download with false and remove the folder again; the TS ignored a failed tar and wrote current_version over an empty folder
 - [Phase 87]: 87-17: a replacing delete goes through gamelib-safety remove_tree with the data directory as trust root, an empty known-installs list and the home, app folder and tools as protected roots; a refusal stops the operation
+- [Phase 87]: ShellEngineUi: the shell's EngineUi sink (notify via show_notification, showDialog frame via the FrontendEmitter, raise via rpc_main_window_raise, kind send frames), installed as EngineCtx.ui; build_ctx takes the ui
+- [Phase 87]: wine_runtime_download is unbounded in the sidecar rustInvoke (UNBOUNDED_RUST_CHANNELS); wine_runtime_is_installed stays bounded
+- [Phase 87]: Launcher runtime shims return Promise<unknown> (requestRustInvoke resolves unknown), scheduled deletedBy 88; the wine-manager oracle still needs test_data/ArchiveWithSubfolder.tar.xz so it stays
 
 ### Pending Todos
 
@@ -1148,8 +1152,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T04:09:15.444Z
-Stopped at: Completed 87-17-PLAN.md
+Last session: 2026-11-23T04:29:14.222Z
+Stopped at: Completed 87-18-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
