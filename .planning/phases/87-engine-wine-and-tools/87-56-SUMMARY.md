@@ -3,7 +3,7 @@ phase: 87-engine-wine-and-tools
 plan: 56
 subsystem: engine
 tags: [rust, engine-ts-deletion, partial, split, d-06, d-21, enginePortComplete]
-status: halted
+status: partial
 
 requires:
   - phase: 87-engine-wine-and-tools
