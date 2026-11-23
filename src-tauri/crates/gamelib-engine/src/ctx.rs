@@ -13,6 +13,7 @@ use gamelib_i18n::Catalog;
 use gamelib_proc::spec::SpecProcRunner;
 use gamelib_store::host::StoreHost;
 use serde::{Deserialize, Serialize};
+use tokio_util::sync::CancellationToken;
 
 use crate::bottles::ledger::Ledger;
 use crate::bottles::per_game::PerGameFlights;
@@ -72,6 +73,78 @@ pub type DefaultWineHook = Arc<dyn Fn() -> Option<WineInstallationView> + Send +
 /// `gamelib-wine`'s CrossOver discovery. `None` is "CrossOver is not installed".
 pub type CrossoverBinDirHook = Arc<dyn Fn() -> BoxFuture<Option<String>> + Send + Sync>;
 
+/// The in-flight runs a caller can cancel by id (D-17, Pitfall 10: an `AbortSignal` cannot cross
+/// `rustInvoke`). A run registers its id, races the token and ends the registration when it finishes;
+/// op `engine_cancel` cancels the token. In memory only.
+#[derive(Debug, Default)]
+pub struct Cancels {
+    next: std::sync::atomic::AtomicU64,
+    runs: std::sync::Mutex<std::collections::HashMap<String, (u64, CancellationToken)>>,
+}
+
+/// Ends a run's registration when it finishes, but only if the entry is still its own.
+#[derive(Debug)]
+pub struct CancelGuard<'a> {
+    cancels: &'a Cancels,
+    id: String,
+    generation: u64,
+}
+
+impl Drop for CancelGuard<'_> {
+    fn drop(&mut self) {
+        let mut runs = self.cancels.runs.lock().unwrap_or_else(|e| e.into_inner());
+        if runs
+            .get(&self.id)
+            .is_some_and(|(g, _)| *g == self.generation)
+        {
+            runs.remove(&self.id);
+        }
+    }
+}
+
+impl Cancels {
+    /// A cancel id the caller makes: 1 to 64 of `[A-Za-z0-9_-]`.
+    pub fn is_valid_id(id: &str) -> bool {
+        (1..=64).contains(&id.len())
+            && id
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+    }
+
+    /// Registers `id` (a newer run of the same id replaces the older registration); `None` for an id
+    /// that is not valid. The token cancels when [`Cancels::cancel`] names the id.
+    pub fn register(&self, id: &str) -> Option<(CancellationToken, CancelGuard<'_>)> {
+        if !Cancels::is_valid_id(id) {
+            return None;
+        }
+        let generation = self.next.fetch_add(1, Ordering::Relaxed);
+        let token = CancellationToken::new();
+        self.runs
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(id.to_string(), (generation, token.clone()));
+        Some((
+            token,
+            CancelGuard {
+                cancels: self,
+                id: id.to_string(),
+                generation,
+            },
+        ))
+    }
+
+    /// Cancels the run that registered `id`; `true` when one was in flight.
+    pub fn cancel(&self, id: &str) -> bool {
+        let token = self
+            .runs
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(id)
+            .map(|(_, token)| token.clone());
+        token.map(|t| t.cancel()).is_some()
+    }
+}
+
 /// Everything an op needs from outside the crate. Fields are public so the shell can fill the ones
 /// a later slice adds; [`EngineCtx::new`] gives each a neutral default, and the `with_*` methods
 /// replace one (the shell's real sinks, a test's scripted fakes).
@@ -130,6 +203,8 @@ pub struct EngineCtx {
     pub crossover_discovery: Arc<dyn CrossoverDiscovery>,
     /// The CrossOver bin directory resolver and its memo (D-04). In memory only.
     pub crossover_locator: CrossoverLocator,
+    /// The cancellable runs in flight, by cancel id (`run_tool`). In memory only.
+    pub cancels: Cancels,
 }
 
 impl EngineCtx {
@@ -159,6 +234,7 @@ impl EngineCtx {
             in_flight: InFlightSwitches::new(),
             crossover_discovery: Arc::new(NoCrossoverDiscovery),
             crossover_locator: CrossoverLocator::new(),
+            cancels: Cancels::default(),
             host,
             clock,
             platform,

@@ -51,6 +51,7 @@ pub const OPS: &[&str] = &[
     "engine_bottle_record_crossover",
     "engine_bottle_record_pinned",
     "engine_bottle_remove_created",
+    "engine_cancel",
     "engine_cx_demo_status",
     "engine_cx_resolve_bin_dir",
     "engine_default_engine",
@@ -60,6 +61,7 @@ pub const OPS: &[&str] = &[
     "engine_per_game_bottle_name",
     "engine_pins",
     "engine_resolve_tool_settings",
+    "engine_run_tool",
     "engine_selection_clear",
     "engine_set_online",
 ];
@@ -324,6 +326,29 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
             )
             .await;
             Ok(probe.to_value())
+        }
+        // One of the five allowlisted tools with the isolated profile (D-18). A program outside the list is
+        // an answer (`stderr: "tool not allowed: ..."`), as `runTool` gave, and spawns nothing. `cancelId`
+        // names the run for `engine_cancel`.
+        "engine_run_tool" => {
+            let mut request: crossover::run_tool::RunToolArgs = decode(op, args)?;
+            request.timeout_ms = request.timeout_ms.min(MAX_SPAWN_CAP_MS);
+            if request
+                .cancel_id
+                .as_deref()
+                .is_some_and(|id| !ctx::Cancels::is_valid_id(id))
+            {
+                return Err(format!("{op}:bad-args"));
+            }
+            Ok(crossover::run_tool::run_tool(ctx, request).await.to_value())
+        }
+        // Cancels the `engine_run_tool` that registered `cancelId`; `true` when one was in flight.
+        "engine_cancel" => {
+            let request: CancelCreateRequest = decode(op, args)?;
+            if !ctx::Cancels::is_valid_id(&request.cancel_id) {
+                return Err(format!("{op}:bad-args"));
+            }
+            Ok(Value::Bool(ctx.cancels.cancel(&request.cancel_id)))
         }
         // The shell's online monitor says it changed (D-17): the DXMT fetch and the boot update read it.
         "engine_set_online" => {
@@ -834,6 +859,7 @@ mod tests {
             "engine_bottle_record_crossover",
             "engine_bottle_record_pinned",
             "engine_bottle_remove_created",
+            "engine_cancel",
             "engine_cx_demo_status",
             "engine_cx_resolve_bin_dir",
             "engine_default_engine",
@@ -842,6 +868,7 @@ mod tests {
             "engine_list_options",
             "engine_per_game_bottle_name",
             "engine_resolve_tool_settings",
+            "engine_run_tool",
             "engine_selection_clear",
             "engine_set_online",
         ] {
