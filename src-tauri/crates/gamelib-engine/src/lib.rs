@@ -45,6 +45,8 @@ pub const OPS: &[&str] = &[
     "engine_bottle_is_provisioned",
     "engine_bottle_kill_wineserver",
     "engine_bottle_prepare",
+    "engine_bottle_reconcile_marker",
+    "engine_bottle_record_crossover",
     "engine_bottle_record_pinned",
     "engine_bottle_remove_created",
     "engine_default_engine",
@@ -86,6 +88,27 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
                 .ok_or_else(|| format!("{op}:bad-args"))?;
             let result = bottles::switch::prepare_bottle_for_engine(ctx, &prepare).await;
             Ok(result.to_value())
+        }
+        // The bottle's engine, persisted before a CrossOver probe touches its conf (76 CR-01): written
+        // only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS. The
+        // answer is `"crossover"`, `"pinned"` or `null` (nothing written, a newer marker included).
+        "engine_bottle_reconcile_marker" => {
+            let request: BottleNameRequest = decode(op, args)?;
+            Ok(bottles::switch::reconcile_marker(ctx, &request.bottle_name)
+                .map_or(Value::Null, |engine| {
+                    Value::String(engine.as_str().to_string())
+                }))
+        }
+        // The marker a CrossOver-created bottle gets at creation (D-07a), through the in-process version
+        // gate; `false` when nothing was written (a newer marker, an absent bottle, an unsafe name).
+        "engine_bottle_record_crossover" => {
+            let request: RecordCrossoverRequest = decode(op, args)?;
+            if !Path::new(&request.bin_dir).is_absolute() {
+                return Err(format!("{op}:bad-args"));
+            }
+            let recorded =
+                bottles::switch::record_crossover(ctx, &request.bottle_name, &request.bin_dir);
+            Ok(Value::Bool(recorded))
         }
         // The marker a pinned-engine bottle gets at creation: written through the in-process version
         // gate, `false` when nothing was written (a newer marker, an absent bottle, an unsafe name).
@@ -268,6 +291,14 @@ struct KillWineserverRequest {
     extra_env: serde_json::Map<String, Value>,
     #[serde(default)]
     timeout_ms: Option<u64>,
+}
+
+/// The argument of `engine_bottle_record_crossover`: the bottle and the CrossOver `bin` directory.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct RecordCrossoverRequest {
+    bottle_name: String,
+    bin_dir: String,
 }
 
 /// The argument of `engine_bottle_record_pinned`: the bottle, the pin's id and the engine the bottle
@@ -472,6 +503,7 @@ impl PrepareRequest {
             crossover_settings: self.crossover_settings,
             crossover_healthy: self.crossover_healthy,
             fallback_settings: self.fallback_settings,
+            ensure_pin: None,
             on_switching: None,
             register_selection: self.register_selection,
         })
@@ -618,6 +650,8 @@ mod tests {
             "engine_bottle_is_provisioned",
             "engine_bottle_kill_wineserver",
             "engine_bottle_prepare",
+            "engine_bottle_reconcile_marker",
+            "engine_bottle_record_crossover",
             "engine_bottle_record_pinned",
             "engine_bottle_remove_created",
             "engine_default_engine",
@@ -759,6 +793,97 @@ mod tests {
                 .await
                 .unwrap_err(),
             "engine_bottle_record_pinned:bad-args"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_record_crossover_op_writes_the_marker_and_the_reconcile_op_reports_what_it_wrote()
+    {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        let dir = lay_bottle(&home, "GameLib-gog-1", true, false);
+        let record = |name: &str, bin_dir: &str| [json!({"bottleName": name, "binDir": bin_dir})];
+        assert_eq!(
+            dispatch(
+                "engine_bottle_record_crossover",
+                &record("GameLib-gog-1", "/cx/bin"),
+                &ctx
+            )
+            .await
+            .unwrap(),
+            json!(true)
+        );
+        let marker = dir.join(".gamelib-engine.json");
+        assert_eq!(
+            std::fs::read_to_string(&marker).unwrap(),
+            r#"{"kind":"crossover","id":"crossover","wineserverBin":"/cx/bin/wineserver","version":1}"#
+        );
+        // An absent bottle and an unsafe name record nothing; a relative bin directory is refused.
+        for name in ["no-such", "../x"] {
+            assert_eq!(
+                dispatch(
+                    "engine_bottle_record_crossover",
+                    &record(name, "/cx/bin"),
+                    &ctx
+                )
+                .await
+                .unwrap(),
+                json!(false),
+                "{name}"
+            );
+        }
+        assert_eq!(
+            dispatch(
+                "engine_bottle_record_crossover",
+                &record("GameLib-gog-1", "cx/bin"),
+                &ctx
+            )
+            .await
+            .unwrap_err(),
+            "engine_bottle_record_crossover:bad-args"
+        );
+
+        // A trusted marker is left alone; a contradicted one is rewritten from what the bottle holds.
+        let reconcile = [json!({"bottleName": "GameLib-gog-1"})];
+        assert_eq!(
+            dispatch("engine_bottle_reconcile_marker", &reconcile, &ctx)
+                .await
+                .unwrap(),
+            Value::Null
+        );
+        std::fs::write(dir.join("current_dxvk-macOS"), "v1\n").unwrap();
+        assert_eq!(
+            dispatch("engine_bottle_reconcile_marker", &reconcile, &ctx)
+                .await
+                .unwrap(),
+            json!("pinned")
+        );
+        assert!(std::fs::read_to_string(&marker)
+            .unwrap()
+            .contains(r#""kind":"pinned""#));
+        // An unsafe or absent bottle answers null; the argument is strict.
+        for name in ["no-such", "../x"] {
+            assert_eq!(
+                dispatch(
+                    "engine_bottle_reconcile_marker",
+                    &[json!({"bottleName": name})],
+                    &ctx
+                )
+                .await
+                .unwrap(),
+                Value::Null,
+                "{name}"
+            );
+        }
+        assert_eq!(
+            dispatch(
+                "engine_bottle_reconcile_marker",
+                &[json!({"bottleName": "GameLib-gog-1", "extra": 1})],
+                &ctx
+            )
+            .await
+            .unwrap_err(),
+            "engine_bottle_reconcile_marker:bad-args"
         );
     }
 

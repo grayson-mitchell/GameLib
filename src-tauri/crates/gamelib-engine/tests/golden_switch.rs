@@ -1,5 +1,6 @@
-//! The engine switch against the TS goldens (87-16 recorded them, 87-40 ports the tracer path, 87-41
-//! the rest; D-07, D-08): `golden/switch` holds one case per branch of `prepareBottleForEngine`.
+//! The engine switch against the TS goldens (87-16 recorded them, 87-40 ports the switch, 87-41 the
+//! serialisation and the restore; D-07, D-08): `golden/switch` holds one case per branch of
+//! `prepareBottleForEngine`, 73 in all, and every one replays.
 //!
 //! A case replays over a fake HOME laid out as the oracle's profile: the case's pinned-engine variant
 //! and each named fixture bottle are copied in, the case's ledger entries are marked, and its calls
@@ -14,10 +15,9 @@
 //! bytes and the trees are what the writes are judged by.
 //!
 //! A count floor lives here beside the replay, so editing the JSON alone cannot lower the bar, and an
-//! empty case list fails. A case this build does not replay is named in [`LATER`] (the concurrent
-//! WR-02 interleaves and every switch that restores CrossOver's graphics stack, 87-41) and is checked
-//! both ways: it must be in the list and it must still be the case that this build cannot replay it.
-//! POSIX only, as the TS oracle's replays are.
+//! empty case list fails. The concurrent cases (`Promise.all` in the oracle) are driven together on one
+//! thread, each call in its own task-local stamp, with the scripted seams yielding where the TS awaited
+//! so that the events fall in the order the oracle recorded. POSIX only, as the TS oracle's replays are.
 #![cfg(unix)]
 
 mod common;
@@ -33,8 +33,7 @@ use gamelib_core::process::{BoxFuture, LineSink, ProcSpec, SpecOutput, SpecRunne
 use gamelib_engine::bottles::marker;
 use gamelib_engine::bottles::registry::EngineSelection;
 use gamelib_engine::bottles::switch::{
-    prepare_bottle_for_engine_with, MonitorPhase, OwnBottle, PrepareArgs, PrepareOutcome,
-    PrepareReason, PrepareResult,
+    prepare_bottle_for_engine_with, EnsurePin, MonitorPhase, OwnBottle, PrepareArgs, PrepareResult,
 };
 use gamelib_engine::dxvk::{DxvkAction, DxvkInstaller, DxvkRequest};
 use gamelib_engine::engines::{DxvkBuild, NonCrossoverEngine};
@@ -46,32 +45,6 @@ use common::{check_floor, first_difference, read_json, sha256_hex, Profile, BOTT
 
 /// `golden/switch` holds 73 cases; a later edit may raise this, never lower it.
 const CASE_FLOOR: usize = 73;
-
-/// The cases this build replays, at least (the tracer and the non-restore branches).
-const REPLAYED_FLOOR: usize = 55;
-
-/// The cases 87-41 has still to replay: the switches that restore CrossOver's graphics stack (the
-/// concurrent WR-02 interleaves replay since the per-bottle serialisation).
-const LATER: [&str; 18] = [
-    "concurrent-opposite-targets-wr02",
-    "crossover-contradicted-to-crossover",
-    "dxvk-failed-to-crossover-restores",
-    "marker-legacy-noversion-to-crossover",
-    "nomarker-dxvk-pin-absent-to-crossover",
-    "nomarker-dxvk-pin-installed-to-crossover",
-    "pin-to-crossover-healthy-no-crossover-found",
-    "pin-to-crossover-healthy-restore-fails",
-    "pin-to-crossover-healthy-restore-from-marker-copy-pin-absent",
-    "pin-to-crossover-healthy-restore-leaves-dxvk-file",
-    "pin-to-crossover-healthy-restore-throws",
-    "pin-to-crossover-healthy-restored",
-    "pin-to-crossover-restore-source-unavailable",
-    "pin-to-crossover-retired-pin-restores-from-current",
-    "pin-to-crossover-unhealthy-built-in-restore",
-    "pin-to-crossover-unhealthy-restore-fails",
-    "pin-to-crossover-unhealthy-source-fetched",
-    "sequential-round-trip-pin-crossover-pin",
-];
 
 const CX_BIN_DIR: &str = "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin";
 const PIN_ID: &str = "wine-staging-11.20";
@@ -384,6 +357,15 @@ fn global_game_settings() -> Value {
     })
 }
 
+/// The oracle's `crossoverSettings`: the stock CrossOver settings, which carry the global prefix.
+fn crossover_settings(profile: &Profile) -> Value {
+    json!({
+        "wineVersion": {"type": "crossover", "bin": format!("{CX_BIN_DIR}/wine"), "name": "CrossOver"},
+        "winePrefix": profile.expand("<HOME>/global-crossover-prefix"),
+        "wineCrossoverBottle": ""
+    })
+}
+
 /// What the TS `PrepareResult` looked like on the wire (`{ok, changed}` or `{ok, reason, detail}`).
 fn ts_result(result: &PrepareResult) -> Value {
     let mut value = result.to_value();
@@ -406,8 +388,8 @@ struct Replayed {
     installer: Value,
     spawns: Value,
     after: Value,
-    /// Whether any call was refused because it needs the CrossOver restore (87-41).
-    hit_restore: bool,
+    /// The pins the case's `ensurePinEngine` was asked for, in order.
+    pin_fetches: Value,
 }
 
 /// `treeDiff`: what changed between two snapshots, and whether only a marker did.
@@ -481,6 +463,7 @@ fn run_case(case: &Value) -> Replayed {
         events: events.clone(),
         requests: Mutex::new(Vec::new()),
     });
+    let pin_fetches: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     let log = Arc::new(RecordingLog::new());
     let bin_dir_absent = args["binDir"] == "absent";
     let ctx = profile
@@ -503,11 +486,31 @@ fn run_case(case: &Value) -> Replayed {
     let before = profile.snapshot();
     let markers_before = profile.marker_bytes();
     let gate = gate_of(case);
+    // `ensurePinEngine` of the oracle: records the fetch, then answers the synthetic pin engine (the
+    // paths a download would have made), or nothing when the case says the download fails.
+    let ensure_pin: EnsurePin = {
+        let (fetches, profile) = (pin_fetches.clone(), profile.clone());
+        let fails = args["pinFetch"] == "fails";
+        Arc::new(move |pin| {
+            fetches.lock().unwrap().push(pin.id.clone());
+            let engine = (!fails).then(|| NonCrossoverEngine {
+                wine_bin: profile.expand(WINE_BIN),
+                wineserver_bin: profile.expand(WINESERVER_BIN),
+                label: PIN_LABEL.to_string(),
+                version: pin.wine.version.clone(),
+                dxvk: Some(DxvkBuild {
+                    dir: profile.expand(DXVK_DIR),
+                    version: pin.dxvk.version.clone(),
+                }),
+            });
+            Box::pin(async move { engine })
+        })
+    };
     // One call as the TS `runCall` ran it: its `start`, the switch (a panic is the TS throw) and its
     // `result` or `threw`.
     let run_call = |index: usize, call: &Value| {
         let (ctx, gate, events, profile) = (&ctx, &*gate, events.clone(), profile.clone());
-        let call = call.clone();
+        let (call, ensure_pin) = (call.clone(), ensure_pin.clone());
         async move {
             let bottle = call["bottle"].as_str().unwrap().to_string();
             let mut prepare = PrepareArgs::new(
@@ -526,7 +529,9 @@ fn run_case(case: &Value) -> Replayed {
                 Some(other) => OwnBottle::Named(other.to_string()),
             };
             prepare.crossover_healthy = call["crossoverHealthy"] != false;
+            prepare.crossover_settings = crossover_settings(&profile);
             prepare.fallback_settings = global_game_settings();
+            prepare.ensure_pin = Some(ensure_pin.clone());
             let switching = events.clone();
             prepare.on_switching = Some(Arc::new(move || {
                 push(&switching, json!({"ev": "switching", "call": index}));
@@ -534,19 +539,12 @@ fn run_case(case: &Value) -> Replayed {
             let run = CALL.scope(index, prepare_bottle_for_engine_with(ctx, gate, &prepare));
             match AssertUnwindSafe(run).catch_unwind().await {
                 Ok(result) => {
-                    let restore_pending = matches!(
-                        result.outcome,
-                        PrepareOutcome::Refused {
-                            reason: PrepareReason::RestorePending,
-                            ..
-                        }
-                    );
                     let value = ts_result(&result);
                     push(
                         &events,
                         json!({"ev": "result", "call": index, "result": value}),
                     );
-                    (json!({"call": index, "result": value}), restore_pending)
+                    json!({"call": index, "result": value})
                 }
                 Err(payload) => {
                     let message = payload
@@ -558,7 +556,7 @@ fn run_case(case: &Value) -> Replayed {
                         &events,
                         json!({"ev": "threw", "call": index, "message": message}),
                     );
-                    (json!({"call": index, "threw": message}), false)
+                    json!({"call": index, "threw": message})
                 }
             }
         }
@@ -570,7 +568,7 @@ fn run_case(case: &Value) -> Replayed {
             json!({"ev": "start", "call": index, "bottle": call["bottle"], "next": call["next"]}),
         );
     };
-    let ran: Vec<(Value, bool)> = if args["mode"] == "concurrent" {
+    let outcomes: Vec<Value> = if args["mode"] == "concurrent" {
         // `Promise.all`: every call starts, then they are driven together on one thread, in order.
         for (index, call) in calls.iter().enumerate() {
             start(index, call);
@@ -589,8 +587,6 @@ fn run_case(case: &Value) -> Replayed {
         }
         ran
     };
-    let hit_restore = ran.iter().any(|(_, pending)| *pending);
-    let outcomes: Vec<Value> = ran.into_iter().map(|(outcome, _)| outcome).collect();
     let after = profile.snapshot();
     let spawns = Value::Array(
         runner
@@ -617,6 +613,7 @@ fn run_case(case: &Value) -> Replayed {
             format!("{level}: {}", profile.normalise_text(&line))
         })
         .collect();
+    let pin_fetches = json!(pin_fetches.lock().unwrap().clone());
     let timeline = events.lock().unwrap().clone();
     let requests = installer.requests.lock().unwrap().clone();
     let limits = runner.limits.lock().unwrap().clone();
@@ -632,7 +629,7 @@ fn run_case(case: &Value) -> Replayed {
         installer: profile.normalise(Value::Array(requests)),
         spawns: profile.normalise(spawns),
         after,
-        hit_restore,
+        pin_fetches,
     }
 }
 
@@ -749,6 +746,12 @@ fn compare(case: &Value, actual: &Replayed) -> Vec<String> {
         text(&actual.spawn_limits),
     );
     check(
+        "pin fetches",
+        actual.pin_fetches == golden["pinFetches"],
+        text(&golden["pinFetches"]),
+        text(&actual.pin_fetches),
+    );
+    check(
         "installer requests",
         actual.installer == golden["installRemove"],
         text(&golden["installRemove"]),
@@ -794,10 +797,6 @@ fn compare(case: &Value, actual: &Replayed) -> Vec<String> {
         );
     }
     problems
-}
-
-fn is_later(case: &Value) -> bool {
-    LATER.contains(&case["id"].as_str().unwrap())
 }
 
 #[test]
@@ -905,15 +904,9 @@ fn the_wr02_interleave_tracer_replays() {
 fn every_switch_golden_this_build_ports_replays() {
     let mut replayed = 0;
     let mut failures = Vec::new();
-    for case in cases().iter().filter(|c| !is_later(c)) {
+    for case in cases().iter() {
         let actual = run_case(case);
         let id = case["id"].as_str().unwrap();
-        if actual.hit_restore {
-            failures.push(format!(
-                "{id}: needs the CrossOver restore, which is not in LATER"
-            ));
-            continue;
-        }
         let problems = compare(case, &actual);
         if !problems.is_empty() {
             failures.push(format!("{id}:\n  {}", problems.join("\n  ")));
@@ -921,27 +914,7 @@ fn every_switch_golden_this_build_ports_replays() {
         replayed += 1;
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
-    check_floor("replayed switch cases", replayed, REPLAYED_FLOOR).unwrap();
-}
-
-/// A case in `LATER` is one this build cannot replay: a switch that needs the restore. When 87-41 ports one the case moves out of the list; until then the list is exact.
-#[test]
-fn the_later_list_names_exactly_the_cases_this_build_cannot_replay() {
-    let all = cases();
-    for id in LATER {
-        assert!(all.iter().any(|c| c["id"] == id), "{id} is not a case");
-    }
-    let mut stale = Vec::new();
-    for case in all.iter().filter(|c| is_later(c)) {
-        let id = case["id"].as_str().unwrap();
-        if !run_case(case).hit_restore {
-            stale.push(id);
-        }
-    }
-    assert!(
-        stale.is_empty(),
-        "no longer need the restore, so take them out of LATER and replay them: {stale:?}"
-    );
+    check_floor("replayed switch cases", replayed, CASE_FLOOR).unwrap();
 }
 
 #[test]

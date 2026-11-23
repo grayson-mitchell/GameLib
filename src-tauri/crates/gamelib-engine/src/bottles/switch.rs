@@ -6,14 +6,14 @@
 //! that last prepared a bottle is recorded in its marker ([`super::marker`]); a marker a newer build
 //! wrote is never overwritten.
 //!
-//! **What this build ports (87-40, the tracer path):** the refusals (an invalid or absent bottle, a
-//! game starting or running in it, a marker from a newer build, another game running in the bottle,
-//! a legacy shared bottle), the same-engine no-op and the failed-DXVK retry, killing the previous
-//! engine's wineserver, installing the next engine's DXVK through `ctx.dxvk` and writing the marker
-//! (`crossover -> pinned` is the golden tracer; `pinned -> wine-manager` and the rest of the
-//! non-CrossOver targets share the path). **Not yet ported (87-41):** the restore of CrossOver's
-//! graphics stack when the target is CrossOver and DXVK is present, which answers
-//! [`PrepareReason::RestorePending`] before anything is stopped or written.
+//! **What this ports:** the refusals (an invalid or absent bottle, a game starting or running in it,
+//! a marker from a newer build, another game running in the bottle, a legacy shared bottle), the
+//! same-engine no-op and the failed-DXVK retry, killing the previous engine's wineserver, installing
+//! the next engine's DXVK through `ctx.dxvk` and writing the marker (87-40, `crossover -> pinned` is
+//! the golden tracer), and the restore of CrossOver's graphics stack when the target is CrossOver and
+//! DXVK is present ([`restore`], 87-41: its source is resolved before anything is stopped, a
+//! CrossOver that cannot run restores through the built-in engine, and CrossOver's own wineserver is
+//! stopped once afterwards, G30).
 //!
 //! **One switch per bottle at a time (87-41, WR-02, T-87-39):** [`InFlightSwitches`] is the TS
 //! `inFlightSwitches` map. Every call takes its bottle's lock for its whole run, so a call that
@@ -36,6 +36,8 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use tokio::sync::{Mutex as AsyncMutex, OwnedMutexGuard};
 
+use gamelib_core::process::BoxFuture;
+
 use super::lifecycle::{dirname, kill_bottle_wineserver, KILL_TIMEOUT_MS};
 use super::marker::{
     self, gate_allows_write, identity_of, marker_path, process_gate, DxvkField, EngineKind, Marker,
@@ -44,14 +46,21 @@ use super::paths::{bottle_dir, is_clean_bottle_name, is_inside, lexical_resolve}
 use super::registry::EngineSelection;
 use crate::ctx::EngineCtx;
 use crate::dxvk::{DxvkAction, DxvkRequest, DxvkSource, DxvkTool};
-use crate::engines::{is_pinned_engine_installed, pinned_engine_paths, pinned_engine_root};
+use crate::engines::{
+    is_pinned_engine_installed, pin_engine, pinned_engine_paths, pinned_engine_root, DxvkBuild,
+    NonCrossoverEngine,
+};
 use crate::ids::pin_by_id;
 use crate::jsutil::path_join;
-use crate::pins::pins;
+use crate::pins::{pins, EnginePin};
 use crate::tool_settings::build_fallback_game_settings;
 
 /// The DXVK-macOS version file a switch to a non-CrossOver engine leaves in the bottle.
 const DXVK_VERSION_FILE: &str = "current_dxvk-macOS";
+
+/// `ensurePinEngine`: makes a pinned engine available (downloading it when absent); `None` when that
+/// fails. The restore asks it only when its source is not on disk.
+pub type EnsurePin = Arc<dyn Fn(EnginePin) -> BoxFuture<Option<NonCrossoverEngine>> + Send + Sync>;
 
 /// A version gate the switch can hold across an await: [`marker::Gate`] plus `Send + Sync`.
 pub type SyncGate<'a> = &'a (dyn Fn(&Path) -> Option<GateState> + Send + Sync + 'a);
@@ -97,13 +106,16 @@ pub struct PrepareArgs {
     /// `getMonitorPhase(key)`: a title is starting or running in this bottle.
     pub monitor_phase: Option<MonitorPhase>,
     pub own_bottle_name: OwnBottle,
-    /// `crossoverSettings(key)`: the stored settings the CrossOver restore runs with (87-41).
+    /// `crossoverSettings(key)`: the stored settings the CrossOver restore runs with (its `winePrefix`
+    /// is replaced by the bottle's, 59-UAT G7).
     pub crossover_settings: Value,
-    /// False when CrossOver cannot run (expired or missing): the restore then uses the built-in engine
-    /// (87-41).
+    /// False when CrossOver cannot run (expired or missing): the restore then uses the built-in engine.
     pub crossover_healthy: bool,
     /// The global game settings the fallback settings are built over (`globalGameSettings()`).
     pub fallback_settings: Value,
+    /// `ensurePinEngine`. `None`: a pin that is installed is used and one that is not is unavailable
+    /// (this crate downloads no engine yet, 87-40), so a restore whose source is missing refuses.
+    pub ensure_pin: Option<EnsurePin>,
     /// Called once when a real engine change is about to start, before any stop or DXVK step.
     pub on_switching: Option<Arc<dyn Fn() + Send + Sync>>,
     /// Record `selection` in the context's registry once the bottle is on that engine. The TS switch
@@ -123,6 +135,7 @@ impl PrepareArgs {
             crossover_settings: json!({}),
             crossover_healthy: true,
             fallback_settings: json!({}),
+            ensure_pin: None,
             on_switching: None,
             register_selection: false,
         }
@@ -141,8 +154,6 @@ pub enum PrepareReason {
     MarkerNewer,
     /// The engine pin table could not be read, so a marker-less bottle cannot be told apart.
     PinsUnavailable,
-    /// The CrossOver restore is not ported yet (87-41). Answered before anything is stopped or written.
-    RestorePending,
 }
 
 impl PrepareReason {
@@ -155,7 +166,6 @@ impl PrepareReason {
             PrepareReason::BottleBusy => "bottle-busy",
             PrepareReason::MarkerNewer => "marker-newer",
             PrepareReason::PinsUnavailable => "pins-unavailable",
-            PrepareReason::RestorePending => "restore-pending",
         }
     }
 }
@@ -578,17 +588,23 @@ async fn prepare_body(ctx: &EngineCtx, gate: SyncGate<'_>, args: &PrepareArgs) -
         );
     }
 
-    // 59-REVIEW WR-05 resolves the restore source before anything is stopped; the restore itself is
-    // 87-41's. Refusing here leaves the bottle and its marker exactly as they were.
+    // 59-REVIEW WR-05: resolve (and download) the restore source before anything is stopped, so a
+    // missing source leaves the bottle and its marker exactly as they were.
     let restore_needed = matches!(next, EngineSelection::Crossover { .. })
         && (Path::new(&dxvk_marker_path).exists() || prev.dxvk.is_some());
+    let mut restore_source: Option<NonCrossoverEngine> = None;
     if restore_needed {
-        return PrepareResult::refused(
-            PrepareReason::RestorePending,
-            format!(
-                "restoring CrossOver's graphics stack in \"{bottle_name}\" is not ported yet (87-41)"
-            ),
-        );
+        restore_source = resolve_restore_source(ctx, args, &prev, !args.crossover_healthy).await;
+        if restore_source
+            .as_ref()
+            .and_then(|s| s.dxvk.as_ref())
+            .is_none()
+        {
+            return PrepareResult::refused(
+                PrepareReason::DxvkFailed,
+                format!("no DXVK source to restore \"{bottle_name}\""),
+            );
+        }
     }
 
     if let Some(on_switching) = &args.on_switching {
@@ -607,8 +623,202 @@ async fn prepare_body(ctx: &EngineCtx, gate: SyncGate<'_>, args: &PrepareArgs) -
     if next.engine().is_some() {
         return install_next_dxvk(ctx, gate, args, &dir).await;
     }
+
+    if let (true, Some(source)) = (restore_needed, restore_source) {
+        if let Some(refusal) = restore(ctx, gate, args, &dir, &prev, &source).await {
+            return refusal;
+        }
+    }
+
     marker::write_marker_with(log, gate, &dir, &next_marker);
     PrepareResult::prepared(true, next)
+}
+
+/// `ensurePinEngine` as the caller supplied it, else the pin when it is installed.
+async fn ensure_pin_engine(
+    ctx: &EngineCtx,
+    args: &PrepareArgs,
+    pin: &EnginePin,
+) -> Option<NonCrossoverEngine> {
+    match &args.ensure_pin {
+        Some(ensure) => ensure(pin.clone()).await,
+        None => is_pinned_engine_installed(ctx, pin).then(|| pin_engine(ctx, pin)),
+    }
+}
+
+/// `resolveRestoreSource`: where the DXVK DLL list for a restore comes from: the marker's recorded
+/// dir, else the pin the bottle was prepared with, else the current pin (downloaded when it is not on
+/// disk). `need_wine`: the restore runs through the built-in engine (CrossOver unhealthy), so a source
+/// with DXVK but no Wine binary (a half-installed pin, IN-06) takes its Wine from the pin download.
+async fn resolve_restore_source(
+    ctx: &EngineCtx,
+    args: &PrepareArgs,
+    prev: &Marker,
+    need_wine: bool,
+) -> Option<NonCrossoverEngine> {
+    let table = pins().ok()?;
+    let pin = if prev.kind == EngineKind::Pinned {
+        pin_by_id(&prev.id)
+    } else {
+        None
+    }
+    .unwrap_or(&table.current);
+    let installed = is_pinned_engine_installed(ctx, pin).then(|| pinned_engine_paths(ctx, pin));
+    if let Some(DxvkField::Installed { dir, version }) = &prev.dxvk {
+        if Path::new(dir).join("x64").exists() {
+            let dxvk = Some(DxvkBuild {
+                dir: dir.clone(),
+                version: version.clone(),
+            });
+            if installed.is_some() || !need_wine {
+                return Some(NonCrossoverEngine {
+                    wine_bin: installed
+                        .as_ref()
+                        .map(|p| p.wine_bin.clone())
+                        .unwrap_or_default(),
+                    wineserver_bin: installed
+                        .as_ref()
+                        .map(|p| p.wineserver_bin.clone())
+                        .unwrap_or_default(),
+                    label: pin.label.clone(),
+                    version: pin.wine.version.clone(),
+                    dxvk,
+                });
+            }
+            let fetched = ensure_pin_engine(ctx, args, pin).await?;
+            return Some(NonCrossoverEngine { dxvk, ..fetched });
+        }
+    }
+    if let Some(paths) = installed {
+        return Some(NonCrossoverEngine {
+            wine_bin: paths.wine_bin,
+            wineserver_bin: paths.wineserver_bin,
+            label: pin.label.clone(),
+            version: pin.wine.version.clone(),
+            dxvk: Some(DxvkBuild {
+                dir: paths.dxvk_dir,
+                version: pin.dxvk.version.clone(),
+            }),
+        });
+    }
+    ensure_pin_engine(ctx, args, pin).await
+}
+
+/// The restore of CrossOver's graphics stack (the tail of `prepareBottleForEngineBody`): puts back the
+/// DLLs DXVK replaced, then stops the wineserver that did it. `None` when the bottle is clean (the
+/// caller writes the CrossOver marker), else the refusal.
+///
+/// 59-UAT G7: the stock CrossOver settings carry the global winePrefix, not this bottle's. 59-UAT G10:
+/// every CrossOver wine step on an expired bottle blocks on CodeWeavers' Expired Bottle dialog and the
+/// built-in engine never shows it, so an unhealthy CrossOver restores through the built-in engine and
+/// stops that wineserver afterwards. G30: the restore returns while its CrossOver wineserver lingers
+/// and the next launch may run on a different runner (overlay clone, 60-RESEARCH Pitfall 2), so a
+/// healthy restore stops it once, on both outcomes.
+pub async fn restore(
+    ctx: &EngineCtx,
+    gate: SyncGate<'_>,
+    args: &PrepareArgs,
+    dir: &str,
+    prev: &Marker,
+    source: &NonCrossoverEngine,
+) -> Option<PrepareResult> {
+    let bottle_name = args.bottle_name.as_str();
+    let source_dxvk = source.dxvk.as_ref()?;
+    let timeout = Duration::from_millis(KILL_TIMEOUT_MS);
+    let mut settings = if args.crossover_healthy {
+        // 59-01 measurement: healthy CrossOver removed Staging-installed DXVK cleanly.
+        args.crossover_settings.clone()
+    } else {
+        if source.wine_bin.is_empty() || source.wineserver_bin.is_empty() {
+            return Some(PrepareResult::refused(
+                PrepareReason::DxvkFailed,
+                format!(
+                    "no built-in engine to restore \"{bottle_name}\" while CrossOver is unavailable"
+                ),
+            ));
+        }
+        build_fallback_game_settings(ctx, bottle_name, source, &args.fallback_settings)
+    };
+    match settings.as_object_mut() {
+        Some(map) => {
+            map.insert("winePrefix".to_string(), json!(dir));
+        }
+        None => settings = json!({"winePrefix": dir}),
+    }
+    let ok = ctx
+        .dxvk
+        .install_remove(DxvkRequest {
+            settings,
+            tool: DxvkTool::Dxvk,
+            action: DxvkAction::Restore,
+            source: Some(DxvkSource {
+                dir: source_dxvk.dir.clone(),
+                version: source_dxvk.version.clone(),
+            }),
+        })
+        .await;
+    if args.crossover_healthy {
+        match (ctx.crossover_bin_dir)().await {
+            Some(bin_dir) => {
+                kill_bottle_wineserver(
+                    ctx,
+                    bottle_name,
+                    &path_join(&[&bin_dir, "wineserver"]),
+                    &[("CX_ROOT".to_string(), dirname(&bin_dir))],
+                    timeout,
+                )
+                .await;
+                info(
+                    ctx,
+                    &format!(
+                        "engine switch: stopped the restore's CrossOver wineserver for \"{bottle_name}\""
+                    ),
+                );
+            }
+            None => warn(
+                ctx,
+                &format!(
+                    "engine switch: no CrossOver found to stop the restore's wineserver for \"{bottle_name}\""
+                ),
+            ),
+        }
+    } else {
+        kill_bottle_wineserver(
+            ctx,
+            bottle_name,
+            &source.wineserver_bin,
+            &[("USER".to_string(), "crossover".to_string())],
+            timeout,
+        )
+        .await;
+    }
+    if !ok || Path::new(&path_join(&[dir, DXVK_VERSION_FILE])).exists() {
+        // CR-03: the restore may have deleted DLLs or overrides before failing; record that so the
+        // next launch on either engine repairs the bottle instead of reporting changed:false.
+        if prev.kind != EngineKind::Crossover {
+            let failed = Marker {
+                dxvk: Some(DxvkField::Failed),
+                ..prev.clone()
+            };
+            marker::write_marker_with(ctx.log.as_deref(), gate, dir, &failed);
+        }
+        return Some(PrepareResult::refused(
+            PrepareReason::DxvkFailed,
+            format!("DXVK removal failed for \"{bottle_name}\""),
+        ));
+    }
+    None
+}
+
+/// `reconcileBottleEngineMarker` (76 gap, CR-01): persists the bottle's engine before any CrossOver
+/// probe touches `cxbottle.conf`; answers what it wrote, `None` when it wrote nothing.
+pub fn reconcile_marker(ctx: &EngineCtx, bottle_name: &str) -> Option<marker::Reconciled> {
+    marker::reconcile(ctx, bottle_name)
+}
+
+/// `recordCrossoverBottleEngine` (D-07a): the marker a CrossOver-created bridge bottle gets at creation.
+pub fn record_crossover(ctx: &EngineCtx, bottle_name: &str, bin_dir: &str) -> bool {
+    marker::record_crossover(ctx, bottle_name, bin_dir)
 }
 
 /// `installNextDxvk`: installs the next engine's DXVK. Once the previous wineserver is gone the bottle
@@ -785,39 +995,6 @@ mod tests {
         assert_eq!(ctx.registry.get_engine_selection(KEY), Some(next.clone()));
         assert_eq!(ok.to_value()["changed"], json!(true));
         assert_eq!(ok.to_value()["selection"]["kind"], json!("pinned"));
-    }
-
-    #[tokio::test]
-    async fn a_switch_to_crossover_that_needs_the_restore_is_refused_before_anything_is_touched() {
-        let home = FakeHome::new("engine-switch-");
-        let dir = crossover_bottle(&home, false);
-        let marker_path = Path::new(&dir).join(".gamelib-engine.json");
-        // The bottle is on the pin with DXVK installed; CrossOver would have to restore its stack.
-        let dxvk_dir = home.root().join("tools/steam-engines/dxvk");
-        let on_pin = format!(
-            r#"{{"kind":"pinned","id":"p","wineserverBin":"/nowhere","dxvk":{{"dir":"{}","version":"v1"}},"version":1}}"#,
-            dxvk_dir.display()
-        );
-        std::fs::write(&marker_path, &on_pin).unwrap();
-        let runner = runner();
-        let ctx = ctx(&home, runner.clone(), Arc::new(ScriptedDxvk::new(&[true])));
-        let next = EngineSelection::Crossover {
-            reason: "cx-healthy".to_string(),
-            crossover_build: None,
-            bin_dir: "/cx/bin".to_string(),
-        };
-        let result = prepare_bottle_for_engine(&ctx, &PrepareArgs::new(KEY, BOTTLE, next)).await;
-        assert!(matches!(
-            result.outcome,
-            PrepareOutcome::Refused {
-                reason: PrepareReason::RestorePending,
-                ..
-            }
-        ));
-        assert!(!result.switched);
-        // Nothing was stopped, installed or written.
-        assert!(runner.spawns().is_empty());
-        assert_eq!(std::fs::read(&marker_path).unwrap(), on_pin.as_bytes());
     }
 
     #[tokio::test]
