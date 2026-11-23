@@ -40,7 +40,7 @@ export interface EngineServices {
   /** The path roots the engine reads (66.4-05). */
   paths: Pick<
     AppPaths,
-    'userHome' | 'toolsPath' | 'gamesConfigPath' | 'configPath'
+    'userHome' | 'toolsPath' | 'gamesConfigPath' | 'configPath' | 'userData'
   >
   /** The boot-owned engine runtime: ledger, registry, deadlines, single-flight maps (66.4-05). */
   engineRuntime: EngineRuntime

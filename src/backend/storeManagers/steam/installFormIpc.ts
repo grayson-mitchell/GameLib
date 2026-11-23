@@ -25,7 +25,7 @@ import { logWarning, LogPrefix } from 'backend/logger'
 import SteamGame from './games'
 import { checkBottleEligibility } from './gameEligibility'
 import { getBridgeRouteVerdict } from './bridgeRouteVerdict'
-import type { ManagerDeps, Stores } from 'backend/services/types'
+import type { ManagerDeps } from 'backend/services/types'
 import type { ProcessRunner } from 'backend/process/types'
 import type { AppPaths } from 'backend/process/context'
 import type { SteamStoresDeps } from './library/installRoot'
@@ -226,7 +226,6 @@ export async function getSteamBottleEligibilityVerdict(
  */
 export async function persistInstallFormWineVersion(
   deps: {
-    stores: Pick<Stores, 'wineManager'>
     runner: Pick<ProcessRunner, 'run'>
     config: Pick<GlobalConfigSlice, 'getAlternativeWine'>
     paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
@@ -301,7 +300,6 @@ export async function persistInstallFormWineVersion(
   let detected: WineInstallation[]
   try {
     detected = await deps.config.getAlternativeWine({
-      wineDownloaderInfoStore: deps.stores.wineManager.wineDownloaderInfoStore,
       runner: deps.runner,
       paths: deps.paths,
       sendFrontendMessage: deps.sendFrontendMessage

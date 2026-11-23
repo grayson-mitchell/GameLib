@@ -8,7 +8,6 @@
  */
 import { killCrossoverWineserverWith } from 'backend/engine/engineDecision'
 import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
-import type { Stores } from 'backend/services/types'
 import type {
   EngineDecisionDeps,
   RunnerDeps
@@ -77,7 +76,6 @@ export function steamDecisionServices(
     paths: EngineServices['paths']
     engineRuntime: EngineServices['engineRuntime']
     storeRoot?: EngineServices['storeRoot']
-    stores: Pick<Stores, 'wineManager'>
   } & SteamEngineBottle
 ): Pick<
   EngineServices,

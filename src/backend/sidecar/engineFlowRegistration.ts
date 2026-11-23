@@ -34,7 +34,7 @@ import type { SteamEngineBottle } from 'backend/storeManagers/steam/bottle'
 export interface EngineFlowDeps {
   ipc: Pick<IpcRegistry, 'handle'>
   managers: Pick<StoreManagers, 'library'>
-  stores: Pick<Stores, 'steam' | 'wineManager'>
+  stores: Pick<Stores, 'steam'>
   spawnAsync: BootServices['spawnAsync']
   /** The boot process runner (66.2); consumers converted by 66.2-03. */
   runner: BootServices['runner']

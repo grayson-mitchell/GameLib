@@ -222,16 +222,8 @@ function buildServices(
     } as never,
     requestRustInvoke: gate.requestRustInvoke
   })
-  const storeFile = join(profile.userData, 'store', 'wine-downloader-info.json')
   const wineManagerReleases = wineManagerReleasesFrom({
-    stores: {
-      wineManager: {
-        wineDownloaderInfoStore: {
-          get: (key: string, fallback: unknown) =>
-            readJson(storeFile)?.[key] ?? fallback
-        }
-      }
-    } as never
+    paths: { userData: profile.userData }
   })
   const globalSettings = (): Record<string, unknown> =>
     (readJson(profile.paths.configPath)?.defaultSettings as

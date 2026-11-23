@@ -14,7 +14,6 @@ import { createLegendaryStores } from 'backend/storeManagers/legendary/stores'
 import { createNileStores } from 'backend/storeManagers/nile/stores'
 import { createSideloadStores } from 'backend/storeManagers/sideload/stores'
 import { createSteamStores } from 'backend/storeManagers/steam/stores'
-import { createWineManagerStores } from 'backend/wine/manager/stores'
 import type { Stores } from 'backend/services/types'
 import { createEngineStores } from 'backend/engine/engineNoticeStore'
 import { createPciIdCaches } from 'backend/utils/systeminfo/gpu/pci_ids'
@@ -32,7 +31,6 @@ export function createStores(deps: StoreFamilyDeps): Stores {
     nile: createNileStores(deps),
     sideload: createSideloadStores(deps),
     steam: createSteamStores(deps),
-    wineManager: createWineManagerStores(deps),
     engine: createEngineStores(deps),
     systemInfo: createPciIdCaches(deps)
   }

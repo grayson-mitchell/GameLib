@@ -169,8 +169,10 @@ describe('66.1 end state: stores modules', () => {
   // search and its two caches are Rust's).
   // 13 -> 11 at Phase 86 plan 86-24 (2026-11-23): crossover_index/stores.ts and wiki_game_info/stores.ts
   // were deleted (the wiki and CrossOver index slices are Rust's).
-  it('finds the 11 stores modules', () => {
-    expect(STORES_MODULES).toHaveLength(11)
+  // 11 -> 10 at Phase 87 plan 87-37 (2026-11-24): wine/manager/stores.ts was deleted (the wine manager and its
+  // store are Rust's).
+  it('finds the 10 stores modules', () => {
+    expect(STORES_MODULES).toHaveLength(10)
     for (const m of STORES_MODULES) {
       expect(existsSync(join(BACKEND, m))).toBe(true)
     }
@@ -246,7 +248,9 @@ describe('66.1 end state: stores modules', () => {
     // storeSearch/stores.ts was deleted with the slice.
     // 14 -> 12 at Phase 86 plan 86-24 (2026-11-23): index.ts plus 11 stores modules now, after
     // crossover_index/stores.ts and wiki_game_info/stores.ts were deleted with their slices.
-    assertAtOrAboveFloor('66.1 stores modules', files.length, 12)
+    // 12 -> 11 at Phase 87 plan 87-37 (2026-11-24): index.ts plus 10 stores modules now, after
+    // wine/manager/stores.ts was deleted with the wine manager slice.
+    assertAtOrAboveFloor('66.1 stores modules', files.length, 11)
     const offenders: string[] = []
     for (const f of files) {
       const text = source(join(BACKEND, f))

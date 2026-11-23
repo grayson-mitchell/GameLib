@@ -73,7 +73,6 @@ export type EngineServicesSource = Pick<
     runner: Pick<ManagerDeps['runner'], 'run'>
     /** The members the engine reads; a launcher still being built can supply just these. */
     launcher: Pick<Launcher, 'setupEnvVars' | 'setupWineEnvVars' | 'validWine'>
-    stores: Pick<ManagerDeps['stores'], 'wineManager'>
   }
 
 export function engineServicesFrom(deps: EngineServicesSource): EngineServices {

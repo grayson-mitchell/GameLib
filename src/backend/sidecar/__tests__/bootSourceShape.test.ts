@@ -87,8 +87,7 @@ describe('stores modules construct nothing at import (66.1-25, MH-1)', () => {
     'storeManagers/legendary/stores.ts',
     'storeManagers/nile/stores.ts',
     'storeManagers/sideload/stores.ts',
-    'storeManagers/steam/stores.ts',
-    'wine/manager/stores.ts'
+    'storeManagers/steam/stores.ts'
   ]
 
   it.each(STORE_MODULES)(

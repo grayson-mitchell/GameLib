@@ -116,9 +116,7 @@ const wineDeps = {
   config: {
     getAlternativeWine: (...a: unknown[]) => mockGetAlternativeWine(...a)
   } as never,
-  stores: createTestStores({
-    wineManager: { wineDownloaderInfoStore: {} } as never
-  })
+  stores: createTestStores()
 }
 
 const mockedSteamGame = SteamGame as unknown as jest.Mock

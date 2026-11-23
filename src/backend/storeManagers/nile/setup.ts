@@ -41,7 +41,7 @@ type NileSetupDeps = StatusUpdateDeps &
     | 'appInfo'
     | 'appState'
     | 'notifications'
-  > & { stores: Pick<ManagerDeps['stores'], 'kvs' | 'wineManager'> }
+  > & { stores: Pick<ManagerDeps['stores'], 'kvs'> }
 
 /**
  * Handles installing dependencies for games that include PostInstall scripts

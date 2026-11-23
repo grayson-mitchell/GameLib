@@ -536,16 +536,5 @@
     "declaration": {
       "kind": "user-state"
     }
-  },
-  {
-    "registeredAs": "wineDownloaderInfoStore",
-    "options": {
-      "cwd": "store",
-      "name": "wine-downloader-info",
-      "schemaKeys": null
-    },
-    "declaration": {
-      "kind": "cache"
-    }
   }
 ]

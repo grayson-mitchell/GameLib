@@ -22,7 +22,6 @@ import { createLegendaryStores } from '../storeManagers/legendary/stores'
 import { createNileStores } from '../storeManagers/nile/stores'
 import { createSideloadStores } from '../storeManagers/sideload/stores'
 import { createSteamStores } from '../storeManagers/steam/stores'
-import { createWineManagerStores } from '../wine/manager/stores'
 import { createEngineStores } from '../engine/engineNoticeStore'
 import { createPciIdCaches } from '../utils/systeminfo/gpu/pci_ids'
 import type { StoreFamilyDeps, StoreRoot } from '../stores/storeRoot'
@@ -149,7 +148,6 @@ const STORE_KEYS = [
   'nile',
   'sideload',
   'steam',
-  'wineManager',
   'engine',
   'systemInfo'
 ] as const satisfies readonly (keyof Stores)[]
@@ -177,7 +175,6 @@ function familyBuilders(): FamilyBuilders {
     nile: (deps) => createNileStores(deps),
     sideload: (deps) => createSideloadStores(deps),
     steam: (deps) => createSteamStores(deps),
-    wineManager: (deps) => createWineManagerStores(deps),
     engine: (deps) => createEngineStores(deps),
     systemInfo: (deps) => createPciIdCaches(deps)
   }

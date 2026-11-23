@@ -134,7 +134,6 @@ function engineSourceFrom(services: BootServices): EngineServicesSource {
     commandRunner: services.commandRunner,
     spawnAsync: services.spawnAsync,
     runner: services.runner,
-    stores: services.stores,
     launcher: services.launcher,
     ...toolSlices(services)
   }

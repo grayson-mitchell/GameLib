@@ -113,7 +113,6 @@ abstract class GlobalConfig {
    */
   public async getAlternativeWine(
     deps: {
-      wineDownloaderInfoStore: Stores['wineManager']['wineDownloaderInfoStore']
       runner: Pick<ProcessRunner, 'run'>
       paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
       sendFrontendMessage: SendFrontendMessage

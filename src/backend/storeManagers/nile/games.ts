@@ -78,7 +78,7 @@ export default class NileGameManager implements Game {
         | 'appRuntime'
         | 'requestRustInvoke'
       > & {
-        stores: Pick<ManagerDeps['stores'], 'kvs' | 'wineManager'>
+        stores: Pick<ManagerDeps['stores'], 'kvs'>
       }
   ) {
     this.id = id

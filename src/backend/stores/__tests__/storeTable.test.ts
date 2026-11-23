@@ -51,10 +51,12 @@ describe('storeTable.json', () => {
   it('names every EXPECTED_KINDS store with the same kind', () => {
     const kinds = expectedKinds()
     const names = Object.keys(kinds)
-    // The parse cannot pass vacuously: the literal holds 47 names today. 50 -> 47 at Phase 86 plan
+    // The parse cannot pass vacuously: the literal holds 46 names today. 47 -> 46 at Phase 87 plan 87-37
+    // (2026-11-24): the literal lost `wineDownloaderInfoStore` with its TS store (its row moved to EXTRA_ROWS).
+    // The literal held 47 names before that. 50 -> 47 at Phase 86 plan
     // 86-24 (2026-11-23): the literal lost `crossover_index`, `umu` and `wikigameinfo` with their TS
     // stores (their rows moved to EXTRA_ROWS). The floor tracks the list that plan shrank.
-    expect(names.length).toBeGreaterThanOrEqual(47)
+    expect(names.length).toBeGreaterThanOrEqual(46)
     const rows = committed().rows
     const missing: string[] = []
     const wrongKind: string[] = []

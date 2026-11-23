@@ -99,9 +99,6 @@ export interface Stores {
   steam: ReturnType<
     typeof import('backend/storeManagers/steam/stores').createSteamStores
   >
-  wineManager: ReturnType<
-    typeof import('backend/wine/manager/stores').createWineManagerStores
-  >
   engine: ReturnType<
     typeof import('backend/engine/engineNoticeStore').createEngineStores
   >

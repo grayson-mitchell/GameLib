@@ -80,8 +80,10 @@ describe('runtimesPortComplete', () => {
  * three channels). The TS wine manager (the install, the remove and the list refresh, the seven
  * release feeds and the downloader), their five unit tests and the wine-manager oracle are deleted;
  * the goldens, the state and the recordings stay for the Rust replay (`golden_wine_manager.rs`).
- * `stores.ts` stays too: it still holds the `wineDownloaderInfoStore` mirror, which the TS DXMT reads
- * until 87-37, so deleting it with the modules would break the store registration (T-87-69).
+ * `stores.ts` stayed until 87-37, which deleted it with the `wineDownloaderInfoStore` mirror (the TS DXMT that read
+ * it went in the same plan): the store's `storeTable.json` row lives on in the generator's EXTRA_ROWS so the Rust
+ * `StoreHost` keeps owning it (T-87-35, D-29 row 5), and the engine's synchronous release read opens the file Rust
+ * writes (`engine/wineManagerReleases.ts`).
  */
 const WINE_DOWNLOADS: SliceSpec = {
   deleted: [
@@ -94,12 +96,13 @@ const WINE_DOWNLOADS: SliceSpec = {
     'src/backend/wine/manager/downloader/__tests__/utilities/geProtonArch.test.ts',
     'src/backend/wine/manager/downloader/__tests__/utilities/rest.test.ts',
     'src/backend/wine/manager/downloader/__tests__/utilities/unzip.test.ts',
-    'src/backend/wine/__tests__/oracle/wineManager.oracle.test.ts'
+    'src/backend/wine/__tests__/oracle/wineManager.oracle.test.ts',
+    'src/backend/wine/manager/stores.ts',
+    'src/backend/wine/manager'
   ],
   kept: [
     'src-tauri/crates/gamelib-wine/tests/fixtures/golden/wine_manager',
-    'src-tauri/crates/gamelib-wine/tests/fixtures/recorded/wine_manager',
-    'src/backend/wine/manager/stores.ts'
+    'src-tauri/crates/gamelib-wine/tests/fixtures/recorded/wine_manager'
   ],
   forbiddenIdentifiers: [
     'updateWineListsIfOutdated',
@@ -107,12 +110,15 @@ const WINE_DOWNLOADS: SliceSpec = {
     'getAvailableVersions',
     'fetchReleases',
     'PROTONGE_URL',
-    'WINESTAGINGMACOS_URL'
+    'WINESTAGINGMACOS_URL',
+    'createWineManagerStores',
+    'wineDownloaderInfoStore'
   ],
   identifierRoot: 'src/backend',
   flag: 'GAMELIB_WINE',
   manifestSlice: 'wine',
-  channelsFloor: 5
+  channelsFloor: 5,
+  storeRowKeys: ['store/wine-downloader-info']
 }
 
 describe('wineDownloadsPortComplete', () => {

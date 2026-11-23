@@ -118,7 +118,7 @@ export interface LauncherDeps
   /** The boot process runner: the gamescope --help probe runs through it. */
   runner: Pick<ProcessRunner, 'run'>
   spawnAsync: SpawnAsync
-  stores: Pick<Stores, 'kvs' | 'wineManager' | 'runsForMe' | 'systemInfo'>
+  stores: Pick<Stores, 'kvs' | 'runsForMe' | 'systemInfo'>
   config: Pick<
     GlobalConfigSlice,
     'getSettings' | 'getAlternativeWine' | 'setSetting'
@@ -193,7 +193,6 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
     storeRoot: deps.storeRoot,
     paths: deps.paths,
     runner: deps.runner,
-    stores: deps.stores,
     steamBottle: deps.steamBottle,
     steamLaunchRuntime: deps.steamLaunchRuntime,
     // The pure env/validation helpers are module functions, so the tools need no handle on the

@@ -1,3 +1,5 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
+import { tmpdir } from 'os'
 import { join } from 'path'
 import {
   createScriptedRunner,
@@ -1055,18 +1057,35 @@ describe('killCrossoverWineserverWith (66.1-22e)', () => {
 })
 
 describe('wineManagerReleasesFrom (66.1-22i)', () => {
-  it('reads wine-releases from the injected wineManager store', () => {
-    const rel = {
-      version: 'Wine-Staging-11.0',
-      type: 'Wine-Staging-macOS',
-      isInstalled: true,
-      installDir: WM_ROOT
-    }
-    const get = jest.fn((..._args: unknown[]) => [rel])
-    const stores = {
-      wineManager: { wineDownloaderInfoStore: { get } }
-    } as unknown as Parameters<typeof wineManagerReleasesFrom>[0]['stores']
-    expect(wineManagerReleasesFrom({ stores })()).toEqual([rel])
-    expect(get).toHaveBeenCalledWith('wine-releases', [])
+  const rel = {
+    version: 'Wine-Staging-11.0',
+    type: 'Wine-Staging-macOS',
+    isInstalled: true,
+    installDir: WM_ROOT
+  }
+  const userData = mkdtempSync(join(tmpdir(), 'wine-releases-'))
+  const storeFile = join(userData, 'store', 'wine-downloader-info.json')
+  const read = () => wineManagerReleasesFrom({ paths: { userData } })()
+
+  afterAll(() => rmSync(userData, { recursive: true, force: true }))
+
+  it('reads wine-releases from the file the Rust store writes, on every call', () => {
+    mkdirSync(join(userData, 'store'), { recursive: true })
+    const reader = wineManagerReleasesFrom({ paths: { userData } })
+    writeFileSync(storeFile, JSON.stringify({ 'wine-releases': [rel] }))
+    expect(reader()).toEqual([rel])
+    writeFileSync(storeFile, JSON.stringify({ 'wine-releases': [] }))
+    expect(reader()).toEqual([])
+  })
+
+  it('is the empty list for a missing file, corrupt JSON or a mis-shaped key', () => {
+    rmSync(storeFile, { force: true })
+    expect(read()).toEqual([])
+    writeFileSync(storeFile, '{not json')
+    expect(read()).toEqual([])
+    writeFileSync(storeFile, JSON.stringify({ 'wine-releases': 'nope' }))
+    expect(read()).toEqual([])
+    writeFileSync(storeFile, 'null')
+    expect(read()).toEqual([])
   })
 })

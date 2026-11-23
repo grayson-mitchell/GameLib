@@ -147,6 +147,19 @@ const EXTRA_ROWS: Omit<Row, 'family' | 'chain'>[] = [
     dotPaths: true,
     flavour: 'store'
   },
+  // 87-37 (D-29 row 5): the TS wine manager mirror is deleted; the Rust `gamelib-wine` manager still owns the
+  // `wine-downloader-info` cache (key `wine-releases`) and the renderer's release read resolves it through ts_names,
+  // so the row lives here with the cache kind unchanged.
+  {
+    key: 'store/wine-downloader-info',
+    dir: 'store',
+    name: 'wine-downloader-info',
+    tsNames: ['wineDownloaderInfoStore'],
+    kind: 'cache',
+    tokenBearing: false,
+    dotPaths: true,
+    flavour: 'store'
+  },
   // 86-24 (D-29 row 5): the TS wiki game info, umu and CrossOver index stores are deleted; the Rust
   // `gamelib-info` wiki and crossover slices still open these three caches (the renderer's wiki read
   // resolves `wikigameinfo` through ts_names), so the rows live here with the cache kind unchanged.

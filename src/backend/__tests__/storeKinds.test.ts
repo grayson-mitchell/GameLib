@@ -60,10 +60,14 @@ const EXEMPT_NAMES: readonly { name: string; reason: string }[] = [
 // 50 -> 47 at Phase 86 plan 86-24 (2026-11-23): deleting wiki_game_info/stores.ts (umu, wikigameinfo) and
 // crossover_index/stores.ts (crossover_index) removed exactly three constructions, leaving 47. The floor
 // tracks the construction list that plan shrank; it is not lowered to turn a run green.
-const MIN_CONSTRUCTIONS = 47
+// 47 -> 46 at Phase 87 plan 87-37 (2026-11-24): deleting wine/manager/stores.ts removed exactly one construction
+// (wineDownloaderInfoStore), leaving 46. The floor tracks the construction list that plan shrank; it is not
+// lowered to turn a run green.
+const MIN_CONSTRUCTIONS = 46
 // 15 -> 13 at Phase 86 plan 86-24 (2026-11-23): the same two deleted files, wiki_game_info/stores.ts and
 // crossover_index/stores.ts, were two of the files holding a construction.
-const MIN_FILES_WITH_CONSTRUCTION = 13
+// 13 -> 12 at Phase 87 plan 87-37 (2026-11-24): wine/manager/stores.ts was one of the files holding a construction.
+const MIN_FILES_WITH_CONSTRUCTION = 12
 const MIN_MIRRORS = 10
 
 // This is a shrink-and-grow equality ratchet. Never widen it to admit a failing case
@@ -84,7 +88,6 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   sideloadedStore: 'user-state',
   humbleConfigStore: 'user-state',
   downloadManager: 'user-state',
-  wineDownloaderInfoStore: 'cache',
   macArchStore: 'user-state',
   runsForMeStore: 'user-state',
   // CacheStore (33)

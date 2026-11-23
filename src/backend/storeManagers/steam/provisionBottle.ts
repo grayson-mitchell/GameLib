@@ -172,7 +172,7 @@ export async function provisionBottle(
     RustInvokeDeps & {
       /** The boot-owned abort registry the default-Wine download registers in (66.4-13). */
       aborts: Pick<AbortRegistry, 'create' | 'delete'>
-      stores: Pick<Stores, 'kvs' | 'wineManager'>
+      stores: Pick<Stores, 'kvs'>
       spawnAsync: SpawnAsync
       commandRunner: Pick<CommandRunner, 'runWineCommand'>
       runner: Pick<ProcessRunner, 'run'>

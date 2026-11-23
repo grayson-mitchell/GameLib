@@ -35,7 +35,8 @@ const NO_TS_STORE: readonly string[] = [
   'store_cache/itad_steam_gids',
   'store_cache/crossover_index',
   'store_cache/umu',
-  'store_cache/wikigameinfo'
+  'store_cache/wikigameinfo',
+  'store/wine-downloader-info'
 ]
 
 interface Probe {
@@ -47,9 +48,6 @@ function storeOfRow(
   row: (typeof CACHE_ROWS)[number],
   stores: ReturnType<typeof createStores>
 ): Probe {
-  if (row.key === 'store/wine-downloader-info') {
-    return stores.wineManager.wineDownloaderInfoStore as unknown as Probe
-  }
   for (const family of Object.values(stores)) {
     for (const store of Object.values(family)) {
       if (!(store instanceof CacheStore)) continue

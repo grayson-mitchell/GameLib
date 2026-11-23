@@ -51,6 +51,15 @@ const DELETED_IN_PHASE_86: ReadonlySet<string> = new Set([
   'wikigameinfo'
 ])
 
+/**
+ * Mirrors a Phase 87 plan has already deleted, on the same terms as `DELETED_IN_PHASE_86`: the schedule cell is 87,
+ * 87 is not finished, and `CURRENT_PHASE` stays 85. 87-37: `wineDownloaderInfoStore` (the wine manager and its store
+ * are Rust's; the engine's synchronous release read opens the file itself), its `storeTable.json` row in `EXTRA_ROWS`.
+ */
+const DELETED_IN_PHASE_87: ReadonlySet<string> = new Set([
+  'wineDownloaderInfoStore'
+])
+
 /** Store (TS name) -> the slice that deletes its TS mirror (82-STATE-OWNERSHIP.md). */
 const SCHEDULE: Readonly<Record<string, number>> = {
   configStore: 98,
@@ -280,9 +289,16 @@ describe('TS-mirror deletion schedule (D-19)', () => {
         { ...SCHEDULE, ...SETTINGS_SCHEDULE },
         registered,
         CURRENT_PHASE,
-        DELETED_IN_PHASE_86
+        new Set([...DELETED_IN_PHASE_86, ...DELETED_IN_PHASE_87])
       )
     ).toEqual([])
+  })
+
+  it('every store a Phase 87 plan deleted is scheduled for 87 and has no registration', () => {
+    for (const store of DELETED_IN_PHASE_87) {
+      expect([store, SCHEDULE[store]]).toEqual([store, 87])
+      expect([store, registered.has(store)]).toEqual([store, false])
+    }
   })
 
   it('every store a Phase 86 plan deleted is scheduled for 86 and has no registration', () => {

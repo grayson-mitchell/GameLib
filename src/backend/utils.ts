@@ -1059,7 +1059,7 @@ export async function downloadDefaultWine(
   deps: AppRuntimeSlice<'events'> &
     RustInvokeDeps & {
       aborts: Pick<AbortRegistry, 'create' | 'delete'>
-      stores: Pick<Stores, 'kvs' | 'wineManager'>
+      stores: Pick<Stores, 'kvs'>
       runner: Pick<ProcessRunner, 'run'>
       paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
       config: Pick<
@@ -1104,8 +1104,6 @@ export async function downloadDefaultWine(
     let downloadedWine = null
     try {
       const wineList = await deps.config.getAlternativeWine({
-        wineDownloaderInfoStore:
-          deps.stores.wineManager.wineDownloaderInfoStore,
         runner: deps.runner,
         paths: deps.paths,
         sendFrontendMessage: deps.sendFrontendMessage
@@ -1133,7 +1131,7 @@ export async function checkWineBeforeLaunch(
   deps: AppRuntimeSlice<'events'> &
     RustInvokeDeps & {
       aborts: Pick<AbortRegistry, 'create' | 'delete'>
-      stores: Pick<Stores, 'kvs' | 'wineManager'>
+      stores: Pick<Stores, 'kvs'>
       runner: Pick<ProcessRunner, 'run'>
       paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
       config: Pick<
@@ -1199,8 +1197,6 @@ export async function checkWineBeforeLaunch(
       }
     } else {
       const wineList = await deps.config.getAlternativeWine({
-        wineDownloaderInfoStore:
-          deps.stores.wineManager.wineDownloaderInfoStore,
         runner: deps.runner,
         paths: deps.paths,
         sendFrontendMessage: deps.sendFrontendMessage

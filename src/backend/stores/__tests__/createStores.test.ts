@@ -182,6 +182,14 @@ describe('createStores', () => {
     }
   })
 
+  it('builds no wine-downloader-info store: the wine manager and its store are Rust-owned (87-37)', () => {
+    const stores = createStores({
+      registry: createStoreRegistry(),
+      root: createTestStoreRoot()
+    })
+    expect(Object.keys(stores)).not.toContain('wineManager')
+  })
+
   it('builds no itad_prices or itad_steam_gids cache: the ITAD store search is Rust-owned (86-17)', () => {
     const built = builtCacheStores()
     expect(built.has('itad_prices')).toBe(false)

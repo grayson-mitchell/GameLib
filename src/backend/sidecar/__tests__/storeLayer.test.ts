@@ -129,7 +129,6 @@ describe('round-trip', () => {
   // resolves).
   const ALL_VALID_STORE_NAMES = [
     'configStore',
-    'wineDownloaderInfoStore',
     'gogInstalledGamesStore',
     'timestampStore',
     // 'fontsStore' — permitted exclusion #1 (29-RESEARCH Pitfall 2): zero
@@ -153,6 +152,8 @@ describe('round-trip', () => {
     // `gamelib-info` wiki slice owns the file), so `registry.get()` can never
     // resolve it — it round-trips through the same mechanism as the D-13
     // cache stores instead, immediately below.
+    //
+    // 'wineDownloaderInfoStore' is not listed: Phase 87 (87-37) deleted its TS registration; Rust owns the file.
     //
     // 'gameOverridesStore' is not listed: Phase 86 (86-11) deleted its TS registration; Rust owns it.
     'runsForMeStore'
