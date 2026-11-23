@@ -1,0 +1,810 @@
+[
+  {
+    "a": "Assault Android Cactus+",
+    "b": "Assault Android Cactus",
+    "normalizedA": "assault android cactus",
+    "normalizedB": "assault android cactus",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "FRAMED Collection",
+    "b": "Framed Collection",
+    "normalizedA": "framed",
+    "normalizedB": "framed",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Into the Breach",
+    "b": "Into The Breach (Steam)",
+    "normalizedA": "into the breach",
+    "normalizedB": "into the breach",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Stardew Valley",
+    "b": "Stardew Valley",
+    "normalizedA": "stardew valley",
+    "normalizedB": "stardew valley",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Portal 2",
+    "b": "Portal 2",
+    "normalizedA": "portal 2",
+    "normalizedB": "portal 2",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "HADES",
+    "b": "hades",
+    "normalizedA": "hades",
+    "normalizedB": "hades",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Half-Life 2",
+    "b": "Half Life 2",
+    "normalizedA": "half life 2",
+    "normalizedB": "half life 2",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Half-Life: Alyx",
+    "b": "Half Life Alyx",
+    "normalizedA": "half life alyx",
+    "normalizedB": "half life alyx",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "  Spaced   Out  ",
+    "b": "Spaced Out",
+    "normalizedA": "spaced out",
+    "normalizedB": "spaced out",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Baldur's Gate 3",
+    "b": "Baldurs Gate 3",
+    "normalizedA": "baldur s gate 3",
+    "normalizedB": "baldurs gate 3",
+    "similarity": 0.9333333333333333,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Dr. Langeskov, The Tiger, and The Terribly Cursed Emerald",
+    "b": "Dr Langeskov The Tiger and The Terribly Cursed Emerald",
+    "normalizedA": "dr langeskov the tiger and the terribly cursed emerald",
+    "normalizedB": "dr langeskov the tiger and the terribly cursed emerald",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "DOOM™",
+    "b": "DOOM",
+    "normalizedA": "doom",
+    "normalizedB": "doom",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Alan Wake®",
+    "b": "Alan Wake",
+    "normalizedA": "alan wake",
+    "normalizedB": "alan wake",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Hades © Supergiant",
+    "b": "Hades Supergiant",
+    "normalizedA": "hades supergiant",
+    "normalizedB": "hades supergiant",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Celeste (Steam)",
+    "b": "Celeste",
+    "normalizedA": "celeste",
+    "normalizedB": "celeste",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Celeste (Windows) (Steam Key)",
+    "b": "Celeste",
+    "normalizedA": "celeste",
+    "normalizedB": "celeste",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "(Steam) Celeste",
+    "b": "Celeste",
+    "normalizedA": "celeste",
+    "normalizedB": "celeste",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Unbalanced (paren",
+    "b": "Unbalanced",
+    "normalizedA": "unbalanced paren",
+    "normalizedB": "unbalanced",
+    "similarity": 0.625,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Game of the Year Edition Fallout 3",
+    "b": "Fallout 3",
+    "normalizedA": "fallout 3",
+    "normalizedB": "fallout 3",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "The Witcher 3: Wild Hunt - Game of the Year Edition",
+    "b": "The Witcher 3: Wild Hunt",
+    "normalizedA": "the witcher 3 wild hunt",
+    "normalizedB": "the witcher 3 wild hunt",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Metro 2033 Redux Definitive Edition",
+    "b": "Metro 2033 Redux",
+    "normalizedA": "metro 2033 redux",
+    "normalizedB": "metro 2033 redux",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Skyrim Enhanced Edition",
+    "b": "Skyrim",
+    "normalizedA": "skyrim",
+    "normalizedB": "skyrim",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Tomb Raider Anniversary Edition",
+    "b": "Tomb Raider",
+    "normalizedA": "tomb raider",
+    "normalizedB": "tomb raider",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Civilization Complete Edition",
+    "b": "Civilization",
+    "normalizedA": "civilization",
+    "normalizedB": "civilization",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Dishonored Ultimate Edition",
+    "b": "Dishonored",
+    "normalizedA": "dishonored",
+    "normalizedB": "dishonored",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Payday Deluxe Edition",
+    "b": "Payday",
+    "normalizedA": "payday",
+    "normalizedB": "payday",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Dungeon Standard Edition",
+    "b": "Dungeon",
+    "normalizedA": "dungeon",
+    "normalizedB": "dungeon",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Borderlands GOTY",
+    "b": "Borderlands",
+    "normalizedA": "borderlands",
+    "normalizedB": "borderlands",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Borderlands GOTY Edition",
+    "b": "Borderlands",
+    "normalizedA": "borderlands",
+    "normalizedB": "borderlands",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Borderlands GOTYX",
+    "b": "Borderlands",
+    "normalizedA": "borderlands gotyx",
+    "normalizedB": "borderlands",
+    "similarity": 0.6470588235294117,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Mirror Collection",
+    "b": "Mirror",
+    "normalizedA": "mirror",
+    "normalizedB": "mirror",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Mirror Collections",
+    "b": "Mirror",
+    "normalizedA": "mirror collections",
+    "normalizedB": "mirror",
+    "similarity": 0.33333333333333337,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "The Collection Agency",
+    "b": "The Agency",
+    "normalizedA": "the agency",
+    "normalizedB": "the agency",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Game X: Season Pass",
+    "b": "Game X",
+    "normalizedA": "game x season pass",
+    "normalizedB": "game x",
+    "similarity": 0.33333333333333337,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Game X",
+    "b": "Game X: Season Pass",
+    "normalizedA": "game x",
+    "normalizedB": "game x season pass",
+    "similarity": 0.33333333333333337,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Game X: Season Pass",
+    "b": "Game X: Season Pass",
+    "normalizedA": "game x season pass",
+    "normalizedB": "game x season pass",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Hades Soundtrack",
+    "b": "Hades",
+    "normalizedA": "hades soundtrack",
+    "normalizedB": "hades",
+    "similarity": 0.3125,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Hades DLC",
+    "b": "Hades",
+    "normalizedA": "hades dlc",
+    "normalizedB": "hades",
+    "similarity": 0.5555555555555556,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Hades Expansion",
+    "b": "Hades",
+    "normalizedA": "hades expansion",
+    "normalizedB": "hades",
+    "similarity": 0.33333333333333337,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Hades Artbook",
+    "b": "Hades",
+    "normalizedA": "hades artbook",
+    "normalizedB": "hades",
+    "similarity": 0.3846153846153846,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Hades Art Book",
+    "b": "Hades",
+    "normalizedA": "hades art book",
+    "normalizedB": "hades",
+    "similarity": 0.3571428571428571,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Hades Content Pack",
+    "b": "Hades",
+    "normalizedA": "hades content pack",
+    "normalizedB": "hades",
+    "similarity": 0.2777777777777778,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Hades Bonus Content",
+    "b": "Hades",
+    "normalizedA": "hades bonus content",
+    "normalizedB": "hades",
+    "similarity": 0.26315789473684215,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Hades Upgrade Pack",
+    "b": "Hades",
+    "normalizedA": "hades upgrade pack",
+    "normalizedB": "hades",
+    "similarity": 0.2777777777777778,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Hades dlc",
+    "b": "Hades DLC",
+    "normalizedA": "hades dlc",
+    "normalizedB": "hades dlc",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Portal 2 Remastered",
+    "b": "Portal 2",
+    "normalizedA": "portal 2 remastered",
+    "normalizedB": "portal 2",
+    "similarity": 0.42105263157894735,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Portal 2",
+    "b": "Portal 2 Remastered",
+    "normalizedA": "portal 2",
+    "normalizedB": "portal 2 remastered",
+    "similarity": 0.42105263157894735,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Portal 2 Remastered",
+    "b": "Portal 2 Remastered",
+    "normalizedA": "portal 2 remastered",
+    "normalizedB": "portal 2 remastered",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Resident Evil 2 Remake",
+    "b": "Resident Evil 2",
+    "normalizedA": "resident evil 2 remake",
+    "normalizedB": "resident evil 2",
+    "similarity": 0.6818181818181819,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Remake Tactics",
+    "b": "Tactics",
+    "normalizedA": "remake tactics",
+    "normalizedB": "tactics",
+    "similarity": 0.5,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Batman",
+    "b": "Batman: Arkham Knight",
+    "normalizedA": "batman",
+    "normalizedB": "batman arkham knight",
+    "similarity": 0.30000000000000004,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Batman: Arkham Knight",
+    "b": "Batman: Arkham City",
+    "normalizedA": "batman arkham knight",
+    "normalizedB": "batman arkham city",
+    "similarity": 0.75,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Totally Different",
+    "b": "Portal 2",
+    "normalizedA": "totally different",
+    "normalizedB": "portal 2",
+    "similarity": 0.23529411764705888,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Game",
+    "b": "Game 2",
+    "normalizedA": "game",
+    "normalizedB": "game 2",
+    "similarity": 0.6666666666666667,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Doom",
+    "b": "Doom 2",
+    "normalizedA": "doom",
+    "normalizedB": "doom 2",
+    "similarity": 0.6666666666666667,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Pokémon Café",
+    "b": "Pokemon Cafe",
+    "normalizedA": "pok mon caf",
+    "normalizedB": "pokemon cafe",
+    "similarity": 0.8333333333333334,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Pokémon Café",
+    "b": "Pok mon Caf",
+    "normalizedA": "pok mon caf",
+    "normalizedB": "pok mon caf",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Pokémon",
+    "b": "Pokmon",
+    "normalizedA": "pok mon",
+    "normalizedB": "pokmon",
+    "similarity": 0.8571428571428572,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Café",
+    "b": "Cafe",
+    "normalizedA": "caf",
+    "normalizedB": "cafe",
+    "similarity": 0.75,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Naïve",
+    "b": "Naive",
+    "normalizedA": "na ve",
+    "normalizedB": "naive",
+    "similarity": 0.8,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Über",
+    "b": "Uber",
+    "normalizedA": "ber",
+    "normalizedB": "uber",
+    "similarity": 0.75,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Zoë",
+    "b": "Zoe",
+    "normalizedA": "zo",
+    "normalizedB": "zoe",
+    "similarity": 0.6666666666666667,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Mañana",
+    "b": "Manana",
+    "normalizedA": "ma ana",
+    "normalizedB": "manana",
+    "similarity": 0.8333333333333334,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "straße",
+    "b": "strasse",
+    "normalizedA": "stra e",
+    "normalizedB": "strasse",
+    "similarity": 0.7142857142857143,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Æon",
+    "b": "Aeon",
+    "normalizedA": "on",
+    "normalizedB": "aeon",
+    "similarity": 0.5,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "İstanbul",
+    "b": "Istanbul",
+    "normalizedA": "i stanbul",
+    "normalizedB": "istanbul",
+    "similarity": 0.8888888888888888,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Ｈades",
+    "b": "Hades",
+    "normalizedA": "ades",
+    "normalizedB": "hades",
+    "similarity": 0.8,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Café Collection",
+    "b": "Café",
+    "normalizedA": "caf",
+    "normalizedB": "caf",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "日本語のタイトル",
+    "b": "日本語のタイトル",
+    "normalizedA": "",
+    "normalizedB": "",
+    "similarity": 0,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "日本語のタイトル",
+    "b": "別のタイトル",
+    "normalizedA": "",
+    "normalizedB": "",
+    "similarity": 0,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "日本語のタイトル",
+    "b": "Hades",
+    "normalizedA": "",
+    "normalizedB": "hades",
+    "similarity": 0,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Привет мир",
+    "b": "Привет мир",
+    "normalizedA": "",
+    "normalizedB": "",
+    "similarity": 0,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "ΣΊΣΥΦΟΣ",
+    "b": "ΣΊΣΥΦΟΣ",
+    "normalizedA": "",
+    "normalizedB": "",
+    "similarity": 0,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "🎮🎮",
+    "b": "🎮🎮",
+    "normalizedA": "",
+    "normalizedB": "",
+    "similarity": 0,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Hades 🎮",
+    "b": "Hades",
+    "normalizedA": "hades",
+    "normalizedB": "hades",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Hades 🎮🎮",
+    "b": "Hades 🎮",
+    "normalizedA": "hades",
+    "normalizedB": "hades",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "!!!",
+    "b": "???",
+    "normalizedA": "",
+    "normalizedB": "",
+    "similarity": 0,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "!!!",
+    "b": "!!!",
+    "normalizedA": "",
+    "normalizedB": "",
+    "similarity": 0,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "...",
+    "b": "Hades",
+    "normalizedA": "",
+    "normalizedB": "hades",
+    "similarity": 0,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "",
+    "b": "",
+    "normalizedA": "",
+    "normalizedB": "",
+    "similarity": 0,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "",
+    "b": "Hades",
+    "normalizedA": "",
+    "normalizedB": "hades",
+    "similarity": 0,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Hades",
+    "b": "",
+    "normalizedA": "hades",
+    "normalizedB": "",
+    "similarity": 0,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "   ",
+    "b": "   ",
+    "normalizedA": "",
+    "normalizedB": "",
+    "similarity": 0,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "\t\n",
+    "b": "Hades",
+    "normalizedA": "",
+    "normalizedB": "hades",
+    "similarity": 0,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Final Fantasy 7",
+    "b": "Final Fantasy VII",
+    "normalizedA": "final fantasy 7",
+    "normalizedB": "final fantasy vii",
+    "similarity": 0.8235294117647058,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Final Fantasy 7",
+    "b": "Final Fantasy 7",
+    "normalizedA": "final fantasy 7",
+    "normalizedB": "final fantasy 7",
+    "similarity": 1,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "Left 4 Dead 2",
+    "b": "Left 4 Dead",
+    "normalizedA": "left 4 dead 2",
+    "normalizedB": "left 4 dead",
+    "similarity": 0.8461538461538461,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "Tekken 7",
+    "b": "Tekken 8",
+    "normalizedA": "tekken 7",
+    "normalizedB": "tekken 8",
+    "similarity": 0.875,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "abcdefg",
+    "b": "abcdefh",
+    "normalizedA": "abcdefg",
+    "normalizedB": "abcdefh",
+    "similarity": 0.8571428571428572,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "abcdef",
+    "b": "abcdeg",
+    "normalizedA": "abcdef",
+    "normalizedB": "abcdeg",
+    "similarity": 0.8333333333333334,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "abcdefghijklmn",
+    "b": "abcdefghijklxy",
+    "normalizedA": "abcdefghijklmn",
+    "normalizedB": "abcdefghijklxy",
+    "similarity": 0.8571428571428572,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "abcdefghijklm",
+    "b": "abcdefghijkxy",
+    "normalizedA": "abcdefghijklm",
+    "normalizedB": "abcdefghijkxy",
+    "similarity": 0.8461538461538461,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "abcdefghijklmnopqrstuvwxyza",
+    "b": "abcdefghijklmnopqrstuvwqqqq",
+    "normalizedA": "abcdefghijklmnopqrstuvwxyza",
+    "normalizedB": "abcdefghijklmnopqrstuvwqqqq",
+    "similarity": 0.8518518518518519,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "abcdefghijklmnopqrstuvwxyz",
+    "b": "abcdefghijklmnopqrstuvabcd",
+    "normalizedA": "abcdefghijklmnopqrstuvwxyz",
+    "normalizedB": "abcdefghijklmnopqrstuvabcd",
+    "similarity": 0.8461538461538461,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "abcdefghijklmnopqrst",
+    "b": "abcdefghijklmnopqxyz",
+    "normalizedA": "abcdefghijklmnopqrst",
+    "normalizedB": "abcdefghijklmnopqxyz",
+    "similarity": 0.85,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "abcdefghijklmnopqrst",
+    "b": "abcdefghijklmnopqrxy",
+    "normalizedA": "abcdefghijklmnopqrst",
+    "normalizedB": "abcdefghijklmnopqrxy",
+    "similarity": 0.9,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "abcdefghijklmnopqrst",
+    "b": "abcdefghijklmnopwxyz",
+    "normalizedA": "abcdefghijklmnopqrst",
+    "normalizedB": "abcdefghijklmnopwxyz",
+    "similarity": 0.8,
+    "fuzzyMatch": false
+  },
+  {
+    "a": "abcdefghijklmnopqrstabcdefghijklmnopqrst",
+    "b": "abcdefghijklmnopqrstabcdefghijklmnxyzxyz",
+    "normalizedA": "abcdefghijklmnopqrstabcdefghijklmnopqrst",
+    "normalizedB": "abcdefghijklmnopqrstabcdefghijklmnxyzxyz",
+    "similarity": 0.85,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "abcdefghijklmnopqrstabcdefghijklmnopqrstabcdefghijklmnopqrst",
+    "b": "abcdefghijklmnopqrstabcdefghijklmnopqrstabcdefghijkxyzxyzxyz",
+    "normalizedA": "abcdefghijklmnopqrstabcdefghijklmnopqrstabcdefghijklmnopqrst",
+    "normalizedB": "abcdefghijklmnopqrstabcdefghijklmnopqrstabcdefghijkxyzxyzxyz",
+    "similarity": 0.85,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "abcdefghijklmnopqrst",
+    "b": "abcdefghijklmnopqrstuvw",
+    "normalizedA": "abcdefghijklmnopqrst",
+    "normalizedB": "abcdefghijklmnopqrstuvw",
+    "similarity": 0.8695652173913043,
+    "fuzzyMatch": true
+  },
+  {
+    "a": "abcdefghij",
+    "b": "abcdefghijklm",
+    "normalizedA": "abcdefghij",
+    "normalizedB": "abcdefghijklm",
+    "similarity": 0.7692307692307692,
+    "fuzzyMatch": false
+  }
+]
