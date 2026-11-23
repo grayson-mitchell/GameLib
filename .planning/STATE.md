@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-56a-PLAN.md
-last_updated: "2026-11-23T20:24:21.722Z"
+stopped_at: Completed 87-56b-PLAN.md
+last_updated: "2026-11-23T20:46:28.850Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 3e9429685f7f3dbd914ea68ba12e5a969c36e320
+state_head: 4ccc065e01ecca4a6946ea5d54dc7f5be9b8bba8
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 58 of 62 (87-56a complete 2026-11-24; 87-56b next, then 87-56c, before 87-57)
+Plan: 59 of 62 (87-56b complete 2026-11-24; 87-56c next, before 87-57)
 Status: Ready to execute (87-56b next via /gsd-execute-phase 87)
-Last activity: 2026-11-24 — Completed 87-56a (clusters A and B over Rust; 87-52 regression closed)
+Last activity: 2026-11-24 — Completed 87-56b (Steam caller halves relocated, runtime member reads gone, two twins with shared vectors)
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -466,6 +466,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P54 | 100 min | 2 tasks | 36 files |
 | Phase 87 P55 | 19 min | 2 tasks | 62 files |
 | Phase 87 P56a | one session | 3 tasks | 36 files |
+| Phase 87 P56b | n/a | 3 tasks | 51 files |
 
 ## Accumulated Context
 
@@ -999,6 +1000,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-56: SVC-02 stays open; enginePortComplete is written and red, noIntraPhaseRowsLeft and the engine-state/engine-runtime boot steps and the steam_engine_notices TS registration are carried to 87-56c
 - [Phase 87]: 87-56a: ToolSettingsResult lives in common/types/engine; the native check stays in TS, every other eligibility rule is Rust's
 - [Phase 87]: 87-56a: ensurePinnedEngineThroughRust takes clearStatus, run whenever Rust never sent its closing done; sync pinned-engine reads go through pinnedEngineReader over the twin
+- [Phase 87]: 87-56b: recordGameRunning answers Rust's boolean and falls back to the old ledger validity rule on a transport fault; setSteamEngineSelection carries the registry's validation into engineSelectionView
+- [Phase 87]: 87-56b: parseEngineOverride is pinned by override_twin.json (a function that never answers null or false does not fit engine_twin.json's anti-vacuity rule); crossoverBinDirSync is a bottle_twin.json group
+- [Phase 87]: 87-56b: createRunTool moved to testUtils/realRunTool.ts (test support) so engine/runTool.ts is gone before 87-56c
 
 ### Pending Todos
 
@@ -1280,8 +1284,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T20:24:19.042Z
-Stopped at: Completed 87-56a-PLAN.md
+Last session: 2026-11-23T20:46:26.215Z
+Stopped at: Completed 87-56b-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

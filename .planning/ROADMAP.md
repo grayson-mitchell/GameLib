@@ -653,7 +653,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 57/62 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder
+**Plans:** 58/62 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder
 
 Plans:
 **Wave 1**
@@ -786,7 +786,7 @@ Plans:
 - [x] 87-56a-PLAN.md — Tool settings and the pinned-engine download reach Rust; the 87-52 Winetricks/Run EXE live-selection regression closed; engineOutsideImporters map
 
 **Wave 37** *(blocked on Wave 36 completion)*
-- [ ] 87-56b-PLAN.md — Steam caller halves relocated to steam/engine, runtime member reads gone, crossoverBinDirSync and parseEngineOverride twins
+- [x] 87-56b-PLAN.md — Steam caller halves relocated to steam/engine, runtime member reads gone, crossoverBinDirSync and parseEngineOverride twins
 
 **Wave 38** *(blocked on Wave 37 completion)*
 - [ ] 87-56c-PLAN.md — Engine runtime and state out of boot and deps, notices store registration and services builder deleted, src/backend/engine deleted; enginePortComplete green
