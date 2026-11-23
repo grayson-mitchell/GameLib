@@ -819,7 +819,9 @@ impl SecretSource for Stuck {
 }
 
 /// WR-04: a Keychain read or write that is parked must not keep a guarded op from answering
-/// `<op>:shutdown`, nor keep the op's `info` registrant held.
+/// `<op>:shutdown`, nor keep the op's `info` registrant held. WR-65: the abandoned Keychain call
+/// itself still holds an `info-keychain` registrant until it really returns, so the exit drain waits
+/// for it (within its budget) instead of cutting a write short.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn a_parked_keychain_call_does_not_hold_an_op_past_shutdown() {
     use gamelib_info::dispatch;
@@ -854,11 +856,112 @@ async fn a_parked_keychain_call_does_not_hold_an_op_past_shutdown() {
             .unwrap();
         canceller.await.unwrap();
         assert_eq!(out, Err(format!("{op}:shutdown")));
-        assert!(
-            ctx.shutdown.drain(Duration::from_millis(500)).is_empty(),
-            "{op} must release its registrant"
+        // The op's own `info` registrant is gone, but the Keychain call is still parked on its pool
+        // thread and holds `info-keychain`: a drain started now runs to its budget and names it.
+        assert_eq!(
+            ctx.shutdown.drain(Duration::from_millis(200)),
+            ["info-keychain"],
+            "{op}: the parked Keychain call must hold its registrant until it returns"
         );
-        // Let the parked pool thread finish.
-        let _ = release_tx.send(());
+        // The Keychain answers; the call returns and only then releases its registrant.
+        release_tx.send(()).unwrap();
+        assert!(
+            ctx.shutdown.drain(Duration::from_secs(2)).is_empty(),
+            "{op} must release its registrant once the Keychain call returns"
+        );
     }
+}
+
+/// A source whose writes land at once but whose call then parks until the test releases that value,
+/// so a test can order when a write reaches the Keychain apart from when its call returns.
+struct LandThenPark {
+    inner: MemorySecretSource,
+    entered: Mutex<std::sync::mpsc::Sender<String>>,
+    gates: Mutex<std::collections::HashMap<String, std::sync::mpsc::Receiver<()>>>,
+}
+
+impl SecretSource for LandThenPark {
+    fn get(&self, slot: Slot) -> Result<Option<String>, String> {
+        self.inner.get(slot)
+    }
+    fn set(&self, slot: Slot, value: &str) -> Result<(), String> {
+        self.inner.set(slot, value)?;
+        self.entered
+            .lock()
+            .unwrap()
+            .send(value.to_string())
+            .unwrap();
+        let gate = self.gates.lock().unwrap().remove(value).unwrap();
+        let _ = gate.recv();
+        Ok(())
+    }
+    fn delete(&self, slot: Slot) -> Result<(), String> {
+        self.inner.delete(slot)
+    }
+}
+
+/// WR-66: two overlapping `set_async` calls must leave the cache holding what the Keychain holds.
+/// Without serialised writers both writes land (A, then B, so the Keychain holds B) and the calls
+/// return in reverse order (B, then A), so A's cache update runs last and the cache says A for the
+/// rest of the session.
+#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
+async fn overlapping_async_sets_leave_the_cache_holding_what_the_keychain_holds() {
+    use std::sync::mpsc::channel;
+    let (entered_tx, entered_rx) = channel();
+    let (a_tx, a_rx) = channel();
+    let (b_tx, b_rx) = channel();
+    let source = Arc::new(LandThenPark {
+        inner: MemorySecretSource::new(),
+        entered: Mutex::new(entered_tx),
+        gates: Mutex::new(
+            [("a".to_string(), a_rx), ("b".to_string(), b_rx)]
+                .into_iter()
+                .collect(),
+        ),
+    });
+    let mut f = Fixture::new();
+    f.ctx.secrets = Some(source.clone());
+    let _home = f.home;
+    let ctx = Arc::new(f.ctx);
+    let save = |value: &'static str| {
+        let ctx = Arc::clone(&ctx);
+        tokio::spawn(async move { ctx.sgdb_key.set_async(&ctx, "t", value).await })
+    };
+
+    // A's write lands and its call parks.
+    let a = save("a");
+    assert_eq!(
+        entered_rx.recv_timeout(Duration::from_secs(5)).unwrap(),
+        "a"
+    );
+    // B starts while A is parked. Unserialised, B's write lands too and the Keychain holds B.
+    let b = save("b");
+    let b_overlapped = entered_rx.recv_timeout(Duration::from_millis(300)).is_ok();
+    // Release in reverse order: B's call returns first, then A's.
+    b_tx.send(()).unwrap();
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    a_tx.send(()).unwrap();
+    let timeout = Duration::from_secs(5);
+    tokio::time::timeout(timeout, a)
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    tokio::time::timeout(timeout, b)
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+
+    let held = source.inner.get(Slot::SteamGridDb).unwrap();
+    assert_eq!(held.as_deref(), Some("b"));
+    assert_eq!(
+        ctx.sgdb_key.get_async(&ctx, "t").await.unwrap(),
+        held,
+        "the cache must hold what the Keychain holds"
+    );
+    assert!(
+        !b_overlapped,
+        "a second writer must not reach the Keychain while the first is still in it"
+    );
 }
