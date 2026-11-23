@@ -11,6 +11,7 @@ pub mod ctx;
 pub mod extract;
 pub mod manager;
 pub mod runtimes;
+pub mod wine_cmd;
 
 /// The cancel token an install takes (`manager::install::install`), re-exported so the shell, which
 /// owns the renderer's cancel, needs no `tokio-util` of its own.
@@ -34,6 +35,7 @@ pub const OPS: &[&str] = &[
     "wine_releases_info_ready",
     "wine_runtime_download",
     "wine_runtime_is_installed",
+    "wine_valid",
 ];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
@@ -89,6 +91,15 @@ async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String>
             manager::releases::update_lists_if_outdated(ctx, &info).await;
             Ok(Value::Null)
         }
+        "wine_valid" => {
+            let (wine, host) = wine_valid_args(op, args)?;
+            Ok(Value::Bool(wine_cmd::valid::valid_wine(
+                wine.as_ref(),
+                ctx.engine.platform,
+                host.darwin_release.as_deref(),
+                &|path| path.exists(),
+            )))
+        }
         "wine_runtime_download" => {
             let name = runtime_name_arg(op, args)?;
             Ok(Value::Bool(runtimes::download(ctx, name).await))
@@ -99,6 +110,30 @@ async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String>
         }
         _ => Err(format!("unknown op: {op}")),
     }
+}
+
+/// `wine_valid`'s arguments: the `WineInstallation` to check (or `null`, no wine selected) and,
+/// optionally, the [`wine_cmd::WineHost`] facts the shell read (the Darwin release). A bad shape is
+/// a fixed `<op>:bad-args`.
+fn wine_valid_args(
+    op: &str,
+    args: &[Value],
+) -> Result<(Option<wine_cmd::WineInstallation>, wine_cmd::WineHost), String> {
+    let bad = || format!("{op}:bad-args");
+    let (wine, host) = match args {
+        [wine] => (wine, None),
+        [wine, host] => (wine, Some(host)),
+        _ => return Err(bad()),
+    };
+    let wine = match wine {
+        Value::Null => None,
+        other => Some(serde_json::from_value(other.clone()).map_err(|_| bad())?),
+    };
+    let host = match host {
+        None | Some(Value::Null) => wine_cmd::WineHost::default(),
+        Some(host) => serde_json::from_value(host.clone()).map_err(|_| bad())?,
+    };
+    Ok((wine, host))
 }
 
 /// The one string argument of a runtime op: exactly one string that is a [`runtimes::valid_name`].
