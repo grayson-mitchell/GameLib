@@ -7,7 +7,7 @@
 //! Crate-only (D-06): op `wine_dxvk_install_remove` exists and nothing calls it. The TS tools path
 //! stays the only live DXVK path until 87-34 flips every DXVK writer in one plan (a TS and a Rust
 //! writer of `<tools>/<tool>` and `current_<tool>` at once is what D-06 forbids); the engine-trait
-//! implementation (`gamelib_engine::dxvk::DxvkInstaller`) lands in 87-29.
+//! implementation (`gamelib_engine::dxvk::DxvkInstaller`) is [`installer::WineDxvkInstaller`] (87-29).
 //!
 //! - [`install_tool`]: `installOrUpdateTool`, a GitHub release looked up, downloaded through the
 //!   `Fetch` seam, extracted through `extract_tar` and its version file written; the replaced
@@ -21,6 +21,7 @@
 
 pub mod dxvk;
 pub mod install_tool;
+pub mod installer;
 pub mod state;
 mod vulkan;
 

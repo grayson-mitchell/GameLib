@@ -1053,3 +1053,164 @@ async fn a_tool_version_file_that_names_a_path_is_refused_before_it_is_read() {
     assert_eq!(done, Err(DxvkError::Unreadable));
     assert!(wine.calls().is_empty());
 }
+
+// ---- the engine's DxvkInstaller seam (87-29, D-25 (a)) ---------------------------------------------
+
+use gamelib_wine::WineDxvkInstaller;
+use sha2::{Digest, Sha256};
+
+fn golden_case_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/golden/dxvk")
+}
+
+fn hex_sha256(path: &Path) -> String {
+    Sha256::digest(std::fs::read(path).unwrap())
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
+}
+
+/// Every file under `dir`, relative to `root`, as a `/`-joined path.
+fn files_under(root: &Path, dir: &Path, out: &mut Vec<String>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+            files_under(root, &path, out);
+        } else {
+            let rel = path.strip_prefix(root).unwrap();
+            out.push(
+                rel.components()
+                    .map(|c| c.as_os_str().to_string_lossy().into_owned())
+                    .collect::<Vec<_>>()
+                    .join("/"),
+            );
+        }
+    }
+}
+
+/// An engine context whose `dxvk` is a [`WineDxvkInstaller`] over `wine`. The wine context holds the
+/// engine context it was built from, so the installer's own context is a second one over the same
+/// directories (the shell breaks the same loop with a call-time lookup).
+fn engine_with_installer(wine: Arc<WineCtx>, runner: Arc<Wine>) -> EngineCtx {
+    let paths = wine.engine.paths.clone();
+    let platform = wine.engine.platform;
+    let installer = WineDxvkInstaller::new(wine).with_runner(runner as Arc<dyn WineRunner>);
+    EngineCtx::new(
+        Arc::new(StoreHost::new()),
+        Arc::new(SystemClock),
+        platform,
+        paths,
+        Shutdown::new(),
+    )
+    .with_dxvk(Arc::new(installer))
+}
+
+/// The tracer of 87-29: the golden macOS install ("tools directory already holds the build") driven
+/// through `EngineCtx.dxvk.install_remove`, the way the engine switch calls it, leaves the files
+/// `golden_dxvk` pins for the same case (same paths, same sha256).
+#[tokio::test]
+async fn the_engine_dxvk_trait_installs_the_macos_golden_tree() {
+    let bed = bed_with(Platform::Mac, None, None, false);
+    let root = bed.home.root().to_path_buf();
+    let dir = golden_case_dir();
+    let cases: Value =
+        serde_json::from_slice(&std::fs::read(dir.join("cases.json")).unwrap()).unwrap();
+    let cases = cases
+        .as_array()
+        .cloned()
+        .or_else(|| cases["cases"].as_array().cloned())
+        .unwrap();
+    let case = cases
+        .iter()
+        .find(|c| c["id"] == "mac-dxvk-install-from-tools")
+        .expect("the golden case");
+
+    let tools = bed.tools();
+    let expand = |text: &str| {
+        text.replace("<HOME>", &root.to_string_lossy())
+            .replace("<TOOLS>", &tools.to_string_lossy())
+    };
+    for entry in case["seed"].as_array().unwrap() {
+        let path = PathBuf::from(expand(entry["path"].as_str().unwrap()));
+        if entry["dir"] == true {
+            std::fs::create_dir_all(&path).unwrap();
+        } else {
+            write(&path, entry["text"].as_str().unwrap());
+        }
+    }
+
+    let wine = Arc::new(Wine::healthy());
+    let engine = engine_with_installer(Arc::new(bed.ctx), Arc::clone(&wine));
+    let done = engine
+        .dxvk
+        .install_remove(DxvkRequest {
+            settings: json!({
+                "winePrefix": root.join("prefix").to_string_lossy(),
+                "wineVersion": expand_value(&case["wineVersion"], &expand),
+            }),
+            tool: DxvkTool::Dxvk,
+            action: DxvkAction::Backup,
+            source: None,
+        })
+        .await;
+    assert!(done, "the golden returned true");
+
+    // The tree the golden pinned: every file it lists is there with its hash, and the prefix and tools
+    // directories hold nothing else.
+    let golden: Value = serde_json::from_slice(
+        &std::fs::read(dir.join("expected/mac-dxvk-install-from-tools/tree.json")).unwrap(),
+    )
+    .unwrap();
+    let mut want: Vec<String> = Vec::new();
+    for entry in golden.as_array().unwrap() {
+        if entry["kind"] != "file" {
+            continue;
+        }
+        let rel = entry["path"].as_str().unwrap();
+        assert_eq!(
+            hex_sha256(&root.join(rel)),
+            entry["sha256"].as_str().unwrap(),
+            "{rel}"
+        );
+        want.push(rel.to_string());
+    }
+    want.sort();
+    let mut have = Vec::new();
+    files_under(&root, &root.join("prefix"), &mut have);
+    files_under(&root, &root.join(".config/GameLib/tools"), &mut have);
+    have.sort();
+    assert_eq!(have, want);
+
+    // The wine core was reached through the trait: one `reg add` per DLL name of the build.
+    let adds = wine.verbs().iter().filter(|v| *v == "add").count();
+    assert_eq!(adds, 3, "d3d9, d3d11 and dxgi");
+}
+
+fn expand_value(value: &Value, expand: &dyn Fn(&str) -> String) -> Value {
+    match value {
+        Value::String(text) => Value::String(expand(text)),
+        Value::Object(map) => Value::Object(
+            map.iter()
+                .map(|(k, v)| (k.clone(), expand_value(v, expand)))
+                .collect(),
+        ),
+        other => other.clone(),
+    }
+}
+
+/// A [`DxvkError`] is the TS rejection; the trait answers a plain `bool`, so it is `false` here.
+#[tokio::test]
+async fn the_engine_dxvk_trait_answers_false_for_an_install_that_errors() {
+    let bed = bed();
+    bed.seed();
+    // `latest_dxvk` names a path: `install_remove` answers `Err(Unreadable)`.
+    write(&bed.tools().join("dxvk/latest_dxvk"), "../../..");
+    let request = bed.request(DxvkAction::Backup, None);
+    let wine = Arc::new(Wine::healthy());
+    let engine = engine_with_installer(Arc::new(bed.ctx), Arc::clone(&wine));
+    assert!(!engine.dxvk.install_remove(request).await);
+    assert!(wine.calls().is_empty());
+}

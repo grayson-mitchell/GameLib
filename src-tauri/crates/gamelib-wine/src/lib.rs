@@ -19,6 +19,10 @@ pub mod wine_cmd;
 /// owns the renderer's cancel, needs no `tokio-util` of its own.
 pub use tokio_util::sync::CancellationToken;
 
+/// The engine's DXVK seam implemented over this crate's tools (87-29, D-25 (a)); the shell resolves it
+/// at call time so `gamelib-engine` never names this crate.
+pub use tools::installer::WineDxvkInstaller;
+
 use ctx::WineCtx;
 use serde_json::Value;
 use std::future::Future;
