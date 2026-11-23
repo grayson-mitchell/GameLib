@@ -161,6 +161,27 @@ Copied verbatim from the orchestrator notes. Live checks and the two open user d
 - (from 87-31) Live: first releasesInfoReady logs exactly one "DXMT boot update: <word>" line, and the engine online flag arrives before it.
 - (from 87-31) Behaviour change: Mac staging install rpc now awaits DXMT fetch+copy (TS ran it detached).
 - (from 87-53) Live: a real engine dialog from the renderer -> ack -> a display=shown line in gamelib.log.
+- (from 87-34) Live: toggle DXVK / DXVK-NVAPI / VKD3D on a real Wine prefix (not run by executor).
+- (from 87-35) Live: a Winetricks apply / launch with known fixes on a real prefix (not run by executor).
+- (from 87-36) Live: a Wine tool button (winecfg/runExe), Run installer, known-fix launch, and a Steam-game refusal on a real prefix (coverage D5).
+- (from 87-37) Live: engine release decisions against a wine-releases list a real Rust refresh just wrote (<userData>/store/wine-downloader-info.json) (coverage D5).
+- (DECISION from 87-38) Unreadable bottle marker: plan said "kept, never reset", but the 87-11 goldens record the TS overwriting it; executor followed the goldens (reconcile/record_pinned rewrite an unreadable marker; only `newer` is never touched). Stricter behaviour = one-line change in gate_allows_write + two goldens become deltas.
+- (from 87-39) Live: CrossOver bottle create / wineserver kill / created-bottle removal on a real CrossOver (coverage D6).
+- (from 87-42) Live: a Steam launch, Steam install and a DRM launch on the Mac through the Rust bottle ops (prepare/switch, ledger, selection view).
+- (from 87-42) Known limit: a fallback-bottle cancel that lands before Rust registers the cancelId is lost; the creation then runs to its end.
+- (from 87-44) Live: real CrossOver licence demo-status probe, plutil build read and codesign on a bundle via run_tool (coverage D5).
+- (from 87-45) Live: the production CrossOver pre-flight (G29 two-probe rule) on a real Mac (coverage D5).
+- (from 87-47) Live: a real first-need download of the pinned fallback engine (~228 MB) with progress in the renderer (coverage D5).
+- (from 87-48) Live: boot with a stranded `<tools>/steam-engines/.tmp-*` dir — expect one shell line `engine temp sweep: <word> (removed <n>)` and the dir gone.
+- (DECISION from 87-48) The shell has no EngineLog (ctx.log is None in the app), so Rust engine log lines (e.g. "Engine: removed N", refusals) go nowhere in the app. Wiring an engine log into the uploaded gamelib.log is a privacy decision (lines may carry paths) — unowned so far.
+- (from 87-49) Live: dismiss an engine notice (now a native Rust channel); confirm the TS sidecar's store mirror sees it and it stays dismissed after restart. A real corrupt notices file leaves the badge usable (Rust keeps the file byte-for-byte and answers {ok:false} to a dismissal it can't record — TS replaced the file).
+- (from 87-50) Live: engine refusal dialog raises the window every time; toast and notice never raise; a dialog ack reaches Rust (engine:<n> ack id) — coverage D4.
+- (from 87-51) Live: a launch deadline firing (180 s, no game process) shows the notice without raising the window; process watch sees the real game pid (D5). Note the deadline/watch lines (cancelled/fired/stood down, gameProcessWatch ...) reach no log until the engine-log decision.
+- (from 87-52) Live: a non-Steam launch through the Rust engine step (engine logLines in gamelib.log and the game log), GOG/Amazon setup, engine badge (D6).
+- (REGRESSION RISK from 87-52, UNOWNED) During a live non-Steam launch on a fallback engine, Winetricks / Run EXE target resolves from the stored override, not the launch's engine: engine/toolSettings.ts reads the TS registry/overlay, and nothing mirrors the Rust selection into it. No plan 87-53..56 names switching winetricksTarget/gameCommandFacts to Rust tool_settings.
+- (LOG GAP now real from 87-52) Rust-only step.warn lines (no valid prefix, bottle could not be created, launch blocked offline, override unavailable, pin table unreadable, selection rejected, could not switch back to CrossOver, DXVK setup failed, cannot switch engine) + registry/ledger + deadline/watch lines reach no log. TS equivalents did. Refusal dialogs still show.
+- (from 87-54) Live: a real Steam bridge launch on the Mac: deadline firing end to end via engineDeadlineFired, overlay notices, engine badge after a Steam launch (D6).
+- (from 87-55) Live: a real DRM runner clone through Rust run_tool, an abort mid-clone, and a cancel racing registration (live-gate item 1).
 
 ### Carry-forward notes (carry.md)
 
@@ -192,7 +213,7 @@ Copied verbatim from the orchestrator notes. Live checks and the two open user d
 - (from 87-54) Steam bridge decision/creation/pre-flight/state/deadline now go through Rust shims (enginewine/decision.ts, state.ts, deadline.ts). engine_cx_resolve_bin_dir has its channel and shell arm but NO shim yet — 87-55's. engine_decide_launch and engine_preflight_crossover are on the sidecar's unbounded list.
 - (from 87-54) Another session may have UNCOMMITTED edits in .planning/STATE.md and .planning/ROADMAP.md (phase 90 split, total_phases, state_head). Commit only your own hunks (build them into the index, e.g. git add -p or apply a patch to the index); never sweep the other session's hunks in, never discard them.
 
-Note on the sentence "live checks and two open user decisions owed at 87-58": the live-checks file as supplied contains the three live-check lines above and no explicit open-decision lines; nothing was dropped in copying.
+The orchestrator kept its live-check list in two files; both are merged above (the first close-out pass saw only the three-line one). The open user decisions are the lines tagged DECISION, REGRESSION RISK and LOG GAP. The REGRESSION RISK (Winetricks / Run EXE target during a live fallback-engine launch) is now owned by 87-56a.
 
 ## Self-Check
 
