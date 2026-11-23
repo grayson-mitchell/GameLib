@@ -67,6 +67,7 @@ import {
   RUST_WINE_DXVK_INSTALL_REMOVE,
   RUST_ENGINE_BOTTLE_CREATE_FALLBACK,
   RUST_ENGINE_BOTTLE_PREPARE,
+  RUST_ENGINE_LAUNCH_SELECT,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,
@@ -194,6 +195,10 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * Wine, and `engine_bottle_create_fallback` runs `wineboot -i` (180 s) and `wineserver -w` (60 s) before it installs
  * DXVK: neither has a limit of its own beyond a cancel or the app shutdown. The wineserver stop (its own 15 s cap),
  * the marker, ledger, removal and selection ops are bounded.
+ *
+ * Thirteenth (Phase 87, 87-52): `engine_launch_select` is the whole launch-time engine step, which may download the
+ * 228 MB pinned engine and run the bottle switch: no limit of its own beyond the app shutdown. The deadline arm and the
+ * end of a launch are bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -229,6 +234,7 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_WINE_DXVK_INSTALL_REMOVE,
   RUST_ENGINE_BOTTLE_CREATE_FALLBACK,
   RUST_ENGINE_BOTTLE_PREPARE,
+  RUST_ENGINE_LAUNCH_SELECT,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,

@@ -124,6 +124,10 @@ import {
   RUST_ENGINE_LEDGER_MARK_RUNNING,
   RUST_ENGINE_LEDGER_MARK_STOPPED,
   RUST_ENGINE_SELECTION_CLEAR,
+  RUST_ENGINE_LAUNCH_SELECT,
+  RUST_ENGINE_LAUNCH_ARM_DEADLINE,
+  RUST_ENGINE_LAUNCH_END,
+  RUST_ENGINE_LAUNCH_SETTINGS_GET,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -935,7 +939,14 @@ export const rustInvokeArgs = {
   [RUST_ENGINE_BOTTLE_RECORD_CROSSOVER]: engineOpRequest,
   [RUST_ENGINE_LEDGER_MARK_RUNNING]: engineOpRequest,
   [RUST_ENGINE_LEDGER_MARK_STOPPED]: engineOpRequest,
-  [RUST_ENGINE_SELECTION_CLEAR]: engineOpRequest
+  [RUST_ENGINE_SELECTION_CLEAR]: engineOpRequest,
+  // Phase 87 (SVC-02, 87-52): the launch-time engine step of a non-Steam launch. One object each, decoded strictly by
+  // the crate (every request struct denies unknown fields; the runner, app name and title are length-bounded there and
+  // the engine key is derived, never taken from the caller, T-87-53).
+  [RUST_ENGINE_LAUNCH_SELECT]: engineOpRequest,
+  [RUST_ENGINE_LAUNCH_ARM_DEADLINE]: engineOpRequest,
+  [RUST_ENGINE_LAUNCH_END]: engineOpRequest,
+  [RUST_ENGINE_LAUNCH_SETTINGS_GET]: engineOpRequest
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

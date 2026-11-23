@@ -264,5 +264,13 @@ pub(crate) fn dispatch_rust_channel(
             engine_dispatch::rpc_ledger_mark_stopped(args)
         }
         RustInvokeChannel::EngineSelectionClear => engine_dispatch::rpc_selection_clear(args),
+        RustInvokeChannel::EngineLaunchSelect => engine_dispatch::rpc_launch_select(args),
+        RustInvokeChannel::EngineLaunchArmDeadline => {
+            engine_dispatch::rpc_launch_arm_deadline(args)
+        }
+        RustInvokeChannel::EngineLaunchEnd => engine_dispatch::rpc_launch_end(args),
+        RustInvokeChannel::EngineLaunchSettingsGet => {
+            engine_dispatch::rpc_launch_settings_get(args)
+        }
     }
 }

@@ -164,6 +164,11 @@ const BOTTLES_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
   'src/backend/storeManagers/steam/gameBridgeLaunch.ts'
 ]
+/** Every non-test importer of `enginewine/launch.ts` (the check is per file, so every row of that file lists them all). */
+const LAUNCH_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/launchEngineStep.ts',
+  'src/backend/launcher.ts'
+]
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
   'src/backend/services/types.ts',
   'src/backend/sidecar/bootstrap.ts',
@@ -379,6 +384,42 @@ const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_ENGINE_SELECTION_CLEAR',
     callers: BOTTLES_SHIM_IMPORTERS,
     deletedBy: 96
+  },
+  // 87-52 (D-01, D-15): the launch shims. The launcher and the GOG and Amazon setup run the engine step of a non-Steam
+  // launch in Rust through `launchEngineStep.ts` (which narrows the reply and writes its lines) while Phase 88 still builds
+  // the argv and the environment in TS. The launcher's own arm of the deadline goes away with its launch (88); the setup
+  // runs, and the settings reads of every store manager, go in 92.
+  {
+    name: 'selectEngineForLaunch',
+    file: 'src/backend/enginewine/launch.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_LAUNCH_SELECT',
+    callers: LAUNCH_SHIM_IMPORTERS,
+    deletedBy: 92
+  },
+  {
+    name: 'armEngineLaunchDeadline',
+    file: 'src/backend/enginewine/launch.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_LAUNCH_ARM_DEADLINE',
+    callers: LAUNCH_SHIM_IMPORTERS,
+    deletedBy: 88
+  },
+  {
+    name: 'endEngineLaunch',
+    file: 'src/backend/enginewine/launch.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_LAUNCH_END',
+    callers: LAUNCH_SHIM_IMPORTERS,
+    deletedBy: 92
+  },
+  {
+    name: 'getLaunchSettings',
+    file: 'src/backend/enginewine/launch.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_LAUNCH_SETTINGS_GET',
+    callers: LAUNCH_SHIM_IMPORTERS,
+    deletedBy: 92
   },
   // 87-42 (D-24): the engine selection view, the write-through mirror of Rust's registry. The sync bridge reads
   // (`getBridgeBottleSettings` and the launch settings) stay sync; `registerEngineSelectionView` installs the one

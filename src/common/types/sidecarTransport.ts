@@ -1302,6 +1302,29 @@ export const RUST_ENGINE_LEDGER_MARK_STOPPED =
 export const RUST_ENGINE_SELECTION_CLEAR = 'engine_selection_clear' as const
 
 /**
+ * Phase 87 (SVC-02, 87-52): the launch-time engine step of a non-Steam launch, reached through the shims in
+ * `enginewine/launch.ts` (D-01, D-15). Every one takes one object the crate decodes strictly.
+ * `engine_launch_select` runs the whole step (eligibility, the effective engine, the prefix, the game's own bottle,
+ * the offline refusal, the decision, the first-need pinned-engine download, the bottle switch and the registry) and
+ * answers `{kind, key?, selection?, prefix?, logLines?, launchSettings?}`; it may download the 228 MB pinned engine and
+ * wait on a dialog, so it has no limit of its own beyond the app shutdown (it joins the sidecar's unbounded list).
+ * `engine_launch_arm_deadline` arms the 180 s no-kill deadline and its process watch for a bottle-backed launch and
+ * answers `{armed, watching?}`; `engine_launch_end` releases everything a launch held and answers `null`; both are
+ * bounded (an in-memory table and one spawn handle).
+ */
+export const RUST_ENGINE_LAUNCH_SELECT = 'engine_launch_select' as const
+export const RUST_ENGINE_LAUNCH_ARM_DEADLINE =
+  'engine_launch_arm_deadline' as const
+export const RUST_ENGINE_LAUNCH_END = 'engine_launch_end' as const
+/**
+ * Phase 87 (87-52): `getLaunchSettings` over `{key, stored}`: the stored settings with the running launch's engine
+ * overlaid (a `null` key, or a key with no registered selection, answers the stored settings unchanged). Bounded: it
+ * reads the in-memory registry and the overlay context.
+ */
+export const RUST_ENGINE_LAUNCH_SETTINGS_GET =
+  'engine_launch_settings_get' as const
+
+/**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
  * the macOS bridge helper loads: the GameLib cache, else a snapshot of the Steam client's own copy
  * when it already hashes to the pin, else a fetch from Valve's client-update CDN (sha2vz, VZ decode,
@@ -1665,7 +1688,11 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_BOTTLE_RECORD_CROSSOVER,
   RUST_ENGINE_LEDGER_MARK_RUNNING,
   RUST_ENGINE_LEDGER_MARK_STOPPED,
-  RUST_ENGINE_SELECTION_CLEAR
+  RUST_ENGINE_SELECTION_CLEAR,
+  RUST_ENGINE_LAUNCH_SELECT,
+  RUST_ENGINE_LAUNCH_ARM_DEADLINE,
+  RUST_ENGINE_LAUNCH_END,
+  RUST_ENGINE_LAUNCH_SETTINGS_GET
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

@@ -722,6 +722,10 @@ engine_op_arms! {
     rpc_ledger_mark_running => "engine_ledger_mark_running",
     rpc_ledger_mark_stopped => "engine_ledger_mark_stopped",
     rpc_selection_clear => "engine_selection_clear",
+    rpc_launch_select => "engine_launch_select",
+    rpc_launch_arm_deadline => "engine_launch_arm_deadline",
+    rpc_launch_end => "engine_launch_end",
+    rpc_launch_settings_get => "engine_launch_settings_get",
 }
 
 #[cfg(test)]
@@ -1194,6 +1198,10 @@ mod tests {
             (rpc_ledger_mark_running, "engine_ledger_mark_running"),
             (rpc_ledger_mark_stopped, "engine_ledger_mark_stopped"),
             (rpc_selection_clear, "engine_selection_clear"),
+            (rpc_launch_select, "engine_launch_select"),
+            (rpc_launch_arm_deadline, "engine_launch_arm_deadline"),
+            (rpc_launch_end, "engine_launch_end"),
+            (rpc_launch_settings_get, "engine_launch_settings_get"),
         ] {
             for bad in [
                 vec![],

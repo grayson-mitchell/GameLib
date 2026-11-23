@@ -1,5 +1,5 @@
 /**
- * Phase 61-14 (T-61-43): source census of the settings reads on the shared launcher's launch path.
+ * Phase 61-14 (T-61-43), 87-52: source census of the settings reads on the shared launcher's launch path.
  * A read that skips the overlay would launch the wrong Wine; this fails the build instead.
  *
  * The census of the TS tools' own settings reads (T-61-63, `tools/index.ts`) went with the TS tools in
@@ -31,8 +31,9 @@ describe('launcher.ts overlay census', () => {
     const gameReads = body.match(/game\.getSettings\(\)/g) ?? []
     expect(gameReads).toHaveLength(1)
     expect(reads.length).toBeGreaterThanOrEqual(1)
+    // 87-52: the overlay is Rust's registry, read through the async shim (`launchSettingsFor`).
     expect(body).toMatch(
-      /getLaunchSettings\(\s*engineKeyFor\([^)]*\),\s*await game\.getSettings\(\)\s*\)/
+      /launchSettingsFor\(\s*deps,\s*engineKeyFor\([^)]*\),\s*await game\.getSettings\(\)\s*\)/
     )
   })
 
@@ -40,9 +41,10 @@ describe('launcher.ts overlay census', () => {
     const body = bodyOf(launcher, 'async function runLaunchEventCallback(')
     const gameReads = body.match(/game\.getSettings\(\)/g) ?? []
     expect(gameReads).toHaveLength(1)
-    const stepAt = body.indexOf('selectEngineForLaunch(')
+    const stepAt = body.indexOf('runLaunchEngineStep(')
     expect(stepAt).toBeGreaterThan(body.indexOf('game.getSettings()'))
-    const overlayAt = body.indexOf('getLaunchSettings(')
+    // 87-52: the settings the launch runs with are the select reply's, read from the step after it ran.
+    const overlayAt = body.indexOf('engineStep.launchSettings')
     expect(overlayAt).toBeGreaterThan(stepAt)
     // every consumer of the settings follows the overlay
     expect(body.indexOf('runBeforeLaunchScript(')).toBeGreaterThan(overlayAt)
@@ -52,7 +54,7 @@ describe('launcher.ts overlay census', () => {
   it('the engine step follows the log writer and precedes the Wine check', () => {
     const body = bodyOf(launcher, 'async function runLaunchEventCallback(')
     const logAt = body.indexOf('createGameLogWriter(')
-    const stepAt = body.indexOf('selectEngineForLaunch(')
+    const stepAt = body.indexOf('runLaunchEngineStep(')
     const checkAt = body.indexOf('checkWineBeforeLaunch(')
     expect(logAt).toBeGreaterThan(-1)
     expect(stepAt).toBeGreaterThan(logAt)
@@ -72,11 +74,13 @@ describe('launcher.ts overlay census', () => {
     const body = bodyOf(launcher, 'async function runLaunchEventCallback(')
     expect(body).toMatch(/\.finally\(async \(\) => \{[\s\S]*releaseEngine\(\)/)
     expect(body).toMatch(/catch \(error\) \{[\s\S]*releaseEngine\(\)/)
-    expect(body).toContain('endEngineLaunch(deps.engineRuntime, engineKey)')
+    expect(body).toContain('endEngineLaunch(deps, engineKey)')
   })
 
-  it('imports engine modules only (no store manager reach beyond the index)', () => {
-    expect(launcher).toMatch(/from '\.\/engine\/launchEngine'/)
+  it('reaches the engine step through the Rust shims only (no store manager reach beyond the index)', () => {
+    expect(launcher).toMatch(/from '\.\/enginewine\/launch'/)
+    expect(launcher).toMatch(/from '\.\/launchEngineStep'/)
+    expect(launcher).not.toMatch(/from '\.\/engine\/launchEngine'/)
     expect(launcher).not.toMatch(/from '\.\/storeManagers\/(?!index)/)
   })
 })

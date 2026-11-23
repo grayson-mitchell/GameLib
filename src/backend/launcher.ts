@@ -44,10 +44,7 @@ import {
   logWarning
 } from './logger'
 import type { EngineStateService } from './engine/engineState'
-import {
-  engineServicesFrom,
-  type EngineServicesSource
-} from './services/engineServices'
+import type { EngineServicesSource } from './services/engineServices'
 import { gatherGameCommandFacts } from './services/gameCommandFacts'
 import { runWineCommandForGame } from './sidecar/engineWineResolvers'
 import type {
@@ -90,11 +87,8 @@ import {
 } from './constants/environment'
 import { formatSystemInfo } from './utils/systeminfo'
 import { gameAnticheatInfo } from './info/anticheat'
-import {
-  armEngineLaunchDeadline,
-  endEngineLaunch,
-  selectEngineForLaunch
-} from './engine/launchEngine'
+import { armEngineLaunchDeadline, endEngineLaunch } from './enginewine/launch'
+import { launchSettingsFor, runLaunchEngineStep } from './launchEngineStep'
 import { engineKeyFor } from './enginewine/twin'
 
 import type { AppRuntimeSlice } from './appRuntime'
@@ -302,14 +296,21 @@ async function runLaunchEventCallback(
   const isNative = game.isNative()
 
   // Phase 61 (D-05, D-13): on macOS every non-Steam Windows launch runs the engine step before
-  // any Wine check. It returns the engine this launch uses; nothing is persisted (D-08).
-  const engineStep = await selectEngineForLaunch(
-    engineServicesFrom(engineSource(deps)),
-    game,
+  // any Wine check. It returns the engine this launch uses; nothing is persisted (D-08). The step is
+  // Rust's (87-52, D-01): the reply carries the settings this launch runs with and the lines for the log.
+  const engineStep = await runLaunchEngineStep(
+    deps,
     {
-      offline: !deps.onlineMonitor.isOnline(),
-      logWriter
-    }
+      runner,
+      appName,
+      title,
+      installPath: gameInfo.install?.install_path,
+      platform: gameInfo.install?.platform,
+      isNative,
+      settings: gameSettings,
+      offline: !deps.onlineMonitor.isOnline()
+    },
+    logWriter
   )
   if (engineStep.kind === 'refused') {
     sendGameStatusUpdate(deps, {
@@ -325,14 +326,18 @@ async function runLaunchEventCallback(
   const engineControlled = engineStep.kind === 'use'
   const engineKey = engineStep.kind === 'use' ? engineStep.key : null
   const releaseEngine = async () => {
-    if (engineKey !== null) await endEngineLaunch(deps.engineRuntime, engineKey)
-  }
-  if (engineControlled) {
-    // Everything that follows sees the overlay, never the stored settings.
-    gameSettings = deps.engineRuntime.launchSettings.getLaunchSettings(
-      engineKey,
-      gameSettings
+    if (engineKey === null) return
+    // A release that fails (the app is quitting) must not replace the launch's own result or error.
+    await endEngineLaunch(deps, engineKey).catch((error: unknown) =>
+      logWarning(
+        `Engine: ${engineKey} could not release its launch: ${String(error)}`,
+        LogPrefix.Backend
+      )
     )
+  }
+  if (engineStep.kind === 'use') {
+    // Everything that follows sees the overlay, never the stored settings.
+    gameSettings = engineStep.launchSettings
   }
 
   // check if isNative, if not, check if wine is valid. An engine-controlled launch skips this:
@@ -930,7 +935,8 @@ async function prepareWineLaunch(
 }> {
   const gameInfo = game.getGameInfo()
 
-  const gameSettings = deps.engineRuntime.launchSettings.getLaunchSettings(
+  const gameSettings = await launchSettingsFor(
+    deps,
     engineKeyFor(gameInfo.runner, gameInfo.app_name),
     await game.getSettings()
   )
@@ -1168,10 +1174,18 @@ async function prepareWineLaunch(
 
   // Phase 61-16 (D-18): after installFixes and the known-fix overlay env, so prerequisite
   // installers never count against the deadline (RESEARCH Pitfall 3).
-  armEngineLaunchDeadline(
-    engineServicesFrom(engineSource(deps)),
-    game,
-    engineKeyFor(gameInfo.runner, gameInfo.app_name)
+  // The arm is Rust's (87-52): a plain-prefix launch and a launch with no registered selection arm nothing, and a
+  // failed call must not fail a launch that is otherwise ready, so it is logged and the launch goes on.
+  await armEngineLaunchDeadline(deps, {
+    runner: gameInfo.runner,
+    appName: gameInfo.app_name,
+    title: gameInfo.title,
+    installPath: gameInfo.install?.install_path
+  }).catch((error: unknown) =>
+    logWarning(
+      `Engine: the launch deadline could not be armed: ${String(error)}`,
+      LogPrefix.Backend
+    )
   )
 
   return {

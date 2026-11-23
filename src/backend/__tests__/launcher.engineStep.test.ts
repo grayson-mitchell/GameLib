@@ -1,9 +1,11 @@
 /**
- * Phase 61-14 (D-05, D-08, D-13): the engine step in launchEventCallback.
+ * Phase 61-14 (D-05, D-08, D-13), 87-52 (D-01): the engine step in launchEventCallback.
  *
- * The engine modules and the Wine validity check are mocked; what is asserted is the
- * launcher's wiring: order, skipping the self-healing Wine check for an engine-controlled
- * launch, the overlay reaching the launch, and release of the selection on every exit.
+ * The step is Rust's, so the test drives the launcher's shims with a fake `requestRustInvoke` that returns
+ * recorded replies of `engine_launch_select` and records every `engine_launch_end`. The Wine validity check is
+ * mocked; what is asserted is the launcher's wiring: order, the request the step is sent, the reply's log lines
+ * reaching the log writer, skipping the self-healing Wine check for an engine-controlled launch, the reply's settings
+ * reaching the launch, and release of the selection on every exit.
  *
  * Mock implementations are assigned in beforeEach (jest.config.js sets resetMocks: true).
  */
@@ -38,30 +40,45 @@ jest.mock('backend/info/recentGames', () => ({
 }))
 jest.mock('backend/runsForMe', () => ({ recordPlaySession: jest.fn() }))
 
-const selectMock = jest.fn()
-const endMock = jest.fn()
-jest.mock('backend/engine/launchEngine', () => ({
-  createLaunchEngineState: () => ({}),
-  armEngineLaunchDeadline: jest.fn(),
-  selectEngineForLaunch: (...a: unknown[]) => selectMock(...a),
-  endEngineLaunch: (...a: unknown[]) => endMock(...a)
-}))
-
-const overlayMock = jest.fn()
-
 import { createTestToolsSlices } from 'backend/testUtils/testServices'
 import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { createLauncher } from 'backend/launcher'
 import { sendGameStatusUpdate } from 'backend/utils'
-import { createGameLogWriter } from 'backend/logger'
+import { createGameLogWriter, logInfo } from 'backend/logger'
+import {
+  RUST_ENGINE_LAUNCH_END,
+  RUST_ENGINE_LAUNCH_SELECT,
+  RUST_ENGINE_LAUNCH_SETTINGS_GET
+} from 'common/types/sidecarTransport'
 
 const KEY = 'legendary:Quail'
 const STORED = { verboseLogs: true, wineVersion: { name: 'stored' } }
-const OVERLAY = { verboseLogs: true, wineVersion: { name: 'overlay' } }
+const OVERLAY = {
+  verboseLogs: true,
+  wineVersion: { name: 'overlay' },
+  afterLaunchScriptPath: '/overlay/after.sh'
+}
+
+/** The reply of `engine_launch_select` the next launch gets, and every Rust call the launcher made. */
+let selectReply: unknown
+const rustCalls: { channel: string; args: unknown[] }[] = []
+const requestRustInvoke = ((channel: string, args: unknown[]) => {
+  rustCalls.push({ channel, args })
+  if (channel === RUST_ENGINE_LAUNCH_SELECT) {
+    calls.push('engineStep')
+    return Promise.resolve(selectReply)
+  }
+  if (channel === RUST_ENGINE_LAUNCH_END) return Promise.resolve(null)
+  return Promise.reject(new Error(`unscripted rust call ${channel}`))
+}) as never
+const callsOn = (channel: string) =>
+  rustCalls.filter((call) => call.channel === channel)
+const runScriptForGame = jest.fn()
 
 let logWriter: {
+  writeString: jest.Mock
   logInfo: jest.Mock
   logError: jest.Mock
   logWarning: jest.Mock
@@ -71,6 +88,8 @@ let launchMock: jest.Mock
 
 beforeEach(() => {
   calls.length = 0
+  rustCalls.length = 0
+  selectReply = { kind: 'skip' }
   // A fresh launcher (and so a fresh single-flight table) per test, as one per boot in production.
   launchEventCallback = buildLauncher().launchEventCallback
   globalSettingsMock.mockReturnValue({
@@ -79,6 +98,7 @@ beforeEach(() => {
     disablePlaytimeSync: true
   })
   logWriter = {
+    writeString: jest.fn().mockResolvedValue(undefined),
     logInfo: jest.fn().mockResolvedValue(undefined),
     logError: jest.fn().mockResolvedValue(undefined),
     logWarning: jest.fn().mockResolvedValue(undefined),
@@ -92,11 +112,6 @@ beforeEach(() => {
     calls.push('checkWine')
     return Promise.resolve(true)
   })
-  selectMock.mockImplementation(() => {
-    calls.push('engineStep')
-    return Promise.resolve({ kind: 'skip' })
-  })
-  overlayMock.mockImplementation(() => OVERLAY)
   launchMock = jest.fn(() => {
     calls.push('launch')
     return Promise.resolve(true)
@@ -117,24 +132,16 @@ beforeEach(() => {
 // The launcher is built from test deps (66.1-23): the manager table and hooks are plain fakes.
 const tsStore = { has: () => true, get: () => 0, set: jest.fn() }
 const slices = createTestToolsSlices()
-// The overlay read is a recording fake on the runtime's launch-settings registry.
-const engineRuntime = {
-  ...slices.engineRuntime,
-  launchSettings: {
-    ...slices.engineRuntime.launchSettings,
-    getLaunchSettings: (...a: unknown[]) => overlayMock(...a)
-  } as never
-}
 const buildLauncher = () =>
   createLauncher({
     ...slices,
-    engineRuntime,
+    requestRustInvoke,
     onlineMonitor: createTestOnlineMonitor({ online: false }),
     libraryManagers: {
       legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
     } as never,
     launchHooks: { legendary: {} } as never,
-    commandRunner: {} as never,
+    commandRunner: { runScriptForGame } as never,
     runner: { run: () => Promise.reject(new Error('unscripted run')) } as never,
     spawnAsync: (() => Promise.reject(new Error('unscripted spawn'))) as never,
     stores: { kvs: { tsStore }, wineManager: {}, runsForMe: {} } as never
@@ -143,85 +150,116 @@ let launchEventCallback: ReturnType<typeof buildLauncher>['launchEventCallback']
 
 const run = () => launchEventCallback({ appName: 'Quail', runner: 'legendary' })
 
-describe('launcher engine step (61-14)', () => {
-  it('runs the step once, after the log writer and before the Wine check', async () => {
+describe('launcher engine step (61-14, 87-52)', () => {
+  it('runs the step once, after the log writer and before the Wine check, sending the launch facts', async () => {
     await run()
-    expect(selectMock).toHaveBeenCalledTimes(1)
-    const [services, game, opts] = selectMock.mock.calls[0]
-    expect(services).toEqual(
-      expect.objectContaining({ spawnAsync: expect.any(Function) })
-    )
-    expect(game.getGameInfo().app_name).toBe('Quail')
-    expect(opts.logWriter).toBe(logWriter)
-    expect(typeof opts.offline).toBe('boolean')
+    expect(callsOn(RUST_ENGINE_LAUNCH_SELECT)).toHaveLength(1)
+    expect(callsOn(RUST_ENGINE_LAUNCH_SELECT)[0]?.args).toEqual([
+      {
+        runner: 'legendary',
+        appName: 'Quail',
+        title: 'Quail',
+        installPath: undefined,
+        platform: undefined,
+        isNative: false,
+        settings: STORED,
+        offline: true
+      }
+    ])
     expect(calls).toEqual(['logWriter', 'engineStep', 'checkWine', 'launch'])
   })
 
-  it("'use': skips the Wine check, applies the overlay, and releases after the launch", async () => {
-    selectMock.mockImplementation(() => {
-      calls.push('engineStep')
-      return Promise.resolve({
-        kind: 'use',
-        key: KEY,
-        selection: {},
-        prefix: {}
-      })
-    })
+  it("'use': skips the Wine check, runs on the reply's settings, writes its log lines and releases after the launch", async () => {
+    selectReply = {
+      kind: 'use',
+      key: KEY,
+      selection: {},
+      prefix: {},
+      logLines: ['engine=crossover version=24.0', 'bottle=Quail'],
+      launchSettings: OVERLAY
+    }
     launchMock.mockImplementation(() => {
       calls.push('launch')
-      expect(endMock).not.toHaveBeenCalled()
+      expect(callsOn(RUST_ENGINE_LAUNCH_END)).toHaveLength(0)
       return Promise.resolve(true)
     })
     const result = await run()
 
     expect(result).toEqual({ status: 'done' })
     expect(checkWineMock).not.toHaveBeenCalled()
-    expect(overlayMock).toHaveBeenCalledWith(KEY, STORED)
-    expect(endMock).toHaveBeenCalledTimes(1)
-    expect(endMock).toHaveBeenCalledWith(engineRuntime, KEY)
+    // The reply's settings are the ones the after-launch script reads: the stored ones never are.
+    expect(runScriptForGame).toHaveBeenCalledWith(
+      expect.anything(),
+      OVERLAY,
+      'after',
+      logWriter
+    )
+    expect(logWriter.logInfo).toHaveBeenCalledWith(
+      'engine=crossover version=24.0'
+    )
+    expect(logWriter.logInfo).toHaveBeenCalledWith('bottle=Quail')
+    expect(logInfo).toHaveBeenCalledWith(
+      `Engine: ${KEY} engine=crossover version=24.0`,
+      'Backend'
+    )
+    // The reply carried the settings, so there was no second call to read them.
+    expect(callsOn(RUST_ENGINE_LAUNCH_SETTINGS_GET)).toHaveLength(0)
+    expect(callsOn(RUST_ENGINE_LAUNCH_END)).toHaveLength(1)
+    expect(callsOn(RUST_ENGINE_LAUNCH_END)[0]?.args).toEqual([{ key: KEY }])
   })
 
   it("'use': releases the selection when the launch throws", async () => {
-    selectMock.mockResolvedValue({
+    selectReply = {
       kind: 'use',
       key: KEY,
       selection: {},
-      prefix: {}
-    })
+      prefix: {},
+      logLines: [],
+      launchSettings: OVERLAY
+    }
     launchMock.mockRejectedValue(new Error('boom'))
     const result = await run()
 
     expect(result).toEqual({ status: 'error' })
-    expect(endMock).toHaveBeenCalledTimes(1)
-    expect(endMock).toHaveBeenCalledWith(engineRuntime, KEY)
+    expect(callsOn(RUST_ENGINE_LAUNCH_END)).toHaveLength(1)
+    expect(callsOn(RUST_ENGINE_LAUNCH_END)[0]?.args).toEqual([{ key: KEY }])
   })
 
   it.each(['legacy', 'skip'])(
     "'%s': the Wine check runs as today, no overlay, no release",
     async (kind) => {
-      selectMock.mockResolvedValue({ kind, key: KEY })
+      selectReply =
+        kind === 'skip' ? { kind } : { kind, key: KEY, logLines: [] }
       const result = await run()
 
       expect(result).toEqual({ status: 'done' })
       expect(checkWineMock).toHaveBeenCalledTimes(1)
-      expect(overlayMock).not.toHaveBeenCalled()
-      expect(endMock).not.toHaveBeenCalled()
+      expect(runScriptForGame).not.toHaveBeenCalled()
+      expect(callsOn(RUST_ENGINE_LAUNCH_END)).toHaveLength(0)
     }
   )
 
   it("'refused': reports done, closes the log, aborts, and never launches", async () => {
-    selectMock.mockResolvedValue({ kind: 'refused', key: KEY })
+    selectReply = { kind: 'refused', key: KEY, logLines: ['refused'] }
     const result = await run()
 
     expect(result).toEqual({ status: 'abort' })
     expect(launchMock).not.toHaveBeenCalled()
     expect(checkWineMock).not.toHaveBeenCalled()
     expect(logWriter.close).toHaveBeenCalledTimes(1)
+    expect(logWriter.logInfo).toHaveBeenCalledWith('refused')
+    expect(callsOn(RUST_ENGINE_LAUNCH_END)).toHaveLength(0)
     expect(sendGameStatusUpdate).toHaveBeenCalledWith(expect.anything(), {
       appName: 'Quail',
       runner: 'legendary',
       status: 'done'
     })
+  })
+
+  it('a reply the crate never produces fails the launch instead of guessing an engine', async () => {
+    selectReply = { kind: 'use', key: KEY, logLines: [] }
+    await expect(run()).rejects.toThrow('engine_launch_select')
+    expect(launchMock).not.toHaveBeenCalled()
   })
 })
 

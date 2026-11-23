@@ -246,6 +246,9 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // Not dialog channels either.
     'RUST_ENGINE_BOTTLE_PREPARE',
     'RUST_ENGINE_BOTTLE_CREATE_FALLBACK',
+    // Phase 87 plan 52: engine_launch_select is the whole launch-time engine step, which may download the 228 MB
+    // pinned engine and run the bottle switch: no limit of its own beyond the shutdown. Not a dialog channel either.
+    'RUST_ENGINE_LAUNCH_SELECT',
     // Phase 87 plan 35: wine_winetricks_apply and wine_winetricks_available read the catalog, whose first read
     // downloads the winetricks script and lists it; wine_winetricks_install runs one winetricks per verb. None
     // has a limit of its own beyond the shutdown. Not a dialog channel either.

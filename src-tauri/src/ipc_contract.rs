@@ -190,6 +190,10 @@ pub(crate) enum RustInvokeChannel {
     EngineLedgerMarkRunning,
     EngineLedgerMarkStopped,
     EngineSelectionClear,
+    EngineLaunchSelect,
+    EngineLaunchArmDeadline,
+    EngineLaunchEnd,
+    EngineLaunchSettingsGet,
 }
 
 impl RustInvokeChannel {
@@ -361,6 +365,10 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineLedgerMarkRunning,
         RustInvokeChannel::EngineLedgerMarkStopped,
         RustInvokeChannel::EngineSelectionClear,
+        RustInvokeChannel::EngineLaunchSelect,
+        RustInvokeChannel::EngineLaunchArmDeadline,
+        RustInvokeChannel::EngineLaunchEnd,
+        RustInvokeChannel::EngineLaunchSettingsGet,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -532,6 +540,10 @@ impl RustInvokeChannel {
             "engine_ledger_mark_running" => Some(RustInvokeChannel::EngineLedgerMarkRunning),
             "engine_ledger_mark_stopped" => Some(RustInvokeChannel::EngineLedgerMarkStopped),
             "engine_selection_clear" => Some(RustInvokeChannel::EngineSelectionClear),
+            "engine_launch_select" => Some(RustInvokeChannel::EngineLaunchSelect),
+            "engine_launch_arm_deadline" => Some(RustInvokeChannel::EngineLaunchArmDeadline),
+            "engine_launch_end" => Some(RustInvokeChannel::EngineLaunchEnd),
+            "engine_launch_settings_get" => Some(RustInvokeChannel::EngineLaunchSettingsGet),
             _ => None,
         }
     }
@@ -705,6 +717,10 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineLedgerMarkRunning => "engine_ledger_mark_running",
             RustInvokeChannel::EngineLedgerMarkStopped => "engine_ledger_mark_stopped",
             RustInvokeChannel::EngineSelectionClear => "engine_selection_clear",
+            RustInvokeChannel::EngineLaunchSelect => "engine_launch_select",
+            RustInvokeChannel::EngineLaunchArmDeadline => "engine_launch_arm_deadline",
+            RustInvokeChannel::EngineLaunchEnd => "engine_launch_end",
+            RustInvokeChannel::EngineLaunchSettingsGet => "engine_launch_settings_get",
         }
     }
 }
@@ -3596,6 +3612,54 @@ pub(crate) struct EngineSelectionClearArgs {
 impl EngineSelectionClearArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let request = serde_json::from_value(args.first().ok_or_else(|| "engine_selection_clear:bad-args".to_string())?.clone()).map_err(|_| "engine_selection_clear:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineLaunchSelectArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineLaunchSelectArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_launch_select:bad-args".to_string())?.clone()).map_err(|_| "engine_launch_select:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineLaunchArmDeadlineArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineLaunchArmDeadlineArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_launch_arm_deadline:bad-args".to_string())?.clone()).map_err(|_| "engine_launch_arm_deadline:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineLaunchEndArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineLaunchEndArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_launch_end:bad-args".to_string())?.clone()).map_err(|_| "engine_launch_end:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineLaunchSettingsGetArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineLaunchSettingsGetArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_launch_settings_get:bad-args".to_string())?.clone()).map_err(|_| "engine_launch_settings_get:bad-args".to_string())?;
         Ok(Self { request })
     }
 }
