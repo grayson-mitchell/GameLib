@@ -13,6 +13,12 @@
 //! variables as the base environment (`replaceEnv: true`, how the TS tests ran), `baseEnv: "inherit"` is
 //! the production call (`replaceEnv: false`, the real profile is inherited, declared in `demo_status.rs`).
 //!
+//! The tested-version cases replay `read_crossover_build` over a scripted `plutil` (through `run_tool`'s spawn
+//! path, so the profile it makes under the context's temp directory is checked to be gone: the tree is
+//! unchanged), the tested-build predicates and the notice dismissals over an in-memory store that counts
+//! its reads and records its writes. The `ps` parse and listing vectors of `vectors/process_match.json`
+//! replay in the second test.
+//!
 //! One divergence, recorded here and not hidden: the TS reported a rejected spawn as `spawn-error`. A
 //! `SpecRunner` answers a spawn that failed and a child that was killed alike (`code: None`), so Rust
 //! reads both as `nonzero-exit` with `code=null`; the `throws` items assert exactly that.
@@ -20,13 +26,18 @@
 
 mod common;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use gamelib_core::process::SpecOutput;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::crossover::demo_status::{parse_demo_status, probe_demo_status};
 use gamelib_engine::crossover::locate::crossover_bin_dir_from_wine_bin;
+use gamelib_engine::crossover::tested_versions::{
+    dismiss_untested_notice, is_tested_crossover, read_crossover_build,
+    should_show_untested_notice, untested_log_line, NoticeStore, UNTESTED_DISMISSED_KEY,
+};
 use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
+use gamelib_engine::launch::process_listing::{list_processes, parse_ps_line};
 use gamelib_engine::testing::{FixedClock, RecordingLog, ScriptedSpecRunner};
 use gamelib_store::host::StoreHost;
 use serde_json::{json, Value};
@@ -40,8 +51,8 @@ const MANIFEST_FLOOR: usize = 15;
 
 /// The ops this build replays.
 const PROBE_OPS: [&str; 3] = ["probe", "parse", "bin-dir"];
-/// The ops a later task of this plan replays (the tested-version rules and the notice store).
-const DEFERRED_OPS: [&str; 3] = ["read-build", "tested", "notice"];
+/// The ops that replay the tested-version rules and the notice store.
+const TESTED_OPS: [&str; 3] = ["read-build", "tested", "notice"];
 
 fn golden_dir() -> std::path::PathBuf {
     common::fixtures().join("golden/demo_status")
@@ -227,6 +238,140 @@ fn replay_bin_dir(case: &Value) -> Vec<Value> {
         .collect()
 }
 
+async fn replay_read_build(profile: &Profile, case: &Value) -> Vec<Value> {
+    // `run_tool` makes its profile under the context's temp directory; it has to exist for the tree
+    // before and after to be comparable, and the profile it makes has to be gone.
+    std::fs::create_dir_all(profile.root().join("tmp")).unwrap();
+    let before = profile.snapshot();
+    let mut outcomes = Vec::new();
+    for item in case["args"]["items"].as_array().unwrap() {
+        let step = &item["step"];
+        let runner = Arc::new(
+            ScriptedSpecRunner::new(base_env(profile))
+                .on_program("/usr/bin/plutil", step_output(step)),
+        );
+        let log = Arc::new(RecordingLog::new());
+        let ctx = ctx_over(profile, runner.clone(), log.clone());
+        let bin_dir = profile.expand(item["binDir"].as_str().unwrap());
+        let build = read_crossover_build(&ctx, &bin_dir).await;
+        if step.get("throws").is_some() {
+            // The TS test's fake tool threw; Rust's `run_tool` never rejects, so a spawn that failed
+            // reads as no build, with the spawn recorded.
+            assert_eq!(build, None);
+            assert_eq!(runner.spawns().len(), 1);
+            outcomes.push(json!({ "threw": "Error", "logs": logs_of(&log) }));
+            continue;
+        }
+        let calls: Vec<Value> = runner
+            .spawns()
+            .iter()
+            .map(|s| {
+                profile.normalise(json!({
+                    "tool": s.program,
+                    "args": s.argv,
+                    "timeoutMs": s.timeout.map(|t| t.as_millis() as u64),
+                }))
+            })
+            .collect();
+        outcomes.push(json!({ "build": build, "toolCalls": calls, "logs": logs_of(&log) }));
+    }
+    assert_eq!(profile.snapshot(), before, "run_tool left nothing behind");
+    outcomes
+}
+
+fn replay_tested(case: &Value) -> Vec<Value> {
+    case["args"]["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| {
+            let build = item["build"].as_str();
+            json!({
+                "tested": is_tested_crossover(build),
+                "logLine": untested_log_line(build),
+                "logs": [],
+            })
+        })
+        .collect()
+}
+
+/// A notice store in memory that counts its reads and keeps its writes.
+#[derive(Default)]
+struct MemoryStore {
+    value: Mutex<Option<Value>>,
+    gets: Mutex<usize>,
+    sets: Mutex<Vec<Value>>,
+}
+
+impl NoticeStore for MemoryStore {
+    fn get(&self, key: &str) -> Option<Value> {
+        assert_eq!(key, UNTESTED_DISMISSED_KEY);
+        *self.gets.lock().unwrap() += 1;
+        self.value.lock().unwrap().clone()
+    }
+
+    fn set(&self, key: &str, value: Value) {
+        self.sets
+            .lock()
+            .unwrap()
+            .push(json!({ "key": key, "value": value }));
+        *self.value.lock().unwrap() = Some(value);
+    }
+}
+
+fn replay_notice(case: &Value) -> Vec<Value> {
+    case["args"]["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| {
+            let store = MemoryStore::default();
+            if let Some(initial) = item.get("initial") {
+                *store.value.lock().unwrap() = Some(initial.clone());
+            }
+            if let Some(spec) = item.get("initialBuilds") {
+                let prefix = spec["prefix"].as_str().unwrap();
+                let count = spec["count"].as_u64().unwrap();
+                let list: Vec<Value> = (0..count).map(|i| json!(format!("{prefix}{i}"))).collect();
+                *store.value.lock().unwrap() = Some(Value::Array(list));
+            }
+            let results: Vec<Value> = item["steps"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|step| {
+                    let build = step["build"].as_str();
+                    match step["do"].as_str().unwrap() {
+                        "show" => json!({
+                            "step": step,
+                            "shown": should_show_untested_notice(build, &store),
+                        }),
+                        _ => json!({
+                            "step": step,
+                            "dismissed": dismiss_untested_notice(build.unwrap(), &store),
+                        }),
+                    }
+                })
+                .collect();
+            let gets = *store.gets.lock().unwrap();
+            let sets = store.sets.lock().unwrap().clone();
+            let final_value = store
+                .value
+                .lock()
+                .unwrap()
+                .clone()
+                .unwrap_or_else(|| json!({ "absent": true }));
+            json!({
+                "results": results,
+                "gets": gets,
+                "sets": sets,
+                "finalValue": final_value,
+                "logs": [],
+            })
+        })
+        .collect()
+}
+
 fn without_input(outcomes: &[Value]) -> Vec<Value> {
     outcomes
         .iter()
@@ -258,10 +403,7 @@ async fn every_demo_status_golden_replays() {
     for case in &cases {
         let id = case["id"].as_str().unwrap();
         let op = case["op"].as_str().unwrap();
-        if DEFERRED_OPS.contains(&op) {
-            continue;
-        }
-        if !PROBE_OPS.contains(&op) {
+        if !PROBE_OPS.contains(&op) && !TESTED_OPS.contains(&op) {
             failures.push(format!("{id}: op {op} is not replayed"));
             continue;
         }
@@ -272,7 +414,10 @@ async fn every_demo_status_golden_replays() {
         let (outcomes, spawns) = match op {
             "probe" => replay_probe(&profile, case).await,
             "parse" => (replay_parse(case), Vec::new()),
-            _ => (replay_bin_dir(case), Vec::new()),
+            "bin-dir" => (replay_bin_dir(case), Vec::new()),
+            "read-build" => (replay_read_build(&profile, case).await, Vec::new()),
+            "tested" => (replay_tested(case), Vec::new()),
+            _ => (replay_notice(case), Vec::new()),
         };
         let want = without_input(expected["outcomes"].as_array().unwrap());
         if outcomes != want {
@@ -304,4 +449,66 @@ async fn every_demo_status_golden_replays() {
     }
     assert!(replayed >= MANIFEST_FLOOR, "replayed {replayed}");
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// The `ps` parse and listing vectors of `vectors/process_match.json` (the `match` vectors are 87-51's).
+#[tokio::test]
+async fn every_ps_vector_replays() {
+    let vectors = read_json(&common::fixtures().join("vectors/process_match.json"));
+    let parse = vectors["parsePsLine"].as_array().unwrap();
+    check_floor("ps parse vectors", parse.len(), 13).unwrap();
+    for vector in parse {
+        let got = parse_ps_line(vector["line"].as_str().unwrap())
+            .map(|(pid, command)| json!({ "pid": pid, "command": command }))
+            .unwrap_or(Value::Null);
+        assert_eq!(got, vector["expected"], "{}", vector["id"]);
+    }
+
+    let listing = vectors["listing"].as_array().unwrap();
+    check_floor("ps listing vectors", listing.len(), 3).unwrap();
+    for vector in listing {
+        let profile = Profile::new();
+        let mut runner = ScriptedSpecRunner::new(base_env(&profile));
+        for step in vector["script"].as_array().unwrap() {
+            let cmd = step["cmd"].as_str().unwrap();
+            let output = match step["outcome"].as_str().unwrap() {
+                "ok" => SpecOutput {
+                    code: Some(0),
+                    stdout: step["stdout"].as_str().unwrap_or("").to_string(),
+                    ..SpecOutput::default()
+                },
+                // A program that could not be spawned: no code, the reason in stderr.
+                _ => SpecOutput {
+                    code: None,
+                    stderr: format!("{cmd} failed"),
+                    ..SpecOutput::default()
+                },
+            };
+            runner = runner.on_program(cmd, output);
+        }
+        let runner = Arc::new(runner);
+        let ctx = ctx_over(&profile, runner.clone(), Arc::new(RecordingLog::new()));
+        let got = list_processes(&ctx).await;
+        let expected = &vector["expected"];
+        match expected.get("threw").and_then(Value::as_str) {
+            Some(message) => assert_eq!(got, Err(message.to_string()), "{}", vector["id"]),
+            None => assert_eq!(
+                got.as_deref(),
+                Ok(expected["stdout"].as_str().unwrap()),
+                "{}",
+                vector["id"]
+            ),
+        }
+        let spawned: Vec<Value> = runner
+            .spawns()
+            .iter()
+            .map(|s| json!({ "cmd": s.program, "args": s.argv }))
+            .collect();
+        assert_eq!(
+            Value::Array(spawned),
+            expected["spawned"],
+            "{}",
+            vector["id"]
+        );
+    }
 }

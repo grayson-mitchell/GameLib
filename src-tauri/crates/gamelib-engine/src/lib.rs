@@ -20,6 +20,7 @@ pub mod game_prefix;
 pub mod ids;
 pub mod jsutil;
 pub mod key;
+pub mod launch;
 pub mod offline;
 pub mod pins;
 pub mod sinks;
