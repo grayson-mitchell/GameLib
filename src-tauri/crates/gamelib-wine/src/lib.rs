@@ -8,6 +8,7 @@
 //! This crate may depend on `gamelib-engine`; `gamelib-engine` never depends on this one (D-04).
 
 pub mod ctx;
+pub mod extract;
 pub mod runtimes;
 
 use ctx::WineCtx;
@@ -20,7 +21,7 @@ use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
-pub const OPS: &[&str] = &["wine_runtime_is_installed"];
+pub const OPS: &[&str] = &["wine_runtime_download", "wine_runtime_is_installed"];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
 /// shutdown, a wrong thread or a panic (`<op>:panic`).
@@ -34,6 +35,10 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, 
 /// Each plan adds its arms here, in step with `OPS`.
 async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String> {
     match op {
+        "wine_runtime_download" => {
+            let name = runtime_name_arg(op, args)?;
+            Ok(Value::Bool(runtimes::download(ctx, name).await))
+        }
         "wine_runtime_is_installed" => {
             let name = runtime_name_arg(op, args)?;
             Ok(Value::Bool(runtimes::is_installed(ctx, name).await))
@@ -198,6 +203,7 @@ mod tests {
     #[test]
     fn the_runtime_ops_are_in_the_sorted_op_table() {
         assert!(OPS.contains(&"wine_runtime_is_installed"));
+        assert!(OPS.contains(&"wine_runtime_download"));
     }
 
     #[tokio::test]
@@ -214,10 +220,10 @@ mod tests {
             vec![json!("../umu")],
             vec![json!("a/b")],
         ] {
-            let err = dispatch("wine_runtime_is_installed", &bad, &ctx)
-                .await
-                .unwrap_err();
-            assert_eq!(err, "wine_runtime_is_installed:bad-args", "{bad:?}");
+            for op in ["wine_runtime_is_installed", "wine_runtime_download"] {
+                let err = dispatch(op, &bad, &ctx).await.unwrap_err();
+                assert_eq!(err, format!("{op}:bad-args"), "{bad:?}");
+            }
         }
         // Nothing was created for a refused call.
         assert!(!home.root().join("tools").exists());
