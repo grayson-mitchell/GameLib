@@ -217,11 +217,16 @@ export function sanitizeBottleName(name: string | null): string | null {
  * (half-provisioned, e.g. the SteamSetup.exe download failed). Used by
  * provisionBottle() to decide whether `cxbottle --create` needs to run again
  * (re-entrancy check). For the REAL completion signal, use isBottleReady().
+ *
+ * Answers false for a name sanitizeBottleName does not leave unchanged, the
+ * same guard the marker views use, so a traversal or padded name never reaches
+ * a path. Mirrors engines::is_bottle_provisioned through bottle_twin.json.
  */
 export function isBottleProvisioned(
   paths: Pick<AppPaths, 'userHome'>,
   bottleName: string
 ): boolean {
+  if (sanitizeBottleName(bottleName) !== bottleName) return false
   return gracefulExistsSync(
     join(getBottleDir(paths, bottleName), 'cxbottle.conf')
   )

@@ -122,7 +122,7 @@
   "outcome": [
     {
       "name": "..",
-      "provisioned": true
+      "provisioned": false
     },
     {
       "name": ".",
@@ -130,11 +130,11 @@
     },
     {
       "name": "nested/inner",
-      "provisioned": true
+      "provisioned": false
     },
     {
       "name": "fx-pinned-current/../fx-pinned-current",
-      "provisioned": true
+      "provisioned": false
     }
   ],
   "markers": {

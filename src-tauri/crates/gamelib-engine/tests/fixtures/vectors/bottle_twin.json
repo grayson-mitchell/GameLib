@@ -643,6 +643,48 @@
         ],
         "bottle": ".."
       },
+      "expected": false
+    },
+    {
+      "id": "provisioned-nested-path-with-conf",
+      "input": {
+        "fixtures": [],
+        "seed": [
+          {
+            "path": "<HOME>/Library/Application Support/CrossOver/Bottles/nested/inner/cxbottle.conf",
+            "text": "[Bottle]\n"
+          }
+        ],
+        "bottle": "nested/inner"
+      },
+      "expected": false
+    },
+    {
+      "id": "provisioned-padded-name-with-padded-dir",
+      "input": {
+        "fixtures": [],
+        "seed": [
+          {
+            "path": "<HOME>/Library/Application Support/CrossOver/Bottles/ padded /cxbottle.conf",
+            "text": "[Bottle]\n"
+          }
+        ],
+        "bottle": " padded "
+      },
+      "expected": false
+    },
+    {
+      "id": "provisioned-clean-name-with-seeded-conf",
+      "input": {
+        "fixtures": [],
+        "seed": [
+          {
+            "path": "<HOME>/Library/Application Support/CrossOver/Bottles/seeded/cxbottle.conf",
+            "text": "[Bottle]\n"
+          }
+        ],
+        "bottle": "seeded"
+      },
       "expected": true
     }
   ],

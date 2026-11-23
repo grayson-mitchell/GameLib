@@ -1426,12 +1426,15 @@ fn the_documented_deltas_are_exactly_those_this_replay_treats_differently() {
         .map(String::as_str)
         .collect();
     keys.sort_unstable();
+    // Entries for behaviour changed after the port (quick 261124-8f3) edit their goldens instead of
+    // being treated in this replay.
     assert_eq!(
         keys,
         [
             "conf-log-lines-name-the-bottle-not-its-path",
             "gate-is-in-process-and-cannot-fail",
             "installer-answers-a-bool-and-a-throw-is-a-panic",
+            "provisioned-answers-false-for-an-unclean-name",
             "removal-goes-through-the-safety-guard",
             "removal-refusal-names-the-bottle-not-its-path",
             "spawn-failure-text-is-the-runners-not-nodes",

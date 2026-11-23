@@ -184,8 +184,12 @@ pub fn bottle_dir(ctx: &EngineCtx, bottle_name: &str) -> String {
 }
 
 /// `isBottleProvisioned`: the bottle directory has been created (its `cxbottle.conf` exists). Not
-/// "the bottle is ready to use".
+/// "the bottle is ready to use". `false` for a name the sanitiser does not leave unchanged, so a
+/// traversal or padded name never reaches a path (quick 261124-8f3).
 pub fn is_bottle_provisioned(ctx: &EngineCtx, bottle_name: &str) -> bool {
+    if !paths::is_clean_bottle_name(bottle_name) {
+        return false;
+    }
     Path::new(&bottle_dir(ctx, bottle_name))
         .join("cxbottle.conf")
         .exists()

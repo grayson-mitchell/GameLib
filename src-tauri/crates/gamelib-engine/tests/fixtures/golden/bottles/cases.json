@@ -1104,7 +1104,7 @@
   {
     "id": "provisioned-parent-traversal-name",
     "op": "provisioned",
-    "note": "the predicate does not sanitise: \"..\", \".\" and a nested path resolve through path.join, so a conf in the CrossOver directory makes \"..\" read as provisioned (recorded as is; the callers sanitise first)",
+    "note": "the predicate answers false for a name the sanitiser changes or rejects, so \"..\", the nested path and the self-referencing parent path never reach a path even with a conf there; \".\" is clean (the sanitiser keeps it, 87-11 finding 3) and reads false because no conf sits at the Bottles root; the TS recorded true for the other three (quick 261124-8f3, deltas.json provisioned-answers-false-for-an-unclean-name)",
     "bottles": [
       "fx-pinned-current"
     ],

@@ -101,8 +101,9 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value
 /// Each plan adds its arms here, in step with `OPS`.
 async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, String> {
     match op {
-        // Whether the named bottle's `cxbottle.conf` exists. An unsafe name is answered `false` (the op
-        // is a surface the renderer's names can reach; the library function never sanitised).
+        // Whether the named bottle's `cxbottle.conf` exists. An unsafe name is answered `false` by the op
+        // and by the library function alike (the op is a surface the renderer's names can reach, so it
+        // keeps its own check).
         "engine_bottle_is_provisioned" => {
             let request: BottleNameRequest = decode(op, args)?;
             let provisioned = bottles::paths::is_clean_bottle_name(&request.bottle_name)
