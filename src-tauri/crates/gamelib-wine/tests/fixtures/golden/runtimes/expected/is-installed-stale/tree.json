@@ -1,0 +1,33 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/runtimes",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/runtimes/eac_runtime",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/runtimes/eac_runtime/current_version",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "06bd0641dfb79636dcca06aff572cd31af8e71b411b0a084a25c63b8c54c4c50"
+  }
+]

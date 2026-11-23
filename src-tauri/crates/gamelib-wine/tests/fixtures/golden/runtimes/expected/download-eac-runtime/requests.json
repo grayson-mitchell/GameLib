@@ -1,0 +1,4 @@
+[
+  "GET https://lutris.net/api/runtimes",
+  "GET https://github.com/lutris/buildbot/releases/download/2022.06.23/eac_runtime-20240114.tar.xz"
+]

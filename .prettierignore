@@ -48,3 +48,6 @@ src-tauri/crates/gamelib-log/tests/fixtures/golden
 src-tauri/crates/gamelib-store/tests/fixtures
 # Byte-exact fixtures written by the 86 TS oracle (golden, state and recorded exchanges under gamelib-info); prettier must never reformat them.
 src-tauri/crates/gamelib-info/tests/fixtures
+# Byte-exact fixtures written by the 87 TS oracles (golden and recorded exchanges for the engine and wine crates); prettier must never reformat them.
+src-tauri/crates/gamelib-engine/tests/fixtures
+src-tauri/crates/gamelib-wine/tests/fixtures

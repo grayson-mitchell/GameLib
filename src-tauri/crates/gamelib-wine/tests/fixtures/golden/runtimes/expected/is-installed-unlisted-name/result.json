@@ -1,0 +1,5 @@
+{
+  "op": "isInstalled",
+  "name": "not-a-runtime",
+  "result": true
+}

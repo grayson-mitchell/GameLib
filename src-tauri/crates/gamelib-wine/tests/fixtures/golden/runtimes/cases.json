@@ -1,0 +1,84 @@
+[
+  {
+    "id": "list-runtimes",
+    "op": "download",
+    "name": "not-a-runtime",
+    "platform": "mac",
+    "note": "the runtime list fetch is module-private; it is observed through a name the list does not hold: one GET of the lutris list, the runtimes directory created, nothing extracted, result false"
+  },
+  {
+    "id": "is-installed-absent",
+    "op": "isInstalled",
+    "name": "eac_runtime",
+    "platform": "mac",
+    "note": "no install directory: false, and the list is never fetched"
+  },
+  {
+    "id": "is-installed-current",
+    "op": "isInstalled",
+    "name": "eac_runtime",
+    "platform": "mac",
+    "seed": [
+      { "path": "<TOOLS>/runtimes/eac_runtime/current_version", "text": "2024-01-14T19:38:26.671443Z" }
+    ],
+    "note": "current_version equals the listed created_at: true"
+  },
+  {
+    "id": "is-installed-stale",
+    "op": "isInstalled",
+    "name": "eac_runtime",
+    "platform": "mac",
+    "seed": [
+      { "path": "<TOOLS>/runtimes/eac_runtime/current_version", "text": "2020-01-01T00:00:00.000000Z" }
+    ],
+    "note": "current_version differs from the listed created_at: false"
+  },
+  {
+    "id": "is-installed-no-version-file",
+    "op": "isInstalled",
+    "name": "eac_runtime",
+    "platform": "mac",
+    "seed": [
+      { "path": "<TOOLS>/runtimes/eac_runtime", "dir": true }
+    ],
+    "note": "an install directory with no current_version: false"
+  },
+  {
+    "id": "is-installed-unlisted-name",
+    "op": "isInstalled",
+    "name": "not-a-runtime",
+    "platform": "mac",
+    "seed": [
+      { "path": "<TOOLS>/runtimes/not-a-runtime", "dir": true }
+    ],
+    "note": "a directory for a name the list does not hold is reported installed, to prevent a re-download of something that cannot be fetched"
+  },
+  {
+    "id": "download-eac-runtime",
+    "op": "download",
+    "name": "eac_runtime",
+    "platform": "mac",
+    "archive": "ok",
+    "note": "the archive is served from a synthetic tar.xz keyed by URL; extracted with strip 1, current_version written, archive removed"
+  },
+  {
+    "id": "redownload-over-existing",
+    "op": "download",
+    "name": "eac_runtime",
+    "platform": "mac",
+    "archive": "ok",
+    "seed": [
+      { "path": "<TOOLS>/runtimes/eac_runtime/old-file.txt", "text": "stale" },
+      { "path": "<TOOLS>/runtimes/eac_runtime/current_version", "text": "2020-01-01T00:00:00.000000Z" }
+    ],
+    "note": "an existing install directory is removed before the new archive is extracted over it"
+  },
+  {
+    "id": "download-http-404",
+    "op": "download",
+    "name": "eac_runtime",
+    "platform": "mac",
+    "archive": "http-404",
+    "note": "the archive request fails with 404: result false, no install directory, no tar spawn"
+  }
+]
