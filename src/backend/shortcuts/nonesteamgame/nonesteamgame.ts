@@ -257,7 +257,19 @@ async function addNonSteamGame(
 ): Promise<boolean> {
   const gameInfo = game.getGameInfo()
   const steamUserdataDir = await getSteamUserdataDir(deps)
-  const wikiInfo = (await getWikiGameInfo(deps, game)) as WikiInfo | null
+  // WR-42: a failed wiki lookup is the old TS null result; the shortcut is still written, with no Steam id.
+  const wikiInfo = (await getWikiGameInfo(deps, game).catch(
+    (error: unknown) => {
+      logWarning(
+        [
+          `wiki lookup for ${gameInfo.title} failed, adding the shortcut without a Steam id:`,
+          error
+        ],
+        LogPrefix.Shortcuts
+      )
+      return null
+    }
+  )) as WikiInfo | null
   const steamID = wikiInfo?.pcgamingwiki?.steamID ?? wikiInfo?.gamesdb?.steamID
 
   const { folders, error } = checkSteamUserDataDir(steamUserdataDir)

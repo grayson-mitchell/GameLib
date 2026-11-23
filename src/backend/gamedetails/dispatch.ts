@@ -110,7 +110,20 @@ export async function getGameInfo(
   // The frontend can however handle being passed an explicit `null` value, so
   // we return that here instead if the game info is empty
   if (!Object.keys(tempGameInfo).length) return null
-  return (await attachOverrides(deps, tempGameInfo)) as GameInfo
+  try {
+    return (await attachOverrides(deps, tempGameInfo)) as GameInfo
+  } catch (error) {
+    // WR-42: the TS returned the game's own info when no override applied, so a failed Rust lookup
+    // shows the game without its overrides rather than failing the page.
+    logWarning(
+      [
+        'attachOverrides failed, returning the game info without overrides:',
+        error
+      ],
+      LogPrefix.Backend
+    )
+    return tempGameInfo
+  }
 }
 
 export async function getExtraInfo(

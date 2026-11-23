@@ -274,6 +274,24 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     expect(result).toBe(overriddenInfo)
   })
 
+  it("WR-42: getGameInfo falls back to the game's own info when attachOverrides rejects", async () => {
+    const rawInfo = { app_name: '440', title: 'Portal 2' }
+    const failure = new Error('info_overrides_attach:not-ready')
+    const gameDouble = makeGameDouble({
+      getGameInfo: jest.fn().mockReturnValue(rawInfo)
+    })
+    managerMocks.steam.getGame.mockReturnValue(gameDouble)
+    attachOverridesMock.mockRejectedValueOnce(failure)
+    logWarningMock.mockClear()
+
+    const result = await getGameInfo(dispatchDeps, '440', 'steam')
+
+    expect(result).toBe(rawInfo)
+    expect(logWarningMock).toHaveBeenCalledTimes(1)
+    const [parts] = logWarningMock.mock.calls[0] as [unknown[]]
+    expect(parts).toContain(failure)
+  })
+
   // ── getExtraInfo ────────────────────────────────────────────────────
   it('REQ-34.2-01 getExtraInfo applies the same legendary fastpath', async () => {
     managerMocks.legendary.hasGame.mockReturnValue(false)

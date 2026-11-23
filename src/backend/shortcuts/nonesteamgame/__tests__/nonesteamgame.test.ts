@@ -4,7 +4,7 @@ import { join } from 'path'
 import { DirResult, dirSync } from 'tmp'
 import { addNonSteamGame, removeNonSteamGame } from '../nonesteamgame'
 import { showDialogBoxModalAuto } from 'backend/dialog/dialog'
-import { logInfo, logError } from 'backend/logger'
+import { logInfo, logError, logWarning } from 'backend/logger'
 import type { Game } from 'common/types/game_manager'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createKvsStores } from 'backend/constants/key_value_stores'
@@ -97,13 +97,16 @@ describe('NonSteamGame shortcuts through steamfiles', () => {
   // The wiki lookup is one Rust call (86-23); Rust has no entry for these games. It is answered here
   // and recorded in `wikiCalls`, so `stub.calls` keeps holding only the shortcut-file channels.
   const wikiCalls: unknown[][] = []
-  const rustDeps = (stub: { requestRustInvoke: unknown }) =>
+  const rustDeps = (
+    stub: { requestRustInvoke: unknown },
+    wikiAnswer: () => Promise<unknown> = () => Promise.resolve(null)
+  ) =>
     ({
       ...deps,
       requestRustInvoke: (channel: string, argv: unknown[]) => {
         if (channel === RUST_INFO_WIKI_GET) {
           wikiCalls.push(argv)
-          return Promise.resolve(null)
+          return wikiAnswer()
         }
         return (
           stub.requestRustInvoke as (
@@ -199,6 +202,36 @@ describe('NonSteamGame shortcuts through steamfiles', () => {
     expect(typeof byKey.appid).toBe('number')
     expect(logInfo).toBeCalledWith(
       'MyGame was successfully added to Steam.',
+      'Shortcuts'
+    )
+  })
+
+  test('WR-42: a rejected wiki lookup still writes the shortcut, with no Steam id', async () => {
+    const failure = new Error('info_wiki_get:not-ready')
+    const stub = stubRustSteamFiles({
+      [RUST_STEAMFILES_SHORTCUTS_READ]: () => MISSING,
+      [RUST_STEAMFILES_SHORTCUTS_APPLY]: () => applied()
+    })
+
+    await expect(
+      addNonSteamGame(
+        rustDeps(stub, () => Promise.reject(failure)),
+        makeGameMock('MyGame', 'Game')
+      )
+    ).resolves.toBe(true)
+
+    const apply = stub.calls.find(
+      (c) => c.channel === RUST_STEAMFILES_SHORTCUTS_APPLY
+    )
+    expect((apply?.args as { mutation: { op: string } }).mutation.op).toBe(
+      'add'
+    )
+    expect(logInfo).toBeCalledWith(
+      'MyGame was successfully added to Steam.',
+      'Shortcuts'
+    )
+    expect(logWarning).toBeCalledWith(
+      [expect.stringContaining('MyGame'), failure],
       'Shortcuts'
     )
   })
