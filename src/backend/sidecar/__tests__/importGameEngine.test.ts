@@ -1,5 +1,7 @@
-import { importEngineSettings } from '../../engine/importEngineSettings'
-import { getPerGameBottleNameFor } from '../../engine/gameEngineState'
+import {
+  getPerGameBottleNameFor,
+  importEngineSettings
+} from 'backend/enginewine/twin'
 
 describe('importGame engine settings (D-17)', () => {
   it('writes the engine and the server-computed bottle for automatic', () => {

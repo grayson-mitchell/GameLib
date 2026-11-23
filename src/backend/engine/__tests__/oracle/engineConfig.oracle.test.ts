@@ -67,7 +67,6 @@ import {
   configPathDepsFrom,
   deriveEngineFromWine,
   engineIdOf,
-  isWritableEngineOverride,
   readEngineForGame,
   readStoredGameConfig,
   resolveEffectiveEngine,
@@ -77,7 +76,6 @@ import {
 } from '../../engineConfig'
 import { createEngineRuntime } from '../../engineRuntime'
 import { engineKeyIfEligible } from '../../engineEligibility'
-import { importEngineSettings } from '../../importEngineSettings'
 import { offlineLaunchCertainlyBlocked } from '../../offlineRefusal'
 import {
   resolveToolSettings,
@@ -85,13 +83,15 @@ import {
   type ToolSettingsDeps
 } from '../../toolSettings'
 import type { EngineServices } from '../../engineServices'
-import {
-  getDefaultEngine,
-  getPerGameBottleNameFor,
-  listGameEngineOptions
-} from '../../gameEngineState'
+import { getDefaultEngine, listGameEngineOptions } from '../../gameEngineState'
 import { parseEngineOverride } from '../../engineIds'
-import { appNameOf, engineKeyFor, isEngineKey } from '../../gameKey'
+import { appNameOf, isEngineKey } from '../../gameKey'
+import {
+  engineKeyFor,
+  getPerGameBottleNameFor,
+  importEngineSettings,
+  isWritableEngineOverride
+} from 'backend/enginewine/twin'
 import { wineManagerReleasesFrom } from '../../wineManagerReleases'
 import { buildEngines, type EngineVariant } from './fixtureBottles'
 

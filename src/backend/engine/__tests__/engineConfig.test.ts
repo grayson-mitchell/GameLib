@@ -39,13 +39,13 @@ import { createFallbackEngine } from '../fallbackEngine'
 import {
   deriveEngineFromWine,
   engineIdOf,
-  isWritableEngineOverride,
   readEngineForGame,
   readStoredGameConfig,
   resolveEffectiveEngine,
   resolveGlobalEngine,
   type EngineConfigDeps
 } from '../engineConfig'
+import { isWritableEngineOverride } from 'backend/enginewine/twin'
 import type { WineInstallation } from 'common/types'
 import { createAbortRegistry } from '../../utils/aborthandler/aborthandler'
 

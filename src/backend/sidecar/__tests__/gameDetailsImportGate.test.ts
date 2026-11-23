@@ -259,8 +259,12 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // working tree are byte-identical after stripping comments: no registration, argument, guard or
   // `steamLibrary.has` gate moved. Prior digest:
   // 1cf25750511f1cb0d65d6564ed4aa06df1aa0b8cf517cf668802aa2a5a76cad7
+  // Phase 87 / 87-28 (2026-11-23): re-pin -- ONE import line. `isWritableEngineOverride` now comes from
+  // the TS twin `backend/enginewine/twin.ts` (D-24) instead of `engine/engineConfig`, which no longer
+  // exports it. No channel, argument, guard or `steamLibrary.has` gate moved. Prior digest:
+  // d05b557e5d0a9c05611b9447b98803e1b9f2d55652d0f2053db8cfacb6175769
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    'd05b557e5d0a9c05611b9447b98803e1b9f2d55652d0f2053db8cfacb6175769'
+    '2470b8a024e20be7f125b02f81fed8f3fb874f512c88dc9aafdc6bbdca7e1052'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')

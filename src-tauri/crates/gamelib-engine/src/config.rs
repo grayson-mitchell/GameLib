@@ -18,6 +18,7 @@ use serde_json::{Map, Value};
 use crate::ctx::{EngineCtx, Platform};
 use crate::engines::pinned_engine_paths;
 use crate::engines::{is_installed_macos_release, release_bin_dir, wine_manager_releases};
+use crate::game_engine::per_game_bottle_name_for;
 use crate::ids::{parse_engine_override, parse_engine_override_str, AUTOMATIC};
 use crate::jsutil::{js_to_string, js_truthy, path_join, prop, utf16_len};
 use crate::key::uses_bottle_runtime;
@@ -95,6 +96,28 @@ pub fn is_writable_engine_override(value: &Value) -> bool {
         Some(text) => parse_engine_override_str(text) == text,
         None => false,
     }
+}
+
+/// `importEngineSettings` (Phase 61 D-17, T-61-58, T-61-59): the settings an engine-choice import adds to a
+/// game's config. `None` when the renderer sent no writable engine id (the caller then keeps the Wine
+/// prefix/version path). The bottle name is computed from the game identity here; a renderer-sent name is
+/// never trusted, and a game with no per-game bottle (a Steam game, an unclean name, a non-string
+/// identity) keeps only the override. The three inputs are untyped JSON, as the renderer sends them.
+pub fn import_engine_settings(
+    runner: &Value,
+    app_name: &Value,
+    engine_override: &Value,
+) -> Option<Value> {
+    if !is_writable_engine_override(engine_override) {
+        return None;
+    }
+    let mut out = Map::new();
+    out.insert("engineOverride".to_string(), engine_override.clone());
+    let identity = serde_json::json!({ "runner": runner, "appName": app_name });
+    if let Some(bottle) = per_game_bottle_name_for(&identity) {
+        out.insert("wineCrossoverBottle".to_string(), Value::String(bottle));
+    }
+    Some(Value::Object(out))
 }
 
 /// The document at `path` opened through the host, as its top-level entries. A missing file, an

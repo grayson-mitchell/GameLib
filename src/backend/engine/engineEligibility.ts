@@ -5,7 +5,7 @@
  */
 import type { Game } from 'common/types/game_manager'
 import { hasCapability } from 'common/storeCapabilities'
-import { engineKeyFor } from './gameKey'
+import { engineKeyFor } from 'backend/enginewine/twin'
 import type { EngineKey } from './gameKey'
 
 /**

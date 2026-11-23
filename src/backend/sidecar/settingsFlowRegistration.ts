@@ -66,7 +66,7 @@ import { isAbsolute, relative, resolve } from 'path'
 
 import type { IpcRegistry } from './ipcRegistry'
 import { applyGameSetting } from './gameSettingWrite'
-import { isWritableEngineOverride } from '../engine/engineConfig'
+import { isWritableEngineOverride } from 'backend/enginewine/twin'
 // `writeConfig` (backend/utils.ts:1607) is already force-imported into the
 // sidecar's module graph via `installFlowRegistration.ts:110`'s own
 // `sendGameStatusUpdate` import from the same module — this named import

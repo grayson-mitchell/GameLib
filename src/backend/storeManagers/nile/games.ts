@@ -45,7 +45,7 @@ import { isWindows } from 'backend/constants/environment'
 
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import type LogWriter from 'backend/logger/targetWriter'
-import { engineKeyFor } from 'backend/engine/gameKey'
+import { engineKeyFor } from 'backend/enginewine/twin'
 
 export default class NileGameManager implements Game {
   private readonly id: string

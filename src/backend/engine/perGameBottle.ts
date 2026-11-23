@@ -16,7 +16,6 @@
  * only from the shared primitives. Steam's arm is left untouched; phase 65 should fold it onto
  * this one. Without CrossOver the shared createFallbackBottle runs (D-03), no second path.
  */
-import { createHash } from 'crypto'
 import { dirname, join } from 'path'
 import { existsSync } from 'graceful-fs'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -37,54 +36,22 @@ import {
 } from './engineDecision'
 import { ENGINE_PINS } from './enginePins'
 import type { EnginePin } from './enginePins'
-import { engineKeyFor } from './gameKey'
 import type { EngineKey } from './gameKey'
 import { ensurePinnedEngineReportingStatus } from './pinnedEngineProgress'
 import type { PinnedEngineResult } from './pinnedEngineProgress'
 import type { Runner } from 'common/types'
 
-export const PER_GAME_BOTTLE_NAME_MAX = 64
 const CROSSOVER_CREATE_TIMEOUT = 'crossover-create-timeout' as const
 const CROSSOVER_CREATE_FAILED = 'crossover-create-failed' as const
 const PROVISION_ABORTED = 'provision-aborted' as const
 const ENGINE_DOWNLOAD_FAILED = 'engine-download-failed' as const
 
-const PREFIX = 'GameLib'
-const HASH_HEX = 10
-
-function encodeAppName(appName: string): string {
-  const bytes = Buffer.from(appName, 'utf8')
-  let out = ''
-  for (const [i, b] of bytes.entries()) {
-    const ch = String.fromCharCode(b)
-    const dotInRun =
-      b === 0x2e && (bytes[i - 1] === 0x2e || bytes[i + 1] === 0x2e)
-    if (/[A-Za-z0-9-]/.test(ch) || (b === 0x2e && !dotInRun)) {
-      out += ch
-    } else {
-      out += `_${b.toString(16).padStart(2, '0')}`
-    }
-  }
-  return out
-}
-
-/** The deterministic per-game bottle name, or null for an unknown runner or an unclean appName. */
-export function perGameBottleName(
-  runner: string,
-  appName: string
-): string | null {
-  if (engineKeyFor(runner, appName) === null) return null
-  let name = `${PREFIX}-${runner}-${encodeAppName(appName)}`
-  if (name.length > PER_GAME_BOTTLE_NAME_MAX) {
-    const digest = createHash('sha256')
-      .update(`${runner}:${appName}`)
-      .digest('hex')
-      .slice(0, HASH_HEX)
-    const keep = PER_GAME_BOTTLE_NAME_MAX - HASH_HEX - 1
-    name = `${name.slice(0, keep)}-${digest}`
-  }
-  return sanitizeBottleName(name) === name ? name : null
-}
+/**
+ * The deterministic per-game bottle name lives in the TS twin `enginewine/twin.ts` (Phase 87, 87-28, D-24):
+ * one copy, pinned to the Rust `game_engine::per_game_bottle_name` by shared vectors. Re-exported so the
+ * engine TS that is alive until 87-56 keeps its import.
+ */
+export { perGameBottleName } from 'backend/enginewine/twin'
 
 export type CreateBottleResult = {
   status: 'done' | 'error'

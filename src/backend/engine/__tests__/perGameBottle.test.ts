@@ -20,11 +20,13 @@ import { createTestEngineServices } from 'backend/testUtils/testServices'
 import {
   createCrossoverBottle,
   createPerGameBottleFlights,
-  perGameBottleName,
-  PER_GAME_BOTTLE_NAME_MAX
+  perGameBottleName
 } from '../perGameBottle'
 import { getBottleDir, sanitizeBottleName } from '../bottlePrimitives'
 import type { PerGameBottleDeps } from '../perGameBottle'
+
+/** The cap the Rust `per_game_bottle_name` and the twin both hold (`PER_GAME_BOTTLE_NAME_MAX`, private in `twin.ts`). */
+const PER_GAME_BOTTLE_NAME_MAX = 64
 
 const paths = { userHome: mockProfile.root, toolsPath: '/tmp/tools' }
 const services: EngineServices = createTestEngineServices({

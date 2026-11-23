@@ -66,7 +66,7 @@ import { deriveLegendaryPaths } from './constants'
 import { isCLINoGui, isMac, isWindows } from 'backend/constants/environment'
 
 import type LogWriter from 'backend/logger/targetWriter'
-import { engineKeyFor } from 'backend/engine/gameKey'
+import { engineKeyFor } from 'backend/enginewine/twin'
 
 export default class LegendaryGame implements Game {
   private readonly appName: LegendaryAppName

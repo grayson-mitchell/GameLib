@@ -37,7 +37,7 @@ import type {
 } from './engineConfig'
 import type { EngineServices } from './engineServices'
 import type { EngineStateDeps } from './engineState'
-import { engineKeyFor } from './gameKey'
+import { engineKeyFor } from 'backend/enginewine/twin'
 import { resolveGamePrefix } from './gamePrefix'
 import { perGameBottleName } from './perGameBottle'
 
@@ -240,10 +240,4 @@ export function getDefaultEngine(
     engineSource: effective.kind === 'override' ? effective.source : 'derived',
     legacyLabel: effective.kind === 'legacy' ? effective.label : null
   }
-}
-
-/** The per-game bottle name for the install dialogs (D-17), or null for an invalid / Steam game. */
-export function getPerGameBottleNameFor(args: unknown): string | null {
-  const id = asNonSteamIdentity(args)
-  return id === null ? null : perGameBottleName(id.runner, id.appName)
 }

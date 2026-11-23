@@ -14,7 +14,7 @@ import { withKnownFixEnv } from 'backend/knownFixOverlays'
 
 import type LogWriter from 'backend/logger/targetWriter'
 import { Game } from '../../../common/types/game_manager'
-import { engineKeyFor } from 'backend/engine/gameKey'
+import { engineKeyFor } from 'backend/enginewine/twin'
 import { asStoreGame } from 'common/gameInfoNarrowing'
 
 /**

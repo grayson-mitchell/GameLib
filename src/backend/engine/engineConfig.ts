@@ -249,11 +249,6 @@ export function resolveGlobalEngine(
   )
 }
 
-/** True only for a value that survives the closed grammar unchanged. */
-export function isWritableEngineOverride(v: unknown): v is EngineOverrideId {
-  return typeof v === 'string' && parseEngineOverride(v) === v
-}
-
 /**
  * The override id, or `legacy:<label>` for display only. Never parse this back
  * into a launch path.

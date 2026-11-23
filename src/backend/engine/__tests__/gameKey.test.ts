@@ -1,4 +1,5 @@
-import { appNameOf, engineKeyFor, isEngineKey } from '../gameKey'
+import { appNameOf, isEngineKey } from '../gameKey'
+import { engineKeyFor } from 'backend/enginewine/twin'
 
 describe('engineKeyFor', () => {
   test('Steam keeps its bare numeric appId', () => {

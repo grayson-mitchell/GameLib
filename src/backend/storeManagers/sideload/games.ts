@@ -36,7 +36,7 @@ import { removeNonSteamGame } from 'backend/shortcuts/nonesteamgame/nonesteamgam
 import type { ManagerDeps } from 'backend/services/types'
 
 import type LogWriter from 'backend/logger/targetWriter'
-import { engineKeyFor } from 'backend/engine/gameKey'
+import { engineKeyFor } from 'backend/enginewine/twin'
 
 export default class SideloadGame implements Game {
   private readonly id: string

@@ -30,7 +30,7 @@ import { engineKeyIfEligible } from './engineEligibility'
 import { readBottleEngineMarkerKind, switchContextFrom } from './engineSwitch'
 import type { NonCrossoverEngine } from './engineTypes'
 import { ENGINE_PINS } from './enginePins'
-import { engineKeyFor } from './gameKey'
+import { engineKeyFor } from 'backend/enginewine/twin'
 import type { EngineKey } from './gameKey'
 import { resolveGamePrefix } from './gamePrefix'
 import {

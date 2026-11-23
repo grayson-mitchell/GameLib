@@ -122,6 +122,10 @@
 
 import { isStore } from 'common/storeCapabilities'
 import type { IpcRegistry } from './ipcRegistry'
+import {
+  importEngineSettings,
+  isWritableEngineOverride
+} from 'backend/enginewine/twin'
 // Load-bearing FIRST import (mirrors steamFlowRegistration.ts's / plan
 // 30-01's steamAuthFlowRegistration.ts's Phase 27 Plan 05 circular-dep fix):
 // force `storeManagers/index.ts` to be the INITIALIZATION ENTRY before the
@@ -182,8 +186,6 @@ import {
   assertPlausibleAbsolutePath,
   PathShapeError
 } from './rendererPathGuard'
-import { isWritableEngineOverride } from '../engine/engineConfig'
-import { importEngineSettings } from '../engine/importEngineSettings'
 import type { StatusUpdateDeps } from '../appRuntime'
 import { logError, logInfo, LogPrefix } from '../logger'
 import i18next from 'i18next'

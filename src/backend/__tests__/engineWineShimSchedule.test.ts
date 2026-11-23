@@ -97,6 +97,27 @@ const COMPATIBILITY_LAYERS_IMPORTERS: readonly string[] = [
   'src/backend/tools/index.ts',
   'src/backend/utils.ts'
 ]
+/**
+ * Every non-test importer of `enginewine/twin.ts` (the check is per file, so every twin row lists them all):
+ * the launcher and the five `games.ts` (`engineKeyFor`), the settings and install flows (the override
+ * validation and the import settings), the engine flows, and the engine TS alive until 87-56.
+ */
+const ENGINE_TWIN_IMPORTERS: readonly string[] = [
+  'src/backend/engine/engineEligibility.ts',
+  'src/backend/engine/engineState.ts',
+  'src/backend/engine/gameEngineState.ts',
+  'src/backend/engine/perGameBottle.ts',
+  'src/backend/engine/toolSettings.ts',
+  'src/backend/launcher.ts',
+  'src/backend/sidecar/engineFlowRegistration.ts',
+  'src/backend/sidecar/installFlowRegistration.ts',
+  'src/backend/sidecar/settingsFlowRegistration.ts',
+  'src/backend/storeManagers/gog/games.ts',
+  'src/backend/storeManagers/legendary/games.ts',
+  'src/backend/storeManagers/nile/games.ts',
+  'src/backend/storeManagers/sideload/games.ts',
+  'src/backend/storeManagers/storeManagerCommon/games.ts'
+]
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
   'src/backend/services/types.ts',
   'src/backend/sidecar/bootstrap.ts',
@@ -247,6 +268,54 @@ const SCHEDULE: readonly ScheduleRow[] = [
     vectors: 'src/backend/wine/__tests__/oracle/wineCore.oracle.test.ts',
     callers: COMMAND_RUNNER_IMPORTERS,
     deletedBy: 88
+  },
+  // 87-28 (D-24 extended, for the checker and the operator): the non-bridge sync pure helpers of the engine
+  // configuration. They are called synchronously from the launch paths (`engineKeyFor`: launcher.ts and the five
+  // games.ts, Phase 92) and from the settings and install flows' engine-override validation (Phase 98), so they
+  // cannot become async shims; each lives once in `enginewine/twin.ts`, pinned to Rust by the shared
+  // `engine_twin.json` vectors that `twinVectors.test.ts` and `gamelib-engine`'s `twin_vectors.rs` both replay.
+  // `callers` is every importer of the file (the check is per file). `perGameBottleName` is the naming rule the
+  // bottle functions share: the engine TS alive until 87-56 (gamePrefix, launchEngine, gameEngineState, through
+  // perGameBottle.ts) calls it, so it is an intra-phase row that 87-56 makes private; the plan named four rows.
+  {
+    name: 'engineKeyFor',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 92
+  },
+  {
+    name: 'isWritableEngineOverride',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 98
+  },
+  {
+    name: 'importEngineSettings',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 98
+  },
+  {
+    name: 'getPerGameBottleNameFor',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 98
+  },
+  {
+    name: 'perGameBottleName',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 87
   }
 ]
 

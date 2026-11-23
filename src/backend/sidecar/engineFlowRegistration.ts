@@ -25,7 +25,7 @@ import type {
 } from 'backend/services/types'
 import { isMac } from '../constants/environment'
 import { getGameEngineState } from 'backend/engine/gameEngineState'
-import { engineKeyFor } from 'backend/engine/gameKey'
+import { engineKeyFor } from 'backend/enginewine/twin'
 import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
 import type { EngineServices } from 'backend/engine/engineServices'
 import type { SteamEngineBottle } from 'backend/storeManagers/steam/bottle'
