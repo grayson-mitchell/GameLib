@@ -47,6 +47,8 @@ testing = ["gamelib-engine/testing"]
 gamelib-wine = { path = ".", features = ["testing"] }
 gamelib-testutil = { path = "../gamelib-testutil" }
 tempfile = "3"
+# The winetricks goldens run the progress flush on a paused clock: a scripted tick step sleeps on it.
+tokio = { version = "1", features = ["test-util"] }
 
 [lints.clippy]
 dbg_macro = "deny"

@@ -80,6 +80,18 @@ impl ProcSpec {
 /// The per-line stdout callback of a [`SpecRunner`] run.
 pub type LineSink = Box<dyn FnMut(&str) + Send>;
 
+/// Which of a child's two output pipes a chunk of [`SpecRunner::run_streamed`] came from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Pipe {
+    Stdout,
+    Stderr,
+}
+
+/// The raw-chunk callback of a [`SpecRunner::run_streamed`] run: text as it arrives from either pipe,
+/// not split into lines (a tool that redraws a progress meter with a bare `\r`, as curl does, never
+/// writes a newline, so a line callback would see it only at exit).
+pub type ChunkSink = Box<dyn FnMut(Pipe, &str) + Send>;
+
 /// What a [`SpecRunner`] run produced.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SpecOutput {
@@ -105,4 +117,25 @@ pub trait SpecRunner: Send + Sync + 'static {
     /// line (without its line ending) as it arrives, whether or not the capture cap has been hit.
     /// Must be polled inside a tokio runtime.
     fn run(&self, spec: ProcSpec, on_line: Option<LineSink>) -> BoxFuture<SpecOutput>;
+
+    /// Like [`SpecRunner::run`], but `on_chunk` sees the raw text of BOTH pipes as it arrives (no line
+    /// splitting, a multi-byte character never cut in half). The capture caps and the returned
+    /// [`SpecOutput`] are the same as `run`'s.
+    ///
+    /// The default runs the spec to the end and then hands over what was captured, stdout first: a fake
+    /// that only scripts a final output keeps working, but only [`SpecRunner`] implementations that
+    /// override this stream while the child runs (the app's does).
+    fn run_streamed(&self, spec: ProcSpec, mut on_chunk: ChunkSink) -> BoxFuture<SpecOutput> {
+        let run = self.run(spec, None);
+        Box::pin(async move {
+            let output = run.await;
+            if !output.stdout.is_empty() {
+                on_chunk(Pipe::Stdout, &output.stdout);
+            }
+            if !output.stderr.is_empty() {
+                on_chunk(Pipe::Stderr, &output.stderr);
+            }
+            output
+        })
+    }
 }

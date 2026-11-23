@@ -13,12 +13,16 @@ use std::sync::{Mutex, MutexGuard};
 
 use serde_json::Value;
 
+use crate::winetricks::env::WinetricksEnvironment;
+
 /// The state of the tools of one boot.
 #[derive(Default)]
 pub struct ToolsState {
     installing: Mutex<String>,
     catalog: Mutex<HashMap<String, Vec<Value>>>,
     script_metadata: Mutex<Option<(String, Value)>>,
+    /// The winetricks environment reports and their one change listener (87-32).
+    pub winetricks_env: WinetricksEnvironment,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {

@@ -14,6 +14,7 @@ pub mod manager;
 pub mod runtimes;
 pub mod tools;
 pub mod wine_cmd;
+pub mod winetricks;
 
 /// The cancel token an install takes (`manager::install::install`), re-exported so the shell, which
 /// owns the renderer's cancel, needs no `tokio-util` of its own.
@@ -48,6 +49,7 @@ pub const OPS: &[&str] = &[
     "wine_runtime_download",
     "wine_runtime_is_installed",
     "wine_valid",
+    "wine_winetricks_install",
 ];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
@@ -162,6 +164,24 @@ async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String>
                 &|path| path.exists(),
             )))
         }
+        "wine_winetricks_install" => {
+            let (request, host) = winetricks_args(op, args)?;
+            let target = request.target().ok_or_else(|| format!("{op}:bad-args"))?;
+            // The verb reaches winetricks' argv: it must have the shape of a real one.
+            let verb = request
+                .verb
+                .as_deref()
+                .filter(|v| winetricks::is_verb_shape(v))
+                .ok_or_else(|| format!("{op}:bad-args"))?;
+            let launcher = winetricks::HostLauncher { host: &host };
+            let session = winetricks::Session {
+                ctx,
+                host: &host,
+                launcher: &launcher,
+            };
+            let outcome = winetricks::install::install(&session, &target, verb, None).await;
+            Ok(Value::String(outcome.as_str().to_string()))
+        }
         "wine_runtime_download" => {
             let name = runtime_name_arg(op, args)?;
             Ok(Value::Bool(runtimes::download(ctx, name).await))
@@ -259,6 +279,27 @@ fn wine_run_command_args(
         Some(host) => serde_json::from_value(host.clone()).map_err(|_| bad())?,
     };
     Ok((command, host))
+}
+
+/// A winetricks op's arguments: the [`winetricks::TargetArg`] object and, optionally, the
+/// [`wine_cmd::WineHost`] facts the shell read (the process environment, the Darwin release). A bad
+/// shape is a fixed `<op>:bad-args`.
+fn winetricks_args(
+    op: &str,
+    args: &[Value],
+) -> Result<(winetricks::TargetArg, wine_cmd::WineHost), String> {
+    let bad = || format!("{op}:bad-args");
+    let (request, host) = match args {
+        [request @ Value::Object(_)] => (request, None),
+        [request @ Value::Object(_), host] => (request, Some(host)),
+        _ => return Err(bad()),
+    };
+    let request = serde_json::from_value(request.clone()).map_err(|_| bad())?;
+    let host = match host {
+        None | Some(Value::Null) => wine_cmd::WineHost::default(),
+        Some(host) => serde_json::from_value(host.clone()).map_err(|_| bad())?,
+    };
+    Ok((request, host))
 }
 
 /// The one string argument of a runtime op: exactly one string that is a [`runtimes::valid_name`].
@@ -455,6 +496,33 @@ mod tests {
     /// A future that panics when polled: the shape of an op that hits a bug.
     fn panicking() -> impl Future<Output = Result<Value, String>> {
         std::future::poll_fn(|_| -> Poll<Result<Value, String>> { panic!("test-only op panic") })
+    }
+
+    #[test]
+    fn the_winetricks_install_op_refuses_a_bad_argument_before_any_spawn() {
+        let home = FakeHome::new("wine-winetricks-op-");
+        let ctx = ctx(&home);
+        let settings =
+            json!({"winePrefix": "/p", "wineVersion": {"bin": "/b", "name": "n", "type": "wine"}});
+        let run = |args: Vec<Value>| {
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(dispatch("wine_winetricks_install", &args, &ctx))
+        };
+        let bad = Err("wine_winetricks_install:bad-args".to_string());
+        // No verb, a verb with a shell metacharacter, both a settings object and a reason, none.
+        for request in [
+            json!({"runner": "gog", "appName": "1", "settings": settings}),
+            json!({"runner": "gog", "appName": "1", "settings": settings, "verb": "x;rm"}),
+            json!({"runner": "gog", "appName": "1", "settings": settings, "unavailable": "r", "verb": "vcrun2019"}),
+            json!({"runner": "gog", "appName": "1", "verb": "vcrun2019"}),
+        ] {
+            assert_eq!(run(vec![request]), bad);
+        }
+        assert_eq!(run(vec![json!("not an object")]), bad);
+        assert_eq!(run(vec![]), bad);
     }
 
     #[test]

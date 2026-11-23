@@ -4,7 +4,7 @@
 //! Every child's environment is built from a `FakeHome` (convention 2), except the one named
 //! real-profile arm below.
 
-use gamelib_core::process::{ProcSpec, SpecRunner};
+use gamelib_core::process::{Pipe, ProcSpec, SpecRunner};
 use gamelib_proc::{global, SpecProcRunner};
 use gamelib_testutil::FakeHome;
 use std::sync::{Arc, Mutex};
@@ -217,6 +217,65 @@ async fn on_line_sees_each_stdout_line() {
         .await;
     assert_eq!(out.code, Some(0), "{out:?}");
     assert_eq!(*seen.lock().expect("seen"), ["a", "b", "c"]);
+}
+
+/// `run_streamed` hands over the raw text of both pipes as it arrives: a bare `\r` redraw is not a
+/// line break, each pipe is tagged, and the capture is the same as `run`'s.
+#[cfg(unix)]
+#[tokio::test]
+async fn run_streamed_sees_both_pipes_raw() {
+    let seen = Arc::new(Mutex::new(Vec::<(Pipe, String)>::new()));
+    let sink = seen.clone();
+    let spec = shell(
+        "spec-test-streamed",
+        "printf 'out 1\\rout 2\\n'; printf 'err 1\\r 50%%\\r' >&2",
+        "",
+    );
+    let out = SpecProcRunner
+        .run_streamed(
+            spec,
+            Box::new(move |pipe: Pipe, text: &str| {
+                sink.lock().expect("sink").push((pipe, text.to_string()));
+            }),
+        )
+        .await;
+    assert_eq!(out.code, Some(0), "{out:?}");
+    let seen = seen.lock().expect("seen");
+    let of = |pipe: Pipe| -> String {
+        seen.iter()
+            .filter(|(p, _)| *p == pipe)
+            .map(|(_, t)| t.as_str())
+            .collect()
+    };
+    assert_eq!(of(Pipe::Stdout), "out 1\rout 2\n");
+    assert_eq!(of(Pipe::Stderr), "err 1\r 50%\r");
+    assert_eq!(out.stdout, "out 1\rout 2\n");
+    assert_eq!(out.stderr, "err 1\r 50%\r");
+}
+
+/// A multi-byte character split across two reads is delivered whole, never as replacement
+/// characters.
+#[cfg(unix)]
+#[tokio::test]
+async fn run_streamed_never_cuts_a_character_in_half() {
+    let seen = Arc::new(Mutex::new(String::new()));
+    let sink = seen.clone();
+    // U+00E9 is C3 A9; the sleep makes the two bytes arrive in separate reads.
+    let spec = shell(
+        "spec-test-utf8",
+        "printf 'caf\\303'; sleep 0.3; printf '\\251 ok'",
+        "",
+    );
+    let out = SpecProcRunner
+        .run_streamed(
+            spec,
+            Box::new(move |_pipe: Pipe, text: &str| {
+                sink.lock().expect("sink").push_str(text);
+            }),
+        )
+        .await;
+    assert_eq!(out.code, Some(0), "{out:?}");
+    assert_eq!(*seen.lock().expect("seen"), "caf\u{e9} ok");
 }
 
 #[tokio::test]

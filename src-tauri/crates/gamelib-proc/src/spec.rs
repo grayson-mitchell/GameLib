@@ -10,9 +10,12 @@
 //! flag set.
 
 use crate::spawn::spawn_helper_tokio;
-use gamelib_core::process::{BoxFuture, LineSink, ProcSpec, SpecOutput, SpecRunner};
+use gamelib_core::process::{
+    BoxFuture, ChunkSink, LineSink, Pipe, ProcSpec, SpecOutput, SpecRunner,
+};
 use std::pin::pin;
 use std::process::Stdio;
+use std::sync::Mutex;
 use std::time::Duration;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tokio_util::sync::CancellationToken;
@@ -36,9 +39,65 @@ impl SpecRunner for SpecProcRunner {
     fn run(&self, spec: ProcSpec, on_line: Option<LineSink>) -> BoxFuture<SpecOutput> {
         Box::pin(run_spec(
             spec,
-            on_line,
+            on_line.map_or(Feed::None, Feed::Lines),
             gamelib_core::shutdown::global().token(),
         ))
+    }
+
+    fn run_streamed(&self, spec: ProcSpec, on_chunk: ChunkSink) -> BoxFuture<SpecOutput> {
+        Box::pin(run_spec(
+            spec,
+            Feed::Chunks(on_chunk),
+            gamelib_core::shutdown::global().token(),
+        ))
+    }
+}
+
+/// What a run hands its output to.
+enum Feed {
+    None,
+    /// Stdout, split into lines.
+    Lines(LineSink),
+    /// Both pipes, as raw text.
+    Chunks(ChunkSink),
+}
+
+/// What one pipe's reader hands its bytes to.
+enum Tap<'a> {
+    None,
+    Lines(&'a mut (dyn FnMut(&str) + Send)),
+    Chunks(&'a Mutex<ChunkSink>, Pipe),
+}
+
+/// Decodes a byte stream to text a chunk at a time: a multi-byte character cut by a read boundary
+/// is held back and completed by the next read, never turned into a replacement character.
+#[derive(Default)]
+struct Utf8Carry {
+    held: Vec<u8>,
+}
+
+impl Utf8Carry {
+    /// The text of `held + bytes` up to the last complete character; the cut tail stays held. Bytes
+    /// that can never be valid are replaced (as `from_utf8_lossy` does), only a possibly-incomplete
+    /// ending is kept back.
+    fn push(&mut self, bytes: &[u8]) -> String {
+        self.held.extend_from_slice(bytes);
+        let keep = match std::str::from_utf8(&self.held) {
+            Ok(_) => 0,
+            Err(e) if e.error_len().is_none() => self.held.len() - e.valid_up_to(),
+            Err(_) => 0,
+        };
+        let cut = self.held.len() - keep;
+        let text = String::from_utf8_lossy(&self.held[..cut]).into_owned();
+        self.held.drain(..cut);
+        text
+    }
+
+    /// What is still held when the stream ends (an incomplete character becomes a replacement).
+    fn finish(&mut self) -> String {
+        let text = String::from_utf8_lossy(&self.held).into_owned();
+        self.held.clear();
+        text
     }
 }
 
@@ -72,39 +131,60 @@ fn emit(pending: &mut Vec<u8>, on_line: &mut (dyn FnMut(&str) + Send)) {
     pending.clear();
 }
 
-/// Reads `reader` to EOF into `cap` (bounded), and, when `on_line` is given, splits it into lines.
-/// Past the cap the bytes are still read, so the child never blocks on a full pipe, but they are
-/// dropped.
+/// Reads `reader` to EOF into `cap` (bounded), and hands what it reads to `tap`: as lines for
+/// [`Tap::Lines`], as raw text for [`Tap::Chunks`]. Past the cap the bytes are still read, so the
+/// child never blocks on a full pipe, but they are dropped from the capture (the tap still sees them).
 async fn pump<R: AsyncRead + Unpin>(
     mut reader: R,
     cap: &mut Capture,
     max: usize,
-    mut on_line: Option<&mut (dyn FnMut(&str) + Send)>,
+    mut tap: Tap<'_>,
 ) {
     let mut chunk = vec![0u8; CHUNK];
     let mut pending: Vec<u8> = Vec::new();
+    let mut carry = Utf8Carry::default();
     loop {
         let n = match reader.read(&mut chunk).await {
             Ok(0) | Err(_) => break,
             Ok(n) => n,
         };
         cap.push(&chunk[..n], max);
-        if let Some(cb) = on_line.as_deref_mut() {
-            let mut rest = &chunk[..n];
-            while let Some(i) = rest.iter().position(|b| *b == b'\n') {
-                pending.extend_from_slice(&rest[..i]);
-                emit(&mut pending, cb);
-                rest = &rest[i + 1..];
+        match &mut tap {
+            Tap::None => {}
+            Tap::Lines(cb) => {
+                let mut rest = &chunk[..n];
+                while let Some(i) = rest.iter().position(|b| *b == b'\n') {
+                    pending.extend_from_slice(&rest[..i]);
+                    emit(&mut pending, &mut **cb);
+                    rest = &rest[i + 1..];
+                }
+                pending.extend_from_slice(rest);
+                if pending.len() > MAX_LINE {
+                    emit(&mut pending, &mut **cb);
+                }
             }
-            pending.extend_from_slice(rest);
-            if pending.len() > MAX_LINE {
-                emit(&mut pending, cb);
+            Tap::Chunks(sink, pipe) => {
+                let text = carry.push(&chunk[..n]);
+                if !text.is_empty() {
+                    let mut sink = sink.lock().unwrap_or_else(|e| e.into_inner());
+                    (*sink)(*pipe, &text);
+                }
             }
         }
     }
-    if let Some(cb) = on_line {
-        if !pending.is_empty() {
-            emit(&mut pending, cb);
+    match tap {
+        Tap::None => {}
+        Tap::Lines(cb) => {
+            if !pending.is_empty() {
+                emit(&mut pending, cb);
+            }
+        }
+        Tap::Chunks(sink, pipe) => {
+            let text = carry.finish();
+            if !text.is_empty() {
+                let mut sink = sink.lock().unwrap_or_else(|e| e.into_inner());
+                (*sink)(pipe, &text);
+            }
         }
     }
 }
@@ -127,15 +207,16 @@ async fn drive(
     max: usize,
     out_cap: &mut Capture,
     err_cap: &mut Capture,
-    on_line: Option<&mut (dyn FnMut(&str) + Send)>,
+    out_tap: Tap<'_>,
+    err_tap: Tap<'_>,
 ) -> Option<i32> {
     let stdin = child.stdin.take();
     let (Some(stdout), Some(stderr)) = (child.stdout.take(), child.stderr.take()) else {
         return child.wait().await.ok().and_then(|s| s.code());
     };
     let mut in_f = pin!(feed(stdin, input));
-    let mut out_f = pin!(pump(stdout, out_cap, max, on_line));
-    let mut err_f = pin!(pump(stderr, err_cap, max, None));
+    let mut out_f = pin!(pump(stdout, out_cap, max, out_tap));
+    let mut err_f = pin!(pump(stderr, err_cap, max, err_tap));
     let (mut in_done, mut out_done, mut err_done) = (false, false, false);
     let status = loop {
         tokio::select! {
@@ -169,11 +250,7 @@ enum End {
 }
 
 /// The whole run, with the app-wide shutdown token passed in so it can be tested with a local one.
-pub(crate) async fn run_spec(
-    spec: ProcSpec,
-    mut on_line: Option<LineSink>,
-    shutdown: CancellationToken,
-) -> SpecOutput {
+async fn run_spec(spec: ProcSpec, feed: Feed, shutdown: CancellationToken) -> SpecOutput {
     // A run asked for after the exit began is not started: nothing would reap it in time.
     if shutdown.is_cancelled() || spec.cancel.as_ref().is_some_and(|c| c.is_cancelled()) {
         return SpecOutput {
@@ -213,9 +290,21 @@ pub(crate) async fn run_spec(
 
     let (mut out_cap, mut err_cap) = (Capture::default(), Capture::default());
     let end = {
-        let cb: Option<&mut (dyn FnMut(&str) + Send)> = match on_line.as_mut() {
-            Some(b) => Some(&mut **b),
-            None => None,
+        let mut lines_sink: LineSink;
+        let chunk_sink: Mutex<ChunkSink>;
+        let (out_tap, err_tap) = match feed {
+            Feed::None => (Tap::None, Tap::None),
+            Feed::Lines(cb) => {
+                lines_sink = cb;
+                (Tap::Lines(&mut *lines_sink), Tap::None)
+            }
+            Feed::Chunks(sink) => {
+                chunk_sink = Mutex::new(sink);
+                (
+                    Tap::Chunks(&chunk_sink, Pipe::Stdout),
+                    Tap::Chunks(&chunk_sink, Pipe::Stderr),
+                )
+            }
         };
         let driven = drive(
             &mut child,
@@ -223,7 +312,8 @@ pub(crate) async fn run_spec(
             spec.max_buffer,
             &mut out_cap,
             &mut err_cap,
-            cb,
+            out_tap,
+            err_tap,
         );
         let timeout = async {
             match spec.timeout {
@@ -295,7 +385,7 @@ mod tests {
     async fn a_run_asked_for_after_shutdown_began_is_not_started() {
         let token = Shutdown::new().token();
         token.cancel();
-        let out = run_spec(sleeper("spec-test-late"), None, token).await;
+        let out = run_spec(sleeper("spec-test-late"), Feed::None, token).await;
         assert!(out.cancelled);
         assert_eq!(out.code, None);
         assert!(!global().labels().contains(&"spec-test-late"));
@@ -309,7 +399,7 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(200)).await;
             stopper.cancel();
         });
-        let out = run_spec(sleeper("spec-test-shutdown"), None, token).await;
+        let out = run_spec(sleeper("spec-test-shutdown"), Feed::None, token).await;
         assert!(out.cancelled, "{out:?}");
         assert!(!out.timed_out);
         assert_eq!(out.code, None);
