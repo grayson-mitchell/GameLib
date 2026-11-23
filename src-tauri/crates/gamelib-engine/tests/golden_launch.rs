@@ -18,8 +18,15 @@
 //! `engineStateChanged` pushes, the lines the engine wrote to its log, and the profile tree.
 //!
 //! What the replay does differently, each with its reason:
-//! - **87-51's cases** (`end`, `arm`, `advance`, `registry-clear` and `quit` steps) replay with the
-//!   launch deadline and the end of a launch;
+//! - **the deadline cases** (`arm`, `advance`, `end`, `registry-clear` and `quit` steps, 87-51) run on a
+//!   paused tokio clock that the replay moves 100 ms at a time, with `FixedClock` moved the same, over a
+//!   scripted `ps` listing through the one spawn seam. The TS oracle's own timer trace (`timer-set`,
+//!   `timer-fire`, `timer-clear`, `timer-unref` and the `listing` poll count) is its fake clock's and is not
+//!   compared: what is compared is what the launch sees, which is the notification, the watch's request, the
+//!   log, the `engineStateChanged` pushes, the registry, overlay, ledger and the number of armed deadlines;
+//! - **a quit** with a deadline armed ends its task and its entry in Rust (the token ends it, no notice
+//!   fires and the registrant is released); the TS left the entry and three timers pending. The replay
+//!   compares the cases up to the quit, and `a_quit_with_a_deadline_armed_...` asserts the Rust side;
 //! - **the dialog** is one `show_dialog` call in Rust where the TS made a window raise, an
 //!   acknowledgement tracking and a frame; the replay expands one into the other, and the acknowledgement
 //!   id is `engine:<n>` where the TS had `ack-<n>`;
@@ -39,6 +46,7 @@ use std::collections::BTreeMap;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use gamelib_core::clock::Clock;
 use gamelib_core::emitter::FrontendEmitter;
@@ -56,7 +64,8 @@ use gamelib_engine::fallback::ensure::{EnsureReason, PinnedEngineResult};
 use gamelib_engine::game_engine::per_game_bottle_name;
 use gamelib_engine::launch::settings::OverlayContext;
 use gamelib_engine::launch::step::{
-    select_engine_for_launch, CtxStepDeps, Fut, GameRef, Purpose, SelectArgs, StepDeps,
+    arm_engine_launch_deadline, end_engine_launch, select_engine_for_launch, ArmOptions,
+    ArmOutcome, CtxStepDeps, DeadlineGame, Fut, GameRef, Purpose, SelectArgs, StepDeps,
 };
 use gamelib_engine::pins::{pins, EnginePin};
 use gamelib_engine::sinks::EngineUi;
@@ -67,8 +76,10 @@ use common::{check_floor, first_difference, read_json, Profile};
 
 /// The case count the plan committed as a floor; a later edit may raise it, never lower it.
 const CASE_FLOOR: usize = 25;
-/// How many cases this plan replays (the rest are 87-51's). A floor too: the list may grow, not shrink.
+/// How many cases have no deadline step (87-50's). A floor too: the list may grow, not shrink.
 const REPLAYED_FLOOR: usize = 53;
+/// How many cases have a deadline step (87-51's).
+const DEADLINE_FLOOR: usize = 24;
 
 /// 2026-11-23 12:00:00 UTC, the oracle's start.
 const START: u64 = 1_795_435_200_000;
@@ -78,18 +89,30 @@ const BUILD: &str = "26.3.0.39832";
 /// The steps 87-51 owns: the launch deadline, its process watch and the end of a launch.
 const DEADLINE_OPS: [&str; 5] = ["arm", "advance", "end", "quit", "registry-clear"];
 
+/// How far the paused clock moves at a time while a deadline case advances: every time the oracle's cases
+/// ask for (1.5 s polls, a 180 s deadline, a 10 s cap, 4.6 s) is a whole number of these.
+const TICK_MS: u64 = 100;
+
+/// Lets the tasks the clock just woke run: the watch's poll, the deadline's fire.
+async fn settle() {
+    for _ in 0..6 {
+        tokio::task::yield_now().await;
+    }
+}
+
 /// Whether the replay compares the host surfaces (notification, window raise, dialog).
 const COMPARE_UI: bool = true;
 
 /// The trace entries that are compared: the scripted collaborators and the host surfaces. The oracle's
 /// other entries (`resolveCrossoverBinDir`, `probe`, `killWineserver`, timers) are the decision's own
 /// reads, which the real decision makes through real files and spawns.
-const SCRIPTED_OPS: [&str; 5] = [
+const SCRIPTED_OPS: [&str; 6] = [
     "isProvisioned",
     "ensureGameBottle",
     "ensurePinned",
     "prepare",
     "sendStatus",
+    "watch",
 ];
 const UI_OPS: [&str; 6] = [
     "notify",
@@ -204,6 +227,26 @@ fn probe_output(cx: &str) -> SpecOutput {
 struct WorldRunner {
     world: Shared<World>,
     stray: Mutex<Vec<String>>,
+    /// The `ps` listing script of the armed launch: poll `n` answers item `min(n, len - 1)`.
+    listing: Mutex<Listing>,
+}
+
+/// The oracle's `listing`: `None` is the item `"throw"` (the listing fails).
+#[derive(Default)]
+struct Listing {
+    items: Vec<Option<String>>,
+    polls: usize,
+}
+
+impl Listing {
+    fn next(&mut self) -> Option<Option<String>> {
+        if self.items.is_empty() {
+            return None;
+        }
+        let item = self.items[self.polls.min(self.items.len() - 1)].clone();
+        self.polls += 1;
+        Some(item)
+    }
 }
 
 impl SpecRunner for WorldRunner {
@@ -222,6 +265,23 @@ impl SpecRunner for WorldRunner {
                 code: Some(0),
                 ..SpecOutput::default()
             }
+        } else if spec.program == "ps" && spec.argv == ["-axo", "pid=,command="] {
+            // The scripted listing; a failing item is a `ps` that could not run.
+            match lock(&self.listing).next() {
+                Some(Some(stdout)) => SpecOutput {
+                    code: Some(0),
+                    stdout,
+                    ..SpecOutput::default()
+                },
+                Some(None) => SpecOutput::default(),
+                None => {
+                    lock(&self.stray).push("ps without a listing".to_string());
+                    SpecOutput::default()
+                }
+            }
+        } else if spec.program == "pgrep" {
+            // The stand-in when `ps` cannot run: the oracle's listing failure fails it as well.
+            SpecOutput::default()
         } else {
             lock(&self.stray).push(format!("{} {}", spec.program, spec.argv.join(" ")));
             SpecOutput::default()
@@ -511,6 +571,8 @@ fn as_ts_text(text: &str) -> String {
             "--demo-status invalid-bottle (no evidence; not retried): no such bottle",
         )
         .replace("invalid-bottle: scripted other", "other: scripted other")
+        // A scripted `ps` that fails is the oracle's rejected promise.
+        .replace(": ps did not run", ": ps failed")
 }
 
 fn map_strings(value: Value) -> Value {
@@ -596,10 +658,20 @@ async fn replay(case: &Value) -> Replay {
     let app_name = spec["appName"].as_str().unwrap_or("Quail").to_string();
     let title = spec["title"].as_str().unwrap_or("Quail").to_string();
     let per_game = per_game_bottle_name(&runner, &app_name).unwrap_or_default();
+    let install_raw = spec["installPath"]
+        .as_str()
+        .unwrap_or("<HOME>/Games/Quail")
+        .to_string();
     let expander = Expander {
         profile: &profile,
         per_game: per_game.clone(),
-        install: profile.expand(spec["installPath"].as_str().unwrap_or("<HOME>/Games/Quail")),
+        install: profile.expand(&install_raw),
+    };
+    // `$BOTTLE` and the other placeholders of the oracle's install path (the C: form installs under the
+    // bottle's drive_c).
+    let expander = Expander {
+        install: expander.text(&install_raw),
+        ..expander
     };
     let stored_settings = expander.value(&spec.get("settings").cloned().unwrap_or_else(|| {
         json!({
@@ -618,8 +690,10 @@ async fn replay(case: &Value) -> Replay {
     let proc = Arc::new(WorldRunner {
         world: world.clone(),
         stray: Mutex::new(Vec::new()),
+        listing: Mutex::new(Listing::default()),
     });
-    let clock: Arc<dyn Clock> = Arc::new(FixedClock::new(START));
+    let fixed = Arc::new(FixedClock::new(START));
+    let clock: Arc<dyn Clock> = fixed.clone();
 
     let mut ctx = profile.ctx_with(log.clone(), Some(proc.clone()));
     ctx.clock = clock;
@@ -643,6 +717,18 @@ async fn replay(case: &Value) -> Replay {
     };
     ctx.crossover_locator = new_locator();
     lay_out_crossover(&profile, lock(&world).cx());
+    // A deadline case arms tasks that reach the context when they fire, so it is shared and nothing
+    // changes in it afterwards; the one case that changes the world between steps has no deadline.
+    let mut owned = Some(ctx);
+    let mut shared: Option<Arc<EngineCtx>> = None;
+    if case["steps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|step| step["op"].as_str() == Some("arm"))
+    {
+        shared = owned.take().map(EngineCtx::share);
+    }
 
     let deps = Scripted {
         world: world.clone(),
@@ -669,6 +755,8 @@ async fn replay(case: &Value) -> Replay {
     };
 
     let mut steps = Vec::new();
+    let mut arm_seq = 0u64;
+    let mut elapsed_ms = 0u64;
     for raw in case["steps"].as_array().unwrap() {
         if let Some(step_world) = raw.get("world") {
             let before = lock(&world).cx().to_string();
@@ -676,16 +764,24 @@ async fn replay(case: &Value) -> Replay {
             let after = lock(&world).cx().to_string();
             if before != after {
                 lay_out_crossover(&profile, &after);
-                ctx.crossover_locator = new_locator();
+                owned
+                    .as_mut()
+                    .expect("a deadline case does not change the world")
+                    .crossover_locator = new_locator();
             }
         }
         if let Some(mac) = lock(&world).is_mac {
-            ctx.platform = if mac {
+            let platform = if mac {
                 gamelib_engine::ctx::Platform::Mac
             } else {
                 gamelib_engine::ctx::Platform::Linux
             };
+            match owned.as_mut() {
+                Some(ctx) => ctx.platform = platform,
+                None => assert_eq!(shared.as_ref().unwrap().platform, platform),
+            }
         }
+        let ctx: &EngineCtx = shared.as_deref().or(owned.as_ref()).unwrap();
         let from = lock(&trace).len();
         let mut outcome = Map::new();
         match raw["op"].as_str().unwrap() {
@@ -704,7 +800,7 @@ async fn replay(case: &Value) -> Replay {
                         _ => Purpose::Launch,
                     },
                 };
-                let reply = select_engine_for_launch(&ctx, &deps, &args).await;
+                let reply = select_engine_for_launch(ctx, &deps, &args).await;
                 outcome.insert("result".into(), summarise(&reply.to_value()));
                 outcome.insert("launchLog".into(), json!(reply.log_lines));
             }
@@ -719,7 +815,7 @@ async fn replay(case: &Value) -> Replay {
                 };
                 let out = ctx
                     .launch_settings
-                    .get_launch_settings(&ctx, target.as_deref(), &stored);
+                    .get_launch_settings(ctx, target.as_deref(), &stored);
                 outcome.insert("key".into(), json!(target));
                 outcome.insert("sameObject".into(), json!(out == stored));
                 outcome.insert("returned".into(), out);
@@ -774,7 +870,89 @@ async fn replay(case: &Value) -> Replay {
                         .map_or(Value::Null, |c| c.to_value()),
                 );
             }
-            other => panic!("a step of {other} is 87-51's"),
+            "arm" => {
+                arm_seq += 1;
+                let items: Vec<Option<String>> = raw
+                    .get("listing")
+                    .and_then(Value::as_array)
+                    .map(|items| {
+                        items
+                            .iter()
+                            .map(|item| match item {
+                                Value::String(word) if word == "throw" => None,
+                                Value::Array(lines) => Some(
+                                    lines
+                                        .iter()
+                                        .map(|line| expander.text(line.as_str().unwrap()))
+                                        .collect::<Vec<_>>()
+                                        .join("\n"),
+                                ),
+                                other => panic!("a listing item of {other}"),
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_else(|| vec![Some(String::new())]);
+                *lock(&proc.listing) = Listing { items, polls: 0 };
+                let game = DeadlineGame {
+                    runner: runner.clone(),
+                    app_name: app_name.clone(),
+                    title: title.clone(),
+                    install_path: expander.install.clone(),
+                };
+                let options = ArmOptions {
+                    poll_ms: raw["pollMs"].as_u64(),
+                    max_duration_ms: raw["maxDurationMs"].as_u64(),
+                    start_watcher: raw["watcher"].as_str() != Some("none"),
+                };
+                let armed_key = (raw["nullKey"].as_bool() != Some(true)).then_some(key.as_str());
+                let outcome_of_arm = arm_engine_launch_deadline(ctx, &game, armed_key, &options)
+                    .expect("the deadline arms");
+                if let ArmOutcome::Armed {
+                    install_path,
+                    bottle_dir,
+                    ..
+                } = outcome_of_arm
+                {
+                    // The oracle's `watch` entry: what the watch was asked to look for. `started` is the
+                    // step's choice of a real watcher, not whether the path derived a form.
+                    lock(&trace).push(json!({
+                        "op": "watch",
+                        "installPath": install_path,
+                        "bottleDir": bottle_dir,
+                        "started": raw["watcher"].as_str() != Some("none"),
+                    }));
+                }
+                // The tasks start their timers when they first run.
+                settle().await;
+                outcome.insert("arm".into(), json!(arm_seq));
+            }
+            "advance" => {
+                let ms = raw["ms"].as_u64().unwrap_or(0);
+                let mut left = ms;
+                while left > 0 {
+                    let chunk = left.min(TICK_MS);
+                    fixed.advance(chunk);
+                    tokio::time::advance(Duration::from_millis(chunk)).await;
+                    settle().await;
+                    left -= chunk;
+                }
+                elapsed_ms += ms;
+                outcome.insert("now".into(), json!(elapsed_ms));
+            }
+            "end" => {
+                end_engine_launch(ctx, &key);
+                outcome.insert("ended".into(), json!(true));
+            }
+            "registry-clear" => {
+                ctx.registry.clear_engine_selection_quiet(&key);
+                outcome.insert("cleared".into(), json!(true));
+            }
+            "quit" => {
+                // The host quits: the token ends every task of the launch.
+                ctx.shutdown.token().cancel();
+                settle().await;
+            }
+            other => panic!("an unknown step {other}"),
         }
         let trace_now = lock(&trace).clone();
         let mut ledger = Map::new();
@@ -795,7 +973,7 @@ async fn replay(case: &Value) -> Replay {
                 "overlay": ctx.launch_settings.get_launch_overlay_context(&key)
                     .map_or(Value::Null, |c| c.to_value()),
                 "ledger": ledger,
-                "activeDeadlines": 0,
+                "activeDeadlines": ctx.launch_state.active_deadlines(),
             }),
         );
         step.insert("eventsSoFar".into(), json!(lock(&events).len()));
@@ -885,9 +1063,18 @@ fn pinned_selection(profile: &Profile) -> EngineSelection {
 
 /// The golden step with the fields the replay compares.
 fn golden_step(step: &Value) -> Value {
+    let quit = step["step"]["op"] == "quit";
     let mut out = Map::new();
     for (key, value) in step.as_object().unwrap() {
         match key.as_str() {
+            // The TS left the entry and three timers pending after a quit; Rust ends the task and the
+            // entry (the header; `a_quit_with_a_deadline_armed_...` asserts that).
+            "activeDeadlines" | "pendingTimers" | "keepAliveReasons" if quit => {}
+            "after" if quit => {
+                let mut after = value.clone();
+                after["activeDeadlines"] = json!(0);
+                out.insert(key.clone(), after);
+            }
             "trace" => {
                 out.insert(
                     key.clone(),
@@ -915,8 +1102,9 @@ fn golden_logs(logs: &Value) -> Vec<Value> {
         .collect()
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn every_launch_golden_this_plan_owns_replays() {
+/// Replays every case that has (or has not) a deadline step against its golden and answers how many it
+/// replayed. A difference fails the test with every case's first difference named.
+async fn replay_against_goldens(deadline: bool) -> usize {
     let all = cases();
     let manifest = read_json(&golden_dir().join("MANIFEST.json"));
     assert_eq!(
@@ -929,7 +1117,7 @@ async fn every_launch_golden_this_plan_owns_replays() {
     let mut replayed = 0;
     let mut failures = Vec::new();
     for case in &all {
-        if is_deadline_case(case) {
+        if is_deadline_case(case) != deadline {
             continue;
         }
         let id = id_of(case);
@@ -998,25 +1186,38 @@ async fn every_launch_golden_this_plan_owns_replays() {
         failures.len(),
         failures.join("\n")
     );
+    replayed
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn every_launch_golden_without_a_deadline_replays() {
+    let replayed = replay_against_goldens(false).await;
     check_floor("replayed launch goldens", replayed, REPLAYED_FLOOR).unwrap();
 }
 
+/// The deadline cases run on a paused clock (the 180 s deadline and the 1.5 s polls are driven, not slept).
+#[tokio::test(start_paused = true)]
+async fn every_deadline_golden_replays() {
+    let replayed = replay_against_goldens(true).await;
+    check_floor("replayed deadline goldens", replayed, DEADLINE_FLOOR).unwrap();
+}
+
 #[test]
-fn the_cases_this_plan_leaves_to_the_deadline_are_the_ones_with_its_steps() {
+fn every_case_of_the_manifest_has_a_replay() {
     let all = cases();
-    let owned_by_87_51: Vec<&str> = all
-        .iter()
-        .filter(|case| is_deadline_case(case))
-        .map(id_of)
-        .collect();
-    // Every deadline case names its steps, and none of them is a case this plan replays.
-    check_floor("deadline cases", owned_by_87_51.len(), 20).unwrap();
-    assert!(owned_by_87_51.iter().all(|id| ![
-        "use-crossover-healthy",
-        "skip-native",
-        "legacy-override"
-    ]
-    .contains(id)));
+    let deadline = all.iter().filter(|case| is_deadline_case(case)).count();
+    // Both lists have a floor, and together they are the manifest: no case is left to a later plan.
+    check_floor("deadline cases", deadline, DEADLINE_FLOOR).unwrap();
+    check_floor(
+        "cases without a deadline",
+        all.len() - deadline,
+        REPLAYED_FLOOR,
+    )
+    .unwrap();
+    assert!(all.iter().all(
+        |case| !["use-crossover-healthy", "skip-native", "legacy-override"].contains(&id_of(case))
+            || !is_deadline_case(case)
+    ));
     let ops: BTreeMap<&str, usize> = all
         .iter()
         .flat_map(|case| case["steps"].as_array().unwrap())
@@ -1024,8 +1225,36 @@ fn the_cases_this_plan_leaves_to_the_deadline_are_the_ones_with_its_steps() {
             *acc.entry(step["op"].as_str().unwrap()).or_default() += 1;
             acc
         });
-    for op in ["select", "settings", "overlay", "prime"] {
+    for op in [
+        "select",
+        "settings",
+        "overlay",
+        "prime",
+        "arm",
+        "advance",
+        "end",
+        "quit",
+        "registry-clear",
+    ] {
         assert!(ops.contains_key(op), "{op}");
+    }
+    // Every step the cases use is one the replay knows.
+    for op in ops.keys() {
+        assert!(
+            [
+                "select",
+                "settings",
+                "overlay",
+                "prime",
+                "arm",
+                "advance",
+                "end",
+                "quit",
+                "registry-clear"
+            ]
+            .contains(op),
+            "{op}"
+        );
     }
 }
 
@@ -1069,6 +1298,39 @@ async fn a_fallback_toast_is_a_notification_and_never_raises_the_window() {
     for id in [
         "fallback-setup-purpose-no-toast",
         "inconclusive-keeps-pinned-marker",
+    ] {
+        assert!(!ops_of(id).await.iter().any(|op| op == "notify"), "{id}");
+    }
+}
+
+/// A deadline that passes with no process seen shows its notice and nothing else: one notification, no
+/// window raise, no in-app dialog (the acknowledgement tracking and the dialog frame are the dialog's).
+#[tokio::test(start_paused = true)]
+async fn a_deadline_that_fires_notifies_once_and_never_raises_the_window() {
+    for id in [
+        "deadline-fires-no-match-no-raise",
+        "deadline-basename-only-fires",
+        "deadline-sibling-dir-fires",
+    ] {
+        let ops = ops_of(id).await;
+        assert_eq!(ops.iter().filter(|op| *op == "notify").count(), 1, "{id}");
+        for raise in [
+            "raiseMainWindow",
+            "raiseMainWindowForInAppDialog",
+            "trackAck",
+            "sendFrontendMessage",
+        ] {
+            assert!(!ops.iter().any(|op| op == raise), "{id}: {raise}");
+        }
+    }
+    // A deadline that was cancelled, stood down or never armed says nothing at all.
+    for id in [
+        "deadline-cancel-first-match-unix",
+        "deadline-cancel-by-end-launch",
+        "deadline-cancel-by-giveup-listing-failures",
+        "deadline-stands-down-without-watcher",
+        "deadline-quit-with-deadline-armed",
+        "deadline-plain-prefix-not-armed",
     ] {
         assert!(!ops_of(id).await.iter().any(|op| op == "notify"), "{id}");
     }

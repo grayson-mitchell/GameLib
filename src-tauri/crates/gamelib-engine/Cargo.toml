@@ -49,8 +49,8 @@ testing = ["dep:url"]
 gamelib-engine = { path = ".", features = ["testing"] }
 gamelib-testutil = { path = "../gamelib-testutil" }
 tempfile = "3"
-# The ReqwestFetch tests talk to a local socket server.
-tokio = { version = "1", features = ["net"] }
+# The ReqwestFetch tests talk to a local socket server; the launch deadline tests pause the clock.
+tokio = { version = "1", features = ["net", "test-util"] }
 
 [lints.clippy]
 dbg_macro = "deny"

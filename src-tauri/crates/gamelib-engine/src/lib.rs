@@ -58,6 +58,8 @@ pub const OPS: &[&str] = &[
     "engine_cancel",
     "engine_cx_demo_status",
     "engine_cx_resolve_bin_dir",
+    "engine_deadline_arm",
+    "engine_deadline_cancel",
     "engine_decide_creation",
     "engine_decide_launch",
     "engine_default_engine",
@@ -65,7 +67,10 @@ pub const OPS: &[&str] = &[
     "engine_fallback_ensure",
     "engine_fallback_is_installed",
     "engine_is_crossover_missing",
+    "engine_launch_arm_deadline",
+    "engine_launch_end",
     "engine_launch_select",
+    "engine_launch_settings_get",
     "engine_ledger_mark_running",
     "engine_ledger_mark_stopped",
     "engine_list_options",
@@ -563,6 +568,78 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
                     .await;
             Ok(reply.to_value())
         }
+        // Arms the launch deadline of a bottle-backed non-Steam launch and its process watch, after the
+        // prerequisite installers (`armEngineLaunchDeadline`). Nothing is armed for a key the engine layer
+        // has no entry for, a plain-prefix launch or a launch with no registered selection. A deadline that
+        // fires shows the no-kill notice and never raises the window (D-01).
+        "engine_launch_arm_deadline" => {
+            let request: LaunchArmDeadlineRequest = decode(op, args)?;
+            let (game, key) = request
+                .into_game()
+                .ok_or_else(|| format!("{op}:bad-args"))?;
+            let outcome = launch::step::arm_engine_launch_deadline(
+                ctx,
+                &game,
+                key.as_deref(),
+                &launch::step::ArmOptions::default(),
+            )
+            .map_err(|e| format!("{op}:{}", e.as_str()))?;
+            Ok(match outcome {
+                launch::step::ArmOutcome::NotArmed => serde_json::json!({ "armed": false }),
+                launch::step::ArmOutcome::Armed { watching, .. } => {
+                    serde_json::json!({ "armed": true, "watching": watching })
+                }
+            })
+        }
+        // `endEngineLaunch`: the launcher exited. Releases the process watch, the overlay context, the
+        // deadline, the ledger entry and the registry selection of the key.
+        "engine_launch_end" => {
+            let request: SelectionClearRequest = decode(op, args)?;
+            if !key::is_engine_key(&request.key) {
+                return Err(format!("{op}:bad-args"));
+            }
+            launch::step::end_engine_launch(ctx, &request.key);
+            Ok(Value::Null)
+        }
+        // Arms the launch deadline of a Steam bridge launch: no process watch (the bridge's own monitor
+        // cancels it through `engine_deadline_cancel`), and when it fires the sidecar is sent
+        // `engineDeadlineFired {key, reason}` instead of a notice.
+        "engine_deadline_arm" => {
+            let request: SelectionClearRequest = decode(op, args)?;
+            launch::deadline::arm(ctx, &request.key, launch::deadline::DeadlineKind::Bridge)
+                .map_err(|e| format!("{op}:{}", e.as_str()))?;
+            Ok(Value::Null)
+        }
+        // Cancels the deadline of a key (`cancelLaunchDeadline`); `true` when one was armed.
+        "engine_deadline_cancel" => {
+            let request: DeadlineCancelRequest = decode(op, args)?;
+            let reason = launch::deadline::CancelReason::parse(&request.reason)
+                .filter(|_| key::is_engine_key(&request.key))
+                .ok_or_else(|| format!("{op}:bad-args"))?;
+            Ok(Value::Bool(launch::deadline::cancel(
+                ctx,
+                &request.key,
+                reason,
+            )))
+        }
+        // `getLaunchSettings`: the stored settings with the running launch's engine overlaid (`null` key:
+        // the input comes back unchanged). The input is never changed.
+        "engine_launch_settings_get" => {
+            let request: LaunchSettingsGetRequest = decode(op, args)?;
+            if !request.stored.is_object()
+                || request
+                    .key
+                    .as_deref()
+                    .is_some_and(|key| !key::is_engine_key(key))
+            {
+                return Err(format!("{op}:bad-args"));
+            }
+            Ok(ctx.launch_settings.get_launch_settings(
+                ctx,
+                request.key.as_deref(),
+                &request.stored,
+            ))
+        }
         // G25: true when CrossOver is not installed; never probes.
         "engine_is_crossover_missing" => {
             let request: ResolveBinDirRequest = decode(op, args)?;
@@ -965,6 +1042,60 @@ struct GameIdentityRequest {
     app_name: String,
 }
 
+/// The argument of `engine_launch_arm_deadline`: the game the deadline speaks for. The key is derived
+/// from the runner and app name, as every engine key is.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct LaunchArmDeadlineRequest {
+    runner: String,
+    app_name: String,
+    title: String,
+    #[serde(default)]
+    install_path: Option<String>,
+}
+
+impl LaunchArmDeadlineRequest {
+    /// The game and its key (`None` for a game the engine layer has no key for: nothing is armed).
+    fn into_game(self) -> Option<(launch::step::DeadlineGame, Option<String>)> {
+        let within = |text: &str, max: usize| (1..=max).contains(&jsutil::utf16_len(text));
+        let install_path = self.install_path.unwrap_or_default();
+        (within(&self.runner, 64)
+            && within(&self.app_name, 4096)
+            && jsutil::utf16_len(&self.title) <= 4096
+            && jsutil::utf16_len(&install_path) <= 4096)
+            .then(|| {
+                let key = key::engine_key_for(&self.runner, &self.app_name);
+                (
+                    launch::step::DeadlineGame {
+                        runner: self.runner,
+                        app_name: self.app_name,
+                        title: self.title,
+                        install_path,
+                    },
+                    key,
+                )
+            })
+    }
+}
+
+/// The argument of `engine_deadline_cancel`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DeadlineCancelRequest {
+    key: String,
+    reason: String,
+}
+
+/// The argument of `engine_launch_settings_get`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LaunchSettingsGetRequest {
+    #[serde(default)]
+    key: Option<String>,
+    #[serde(default)]
+    stored: Value,
+}
+
 /// The argument of `engine_dialog_displayed`: the acknowledgement id the dialog was shown under.
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
@@ -1314,6 +1445,8 @@ mod tests {
             "engine_cancel",
             "engine_cx_demo_status",
             "engine_cx_resolve_bin_dir",
+            "engine_deadline_arm",
+            "engine_deadline_cancel",
             "engine_decide_creation",
             "engine_decide_launch",
             "engine_default_engine",
@@ -1321,7 +1454,10 @@ mod tests {
             "engine_fallback_ensure",
             "engine_fallback_is_installed",
             "engine_is_crossover_missing",
+            "engine_launch_arm_deadline",
+            "engine_launch_end",
             "engine_launch_select",
+            "engine_launch_settings_get",
             "engine_ledger_mark_running",
             "engine_ledger_mark_stopped",
             "engine_list_options",
@@ -1378,6 +1514,177 @@ mod tests {
             .await,
             Ok(json!({"kind": "skip"}))
         );
+    }
+
+    #[tokio::test]
+    async fn the_deadline_ops_arm_a_bridge_deadline_cancel_it_by_a_closed_reason_and_need_a_shared_context(
+    ) {
+        let home = FakeHome::new("engine-lib-");
+        let unshared = ctx(&home);
+        assert_eq!(
+            dispatch("engine_deadline_arm", &[json!({"key": "620"})], &unshared).await,
+            Err("engine_deadline_arm:not-shared".to_string())
+        );
+        let shared = ctx(&home).share();
+        let ctx = &*shared;
+        for bad in [
+            json!({}),
+            json!({"key": "not a key"}),
+            json!({"key": "620", "x": 1}),
+        ] {
+            assert!(
+                dispatch("engine_deadline_arm", &[bad], ctx).await.is_err(),
+                "arm"
+            );
+        }
+        assert_eq!(
+            dispatch("engine_deadline_arm", &[json!({"key": "620"})], ctx).await,
+            Ok(Value::Null)
+        );
+        assert!(ctx.launch_state.deadline_armed("620"));
+        for bad in [
+            json!({"key": "620"}),
+            json!({"key": "620", "reason": "because"}),
+            json!({"key": "not a key", "reason": "first-match"}),
+            json!({"key": "620", "reason": "first-match", "x": 1}),
+        ] {
+            assert_eq!(
+                dispatch("engine_deadline_cancel", &[bad], ctx).await,
+                Err("engine_deadline_cancel:bad-args".to_string())
+            );
+        }
+        let cancel = json!({"key": "620", "reason": "first-match"});
+        assert_eq!(
+            dispatch("engine_deadline_cancel", std::slice::from_ref(&cancel), ctx).await,
+            Ok(Value::Bool(true))
+        );
+        assert_eq!(
+            dispatch("engine_deadline_cancel", &[cancel], ctx).await,
+            Ok(Value::Bool(false))
+        );
+        assert!(!ctx.launch_state.deadline_armed("620"));
+    }
+
+    #[tokio::test]
+    async fn the_launch_deadline_op_arms_only_a_bottle_backed_launch_and_the_end_op_releases_it() {
+        let home = FakeHome::new("engine-lib-");
+        let shared = ctx(&home).share();
+        let ctx = &*shared;
+        let game = |install: &str| {
+            json!({
+                "runner": "gog", "appName": "1207658924", "title": "Quail", "installPath": install,
+            })
+        };
+        for bad in [
+            json!({}),
+            json!({"runner": "gog", "appName": "1", "title": "t", "x": 1}),
+            json!({"runner": "", "appName": "1", "title": "t"}),
+            json!({"runner": "gog", "appName": "", "title": "t"}),
+        ] {
+            assert_eq!(
+                dispatch("engine_launch_arm_deadline", &[bad], ctx).await,
+                Err("engine_launch_arm_deadline:bad-args".to_string())
+            );
+        }
+        let key = "gog:1207658924";
+        // No overlay context and no selection: nothing is armed, and a game with no key is the same.
+        assert_eq!(
+            dispatch("engine_launch_arm_deadline", &[game("/g/Quail")], ctx).await,
+            Ok(json!({"armed": false}))
+        );
+        assert_eq!(
+            dispatch(
+                "engine_launch_arm_deadline",
+                &[json!({"runner": "humble", "appName": "a", "title": "t"})],
+                ctx
+            )
+            .await,
+            Ok(json!({"armed": false}))
+        );
+        ctx.launch_settings.set_launch_overlay_context(
+            key,
+            launch::settings::OverlayContext::bottle("GameLib-gog-1207658924", None),
+        );
+        // A bottle context alone is not enough: the selection must be registered.
+        assert_eq!(
+            dispatch("engine_launch_arm_deadline", &[game("/g/Quail")], ctx).await,
+            Ok(json!({"armed": false}))
+        );
+        ctx.registry.set_engine_selection_quiet(
+            None,
+            key,
+            bottles::registry::EngineSelection::Crossover {
+                reason: "cx-healthy".to_string(),
+                crossover_build: None,
+                bin_dir: "/cx/bin".to_string(),
+            },
+        );
+        // A path with no usable form has no process to watch: the deadline is stood down at once.
+        assert_eq!(
+            dispatch("engine_launch_arm_deadline", &[game("relative")], ctx).await,
+            Ok(json!({"armed": true, "watching": false}))
+        );
+        assert!(!ctx.launch_state.deadline_armed(key));
+        assert_eq!(
+            dispatch("engine_launch_arm_deadline", &[game("/g/Quail")], ctx).await,
+            Ok(json!({"armed": true, "watching": true}))
+        );
+        assert!(ctx.launch_state.deadline_armed(key));
+        assert_eq!(ctx.launch_state.active_watchers(), 1);
+        ctx.launch_state
+            .remember_ledger_bottle(key, "GameLib-gog-1207658924");
+        ctx.ledger
+            .mark_game_running(None, "GameLib-gog-1207658924", key);
+
+        assert_eq!(
+            dispatch("engine_launch_end", &[json!({"key": "not a key"})], ctx).await,
+            Err("engine_launch_end:bad-args".to_string())
+        );
+        assert_eq!(
+            dispatch("engine_launch_end", &[json!({"key": key})], ctx).await,
+            Ok(Value::Null)
+        );
+        assert!(!ctx.launch_state.deadline_armed(key));
+        assert_eq!(ctx.launch_state.active_watchers(), 0);
+        assert!(ctx
+            .launch_settings
+            .get_launch_overlay_context(key)
+            .is_none());
+        assert!(ctx.registry.get_engine_selection(key).is_none());
+        assert!(ctx
+            .ledger
+            .games_running_in("GameLib-gog-1207658924")
+            .is_empty());
+    }
+
+    #[tokio::test]
+    async fn the_launch_settings_op_returns_the_stored_settings_and_refuses_a_non_object() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        let stored = json!({"wineVersion": {"type": "wine", "bin": "/w/wine", "name": "Wine"}});
+        for bad in [
+            json!({}),
+            json!({"stored": []}),
+            json!({"key": "not a key", "stored": {}}),
+            json!({"stored": {}, "x": 1}),
+        ] {
+            assert_eq!(
+                dispatch("engine_launch_settings_get", &[bad], &ctx).await,
+                Err("engine_launch_settings_get:bad-args".to_string())
+            );
+        }
+        // No launch is running for the key, so the settings come back as they went in.
+        for key in [json!(null), json!("gog:1")] {
+            assert_eq!(
+                dispatch(
+                    "engine_launch_settings_get",
+                    &[json!({"key": key, "stored": stored})],
+                    &ctx
+                )
+                .await,
+                Ok(stored.clone())
+            );
+        }
     }
 
     #[tokio::test]

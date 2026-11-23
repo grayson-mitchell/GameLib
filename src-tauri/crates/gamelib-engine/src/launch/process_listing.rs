@@ -3,7 +3,7 @@
 
 use std::time::Duration;
 
-use gamelib_core::process::ProcSpec;
+use gamelib_core::process::{ProcSpec, SpecRunner};
 
 use crate::ctx::EngineCtx;
 use crate::jsutil::{is_js_whitespace, js_trim};
@@ -39,7 +39,7 @@ pub fn parse_ps_line(line: &str) -> Option<(String, String)> {
 }
 
 async fn list_with(
-    ctx: &EngineCtx,
+    proc: &dyn SpecRunner,
     label: &'static str,
     program: &str,
     argv: &[&str],
@@ -48,7 +48,7 @@ async fn list_with(
     spec.argv = argv.iter().map(|a| (*a).to_string()).collect();
     spec.timeout = Some(LISTING_TIMEOUT);
     spec.max_buffer = LISTING_CAP;
-    let run = ctx.proc.run(spec, None).await;
+    let run = proc.run(spec, None).await;
     // A program that could not run, timed out or was cancelled has no listing; a nonzero exit still
     // printed what it saw, as `spawnAsync` resolved it.
     if run.code.is_none() || run.timed_out || run.cancelled {
@@ -66,9 +66,15 @@ async fn list_with(
 /// (`spawn EPERM`). `pgrep -lf .` is not setuid and prints the same `pid command` lines, so it stands
 /// in when `ps` cannot run. The `ps` error is the one returned if both fail.
 pub async fn list_processes(ctx: &EngineCtx) -> Result<String, String> {
-    match list_with(ctx, "engine-ps-listing", "ps", &["-axo", "pid=,command="]).await {
+    list_processes_via(&*ctx.proc).await
+}
+
+/// [`list_processes`] over a spawn seam instead of a context: what the process watch task holds (it
+/// clones the seam, not the context).
+pub async fn list_processes_via(proc: &dyn SpecRunner) -> Result<String, String> {
+    match list_with(proc, "engine-ps-listing", "ps", &["-axo", "pid=,command="]).await {
         Ok(listing) => Ok(listing),
-        Err(ps_error) => list_with(ctx, "engine-pgrep-listing", "pgrep", &["-lf", "."])
+        Err(ps_error) => list_with(proc, "engine-pgrep-listing", "pgrep", &["-lf", "."])
             .await
             .map_err(|_| ps_error),
     }

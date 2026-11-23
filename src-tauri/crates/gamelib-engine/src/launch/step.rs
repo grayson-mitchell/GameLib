@@ -53,6 +53,7 @@ use crate::fallback::progress::STATUS_CHANNEL;
 use crate::game_prefix::{resolve_game_prefix, GamePrefix};
 use crate::ids::{pin_by_id, AUTOMATIC, CROSSOVER};
 use crate::key::{engine_key_if_eligible, GameIdentity};
+use crate::launch::deadline::{self, ArmError, DeadlineKind, NoticeTarget};
 use crate::launch::dialogs::{notify_engine_fallback, show_engine_dialog, Notice};
 use crate::launch::settings::{build_crossover_game_settings, OverlayContext};
 use crate::pins::{pins, EnginePin};
@@ -772,5 +773,141 @@ pub async fn select_engine_for_launch(
         prefix: Some(prefix),
         log_lines: std::mem::take(&mut step.log_lines),
         launch_settings: Some(launch_settings),
+    }
+}
+
+/// The game a deadline speaks for (`game.getGameInfo()`): the runner and app name the notice's engine-state
+/// push names, the title the user reads, and where the game is installed (what the process watch matches).
+#[derive(Debug, Clone)]
+pub struct DeadlineGame {
+    pub runner: String,
+    pub app_name: String,
+    pub title: String,
+    pub install_path: String,
+}
+
+/// What the TS passed as `Partial<DeadlineDeps>` and the watch's own options, for a test to shorten or
+/// replace; [`ArmOptions::default`] is production.
+#[derive(Debug, Clone)]
+pub struct ArmOptions {
+    /// The listing interval (the TS `pollMs`); `None` is 1.5 s.
+    pub poll_ms: Option<u64>,
+    /// The watch's own cap (the TS `maxDurationMs`); `None` is the deadline plus five seconds.
+    pub max_duration_ms: Option<u64>,
+    /// Whether to start the process watch. `false` is a watch that found no signal (the TS `watch`
+    /// returning `null`): the deadline is stood down.
+    pub start_watcher: bool,
+}
+
+impl Default for ArmOptions {
+    fn default() -> ArmOptions {
+        ArmOptions {
+            poll_ms: None,
+            max_duration_ms: None,
+            start_watcher: true,
+        }
+    }
+}
+
+/// What [`arm_engine_launch_deadline`] did.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ArmOutcome {
+    /// Nothing was armed: no key, no bottle-backed overlay context, or no registered selection.
+    NotArmed,
+    /// A deadline was armed; the watch was asked for `install_path` and `bottle_dir`. `watching` is false
+    /// when no process monitor started, in which case the deadline was stood down at once.
+    Armed {
+        install_path: String,
+        bottle_dir: String,
+        watching: bool,
+    },
+}
+
+/// `armEngineLaunchDeadline` (61-16 D-18): arms the launch deadline for a bottle-backed launch, after the
+/// prerequisite installers. Plain-prefix launches are not armed. The deadline is bound to the first-match
+/// process watch; with no derivable signal, or a watch that gives up (WR-01), it is stood down. When it
+/// does fire it only shows a no-kill notice (CR-02, CR-03).
+pub fn arm_engine_launch_deadline(
+    ctx: &EngineCtx,
+    game: &DeadlineGame,
+    key: Option<&str>,
+    options: &ArmOptions,
+) -> Result<ArmOutcome, ArmError> {
+    let Some(key) = key else {
+        return Ok(ArmOutcome::NotArmed);
+    };
+    let Some(OverlayContext {
+        prefix: crate::launch::settings::OverlayPrefix::Bottle { bottle_name },
+        ..
+    }) = ctx.launch_settings.get_launch_overlay_context(key)
+    else {
+        return Ok(ArmOutcome::NotArmed);
+    };
+    let Some(armed_selection) = ctx.registry.get_engine_selection(key) else {
+        return Ok(ArmOutcome::NotArmed);
+    };
+
+    deadline::arm(
+        ctx,
+        key,
+        DeadlineKind::Notice(Box::new(NoticeTarget {
+            runner: game.runner.clone(),
+            app_name: game.app_name.clone(),
+            title: game.title.clone(),
+            armed_selection: Some(armed_selection),
+        })),
+    )?;
+    ctx.launch_state.stop_watcher(key);
+
+    let bottle_dir = crate::engines::bottle_dir(ctx, &bottle_name);
+    let mut watch_args =
+        crate::launch::watch::WatchArgs::new(&game.install_path, Some(&bottle_dir));
+    if let Some(ms) = options.poll_ms {
+        watch_args.poll = Duration::from_millis(ms);
+    }
+    if let Some(ms) = options.max_duration_ms {
+        watch_args.max_duration = Duration::from_millis(ms);
+    }
+    let watching = options.start_watcher && {
+        let me = ctx.weak().ok_or(ArmError::NotShared)?;
+        let watched_key = key.to_string();
+        crate::launch::watch::start(ctx, key, &watch_args, move |end| {
+            // The watch has left the state by now. The first match ends the deadline; a watch that gave
+            // up (WR-01) is a lost signal source and must not leave a stale deadline armed.
+            let Some(ctx) = me.upgrade() else {
+                return;
+            };
+            let reason = match end {
+                crate::launch::watch::WatchEnd::FirstMatch { .. } => {
+                    deadline::CancelReason::FirstMatch
+                }
+                crate::launch::watch::WatchEnd::GaveUp(_) => {
+                    deadline::CancelReason::MonitorUnavailable
+                }
+            };
+            deadline::cancel(&ctx, &watched_key, reason);
+        })
+    };
+    if !watching {
+        deadline::stand_down_without_monitor(ctx, key);
+    }
+    Ok(ArmOutcome::Armed {
+        install_path: game.install_path.clone(),
+        bottle_dir,
+        watching,
+    })
+}
+
+/// `endEngineLaunch`: releases everything a launch held (the process watch, the overlay context, the
+/// deadline, the ledger entry and the registry selection) when the launcher exits. The registry is
+/// cleared quietly, as every op the sidecar starts does: its reply is the sidecar view's own update.
+pub fn end_engine_launch(ctx: &EngineCtx, key: &str) {
+    ctx.launch_state.stop_watcher(key);
+    ctx.launch_settings.clear_launch_overlay_context(key);
+    deadline::cancel(ctx, key, deadline::CancelReason::LauncherExited);
+    let bottle = ctx.launch_state.take_ledger_bottle(key);
+    ctx.registry.clear_engine_selection_quiet(key);
+    if let Some(bottle) = bottle {
+        ctx.ledger.mark_game_stopped(&bottle, key);
     }
 }

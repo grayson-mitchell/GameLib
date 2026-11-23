@@ -447,7 +447,8 @@ pub(crate) fn install(app: &AppHandle, user_data: &Path) {
         ui,
         gamelib_core::shutdown::global().clone(),
     );
-    let ctx = Arc::new(ctx);
+    // Shared, so the launch deadline and the process watch can reach the context when they fire (87-51).
+    let ctx = ctx.share();
     if ENGINE_CTX.set(Arc::clone(&ctx)).is_ok() {
         start_engine_sweep(&ctx, shell_log);
     }

@@ -3,7 +3,7 @@
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock, Weak};
 
 use gamelib_core::clock::Clock;
 use gamelib_core::emitter::FrontendEmitter;
@@ -228,6 +228,10 @@ pub struct EngineCtx {
     /// The engine dialogs waiting for the renderer's acknowledgement (`engine:<n>` ids). In memory only:
     /// empty at construction.
     pub display_acks: DisplayAcks,
+    /// A weak handle to this context once it is shared ([`EngineCtx::share`]): what a task that outlives
+    /// the op that started it (the launch deadline, the process watch) holds, so it can reach the context
+    /// when it fires without keeping it alive while it sleeps.
+    me: OnceLock<Weak<EngineCtx>>,
 }
 
 impl EngineCtx {
@@ -264,6 +268,7 @@ impl EngineCtx {
             launch_settings: LaunchSettingsRegistry::new(),
             launch_state: LaunchState::new(),
             display_acks: DisplayAcks::new(),
+            me: OnceLock::new(),
             host,
             clock,
             platform,
@@ -328,6 +333,22 @@ impl EngineCtx {
     ) -> EngineCtx {
         self.crossover_discovery = crossover_discovery;
         self
+    }
+
+    /// Puts the context behind its `Arc` and records the weak handle a long-lived task of the launch
+    /// (the deadline, the process watch) reaches it through. The shell calls this once where it builds the
+    /// `Arc<EngineCtx>`; a context that was never shared answers `None` from [`EngineCtx::weak`], and the
+    /// ops that start such a task refuse (`<op>:not-shared`) rather than start one that cannot fire.
+    pub fn share(self) -> Arc<EngineCtx> {
+        let shared = Arc::new(self);
+        // A fresh context has no handle yet, so this always stores.
+        let _ = shared.me.set(Arc::downgrade(&shared));
+        shared
+    }
+
+    /// The weak handle of a shared context ([`EngineCtx::share`]).
+    pub fn weak(&self) -> Option<Weak<EngineCtx>> {
+        self.me.get().cloned()
     }
 
     /// Sets the online answer this context starts with.
@@ -407,6 +428,19 @@ mod tests {
                 .t("none.such", "inline default", &serde_json::Map::new()),
             "inline default"
         );
+    }
+
+    #[tokio::test]
+    async fn a_context_hands_out_its_weak_handle_only_once_shared() {
+        let home = FakeHome::new("engine-ctx-");
+        let ctx = ctx(&home);
+        assert!(ctx.weak().is_none());
+        let shared = ctx.share();
+        let weak = shared.weak().unwrap();
+        assert!(Arc::ptr_eq(&weak.upgrade().unwrap(), &shared));
+        // The handle is weak: it does not keep the context alive.
+        drop(shared);
+        assert!(weak.upgrade().is_none());
     }
 
     #[tokio::test]
