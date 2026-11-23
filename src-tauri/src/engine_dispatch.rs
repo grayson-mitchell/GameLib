@@ -742,6 +742,7 @@ engine_op_arms! {
     rpc_cancel => "engine_cancel",
     rpc_resolve_tool_settings => "engine_resolve_tool_settings",
     rpc_non_crossover_engine => "engine_non_crossover_engine",
+    rpc_fallback_ensure => "engine_fallback_ensure",
 }
 
 #[cfg(test)]
@@ -1240,6 +1241,7 @@ mod tests {
             (rpc_cancel, "engine_cancel"),
             (rpc_resolve_tool_settings, "engine_resolve_tool_settings"),
             (rpc_non_crossover_engine, "engine_non_crossover_engine"),
+            (rpc_fallback_ensure, "engine_fallback_ensure"),
         ] {
             for bad in [
                 vec![],

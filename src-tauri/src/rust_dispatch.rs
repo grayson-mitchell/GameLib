@@ -302,5 +302,6 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::EngineNonCrossoverEngine => {
             engine_dispatch::rpc_non_crossover_engine(args)
         }
+        RustInvokeChannel::EngineFallbackEnsure => engine_dispatch::rpc_fallback_ensure(args),
     }
 }

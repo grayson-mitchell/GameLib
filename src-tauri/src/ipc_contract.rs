@@ -210,6 +210,7 @@ pub(crate) enum RustInvokeChannel {
     EngineCancel,
     EngineResolveToolSettings,
     EngineNonCrossoverEngine,
+    EngineFallbackEnsure,
 }
 
 impl RustInvokeChannel {
@@ -401,6 +402,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineCancel,
         RustInvokeChannel::EngineResolveToolSettings,
         RustInvokeChannel::EngineNonCrossoverEngine,
+        RustInvokeChannel::EngineFallbackEnsure,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -592,6 +594,7 @@ impl RustInvokeChannel {
             "engine_cancel" => Some(RustInvokeChannel::EngineCancel),
             "engine_resolve_tool_settings" => Some(RustInvokeChannel::EngineResolveToolSettings),
             "engine_non_crossover_engine" => Some(RustInvokeChannel::EngineNonCrossoverEngine),
+            "engine_fallback_ensure" => Some(RustInvokeChannel::EngineFallbackEnsure),
             _ => None,
         }
     }
@@ -785,6 +788,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineCancel => "engine_cancel",
             RustInvokeChannel::EngineResolveToolSettings => "engine_resolve_tool_settings",
             RustInvokeChannel::EngineNonCrossoverEngine => "engine_non_crossover_engine",
+            RustInvokeChannel::EngineFallbackEnsure => "engine_fallback_ensure",
         }
     }
 }
@@ -3916,6 +3920,18 @@ pub(crate) struct EngineNonCrossoverEngineArgs {
 impl EngineNonCrossoverEngineArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let request = serde_json::from_value(args.first().ok_or_else(|| "engine_non_crossover_engine:bad-args".to_string())?.clone()).map_err(|_| "engine_non_crossover_engine:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineFallbackEnsureArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineFallbackEnsureArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_fallback_ensure:bad-args".to_string())?.clone()).map_err(|_| "engine_fallback_ensure:bad-args".to_string())?;
         Ok(Self { request })
     }
 }

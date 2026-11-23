@@ -36,7 +36,8 @@ import {
   setBridgeSteamApiPrescreen
 } from './bridge/bridgeVerdict'
 import type { EnginePin } from 'common/types/engine'
-import { ensurePinnedEngineReportingStatus } from 'backend/engine/pinnedEngineProgress'
+import { sendGameStatusUpdate } from 'backend/utils'
+import { ensurePinnedEngineThroughRust } from './engine/pinnedEngine'
 import { markForcedWindowsViaBottle } from './gameSessionState'
 import { buildSteamProtocolUrl } from './gameProtocolUrl'
 import type SteamGame from './games'
@@ -599,18 +600,23 @@ export async function ensureBuiltInEngineForInstall(
   pin: EnginePin,
   signal?: AbortSignal
 ): Promise<NonCrossoverEngine | InstallResult> {
-  // Phase 61 (D-03): the progress wrapper is shared with the non-Steam stores.
-  const result = await ensurePinnedEngineReportingStatus({
-    pin,
-    appName: steamGame.appId,
-    runner: 'steam',
-    processRunner: steamGame.deps.runner,
-    onlineMonitor: steamGame.deps.onlineMonitor,
-    fallback: steamGame.deps.engineRuntime.fallback,
-    sendFrontendMessage: steamGame.deps.sendFrontendMessage,
-    appRuntime: steamGame.deps.appRuntime,
-    signal
-  })
+  // 87-56a (D-01, D-10): Rust downloads and sends the engine-download statuses itself; an abort reaches it as a cancel id.
+  const result = await ensurePinnedEngineThroughRust(
+    { requestRustInvoke: steamGame.deps.engineRuntime.requestRustInvoke },
+    {
+      pin,
+      appName: steamGame.appId,
+      runner: 'steam',
+      signal,
+      // Rust closes the status with `done` itself; this runs only when it never got the request.
+      clearStatus: () =>
+        sendGameStatusUpdate(steamGame.deps, {
+          appName: steamGame.appId,
+          runner: 'steam',
+          status: 'done'
+        })
+    }
+  )
   if (result.ok) return result.engine
   // 59-REVIEW WR-01: a cancel or quit is not a download failure.
   if (result.aborted) return { status: 'abort' }

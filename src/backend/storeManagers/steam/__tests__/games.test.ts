@@ -201,6 +201,11 @@ import * as deadlineModule from 'backend/enginewine/deadline'
 import { LAUNCH_DEADLINE_MS } from 'common/types/engine'
 import { createFakeClock } from 'backend/testUtils/fakeClock'
 import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
+import {
+  RUST_ENGINE_CANCEL,
+  RUST_ENGINE_FALLBACK_ENSURE
+} from 'common/types/sidecarTransport'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { checkConnectivityNow } from 'backend/connectivityNow'
 import { existsSync } from 'graceful-fs'
 import { getSteamLibraries, sendGameStatusUpdate } from 'backend/utils'
@@ -323,10 +328,26 @@ const hostFakes = {
 // One engine runtime on a fake clock for the whole file (the boot instance of production); the
 // tests below clear what they register (selection, ledger, deadline) exactly as before.
 const mockPrepareBottleForEngine = jest.fn()
+// 87-56a: the first-need download is Rust's. `mockEnsurePinnedEngine` answers the `engine_fallback_ensure` request
+// (`{pinId, appName, runner, cancelId}`) with a `PinnedEngineResult`; `mockCancelEnsure` the `engine_cancel` for it.
 const mockEnsurePinnedEngine = jest.fn()
+const mockCancelEnsure = jest.fn()
 const mockIsPinnedEngineInstalled = jest.fn()
 const gamesClock = createFakeClock()
-const testRuntime = createTestEngineRuntime()
+const defaultEngineTransport = createTestEngineRuntime().requestRustInvoke
+const testRuntime = createTestEngineRuntime({
+  requestRustInvoke: ((channel: string, args: unknown[]) => {
+    if (channel === RUST_ENGINE_FALLBACK_ENSURE) {
+      return Promise.resolve(mockEnsurePinnedEngine(args[0]))
+    }
+    if (channel === RUST_ENGINE_CANCEL) {
+      return Promise.resolve(mockCancelEnsure(args[0]))
+    }
+    return (
+      defaultEngineTransport as (c: string, a: unknown[]) => Promise<unknown>
+    )(channel, args)
+  }) as unknown as RustInvokeDeps['requestRustInvoke']
+})
 const getEngineSelection = (k: string) =>
   testRuntime.registry.getEngineSelection(k)
 const clearEngineSelection = (k: string) =>
@@ -668,6 +689,9 @@ jest.mock('backend/enginewine/twin', () => ({
   buildFallbackGameSettings: jest.fn(),
   // The marker views the offline refusal reads (the switch itself is Rust's).
   readBottleEngineMarkerKind: jest.fn(),
+  // 87-56a: the synchronous installed check the offline pre-check reads through `pinnedEngineReader` (D-24 twin).
+  isPinnedEngineInstalled: (...a: unknown[]) =>
+    mockIsPinnedEngineInstalled(...a),
   restoreNeedsAbsentPin: jest.fn(),
   // Phase 51 Plan 01 (D-51-01): launchBridgeGame()'s bottleProcessMonitor
   // wiring resolves the bottle dir via this.
@@ -966,20 +990,8 @@ jest.mock('../engine/steamEngineDeps', () => ({
   steamWineBinHints: jest.fn(() => []),
   steamPrepareFacts: jest.fn(() => ({}))
 }))
-// Phase 59 (59-10): per-launch bottle preparation and state publishing.
-// 66.4-05: the switcher and the fallback-engine owner are boot instances reached through
-// deps.engineRuntime; the runtime built below wraps these recording fakes.
-jest.mock('backend/engine/fallbackEngine', () => ({
-  createFallbackEngine: () => ({
-    ensurePinnedEngine: (...a: unknown[]) => mockEnsurePinnedEngine(...a),
-    isPinnedEngineInstalled: (...a: unknown[]) =>
-      mockIsPinnedEngineInstalled(...a),
-    pinnedEnginePaths: jest.fn(),
-    pinnedEngineRoot: jest.fn(),
-    pruneUnpinnedEngines: jest.fn(),
-    sweepStaleEngineTemps: jest.fn()
-  })
-}))
+// Phase 59 (59-10): per-launch bottle preparation and state publishing. 87-56a: the pinned-engine download is Rust's
+// (`mockEnsurePinnedEngine` above answers its transport request) and the installed check is the twin's.
 
 // ── nativeInstallSetting.ts mock (Plan 03's D-13 opt-in read seam) — plain
 // jest.fn() with no default implementation. resetMocks:true means it returns
@@ -1845,14 +1857,29 @@ const cxDecision = (extra: Record<string, unknown> = {}) => ({
   logLines: ['engine=crossover build=26.3 reason=cx-healthy'],
   ...extra
 })
+// What Rust's `engine_fallback_ensure` answers when the engine is ready (87-56a).
 const ENGINE_OK = {
   ok: true,
-  paths: {
-    wineDir: '/engine/wine',
+  engine: {
     wineBin: '/engine/wine/bin/wine',
     wineserverBin: '/engine/wine/bin/wineserver',
-    dxvkDir: '/engine/dxvk'
+    label: 'Wine-Staging',
+    version: '11',
+    dxvk: { dir: '/engine/dxvk', version: '1.10' }
   }
+}
+/** What Rust answers for a failed download and for a cancel (a `PinnedEngineResult`). */
+const ENGINE_FAILED = {
+  ok: false,
+  aborted: false,
+  reason: 'offline',
+  error: 'offline no network'
+}
+const ENGINE_ABORTED = {
+  ok: false,
+  aborted: true,
+  reason: 'aborted',
+  error: 'aborted'
 }
 // Module-export spies outlive their test (the backend jest project sets
 // resetMocks, not restoreMocks), so every one is registered here and restored.
@@ -4063,7 +4090,7 @@ describe('SteamGame.stop() — D-02 native depot-download abort', () => {
       installdir: APP_ID
     })
     createAbortController.mockReturnValue({
-      signal: 'mock-signal'
+      signal: new AbortController().signal
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
   })
@@ -4399,7 +4426,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(TARGET)
     createAbortController.mockReturnValue({
-      signal: 'mock-signal'
+      signal: new AbortController().signal
     })
   })
 
@@ -4465,7 +4492,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       targetSteamappsDir: TARGET.targetSteamappsDir,
       installdir: TARGET.installdir,
       os: expect.any(String),
-      signal: 'mock-signal'
+      signal: new AbortController().signal
     })
     // debug/steam-1026-download-restart: this poll starts AFTER GameLib's own
     // depot.ts download finished — isNativeHandoff:true so StateFlags 1026 is
@@ -4824,7 +4851,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(TARGET)
     createAbortController.mockReturnValue({
-      signal: 'mock-signal'
+      signal: new AbortController().signal
     })
     // resetMocks: true strips jest.fn() implementations (not just call
     // history) before EVERY test, including the mock factory's default
@@ -5415,7 +5442,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(RESOLVED_TARGET)
     createAbortController.mockReturnValue({
-      signal: 'mock-signal'
+      signal: new AbortController().signal
     })
   })
 
@@ -5442,7 +5469,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
       targetSteamappsDir: BOTTLE_STEAMAPPS_DIR,
       installdir: RESOLVED_TARGET.installdir,
       os: 'windows',
-      signal: 'mock-signal'
+      signal: new AbortController().signal
     })
     // debug/steam-1026-download-restart: this poll starts AFTER GameLib's own
     // depot.ts download finished (D-15/SNI-08 native-ON bottle path) —
@@ -5499,7 +5526,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
       targetSteamappsDir: BOTTLE_STEAMAPPS_DIR,
       installdir: RESOLVED_TARGET.installdir,
       os: 'windows',
-      signal: 'mock-signal'
+      signal: new AbortController().signal
     })
     expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       source: 'bottle',
@@ -5617,7 +5644,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(RESOLVED_TARGET)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
     createAbortController.mockReturnValue({
-      signal: 'mock-signal'
+      signal: new AbortController().signal
     })
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
     ;(placeShimForGame as jest.Mock).mockResolvedValue({
@@ -5660,7 +5687,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       targetSteamappsDir: BRIDGE_STEAMAPPS_DIR,
       installdir: RESOLVED_TARGET.installdir,
       os: 'windows',
-      signal: 'mock-signal'
+      signal: new AbortController().signal
     })
     expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     // quick/261016-u1w: placeShimForGame now receives the per-game bottle
@@ -7278,94 +7305,46 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       })
     })
 
-    it('pinned decision: downloads with deduplicated whole-percent engine-download statuses, then creates the bottle with fallbackEngine', async () => {
+    it('pinned decision: downloads through Rust, then creates the bottle with fallbackEngine', async () => {
       ;(decideCreationEngine as jest.Mock).mockResolvedValue(
         creationReply(pinnedDecision())
       )
-      mockEnsurePinnedEngine.mockImplementation((_pin, opts) => {
-        for (const percentage of [0, 0.2, 10.4, 10.2, 99.6, 100]) {
-          opts.onProgress({
-            phase: 'downloading',
-            artifact: 'wine',
-            percentage
-          })
-        }
-        return Promise.resolve(ENGINE_OK)
-      })
+      mockEnsurePinnedEngine.mockResolvedValue(ENGINE_OK)
 
       const result = await new SteamGame(APP_ID, steamTestDeps).install(
         {} as any
       )
 
-      expect(statuses()).toEqual([
-        'downloading:0',
-        'downloading:10',
-        'downloading:98',
-        'setting-up',
-        'creating-bottle'
-      ])
+      // The download's statuses (the weighted percent, verify, unpack, setting-up) are Rust's, replayed by
+      // `fallback/progress.rs`; the install itself sends only the status after it.
+      expect(mockEnsurePinnedEngine).toHaveBeenCalledTimes(1)
+      expect(mockEnsurePinnedEngine).toHaveBeenCalledWith({
+        pinId: ENGINE_PINS.current.id,
+        appName: APP_ID,
+        runner: 'steam',
+        cancelId: expect.stringMatching(/^ee-[0-9a-f-]{36}$/)
+      })
+      expect(statuses()).toEqual(['creating-bottle'])
       const call = (provisionBridgeBottle as jest.Mock).mock.calls[0][1]
       expect(call.bottleName).toBe(`GameLibSteamBridge-${APP_ID}`)
       expect(call.wineVersion).toBeUndefined()
       expect(call.fallbackPinId).toBe(ENGINE_PINS.current.id)
       expect(call.fallbackEngine).toEqual(
         expect.objectContaining({
-          wineBin: ENGINE_OK.paths.wineBin,
-          wineserverBin: ENGINE_OK.paths.wineserverBin,
-          dxvk: expect.objectContaining({ dir: ENGINE_OK.paths.dxvkDir })
+          wineBin: ENGINE_OK.engine.wineBin,
+          wineserverBin: ENGINE_OK.engine.wineserverBin,
+          dxvk: expect.objectContaining({ dir: ENGINE_OK.engine.dxvk.dir })
         })
       )
       expect(downloadSteamDepots).toHaveBeenCalled()
       expect(result.status).toBe('done')
     })
 
-    it('G1: real two-archive progress never resets the percent and labels verify/unpack/set-up (trace 2026-11-02)', async () => {
-      ;(decideCreationEngine as jest.Mock).mockResolvedValue(
-        creationReply(pinnedDecision())
-      )
-      mockEnsurePinnedEngine.mockImplementation((_pin, opts) => {
-        const run = (artifact: 'dxvk' | 'wine') => {
-          for (const percentage of [0, 5, 50, 100]) {
-            opts.onProgress({ phase: 'downloading', artifact, percentage })
-          }
-          opts.onProgress({ phase: 'verifying', artifact })
-          opts.onProgress({ phase: 'extracting', artifact })
-        }
-        run('dxvk')
-        run('wine')
-        return Promise.resolve(ENGINE_OK)
-      })
-
-      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
-
-      const seen = statuses() as string[]
-      const percents = seen
-        .filter((c) => c.startsWith('downloading:'))
-        .map((c) => Number(c.slice('downloading:'.length)))
-      expect(percents.length).toBeGreaterThan(1)
-      expect(percents).toEqual([...percents].sort((a, b) => a - b))
-      expect(percents[percents.length - 1]).toBe(100)
-      expect(seen).toContain('verifying')
-      expect(seen).toContain('extracting')
-      // no bare percent (legacy '0') once phases exist, and no consecutive dupes
-      expect(seen.filter((c) => /^\d+$/.test(c))).toEqual([])
-      expect(seen.filter((c, i) => c === seen[i - 1])).toEqual([])
-      expect(seen[seen.length - 1]).toBe('creating-bottle')
-      expect(seen[seen.length - 2]).toBe('setting-up')
-    })
-
     it('G1: once the bottle is ready the status leaves engine-download for installing before the game depots download', async () => {
       ;(decideCreationEngine as jest.Mock).mockResolvedValue(
         creationReply(pinnedDecision())
       )
-      mockEnsurePinnedEngine.mockImplementation((_pin, opts) => {
-        opts.onProgress({
-          phase: 'downloading',
-          artifact: 'wine',
-          percentage: 50
-        })
-        return Promise.resolve(ENGINE_OK)
-      })
+      mockEnsurePinnedEngine.mockResolvedValue(ENGINE_OK)
       const order: string[] = []
       sendGameStatusUpdate.mockImplementation((_deps: unknown, u) => {
         order.push(`${u.status}:${u.context ?? ''}`)
@@ -7439,11 +7418,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       ;(decideCreationEngine as jest.Mock).mockResolvedValue(
         creationReply(pinnedDecision())
       )
-      mockEnsurePinnedEngine.mockResolvedValue({
-        ok: false,
-        reason: 'offline',
-        detail: 'no network'
-      })
+      mockEnsurePinnedEngine.mockResolvedValue(ENGINE_FAILED)
 
       const result = await new SteamGame(APP_ID, steamTestDeps).install(
         {} as any
@@ -7453,10 +7428,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       expect(result.error).toContain('downloadFailed')
       expect(provisionBridgeBottle).not.toHaveBeenCalled()
       expect(downloadSteamDepots).not.toHaveBeenCalled()
-      expect(sendGameStatusUpdate).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ appName: APP_ID, status: 'done' })
-      )
+      // The terminal `done` status of a failed download is Rust's (`fallback/progress.rs`), so none is sent from here
+      // when Rust answered.
+      expect(mockEnsurePinnedEngine).toHaveBeenCalledTimes(1)
       expect(sendFrontendMessage).not.toHaveBeenCalledWith(
         'steamBridgeSetupRequired',
         expect.anything()
@@ -7526,11 +7500,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(
           creationReply(pinnedDecision())
         )
-        mockEnsurePinnedEngine.mockResolvedValue({
-          ok: false,
-          reason: 'aborted',
-          detail: 'shutting down'
-        })
+        mockEnsurePinnedEngine.mockResolvedValue(ENGINE_ABORTED)
         const result = await new SteamGame(APP_ID, steamTestDeps).install(
           {} as any
         )
@@ -7538,10 +7508,8 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         expect(provisionBridgeBottle).not.toHaveBeenCalled()
         expect(downloadSteamDepots).not.toHaveBeenCalled()
         expect(leaseRelease).toHaveBeenCalledTimes(1)
-        expect(sendGameStatusUpdate).toHaveBeenCalledWith(
-          expect.anything(),
-          expect.objectContaining({ appName: APP_ID, status: 'done' })
-        )
+        // Rust sends the closing `done` of an aborted download itself (`fallback/progress.rs`).
+        expect(mockEnsurePinnedEngine).toHaveBeenCalledTimes(1)
       })
 
       it('WR-01: install cancel mid engine download aborts the signal it received and removes the controller', async () => {
@@ -7549,20 +7517,22 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(
           creationReply(pinnedDecision())
         )
+        // The abort reaches Rust as an `engine_cancel` for the run's cancel id (87-56a); Rust answers the aborted result.
+        mockCancelEnsure.mockReturnValue(true)
+        let cancelId: string | undefined
         mockEnsurePinnedEngine.mockImplementation(
-          (_pin, opts: { signal: AbortSignal }) => {
+          (request: { cancelId: string }) => {
+            cancelId = request.cancelId
             registry.get(APP_ID)!.abort()
-            return Promise.resolve(
-              opts.signal.aborted
-                ? { ok: false, reason: 'aborted', detail: 'cancelled' }
-                : ENGINE_OK
-            )
+            return Promise.resolve(ENGINE_ABORTED)
           }
         )
         const result = await new SteamGame(APP_ID, steamTestDeps).install(
           {} as any
         )
         expect(result.status).toBe('abort')
+        expect(cancelId).toMatch(/^ee-/)
+        expect(mockCancelEnsure).toHaveBeenCalledWith({ cancelId })
         expect(provisionBridgeBottle).not.toHaveBeenCalled()
         expect(registry.has(APP_ID)).toBe(false)
         expect(leaseRelease).toHaveBeenCalledTimes(1)
@@ -7755,29 +7725,18 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         )
       })
 
-      it('G21: built-in path with a download sends engine contexts, then creating-bottle, then installing', async () => {
+      it('G21: built-in path with a download asks Rust, then sends creating-bottle, then installing', async () => {
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(
           creationReply(pinnedDecision())
         )
-        mockEnsurePinnedEngine.mockImplementation((_pin, opts) => {
-          opts.onProgress({
-            phase: 'downloading',
-            artifact: 'wine',
-            percentage: 50
-          })
-          return Promise.resolve(ENGINE_OK)
-        })
+        mockEnsurePinnedEngine.mockResolvedValue(ENGINE_OK)
         await new SteamGame(APP_ID, steamTestDeps).install({} as any)
+        // The engine contexts before creating-bottle (downloading, setting-up) are Rust's (`fallback/progress.rs`).
+        expect(mockEnsurePinnedEngine).toHaveBeenCalledTimes(1)
         const seq = order()
-        const dl = seq.findIndex((o: string) =>
-          o.startsWith('engine-download:downloading:')
-        )
-        const setup = seq.indexOf('engine-download:setting-up')
         const create = seq.indexOf('engine-download:creating-bottle')
         const installing = seq.indexOf('installing')
-        expect(dl).toBeGreaterThan(-1)
-        expect(setup).toBeGreaterThan(dl)
-        expect(create).toBeGreaterThan(setup)
+        expect(create).toBeGreaterThan(-1)
         expect(installing).toBeGreaterThan(create)
       })
 
@@ -7903,10 +7862,13 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(
           creationReply(pinnedDecision())
         )
+        const listen = jest.spyOn(controller.signal, 'addEventListener')
         await new SteamGame(APP_ID, steamTestDeps).install({} as any)
-        expect(mockEnsurePinnedEngine.mock.calls[0][1].signal).toBe(
-          controller.signal
-        )
+        // The reused controller's signal is the one the download listens on: its abort sends the cancel to Rust.
+        expect(mockEnsurePinnedEngine).toHaveBeenCalledTimes(1)
+        expect(listen).toHaveBeenCalledWith('abort', expect.any(Function), {
+          once: true
+        })
         // only the depot run registers or removes controllers, after provisioning
         const provisioned = at(
           (provisionBridgeBottle as jest.Mock).mock.invocationCallOrder,
@@ -7929,7 +7891,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         expect(buildFallbackGameSettings).toHaveBeenCalledWith(
           steamTestDeps.paths,
           `GameLibSteamBridge-${APP_ID}`,
-          expect.objectContaining({ wineBin: ENGINE_OK.paths.wineBin }),
+          expect.objectContaining({ wineBin: ENGINE_OK.engine.wineBin }),
           expect.anything()
         )
         expect(redistSettings()).toBe(fallback)
@@ -16483,7 +16445,7 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
       ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
       ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(TARGET)
       createAbortController.mockReturnValue({
-        signal: 'mock-signal'
+        signal: new AbortController().signal
       })
       ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
     })
@@ -17021,7 +16983,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
       ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(TARGET)
       createAbortController.mockReturnValue({
-        signal: 'mock-signal'
+        signal: new AbortController().signal
       })
       ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
     })
@@ -17412,28 +17374,21 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ).toBe(false)
     })
 
-    it('needs download: sends engine-download progress, then launches', async () => {
+    it("needs download: asks Rust for the engine (its progress is Rust's), then launches", async () => {
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         pinnedDecision('cx-missing', { needsDownload: true })
       )
-      mockEnsurePinnedEngine.mockImplementation((_pin: unknown, opts: any) => {
-        opts.onProgress({
-          phase: 'downloading',
-          artifact: 'wine',
-          percentage: 40
-        })
-        return Promise.resolve(ENGINE_OK)
-      })
+      mockEnsurePinnedEngine.mockResolvedValue(ENGINE_OK)
       expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
         true
       )
-      expect(sendGameStatusUpdate).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          status: 'engine-download',
-          context: 'downloading:40'
-        })
-      )
+      // The engine-download progress statuses are Rust's; the launch asks for the download and then launches.
+      expect(mockEnsurePinnedEngine).toHaveBeenCalledWith({
+        pinId: 'staging-11',
+        appName: ID,
+        runner: 'steam',
+        cancelId: expect.stringMatching(/^ee-/)
+      })
     })
 
     it('IN-05: a real engine switch sends setting-up through onSwitching', async () => {
@@ -17458,11 +17413,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         pinnedDecision('cx-missing', { needsDownload: true })
       )
-      mockEnsurePinnedEngine.mockResolvedValue({
-        ok: false,
-        reason: 'offline',
-        detail: 'x'
-      })
+      mockEnsurePinnedEngine.mockResolvedValue(ENGINE_FAILED)
       expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
         false
       )
@@ -17556,11 +17507,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         pinnedDecision('cx-missing', { needsDownload: true })
       )
-      mockEnsurePinnedEngine.mockResolvedValue({
-        ok: false,
-        reason: 'offline',
-        detail: 'x'
-      })
+      mockEnsurePinnedEngine.mockResolvedValue(ENGINE_FAILED)
       engineDialog().mockClear()
       expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
         false
@@ -18199,17 +18146,10 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       )
     })
 
-    it('prepareBottleForEngine gets an ensurePinEngine that reports engine-download progress', async () => {
+    it("prepareBottleForEngine gets an ensurePinEngine that downloads through Rust (engine-download progress is Rust's)", async () => {
       await new SteamGame(ID, steamTestDeps).launch({} as any)
       const args = mockPrepareBottleForEngine.mock.calls[0][0]
-      mockEnsurePinnedEngine.mockImplementation((_pin: unknown, opts: any) => {
-        opts.onProgress({
-          phase: 'downloading',
-          artifact: 'wine',
-          percentage: 55
-        })
-        return Promise.resolve(ENGINE_OK)
-      })
+      mockEnsurePinnedEngine.mockResolvedValue(ENGINE_OK)
       const engine = await args.deps.ensurePinEngine({
         id: 'staging-11',
         label: 'Wine-Staging 11.20',
@@ -18217,13 +18157,13 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         dxvk: { version: '1.10.3' }
       })
       expect(engine).not.toBeNull()
-      expect(sendGameStatusUpdate).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          status: 'engine-download',
-          context: 'downloading:55'
-        })
-      )
+      // The restore's pin download is the same Rust call as a launch's, so its progress statuses are the same.
+      expect(mockEnsurePinnedEngine).toHaveBeenCalledWith({
+        pinId: 'staging-11',
+        appName: ID,
+        runner: 'steam',
+        cancelId: expect.stringMatching(/^ee-/)
+      })
     })
 
     it.each(['expired', 'missing', 'broken'])(

@@ -144,6 +144,7 @@ import {
   RUST_ENGINE_CANCEL,
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_ENGINE_NON_CROSSOVER_ENGINE,
+  RUST_ENGINE_FALLBACK_ENSURE,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -993,7 +994,10 @@ export const rustInvokeArgs = {
   // through the per-game flight.
   [RUST_ENGINE_RESOLVE_TOOL_SETTINGS]: engineOpRequest,
   // Phase 87 (87-56a): the engine an id runs on, one `{engineId}` object the crate decodes strictly; a read.
-  [RUST_ENGINE_NON_CROSSOVER_ENGINE]: engineOpRequest
+  [RUST_ENGINE_NON_CROSSOVER_ENGINE]: engineOpRequest,
+  // Phase 87 (87-56a, T-87-90): the pinned-engine download. One object naming a pin id (never a URL or a path) and the
+  // cancel id `[A-Za-z0-9_-]{1,64}`, decoded strictly by the crate.
+  [RUST_ENGINE_FALLBACK_ENSURE]: engineOpRequest
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

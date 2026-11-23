@@ -512,7 +512,7 @@ const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
     'src/backend/storeManagers/steam/gameLaunch.ts'
   ],
   perGameBottle: [],
-  pinnedEngineProgress: ['src/backend/storeManagers/steam/gameInstall.ts'],
+  pinnedEngineProgress: [],
   prepareBottle: [
     'src/backend/storeManagers/steam/engine/steamEngineDeps.ts',
     'src/backend/storeManagers/steam/gameEngineDialogs.ts',
@@ -532,9 +532,7 @@ const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
  */
 const ENGINE_RUNTIME_MEMBER_READS: Record<string, readonly string[]> = {
   'src/backend/sidecar/bootstrap.ts': ['crossover'],
-  'src/backend/storeManagers/steam/gameEngineDialogs.ts': ['fallback'],
-  'src/backend/storeManagers/steam/gameInstall.ts': ['fallback'],
-  'src/backend/storeManagers/steam/gameLaunch.ts': ['fallback', 'registry']
+  'src/backend/storeManagers/steam/gameLaunch.ts': ['registry']
 }
 
 const ENGINE_DIR = 'src/backend/engine'

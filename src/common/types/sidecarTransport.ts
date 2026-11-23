@@ -1405,6 +1405,16 @@ export const RUST_ENGINE_RESOLVE_TOOL_SETTINGS =
   'engine_resolve_tool_settings' as const
 export const RUST_ENGINE_NON_CROSSOVER_ENGINE =
   'engine_non_crossover_engine' as const
+/**
+ * Phase 87 (87-56a, D-01, D-10): the first-need download of the pinned fallback engine (a ~228 MB archive), reached
+ * through `ensureFallbackEngine` in `enginewine/fallback.ts`. `engine_fallback_ensure` takes `{pinId, appName, runner,
+ * cancelId?}` (a pin id only: the crate resolves it in its own pin table, verifies size and sha256 and contains the
+ * extraction) and answers the `PinnedEngineResult` (`{ok: true, engine}` or `{ok: false, aborted, reason, error}`). Rust
+ * sends the `gameStatusUpdate` `engine-download` sequence itself. An `AbortSignal` cannot cross `rustInvoke`, so a caller
+ * names the run with a `cancelId` and sends `engine_cancel`. It has no limit of its own beyond that cancel and the app
+ * shutdown (D-17), so it joins the sidecar's unbounded list.
+ */
+export const RUST_ENGINE_FALLBACK_ENSURE = 'engine_fallback_ensure' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -1796,7 +1806,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_RUN_TOOL,
   RUST_ENGINE_CANCEL,
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
-  RUST_ENGINE_NON_CROSSOVER_ENGINE
+  RUST_ENGINE_NON_CROSSOVER_ENGINE,
+  RUST_ENGINE_FALLBACK_ENSURE
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

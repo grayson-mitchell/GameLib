@@ -505,8 +505,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 87 plan 54: 173 -> 183, the four decision ops, the CrossOver bin-dir lookup, the three engine-state writes and the two
     // bridge-deadline ops.
     // Phase 87 plan 55: 183 -> 185, engine_run_tool and engine_cancel.
-    // Phase 87 plan 56a: 185 -> 187, engine_resolve_tool_settings and engine_non_crossover_engine.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(187)
+    // Phase 87 plan 56a: 185 -> 188, engine_resolve_tool_settings, engine_non_crossover_engine and engine_fallback_ensure.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(188)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1029,7 +1029,10 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // Phase 87 plan 56a: the Wine tools' settings (`enginewine/toolSettings.ts` shim). PROVEN: `engine_dispatch::tests`
       // drives the arm's decode and not-ready.
       'engine_resolve_tool_settings',
-      'engine_non_crossover_engine'
+      'engine_non_crossover_engine',
+      // Phase 87 plan 56a: the first-need pinned-engine download (`enginewine/fallback.ts` shim). PROVEN: `engine_dispatch::tests`
+      // drives the arm's decode and not-ready.
+      'engine_fallback_ensure'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

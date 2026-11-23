@@ -72,6 +72,7 @@ import {
   RUST_ENGINE_PREFLIGHT_CROSSOVER,
   RUST_ENGINE_RUN_TOOL,
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
+  RUST_ENGINE_FALLBACK_ENSURE,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,
@@ -219,6 +220,10 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * `wineboot` and the pinned-engine download); the TS it replaces had no cap. The bottle flight is bounded by its own
  * creation timeout, an `engine_cancel` is not wired to it, and the app shutdown ends it, so no entry can outlive the
  * sidecar. `engine_non_crossover_engine` is a disk read and stays bounded.
+ *
+ * Seventeenth (Phase 87, 87-56a): `engine_fallback_ensure` is the first-need download of the pinned engine, a ~228 MB archive
+ * the TS reporter let run with no cap of its own beyond the caller's abort. Rust bounds it by its cancel id
+ * (`engine_cancel`) and the app shutdown (D-17), so no entry can outlive the sidecar.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -259,6 +264,7 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_ENGINE_PREFLIGHT_CROSSOVER,
   RUST_ENGINE_RUN_TOOL,
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
+  RUST_ENGINE_FALLBACK_ENSURE,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,

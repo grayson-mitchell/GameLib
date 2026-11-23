@@ -259,6 +259,9 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // Phase 87 plan 56a: engine_resolve_tool_settings with ensureBottle may create the game's bottle (wineboot and the pinned
     // engine download, which the TS had no cap on); ended by its creation timeout or the shutdown. Not a dialog channel.
     'RUST_ENGINE_RESOLVE_TOOL_SETTINGS',
+    // Phase 87 plan 56a: engine_fallback_ensure is the first-need ~228 MB pinned-engine download, ended by its own result, the
+    // caller's engine_cancel or the shutdown (D-17). Not a dialog channel.
+    'RUST_ENGINE_FALLBACK_ENSURE',
     // Phase 87 plan 35: wine_winetricks_apply and wine_winetricks_available read the catalog, whose first read
     // downloads the winetricks script and lists it; wine_winetricks_install runs one winetricks per verb. None
     // has a limit of its own beyond the shutdown. Not a dialog channel either.

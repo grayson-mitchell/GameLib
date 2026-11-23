@@ -10,6 +10,7 @@ import { sendGameStatusUpdate } from 'backend/utils'
 import type { CrossoverPreflight } from 'backend/enginewine/decision'
 import type { EngineSelection } from 'common/types/engine'
 import type SteamGame from './games'
+import { pinnedEngineReader } from './engine/pinnedEngine'
 
 /**
  * Phase 59: notify plus an in-app dialog, copied from
@@ -61,11 +62,9 @@ export async function drmOfflinePrecheck(
   const twin = await import('backend/enginewine/twin')
   const { isCrossoverMissing } = await import('backend/enginewine/decision')
   const { steamEngineFacts } = await import('./engine/steamEngineDeps')
-  const { isPinnedEngineInstalled } = steamGame.deps.engineRuntime.fallback
-  const switchCtx = {
-    paths: steamGame.deps.paths,
-    fallback: steamGame.deps.engineRuntime.fallback
-  }
+  const fallback = pinnedEngineReader(steamGame.deps.paths)
+  const { isPinnedEngineInstalled } = fallback
+  const switchCtx = { paths: steamGame.deps.paths, fallback }
   const { ENGINE_PINS } = twin
   const { offlineLaunchCertainlyBlocked } =
     await import('backend/engine/offlineRefusal')

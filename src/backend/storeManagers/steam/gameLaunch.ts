@@ -67,6 +67,7 @@ import {
   isBottleEligible
 } from './gameEligibility'
 import { ensureBuiltInEngineForInstall } from './gameInstall'
+import { pinnedEngineReader } from './engine/pinnedEngine'
 import { launchBridgeGame } from './gameBridgeLaunchGate'
 import { fireBridgeWineLaunch } from './gameBridgeWineLaunch'
 import {
@@ -464,11 +465,9 @@ export async function selectLaunchEngine(
     (earlyOverride === 'automatic' || earlyOverride === 'crossover')
   ) {
     const twin = await import('backend/enginewine/twin')
-    const { isPinnedEngineInstalled } = steamGame.deps.engineRuntime.fallback
-    const switchCtx = {
-      paths: steamGame.deps.paths,
-      fallback: steamGame.deps.engineRuntime.fallback
-    }
+    const fallback = pinnedEngineReader(steamGame.deps.paths)
+    const { isPinnedEngineInstalled } = fallback
+    const switchCtx = { paths: steamGame.deps.paths, fallback }
     const { ENGINE_PINS } = twin
     const { offlineLaunchCertainlyBlocked } =
       await import('backend/engine/offlineRefusal')

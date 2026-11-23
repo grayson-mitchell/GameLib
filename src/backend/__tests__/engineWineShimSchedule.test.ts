@@ -194,9 +194,10 @@ const DECISION_SHIM_IMPORTERS: readonly string[] = [
 ]
 /**
  * Every non-test importer of `enginewine/runTool.ts` (the check is per file, so both rows list them): the one `RunTool`
- * factory over the two shims (87-55).
+ * factory over the two shims (87-55) and the pinned-engine download's cancel (87-56a, one cancel registry).
  */
 const RUN_TOOL_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/storeManagers/steam/engine/pinnedEngine.ts',
   'src/backend/storeManagers/steam/engine/rustRunTool.ts'
 ]
 /**
@@ -208,6 +209,13 @@ const TOOL_SETTINGS_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/services/gameCommandFacts.ts',
   'src/backend/services/winetricksTarget.ts',
   'src/backend/storeManagers/steam/bridgeWineTools.ts'
+]
+/**
+ * Every non-test importer of `enginewine/fallback.ts` (the check is per file): the Steam first-need download wrapper
+ * (87-56a).
+ */
+const FALLBACK_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/storeManagers/steam/engine/pinnedEngine.ts'
 ]
 /**
  * Every non-test importer of `enginewine/state.ts` (the check is per file, so every row of that file lists them all): the
@@ -627,6 +635,16 @@ const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_ENGINE_NON_CROSSOVER_ENGINE',
     callers: TOOL_SETTINGS_SHIM_IMPORTERS,
     deletedBy: 98
+  },
+  // 87-56a (D-01, D-10): the Steam first-need pinned-engine download. `steam/engine/pinnedEngine.ts` names each run with a
+  // cancel id and sends `engine_cancel` for it when the signal aborts; Rust sends the `engine-download` statuses itself.
+  {
+    name: 'ensureFallbackEngine',
+    file: 'src/backend/enginewine/fallback.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_FALLBACK_ENSURE',
+    callers: FALLBACK_SHIM_IMPORTERS,
+    deletedBy: 96
   },
   // 87-42 (D-24): the engine selection view, the write-through mirror of Rust's registry. The sync bridge reads
   // (`getBridgeBottleSettings` and the launch settings) stay sync; `registerEngineSelectionView` installs the one
