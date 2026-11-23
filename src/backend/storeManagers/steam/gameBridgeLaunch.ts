@@ -6,7 +6,7 @@
  * are free functions, so a test spies on the module export.
  */
 import { reconcileBottleEngineMarker } from 'backend/enginewine/bottles'
-import { createRunTool } from 'backend/engine/runTool'
+import { createRustRunTool } from './engine/rustRunTool'
 import { existsSync } from 'graceful-fs'
 import { basename } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -312,7 +312,7 @@ export async function launchBridgeGameBody(
     },
     {
       ...steamGame.deps,
-      runTool: createRunTool({ runner: steamGame.deps.runner })
+      runTool: createRustRunTool(steamGame.deps)
     }
   )
   if (drm.status === 'not-applicable') {

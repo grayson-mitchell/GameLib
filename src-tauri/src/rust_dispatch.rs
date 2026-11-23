@@ -294,5 +294,7 @@ pub(crate) fn dispatch_rust_channel(
         }
         RustInvokeChannel::EngineDeadlineArm => engine_dispatch::rpc_deadline_arm(args),
         RustInvokeChannel::EngineDeadlineCancel => engine_dispatch::rpc_deadline_cancel(args),
+        RustInvokeChannel::EngineRunTool => engine_dispatch::rpc_run_tool(args),
+        RustInvokeChannel::EngineCancel => engine_dispatch::rpc_cancel(args),
     }
 }

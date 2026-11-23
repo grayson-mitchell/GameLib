@@ -8,13 +8,11 @@
  */
 import type { ProcessRunner } from 'backend/process/types'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
+import type { RunTool, RunToolResult, RunnerTool } from 'common/types/engine'
 
-type RunnerTool =
-  | '/bin/cp'
-  | '/usr/bin/xattr'
-  | '/usr/bin/codesign'
-  | '/usr/bin/plutil'
-  | '/bin/ps'
+// The result and call types moved to common/types/engine.ts in Phase 87 (87-55); re-exported for the TS engine that
+// 87-56 deletes with this file.
+export type { RunTool, RunToolResult }
 
 const RUNNER_TOOLS: readonly RunnerTool[] = [
   '/bin/cp',
@@ -23,20 +21,6 @@ const RUNNER_TOOLS: readonly RunnerTool[] = [
   '/usr/bin/plutil',
   '/bin/ps'
 ]
-
-export type RunToolResult = {
-  code: number | null
-  stdout: string
-  stderr: string
-  timedOut: boolean
-  aborted: boolean
-}
-
-export type RunTool = (
-  tool: RunnerTool,
-  args: readonly string[],
-  opts: { timeoutMs: number; signal?: AbortSignal }
-) => Promise<RunToolResult>
 
 const OUTPUT_CAP = 1024 * 1024
 

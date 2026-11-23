@@ -140,6 +140,8 @@ import {
   RUST_ENGINE_STATE_PUBLISH_OVERLAY_EXIT_NOTICE,
   RUST_ENGINE_DEADLINE_ARM,
   RUST_ENGINE_DEADLINE_CANCEL,
+  RUST_ENGINE_RUN_TOOL,
+  RUST_ENGINE_CANCEL,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -979,7 +981,11 @@ export const rustInvokeArgs = {
   // Phase 87 (87-54, D-17): a bridge launch's deadline. `{key}` to arm, `{key, reason}` to cancel; the crate checks the
   // key and the closed reason set.
   [RUST_ENGINE_DEADLINE_ARM]: engineOpRequest,
-  [RUST_ENGINE_DEADLINE_CANCEL]: engineOpRequest
+  [RUST_ENGINE_DEADLINE_CANCEL]: engineOpRequest,
+  // Phase 87 (87-55, D-03, Pitfall 10): the bridge's tool runs. One object each, decoded strictly by the crate; the
+  // program must be one of its five allowlisted absolute paths and the cancel id is `[A-Za-z0-9_-]{1,64}`.
+  [RUST_ENGINE_RUN_TOOL]: engineOpRequest,
+  [RUST_ENGINE_CANCEL]: engineOpRequest
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

@@ -206,6 +206,8 @@ pub(crate) enum RustInvokeChannel {
     EngineStatePublishOverlayExitNotice,
     EngineDeadlineArm,
     EngineDeadlineCancel,
+    EngineRunTool,
+    EngineCancel,
 }
 
 impl RustInvokeChannel {
@@ -393,6 +395,8 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineStatePublishOverlayExitNotice,
         RustInvokeChannel::EngineDeadlineArm,
         RustInvokeChannel::EngineDeadlineCancel,
+        RustInvokeChannel::EngineRunTool,
+        RustInvokeChannel::EngineCancel,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -580,6 +584,8 @@ impl RustInvokeChannel {
             "engine_state_publish_overlay_exit_notice" => Some(RustInvokeChannel::EngineStatePublishOverlayExitNotice),
             "engine_deadline_arm" => Some(RustInvokeChannel::EngineDeadlineArm),
             "engine_deadline_cancel" => Some(RustInvokeChannel::EngineDeadlineCancel),
+            "engine_run_tool" => Some(RustInvokeChannel::EngineRunTool),
+            "engine_cancel" => Some(RustInvokeChannel::EngineCancel),
             _ => None,
         }
     }
@@ -769,6 +775,8 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineStatePublishOverlayExitNotice => "engine_state_publish_overlay_exit_notice",
             RustInvokeChannel::EngineDeadlineArm => "engine_deadline_arm",
             RustInvokeChannel::EngineDeadlineCancel => "engine_deadline_cancel",
+            RustInvokeChannel::EngineRunTool => "engine_run_tool",
+            RustInvokeChannel::EngineCancel => "engine_cancel",
         }
     }
 }
@@ -3852,6 +3860,30 @@ pub(crate) struct EngineDeadlineCancelArgs {
 impl EngineDeadlineCancelArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let request = serde_json::from_value(args.first().ok_or_else(|| "engine_deadline_cancel:bad-args".to_string())?.clone()).map_err(|_| "engine_deadline_cancel:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineRunToolArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineRunToolArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_run_tool:bad-args".to_string())?.clone()).map_err(|_| "engine_run_tool:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineCancelArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineCancelArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_cancel:bad-args".to_string())?.clone()).map_err(|_| "engine_cancel:bad-args".to_string())?;
         Ok(Self { request })
     }
 }

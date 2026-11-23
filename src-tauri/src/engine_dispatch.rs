@@ -738,6 +738,8 @@ engine_op_arms! {
     rpc_state_publish_overlay_exit_notice => "engine_state_publish_overlay_exit_notice",
     rpc_deadline_arm => "engine_deadline_arm",
     rpc_deadline_cancel => "engine_deadline_cancel",
+    rpc_run_tool => "engine_run_tool",
+    rpc_cancel => "engine_cancel",
 }
 
 #[cfg(test)]
@@ -1232,6 +1234,8 @@ mod tests {
             ),
             (rpc_deadline_arm, "engine_deadline_arm"),
             (rpc_deadline_cancel, "engine_deadline_cancel"),
+            (rpc_run_tool, "engine_run_tool"),
+            (rpc_cancel, "engine_cancel"),
         ] {
             for bad in [
                 vec![],

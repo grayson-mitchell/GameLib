@@ -1379,6 +1379,18 @@ export const RUST_ENGINE_CX_RESOLVE_BIN_DIR =
  */
 export const RUST_ENGINE_DEADLINE_ARM = 'engine_deadline_arm' as const
 export const RUST_ENGINE_DEADLINE_CANCEL = 'engine_deadline_cancel' as const
+/**
+ * Phase 87 (87-55, D-03, Pitfall 10): the Steam bridge's tool runs, reached through the shims in
+ * `enginewine/runTool.ts`. `engine_run_tool` takes `{tool, args, timeoutMs, cancelId?}` and answers the TS
+ * `RunToolResult` `{code, stdout, stderr, timedOut, aborted}`: one of five allowlisted absolute-path programs, run with
+ * the isolated profile (a program outside the list is an answer, `stderr: "tool not allowed: ..."`, not a spawn).
+ * An `AbortSignal` cannot cross `rustInvoke`, so the caller names a run with a `cancelId` and `engine_cancel`
+ * (`{cancelId}`, answers whether a run was in flight) cancels it. `engine_run_tool` carries the caller's own
+ * `timeoutMs` (a CrossOver runner clone is a multi-minute `cp -R`), so it joins the sidecar's unbounded list; the
+ * cancel is a lookup and stays bounded.
+ */
+export const RUST_ENGINE_RUN_TOOL = 'engine_run_tool' as const
+export const RUST_ENGINE_CANCEL = 'engine_cancel' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -1766,7 +1778,9 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE,
   RUST_ENGINE_STATE_PUBLISH_OVERLAY_EXIT_NOTICE,
   RUST_ENGINE_DEADLINE_ARM,
-  RUST_ENGINE_DEADLINE_CANCEL
+  RUST_ENGINE_DEADLINE_CANCEL,
+  RUST_ENGINE_RUN_TOOL,
+  RUST_ENGINE_CANCEL
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

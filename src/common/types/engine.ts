@@ -129,3 +129,30 @@ export type EnginePin = {
  * The Rust deadline (`gamelib-engine` `launch::deadline`) holds the same 180 s; this copy is for the dialog that names it.
  */
 export const LAUNCH_DEADLINE_MS = 180_000
+
+/** The five absolute-path programs a bridge tool run may start (the Rust `run_tool` allowlist). */
+export type RunnerTool =
+  | '/bin/cp'
+  | '/usr/bin/xattr'
+  | '/usr/bin/codesign'
+  | '/usr/bin/plutil'
+  | '/bin/ps'
+
+/** What a tool run resolves with. A run never rejects: a refusal is `stderr`, a timeout or an abort a flag. */
+export interface RunToolResult {
+  code: number | null
+  stdout: string
+  stderr: string
+  timedOut: boolean
+  aborted: boolean
+}
+
+/**
+ * The bridge's tool runner (Pitfall 10): the call signature the DRM and overlay runner files use, kept over `rustInvoke`
+ * by naming each run with a cancel id (`enginewine/runTool.ts`, `steam/engine/rustRunTool.ts`).
+ */
+export type RunTool = (
+  tool: RunnerTool,
+  args: readonly string[],
+  opts: { timeoutMs: number; signal?: AbortSignal }
+) => Promise<RunToolResult>

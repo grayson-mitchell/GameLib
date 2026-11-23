@@ -70,6 +70,7 @@ import {
   RUST_ENGINE_DECIDE_LAUNCH,
   RUST_ENGINE_LAUNCH_SELECT,
   RUST_ENGINE_PREFLIGHT_CROSSOVER,
+  RUST_ENGINE_RUN_TOOL,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,
@@ -207,6 +208,11 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * pass the generic 60 s cap; the TS they replace had no cap at all. Each probe, stop and spawn carries its own limit in
  * Rust and the app shutdown ends them, so no entry can outlive the sidecar. `engine_decide_creation`,
  * `engine_is_crossover_missing` and `engine_cx_resolve_bin_dir` are presence checks and stay bounded.
+ *
+ * Fifteenth (Phase 87, 87-55): `engine_run_tool` runs one of five allowlisted tools with the caller's own `timeoutMs`; the
+ * bridge's runner clone is a `cp -R` of a CrossOver bundle that takes minutes, and the TS runner it replaces had no cap
+ * of its own beyond that timeout. Rust bounds every run by it, an `engine_cancel` and the app shutdown, so no entry can
+ * outlive the sidecar. `engine_cancel` is a lookup and stays bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -245,6 +251,7 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_ENGINE_LAUNCH_SELECT,
   RUST_ENGINE_DECIDE_LAUNCH,
   RUST_ENGINE_PREFLIGHT_CROSSOVER,
+  RUST_ENGINE_RUN_TOOL,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,

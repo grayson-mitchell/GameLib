@@ -188,6 +188,13 @@ const DECISION_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/gameLaunch.ts'
 ]
 /**
+ * Every non-test importer of `enginewine/runTool.ts` (the check is per file, so both rows list them): the one `RunTool`
+ * factory over the two shims (87-55).
+ */
+const RUN_TOOL_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/storeManagers/steam/engine/rustRunTool.ts'
+]
+/**
  * Every non-test importer of `enginewine/state.ts` (the check is per file, so every row of that file lists them all): the
  * Steam launch, its overlay policy and the wine launch that publishes the overlay exit notice.
  */
@@ -554,6 +561,25 @@ const SCHEDULE: readonly ScheduleRow[] = [
     vectors: 'src/backend/enginewine/__tests__/deadline.test.ts',
     callers: DEADLINE_SHIM_IMPORTERS,
     deletedBy: 96
+  },
+  // 87-55 (D-03, Pitfall 10): the Steam bridge's tool runs. The `RunTool` call signature `(tool, args, {timeoutMs, signal})`
+  // is kept by `steam/engine/rustRunTool.ts`, which names each run with a cancel id and sends `engine_cancel` for it when
+  // the signal aborts; Phase 97 moves the bridge's runner setup into Rust and deletes the shims.
+  {
+    name: 'rustRunTool',
+    file: 'src/backend/enginewine/runTool.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_RUN_TOOL',
+    callers: RUN_TOOL_SHIM_IMPORTERS,
+    deletedBy: 97
+  },
+  {
+    name: 'cancelRunTool',
+    file: 'src/backend/enginewine/runTool.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_CANCEL',
+    callers: RUN_TOOL_SHIM_IMPORTERS,
+    deletedBy: 97
   },
   // 87-42 (D-24): the engine selection view, the write-through mirror of Rust's registry. The sync bridge reads
   // (`getBridgeBottleSettings` and the launch settings) stay sync; `registerEngineSelectionView` installs the one
