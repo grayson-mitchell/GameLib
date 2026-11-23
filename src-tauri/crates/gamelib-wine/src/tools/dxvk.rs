@@ -312,7 +312,12 @@ pub async fn install_remove(
         .and_then(Value::as_str)
         .ok_or(DxvkError::BadSettings)?;
     let home = ctx.engine.paths.user_home.to_string_lossy();
-    let wine_prefix = prefix.replacen('~', &home, 1);
+    // Only a leading `~` is the home shorthand. The TS replaced the first `~` anywhere, which turns a
+    // Windows 8.3 temp name such as `C:\Users\RUNNER~1\...` into a path that does not exist.
+    let wine_prefix = match prefix.strip_prefix('~') {
+        Some(rest) => format!("{home}{rest}"),
+        None => prefix.to_string(),
+    };
     // A source-pinned install targets a prefix GameLib just created, which has no
     // `.update-timestamp` yet; `system.reg` is the prefix-exists check there.
     let marker = if source.is_some() {
