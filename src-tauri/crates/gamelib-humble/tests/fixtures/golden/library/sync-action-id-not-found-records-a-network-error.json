@@ -1,0 +1,155 @@
+{
+  "input": {
+    "cookie": "fake",
+    "steam": null,
+    "seed": {}
+  },
+  "calls": [
+    {
+      "name": "humbleSync",
+      "args": [],
+      "result": {
+        "status": "failed"
+      },
+      "events": [
+        {
+          "channel": "humbleSyncStateChanged",
+          "payload": {
+            "syncedAt": null,
+            "syncError": "network"
+          }
+        }
+      ],
+      "warnings": [],
+      "expiryDigest": [],
+      "notifications": []
+    },
+    {
+      "name": "humbleGetSyncState",
+      "args": [],
+      "result": {
+        "syncedAt": null,
+        "syncError": "network"
+      },
+      "events": [],
+      "warnings": [],
+      "expiryDigest": [],
+      "notifications": []
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/home/library",
+      "headers": [
+        [
+          "Accept",
+          "text/html"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/_next/static/chunks/aaa.js",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/_next/static/chunks/bbb.js",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/_next/static/chunks/ccc.js",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    }
+  ],
+  "stateAfter": {
+    "store_cache/humble_sync.json": {
+      "utf8": "{\n\t\"state\": {\n\t\t\"syncedAt\": null,\n\t\t\"syncError\": \"network\"\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"state\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    }
+  }
+}
