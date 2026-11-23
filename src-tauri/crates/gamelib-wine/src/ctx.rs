@@ -9,6 +9,30 @@ use gamelib_core::process::SpecRunner;
 use gamelib_engine::ctx::EngineCtx;
 use gamelib_engine::fetch::Fetch;
 
+/// The CPU architecture the app runs on, as the shell reports it. The wine manager picks a release
+/// asset by it (GE-Proton ships an `aarch64` and an `x86_64` build), and a golden pins it so a
+/// recording made on one machine replays the same on another.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Arch {
+    X64,
+    Arm64,
+    /// Neither: no GE-Proton asset matches it, as `process.arch` of `ia32` matched none.
+    Other,
+}
+
+impl Arch {
+    /// The architecture this binary was built for (a compile-time fact, not an environment read).
+    pub fn host() -> Arch {
+        if cfg!(target_arch = "aarch64") {
+            Arch::Arm64
+        } else if cfg!(target_arch = "x86_64") {
+            Arch::X64
+        } else {
+            Arch::Other
+        }
+    }
+}
+
 /// The shell (or the CLI) builds one `WineCtx` and every op takes `&WineCtx`.
 pub struct WineCtx {
     /// The directories, clock, platform, shutdown, sinks and DXVK installer the engine crate already
@@ -22,6 +46,8 @@ pub struct WineCtx {
     /// The spawn seam (D-17), the engine context's unless replaced: wine, wineserver, winetricks and
     /// tar all start through it.
     pub proc: Arc<dyn SpecRunner>,
+    /// The CPU architecture, [`Arch::host`] unless replaced.
+    pub arch: Arch,
 }
 
 impl WineCtx {
@@ -29,9 +55,16 @@ impl WineCtx {
         WineCtx {
             fetch: engine.fetch.clone(),
             proc: engine.proc.clone(),
+            arch: Arch::host(),
             engine,
             runtime_path,
         }
+    }
+
+    /// Replaces the architecture the release picker reads (a golden pins x64).
+    pub fn with_arch(mut self, arch: Arch) -> WineCtx {
+        self.arch = arch;
+        self
     }
 
     /// Replaces the network seam for this crate's ops only (a wine test replays its own case).

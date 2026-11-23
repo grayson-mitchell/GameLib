@@ -9,6 +9,7 @@
 
 pub mod ctx;
 pub mod extract;
+pub mod manager;
 pub mod runtimes;
 
 use ctx::WineCtx;
@@ -21,7 +22,13 @@ use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
-pub const OPS: &[&str] = &["wine_runtime_download", "wine_runtime_is_installed"];
+pub const OPS: &[&str] = &[
+    "wine_manager_list",
+    "wine_manager_refresh",
+    "wine_releases_info_ready",
+    "wine_runtime_download",
+    "wine_runtime_is_installed",
+];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
 /// shutdown, a wrong thread or a panic (`<op>:panic`).
@@ -35,6 +42,33 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, 
 /// Each plan adds its arms here, in step with `OPS`.
 async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String> {
     match op {
+        "wine_manager_list" => {
+            if !args.is_empty() {
+                return Err(format!("{op}:bad-args"));
+            }
+            manager::releases::list(ctx).map_err(|kind| format!("{op}:store {kind:?}"))
+        }
+        "wine_manager_refresh" => {
+            let fetch = refresh_fetch_arg(op, args)?;
+            // The TS handler swallowed every error and answered undefined: a failed refresh is
+            // logged and the renderer keeps what it had.
+            if let Err(error) = manager::releases::update_wine_version_infos(
+                ctx,
+                fetch,
+                None,
+                manager::releases::DEFAULT_COUNT,
+            )
+            .await
+            {
+                manager::log_error(ctx, &format!("wine versions refresh failed: {error}"));
+            }
+            Ok(Value::Null)
+        }
+        "wine_releases_info_ready" => {
+            let info: manager::releases::ReleasesInfo = decode_lenient(op, args)?;
+            manager::releases::update_lists_if_outdated(ctx, &info).await;
+            Ok(Value::Null)
+        }
         "wine_runtime_download" => {
             let name = runtime_name_arg(op, args)?;
             Ok(Value::Bool(runtimes::download(ctx, name).await))
@@ -54,6 +88,35 @@ fn runtime_name_arg<'a>(op: &str, args: &'a [Value]) -> Result<&'a str, String> 
         [Value::String(name)] if runtimes::valid_name(name) => Ok(name),
         _ => Err(format!("{op}:bad-args")),
     }
+}
+
+/// The `fetch` flag of `wine_manager_refresh`: nothing, `null`, a bare boolean (the renderer's
+/// `refreshWineVersionInfo(fetch?)`) or `{ fetch: boolean }`. `fetch` absent is `false`.
+fn refresh_fetch_arg(op: &str, args: &[Value]) -> Result<bool, String> {
+    match args {
+        [] | [Value::Null] => Ok(false),
+        [Value::Bool(fetch)] => Ok(*fetch),
+        [Value::Object(map)] => {
+            let known = map.keys().all(|k| k == "fetch");
+            match map.get("fetch") {
+                None if known => Ok(false),
+                Some(Value::Bool(fetch)) if known => Ok(*fetch),
+                Some(Value::Null) if known => Ok(false),
+                _ => Err(format!("{op}:bad-args")),
+            }
+        }
+        _ => Err(format!("{op}:bad-args")),
+    }
+}
+
+/// The one object argument of an op, decoded leniently: keys the type does not name are ignored (the
+/// argument is a larger shared type, `ReleasesInfo`, of which the op reads a part). The error is a
+/// fixed `<op>:bad-args`.
+fn decode_lenient<T: serde::de::DeserializeOwned>(op: &str, args: &[Value]) -> Result<T, String> {
+    let [arg @ Value::Object(_)] = args else {
+        return Err(format!("{op}:bad-args"));
+    };
+    serde_json::from_value(arg.clone()).map_err(|_| format!("{op}:bad-args"))
 }
 
 /// The one object argument of an op, decoded strictly (the arg structs deny unknown fields). The
@@ -227,6 +290,95 @@ mod tests {
         }
         // Nothing was created for a refused call.
         assert!(!home.root().join("tools").exists());
+    }
+
+    #[test]
+    fn the_manager_ops_are_in_the_sorted_op_table() {
+        for op in [
+            "wine_manager_list",
+            "wine_manager_refresh",
+            "wine_releases_info_ready",
+        ] {
+            assert!(OPS.contains(&op), "{op}");
+        }
+    }
+
+    #[test]
+    fn refresh_takes_a_flag_in_any_of_its_three_shapes_and_nothing_else() {
+        let ok = |args: &[Value]| refresh_fetch_arg("wine_manager_refresh", args);
+        assert_eq!(ok(&[]), Ok(false));
+        assert_eq!(ok(&[Value::Null]), Ok(false));
+        assert_eq!(ok(&[json!(true)]), Ok(true));
+        assert_eq!(ok(&[json!({ "fetch": true })]), Ok(true));
+        assert_eq!(ok(&[json!({})]), Ok(false));
+        for bad in [
+            vec![json!(1)],
+            vec![json!("true")],
+            vec![json!({ "fetch": "yes" })],
+            vec![json!({ "fetch": true, "extra": 1 })],
+            vec![json!(true), json!(true)],
+        ] {
+            assert_eq!(
+                refresh_fetch_arg("wine_manager_refresh", &bad),
+                Err("wine_manager_refresh:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn a_fresh_profile_lists_nothing_and_a_listing_takes_no_argument() {
+        let home = FakeHome::new("wine-lib-");
+        let ctx = ctx(&home);
+        assert_eq!(
+            dispatch("wine_manager_list", &[], &ctx).await,
+            Ok(json!([]))
+        );
+        assert_eq!(
+            dispatch("wine_manager_list", &[json!(1)], &ctx).await,
+            Err("wine_manager_list:bad-args".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn a_refresh_that_cannot_open_its_store_is_swallowed_like_the_ts_handler() {
+        let home = FakeHome::new("wine-lib-");
+        let ctx = ctx(&home);
+        // A file that is not a JSON object is never overwritten, so the store cannot be opened.
+        let dir = home.root().join("store");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("wine-downloader-info.json"), "not json").unwrap();
+        assert_eq!(
+            dispatch("wine_manager_refresh", &[json!(false)], &ctx).await,
+            Ok(Value::Null)
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.join("wine-downloader-info.json")).unwrap(),
+            "not json"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_releases_check_takes_one_object_and_ignores_the_keys_it_does_not_read() {
+        let home = FakeHome::new("wine-lib-");
+        let ctx = ctx(&home);
+        let info = json!({
+            "ge-proton": { "tag": "GE-Proton9-1", "published_at": "2024-06-01T00:00:00Z" },
+            "dxvk": { "tag": "v2", "published_at": "2024-06-01T00:00:00Z" },
+            "anticheatFiles": { "shaMac": "a", "shaLinux": "b" },
+        });
+        // Nothing is stored, so nothing is outdated and no request is made.
+        assert_eq!(
+            dispatch("wine_releases_info_ready", &[info], &ctx).await,
+            Ok(Value::Null)
+        );
+        for bad in [vec![], vec![json!("x")], vec![json!({}), json!({})]] {
+            assert_eq!(
+                dispatch("wine_releases_info_ready", &bad, &ctx).await,
+                Err("wine_releases_info_ready:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
     }
 
     #[tokio::test]
