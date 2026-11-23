@@ -8,7 +8,10 @@
 //!
 //! This crate depends on neither `gamelib-shortcuts` nor `tauri`; `cargo tree` proves it (94-02).
 
+pub mod classify;
 pub mod ctx;
+pub mod js_date;
+pub mod js_value;
 
 use ctx::HumbleCtx;
 use serde_json::Value;
