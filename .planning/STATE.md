@@ -5,15 +5,15 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-18-PLAN.md
-last_updated: "2026-11-23T04:29:16.036Z"
+stopped_at: Completed 87-19-PLAN.md
+last_updated: "2026-11-23T04:51:54.496Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: c782ee7fb40d9d7072ff4f208a7757860f000865
+state_head: 1ecdf62f1ca87d4794fec143e8455ee7d717e1e3
 progress:
   total_phases: 20
   completed_phases: 23
-  total_plans: 173
+  total_plans: 174
   completed_plans: 531
   percent: 100
 ---
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 19 of 59
+Plan: 20 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -428,6 +428,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P16 | 45 min | 2 tasks | 3 files |
 | Phase 87 P17 | 22 min | 2 tasks | 18 files |
 | Phase 87 P18 | 28 min | 3 tasks | 27 files |
+| Phase 87 P19 | 21min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -874,6 +875,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: ShellEngineUi: the shell's EngineUi sink (notify via show_notification, showDialog frame via the FrontendEmitter, raise via rpc_main_window_raise, kind send frames), installed as EngineCtx.ui; build_ctx takes the ui
 - [Phase 87]: wine_runtime_download is unbounded in the sidecar rustInvoke (UNBOUNDED_RUST_CHANNELS); wine_runtime_is_installed stays bounded
 - [Phase 87]: Launcher runtime shims return Promise<unknown> (requestRustInvoke resolves unknown), scheduled deletedBy 88; the wine-manager oracle still needs test_data/ArchiveWithSubfolder.tar.xz so it stays
+- [Phase 87]: 87-19: wine-manager removal trust root is the install folder holding the stored dir (wine, proton, game-porting-toolkit, compatibilitytools.d), not <tools>/wine; a refusal stops the removal
+- [Phase 87]: 87-19: the three TS wine-install bugs (abort deletes the existing install, no restore after a failed extraction, a failing tar counts as success) are fixed and documented in golden/wine_manager/deltas.json
+- [Phase 87]: 87-19: wine_manager_install takes [release] or [release, {downloadProtonToSteam, defaultSteamPath}] since the crate reads no settings; backend events wineVersionInstalled/Uninstalled are not emitted (DXMT gap 87-20 to 87-31)
 
 ### Pending Todos
 
@@ -1152,8 +1156,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T04:29:14.222Z
-Stopped at: Completed 87-18-PLAN.md
+Last session: 2026-11-23T04:51:52.276Z
+Stopped at: Completed 87-19-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
