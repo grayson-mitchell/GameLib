@@ -291,6 +291,53 @@ export function findExportedFunctions(path: string, source: string): string[] {
   return names
 }
 
+/**
+ * Names of every exported value binding in `source`: function, class and enum declarations, every
+ * name a `export const|let|var` introduces (including destructured ones), and the names of a
+ * non-type `export { a, b as c }` list. Never an interface, a type alias or a `type`-only specifier.
+ */
+export function findExportedValues(path: string, source: string): string[] {
+  const sf = parse(path, source)
+  const names = new Set<string>()
+  const hasModifier = (n: ts.Node, kind: ts.SyntaxKind): boolean =>
+    ts.canHaveModifiers(n) &&
+    (ts.getModifiers(n) ?? []).some((m) => m.kind === kind)
+  for (const st of sf.statements) {
+    if (ts.isExportDeclaration(st)) {
+      if (
+        !st.isTypeOnly &&
+        st.exportClause &&
+        ts.isNamedExports(st.exportClause)
+      ) {
+        for (const el of st.exportClause.elements) {
+          if (!el.isTypeOnly) names.add(el.name.text)
+        }
+      }
+      continue
+    }
+    if (ts.isExportAssignment(st)) {
+      names.add('default')
+      continue
+    }
+    if (!hasModifier(st, ts.SyntaxKind.ExportKeyword)) continue
+    if (hasModifier(st, ts.SyntaxKind.DefaultKeyword)) {
+      names.add('default')
+    } else if (
+      (ts.isFunctionDeclaration(st) ||
+        ts.isClassDeclaration(st) ||
+        ts.isEnumDeclaration(st)) &&
+      st.name
+    ) {
+      names.add(st.name.text)
+    } else if (ts.isVariableStatement(st)) {
+      for (const d of st.declarationList.declarations) {
+        for (const n of bindingNames(d.name, [])) names.add(n)
+      }
+    }
+  }
+  return [...names]
+}
+
 /** The module specifiers a source file imports, re-exports, requires or dynamically imports. */
 function moduleSpecifiers(path: string, source: string): string[] {
   const sf = parse(path, source)
@@ -346,9 +393,17 @@ export function findImporters(
 }
 
 export interface ShimRow {
-  shape: 'shim' | 'resolver'
+  /**
+   * `shim` and `resolver` are the 86 shapes `checkShimShape` enforces. `twin` (a sync TS copy of a
+   * Rust-owned pure function) and `view` (a write-through mirror of Rust in-memory state) are the
+   * Phase 87 D-24 survivors: `checkShimShape` is never called for them, and their schedule pins them
+   * to Rust with a `vectors` test instead.
+   */
+  shape: 'shim' | 'resolver' | 'twin' | 'view'
   /** Resolvers only: the names of the `const` declarations that gather TS-only inputs. */
   inputs?: readonly string[]
+  /** Twins and views only: the repo-relative test file whose shared vectors pin the row to Rust. */
+  vectors?: string
 }
 
 /** Binding names a parameter or declaration introduces (`a`, `{ a, b }`, `[a, ...b]`). */
