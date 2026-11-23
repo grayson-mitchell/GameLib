@@ -99,3 +99,49 @@ way the behaviour should go (items 1, 3 and 4 are the ones that read as bugs).
 
 Pick one item, change the Rust, regenerate that case's golden with a `deltas.json` entry that says why, and keep the
 change to that one item. Do not fold a fix into a port or a rename.
+
+## Resolution
+
+Closed 2026-11-24 by quick task 261124-8f3 (commits 79c2a372e and 476235530).
+
+1. Kept, closed as intended: a marker whose bytes are not a JSON object carries no information, so rewriting it from
+   the on-disk classification is a repair; the 87-38 plan's wording ("kept, never reset") was the wrong part, and
+   `deltas.json` `unreadable-marker-is-rewritten-as-the-ts-did` already records it. A marker a newer build wrote is
+   still never touched.
+2. Kept, closed as intended: 76 CR-01 and its review fix WR-01 made this deliberate. A DXVK-macOS file in the bottle
+   is stronger evidence of what the bottle runs than a crossover marker (CR-01: a Staging bottle gains a CrossOver
+   Timestamp when CrossOver probes it), so the switch distrusts the marker and the views read the bottle the way the
+   switch does (WR-01).
+3. Kept, closed as intended: the running check reads the caller's own title's phase (`getMonitorPhase(key)`), so
+   refusing means refusing to re-prepare a title that is already starting or running; the bottle-busy check is about a
+   different title in the same bottle, which a same-engine request does not disturb. The asymmetry is principled.
+4. Kept, closed as intended: deliberate design (quick 261109-w52): never overwrite a newer build's marker, but do not
+   block same-engine launches.
+5. Fixed in 79c2a372e: `engines::is_bottle_provisioned` and the twin `isBottleProvisioned` answer false for a name the
+   sanitiser does not leave unchanged; `provisioned-parent-traversal-name` edited, the shared vector
+   `provisioned-parent-with-conf-in-crossover-dir` flipped and three vectors added; `deltas.json`
+   `provisioned-answers-false-for-an-unclean-name`. Not changed: `.` is clean to the sanitiser (87-11 finding 3), so it
+   still builds the Bottles root and reads false only because no conf sits there.
+6. Fixed in 476235530: in gamelib-engine the only caller that used the trimmed answer was the prefix resolver's
+   CrossOver branch, whose name the launch step, `tool_settings` and `is_bottle_provisioned` build paths from; it and
+   its TS twin `gamePrefix.ts` now keep a stored name only when it is clean and otherwise fall back to `GameLib`, as an
+   unsafe name already did (new case `resolve-prefix-crossover-padded-bottle-refused`, `deltas.json`
+   `prefix-refuses-a-padded-bottle-name`; `create-crossover-padded-name` and `views-unsafe-and-absent-names` were
+   already the refusing side and are unchanged). The sanitiser still returns the trimmed name (31 shared vectors).
+   Still taking the trimmed answer, outside this todo because they are the Steam bridge's own code that Phase 96 moves
+   (`engineWineShimSchedule` twin rows, `deletedBy: 96`): `steam/provisionBottle.ts:207`,
+   `steam/bridgeBottleLifecycle.ts:630`, `steam/bridge/bridgeConfig.ts:174`, `steam/bridge/shimPlacement.ts:245`,
+   `steam/bridge/shimGenerate.ts:168`, `steam/bridge/drm/stageDrmBottle.ts:116` (all under
+   `src/backend/storeManagers/`).
+7. Kept, closed as intended: design. Classifying a marker-less bottle from its files is how pre-marker bottles are read
+   at all, and a pre-61 conf-less prefix is not a GameLib bottle for the switch to change.
+8. Kept, closed as intended: not a quirk fix. It waits on Rust gaining engine download (future work); until then the
+   caller downloads the pin and asks again.
+9. Kept, closed as intended: design. Registering a selection belongs to the caller (`register_selection`,
+   `PrepareArgs`), which is what keeps a refusal from changing the selection a launch runs on.
+10. Kept, closed as intended: design. A failed DXVK install is recorded and retried at the next launch; a retry that
+    fails again changes nothing.
+11. Kept, closed as intended: design. Marking order is the order `gamesRunningIn` answers in, and nothing depends on
+    another order.
+
+The hardening deltas and the differences the port introduced were not quirks and are unchanged.
