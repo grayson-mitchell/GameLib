@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-13-PLAN.md
-last_updated: "2026-11-23T03:06:31.373Z"
+stopped_at: Completed 87-14-PLAN.md
+last_updated: "2026-11-23T03:22:03.567Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: cee3f17a878d7e4195f74bb126935e2956efad81
+state_head: 28d08efd5043c1463217e94fa469b0385db81710
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 14 of 59
+Plan: 15 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -423,6 +423,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P11 | 55 min | 2 tasks | 901 files |
 | Phase 87 P12 | 11 min | 2 tasks | 5 files |
 | Phase 87 P13 | 8 min | 2 tasks | 4 files |
+| Phase 87 P14 | 9 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -859,6 +860,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-12: config oracle cases are list-shaped (one case pins a table of items); the CrossOver bin dir and the per-game bottle flight are scripted doubles, the locator and the flight are other plans' goldens
 - [Phase 87]: 87-13: decision goldens are 122 cases (80 matrix cells x 15 items plus named G29/WR-01/setting/op families); pins {current, retired, none} = pin table plus installed state; CrossOver inconclusive = probe timeout, resolved by busy vs idle bottle
 - [Phase 87]: 87-13: the CrossOver locator goldens cover the sync resolver only (hints, wineVersion, default locations); /Applications is a scripted existsSync answer, the Spotlight async arm is left to its own plan
+- [Phase 87]: 87-14: a corrupt notices store is kept when read but overwritten by the first dismissal in the TS; the Rust port must keep it (FND-06), recorded as the store-corrupt-dismiss-overwrites-as-shipped golden
+- [Phase 87]: 87-14: fallback engine goldens run the real verify, extract and retention over synthetic archives (committed under recorded/fallback/archives) with ENGINE_PINS overridden for the test only; the 228 MB engine is never downloaded
 
 ### Pending Todos
 
@@ -1137,8 +1140,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T03:06:29.549Z
-Stopped at: Completed 87-13-PLAN.md
+Last session: 2026-11-23T03:22:01.675Z
+Stopped at: Completed 87-14-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
