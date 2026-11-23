@@ -819,7 +819,9 @@ impl SecretSource for Stuck {
 }
 
 /// WR-04: a Keychain read or write that is parked must not keep a guarded op from answering
-/// `<op>:shutdown`, nor keep the op's `info` registrant held.
+/// `<op>:shutdown`, nor keep the op's `info` registrant held. WR-65: the abandoned Keychain call
+/// itself still holds an `info-keychain` registrant until it really returns, so the exit drain waits
+/// for it (within its budget) instead of cutting a write short.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn a_parked_keychain_call_does_not_hold_an_op_past_shutdown() {
     use gamelib_info::dispatch;
@@ -854,11 +856,18 @@ async fn a_parked_keychain_call_does_not_hold_an_op_past_shutdown() {
             .unwrap();
         canceller.await.unwrap();
         assert_eq!(out, Err(format!("{op}:shutdown")));
-        assert!(
-            ctx.shutdown.drain(Duration::from_millis(500)).is_empty(),
-            "{op} must release its registrant"
+        // The op's own `info` registrant is gone, but the Keychain call is still parked on its pool
+        // thread and holds `info-keychain`: a drain started now runs to its budget and names it.
+        assert_eq!(
+            ctx.shutdown.drain(Duration::from_millis(200)),
+            ["info-keychain"],
+            "{op}: the parked Keychain call must hold its registrant until it returns"
         );
-        // Let the parked pool thread finish.
-        let _ = release_tx.send(());
+        // The Keychain answers; the call returns and only then releases its registrant.
+        release_tx.send(()).unwrap();
+        assert!(
+            ctx.shutdown.drain(Duration::from_secs(2)).is_empty(),
+            "{op} must release its registrant once the Keychain call returns"
+        );
     }
 }

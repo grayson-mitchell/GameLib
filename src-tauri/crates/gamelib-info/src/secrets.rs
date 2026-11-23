@@ -156,6 +156,33 @@ fn locked<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(|e| e.into_inner())
 }
 
+/// Runs one Keychain call on the blocking pool (WR-04) holding an `info-keychain` shutdown
+/// registrant for exactly as long as the call really runs (WR-65). The registrant moves into the
+/// blocking closure, as [`crate::spawn_sgdb_migration`]'s does: when shutdown wins an op's `guarded`
+/// race the op answers `<op>:shutdown` at once, but the abandoned call keeps the exit drain waiting
+/// for it within the one exit budget instead of being cut off mid-write. Once shutdown has begun no
+/// new call is started.
+///
+/// The outer `Err` is only that refusal, already a full `<op>:shutdown`. The inner value is the
+/// call's own answer, with `unavailable` for a call that panicked.
+async fn keychain_call<T, F>(ctx: &InfoCtx, op: &str, call: F) -> Result<Result<T, String>, String>
+where
+    T: Send + 'static,
+    F: FnOnce() -> Result<T, String> + Send + 'static,
+{
+    if ctx.shutdown.token().is_cancelled() {
+        return Err(format!("{op}:shutdown"));
+    }
+    let registrant = ctx.shutdown.register("info-keychain");
+    let outcome = tokio::task::spawn_blocking(move || {
+        let _registrant = registrant;
+        call()
+    })
+    .await
+    .unwrap_or_else(|_| Err("unavailable".to_string()));
+    Ok(outcome)
+}
+
 /// The read cache of one slot. `value` is `None` when nothing is cached, `Some(None)` for a confirmed
 /// empty slot. `epoch` moves on every write, so a read that was already in flight when a write
 /// happened cannot cache its stale answer.
@@ -220,7 +247,8 @@ impl SlotOwner {
     /// [`SlotOwner::get`] with the Keychain read on the blocking pool (WR-04). The read can take as
     /// long as the shell's 45 s bound, and a synchronous one inside a guarded op stops the op's
     /// `select!` from ever seeing the shutdown token; awaiting the blocking task lets it win. A read
-    /// abandoned that way finishes on its pool thread and its answer is dropped, never cached.
+    /// abandoned that way finishes on its pool thread and its answer is dropped, never cached; it
+    /// holds its `info-keychain` registrant until it returns (WR-65).
     async fn get_async(&self, ctx: &InfoCtx, op: &str) -> Result<Option<String>, String> {
         let Some(source) = ctx.secrets.clone() else {
             return Err(format!("{op}:no-secret-source"));
@@ -234,9 +262,7 @@ impl SlotOwner {
         }
         let epoch = locked(&self.cache).epoch;
         let slot = self.slot;
-        let outcome = tokio::task::spawn_blocking(move || source.get(slot))
-            .await
-            .unwrap_or_else(|_| Err("unavailable".to_string()));
+        let outcome = keychain_call(ctx, op, move || source.get(slot)).await?;
         self.finish_read(ctx, op, epoch, outcome)
     }
 
@@ -285,7 +311,8 @@ impl SlotOwner {
     }
 
     /// [`SlotOwner::set`] with the Keychain write on the blocking pool (WR-04), for the same reason
-    /// as [`SlotOwner::get_async`].
+    /// as [`SlotOwner::get_async`]. A write abandoned by shutdown still holds its `info-keychain`
+    /// registrant until it returns, so the exit drain waits for it within its budget (WR-65).
     async fn set_async(&self, ctx: &InfoCtx, op: &str, value: &str) -> Result<(), String> {
         let Some(source) = ctx.secrets.clone() else {
             return Err(format!("{op}:no-secret-source"));
@@ -294,15 +321,14 @@ impl SlotOwner {
         let value = value.trim().to_string();
         let slot = self.slot;
         let written = (!value.is_empty()).then(|| value.clone());
-        let outcome = tokio::task::spawn_blocking(move || {
+        let outcome = keychain_call(ctx, op, move || {
             if value.is_empty() {
                 source.delete(slot)
             } else {
                 source.set(slot, &value)
             }
         })
-        .await
-        .unwrap_or_else(|_| Err("unavailable".to_string()));
+        .await?;
         self.finish_write(op, written, outcome)
     }
 
