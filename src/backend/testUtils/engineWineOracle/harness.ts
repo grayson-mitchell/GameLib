@@ -6,7 +6,7 @@
  * a golden under `src-tauri/crates/<crate>/tests/fixtures/golden/<slice>/` that the Rust slice
  * later has to reproduce. No expected byte is typed by hand: `GAMELIB_WRITE_ENGINE_GOLDEN=1`
  * writes the goldens from the TS and the default mode compares against them.
- * `GAMELIB_ENGINE_ORACLE=record` is the one mode that touches the network, and only to record the
+ * `GAMELIB_EW_ORACLE=record` is the one mode that touches the network, and only to record the
  * exchanges a case replays (see `recorder.ts`). `cases.json` and `deltas.json` are hand-authored
  * and are never written by the harness.
  *
@@ -60,8 +60,8 @@ import { derivePaths } from 'backend/process/appPaths'
 import type { AppPaths } from 'backend/process/context'
 import {
   fixturesRoot,
-  oracleMode,
-  recordedCaseDir,
+  engineWineOracleMode,
+  engineWineRecordedCaseDir,
   type OracleMode
 } from './recorder'
 
@@ -347,7 +347,7 @@ export function writeOrCompareGolden(
   slice: string,
   caseId: string,
   capture: GoldenCapture,
-  mode: OracleMode = oracleMode()
+  mode: OracleMode = engineWineOracleMode()
 ): void {
   if (mode === 'record') return
   const produced = new Map<string, string>([
@@ -421,7 +421,7 @@ export function syncManifest(
   slice: string,
   cases: readonly { id: string }[],
   defaultFloor: number,
-  mode: OracleMode = oracleMode()
+  mode: OracleMode = engineWineOracleMode()
 ): void {
   if (mode !== 'write') return
   const existing = readManifest(crate, slice)
@@ -443,7 +443,7 @@ export function assertManifest(
   slice: string,
   cases: readonly { id: string }[],
   minFloor: number,
-  mode: OracleMode = oracleMode()
+  mode: OracleMode = engineWineOracleMode()
 ): void {
   assertAtOrAboveFloor(`${slice} oracle cases`, cases.length, minFloor)
   if (mode !== 'compare') return
@@ -489,11 +489,13 @@ export function assertLiveRecorded(
   crate: string,
   slice: string,
   c: { id: string; live?: boolean },
-  mode: OracleMode = oracleMode()
+  mode: OracleMode = engineWineOracleMode()
 ): void {
   if (!c.live || mode === 'record') return
   if (
-    !existsSync(join(recordedCaseDir(crate, slice, c.id), 'exchanges.json'))
+    !existsSync(
+      join(engineWineRecordedCaseDir(crate, slice, c.id), 'exchanges.json')
+    )
   ) {
     throw new Error(`live case not recorded: ${c.id}`)
   }

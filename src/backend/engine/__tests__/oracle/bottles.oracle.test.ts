@@ -53,7 +53,7 @@ import {
 } from 'backend/testUtils/engineWineOracle/harness'
 import {
   fixturesRoot,
-  oracleMode
+  engineWineOracleMode
 } from 'backend/testUtils/engineWineOracle/recorder'
 import {
   createSpawnTracer,
@@ -277,7 +277,7 @@ describeSkipOnWindows('bottles and markers oracle (87-11)', () => {
 
   it.each(cases)('$id', async (c) => {
     // Read before the case replaces `process.env`, which holds the mode switches.
-    const mode = oracleMode()
+    const mode = engineWineOracleMode()
     const logs: LogLine[] = []
     for (const [name, level] of [
       ['logDebug', 'DEBUG'],
@@ -670,7 +670,7 @@ describeSkipOnWindows('bottles and markers oracle (87-11)', () => {
     }
 
     it('are what the builders produce', () => {
-      if (oracleMode() === 'write') {
+      if (engineWineOracleMode() === 'write') {
         rmSync(join(stateRoot(), 'bottles'), { recursive: true, force: true })
         rmSync(join(stateRoot(), 'engines'), { recursive: true, force: true })
         for (const bottle of BOTTLE_FIXTURES) {
@@ -1590,7 +1590,7 @@ describeSkipOnWindows(
 
     /** Writes in write mode; in compare mode the committed bytes must be what the TS produces now. */
     function writeOrCompare(name: string, text: string): void {
-      const mode = oracleMode()
+      const mode = engineWineOracleMode()
       if (mode === 'record') return
       if (mode === 'write') {
         mkdirSync(dirname(vectorFile(name)), { recursive: true })
@@ -1684,7 +1684,7 @@ describeSkipOnWindows(
       const vectors = await buildTwinVectors()
       const text = json(vectors)
       const mutated = text.replace('"expected": null', '"expected": "x"')
-      if (oracleMode() === 'compare') {
+      if (engineWineOracleMode() === 'compare') {
         expect(mutated).not.toBe(
           readFileSync(vectorFile('bottle_twin.json'), 'utf8')
         )

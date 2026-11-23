@@ -4,7 +4,7 @@
  * runtimes slice later has to reproduce. The wine-manager half of the `wine/` goldens follows in 87-07.
  *
  * Modes (see testUtils/engineWineOracle/harness.ts and recorder.ts):
- *   GAMELIB_ENGINE_ORACLE=record     fetch the lutris list live and write recorded/runtimes/<case>/
+ *   GAMELIB_EW_ORACLE=record     fetch the lutris list live and write recorded/runtimes/<case>/
  *   GAMELIB_WRITE_ENGINE_GOLDEN=1    replay the recordings and rewrite golden/runtimes/expected/
  *   (default)                        replay and compare, offline
  *

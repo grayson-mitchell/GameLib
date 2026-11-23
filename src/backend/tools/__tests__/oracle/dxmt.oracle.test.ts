@@ -6,7 +6,7 @@
  * `gamelib-wine` tools slice later has to reproduce. The DXVK family is `dxvk.oracle.test.ts`.
  *
  * Modes (see testUtils/engineWineOracle/harness.ts and recorder.ts):
- *   GAMELIB_ENGINE_ORACLE=record     fetch the latest DXMT release live (the one `live` case) and write
+ *   GAMELIB_EW_ORACLE=record     fetch the latest DXMT release live (the one `live` case) and write
  *                                    recorded/dxmt/<case>/; every other case is synthetic
  *   GAMELIB_WRITE_ENGINE_GOLDEN=1    replay the recordings and rewrite golden/dxmt/expected/
  *   (default)                        replay and compare, offline

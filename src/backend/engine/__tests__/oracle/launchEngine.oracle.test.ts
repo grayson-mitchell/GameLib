@@ -53,7 +53,7 @@ import {
 } from 'backend/testUtils/engineWineOracle/harness'
 import {
   fixturesRoot,
-  oracleMode
+  engineWineOracleMode
 } from 'backend/testUtils/engineWineOracle/recorder'
 import { createSpawnTracer } from 'backend/testUtils/engineWineOracle/spawnTrace'
 import {
@@ -976,7 +976,7 @@ describeSkipOnWindows('launch step oracle (87-15)', () => {
   })
 
   it('a deadline-fired case records zero raise calls and one notify (WR-02)', () => {
-    if (oracleMode() === 'write') return
+    if (engineWineOracleMode() === 'write') return
     const file = join(
       fixturesRoot(CRATE),
       'golden',
@@ -994,7 +994,7 @@ describeSkipOnWindows('launch step oracle (87-15)', () => {
   })
 
   it('the pinned-fallback case records the fallback toast notification', () => {
-    if (oracleMode() === 'write') return
+    if (engineWineOracleMode() === 'write') return
     const file = join(
       fixturesRoot(CRATE),
       'golden',
@@ -1462,7 +1462,7 @@ describeSkipOnWindows('the process-match vectors (87-15)', () => {
   }
 
   function writeOrCompare(text: string): void {
-    const mode = oracleMode()
+    const mode = engineWineOracleMode()
     if (mode === 'record') return
     if (mode === 'write') {
       mkdirSync(dirname(vectorFile), { recursive: true })

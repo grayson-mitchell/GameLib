@@ -6,7 +6,7 @@
  * `gamelib-wine` tools slice later has to reproduce. Winetricks is 87-10; DXMT is `dxmt.oracle.test.ts`.
  *
  * Modes (see testUtils/engineWineOracle/harness.ts and recorder.ts):
- *   GAMELIB_ENGINE_ORACLE=record     fetch the live feeds (the cases flagged `live`) and write
+ *   GAMELIB_EW_ORACLE=record     fetch the live feeds (the cases flagged `live`) and write
  *                                    recorded/dxvk/<case>/; every other case is synthetic
  *   GAMELIB_WRITE_ENGINE_GOLDEN=1    replay the recordings and rewrite golden/dxvk/expected/
  *   (default)                        replay and compare, offline

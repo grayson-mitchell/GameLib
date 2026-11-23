@@ -42,7 +42,7 @@ import {
   type EngineOracleProfile,
   type SeedEntry
 } from 'backend/testUtils/engineWineOracle/harness'
-import { oracleMode } from 'backend/testUtils/engineWineOracle/recorder'
+import { engineWineOracleMode } from 'backend/testUtils/engineWineOracle/recorder'
 import {
   createSpawnTracer,
   type SpawnTracerOptions
@@ -293,7 +293,7 @@ describeSkipOnWindows('engine switch oracle (87-16)', () => {
 
   it.each(cases)('$id', async (c) => {
     // Read before the case replaces `process.env`, which holds the mode switches.
-    const mode = oracleMode()
+    const mode = engineWineOracleMode()
     const logs: LogLine[] = []
     const timeline: Record<string, unknown>[] = []
     for (const [name, level] of [

@@ -6,7 +6,7 @@
  * half of the `wine/` goldens is 87-05.
  *
  * Modes (see testUtils/engineWineOracle/harness.ts and recorder.ts):
- *   GAMELIB_ENGINE_ORACLE=record     fetch the seven GitHub feeds live (the one `live` case) and write
+ *   GAMELIB_EW_ORACLE=record     fetch the seven GitHub feeds live (the one `live` case) and write
  *                                    recorded/wine_manager/<case>/; every other case is synthetic
  *   GAMELIB_WRITE_ENGINE_GOLDEN=1    replay the recordings and rewrite golden/wine_manager/expected/
  *   (default)                        replay and compare, offline

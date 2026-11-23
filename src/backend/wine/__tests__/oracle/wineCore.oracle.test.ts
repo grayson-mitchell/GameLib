@@ -45,7 +45,7 @@ import {
 } from 'backend/testUtils/engineWineOracle/harness'
 import {
   fixturesRoot,
-  oracleMode
+  engineWineOracleMode
 } from 'backend/testUtils/engineWineOracle/recorder'
 import { createSpawnTracer } from 'backend/testUtils/engineWineOracle/spawnTrace'
 import { snapshotTree } from 'backend/testUtils/engineWineOracle/treeSnapshot'
@@ -119,7 +119,7 @@ type EnvSettings = Pick<GameSettings, (typeof ENV_SETTINGS_KEYS)[number]> & {
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const osModule = (): typeof import('os') => require('os')
 
-const modeOf = oracleMode
+const modeOf = engineWineOracleMode
 
 /** Expands every placeholder in every string of a JSON-shaped value onto the profile. */
 function expandDeep<T>(value: T, profile: EngineOracleProfile): T {

@@ -46,7 +46,7 @@ import {
   type OraclePlatform,
   type SeedEntry
 } from 'backend/testUtils/engineWineOracle/harness'
-import { oracleMode } from 'backend/testUtils/engineWineOracle/recorder'
+import { engineWineOracleMode } from 'backend/testUtils/engineWineOracle/recorder'
 import { createSpawnTracer } from 'backend/testUtils/engineWineOracle/spawnTrace'
 import {
   snapshotTree,
@@ -311,7 +311,7 @@ describeSkipOnWindows('engine configuration oracle (87-12)', () => {
   })
 
   it.each(cases)('$id', async (c) => {
-    const mode = oracleMode()
+    const mode = engineWineOracleMode()
     const logs: LogLine[] = []
     for (const [name, level] of [
       ['logDebug', 'DEBUG'],
@@ -904,7 +904,7 @@ describeSkipOnWindows('the D-24 engine twin vectors (87-12)', () => {
       assertAtOrAboveFloor(`engine twin ${name} vectors`, list.length, 20)
     }
     const text = json(vectors)
-    const mode = oracleMode()
+    const mode = engineWineOracleMode()
     if (mode === 'write') {
       mkdirSync(dirname(vectorFile), { recursive: true })
       writeFileSync(vectorFile, text)

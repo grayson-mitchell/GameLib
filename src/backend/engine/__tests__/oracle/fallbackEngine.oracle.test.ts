@@ -53,7 +53,7 @@ import {
 } from 'backend/testUtils/engineWineOracle/harness'
 import {
   fixturesRoot,
-  oracleMode,
+  engineWineOracleMode,
   stubDownloadFile,
   type DownloadRecording
 } from 'backend/testUtils/engineWineOracle/recorder'
@@ -275,7 +275,7 @@ async function writeMissingArchives(dir: string): Promise<void> {
 
 async function loadArchives(): Promise<Archives> {
   const dir = archivesDir()
-  if (oracleMode() === 'write') await writeMissingArchives(dir)
+  if (engineWineOracleMode() === 'write') await writeMissingArchives(dir)
   return {
     wine: readFileSync(join(dir, 'wine-synthetic.tar.xz')),
     wineEscape: readFileSync(join(dir, 'wine-escape.tar.xz')),

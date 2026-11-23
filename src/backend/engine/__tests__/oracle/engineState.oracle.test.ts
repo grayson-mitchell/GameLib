@@ -41,7 +41,7 @@ import {
   writeOrCompareGolden,
   type EngineOracleProfile
 } from 'backend/testUtils/engineWineOracle/harness'
-import { oracleMode } from 'backend/testUtils/engineWineOracle/recorder'
+import { engineWineOracleMode } from 'backend/testUtils/engineWineOracle/recorder'
 import { createSpawnTracer } from 'backend/testUtils/engineWineOracle/spawnTrace'
 import { snapshotTree } from 'backend/testUtils/engineWineOracle/treeSnapshot'
 import {
@@ -620,7 +620,7 @@ describeSkipOnWindows('engine state oracle (87-14)', () => {
       'store-corrupt-read-keeps-file',
       'result.json'
     )
-    if (oracleMode() === 'write' || !existsSync(file)) return
+    if (engineWineOracleMode() === 'write' || !existsSync(file)) return
     const result = JSON.parse(readFileSync(file, 'utf8')) as {
       storeFile: string | null
     }

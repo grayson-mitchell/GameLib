@@ -5,7 +5,7 @@
  * `dxvk.oracle.test.ts` and DXMT is `dxmt.oracle.test.ts`.
  *
  * Modes (see testUtils/engineWineOracle/harness.ts and recorder.ts):
- *   GAMELIB_ENGINE_ORACLE=record     write recorded/winetricks/<case>/ (every response is synthetic; no
+ *   GAMELIB_EW_ORACLE=record     write recorded/winetricks/<case>/ (every response is synthetic; no
  *                                    live request is ever allowed)
  *   GAMELIB_WRITE_ENGINE_GOLDEN=1    replay the recordings and rewrite golden/winetricks/expected/
  *   (default)                        replay and compare, offline
@@ -48,7 +48,7 @@ import {
   fixturesRoot,
   installAdapter,
   installRecorder,
-  oracleMode,
+  engineWineOracleMode,
   type SyntheticResponse
 } from 'backend/testUtils/engineWineOracle/recorder'
 import {
@@ -346,7 +346,7 @@ describeSkipOnWindows('Winetricks oracle (87-10)', () => {
   it.each(cases)('$id', async (c) => {
     assertLiveRecorded(CRATE, SLICE, c)
     // Read before the case replaces `process.env`, which holds the mode switches.
-    const mode = oracleMode()
+    const mode = engineWineOracleMode()
     const restorePlatform = mockPlatform(c.platform)
     // No live request is ever allowed: every body is synthetic.
     const recorder = installRecorder({
@@ -1365,7 +1365,7 @@ describeSkipOnWindows('Winetricks pure vectors (87-10)', () => {
       assertAtOrAboveFloor(`winetricks ${name} vectors`, list.length, 1)
     }
     const text = `${JSON.stringify(vectors, null, 2)}\n`
-    const mode = oracleMode()
+    const mode = engineWineOracleMode()
     if (mode === 'record') return
     if (mode === 'write') {
       mkdirSync(join(vectorFile(), '..'), { recursive: true })

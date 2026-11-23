@@ -32,7 +32,7 @@ import {
 import {
   installRecorder,
   overrideFixturesRoot,
-  recordedCaseDir,
+  engineWineRecordedCaseDir,
   redactHeaders,
   redactUrl,
   stubDownloadFile
@@ -570,7 +570,10 @@ describe('recorder', () => {
       })
       expect(live.data).toEqual({ a: 1 })
       await record.finish()
-      const file = join(recordedCaseDir(CRATE, SLICE, 'rt'), 'exchanges.json')
+      const file = join(
+        engineWineRecordedCaseDir(CRATE, SLICE, 'rt'),
+        'exchanges.json'
+      )
       expect(readFileSync(file, 'utf8')).not.toContain('abc')
 
       const replay = installRecorder({ ...options, mode: 'compare' })

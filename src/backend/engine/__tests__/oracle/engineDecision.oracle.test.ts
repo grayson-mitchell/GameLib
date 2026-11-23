@@ -46,7 +46,7 @@ import {
   writeOrCompareGolden,
   type EngineOracleProfile
 } from 'backend/testUtils/engineWineOracle/harness'
-import { oracleMode } from 'backend/testUtils/engineWineOracle/recorder'
+import { engineWineOracleMode } from 'backend/testUtils/engineWineOracle/recorder'
 import {
   createSpawnTracer,
   type SpawnTracer
@@ -1331,7 +1331,7 @@ describeSkipOnWindows('engine decision oracle (87-13)', () => {
   })
 
   it.each(cases)('$id', async (c) => {
-    const mode = oracleMode()
+    const mode = engineWineOracleMode()
     await withEngineOracleProfile(async (profile) => {
       const before = JSON.stringify(snapshotTree(profile.home))
       const runtime = makeRuntime(profile)
@@ -1385,7 +1385,7 @@ describeSkipOnWindows('engine decision oracle (87-13)', () => {
 
   it('cases.json agrees with the generated case list, the MANIFEST agrees with both and holds one folder per case', () => {
     const file = join(goldenDir(CRATE, DECISION), 'cases.json')
-    const mode = oracleMode()
+    const mode = engineWineOracleMode()
     if (mode === 'write') {
       mkdirSync(dirname(file), { recursive: true })
       writeFileSync(file, json(cases))
@@ -1452,7 +1452,7 @@ describeSkipOnWindows('engine decision oracle (87-13)', () => {
 
   it('no committed golden names the bottled-Steam engine', () => {
     const root = join(goldenDir(CRATE, DECISION), 'expected')
-    if (oracleMode() === 'record' || !existsSync(root)) return
+    if (engineWineOracleMode() === 'record' || !existsSync(root)) return
     for (const c of cases) {
       const text = readFileSync(join(root, c.id, 'result.json'), 'utf8')
       expect(BOTTLED_STEAM.test(text)).toBe(false)
@@ -1461,7 +1461,7 @@ describeSkipOnWindows('engine decision oracle (87-13)', () => {
 
   it('a cx-inconclusive golden keeps the marker, stops no wineserver, reads the marker only and writes nothing (WR-01)', () => {
     const root = join(goldenDir(CRATE, DECISION), 'expected')
-    if (oracleMode() === 'record' || !existsSync(root)) return
+    if (engineWineOracleMode() === 'record' || !existsSync(root)) return
     const result = JSON.parse(
       readFileSync(
         join(root, 'wr01-inconclusive-automatic', 'result.json'),
@@ -2143,7 +2143,7 @@ describeSkipOnWindows('demo status and tested-version oracle (87-13)', () => {
   })
 
   it.each(cases)('$id', async (c) => {
-    const mode = oracleMode()
+    const mode = engineWineOracleMode()
     await withEngineOracleProfile(async (profile) => {
       const before = JSON.stringify(snapshotTree(profile.home))
       const outcomes: unknown[] = []
@@ -2177,7 +2177,7 @@ describeSkipOnWindows('demo status and tested-version oracle (87-13)', () => {
 
   it('cases.json agrees with the generated case list, the MANIFEST agrees with both and holds one folder per case', () => {
     const file = join(goldenDir(CRATE, DEMO_STATUS), 'cases.json')
-    const mode = oracleMode()
+    const mode = engineWineOracleMode()
     if (mode === 'write') {
       mkdirSync(dirname(file), { recursive: true })
       writeFileSync(file, json(cases))
@@ -2208,7 +2208,7 @@ describeSkipOnWindows('demo status and tested-version oracle (87-13)', () => {
     spawns: Record<string, unknown>[]
   } | null => {
     const root = join(goldenDir(CRATE, DEMO_STATUS), 'expected', id)
-    if (oracleMode() === 'record' || !existsSync(root)) return null
+    if (engineWineOracleMode() === 'record' || !existsSync(root)) return null
     return {
       outcomes: (
         JSON.parse(readFileSync(join(root, 'result.json'), 'utf8')) as {

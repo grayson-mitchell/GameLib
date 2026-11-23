@@ -45,7 +45,7 @@ import {
 } from 'backend/testUtils/engineWineOracle/harness'
 import {
   fixturesRoot,
-  oracleMode
+  engineWineOracleMode
 } from 'backend/testUtils/engineWineOracle/recorder'
 import { createSpawnTracer } from 'backend/testUtils/engineWineOracle/spawnTrace'
 import { snapshotTree } from 'backend/testUtils/engineWineOracle/treeSnapshot'
@@ -417,7 +417,7 @@ describeSkipOnWindows('wine discovery oracle (87-08)', () => {
     expect(names).toContain('wine')
 
     const text = `${JSON.stringify(vectors, null, 2)}\n`
-    const mode = oracleMode()
+    const mode = engineWineOracleMode()
     if (mode === 'record') return
     if (mode === 'write') {
       mkdirSync(dirname(vectorFile('default_wine.json')), { recursive: true })

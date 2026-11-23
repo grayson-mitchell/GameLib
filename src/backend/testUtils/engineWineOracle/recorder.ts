@@ -9,7 +9,7 @@
  * `installRecorder`.
  *
  * Three modes, from the environment:
- *   - `GAMELIB_ENGINE_ORACLE=record`: hit the live service, write
+ *   - `GAMELIB_EW_ORACLE=record`: hit the live service, write
  *     `recorded/<slice>/<case>/exchanges.json` and one byte-exact `body-<n>.<ext>` per response. A
  *     case may name `synthetic` responses (an archive body that must never be a real download, an
  *     error path no live service will produce on demand): those are served in place of the
@@ -68,7 +68,7 @@ export const fixturesRoot = (crate: string): string =>
     'fixtures'
   )
 
-export const recordedCaseDir = (
+export const engineWineRecordedCaseDir = (
   crate: string,
   slice: string,
   caseId: string
@@ -77,8 +77,10 @@ export const recordedCaseDir = (
 const REDACTED = 'REDACTED'
 
 /** The mode the environment asks for. Record wins over write when both are set. */
-export function oracleMode(env: NodeJS.ProcessEnv = process.env): OracleMode {
-  if (env.GAMELIB_ENGINE_ORACLE === 'record') return 'record'
+export function engineWineOracleMode(
+  env: NodeJS.ProcessEnv = process.env
+): OracleMode {
+  if (env.GAMELIB_EW_ORACLE === 'record') return 'record'
   if (env.GAMELIB_WRITE_ENGINE_GOLDEN === '1') return 'write'
   return 'compare'
 }
@@ -377,8 +379,12 @@ export function installAdapter(): void {
  * is what sets the shared adapter); call it again for each later case.
  */
 export function installRecorder(options: RecorderOptions): Recorder {
-  const mode = options.mode ?? oracleMode()
-  const dir = recordedCaseDir(options.crate, options.slice, options.caseId)
+  const mode = options.mode ?? engineWineOracleMode()
+  const dir = engineWineRecordedCaseDir(
+    options.crate,
+    options.slice,
+    options.caseId
+  )
   const exchanges: RecordedExchange[] = []
   const bodies = new Map<string, Buffer>()
   const served = new Set<number>()
