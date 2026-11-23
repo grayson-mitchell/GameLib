@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 94
 current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 94-06-PLAN.md
-last_updated: "2026-11-23T21:43:31.498Z"
+stopped_at: Completed 94-08-PLAN.md
+last_updated: "2026-11-23T22:38:27.999Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 94 execution started
-state_head: 413f3d365aa39e1841bb6522c9d7ce74930522b1
+state_head: 55dd219e8445d2b58499e0b7e9cf5e583e8d99ea
 progress:
   total_phases: 22
   completed_phases: 23
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
-Plan: 7 of 32
-Status: Ready to execute (94-07 next; worktree-local STATE, D-02)
-Last activity: 2026-11-24 — Completed 94-06 (Humble TS oracle: wire recorder, 553 classify/dedup goldens, 101 shared title vectors, redaction scan)
+Plan: 8 of 32
+Status: Ready to execute (94-09 next; 94-07 is open, awaiting four macOS icon_geometry goldens that need a Mac; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-08 (Humble adapter request pinning on the wire, 51 library/reveal/key-state flow goldens, the D-07 byte set for all eleven state files)
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -477,6 +477,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P04 | 55min | 2 tasks | 45 files |
 | Phase 94 P05 | 90min | 2 tasks | 365 files |
 | Phase 94 P06 | 95min | 3 tasks | 22 files |
+| Phase 94 P08 | 190min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -1026,6 +1027,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-05: shortcut oracle case ids are checked for case-insensitive collisions (NTFS and default macOS fold them)
 - [Phase 94]: 94-06: Humble wire replay matches by method+target, compares the whole recorded request (multipart fields with redacted values, boundary and content-length normalised) and fails on a recording never requested; close() throws so a swallowed 599 still fails
 - [Phase 94]: 94-06: zone-dependent classify goldens are recorded in UTC, America/Phoenix and Asia/Kolkata via the real process TZ (vm.runInThisContext), host faults never recorded; title-match vectors carry similarity and pin three exact-0.85 matches
+- [Phase 94]: 94-08: synthetic key values are the literal REDACTED (the recorder redacts a key field and the scan requires it), so a replayed response equals the one the golden saw
+- [Phase 94]: 94-08: D-07 state bytes come from the in-process disk sink (the shell's writer in miniature); timestamps are second-resolution Date() zone strings, and JSON key order is part of the bytes (the app-id pass reorders a library entry on the next sync)
 
 ### Pending Todos
 
@@ -1307,8 +1310,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T21:43:31.365Z
-Stopped at: Completed 94-06-PLAN.md
+Last session: 2026-11-23T22:38:27.865Z
+Stopped at: Completed 94-08-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
