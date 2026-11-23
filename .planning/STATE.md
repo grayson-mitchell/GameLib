@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-41-PLAN.md
-last_updated: "2026-11-23T13:09:40.477Z"
+stopped_at: Completed 87-42-PLAN.md
+last_updated: "2026-11-23T13:54:25.929Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 8434e330defaaad1a0eaef8f1ee6841d0b57ecef
+state_head: 3509ea74aca1cee5d2e339864c2dd1d0917df67d
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 42 of 59
+Plan: 43 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -451,6 +451,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P39 | 23 min | 2 tasks | 17 files |
 | Phase 87 P40 | n/a | 2 tasks | 14 files |
 | Phase 87 P41 | 10 min | 2 tasks | 5 files |
+| Phase 87 P42 | not timed | 2 tasks | 61 files |
 
 ## Accumulated Context
 
@@ -953,6 +954,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: The switch serialises per bottle with a fair async lock held by EngineCtx.in_flight (a Drop guard releases it however the call ends); the waiting call logs, then re-reads the marker, and one yield after the lock stands in for the TS registering before its first await
 - [Phase 87]: ensurePinEngine is PrepareArgs.ensure_pin, a value: absent means an installed pin or nothing (no engine is downloaded in Rust yet); 87-42 must pass one where the TS callers downloaded
 - [Phase 87]: PrepareReason::RestorePending is removed; the restore resolves its source before anything is stopped and a failed or file-leaving restore writes the previous marker with dxvk failed (CR-03)
+- [Phase 87]: 87-42: the bottle switch, creation, kill, removal, markers, ledger and selection clear reach gamelib-engine through enginewine/bottles.ts shims; Rust downloads no engine yet, so engine/prepareBottle.ts runs the caller's TS pin download and asks Rust once more when a restore has no DXVK source (Rust refuses it before touching anything)
+- [Phase 87]: 87-42: the sync selection reads use engineSelectionView (D-24), a write-through mirror fed by prepare replies, the clear and Rust's engineSelectionChanged frame (shell to sidecar only); ledger and selection writes land in the TS mirror at once and in Rust through engineSync; a TS AbortSignal on a fallback creation is a cancel id (engine_bottle_cancel_create)
 
 ### Pending Todos
 
@@ -1233,8 +1236,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T13:09:38.036Z
-Stopped at: Completed 87-41-PLAN.md
+Last session: 2026-11-23T13:54:23.389Z
+Stopped at: Completed 87-42-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
