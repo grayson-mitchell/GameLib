@@ -16,10 +16,9 @@ import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import type { AppPaths } from 'backend/process/context'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import type { EngineServices } from './engineServices'
+import type { EngineServices, InstallRemove } from './engineServices'
 import type { GameSettings } from 'common/types'
 import type { ProcessRunner } from 'backend/process/types'
-import type { Tools } from 'backend/tools'
 import {
   buildFallbackGameSettings,
   getBottleDir,
@@ -86,7 +85,7 @@ export interface EngineSwitchDeps {
       : never
   ) => ReturnType<typeof killBottleWineServerWith>
   resolveCrossoverBinDir: () => Promise<string | undefined>
-  installRemove: Tools['DXVK']['installRemove']
+  installRemove: InstallRemove
   /** Must be called while the CrossOver selection is the one registered for the game. */
   crossoverSettings: (key: string) => GameSettings
   fallbackSettings: (

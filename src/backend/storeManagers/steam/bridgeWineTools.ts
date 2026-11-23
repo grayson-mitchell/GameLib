@@ -49,7 +49,7 @@ export interface SteamWineToolsDeps {
   logError(message: string): void
 }
 
-export function defaultSteamWineToolsDeps(
+function defaultSteamWineToolsDeps(
   services: EngineServices & SteamEngineBottle
 ): SteamWineToolsDeps {
   return {

@@ -36,7 +36,6 @@ export type ManagerDepsSource = Pick<
   | 'appRuntime'
   | 'miscRuntime'
   | 'windowRaiser'
-  | 'toolsState'
   | 'signInProbe'
   | 'steamSession'
   | 'tokenStore'
@@ -86,7 +85,6 @@ export function managerDepsFromServices(
     appRuntime: source.appRuntime,
     miscRuntime: source.miscRuntime,
     windowRaiser: source.windowRaiser,
-    toolsState: source.toolsState,
     signIn: {
       epochs: source.signInProbe.epochs,
       outcomes: source.signInProbe.outcomes

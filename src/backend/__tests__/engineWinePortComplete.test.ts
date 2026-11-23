@@ -240,6 +240,70 @@ describe('wineDiscoveryPortComplete', () => {
   })
 })
 
+/**
+ * 87-37, D-06, D-08, D-14 and D-15: the tools sub-slice is Rust's (87-27..87-33 ported it, 87-34..87-36 switched
+ * every caller). The TS tools tree (`index`, `dxmt`, `machoExports`, `toolsState`, the five winetricks modules),
+ * its unit tests and the dxvk, dxmt and winetricks oracles are deleted with the `tools-state` and
+ * `winetricks-queue` boot steps. The goldens, the recordings and the pure-parse vectors stay for the Rust replay
+ * (`golden_dxvk.rs`, `golden_dxmt.rs`, `golden_winetricks.rs`). The three source-text gates dropped with the
+ * tree (`winetricksInstallPathInvariant`, `toolSettingsWiring`, `runWineCommandOnGameGuard`) are covered by the
+ * Rust tests the 87-37 SUMMARY names.
+ */
+const TOOLS: SliceSpec = {
+  deleted: [
+    'src/backend/tools/index.ts',
+    'src/backend/tools/dxmt.ts',
+    'src/backend/tools/machoExports.ts',
+    'src/backend/tools/toolsState.ts',
+    'src/backend/tools/winetricksApplyGuard.ts',
+    'src/backend/tools/winetricksEnvironment.ts',
+    'src/backend/tools/winetricksListParse.ts',
+    'src/backend/tools/winetricksOutputClassifier.ts',
+    'src/backend/tools/winetricksQueue.ts',
+    'src/backend/tools/__tests__',
+    'src/backend/tools/__tests__/oracle/dxvk.oracle.test.ts',
+    'src/backend/tools/__tests__/oracle/dxmt.oracle.test.ts',
+    'src/backend/tools/__tests__/oracle/winetricks.oracle.test.ts',
+    'src/backend/services/toolsFrom.ts',
+    'src/backend/testUtils/testToolsState.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-wine/tests/fixtures/golden/dxvk',
+    'src-tauri/crates/gamelib-wine/tests/fixtures/golden/dxmt',
+    'src-tauri/crates/gamelib-wine/tests/fixtures/golden/winetricks',
+    'src-tauri/crates/gamelib-wine/tests/fixtures/recorded/dxvk',
+    'src-tauri/crates/gamelib-wine/tests/fixtures/recorded/dxmt',
+    'src-tauri/crates/gamelib-wine/tests/fixtures/recorded/winetricks',
+    'src-tauri/crates/gamelib-wine/tests/fixtures/vectors/winetricks_pure.json'
+  ],
+  forbiddenIdentifiers: [
+    'createTools',
+    'createDxvk',
+    'createWinetricks',
+    'createWinetricksQueue',
+    'createToolsState',
+    'createWinetricksEnvironment',
+    'registerDxmtListeners',
+    'installOrUpdateTool'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_WINE',
+  manifestSlice: 'wine',
+  channelsFloor: 9
+}
+
+describe('toolsPortComplete', () => {
+  runSlice(TOOLS)
+
+  it('the tools directory and the tools-state and winetricks-queue boot steps are gone', () => {
+    const bootstrap = tsWalk.files.find(
+      (f) => f.path === 'src/backend/sidecar/bootstrap.ts'
+    )
+    expect(bootstrap).toBeDefined()
+    expect(bootstrap?.code).not.toMatch(/'tools-state'|'winetricks-queue'/)
+  })
+})
+
 describe('noRollbackFlag', () => {
   it('anti-vacuity: the walks read real trees', () => {
     assertAtOrAboveFloor(

@@ -48,7 +48,7 @@ import type { RenderWinetricksRow } from './Row'
 // tiers top to bottom -- Suggested for this game (always open), five task
 // groups (collapsed), and Everything else (collapsed, with its own search) -- all
 // rendered inside the Settings screen's one scroll container, backed by the
-// backend-resident sequential queue (`backend/tools/winetricksQueue.ts`).
+// backend-resident sequential queue (the Rust queue in `gamelib-wine`, `winetricks/queue.rs`).
 // Every `window.api.winetricks*` call lives in this one file -- the call-site
 // guard counts them here from plan 45-02 on.
 //

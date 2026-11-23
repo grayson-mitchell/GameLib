@@ -67,7 +67,6 @@ export default class NileGameManager implements Game {
         | 'commandRunner'
         | 'spawnAsync'
         | 'aborts'
-        | 'toolsState'
         | 'runner'
         | 'config'
         | 'dialogs'

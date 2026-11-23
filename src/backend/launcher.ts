@@ -151,8 +151,6 @@ export interface LauncherDeps
     >
   /** The boot-owned abort registry the tool downloads and known-fix overlay downloads register in (66.4-13). */
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
-  /** The boot-owned tools state the tool wrappers share (66.4-14). */
-  toolsState: EngineServicesSource['toolsState']
   /** The Steam bottle slice the Steam Wine-tool resolver reads (66.3-15). */
   steamBottle: EngineServicesSource['steamBottle']
   steamLaunchRuntime: EngineServicesSource['steamLaunchRuntime']
@@ -181,7 +179,6 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
     commandRunner: deps.commandRunner,
     spawnAsync: deps.spawnAsync,
     aborts: deps.aborts,
-    toolsState: deps.toolsState,
     appRuntime: deps.appRuntime,
     config: deps.config,
     gameConfigs: deps.gameConfigs,

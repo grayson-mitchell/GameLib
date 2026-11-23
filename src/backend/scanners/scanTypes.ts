@@ -1,12 +1,10 @@
 /**
  * Phase 63 (D-08): the one TS contract for every scanner op. The Rust ops in
  * `gamelib-scan` and the TS wrappers/oracles are both written against these
- * shapes. Types, consts and pure helpers; the only runtime import is `path.join`.
+ * shapes. Types only: the DXMT symbol list and winemac path helper went with the TS tools in 87-37.
  *
  * Every args field is a `string`: bytes never cross the pipe, only paths.
  */
-
-import { join } from 'path'
 
 export type ScanOp =
   | 'scan_contained_real'
@@ -91,7 +89,7 @@ type SteamApiImportScanResult = ImportScanResult & {
   diagnostics: ScanDiagnostic[]
 }
 
-export type WinemacMetalCheck =
+type WinemacMetalCheck =
   | { ok: true }
   | { ok: false; winemacPath: string; reason: string; missing: string[] }
 
@@ -107,25 +105,3 @@ type ScanContract = {
 
 export type ScanArgsFor<Op extends ScanOp> = ScanContract[Op][0]
 export type ScanResultFor<Op extends ScanOp> = ScanContract[Op][1]
-
-/** The macdrv metal-view symbols DXMT needs winemac.so to define. */
-export const DXMT_REQUIRED_MACDRV_SYMBOLS = [
-  '_macdrv_functions',
-  '_macdrv_view_create_metal_view',
-  '_macdrv_view_get_metal_layer',
-  '_macdrv_view_release_metal_view'
-] as const
-
-/** Pure path join: where a Wine bundle keeps winemac.so. */
-export function winemacPathFor(wineBundlePath: string): string {
-  return join(
-    wineBundlePath,
-    'Contents',
-    'Resources',
-    'wine',
-    'lib',
-    'wine',
-    'x86_64-unix',
-    'winemac.so'
-  )
-}

@@ -34,7 +34,6 @@ type NileSetupDeps = StatusUpdateDeps &
     | 'commandRunner'
     | 'spawnAsync'
     | 'aborts'
-    | 'toolsState'
     | 'runner'
     | 'config'
     | 'gameConfigs'

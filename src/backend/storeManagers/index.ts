@@ -152,7 +152,6 @@ export interface CreateStoreManagersDeps {
   appRuntime: ManagerDeps['appRuntime']
   miscRuntime: ManagerDeps['miscRuntime']
   windowRaiser: ManagerDeps['windowRaiser']
-  toolsState: ManagerDeps['toolsState']
   steamUser: ManagerDeps['steamUser']
   loginWindowSeam: ManagerDeps['loginWindowSeam']
 }
@@ -211,7 +210,6 @@ export function createStoreManagers(
     appRuntime: deps.appRuntime,
     miscRuntime: deps.miscRuntime,
     windowRaiser: deps.windowRaiser,
-    toolsState: deps.toolsState,
     steamUser: deps.steamUser,
     loginWindowSeam: deps.loginWindowSeam
   }
@@ -239,7 +237,6 @@ export function createStoreManagers(
     paths: deps.paths,
     aborts: deps.aborts,
     appRuntime: deps.appRuntime,
-    toolsState: deps.toolsState,
     steamBottle: deps.steamBottle,
     steamLaunchRuntime: deps.steamLaunchRuntime
   })

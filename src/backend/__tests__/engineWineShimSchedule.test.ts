@@ -94,7 +94,6 @@ const COMPATIBILITY_LAYERS_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/gog/games.ts',
   'src/backend/storeManagers/legendary/games.ts',
   'src/backend/storeManagers/nile/games.ts',
-  'src/backend/tools/index.ts',
   'src/backend/utils.ts'
 ]
 /**

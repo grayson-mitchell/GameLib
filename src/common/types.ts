@@ -754,13 +754,6 @@ export interface ConnectivitySnapshot {
   seq: number
 }
 
-export interface Tool {
-  name: string
-  url: string
-  os: string
-  strip?: number
-}
-
 export type DMStatus = 'done' | 'error' | 'abort' | 'paused'
 export interface DMQueueElement {
   type: 'update' | 'install'
@@ -918,9 +911,6 @@ export interface WinetricksQueueState {
 export type WinetricksApplyResult =
   | { accepted: true; state: WinetricksQueueState }
   | { accepted: false; reason: 'busy' | 'invalid'; detail: string }
-
-/** `Winetricks.install`'s own per-call outcome (D-11), distinct from the queue-run outcome map. */
-export type WinetricksInstallOutcome = 'installed' | 'failed' | 'refused'
 
 // Not exported (86-24): the TS wiki module that imported these wiki source shapes is deleted, so they
 // are used only by `WikiInfo` below (`pnpm find-deadcode`).

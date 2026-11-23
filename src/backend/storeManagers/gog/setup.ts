@@ -46,7 +46,6 @@ export type SetupDeps = StatusUpdateDeps &
     | 'commandRunner'
     | 'spawnAsync'
     | 'aborts'
-    | 'toolsState'
     | 'stores'
     | 'runner'
     | 'config'

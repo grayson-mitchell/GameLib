@@ -130,8 +130,6 @@ import { createLegendaryRuntime } from '../storeManagers/legendary/legendaryRunt
 import { createNileRuntime } from '../storeManagers/nile/nileRuntime'
 import { createSystemInfoCache } from '../utils/systeminfo'
 import { createSteamInstallRuntime } from '../storeManagers/steam/steamInstallRuntime'
-import { createWinetricksQueue } from '../tools/winetricksQueue'
-import { createToolsState, type ToolsState } from '../tools/toolsState'
 import type { OnlineMonitor } from '../online_monitor'
 // Block E (todo 2026-09-06, quick-260908-fre). `grep -rn
 // "storeManagers/legendary/user\|storeManagers/gog/user" src/backend/sidecar/` confirms
@@ -233,7 +231,6 @@ import { isMac, isSnap } from '../constants/environment'
 import {
   checkRosettaInstall,
   errorHandler,
-  sendGameStatusUpdate,
   type ErrorHandlerDeps
 } from '../utils'
 import { createCommandRunner } from '../commandRunner'
@@ -320,8 +317,6 @@ export const BOOT_STEP_NAMES = [
   'legendary-runtime',
   'nile-runtime',
   'info-caches',
-  'tools-state',
-  'winetricks-queue',
   'store-managers',
   'download-queue',
   'shell-exe-receipt',
@@ -516,12 +511,6 @@ function requireAppRuntime(state: BootState): AppRuntime {
   return appRuntime
 }
 
-function requireToolsState(state: BootState): ToolsState {
-  const { toolsState } = state.services
-  if (!toolsState) throw new Error('tools-state step has not run')
-  return toolsState
-}
-
 function requireServices(state: BootState): BootServices {
   const {
     stores,
@@ -555,8 +544,6 @@ function requireServices(state: BootState): BootServices {
     appRuntime,
     miscRuntime,
     windowRaiser,
-    toolsState,
-    winetricksQueue,
     signInProbe,
     steamSession,
     tokenStore,
@@ -598,8 +585,6 @@ function requireServices(state: BootState): BootServices {
     !appRuntime ||
     !miscRuntime ||
     !windowRaiser ||
-    !toolsState ||
-    !winetricksQueue ||
     !signInProbe ||
     !steamSession ||
     !tokenStore ||
@@ -642,8 +627,6 @@ function requireServices(state: BootState): BootServices {
         'appRuntime',
         'miscRuntime',
         'windowRaiser',
-        'toolsState',
-        'winetricksQueue',
         'signInProbe',
         'steamSession',
         'tokenStore',
@@ -688,8 +671,6 @@ function requireServices(state: BootState): BootServices {
     appRuntime,
     miscRuntime,
     windowRaiser,
-    toolsState,
-    winetricksQueue,
     signInProbe,
     steamSession,
     tokenStore,
@@ -2189,42 +2170,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
-      name: 'tools-state',
-      // Builds the tools' one single-flight slot, catalog and script-metadata caches and winetricks
-      // environment reports (D-05, D-66.2-03, 66.4-14). Allocates a Map and closures: no I/O, timer
-      // or handle. Directly before 'winetricks-queue', which reads the slot and the reports.
-      run: (_ctx, _io, state) => {
-        state.services.toolsState = prebuilt.toolsState ?? createToolsState()
-      }
-    },
-    {
-      name: 'winetricks-queue',
-      // Builds the one winetricks apply queue of this boot (D-05, D-66.3-12). Construction does no
-      // I/O and arms no timer: it only subscribes to the environment-report change signal. Before
-      // 'store-managers' (requireServices needs every field once the managers exist) and
-      // 'register-handlers', which hands it to the Wine-tools registration.
-      run: (_ctx, _io, state) => {
-        const host = requireHost(state)
-        const toolsState = requireToolsState(state)
-        state.services.winetricksQueue =
-          prebuilt.winetricksQueue ??
-          createWinetricksQueue({
-            push: (channel, queueState) =>
-              host.pushFrontendMessage(channel, queueState),
-            sendGameStatus: (update) =>
-              sendGameStatusUpdate(
-                {
-                  sendFrontendMessage: host.sendFrontendMessage,
-                  appRuntime: requireAppRuntime(state)
-                },
-                update
-              ),
-            getInstallingComponent: () => toolsState.installing.get(),
-            environment: toolsState.winetricksEnv
-          })
-      }
-    },
-    {
       name: 'store-managers',
       run: (ctx, _io, state) => {
         const { stores, commandRunner, spawnAsync, runner } = state.services
@@ -2248,7 +2193,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           appRuntime,
           miscRuntime,
           windowRaiser,
-          toolsState,
           signInProbe,
           steamSession,
           tokenStore,
@@ -2282,7 +2226,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           !appRuntime ||
           !miscRuntime ||
           !windowRaiser ||
-          !toolsState ||
           !signInProbe ||
           !steamSession ||
           !tokenStore ||
@@ -2339,7 +2282,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           appRuntime,
           miscRuntime,
           windowRaiser,
-          toolsState,
           signIn: signInProbe,
           steamSession,
           tokenStore,

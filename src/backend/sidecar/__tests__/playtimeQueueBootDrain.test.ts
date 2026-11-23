@@ -155,7 +155,6 @@ function bootedWorld(opts?: {
         appRuntime: fakes.appRuntime,
         miscRuntime: fakes.miscRuntime,
         windowRaiser: fakes.windowRaiser,
-        toolsState: fakes.toolsState,
         signIn: fakes.signInProbe,
         steamSession: fakes.steamSession,
         tokenStore: fakes.tokenStore,

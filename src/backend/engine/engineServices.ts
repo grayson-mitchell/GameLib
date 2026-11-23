@@ -11,17 +11,28 @@ import type { AppState } from 'backend/host/appState'
 import type { ProcessRunner } from 'backend/process/types'
 import type { GameSettings } from 'common/types'
 import type { SpawnAsync } from 'backend/spawnAsync'
-import type { Tools } from 'backend/tools'
 import type { WineManagerRelease } from './engineDecision'
 import type { EngineStateService } from './engineState'
 import type { EngineRuntime } from './engineRuntime'
 import type { AppPaths } from 'backend/process/context'
 
+/**
+ * The DXVK family's install or remove for one prefix, which Rust does (`dxvkInstallRemove`, 87-34): the game's
+ * merged settings, the tool, backup or restore, and the engine's pinned `{ dir, version }` when it has one (Phase 59:
+ * the tools-dir `latest_<tool>` lookup is then skipped). Resolves whether the install went through.
+ */
+export type InstallRemove = (
+  gameSettings: GameSettings,
+  tool: 'dxvk' | 'dxvk-nvapi' | 'vkd3d' | 'dxvk-macOS',
+  action: 'backup' | 'restore',
+  source?: { dir: string; version: string }
+) => Promise<boolean>
+
 export interface EngineServices {
   spawnAsync: SpawnAsync
   /** Probes the engine spawns: runTool, demo-status (66.2-03). */
   runner: Pick<ProcessRunner, 'run'>
-  installRemove: Tools['DXVK']['installRemove']
+  installRemove: InstallRemove
   /** The connectivity slice the pinned-engine download gate reads. */
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   /** The boot-owned engine decision/notice state (D-66.3-12). */

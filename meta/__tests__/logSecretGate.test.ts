@@ -425,10 +425,12 @@ describe('logSecretGate', () => {
     // 15th added by Phase 61 (61-07): stderr of `cxbottle --create` in
     // engine/perGameBottle.ts, the store-agnostic twin of the bottle.ts:882
     // exemption. Its only inputs are the bottle name and template.
-    it('carries exactly 15 exemptions — adding a 16th must be a conscious act', () => {
+    // Down to 14 by Phase 87 Plan 37 (D-06): the 13th, the `wine --version` probe in tools/index.ts, was
+    // deleted with the TS tools tree (Rust spawns that probe now). A deletion, not a loosened gate.
+    it('carries exactly 14 exemptions — adding a 15th must be a conscious act', () => {
       const report = auditReport()
 
-      expect(report.exemptions).toHaveLength(15)
+      expect(report.exemptions).toHaveLength(14)
     })
 
     it('pins WHICH files hold them, so a silent swap at the same count still fails', () => {
@@ -444,7 +446,6 @@ describe('logSecretGate', () => {
         'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
         'src/backend/storeManagers/steam/clientSetup.ts',
         'src/backend/storeManagers/steam/provisionBottle.ts',
-        'src/backend/tools/index.ts',
         'src/backend/utils.ts'
       ])
     })

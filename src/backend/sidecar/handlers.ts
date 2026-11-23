@@ -121,7 +121,6 @@ function toolSlices(services: BootServices) {
     storeRoot: services.storeRoot,
     paths: services.paths,
     aborts: services.aborts,
-    toolsState: services.toolsState,
     appRuntime: services.appRuntime,
     steamBottle: services.steamBottle,
     steamLaunchRuntime: services.steamLaunchRuntime
@@ -430,8 +429,6 @@ export function registerHandlers(deps: {
     managers: deps.services.managers,
     commandRunner: deps.services.commandRunner,
     launcher: deps.services.launcher,
-    spawnAsync: deps.services.spawnAsync,
-    stores: deps.services.stores,
     runner: deps.services.runner,
     ...toolSlices(deps.services),
     paths: deps.services.paths

@@ -54,7 +54,6 @@ describe('bootstrap.ts source shape (D-08)', () => {
       'humble-services',
       'online-monitor-owner',
       'engine-state',
-      'winetricks-queue',
       'store-managers',
       'i18n',
       'register-handlers',

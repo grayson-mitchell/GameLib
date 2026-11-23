@@ -3,7 +3,7 @@
     "src/backend/engine/__tests__/adoptBottle.test.ts": 1,
     "src/backend/engine/__tests__/bottleLedger.test.ts": 1,
     "src/backend/engine/__tests__/bottlePrimitives.test.ts": 2,
-    "src/backend/engine/__tests__/crossoverLocation.test.ts": 3,
+    "src/backend/engine/__tests__/crossoverLocation.test.ts": 2,
     "src/backend/engine/__tests__/demoStatus.test.ts": 1,
     "src/backend/engine/__tests__/engineConfig.test.ts": 2,
     "src/backend/engine/__tests__/engineDecision.test.ts": 1,

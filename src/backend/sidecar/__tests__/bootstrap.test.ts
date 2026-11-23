@@ -154,9 +154,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         'storeRoot',
         'stores',
         'tokenStore',
-        'toolsState',
-        'windowRaiser',
-        'winetricksQueue'
+        'windowRaiser'
       ])
       for (const value of Object.values(services)) expect(value).toBeDefined()
     })

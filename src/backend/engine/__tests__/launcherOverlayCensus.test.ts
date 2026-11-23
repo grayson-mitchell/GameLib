@@ -1,6 +1,10 @@
 /**
  * Phase 61-14 (T-61-43): source census of the settings reads on the shared launcher's launch path.
  * A read that skips the overlay would launch the wrong Wine; this fails the build instead.
+ *
+ * The census of the TS tools' own settings reads (T-61-63, `tools/index.ts`) went with the TS tools in
+ * Phase 87 Plan 37 (D-08): a wine command on a game now takes its settings through
+ * `services/gameCommandFacts.ts`, whose order and `ensureBottle` choice `gameCommandFacts.test.ts` pins.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -74,44 +78,5 @@ describe('launcher.ts overlay census', () => {
   it('imports engine modules only (no store manager reach beyond the index)', () => {
     expect(launcher).toMatch(/from '\.\/engine\/launchEngine'/)
     expect(launcher).not.toMatch(/from '\.\/storeManagers\/(?!index)/)
-  })
-})
-
-describe('tools/index.ts overlay census (T-61-63)', () => {
-  const tools = read('tools/index.ts')
-  const bodies: Array<[string, string]> = [
-    ['Winetricks.runWithArgs', 'runWithArgs: async ('],
-    ['Winetricks.listInstalled', 'listInstalled: async (game: Game)'],
-    ['runWineCommandOnGame', 'async function runWineCommandOnGame(']
-  ]
-
-  it.each(bodies)(
-    '%s routes every game.getSettings() read through resolveToolSettings( (or resolveGameToolSettings, quick 261110-vi4)',
-    (_n, marker) => {
-      const start = tools.indexOf(marker)
-      expect(start).toBeGreaterThan(-1)
-      // up to the next member / function: the bodies are long, so bound by the next marker at
-      // the same indentation (member) or column 0 (function)
-      const rest = tools.slice(start + marker.length)
-      const indent = marker.startsWith('async function')
-        ? '\n}\n'
-        : '\n    },\n'
-      const body = tools
-        .slice(start, start + marker.length + rest.indexOf(indent))
-        .replace(/^\s*\/\/.*$/gm, '')
-      const reads = body.match(/\.getSettings\(\)/g) ?? []
-      expect(reads.length).toBeGreaterThan(0)
-      const guarded =
-        body.match(
-          /(?:resolveToolSettings\(\s*engineServicesFor\(deps\)|resolveGameToolSettings\(\s*deps,\s*\{[^}]*\}),\s*\w+,\s*await \w+\.getSettings\(\)/g
-        ) ?? []
-      expect(guarded).toHaveLength(reads.length)
-    }
-  )
-
-  it('runWithArgs keeps the Steam bridge override outside the resolver', () => {
-    expect(tools).toMatch(
-      /if \(gameSettingsOverride\) \{\s*gameSettings = gameSettingsOverride\s*\} else \{/
-    )
   })
 })

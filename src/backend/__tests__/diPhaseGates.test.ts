@@ -358,13 +358,11 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     'src/backend/storeManagers/steam/state.ts',
     'src/backend/storeManagers/steam/bridge/helperRegistry.ts',
     'src/backend/storeManagers/steam/bridge/shimCoverage.ts',
-    'src/backend/tools/winetricksQueue.ts',
     'src/backend/signInProbe/pass.ts',
     'src/backend/signInProbe/outcomes.ts',
     'src/backend/signInProbe/sessionEpoch.ts',
     'src/backend/storeManagers/steam/user.ts',
     'src/backend/storeManagers/steam/bottle.ts',
-    'src/backend/tools/dxmt.ts',
     'src/backend/humble/classify.ts',
     'src/backend/humble/library.ts',
     'src/backend/humble/loginWindowSeam.ts',
@@ -407,13 +405,14 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     expect(callsStaticConfigGet('gameConfigs.get(appName)')).toBe(false)
   })
 
-  it('OWNED_66_3 lists the 26 files 66.3 owns, all existing (but the deleted platform delegate) and none sanctioned', () => {
+  it('OWNED_66_3 lists the 24 files 66.3 owns, all existing (but the deleted platform delegate) and none sanctioned', () => {
     // 66.3-17 deleted humble/humbleStores.ts outright (its holder had no remaining reader), so it
     // leaves the owned list: the file went away, it did not move.
     // Phase 86 plan 86-15 (2026-11-23): 28 -> 26. The SteamGridDB secret store and its sidecar
     // keyring owner moved to Rust and were deleted, so both leave the list with the files; the count
     // tracks the list this plan shrinks.
-    expect(OWNED_66_3).toHaveLength(26)
+    // Phase 87 Plan 37 (D-06): 26 -> 24. tools/winetricksQueue.ts and tools/dxmt.ts were deleted with the TS tools tree.
+    expect(OWNED_66_3).toHaveLength(24)
     const root = join(BACKEND, '..', '..')
     const sanctioned = [
       'src/backend/logger/index.ts',
@@ -700,8 +699,6 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     'src/backend/storeManagers/steam/platformCapture.ts',
     'src/backend/storeManagers/steam/tokenStore.ts',
     'src/backend/storeManagers/steam/userTypes.ts',
-    'src/backend/tools/index.ts',
-    'src/backend/tools/winetricksEnvironment.ts',
     'src/backend/utils.ts',
     'src/backend/utils/aborthandler/aborthandler.ts',
     'src/backend/utils/systeminfo/gpu/pci_ids.ts',
@@ -761,7 +758,8 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     // Phase 86 Plan 24 deleted crossover_index/fetcher.ts, crossover_index/index.ts and
     // wiki_game_info/howlongtobeat/utils.ts with the TS wiki and CrossOver slices (D-13): 71 -> 68.
     // Phase 87 Plan 36 deleted sidecar/wineToolsFlowRegistration.ts with the wine tools cluster (D-06, D-23): 68 -> 67.
-    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 67)
+    // Phase 87 Plan 37 deleted tools/index.ts and tools/winetricksEnvironment.ts with the TS tools tree (D-06): 67 -> 65.
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 65)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {

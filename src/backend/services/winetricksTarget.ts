@@ -5,9 +5,9 @@
  * `engine/toolSettings.ts` reads the game config, the live launch selection and the bottle markers, and a bottle-runtime
  * store (Steam) goes through the Steam resolver. This module is that decision's one entry for the Winetricks resolvers
  * of `sidecar/engineWineResolvers.ts`, which hand the answer to Rust as the target: `settings` when there is a usable
- * environment, `unavailable` with the resolver's reason word when there is not. It is the `resolveGameToolSettings` of
- * `tools/index.ts`, the TS tools' own caller of the same resolvers, so a game resolves to the same environment through
- * either; 87-37 deletes that module and this one stays until the config and the engine state it reads move (Phase 98).
+ * environment, `unavailable` with the resolver's reason word when there is not. It was the `resolveGameToolSettings` of
+ * the TS tools (deleted in 87-37), so a game resolves to the same environment it always did; this module stays until the
+ * config and the engine state it reads move (Phase 98).
  *
  * It never throws: a game the library does not know, or a resolver that fails, is logged and answers
  * `unavailable`, which Rust reads as "no usable Wine environment" and answers with the empty result the

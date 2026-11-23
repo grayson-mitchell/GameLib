@@ -85,7 +85,7 @@ export function engineWineOracleMode(
   return 'compare'
 }
 
-export interface SyntheticResponse {
+interface SyntheticResponse {
   /** Matched against the request's method. */
   method: string
   /** Matched against the request URL's path (no query): exact string, or a pattern. */
@@ -365,14 +365,6 @@ function pathOf(url: string): string {
 
 const pathMatches = (want: string | RegExp, got: string): boolean =>
   typeof want === 'string' ? want === got : want.test(got)
-
-/**
- * Sets the shared adapter without starting a case, so a test can import its slice module before
- * the first `installRecorder`. A request made with no case installed is rejected by name.
- */
-export function installAdapter(): void {
-  axios.defaults.adapter = dispatcher
-}
 
 /**
  * Installs the recorder for one case. Call it before importing the slice module (the first call

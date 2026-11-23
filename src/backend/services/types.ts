@@ -45,8 +45,6 @@ import type { SystemInfoCache } from 'backend/utils/systeminfo'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { WineWindowRaiser } from 'backend/utils/wineWindowRaise'
 import type { SteamInstallRuntime } from 'backend/storeManagers/steam/steamInstallRuntime'
-import type { ToolsState } from 'backend/tools/toolsState'
-import type { WinetricksQueue } from 'backend/tools/winetricksQueue'
 import type { SignInEpochs } from 'backend/signInProbe/sessionEpoch'
 import type { SignInProbeOutcomes } from 'backend/signInProbe/outcomes'
 import type { SignInProbePass } from 'backend/signInProbe/pass'
@@ -210,8 +208,6 @@ export interface ManagerDeps {
   miscRuntime: MiscRuntime
   /** The boot-owned Wine window raiser: its raise timers run on the boot clock (66.4-13). */
   windowRaiser: WineWindowRaiser
-  /** The boot-owned tools state: single-flight slot, catalog and script-metadata caches, winetricks environment (66.4-14). */
-  toolsState: ToolsState
   /** The boot-owned sign-in fence and outcome map the store user modules write through (D-66.3-13). */
   signIn: Pick<SignInProbeServices, 'epochs' | 'outcomes'>
   /** The boot-owned Steam sign-in session and auth-unlock state (D-66.3-13). */
@@ -359,10 +355,6 @@ export interface BootServices {
   miscRuntime: MiscRuntime
   /** The boot-owned Wine window raiser: its raise timers run on the boot clock (66.4-13). */
   windowRaiser: WineWindowRaiser
-  /** The boot-owned tools state: single-flight slot, catalog and script-metadata caches, winetricks environment (66.4-14). */
-  toolsState: ToolsState
-  /** Built by the 'winetricks-queue' boot step, before 'register-handlers' (D-66.3-12). */
-  winetricksQueue: WinetricksQueue
   /** Built by the 'sign-in-probe-state' boot step, before 'store-managers' (D-66.3-13). */
   signInProbe: SignInProbeServices
   /** Built by the 'steam-session-state' boot step, before 'store-managers' (D-66.3-13). */

@@ -645,7 +645,7 @@ export async function provisionBridgeBottle(
 
   // Phase 59: an explicit fallback engine creates the bottle itself.
   if (opts.fallbackEngine) {
-    // Lazy: services/engineServices value-imports backend/tools (storeManagers <-> steam cycle).
+    // Lazy: services/engineServices reaches the engine and the steam modules (storeManagers <-> steam cycle).
     const { engineServicesFrom } =
       await import('backend/services/engineServices')
     const services = engineServicesFrom(deps)
