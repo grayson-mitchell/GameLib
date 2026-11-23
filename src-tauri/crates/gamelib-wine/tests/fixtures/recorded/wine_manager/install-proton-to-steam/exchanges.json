@@ -1,0 +1,58 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "text/plain"
+      },
+      "bodyFile": "body-1.txt"
+    },
+    "synthetic": true
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "HEAD",
+      "url": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "200"
+      }
+    },
+    "synthetic": true
+  },
+  {
+    "id": "ex-3",
+    "request": {
+      "method": "GET",
+      "url": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/x-xz"
+      },
+      "bodyFile": "body-3.bin"
+    },
+    "synthetic": true
+  }
+]

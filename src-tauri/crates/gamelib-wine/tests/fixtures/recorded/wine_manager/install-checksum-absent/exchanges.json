@@ -1,0 +1,39 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "HEAD",
+      "url": "https://downloads.oracle.invalid/wine-staging-9.21-osx64.tar.xz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "200"
+      }
+    },
+    "synthetic": true
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://downloads.oracle.invalid/wine-staging-9.21-osx64.tar.xz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/x-xz"
+      },
+      "bodyFile": "body-2.bin"
+    },
+    "synthetic": true
+  }
+]

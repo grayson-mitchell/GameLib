@@ -69,7 +69,7 @@ import type { Repositorys, WineVersionInfo } from 'common/types'
 const CRATE = 'gamelib-wine'
 const SLICE = 'wine_manager'
 /** The case count this plan commits; a later edit may raise it, never lower it. */
-const FLOOR = 4
+const FLOOR = 19
 
 type Flow = 'full' | 'abort' | 'skip' | 'http-500' | 'head-fails'
 

@@ -1,0 +1,28 @@
+{
+  "op": "remove",
+  "platform": "linux",
+  "downloads": [],
+  "notifications": [],
+  "store": {
+    "wine-releases": [
+      {
+        "version": "GE-Proton9-0",
+        "type": "GE-Proton",
+        "date": "2024-05-01",
+        "download": "",
+        "downsize": 0,
+        "disksize": 0,
+        "checksum": "",
+        "release_notes_link": "",
+        "isInstalled": true,
+        "hasUpdate": false,
+        "installDir": "<TOOLS>/proton/GE-Proton9-0"
+      }
+    ],
+    "__internal__": {
+      "gamelib": {
+        "schemaVersion": 1
+      }
+    }
+  }
+}

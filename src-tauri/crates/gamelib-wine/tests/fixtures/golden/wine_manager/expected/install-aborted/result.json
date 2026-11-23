@@ -1,0 +1,39 @@
+{
+  "op": "install",
+  "platform": "linux",
+  "downloads": [
+    "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz"
+  ],
+  "notifications": [
+    {
+      "title": "GE-Proton9-27",
+      "body": "notify.install.startInstall"
+    },
+    {
+      "title": "GE-Proton9-27",
+      "body": "notify.install.canceled"
+    }
+  ],
+  "store": {
+    "wine-releases": [
+      {
+        "version": "GE-Proton9-27",
+        "type": "GE-Proton",
+        "date": "2025-01-01",
+        "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+        "downsize": 200,
+        "disksize": 0,
+        "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+        "release_notes_link": "https://downloads.oracle.invalid/notes",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": ""
+      }
+    ],
+    "__internal__": {
+      "gamelib": {
+        "schemaVersion": 1
+      }
+    }
+  }
+}

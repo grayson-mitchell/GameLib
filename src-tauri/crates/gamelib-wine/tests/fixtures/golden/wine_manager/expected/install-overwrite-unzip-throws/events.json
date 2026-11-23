@@ -1,0 +1,32 @@
+[
+  {
+    "channel": "progressOfWineManager",
+    "args": [
+      "GE-Proton9-27",
+      {
+        "status": "downloading",
+        "percentage": 0,
+        "avgSpeed": 0,
+        "eta": "00:00:00"
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWineManager",
+    "args": [
+      "GE-Proton9-27",
+      {
+        "status": "unzipping"
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWineManager",
+    "args": [
+      "GE-Proton9-27",
+      {
+        "status": "idle"
+      }
+    ]
+  }
+]

@@ -1,0 +1,39 @@
+{
+  "op": "install",
+  "platform": "mac",
+  "downloads": [
+    "https://downloads.oracle.invalid/wine-staging-9.21-osx64.tar.xz"
+  ],
+  "notifications": [
+    {
+      "title": "Wine-Staging-macOS-9.21",
+      "body": "notify.install.startInstall"
+    },
+    {
+      "title": "Wine-Staging-macOS-9.21",
+      "body": "notify.install.finished"
+    }
+  ],
+  "store": {
+    "wine-releases": [
+      {
+        "version": "Wine-Staging-macOS-9.21",
+        "type": "Wine-Staging-macOS",
+        "date": "2024-10-01",
+        "download": "https://downloads.oracle.invalid/wine-staging-9.21-osx64.tar.xz",
+        "downsize": 200,
+        "disksize": 4194304,
+        "checksum": "",
+        "release_notes_link": "https://downloads.oracle.invalid/notes",
+        "isInstalled": true,
+        "hasUpdate": false,
+        "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9.21"
+      }
+    ],
+    "__internal__": {
+      "gamelib": {
+        "schemaVersion": 1
+      }
+    }
+  }
+}

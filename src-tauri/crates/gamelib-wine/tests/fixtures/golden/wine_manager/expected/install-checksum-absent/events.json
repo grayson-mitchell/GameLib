@@ -1,0 +1,64 @@
+[
+  {
+    "channel": "progressOfWineManager",
+    "args": [
+      "Wine-Staging-macOS-9.21",
+      {
+        "status": "downloading",
+        "percentage": 0,
+        "avgSpeed": 0,
+        "eta": "00:00:00"
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWineManager",
+    "args": [
+      "Wine-Staging-macOS-9.21",
+      {
+        "status": "unzipping"
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWineManager",
+    "args": [
+      "Wine-Staging-macOS-9.21",
+      {
+        "status": "idle"
+      }
+    ]
+  },
+  {
+    "channel": "event:wineVersionInstalled",
+    "args": [
+      {
+        "version": "Wine-Staging-macOS-9.21",
+        "type": "Wine-Staging-macOS",
+        "date": "2024-10-01",
+        "download": "https://downloads.oracle.invalid/wine-staging-9.21-osx64.tar.xz",
+        "downsize": 200,
+        "disksize": 4194304,
+        "checksum": "",
+        "release_notes_link": "https://downloads.oracle.invalid/notes",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": ""
+      },
+      "<TOOLS>/wine"
+    ]
+  },
+  {
+    "channel": "wineVersionsUpdated",
+    "args": []
+  },
+  {
+    "channel": "progressOfWineManager",
+    "args": [
+      "Wine-Staging-macOS-9.21",
+      {
+        "status": "idle"
+      }
+    ]
+  }
+]

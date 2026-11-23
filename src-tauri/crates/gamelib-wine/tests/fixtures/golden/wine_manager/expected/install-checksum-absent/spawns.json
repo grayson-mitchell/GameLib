@@ -1,0 +1,43 @@
+[
+  {
+    "program": "tar",
+    "argv": [
+      "-xf",
+      "<TOOLS>/wine/wine-staging-9.21-osx64.tar.xz",
+      "-C",
+      "<TOOLS>/wine/Wine-Staging-macOS-9.21",
+      "--strip-components=1"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "du",
+    "argv": [
+      "-sk",
+      "<TOOLS>/wine/Wine-Staging-macOS-9.21"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "4096\n",
+      "stderr": ""
+    }
+  }
+]

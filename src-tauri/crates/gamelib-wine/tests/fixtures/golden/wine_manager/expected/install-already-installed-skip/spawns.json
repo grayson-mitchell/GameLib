@@ -1,0 +1,21 @@
+[
+  {
+    "program": "du",
+    "argv": [
+      "-sb",
+      "<TOOLS>/proton/GE-Proton9-27"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "4096\n",
+      "stderr": ""
+    }
+  }
+]

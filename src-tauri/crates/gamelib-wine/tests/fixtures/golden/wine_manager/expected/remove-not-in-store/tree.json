@@ -1,0 +1,70 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton/GE-Proton9-0",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton/GE-Proton9-0/file",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "a51a6c19a1ffc7416827e89adf20749d23ad42452c396cf7e627409f2896922c"
+  },
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store/wine-downloader-info.json",
+    "kind": "file",
+    "mode": "0600",
+    "sha256": "621aadb82ba31adae0ecfcd499daa93f202629ebf0e9e286ab9f8a6715192bd8"
+  },
+  {
+    "path": "precious",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "precious/keep-me",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "52408ce928fcece4a50261fcbb1c3a1556b12bd3ad2c32ee0fd5a8d429b46193"
+  }
+]

@@ -1,0 +1,24 @@
+[
+  {
+    "channel": "event:wineVersionUninstalled",
+    "args": [
+      {
+        "version": "GE-Proton9-27",
+        "type": "GE-Proton",
+        "date": "2025-01-01",
+        "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+        "downsize": 200,
+        "disksize": 999,
+        "checksum": "",
+        "release_notes_link": "",
+        "isInstalled": true,
+        "hasUpdate": false,
+        "installDir": "<TOOLS>/proton/GE-Proton9-27"
+      }
+    ]
+  },
+  {
+    "channel": "wineVersionsUpdated",
+    "args": []
+  }
+]

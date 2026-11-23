@@ -123,5 +123,453 @@
       }
     ],
     "note": "fetch=false reads the stored list and makes no request"
+  },
+  {
+    "id": "install-checksum-match",
+    "op": "install",
+    "platform": "linux",
+    "checksum": "match",
+    "flow": "full",
+    "progress": [
+      { "bytes": 50, "speed": 40, "percentage": 25 },
+      { "bytes": 100, "speed": 40, "percentage": 50 },
+      { "bytes": 200, "speed": 40, "percentage": 100 }
+    ],
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "downsize": 200,
+      "disksize": 0,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/notes",
+      "isInstalled": false,
+      "hasUpdate": false,
+      "installDir": ""
+    },
+    "note": "sha512 asset present and matching: installed into <TOOLS>/proton, store entry marked installed with the measured disksize, progress downloading -> unzipping -> idle"
+  },
+  {
+    "id": "install-checksum-mismatch",
+    "op": "install",
+    "platform": "linux",
+    "checksum": "mismatch",
+    "flow": "full",
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "downsize": 200,
+      "disksize": 0,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/notes",
+      "isInstalled": false,
+      "hasUpdate": false,
+      "installDir": ""
+    },
+    "note": "sha512 asset present and wrong: 'Checksum verification failed', the downloaded archive is deleted, nothing extracted, error notification, store unchanged"
+  },
+  {
+    "id": "install-checksum-absent",
+    "op": "install",
+    "platform": "mac",
+    "checksum": "none",
+    "flow": "full",
+    "release": {
+      "version": "Wine-Staging-macOS-9.21",
+      "type": "Wine-Staging-macOS",
+      "date": "2024-10-01",
+      "download": "https://downloads.oracle.invalid/wine-staging-9.21-osx64.tar.xz",
+      "downsize": 200,
+      "disksize": 0,
+      "checksum": "",
+      "release_notes_link": "https://downloads.oracle.invalid/notes",
+      "isInstalled": false,
+      "hasUpdate": false,
+      "installDir": ""
+    },
+    "note": "no checksum asset (Wine-Staging-macOS): a warning, then the install proceeds into <TOOLS>/wine; du -sk is read as kilobytes"
+  },
+  {
+    "id": "install-overwrite",
+    "op": "install",
+    "platform": "linux",
+    "checksum": "match",
+    "flow": "full",
+    "progress": [{ "bytes": 100, "speed": 40, "percentage": 50 }],
+    "store": [
+      {
+        "version": "GE-Proton9-27",
+        "type": "GE-Proton",
+        "date": "2025-01-01",
+        "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+        "downsize": 200,
+        "disksize": 999,
+        "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+        "release_notes_link": "https://downloads.oracle.invalid/notes",
+        "isInstalled": true,
+        "hasUpdate": true,
+        "installDir": "<TOOLS>/proton/GE-Proton9-27"
+      }
+    ],
+    "seed": [
+      { "path": "<TOOLS>/proton/GE-Proton9-27/old-file", "text": "old" }
+    ],
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "downsize": 200,
+      "disksize": 999,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/notes",
+      "isInstalled": true,
+      "hasUpdate": true,
+      "installDir": "<TOOLS>/proton/GE-Proton9-27"
+    },
+    "note": "an update over an existing install: the old tree is renamed to _backup, the new one extracted, the backup removed; the old file is gone and no _backup is left"
+  },
+  {
+    "id": "install-overwrite-unzip-throws",
+    "op": "install",
+    "platform": "linux",
+    "checksum": "match",
+    "flow": "full",
+    "tar": "throws",
+    "store": [
+      {
+        "version": "GE-Proton9-27",
+        "type": "GE-Proton",
+        "date": "2025-01-01",
+        "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+        "downsize": 200,
+        "disksize": 999,
+        "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+        "release_notes_link": "https://downloads.oracle.invalid/notes",
+        "isInstalled": true,
+        "hasUpdate": true,
+        "installDir": "<TOOLS>/proton/GE-Proton9-27"
+      }
+    ],
+    "seed": [
+      { "path": "<TOOLS>/proton/GE-Proton9-27/old-file", "text": "old" }
+    ],
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "downsize": 200,
+      "disksize": 999,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/notes",
+      "isInstalled": true,
+      "hasUpdate": true,
+      "installDir": "<TOOLS>/proton/GE-Proton9-27"
+    },
+    "note": "the extraction itself rejects (the tar spawn throws, so it is not in the spawn trace): the TS restore branch tests `error.includes('AbortError')` on an Error object, which throws a TypeError before the backup is restored, so the golden records the old tree left as _backup and the half-made install; a Rust port must decide whether to keep or fix this (D-19 delta)"
+  },
+  {
+    "id": "install-tar-nonzero-swallowed",
+    "op": "install",
+    "platform": "linux",
+    "checksum": "match",
+    "flow": "full",
+    "tar": "nonzero",
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "downsize": 200,
+      "disksize": 0,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/notes",
+      "isInstalled": false,
+      "hasUpdate": false,
+      "installDir": ""
+    },
+    "note": "tar exits non-zero: extractFiles reports {status:'error'} instead of throwing, so the install still counts as a success with an empty directory"
+  },
+  {
+    "id": "install-aborted",
+    "op": "install",
+    "platform": "linux",
+    "checksum": "match",
+    "flow": "abort",
+    "progress": [{ "bytes": 50, "speed": 40, "percentage": 25 }],
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "downsize": 200,
+      "disksize": 0,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/notes",
+      "isInstalled": false,
+      "hasUpdate": false,
+      "installDir": ""
+    },
+    "note": "the download stops ('Download stopped or paused') while the abort signal is set: result abort, the 'Installation Canceled' notification, nothing left under <TOOLS>/proton"
+  },
+  {
+    "id": "install-overwrite-aborted",
+    "op": "install",
+    "platform": "linux",
+    "checksum": "match",
+    "flow": "abort",
+    "store": [
+      {
+        "version": "GE-Proton9-27",
+        "type": "GE-Proton",
+        "date": "2025-01-01",
+        "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+        "downsize": 200,
+        "disksize": 999,
+        "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+        "release_notes_link": "https://downloads.oracle.invalid/notes",
+        "isInstalled": true,
+        "hasUpdate": true,
+        "installDir": "<TOOLS>/proton/GE-Proton9-27"
+      }
+    ],
+    "seed": [
+      { "path": "<TOOLS>/proton/GE-Proton9-27/old-file", "text": "old" }
+    ],
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "downsize": 200,
+      "disksize": 999,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/notes",
+      "isInstalled": true,
+      "hasUpdate": true,
+      "installDir": "<TOOLS>/proton/GE-Proton9-27"
+    },
+    "note": "an update aborted mid-download: the abort handler removes installSubDir, which is the EXISTING install, so the previous version is deleted while the store keeps isInstalled true (a D-19 delta candidate)"
+  },
+  {
+    "id": "install-already-installed-skip",
+    "op": "install",
+    "platform": "linux",
+    "checksum": "match",
+    "flow": "skip",
+    "store": [
+      {
+        "version": "GE-Proton9-27",
+        "type": "GE-Proton",
+        "date": "2025-01-01",
+        "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+        "downsize": 200,
+        "disksize": 0,
+        "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+        "release_notes_link": "https://downloads.oracle.invalid/notes",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": ""
+      }
+    ],
+    "seed": [
+      { "path": "<TOOLS>/proton/GE-Proton9-27/already-here", "text": "here" }
+    ],
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "downsize": 200,
+      "disksize": 0,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/notes",
+      "isInstalled": false,
+      "hasUpdate": false,
+      "installDir": ""
+    },
+    "note": "the directory already exists and there is no update: no download and no extraction, the disksize is measured with du, the checksum asset is still fetched first, and the store entry is marked installed"
+  },
+  {
+    "id": "install-download-http-500",
+    "op": "install",
+    "platform": "linux",
+    "checksum": "match",
+    "flow": "http-500",
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "downsize": 200,
+      "disksize": 0,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/notes",
+      "isInstalled": false,
+      "hasUpdate": false,
+      "installDir": ""
+    },
+    "note": "the archive request fails with HTTP 500: the download error is wrapped, the (absent) archive removal is a no-op, error notification, store unchanged"
+  },
+  {
+    "id": "install-head-fails",
+    "op": "install",
+    "platform": "linux",
+    "checksum": "none",
+    "flow": "head-fails",
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "downsize": 200,
+      "disksize": 0,
+      "checksum": "",
+      "release_notes_link": "https://downloads.oracle.invalid/notes",
+      "isInstalled": false,
+      "hasUpdate": false,
+      "installDir": ""
+    },
+    "note": "the HEAD for content-length fails at the transport: 'Failed to get headers', error notification, nothing extracted"
+  },
+  {
+    "id": "install-proton-to-steam",
+    "op": "install",
+    "platform": "linux",
+    "checksum": "match",
+    "flow": "full",
+    "settings": {
+      "downloadProtonToSteam": true,
+      "defaultSteamPath": "<HOME>/steam"
+    },
+    "seed": [{ "path": "<HOME>/steam/steam.sh", "text": "#!/bin/sh\n" }],
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "downsize": 200,
+      "disksize": 0,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/notes",
+      "isInstalled": false,
+      "hasUpdate": false,
+      "installDir": ""
+    },
+    "note": "downloadProtonToSteam with a valid Steam path (steam.sh present): the install goes under <steam>/compatibilitytools.d instead of <TOOLS>/proton"
+  },
+  {
+    "id": "remove-stored-installdir",
+    "op": "remove",
+    "platform": "linux",
+    "store": [
+      {
+        "version": "GE-Proton9-27",
+        "type": "GE-Proton",
+        "date": "2025-01-01",
+        "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+        "downsize": 200,
+        "disksize": 999,
+        "checksum": "",
+        "release_notes_link": "",
+        "isInstalled": true,
+        "hasUpdate": false,
+        "installDir": "<TOOLS>/proton/GE-Proton9-27"
+      }
+    ],
+    "seed": [
+      { "path": "<TOOLS>/proton/GE-Proton9-27/file", "text": "installed" },
+      { "path": "<HOME>/precious/keep-me", "text": "user data" }
+    ],
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "",
+      "downsize": 0,
+      "disksize": 0,
+      "checksum": "",
+      "release_notes_link": "",
+      "isInstalled": true,
+      "hasUpdate": false,
+      "installDir": "<HOME>/precious"
+    },
+    "note": "the renderer sends a different installDir: only the stored installDir is removed, <HOME>/precious stays; the entry is unmarked (isInstalled false, installDir '', disksize 0), wineVersionUninstalled then wineVersionsUpdated, 'Uninstalled' notification"
+  },
+  {
+    "id": "remove-missing-dir",
+    "op": "remove",
+    "platform": "linux",
+    "store": [
+      {
+        "version": "GE-Proton9-27",
+        "type": "GE-Proton",
+        "date": "2025-01-01",
+        "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+        "downsize": 200,
+        "disksize": 999,
+        "checksum": "",
+        "release_notes_link": "",
+        "isInstalled": true,
+        "hasUpdate": true,
+        "installDir": "<TOOLS>/proton/GE-Proton9-27"
+      }
+    ],
+    "release": {
+      "version": "GE-Proton9-27",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "",
+      "downsize": 0,
+      "disksize": 0,
+      "checksum": "",
+      "release_notes_link": "",
+      "isInstalled": true,
+      "hasUpdate": true,
+      "installDir": "<TOOLS>/proton/GE-Proton9-27"
+    },
+    "note": "the stored directory is already gone: nothing is removed and no wineVersionUninstalled is emitted, but the entry is still unmarked (hasUpdate cleared too) and the success notification fires"
+  },
+  {
+    "id": "remove-not-in-store",
+    "op": "remove",
+    "platform": "linux",
+    "store": [
+      {
+        "version": "GE-Proton9-0",
+        "type": "GE-Proton",
+        "date": "2024-05-01",
+        "download": "",
+        "downsize": 0,
+        "disksize": 0,
+        "checksum": "",
+        "release_notes_link": "",
+        "isInstalled": true,
+        "hasUpdate": false,
+        "installDir": "<TOOLS>/proton/GE-Proton9-0"
+      }
+    ],
+    "seed": [
+      { "path": "<TOOLS>/proton/GE-Proton9-0/file", "text": "installed" },
+      { "path": "<HOME>/precious/keep-me", "text": "user data" }
+    ],
+    "release": {
+      "version": "not-stored",
+      "type": "GE-Proton",
+      "date": "2025-01-01",
+      "download": "",
+      "downsize": 0,
+      "disksize": 0,
+      "checksum": "",
+      "release_notes_link": "",
+      "isInstalled": true,
+      "hasUpdate": false,
+      "installDir": "<HOME>/precious"
+    },
+    "note": "a version the store does not hold: nothing is removed whatever installDir the renderer sent, no event, no notification"
   }
 ]

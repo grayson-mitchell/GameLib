@@ -1,0 +1,4 @@
+[
+  "GET https://downloads.oracle.invalid/GE-Proton9-27.sha512sum",
+  "HEAD https://downloads.oracle.invalid/GE-Proton9-27.tar.xz"
+]

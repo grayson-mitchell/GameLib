@@ -1,0 +1,43 @@
+[
+  {
+    "program": "tar",
+    "argv": [
+      "-xf",
+      "<TOOLS>/proton/GE-Proton9-27.tar.xz",
+      "-C",
+      "<TOOLS>/proton/GE-Proton9-27",
+      "--strip-components=1"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "du",
+    "argv": [
+      "-sb",
+      "<TOOLS>/proton/GE-Proton9-27"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "4096\n",
+      "stderr": ""
+    }
+  }
+]

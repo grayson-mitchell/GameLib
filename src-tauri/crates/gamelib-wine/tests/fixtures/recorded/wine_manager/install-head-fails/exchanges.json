@@ -1,0 +1,19 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "HEAD",
+      "url": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 0,
+      "headers": {}
+    },
+    "synthetic": true,
+    "networkError": true
+  }
+]

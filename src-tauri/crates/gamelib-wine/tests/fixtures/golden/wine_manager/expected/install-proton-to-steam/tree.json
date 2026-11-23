@@ -1,0 +1,80 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store/wine-downloader-info.json",
+    "kind": "file",
+    "mode": "0600",
+    "sha256": "c20a9a538bb586367a7d17317858e20e443864f0b942109b9bc7aae04fa374ff"
+  },
+  {
+    "path": "steam",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "steam/compatibilitytools.d",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "steam/compatibilitytools.d/GE-Proton9-27",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "steam/compatibilitytools.d/GE-Proton9-27/empty",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "steam/steam.sh",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf"
+  }
+]

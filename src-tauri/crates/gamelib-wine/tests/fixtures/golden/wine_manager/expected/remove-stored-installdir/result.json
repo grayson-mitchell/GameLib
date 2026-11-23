@@ -1,0 +1,33 @@
+{
+  "op": "remove",
+  "platform": "linux",
+  "downloads": [],
+  "notifications": [
+    {
+      "title": "GE-Proton9-27",
+      "body": "notify.uninstalled"
+    }
+  ],
+  "store": {
+    "wine-releases": [
+      {
+        "version": "GE-Proton9-27",
+        "type": "GE-Proton",
+        "date": "2025-01-01",
+        "download": "https://downloads.oracle.invalid/GE-Proton9-27.tar.xz",
+        "downsize": 200,
+        "disksize": 0,
+        "checksum": "",
+        "release_notes_link": "",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": ""
+      }
+    ],
+    "__internal__": {
+      "gamelib": {
+        "schemaVersion": 1
+      }
+    }
+  }
+}
