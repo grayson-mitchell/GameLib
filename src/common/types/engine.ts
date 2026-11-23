@@ -185,6 +185,13 @@ export type EngineSelection =
       reason: 'override' | 'cx-inconclusive'
     } & NonCrossoverEngine)
 
+/** The closed engine-override grammar (59 D-14): anything outside it parses to `automatic`. */
+export type EngineOverrideId =
+  | 'automatic'
+  | 'crossover'
+  | `pinned:${string}`
+  | `wine-manager:${string}`
+
 export type NonCrossoverSelection = Extract<
   EngineSelection,
   { kind: 'pinned' | 'wine-manager' }

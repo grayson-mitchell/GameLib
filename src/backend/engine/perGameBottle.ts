@@ -33,7 +33,7 @@ import {
   killBottleWineServerWith,
   removeCreatedBottleDir
 } from 'backend/enginewine/bottles'
-import { createFallbackBottleCancellable } from './fallbackBottleCall'
+import { createFallbackBottleCancellable } from 'backend/storeManagers/steam/engine/fallbackBottleCall'
 import type { EngineRuntime } from './engineRuntime'
 import {
   CX_CREATE_CAP_MS,

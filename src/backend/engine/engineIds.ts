@@ -3,13 +3,10 @@
  * including any path, parses to `automatic`. This is the backend validation
  * point for the renderer-supplied per-game override.
  */
+import type { EngineOverrideId } from 'common/types/engine'
 import { pinById } from './enginePins'
 
-export type EngineOverrideId =
-  | 'automatic'
-  | 'crossover'
-  | `pinned:${string}`
-  | `wine-manager:${string}`
+export type { EngineOverrideId }
 
 const WM_VERSION_RE = /^[A-Za-z0-9._-]{1,64}$/
 

@@ -493,24 +493,12 @@ const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
     'src/backend/services/types.ts',
     'src/backend/sidecar/bootstrap.ts'
   ],
-  engineSync: [
-    'src/backend/storeManagers/steam/gameBridgeLaunchGate.ts',
-    'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts',
-    'src/backend/storeManagers/steam/gameLaunch.ts'
-  ],
   engineTypes: [],
-  fallbackBottleCall: [
-    'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts'
-  ],
   fallbackEngine: [],
   gameEngineState: [],
   gameKey: ['src/backend/enginewine/twin.ts'],
   gamePrefix: [],
   launchSettings: [],
-  offlineRefusal: [
-    'src/backend/storeManagers/steam/gameEngineDialogs.ts',
-    'src/backend/storeManagers/steam/gameLaunch.ts'
-  ],
   perGameBottle: [],
   pinnedEngineProgress: [],
   runTool: [],
@@ -525,8 +513,7 @@ const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
  * reads. Slimming the runtime (87-56b) and deleting the members' modules (87-56c) edit this in the same commit.
  */
 const ENGINE_RUNTIME_MEMBER_READS: Record<string, readonly string[]> = {
-  'src/backend/sidecar/bootstrap.ts': ['crossover'],
-  'src/backend/storeManagers/steam/gameLaunch.ts': ['registry']
+  'src/backend/sidecar/bootstrap.ts': ['crossover']
 }
 
 const ENGINE_DIR = 'src/backend/engine'

@@ -13,7 +13,7 @@ import {
   dropEngineSelection,
   recordGameRunning,
   recordGameStopped
-} from 'backend/engine/engineSync'
+} from './engine/engineSync'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
 import { publishOverlayExitNotice } from 'backend/enginewine/state'
 import { getBottleDir } from 'backend/enginewine/twin'

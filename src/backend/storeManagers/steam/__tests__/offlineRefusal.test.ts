@@ -1,5 +1,5 @@
-import { offlineLaunchCertainlyBlocked } from '../offlineRefusal'
-import type { OfflineRefusalInput } from '../offlineRefusal'
+import { offlineLaunchCertainlyBlocked } from '../engine/offlineRefusal'
+import type { OfflineRefusalInput } from '../engine/offlineRefusal'
 
 const base: OfflineRefusalInput = {
   offline: true,

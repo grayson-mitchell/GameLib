@@ -1,5 +1,7 @@
 import * as bottlesModule from 'backend/enginewine/bottles'
 import * as prepareBottleModule from '../engine/prepareBottle'
+import * as engineSyncModule from '../engine/engineSync'
+import { engineSelectionView } from 'backend/enginewine/selectionView'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import type { GameConfigSlice } from 'backend/game_config'
 import type { SteamDrm } from '../bridge/drm/drmLaunchSetup'
@@ -352,8 +354,6 @@ const getEngineSelection = (k: string) =>
   testRuntime.registry.getEngineSelection(k)
 const clearEngineSelection = (k: string) =>
   testRuntime.registry.clearEngineSelection(k)
-const gamesRunningIn = (bottle: string) =>
-  testRuntime.ledger.gamesRunningIn(bottle)
 // 87-54: a bridge launch's deadline timer is Rust's. This fake stands in for it on the runtime's fake clock (the file-level
 // beforeEach spies the `enginewine/deadline.ts` arm and cancel shims over it), and its firing is the `engineDeadlineFired`
 // frame: the same `bridgeDeadlines.fire` the registered listener calls.
@@ -379,13 +379,6 @@ const advanceBoth = async (ms: number) => {
 const advanceBothSync = (ms: number) => {
   gamesClock.advance(ms)
   jest.advanceTimersByTime(ms)
-}
-const resetBottleLedger = () => {
-  for (const bottle of ['GameLibSteam', 'GameLib']) {
-    for (const key of testRuntime.ledger.gamesRunningIn(bottle)) {
-      testRuntime.ledger.markGameStopped(bottle, key)
-    }
-  }
 }
 // 66.4-06: the Steam launch runtime is a set of recording fakes handed through the deps slice.
 // startBottleProcessMonitor ties the helper's lifetime to the game's own process after a successful
@@ -17253,7 +17246,6 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
   beforeEach(() => {
     resetBridgeFailedSession()
     resetBridgeLaunchBottles()
-    resetBottleLedger()
     library.clear()
     pendingFetches.clear()
     library.set(ID, makeEntry({ title: 'Test Game' }))
@@ -17523,7 +17515,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
 
     it('a rejected setEngineSelection shows the selectionRejected dialog (WR-08)', async () => {
       const spy = jest
-        .spyOn(testRuntime.registry, 'setEngineSelection')
+        .spyOn(engineSyncModule, 'setSteamEngineSelection')
         .mockReturnValue(false)
       engineDialog().mockClear()
       try {
@@ -18014,10 +18006,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         const game = new SteamGame(ID, steamTestDeps)
         const d = deferred()
         bodySpy().mockReturnValue(d.promise)
-        const clearSpy = jest.spyOn(
-          testRuntime.registry,
-          'clearEngineSelection'
-        )
+        const clearSpy = jest.spyOn(engineSelectionView, 'clear')
         clearSpy.mockClear()
         const a = launchBridgeGame(game)
         const b = launchBridgeGame(game)
@@ -18238,6 +18227,12 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
 
     it('D-16: a bridge launch marks the bottle ledger and onStopped clears it', async () => {
       jest.useFakeTimers()
+      const markRunning = jest
+        .spyOn(bottlesModule, 'markGameRunning')
+        .mockResolvedValue(true)
+      const markStopped = jest
+        .spyOn(bottlesModule, 'markGameStopped')
+        .mockResolvedValue(null)
       let onStopped: (() => void) | undefined
       startBottleProcessMonitor.mockImplementation((_deps: unknown, a: any) => {
         onStopped = a.onStopped
@@ -18246,9 +18241,11 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
         true
       )
-      expect(gamesRunningIn(PER_GAME)).toEqual([ID])
+      // 87-56b: the ledger is Rust's; the launch marks the game in its bottle, onStopped drops it.
+      expect(markRunning).toHaveBeenCalledWith(expect.anything(), PER_GAME, ID)
+      expect(markStopped).not.toHaveBeenCalled()
       onStopped?.()
-      expect(gamesRunningIn(PER_GAME)).toEqual([])
+      expect(markStopped).toHaveBeenCalledWith(expect.anything(), PER_GAME, ID)
     })
 
     it('arms a deadline and the first match cancels it (no timers left)', async () => {

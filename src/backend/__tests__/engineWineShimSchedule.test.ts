@@ -138,6 +138,7 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/bridgeKnownFixes.ts',
   'src/backend/storeManagers/steam/bridgeWineTools.ts',
   'src/backend/storeManagers/steam/directLaunch/directLaunchProbes.ts',
+  'src/backend/storeManagers/steam/engine/engineSync.ts',
   'src/backend/storeManagers/steam/engine/pinnedEngine.ts',
   'src/backend/storeManagers/steam/engine/prepareBottle.ts',
   'src/backend/storeManagers/steam/gameBridgeLaunch.ts',
@@ -161,10 +162,10 @@ const TOOLS_SHIM_IMPORTERS: readonly string[] = [
 /** Every non-test importer of `enginewine/bottles.ts` (the check is per file, so every row of that file lists them all). */
 const BOTTLES_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/engine/engineDecision.ts',
-  'src/backend/engine/engineSync.ts',
-  'src/backend/engine/fallbackBottleCall.ts',
   'src/backend/engine/perGameBottle.ts',
   'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
+  'src/backend/storeManagers/steam/engine/engineSync.ts',
+  'src/backend/storeManagers/steam/engine/fallbackBottleCall.ts',
   'src/backend/storeManagers/steam/engine/prepareBottle.ts',
   'src/backend/storeManagers/steam/gameBridgeLaunch.ts'
 ]
@@ -656,12 +657,12 @@ const SCHEDULE: readonly ScheduleRow[] = [
     vectors: 'src/backend/enginewine/__tests__/selectionView.test.ts',
     wiring: ['registerEngineSelectionView'],
     callers: [
-      'src/backend/engine/engineSync.ts',
       'src/backend/sidecar/bootstrap.ts',
       'src/backend/sidecar/handlers.ts',
       'src/backend/storeManagers/steam/bridgeBottle.ts',
       'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
       'src/backend/storeManagers/steam/bridgeWineTools.ts',
+      'src/backend/storeManagers/steam/engine/engineSync.ts',
       'src/backend/storeManagers/steam/engine/prepareBottle.ts',
       'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts',
       'src/backend/storeManagers/steam/gameLaunch.ts',

@@ -7,7 +7,7 @@ import {
   RUST_ENGINE_BOTTLE_CREATE_FALLBACK
 } from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import { createFallbackBottleCancellable } from '../fallbackBottleCall'
+import { createFallbackBottleCancellable } from '../engine/fallbackBottleCall'
 
 const ENGINE = {
   wineBin: '/e/wine',

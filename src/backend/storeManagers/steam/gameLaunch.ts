@@ -32,7 +32,10 @@ import { prepareOverlayTokens } from './bridge/overlay/overlayLaunch'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import type { CrossoverPreflight } from 'backend/enginewine/decision'
 import type { EngineSelection } from 'common/types/engine'
-import { dropEngineSelection } from 'backend/engine/engineSync'
+import {
+  dropEngineSelection,
+  setSteamEngineSelection
+} from './engine/engineSync'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
 import { detectLaunchDrmWrapper } from './bridge/drm/drmScanExe'
 import { detectSteamDrmInPe } from './bridge/peScan'
@@ -435,7 +438,6 @@ export async function selectLaunchEngine(
   const { decideLaunchEngine } = await import('backend/enginewine/decision')
   const { recordLaunchDecision } = await import('backend/enginewine/state')
   const { launchDecisionFrom } = await import('./engine/engineDecisionReply')
-  const { setEngineSelection } = steamGame.deps.engineRuntime.registry
   const clearEngineSelection = (key: string) =>
     dropEngineSelection(steamGame.deps.engineRuntime, key)
   const { prepareBottle } = await import('./engine/prepareBottle')
@@ -468,7 +470,7 @@ export async function selectLaunchEngine(
     const switchCtx = { paths: steamGame.deps.paths, fallback }
     const { ENGINE_PINS } = twin
     const { offlineLaunchCertainlyBlocked } =
-      await import('backend/engine/offlineRefusal')
+      await import('./engine/offlineRefusal')
     const refusal = offlineLaunchCertainlyBlocked({
       offline: connectivity.offline,
       override: earlyOverride,
@@ -548,7 +550,7 @@ export async function selectLaunchEngine(
   }
 
   const sel: EngineSelection = decision.selection
-  if (!setEngineSelection(steamGame.appId, sel)) {
+  if (!setSteamEngineSelection(steamGame.appId, sel)) {
     logWarning(
       `SteamGame: appId ${steamGame.appId} engine selection was rejected (${engineLabelForLog(sel)}); not launching`,
       LogPrefix.Steam

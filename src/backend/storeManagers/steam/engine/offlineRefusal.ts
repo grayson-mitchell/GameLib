@@ -21,7 +21,7 @@
  * Steam. A CrossOver override with CrossOver missing is left to the normal
  * path, whose 'unavailable' dialog is already immediate and more accurate.
  */
-import type { EngineOverrideId } from './engineIds'
+import type { EngineOverrideId } from 'common/types/engine'
 
 export interface OfflineRefusalInput {
   offline: boolean

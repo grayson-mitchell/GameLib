@@ -11,7 +11,7 @@ import {
   createFallbackBottle
 } from 'backend/enginewine/bottles'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import type { NonCrossoverEngine } from './engineTypes'
+import type { NonCrossoverEngine } from 'common/types/engine'
 
 /** What the creation answers: `status`, and on an error its message, code and whether this call made the bottle. */
 export interface FallbackBottleOutcome {

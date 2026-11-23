@@ -35,7 +35,7 @@ import {
   isBottleProvisioned,
   isNonCrossover
 } from 'backend/enginewine/twin'
-import { createFallbackBottleCancellable } from 'backend/engine/fallbackBottleCall'
+import { createFallbackBottleCancellable } from './engine/fallbackBottleCall'
 import {
   killBottleWineServerWith,
   recordCrossoverBottleEngine,
@@ -670,15 +670,11 @@ export async function provisionBridgeBottle(
 
   // Phase 59: an explicit fallback engine creates the bottle itself.
   if (opts.fallbackEngine) {
-    // Lazy: services/engineServices reaches the engine and the steam modules (storeManagers <-> steam cycle).
-    const { engineServicesFrom } =
-      await import('backend/services/engineServices')
-    const services = engineServicesFrom(deps)
-    // The TS `AbortSignal` ends the Rust creation through its cancel id (engine/fallbackBottleCall.ts).
+    // The TS `AbortSignal` ends the Rust creation through its cancel id (steam/engine/fallbackBottleCall.ts).
     const made = (await createFallbackBottleCancellable(rust, {
       bottleName,
       engine: opts.fallbackEngine,
-      fallbackSettings: services.globalGameSettings(),
+      fallbackSettings: deps.config.getSettings(),
       signal: opts.signal
     })) as ProvisionBottleResult
     if (made.status === 'done') {

@@ -67,7 +67,7 @@ export async function drmOfflinePrecheck(
   const switchCtx = { paths: steamGame.deps.paths, fallback }
   const { ENGINE_PINS } = twin
   const { offlineLaunchCertainlyBlocked } =
-    await import('backend/engine/offlineRefusal')
+    await import('./engine/offlineRefusal')
   const refusal = offlineLaunchCertainlyBlocked({
     offline: connectivity.offline,
     override: 'crossover',

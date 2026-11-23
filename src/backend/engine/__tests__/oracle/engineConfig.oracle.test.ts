@@ -76,7 +76,7 @@ import {
 } from '../../engineConfig'
 import { createEngineRuntime } from '../../engineRuntime'
 import { engineKeyIfEligible } from '../../engineEligibility'
-import { offlineLaunchCertainlyBlocked } from '../../offlineRefusal'
+import { offlineLaunchCertainlyBlocked } from 'backend/storeManagers/steam/engine/offlineRefusal'
 import {
   resolveToolSettings,
   resolveToolSettingsForId,
