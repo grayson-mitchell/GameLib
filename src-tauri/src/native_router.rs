@@ -17,6 +17,7 @@
 //! `IPC_INVALID_ARGS_MARKER` from [`invalid_args`] (D-03 as refined by research F3), so
 //! `bootErrorSurface` never paints a native rejection as a fatal boot error.
 
+use crate::engine_dispatch;
 use crate::info_dispatch;
 use crate::ipc_contract::{IPC_INVALID_ARGS, IPC_INVALID_ARGS_MARKER};
 use crate::log_dispatch;
@@ -358,6 +359,12 @@ pub(crate) const INFO_SLICE: &str = "info";
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) const WINE_SLICE: &str = "wine";
 
+/// The slice that owns the engine channels in `nativeChannels.json` (Phase 87): invoke channels only,
+/// so it has no send queue; the handler runs the `gamelib-engine` op on the blocking pool. Named here,
+/// with the other slices, for the manifest-slice test.
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) const ENGINE_SLICE: &str = "engine";
+
 /// Run one queued send on its slice worker: the channel picks the handler.
 fn run_send_job(ctx: &Arc<NativeCtx>, job: NativeSendJob) -> Result<(), String> {
     match (job.channel, job.payload) {
@@ -500,6 +507,13 @@ impl NativeRouter {
         // `abort(version)`, which `sidecar_send` offers to `wine_dispatch` first.
         invoke.insert("installWineVersion", wine_dispatch::install_wine_version);
         invoke.insert("removeWineVersion", wine_dispatch::remove_wine_version);
+        // Phase 87 (87-28, D-14): the per-game bottle name the install dialogs show, run by the `engine`
+        // slice over the crate's `engine_per_game_bottle_name`. The sidecar no longer registers
+        // `getPerGameBottleName` (one owner, D-06).
+        invoke.insert(
+            "getPerGameBottleName",
+            engine_dispatch::get_per_game_bottle_name,
+        );
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -908,6 +922,28 @@ mod tests {
             );
         }
         assert!(!router.queues.contains_key(WINE_SLICE));
+    }
+
+    #[test]
+    fn native_manifest_engine_channels_are_registered_in_the_engine_slice() {
+        let m = manifest();
+        let channels = m["channels"].as_object().expect("channels object");
+        let router = router();
+        let engine: Vec<&str> = channels
+            .iter()
+            .filter(|(_, spec)| spec["slice"] == ENGINE_SLICE)
+            .map(|(name, _)| name.as_str())
+            .collect();
+        assert!(engine.contains(&"getPerGameBottleName"), "{engine:?}");
+        for name in engine {
+            // The engine slice is invoke-only: no send queue exists for it.
+            assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");
+            assert!(
+                router.invoke_handler(name).is_some(),
+                "{name} has no handler"
+            );
+        }
+        assert!(!router.queues.contains_key(ENGINE_SLICE));
     }
 
     #[test]

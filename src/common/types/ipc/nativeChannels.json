@@ -1818,6 +1818,38 @@
       "returns": "WineInstallation[]",
       "valid": [[]],
       "invalid": [["extra"], [null], [{}], [1, 2]]
+    },
+    "getPerGameBottleName": {
+      "kind": "invoke",
+      "slice": "engine",
+      "args": [
+        {
+          "name": "game",
+          "type": "{ runner: string, appName: string }",
+          "strict": true
+        }
+      ],
+      "returns": "string | null",
+      "valid": [
+        [{ "runner": "gog", "appName": "1234" }],
+        [{ "runner": "legendary", "appName": "abc" }],
+        [{ "runner": "steam", "appName": "620" }]
+      ],
+      "invalid": [
+        [],
+        [null],
+        [1],
+        ["gog"],
+        [{}],
+        [{ "runner": "gog" }],
+        [{ "appName": "1234" }],
+        [{ "runner": "", "appName": "1234" }],
+        [{ "runner": "gog", "appName": "" }],
+        [{ "runner": 1, "appName": "1234" }],
+        [{ "runner": "gog", "appName": 1234 }],
+        [{ "runner": "gog", "appName": "1234", "extra": true }],
+        [{ "runner": "gog", "appName": "1234" }, {}]
+      ]
     }
   }
 }

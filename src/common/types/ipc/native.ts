@@ -166,6 +166,15 @@ export interface NativeAsync {
   // roots, the `PATH` and the settings are the shell's own), and with no release list stored it refreshes
   // it first and pushes `wineVersionsUpdated`, so it has no wall-clock bound of its own.
   getAlternativeWine: () => Promise<WineInstallation[]>
+  // Phase 87 (87-28, D-14): the per-game bottle name the install dialogs show (`GameLib-<runner>-<appName>`
+  // for a game that has one, `null` for a Steam game or a game the engine layer refuses), answered by the
+  // Rust `engine` slice (`gamelib-engine`'s `engine_per_game_bottle_name`). It takes exactly one strict
+  // `{ runner, appName }` (runner 1 to 64 units, appName 1 to 4096); anything else rejects with the
+  // invalid-args marker. The name is computed from the identity, never taken from the renderer.
+  getPerGameBottleName: (game: {
+    runner: string
+    appName: string
+  }) => Promise<string | null>
 }
 
 export interface NativeSync {

@@ -890,6 +890,7 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "getHeroicVersion",
     "getItadSteamGids",
     "getLogContent",
+    "getPerGameBottleName",
     "getStoreSearchDeals",
     "getUploadedLogFiles",
     "getWikiGameInfo",

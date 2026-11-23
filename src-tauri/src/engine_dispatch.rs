@@ -10,6 +10,11 @@
 //! Rust slice that needs one (the wine manager first, 87-20) reaches it through `ctx.ui`. Building the
 //! context spawns nothing, connects to nothing and waits for nothing: the HTTP client is built on
 //! first use. Until [`install`] has run, an op answers `<op>:not-ready` (see `wine_dispatch`).
+//!
+//! 87-28 (D-14): the `engine` native slice serves the read-only engine channels over the crate's
+//! `engine_*` ops (`getPerGameBottleName` first). Each decode is strict and runs before the context is
+//! looked at, so a bad call is rejected the same way before and after the install; a rejection is a
+//! fixed literal that never echoes the caller's value (T-87-26).
 
 use super::*;
 
@@ -233,6 +238,96 @@ pub(crate) fn install(app: &AppHandle, user_data: &Path) {
     let _ = ENGINE_CTX.set(Arc::new(ctx));
 }
 
+/// What a rejected argument looks like: the JSON path and the zod-vocabulary code. Fixed literals only,
+/// never the renderer's value (T-87-26).
+type Rejection = (&'static str, &'static str);
+
+/// `nonEmptyString(max)` as zod counts it: 1 to `max` UTF-16 code units.
+fn bounded_string(
+    value: Option<&Value>,
+    max: usize,
+    path: &'static str,
+) -> Result<String, Rejection> {
+    let Some(Value::String(text)) = value else {
+        return Err((path, "invalid_type"));
+    };
+    match text.encode_utf16().count() {
+        0 => Err((path, "too_small")),
+        n if n > max => Err((path, "too_big")),
+        _ => Ok(text.clone()),
+    }
+}
+
+/// The one object argument every engine channel starts from: exactly one argument, a plain object.
+fn one_object(args: &[Value]) -> Result<&serde_json::Map<String, Value>, Rejection> {
+    match args {
+        [] => Err(("(args)", "too_small")),
+        [Value::Object(map)] => Ok(map),
+        [_] => Err(("0", "invalid_type")),
+        _ => Err(("(args)", "too_big")),
+    }
+}
+
+/// The game identity of `engine.ts`: `{runner, appName}`, strict, the runner 1 to 64 units and the
+/// app name 1 to 4096. Returns the object the crate ops take, rebuilt from the two decoded strings.
+fn parse_game_identity(map: &serde_json::Map<String, Value>) -> Result<Value, Rejection> {
+    if map.keys().any(|key| key != "runner" && key != "appName") {
+        return Err(("0", "unrecognized_keys"));
+    }
+    let runner = bounded_string(map.get("runner"), 64, "0.runner")?;
+    let app_name = bounded_string(map.get("appName"), 4096, "0.appName")?;
+    Ok(serde_json::json!({ "runner": runner, "appName": app_name }))
+}
+
+/// The one decoded game of `getPerGameBottleName`: `[{runner, appName}]`.
+fn parse_game_args(args: &[Value]) -> Result<Vec<Value>, Rejection> {
+    Ok(vec![parse_game_identity(one_object(args)?)?])
+}
+
+/// Runs `op` over `args` on the blocking pool. The crate's async `dispatch` is driven with `block_on`
+/// there (never `dispatch_sync`, which refuses a thread inside a runtime), so a file read stays off the
+/// async workers and the op still holds its shutdown registrant.
+async fn run_engine_op(
+    engine: Arc<EngineCtx>,
+    op: &'static str,
+    args: Vec<Value>,
+    failed: &'static str,
+) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        tauri::async_runtime::block_on(gamelib_engine::dispatch(op, &args, &engine))
+    })
+    .await
+    .map_err(|_| failed.to_string())?
+}
+
+/// The body of `getPerGameBottleName`: decode first, then the crate's `engine_per_game_bottle_name`.
+/// The name is always computed from the game identity, never taken from the caller (T-87-27). `engine` is
+/// the installed context, passed in so a test drives this over a real one.
+async fn get_per_game_bottle_name_channel(
+    engine: Option<Arc<EngineCtx>>,
+    args: Vec<Value>,
+) -> Result<Value, String> {
+    let op_args = parse_game_args(&args)
+        .map_err(|(path, code)| invalid_args("getPerGameBottleName", &[path], &[code]))?;
+    let engine = engine.ok_or_else(|| "getPerGameBottleName: not ready".to_string())?;
+    run_engine_op(
+        engine,
+        "engine_per_game_bottle_name",
+        op_args,
+        "getPerGameBottleName: the lookup did not finish",
+    )
+    .await
+}
+
+/// The native `getPerGameBottleName` handler (slice `engine`, D-14): the per-game bottle name the install
+/// dialogs show, `null` for a game with none, answered by the crate's `engine_per_game_bottle_name`.
+pub(crate) fn get_per_game_bottle_name(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(get_per_game_bottle_name_channel(
+        engine_ctx().cloned(),
+        args,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -419,5 +514,117 @@ mod tests {
     #[test]
     fn no_context_is_installed_until_run_setup_installs_one() {
         assert!(engine_ctx().is_none());
+    }
+
+    fn engine_over_fake_home(home: &gamelib_testutil::FakeHome) -> Arc<EngineCtx> {
+        let emitter: Arc<dyn FrontendEmitter> = Arc::new(Pushes::default());
+        Arc::new(build_ctx(
+            Arc::new(StoreHost::new()),
+            home.root(),
+            home.root().join("home"),
+            home.root().join("tmp"),
+            Arc::clone(&emitter),
+            Arc::new(ShellEngineUi::silent(emitter)),
+            Shutdown::new(),
+        ))
+    }
+
+    fn block<T>(future: impl std::future::Future<Output = T>) -> T {
+        tauri::async_runtime::block_on(future)
+    }
+
+    /// The fixed-literal tail of an invalid-args rejection: its paths and codes.
+    fn rejection(err: &str) -> (Vec<String>, Vec<String>) {
+        let payload: Value =
+            serde_json::from_str(err.strip_prefix(IPC_INVALID_ARGS_MARKER).unwrap().trim())
+                .expect("the marker carries JSON");
+        let list = |key: &str| -> Vec<String> {
+            payload[key]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|v| v.as_str().unwrap().to_string())
+                .collect()
+        };
+        (list("paths"), list("codes"))
+    }
+
+    #[test]
+    fn get_per_game_bottle_name_decodes_one_strict_game_identity() {
+        let game = serde_json::json!({"runner": "gog", "appName": "1234"});
+        assert_eq!(parse_game_args(&[game.clone()]), Ok(vec![game]));
+        let long_runner = "r".repeat(65);
+        let cases: Vec<(Vec<Value>, Rejection)> = vec![
+            (vec![], ("(args)", "too_small")),
+            (vec![serde_json::json!(1)], ("0", "invalid_type")),
+            (vec![Value::Null], ("0", "invalid_type")),
+            (
+                vec![serde_json::json!({"runner": "gog"})],
+                ("0.appName", "invalid_type"),
+            ),
+            (
+                vec![serde_json::json!({"runner": "", "appName": "a"})],
+                ("0.runner", "too_small"),
+            ),
+            (
+                vec![serde_json::json!({"runner": long_runner, "appName": "a"})],
+                ("0.runner", "too_big"),
+            ),
+            (
+                vec![serde_json::json!({"runner": "gog", "appName": "a", "extra": 1})],
+                ("0", "unrecognized_keys"),
+            ),
+            (
+                vec![
+                    serde_json::json!({"runner": "gog", "appName": "a"}),
+                    serde_json::json!({}),
+                ],
+                ("(args)", "too_big"),
+            ),
+        ];
+        for (args, expected) in cases {
+            assert_eq!(parse_game_args(&args), Err(expected), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn get_per_game_bottle_name_rejects_before_looking_at_the_context_and_answers_not_ready() {
+        // A bad call is the same rejection with or without a context.
+        let err = block(get_per_game_bottle_name_channel(None, vec![])).unwrap_err();
+        assert!(err.starts_with(IPC_INVALID_ARGS_MARKER), "{err}");
+        assert_eq!(
+            rejection(&err),
+            (vec!["(args)".to_string()], vec!["too_small".to_string()])
+        );
+        // A hostile value is never echoed.
+        let hostile = serde_json::json!({"runner": "gog", "appName": "x", "secret-key": "hunter2"});
+        let err = block(get_per_game_bottle_name_channel(None, vec![hostile])).unwrap_err();
+        assert!(
+            !err.contains("hunter2") && !err.contains("secret-key"),
+            "{err}"
+        );
+        // A good call before the install is not-ready, not a rejection.
+        let game = serde_json::json!({"runner": "gog", "appName": "1234"});
+        let err = block(get_per_game_bottle_name_channel(None, vec![game])).unwrap_err();
+        assert_eq!(err, "getPerGameBottleName: not ready");
+    }
+
+    #[test]
+    fn get_per_game_bottle_name_is_computed_by_the_crate_over_a_real_context() {
+        let home = gamelib_testutil::FakeHome::new("engine-bottle-");
+        let engine = engine_over_fake_home(&home);
+        let named = block(get_per_game_bottle_name_channel(
+            Some(Arc::clone(&engine)),
+            vec![serde_json::json!({"runner": "gog", "appName": "1234"})],
+        ))
+        .unwrap();
+        assert_eq!(named, serde_json::json!("GameLib-gog-1234"));
+        // A Steam game has no per-game bottle name: the answer is null, as the TS gave.
+        let steam = block(get_per_game_bottle_name_channel(
+            Some(engine),
+            vec![serde_json::json!({"runner": "steam", "appName": "620"})],
+        ))
+        .unwrap();
+        assert!(steam.is_null());
     }
 }

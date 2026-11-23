@@ -85,7 +85,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   'clipboardFlowRegistration.ts': { invoke: 1, send: 2 },
   // Phase 61 Plan 13 (2026-11-07): the store-agnostic engine domain (getEngineState, listEngineOptions,
   // getDefaultEngine, getPerGameBottleName, dismissEngineNotice)
-  'engineFlowRegistration.ts': { invoke: 5, send: 0 },
+  // Phase 87 Plan 28 (D-14): invoke 5 -> 4 -- `getPerGameBottleName` is a native `engine` channel.
+  'engineFlowRegistration.ts': { invoke: 4, send: 0 },
   'dialogFlowRegistration.ts': { invoke: 1, send: 0 },
   'downloadQueueFlowRegistration.ts': { invoke: 1, send: 4 },
   // Quick 261027-ch9 (2026-10-27): invoke 14 -> 15 -- getGamelibFixStatus

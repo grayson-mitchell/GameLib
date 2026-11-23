@@ -34,8 +34,8 @@ export const engineAsyncArgs = {
   ]),
   // D-09: the global default engine
   getDefaultEngine: noArgs,
-  // D-17: the per-game bottle name for the install dialogs
-  getPerGameBottleName: z.tuple([gameIdentity]),
+  // Phase 87 (87-28, D-14): `getPerGameBottleName` is a native `engine` channel (`nativeChannels.json`);
+  // the strict identity decode lives in the Rust `parse_game_identity`.
   dismissEngineNotice: z.tuple([noticeDismissal])
 }
 
@@ -47,7 +47,6 @@ interface EngineAsyncReturns {
     engineSource: 'stored' | 'derived'
     legacyLabel: string | null
   }>
-  getPerGameBottleName: Promise<string | null>
   dismissEngineNotice: Promise<{ ok: boolean }>
 }
 

@@ -107,10 +107,8 @@ const engineTable: FixtureTable<typeof engineAsyncArgs> = {
     invalid: [[{ appName: 'other' }], [{ appName: 'default', extra: 1 }], [{}]]
   },
   getDefaultEngine: { valid: [[]], invalid: [['x']] },
-  getPerGameBottleName: {
-    valid: [[{ runner: 'gog', appName: 'abc' }]],
-    invalid: [['abc'], [{ appName: 'abc' }]]
-  },
+  // Phase 87 Plan 28 (D-14): `getPerGameBottleName` is a native `engine` channel; its vectors are in
+  // `nativeChannels.json`.
   dismissEngineNotice: {
     valid: [
       [{ kind: 'no-crossover' }],

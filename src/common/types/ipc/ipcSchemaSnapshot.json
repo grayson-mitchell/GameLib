@@ -1721,35 +1721,15 @@
     {
       "channel": "getPerGameBottleName",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "object",
-            "properties": {
-              "runner": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 64
-              },
-              "appName": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 4096
-              }
-            },
-            "required": [
-              "runner",
-              "appName"
-            ],
-            "additionalProperties": false
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "game",
+          "type": "{ runner: string, appName: string }",
+          "strict": true
+        }
+      ],
+      "returns": "string | null"
     },
     {
       "channel": "getPlaytimeFromRunner",

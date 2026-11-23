@@ -22,12 +22,10 @@ const dismiss = jest.fn()
 const gameState = jest.fn()
 const gameOptions = jest.fn()
 const defaultEngine = jest.fn()
-const bottleName = jest.fn()
 jest.mock('backend/engine/gameEngineState', () => ({
   getGameEngineState: (...a: unknown[]) => gameState(...a),
   listGameEngineOptions: (...a: unknown[]) => gameOptions(...a),
-  getDefaultEngine: (...a: unknown[]) => defaultEngine(...a),
-  getPerGameBottleNameFor: (...a: unknown[]) => bottleName(...a)
+  getDefaultEngine: (...a: unknown[]) => defaultEngine(...a)
 }))
 const steamState = jest.fn()
 jest.mock('backend/storeManagers/steam/engine/steamEngineDeps', () => ({
@@ -94,12 +92,11 @@ describe('engine flows', () => {
     envState.isMac = true
   })
 
-  it('registers the five invoke channels', () => {
+  it('registers the four invoke channels (getPerGameBottleName is native, Phase 87 Plan 28)', () => {
     expect([...handlers.keys()].sort()).toEqual([
       'dismissEngineNotice',
       'getDefaultEngine',
       'getEngineState',
-      'getPerGameBottleName',
       'listEngineOptions'
     ])
   })
@@ -205,7 +202,7 @@ describe('engine flows', () => {
     expect(JSON.stringify(out)).not.toContain('/')
   })
 
-  it('serves the default engine and per-game bottle name', async () => {
+  it('serves the default engine', async () => {
     defaultEngine.mockReturnValue({
       effectiveEngineId: 'x',
       engineSource: 'derived',
@@ -216,12 +213,7 @@ describe('engine flows', () => {
       engineSource: 'derived',
       legacyLabel: null
     })
-    bottleName.mockReturnValue('GameLib-abc')
-    const arg = { runner: 'gog', appName: 'abc' }
-    expect(await handlers.get('getPerGameBottleName')!({}, arg)).toBe(
-      'GameLib-abc'
-    )
-    expect(bottleName).toHaveBeenCalledWith(arg)
+    expect(handlers.has('getPerGameBottleName')).toBe(false)
   })
 
   it('passes dismissEngineNotice args[0] through unmodified', async () => {
