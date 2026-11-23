@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Closed 87-56-PLAN.md as a partial; 87-56a/b/c to be planned before 87-57
-last_updated: "2026-11-23T18:24:49.540Z"
+stopped_at: Completed 87-56a-PLAN.md
+last_updated: "2026-11-23T20:24:21.722Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 6cc9e5d6bd295f66090b83a98590d91c0bbda39e
+state_head: 3e9429685f7f3dbd914ea68ba12e5a969c36e320
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 56 of 62 (87-56 closed partial 2026-11-23; 87-56a/b/c planned 2026-11-24, waves 36-38, before 87-57)
-Status: Ready to execute (87-56a next via /gsd-execute-phase 87)
-Last activity: 2026-11-24 — Planned 87-56a/b/c (split remainder of 87-56)
+Plan: 58 of 62 (87-56a complete 2026-11-24; 87-56b next, then 87-56c, before 87-57)
+Status: Ready to execute (87-56b next via /gsd-execute-phase 87)
+Last activity: 2026-11-24 — Completed 87-56a (clusters A and B over Rust; 87-52 regression closed)
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -465,6 +465,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P53 | 30 min | 2 tasks | 20 files |
 | Phase 87 P54 | 100 min | 2 tasks | 36 files |
 | Phase 87 P55 | 19 min | 2 tasks | 62 files |
+| Phase 87 P56a | one session | 3 tasks | 36 files |
 
 ## Accumulated Context
 
@@ -996,6 +997,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-55: isNonCrossover and engineLogLabel are twins pinned to Rust by selection_twin.json (EngineSelection::engine and log_label); the engine types live in common/types/engine
 - [Phase 87]: 87-56: the plan's premise (every caller of src/backend/engine already switched) was false for six clusters (A tool settings, B pinned-engine download, C Steam caller-side halves, D runtime/state plumbing, E pure helpers, F oracles); the user chose to split the remainder into 87-56a (A, B), 87-56b (C, D, E) and 87-56c (F and the finish) before 87-57, and 87-56 closed as a partial (status halted) after deleting the TS launch step, deadline, process watch, dialogs and pin download
 - [Phase 87]: 87-56: SVC-02 stays open; enginePortComplete is written and red, noIntraPhaseRowsLeft and the engine-state/engine-runtime boot steps and the steam_engine_notices TS registration are carried to 87-56c
+- [Phase 87]: 87-56a: ToolSettingsResult lives in common/types/engine; the native check stays in TS, every other eligibility rule is Rust's
+- [Phase 87]: 87-56a: ensurePinnedEngineThroughRust takes clearStatus, run whenever Rust never sent its closing done; sync pinned-engine reads go through pinnedEngineReader over the twin
 
 ### Pending Todos
 
@@ -1277,8 +1280,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T18:45:00.000Z
-Stopped at: Closed 87-56-PLAN.md as a partial; 87-56a/b/c to be planned before 87-57
+Last session: 2026-11-23T20:24:19.042Z
+Stopped at: Completed 87-56a-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
