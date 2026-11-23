@@ -1,0 +1,116 @@
+{
+  "op": "read-for-game",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "runner": "gog",
+        "appName": "a1"
+      },
+      {
+        "runner": "legendary",
+        "appName": "a2"
+      },
+      {
+        "runner": "nile",
+        "appName": "a3"
+      },
+      {
+        "runner": "sideload",
+        "appName": "a4"
+      },
+      {
+        "runner": "gog",
+        "appName": "a5"
+      },
+      {
+        "runner": "legendary",
+        "appName": "a6"
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "a1"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "stored"
+      },
+      "id": "pinned:wine-staging-11.20"
+    },
+    {
+      "input": {
+        "runner": "legendary",
+        "appName": "a2"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "override",
+        "id": "wine-manager:Wine-Staging-10.5",
+        "source": "stored"
+      },
+      "id": "wine-manager:Wine-Staging-10.5"
+    },
+    {
+      "input": {
+        "runner": "nile",
+        "appName": "a3"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "stored"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "runner": "sideload",
+        "appName": "a4"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "override",
+        "id": "crossover",
+        "source": "stored"
+      },
+      "id": "crossover"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "a5"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "derived"
+      },
+      "id": "pinned:wine-staging-11.20"
+    },
+    {
+      "input": {
+        "runner": "legendary",
+        "appName": "a6"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "stored"
+      },
+      "id": "automatic"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

@@ -1,0 +1,29 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/lg1.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "a84dfef80b130ff790c09a2d1def302c894164796c3ee1f97dbd7f343458ed38"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/lg2.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "114d9bba59a9f2f3e2464b6a50de78330bdff100fbe9aeb843dcb7085dffddbc"
+  }
+]

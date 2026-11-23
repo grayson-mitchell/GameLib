@@ -1,0 +1,102 @@
+{
+  "op": "bottle-name",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "runner": "gog",
+        "appName": "1207658924"
+      },
+      {
+        "runner": "legendary",
+        "appName": "Sugar"
+      },
+      {
+        "runner": "nile",
+        "appName": "amzn1.adg.product.x"
+      },
+      {
+        "runner": "sideload",
+        "appName": "My Game"
+      },
+      {
+        "runner": "steam",
+        "appName": "620"
+      },
+      {
+        "runner": "gog",
+        "appName": "a.b"
+      },
+      {
+        "runner": "gog",
+        "appName": "a..b"
+      },
+      {
+        "runner": "gog",
+        "appName": "ゲーム"
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "1207658924"
+      },
+      "name": "GameLib-gog-1207658924"
+    },
+    {
+      "input": {
+        "runner": "legendary",
+        "appName": "Sugar"
+      },
+      "name": "GameLib-legendary-Sugar"
+    },
+    {
+      "input": {
+        "runner": "nile",
+        "appName": "amzn1.adg.product.x"
+      },
+      "name": "GameLib-nile-amzn1.adg.product.x"
+    },
+    {
+      "input": {
+        "runner": "sideload",
+        "appName": "My Game"
+      },
+      "name": "GameLib-sideload-My_20Game"
+    },
+    {
+      "input": {
+        "runner": "steam",
+        "appName": "620"
+      },
+      "name": null
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "a.b"
+      },
+      "name": "GameLib-gog-a.b"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "a..b"
+      },
+      "name": null
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "ゲーム"
+      },
+      "name": "GameLib-gog-_e3_82_b2_e3_83_bc_e3_83_a0"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

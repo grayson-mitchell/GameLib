@@ -1,0 +1,120 @@
+{
+  "op": "derive",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {},
+      {
+        "wine": null
+      },
+      {
+        "wine": "wine"
+      },
+      {
+        "wine": 5
+      },
+      {
+        "wine": []
+      },
+      {
+        "wine": {
+          "type": "crossover",
+          "name": "CrossOver",
+          "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+        }
+      },
+      {
+        "wine": {
+          "type": "crossover",
+          "bin": "not-a-path"
+        }
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {},
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "wine": null
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "wine": "wine"
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "wine": 5
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "wine": []
+      },
+      "effective": {
+        "kind": "legacy"
+      },
+      "id": "legacy:undefined"
+    },
+    {
+      "input": {
+        "wine": {
+          "type": "crossover",
+          "name": "CrossOver",
+          "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+        }
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "wine": {
+          "type": "crossover",
+          "bin": "not-a-path"
+        }
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

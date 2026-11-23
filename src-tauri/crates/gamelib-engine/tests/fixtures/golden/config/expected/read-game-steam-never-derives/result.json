@@ -1,0 +1,133 @@
+{
+  "op": "read-for-game",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "runner": "steam",
+        "appName": "620"
+      },
+      {
+        "runner": "steam",
+        "appName": "730"
+      },
+      {
+        "runner": "steam",
+        "appName": "440"
+      },
+      {
+        "runner": "steam",
+        "appName": "570"
+      },
+      {
+        "runner": "steam",
+        "appName": "400"
+      },
+      {
+        "runner": "steam",
+        "appName": "10"
+      },
+      {
+        "runner": "steam",
+        "appName": "999"
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "runner": "steam",
+        "appName": "620"
+      },
+      "steamStore": true,
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "runner": "steam",
+        "appName": "730"
+      },
+      "steamStore": true,
+      "effective": {
+        "kind": "override",
+        "id": "crossover",
+        "source": "stored"
+      },
+      "id": "crossover"
+    },
+    {
+      "input": {
+        "runner": "steam",
+        "appName": "440"
+      },
+      "steamStore": true,
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "stored"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "runner": "steam",
+        "appName": "570"
+      },
+      "steamStore": true,
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "stored"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "runner": "steam",
+        "appName": "400"
+      },
+      "steamStore": true,
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "runner": "steam",
+        "appName": "10"
+      },
+      "steamStore": true,
+      "effective": {
+        "kind": "override",
+        "id": "wine-manager:Wine-Staging-10.5",
+        "source": "stored"
+      },
+      "id": "wine-manager:Wine-Staging-10.5"
+    },
+    {
+      "input": {
+        "runner": "steam",
+        "appName": "999"
+      },
+      "steamStore": true,
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

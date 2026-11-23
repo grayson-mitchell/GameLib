@@ -1,0 +1,122 @@
+{
+  "op": "global",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "engineOverride": "crossover"
+      },
+      {
+        "engineOverride": "pinned:wine-staging-11.20"
+      },
+      {
+        "engineOverride": "wine-manager:Wine-Staging-10.5"
+      },
+      {
+        "engineOverride": "bogus"
+      },
+      {
+        "engineOverride": "/etc/passwd"
+      },
+      {
+        "engineOverride": "wine-manager:x-DXMT"
+      },
+      {
+        "engineOverride": "automatic",
+        "wineVersion": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        }
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "engineOverride": "crossover"
+      },
+      "effective": {
+        "kind": "override",
+        "id": "crossover",
+        "source": "stored"
+      },
+      "id": "crossover"
+    },
+    {
+      "input": {
+        "engineOverride": "pinned:wine-staging-11.20"
+      },
+      "effective": {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "stored"
+      },
+      "id": "pinned:wine-staging-11.20"
+    },
+    {
+      "input": {
+        "engineOverride": "wine-manager:Wine-Staging-10.5"
+      },
+      "effective": {
+        "kind": "override",
+        "id": "wine-manager:Wine-Staging-10.5",
+        "source": "stored"
+      },
+      "id": "wine-manager:Wine-Staging-10.5"
+    },
+    {
+      "input": {
+        "engineOverride": "bogus"
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "stored"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "engineOverride": "/etc/passwd"
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "stored"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "engineOverride": "wine-manager:x-DXMT"
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "stored"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "engineOverride": "automatic",
+        "wineVersion": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        }
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "stored"
+      },
+      "id": "automatic"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

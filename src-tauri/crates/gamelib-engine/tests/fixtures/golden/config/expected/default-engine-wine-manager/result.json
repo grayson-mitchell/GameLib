@@ -1,0 +1,14 @@
+{
+  "op": "default-engine",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {},
+  "outcome": {
+    "effectiveEngineId": "wine-manager:Wine-Staging-10.5",
+    "engineSource": "derived",
+    "legacyLabel": null
+  },
+  "treeUnchanged": true,
+  "logs": []
+}

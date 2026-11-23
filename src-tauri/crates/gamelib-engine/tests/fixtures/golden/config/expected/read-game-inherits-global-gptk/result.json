@@ -1,0 +1,46 @@
+{
+  "op": "read-for-game",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "runner": "legendary",
+        "appName": "h1"
+      },
+      {
+        "runner": "legendary",
+        "appName": "nofile"
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "runner": "legendary",
+        "appName": "h1"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "legacy",
+        "label": "Game-Porting-Toolkit-2"
+      },
+      "id": "legacy:Game-Porting-Toolkit-2"
+    },
+    {
+      "input": {
+        "runner": "legendary",
+        "appName": "nofile"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "legacy",
+        "label": "Game-Porting-Toolkit-2"
+      },
+      "id": "legacy:Game-Porting-Toolkit-2"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

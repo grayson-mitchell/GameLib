@@ -1,0 +1,113 @@
+{
+  "op": "effective",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "derive": false
+      },
+      {
+        "inherited": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        },
+        "derive": false
+      },
+      {
+        "derive": true
+      },
+      {
+        "inherited": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        },
+        "derive": true
+      },
+      {
+        "inherited": {
+          "type": "wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+        },
+        "derive": true
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "derive": false
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "inherited": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        },
+        "derive": false
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "derive": true
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "inherited": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        },
+        "derive": true
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "Game-Porting-Toolkit-2"
+      },
+      "id": "legacy:Game-Porting-Toolkit-2"
+    },
+    {
+      "input": {
+        "inherited": {
+          "type": "wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+        },
+        "derive": true
+      },
+      "effective": {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "derived"
+      },
+      "id": "pinned:wine-staging-11.20"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

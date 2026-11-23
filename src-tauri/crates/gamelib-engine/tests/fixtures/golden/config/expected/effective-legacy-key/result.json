@@ -1,0 +1,192 @@
+{
+  "op": "effective",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "entry": {
+          "steamEngineOverride": "crossover"
+        },
+        "legacyKey": "steamEngineOverride",
+        "derive": false
+      },
+      {
+        "entry": {
+          "steamEngineOverride": "pinned:wine-staging-11.20"
+        },
+        "legacyKey": "steamEngineOverride",
+        "derive": false
+      },
+      {
+        "entry": {
+          "steamEngineOverride": "bogus"
+        },
+        "legacyKey": "steamEngineOverride",
+        "derive": false
+      },
+      {
+        "entry": {
+          "steamEngineOverride": 5
+        },
+        "legacyKey": "steamEngineOverride",
+        "derive": false
+      },
+      {
+        "entry": {
+          "engineOverride": "automatic",
+          "steamEngineOverride": "crossover"
+        },
+        "legacyKey": "steamEngineOverride",
+        "derive": false
+      },
+      {
+        "entry": {
+          "engineOverride": 5,
+          "steamEngineOverride": "crossover"
+        },
+        "legacyKey": "steamEngineOverride",
+        "derive": false
+      },
+      {
+        "entry": {
+          "steamEngineOverride": "crossover"
+        },
+        "derive": false
+      },
+      {
+        "entry": {
+          "steamEngineOverride": "crossover"
+        },
+        "legacyKey": "otherKey",
+        "derive": false
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "entry": {
+          "steamEngineOverride": "crossover"
+        },
+        "legacyKey": "steamEngineOverride",
+        "derive": false
+      },
+      "effective": {
+        "kind": "override",
+        "id": "crossover",
+        "source": "stored"
+      },
+      "id": "crossover"
+    },
+    {
+      "input": {
+        "entry": {
+          "steamEngineOverride": "pinned:wine-staging-11.20"
+        },
+        "legacyKey": "steamEngineOverride",
+        "derive": false
+      },
+      "effective": {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "stored"
+      },
+      "id": "pinned:wine-staging-11.20"
+    },
+    {
+      "input": {
+        "entry": {
+          "steamEngineOverride": "bogus"
+        },
+        "legacyKey": "steamEngineOverride",
+        "derive": false
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "stored"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "entry": {
+          "steamEngineOverride": 5
+        },
+        "legacyKey": "steamEngineOverride",
+        "derive": false
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "entry": {
+          "engineOverride": "automatic",
+          "steamEngineOverride": "crossover"
+        },
+        "legacyKey": "steamEngineOverride",
+        "derive": false
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "stored"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "entry": {
+          "engineOverride": 5,
+          "steamEngineOverride": "crossover"
+        },
+        "legacyKey": "steamEngineOverride",
+        "derive": false
+      },
+      "effective": {
+        "kind": "override",
+        "id": "crossover",
+        "source": "stored"
+      },
+      "id": "crossover"
+    },
+    {
+      "input": {
+        "entry": {
+          "steamEngineOverride": "crossover"
+        },
+        "derive": false
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "entry": {
+          "steamEngineOverride": "crossover"
+        },
+        "legacyKey": "otherKey",
+        "derive": false
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

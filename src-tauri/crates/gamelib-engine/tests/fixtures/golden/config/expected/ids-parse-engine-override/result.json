@@ -1,0 +1,262 @@
+{
+  "op": "ids",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "value": "automatic"
+      },
+      {
+        "value": "crossover"
+      },
+      {
+        "value": "pinned:wine-staging-11.20"
+      },
+      {
+        "value": "pinned:wine-staging-11.1"
+      },
+      {
+        "value": "pinned:"
+      },
+      {
+        "value": "wine-manager:Wine-Staging-10.5"
+      },
+      {
+        "value": "wine-manager:a..b"
+      },
+      {
+        "value": "wine-manager:Wine-Staging-10.5-DXMT"
+      },
+      {
+        "value": "wine-manager:Game-Porting-Toolkit-2"
+      },
+      {
+        "value": "legacy:Odd Wine"
+      },
+      {
+        "value": "/usr/local/bin/wine"
+      },
+      {
+        "value": "Automatic"
+      },
+      {
+        "value": ""
+      },
+      {
+        "value": "wine-manager:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "value": "wine-manager:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "value": "wine-manager:wine_gptk"
+      },
+      {
+        "value": "wine-manager:PORTING"
+      },
+      {
+        "value": "wine-manager:Toolkit-1"
+      },
+      {
+        "value": "wine-manager:has space"
+      },
+      {
+        "value": "wine-manager:ok.1_2-3"
+      },
+      {
+        "value": "pinned:wine-staging-11.20 "
+      },
+      {
+        "value": " crossover"
+      },
+      {
+        "value": null
+      },
+      {
+        "value": 5
+      },
+      {
+        "value": true
+      },
+      {
+        "value": []
+      },
+      {
+        "value": {}
+      },
+      {}
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "value": "automatic"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": "crossover"
+      },
+      "parsed": "crossover"
+    },
+    {
+      "input": {
+        "value": "pinned:wine-staging-11.20"
+      },
+      "parsed": "pinned:wine-staging-11.20"
+    },
+    {
+      "input": {
+        "value": "pinned:wine-staging-11.1"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": "pinned:"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": "wine-manager:Wine-Staging-10.5"
+      },
+      "parsed": "wine-manager:Wine-Staging-10.5"
+    },
+    {
+      "input": {
+        "value": "wine-manager:a..b"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": "wine-manager:Wine-Staging-10.5-DXMT"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": "wine-manager:Game-Porting-Toolkit-2"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": "legacy:Odd Wine"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": "/usr/local/bin/wine"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": "Automatic"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": ""
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": "wine-manager:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "parsed": "wine-manager:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "input": {
+        "value": "wine-manager:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": "wine-manager:wine_gptk"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": "wine-manager:PORTING"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": "wine-manager:Toolkit-1"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": "wine-manager:has space"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": "wine-manager:ok.1_2-3"
+      },
+      "parsed": "wine-manager:ok.1_2-3"
+    },
+    {
+      "input": {
+        "value": "pinned:wine-staging-11.20 "
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": " crossover"
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": null
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": 5
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": true
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": []
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {
+        "value": {}
+      },
+      "parsed": "automatic"
+    },
+    {
+      "input": {},
+      "parsed": "automatic"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

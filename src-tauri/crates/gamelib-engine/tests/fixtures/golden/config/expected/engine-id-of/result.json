@@ -1,0 +1,99 @@
+{
+  "op": "engine-id",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      {
+        "kind": "override",
+        "id": "crossover",
+        "source": "stored"
+      },
+      {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "derived"
+      },
+      {
+        "kind": "override",
+        "id": "wine-manager:Wine-Staging-10.5",
+        "source": "stored"
+      },
+      {
+        "kind": "legacy",
+        "label": "Odd Wine"
+      },
+      {
+        "kind": "legacy",
+        "label": "with:colon"
+      },
+      {
+        "kind": "legacy",
+        "label": ""
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "kind": "override",
+        "id": "crossover",
+        "source": "stored"
+      },
+      "id": "crossover"
+    },
+    {
+      "input": {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "derived"
+      },
+      "id": "pinned:wine-staging-11.20"
+    },
+    {
+      "input": {
+        "kind": "override",
+        "id": "wine-manager:Wine-Staging-10.5",
+        "source": "stored"
+      },
+      "id": "wine-manager:Wine-Staging-10.5"
+    },
+    {
+      "input": {
+        "kind": "legacy",
+        "label": "Odd Wine"
+      },
+      "id": "legacy:Odd Wine"
+    },
+    {
+      "input": {
+        "kind": "legacy",
+        "label": "with:colon"
+      },
+      "id": "legacy:with:colon"
+    },
+    {
+      "input": {
+        "kind": "legacy",
+        "label": ""
+      },
+      "id": "legacy:"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

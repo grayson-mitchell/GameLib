@@ -1,0 +1,59 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/arr.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "64c1388aab5bf87d870f0a077edcb4a8355944b026e1c3d2d3b9511295c48ad7"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/bad.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "92072df399cb74703f8e86f450d552bc0bb01eeeb98a90985a1b7772c8fd0016"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/empty.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/nul.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "183ff0d68454b237012e27c556298fe53be0cf32b4f4f6792adb448f4cb9f432"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/other.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e321660362025871c181aaf4b24292636f2e960f19cd55d6eba38b6e3fcb079c"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/str.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3f89936ceedaae5f059d905fbf18a6bae3aa61981b9fa7e7a1ee391c42acad8b"
+  },
+  {
+    "path": ".config/GameLib/config.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2007a5d2ecaa550dc29fc082212a6b391fad6caa6614b168de6a5f718058f4b9"
+  }
+]

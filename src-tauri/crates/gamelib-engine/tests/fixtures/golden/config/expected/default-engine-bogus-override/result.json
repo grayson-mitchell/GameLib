@@ -1,0 +1,14 @@
+{
+  "op": "default-engine",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {},
+  "outcome": {
+    "effectiveEngineId": "automatic",
+    "engineSource": "stored",
+    "legacyLabel": null
+  },
+  "treeUnchanged": true,
+  "logs": []
+}

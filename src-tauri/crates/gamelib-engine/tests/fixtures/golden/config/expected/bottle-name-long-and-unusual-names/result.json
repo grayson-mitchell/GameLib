@@ -1,0 +1,171 @@
+{
+  "op": "bottle-name",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "runner": "gog",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 40
+          }
+        }
+      },
+      {
+        "runner": "gog",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 52
+          }
+        }
+      },
+      {
+        "runner": "gog",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 53
+          }
+        }
+      },
+      {
+        "runner": "gog",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        }
+      },
+      {
+        "runner": "legendary",
+        "appName": {
+          "repeat": {
+            "char": "b",
+            "count": 100
+          }
+        }
+      },
+      {
+        "runner": "gog",
+        "appName": "with space"
+      },
+      {
+        "runner": "gog",
+        "appName": "a:b"
+      },
+      {
+        "runner": "gog",
+        "appName": "a%b"
+      },
+      {
+        "runner": "gog",
+        "appName": "a~b"
+      },
+      {
+        "runner": "gog",
+        "appName": ".hidden"
+      },
+      {
+        "runner": "gog",
+        "appName": "trail."
+      },
+      {
+        "runner": "gog",
+        "appName": "Ünï-ñ"
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "name": "GameLib-gog-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "name": "GameLib-gog-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "name": "GameLib-gog-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-0c831cc5c8"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "name": "GameLib-gog-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-96f4e57072"
+    },
+    {
+      "input": {
+        "runner": "legendary",
+        "appName": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "name": "GameLib-legendary-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-9bae57be06"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "with space"
+      },
+      "name": "GameLib-gog-with_20space"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "a:b"
+      },
+      "name": "GameLib-gog-a_3ab"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "a%b"
+      },
+      "name": "GameLib-gog-a_25b"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "a~b"
+      },
+      "name": "GameLib-gog-a_7eb"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": ".hidden"
+      },
+      "name": "GameLib-gog-.hidden"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "trail."
+      },
+      "name": "GameLib-gog-trail."
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "Ünï-ñ"
+      },
+      "name": "GameLib-gog-_c3_9cn_c3_af-_c3_b1"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

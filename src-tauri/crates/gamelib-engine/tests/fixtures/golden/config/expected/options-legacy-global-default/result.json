@@ -1,0 +1,56 @@
+{
+  "op": "options",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "present",
+  "args": {
+    "items": [
+      {
+        "appName": "default"
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "appName": "default"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "legacy:Game-Porting-Toolkit-2",
+          "kind": "legacy",
+          "label": "Legacy: Game-Porting-Toolkit-2",
+          "available": false,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ]
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

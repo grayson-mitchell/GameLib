@@ -1,0 +1,176 @@
+{
+  "op": "derive",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "wine": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        }
+      },
+      {
+        "wine": {
+          "type": "proton",
+          "name": "GE-Proton9-1",
+          "bin": "<HOME>/.steam/proton/proton"
+        }
+      },
+      {
+        "wine": {
+          "type": "wine",
+          "name": "Odd Wine",
+          "bin": "<HOME>/odd/bin/wine"
+        }
+      },
+      {
+        "wine": {
+          "type": "wine",
+          "bin": "<HOME>/odd/bin/wine"
+        }
+      },
+      {
+        "wine": {
+          "type": "wine",
+          "name": "",
+          "bin": "<HOME>/odd/bin/wine"
+        }
+      },
+      {
+        "wine": {
+          "type": "wine",
+          "name": "No Bin"
+        }
+      },
+      {
+        "wine": {
+          "type": "wine",
+          "name": "Numeric Bin",
+          "bin": 5
+        }
+      },
+      {
+        "wine": {
+          "type": "toolkit",
+          "bin": "<HOME>/gptk/wine64"
+        }
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "wine": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        }
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "Game-Porting-Toolkit-2"
+      },
+      "id": "legacy:Game-Porting-Toolkit-2"
+    },
+    {
+      "input": {
+        "wine": {
+          "type": "proton",
+          "name": "GE-Proton9-1",
+          "bin": "<HOME>/.steam/proton/proton"
+        }
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "GE-Proton9-1"
+      },
+      "id": "legacy:GE-Proton9-1"
+    },
+    {
+      "input": {
+        "wine": {
+          "type": "wine",
+          "name": "Odd Wine",
+          "bin": "<HOME>/odd/bin/wine"
+        }
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "Odd Wine"
+      },
+      "id": "legacy:Odd Wine"
+    },
+    {
+      "input": {
+        "wine": {
+          "type": "wine",
+          "bin": "<HOME>/odd/bin/wine"
+        }
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "wine"
+      },
+      "id": "legacy:wine"
+    },
+    {
+      "input": {
+        "wine": {
+          "type": "wine",
+          "name": "",
+          "bin": "<HOME>/odd/bin/wine"
+        }
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "wine"
+      },
+      "id": "legacy:wine"
+    },
+    {
+      "input": {
+        "wine": {
+          "type": "wine",
+          "name": "No Bin"
+        }
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "No Bin"
+      },
+      "id": "legacy:No Bin"
+    },
+    {
+      "input": {
+        "wine": {
+          "type": "wine",
+          "name": "Numeric Bin",
+          "bin": 5
+        }
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "Numeric Bin"
+      },
+      "id": "legacy:Numeric Bin"
+    },
+    {
+      "input": {
+        "wine": {
+          "type": "toolkit",
+          "bin": "<HOME>/gptk/wine64"
+        }
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "toolkit"
+      },
+      "id": "legacy:toolkit"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

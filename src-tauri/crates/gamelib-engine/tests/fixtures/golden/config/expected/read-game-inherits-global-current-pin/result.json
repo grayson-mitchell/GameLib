@@ -1,0 +1,48 @@
+{
+  "op": "read-for-game",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "runner": "legendary",
+        "appName": "h1"
+      },
+      {
+        "runner": "legendary",
+        "appName": "nofile"
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "runner": "legendary",
+        "appName": "h1"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "derived"
+      },
+      "id": "pinned:wine-staging-11.20"
+    },
+    {
+      "input": {
+        "runner": "legendary",
+        "appName": "nofile"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "derived"
+      },
+      "id": "pinned:wine-staging-11.20"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

@@ -1,0 +1,31 @@
+{
+  "op": "read-for-game",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "runner": "gog",
+        "appName": "nothing"
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "nothing"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

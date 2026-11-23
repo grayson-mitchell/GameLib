@@ -1,0 +1,35 @@
+{
+  "op": "derive",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "wine": {
+          "type": "wine",
+          "name": "Wine-Staging 11.1",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.1/Contents/Resources/wine/bin/wine"
+        }
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "wine": {
+          "type": "wine",
+          "name": "Wine-Staging 11.1",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.1/Contents/Resources/wine/bin/wine"
+        }
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "Wine-Staging 11.1"
+      },
+      "id": "legacy:Wine-Staging 11.1"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

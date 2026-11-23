@@ -1,0 +1,57 @@
+{
+  "op": "derive",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "wine": {
+          "type": "wine",
+          "name": "Wine-Staging-10.5",
+          "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine"
+        }
+      },
+      {
+        "wine": {
+          "type": "wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+        }
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "wine": {
+          "type": "wine",
+          "name": "Wine-Staging-10.5",
+          "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine"
+        }
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "Wine-Staging-10.5"
+      },
+      "id": "legacy:Wine-Staging-10.5"
+    },
+    {
+      "input": {
+        "wine": {
+          "type": "wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+        }
+      },
+      "effective": {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "derived"
+      },
+      "id": "pinned:wine-staging-11.20"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

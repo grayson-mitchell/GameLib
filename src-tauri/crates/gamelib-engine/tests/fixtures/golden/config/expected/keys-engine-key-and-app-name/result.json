@@ -1,0 +1,196 @@
+{
+  "op": "keys",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "keys": [
+      "620",
+      "0",
+      "12345678901",
+      "1234567890",
+      "gog:1207658924",
+      "legendary:Sugar",
+      "nile:amzn1.adg.product.x",
+      "sideload:My Game",
+      "steam:620",
+      "unknown:1",
+      "gog:",
+      "gog:../x",
+      "gog:a/b",
+      "gog: padded",
+      "gog:a:b",
+      ":x",
+      "gog",
+      "",
+      "abc",
+      "-1",
+      "6.2",
+      "humble:abc",
+      {
+        "repeat": {
+          "char": "1",
+          "count": 10
+        }
+      },
+      {
+        "repeat": {
+          "char": "1",
+          "count": 11
+        }
+      },
+      5,
+      null,
+      [
+        "gog:1"
+      ],
+      {}
+    ]
+  },
+  "outcome": [
+    {
+      "key": "620",
+      "isEngineKey": true,
+      "appNameOf": "620"
+    },
+    {
+      "key": "0",
+      "isEngineKey": true,
+      "appNameOf": "0"
+    },
+    {
+      "key": "12345678901",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": "1234567890",
+      "isEngineKey": true,
+      "appNameOf": "1234567890"
+    },
+    {
+      "key": "gog:1207658924",
+      "isEngineKey": true,
+      "appNameOf": "1207658924"
+    },
+    {
+      "key": "legendary:Sugar",
+      "isEngineKey": true,
+      "appNameOf": "Sugar"
+    },
+    {
+      "key": "nile:amzn1.adg.product.x",
+      "isEngineKey": true,
+      "appNameOf": "amzn1.adg.product.x"
+    },
+    {
+      "key": "sideload:My Game",
+      "isEngineKey": true,
+      "appNameOf": "My Game"
+    },
+    {
+      "key": "steam:620",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": "unknown:1",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": "gog:",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": "gog:../x",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": "gog:a/b",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": "gog: padded",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": "gog:a:b",
+      "isEngineKey": true,
+      "appNameOf": "a:b"
+    },
+    {
+      "key": ":x",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": "gog",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": "",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": "abc",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": "-1",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": "6.2",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": "humble:abc",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": "1111111111",
+      "isEngineKey": true,
+      "appNameOf": "1111111111"
+    },
+    {
+      "key": "11111111111",
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": 5,
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": null,
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": [
+        "gog:1"
+      ],
+      "isEngineKey": false,
+      "appNameOf": null
+    },
+    {
+      "key": {},
+      "isEngineKey": false,
+      "appNameOf": null
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

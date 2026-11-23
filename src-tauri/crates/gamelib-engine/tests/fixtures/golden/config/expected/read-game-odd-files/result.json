@@ -1,0 +1,110 @@
+{
+  "op": "read-for-game",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "runner": "gog",
+        "appName": "bad"
+      },
+      {
+        "runner": "gog",
+        "appName": "nul"
+      },
+      {
+        "runner": "gog",
+        "appName": "arr"
+      },
+      {
+        "runner": "gog",
+        "appName": "str"
+      },
+      {
+        "runner": "gog",
+        "appName": "other"
+      },
+      {
+        "runner": "gog",
+        "appName": "empty"
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "bad"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "legacy",
+        "label": "Game-Porting-Toolkit-2"
+      },
+      "id": "legacy:Game-Porting-Toolkit-2"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "nul"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "legacy",
+        "label": "Game-Porting-Toolkit-2"
+      },
+      "id": "legacy:Game-Porting-Toolkit-2"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "arr"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "legacy",
+        "label": "Game-Porting-Toolkit-2"
+      },
+      "id": "legacy:Game-Porting-Toolkit-2"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "str"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "legacy",
+        "label": "Game-Porting-Toolkit-2"
+      },
+      "id": "legacy:Game-Porting-Toolkit-2"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "other"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "legacy",
+        "label": "Game-Porting-Toolkit-2"
+      },
+      "id": "legacy:Game-Porting-Toolkit-2"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "empty"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "legacy",
+        "label": "Game-Porting-Toolkit-2"
+      },
+      "id": "legacy:Game-Porting-Toolkit-2"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

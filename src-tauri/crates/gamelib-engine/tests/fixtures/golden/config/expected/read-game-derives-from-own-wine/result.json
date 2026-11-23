@@ -1,0 +1,129 @@
+{
+  "op": "read-for-game",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "runner": "gog",
+        "appName": "g1"
+      },
+      {
+        "runner": "gog",
+        "appName": "g2"
+      },
+      {
+        "runner": "gog",
+        "appName": "g3"
+      },
+      {
+        "runner": "gog",
+        "appName": "g4"
+      },
+      {
+        "runner": "gog",
+        "appName": "g5"
+      },
+      {
+        "runner": "gog",
+        "appName": "g6"
+      },
+      {
+        "runner": "gog",
+        "appName": "g7"
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "g1"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "derived"
+      },
+      "id": "pinned:wine-staging-11.20"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "g2"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "override",
+        "id": "wine-manager:Wine-Staging-10.5",
+        "source": "derived"
+      },
+      "id": "wine-manager:Wine-Staging-10.5"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "g3"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "g4"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "legacy",
+        "label": "Game-Porting-Toolkit-2"
+      },
+      "id": "legacy:Game-Porting-Toolkit-2"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "g5"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "legacy",
+        "label": "Odd Wine"
+      },
+      "id": "legacy:Odd Wine"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "g6"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "legacy",
+        "label": "GE-Proton9-1"
+      },
+      "id": "legacy:GE-Proton9-1"
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "g7"
+      },
+      "steamStore": false,
+      "effective": {
+        "kind": "legacy",
+        "label": "Wine-Staging 11.1"
+      },
+      "id": "legacy:Wine-Staging 11.1"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

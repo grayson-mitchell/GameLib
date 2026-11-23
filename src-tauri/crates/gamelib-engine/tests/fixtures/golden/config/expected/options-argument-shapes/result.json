@@ -1,0 +1,402 @@
+{
+  "op": "options",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      null,
+      "x",
+      5,
+      [],
+      {},
+      {
+        "appName": "default"
+      },
+      {
+        "runner": "gog",
+        "appName": "default"
+      },
+      {
+        "runner": "steam",
+        "appName": "620"
+      },
+      {
+        "runner": "gog",
+        "appName": "../x"
+      },
+      {
+        "runner": "unknown",
+        "appName": "1"
+      },
+      {
+        "runner": "gog",
+        "appName": "nofile"
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": null,
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": false,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": false,
+          "isPreviousPin": false
+        }
+      ]
+    },
+    {
+      "input": "x",
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": false,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": false,
+          "isPreviousPin": false
+        }
+      ]
+    },
+    {
+      "input": 5,
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": false,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": false,
+          "isPreviousPin": false
+        }
+      ]
+    },
+    {
+      "input": [],
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": false,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": false,
+          "isPreviousPin": false
+        }
+      ]
+    },
+    {
+      "input": {},
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": false,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": false,
+          "isPreviousPin": false
+        }
+      ]
+    },
+    {
+      "input": {
+        "appName": "default"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": false,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "legacy:Game-Porting-Toolkit-2",
+          "kind": "legacy",
+          "label": "Legacy: Game-Porting-Toolkit-2",
+          "available": false,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ]
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "default"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": false,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "legacy:Game-Porting-Toolkit-2",
+          "kind": "legacy",
+          "label": "Legacy: Game-Porting-Toolkit-2",
+          "available": false,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ]
+    },
+    {
+      "input": {
+        "runner": "steam",
+        "appName": "620"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": false,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": false,
+          "isPreviousPin": false
+        }
+      ]
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "../x"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": false,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": false,
+          "isPreviousPin": false
+        }
+      ]
+    },
+    {
+      "input": {
+        "runner": "unknown",
+        "appName": "1"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": false,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": false,
+          "isPreviousPin": false
+        }
+      ]
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "nofile"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": false,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "legacy:Game-Porting-Toolkit-2",
+          "kind": "legacy",
+          "label": "Legacy: Game-Porting-Toolkit-2",
+          "available": false,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ]
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

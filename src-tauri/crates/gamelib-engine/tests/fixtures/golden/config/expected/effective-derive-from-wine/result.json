@@ -1,0 +1,212 @@
+{
+  "op": "effective",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "entry": {
+          "wineVersion": {
+            "type": "wine",
+            "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+          }
+        },
+        "inherited": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        },
+        "derive": true
+      },
+      {
+        "entry": {},
+        "inherited": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        },
+        "derive": true
+      },
+      {
+        "entry": {},
+        "inherited": {
+          "type": "wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+        },
+        "derive": true
+      },
+      {
+        "entry": {},
+        "inherited": {
+          "type": "wine",
+          "name": "Wine-Staging-10.5",
+          "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine"
+        },
+        "derive": true
+      },
+      {
+        "entry": {
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+          }
+        },
+        "inherited": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        },
+        "derive": true
+      },
+      {
+        "entry": {
+          "wineVersion": null
+        },
+        "inherited": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        },
+        "derive": true
+      },
+      {
+        "entry": {},
+        "derive": true
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "entry": {
+          "wineVersion": {
+            "type": "wine",
+            "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+          }
+        },
+        "inherited": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        },
+        "derive": true
+      },
+      "effective": {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "derived"
+      },
+      "id": "pinned:wine-staging-11.20"
+    },
+    {
+      "input": {
+        "entry": {},
+        "inherited": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        },
+        "derive": true
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "Game-Porting-Toolkit-2"
+      },
+      "id": "legacy:Game-Porting-Toolkit-2"
+    },
+    {
+      "input": {
+        "entry": {},
+        "inherited": {
+          "type": "wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+        },
+        "derive": true
+      },
+      "effective": {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "derived"
+      },
+      "id": "pinned:wine-staging-11.20"
+    },
+    {
+      "input": {
+        "entry": {},
+        "inherited": {
+          "type": "wine",
+          "name": "Wine-Staging-10.5",
+          "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine"
+        },
+        "derive": true
+      },
+      "effective": {
+        "kind": "override",
+        "id": "wine-manager:Wine-Staging-10.5",
+        "source": "derived"
+      },
+      "id": "wine-manager:Wine-Staging-10.5"
+    },
+    {
+      "input": {
+        "entry": {
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+          }
+        },
+        "inherited": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        },
+        "derive": true
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "entry": {
+          "wineVersion": null
+        },
+        "inherited": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        },
+        "derive": true
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "Game-Porting-Toolkit-2"
+      },
+      "id": "legacy:Game-Porting-Toolkit-2"
+    },
+    {
+      "input": {
+        "entry": {},
+        "derive": true
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

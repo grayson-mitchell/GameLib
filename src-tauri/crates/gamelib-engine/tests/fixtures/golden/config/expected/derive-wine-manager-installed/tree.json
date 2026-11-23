@@ -1,0 +1,85 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-10.5",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-10.5/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-10.5/Contents/Resources",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-10.5/Contents/Resources/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-10.5/Contents/Resources/wine/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "eaabc1f54c8a9cbb4e078da387725138cfb2bf11fb62d324499e9e5be3fab4b4"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "eaabc1f54c8a9cbb4e078da387725138cfb2bf11fb62d324499e9e5be3fab4b4"
+  },
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store/wine-downloader-info.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "a78fa52014a5c7e4c7831f760275911c7605b8d74916f5ad56ee69a9230df4f9"
+  }
+]

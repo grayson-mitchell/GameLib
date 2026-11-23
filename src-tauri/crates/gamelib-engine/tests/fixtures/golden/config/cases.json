@@ -1,0 +1,1817 @@
+[
+  {
+    "id": "derive-crossover-and-non-objects",
+    "op": "derive",
+    "note": "deriveEngineFromWine: a missing, null or non-object wine and a CrossOver wine are Automatic, derived",
+    "seed": [
+      {
+        "path": "<USERDATA>/store/wine-downloader-info.json",
+        "text": "{\n  \"wine-releases\": [\n    {\n      \"version\": \"Wine-Staging-10.5\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5\"\n    }\n  ]\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {},
+        {
+          "wine": null
+        },
+        {
+          "wine": "wine"
+        },
+        {
+          "wine": 5
+        },
+        {
+          "wine": []
+        },
+        {
+          "wine": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+          }
+        },
+        {
+          "wine": {
+            "type": "crossover",
+            "bin": "not-a-path"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "derive-current-pin",
+    "op": "derive",
+    "note": "a Wine whose bin is the current pin wine binary derives pinned:<id>; a proton or a wine-less bin of the same path does not",
+    "args": {
+      "items": [
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+          }
+        },
+        {
+          "wine": {
+            "type": "wine",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+          }
+        },
+        {
+          "wine": {
+            "type": "proton",
+            "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+          }
+        },
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine64"
+          }
+        },
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine/"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "derive-retired-pin-is-legacy",
+    "op": "derive",
+    "note": "a pin build the current table no longer ships is Legacy with its own label, never pinned:<retired>",
+    "args": {
+      "items": [
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Wine-Staging 11.1",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.1/Contents/Resources/wine/bin/wine"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "derive-wine-manager-installed",
+    "op": "derive",
+    "note": "an installed Wine-Staging-macOS release whose bin is its Contents/Resources/wine/bin/wine derives wine-manager:<version>",
+    "seed": [
+      {
+        "path": "<USERDATA>/store/wine-downloader-info.json",
+        "text": "{\n  \"wine-releases\": [\n    {\n      \"version\": \"Wine-Staging-10.5\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5\"\n    },\n    {\n      \"version\": \"Wine-Staging-9.21\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-9.21\"\n    }\n  ]\n}\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+        "text": "#!/bin/sh\n# synthetic oracle fixture\n",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver",
+        "text": "#!/bin/sh\n# synthetic oracle fixture\n",
+        "mode": "0755"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Wine-Staging-10.5",
+            "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine"
+          }
+        },
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Wine-Staging-9.21",
+            "bin": "<TOOLS>/wine/Wine-Staging-9.21/Contents/Resources/wine/bin/wine"
+          }
+        },
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Wine-Staging-10.5",
+            "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "derive-wine-manager-unusable-releases",
+    "op": "derive",
+    "note": "a release that is not installed, is another type, has no string installDir, or is a DXMT or toolkit build never derives an override",
+    "seed": [
+      {
+        "path": "<USERDATA>/store/wine-downloader-info.json",
+        "text": "{\n  \"wine-releases\": [\n    {\n      \"version\": \"Wine-Staging-9.0\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": false,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-9.0\"\n    },\n    {\n      \"version\": \"Wine-GE-8\",\n      \"type\": \"Wine-GE\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-GE-8\"\n    },\n    {\n      \"version\": \"Wine-Staging-10.5-DXMT\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5-DXMT\"\n    },\n    {\n      \"version\": \"Wine-Staging-noinstalldir\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": 5\n    },\n    {\n      \"version\": \"Wine-Staging-gptk-1\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-gptk-1\"\n    }\n  ]\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Wine-Staging-9.0",
+            "bin": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wine"
+          }
+        },
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Wine-GE-8",
+            "bin": "<TOOLS>/wine/Wine-GE-8/Contents/Resources/wine/bin/wine"
+          }
+        },
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Wine-Staging-10.5-DXMT",
+            "bin": "<TOOLS>/wine/Wine-Staging-10.5-DXMT/Contents/Resources/wine/bin/wine"
+          }
+        },
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Wine-Staging-gptk-1",
+            "bin": "<TOOLS>/wine/Wine-Staging-gptk-1/Contents/Resources/wine/bin/wine"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "derive-legacy-labels",
+    "op": "derive",
+    "note": "Legacy carries wine.name, or wine.type when the name is empty or missing; a wine with no string bin is Legacy too",
+    "args": {
+      "items": [
+        {
+          "wine": {
+            "type": "toolkit",
+            "name": "Game-Porting-Toolkit-2",
+            "bin": "<HOME>/gptk/wine64"
+          }
+        },
+        {
+          "wine": {
+            "type": "proton",
+            "name": "GE-Proton9-1",
+            "bin": "<HOME>/.steam/proton/proton"
+          }
+        },
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          }
+        },
+        {
+          "wine": {
+            "type": "wine",
+            "bin": "<HOME>/odd/bin/wine"
+          }
+        },
+        {
+          "wine": {
+            "type": "wine",
+            "name": "",
+            "bin": "<HOME>/odd/bin/wine"
+          }
+        },
+        {
+          "wine": {
+            "type": "wine",
+            "name": "No Bin"
+          }
+        },
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Numeric Bin",
+            "bin": 5
+          }
+        },
+        {
+          "wine": {
+            "type": "toolkit",
+            "bin": "<HOME>/gptk/wine64"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "derive-no-releases-file",
+    "op": "derive",
+    "note": "with no wine-downloader-info store file the release list is empty: a Wine Manager bin is Legacy",
+    "args": {
+      "items": [
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Wine-Staging-10.5",
+            "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine"
+          }
+        },
+        {
+          "wine": {
+            "type": "wine",
+            "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "effective-stored-override",
+    "op": "effective",
+    "note": "resolveEffectiveEngine: a stored engineOverride string is parsed through the closed grammar; anything outside it is Automatic, still source stored",
+    "args": {
+      "items": [
+        {
+          "entry": {
+            "engineOverride": "automatic",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+              "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+            }
+          },
+          "derive": true
+        },
+        {
+          "entry": {
+            "engineOverride": "crossover",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+              "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+            }
+          },
+          "derive": true
+        },
+        {
+          "entry": {
+            "engineOverride": "pinned:wine-staging-11.20",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+              "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+            }
+          },
+          "derive": true
+        },
+        {
+          "entry": {
+            "engineOverride": "pinned:wine-staging-11.1",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+              "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+            }
+          },
+          "derive": true
+        },
+        {
+          "entry": {
+            "engineOverride": "pinned:",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+              "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+            }
+          },
+          "derive": true
+        },
+        {
+          "entry": {
+            "engineOverride": "wine-manager:Wine-Staging-10.5",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+              "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+            }
+          },
+          "derive": true
+        },
+        {
+          "entry": {
+            "engineOverride": "wine-manager:a..b",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+              "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+            }
+          },
+          "derive": true
+        },
+        {
+          "entry": {
+            "engineOverride": "wine-manager:Wine-Staging-10.5-DXMT",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+              "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+            }
+          },
+          "derive": true
+        },
+        {
+          "entry": {
+            "engineOverride": "wine-manager:Game-Porting-Toolkit-2",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+              "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+            }
+          },
+          "derive": true
+        },
+        {
+          "entry": {
+            "engineOverride": "legacy:Odd Wine",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+              "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+            }
+          },
+          "derive": true
+        },
+        {
+          "entry": {
+            "engineOverride": "/usr/local/bin/wine",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+              "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+            }
+          },
+          "derive": true
+        },
+        {
+          "entry": {
+            "engineOverride": "Automatic",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+              "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+            }
+          },
+          "derive": true
+        },
+        {
+          "entry": {
+            "engineOverride": "",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+              "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+            }
+          },
+          "derive": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "effective-legacy-key",
+    "op": "effective",
+    "note": "the legacy key (steamEngineOverride) is read only when engineOverride is not a string; non-strings fall through to derive or Automatic",
+    "args": {
+      "items": [
+        {
+          "entry": {
+            "steamEngineOverride": "crossover"
+          },
+          "legacyKey": "steamEngineOverride",
+          "derive": false
+        },
+        {
+          "entry": {
+            "steamEngineOverride": "pinned:wine-staging-11.20"
+          },
+          "legacyKey": "steamEngineOverride",
+          "derive": false
+        },
+        {
+          "entry": {
+            "steamEngineOverride": "bogus"
+          },
+          "legacyKey": "steamEngineOverride",
+          "derive": false
+        },
+        {
+          "entry": {
+            "steamEngineOverride": 5
+          },
+          "legacyKey": "steamEngineOverride",
+          "derive": false
+        },
+        {
+          "entry": {
+            "engineOverride": "automatic",
+            "steamEngineOverride": "crossover"
+          },
+          "legacyKey": "steamEngineOverride",
+          "derive": false
+        },
+        {
+          "entry": {
+            "engineOverride": 5,
+            "steamEngineOverride": "crossover"
+          },
+          "legacyKey": "steamEngineOverride",
+          "derive": false
+        },
+        {
+          "entry": {
+            "steamEngineOverride": "crossover"
+          },
+          "derive": false
+        },
+        {
+          "entry": {
+            "steamEngineOverride": "crossover"
+          },
+          "legacyKey": "otherKey",
+          "derive": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "effective-derive-from-wine",
+    "op": "effective",
+    "note": "with derive on, the entry wineVersion wins over the inherited one; the inherited Wine is used only when the entry has none",
+    "seed": [
+      {
+        "path": "<USERDATA>/store/wine-downloader-info.json",
+        "text": "{\n  \"wine-releases\": [\n    {\n      \"version\": \"Wine-Staging-10.5\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5\"\n    }\n  ]\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "entry": {
+            "wineVersion": {
+              "type": "wine",
+              "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+              "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+            }
+          },
+          "inherited": {
+            "type": "toolkit",
+            "name": "Game-Porting-Toolkit-2",
+            "bin": "<HOME>/gptk/wine64"
+          },
+          "derive": true
+        },
+        {
+          "entry": {},
+          "inherited": {
+            "type": "toolkit",
+            "name": "Game-Porting-Toolkit-2",
+            "bin": "<HOME>/gptk/wine64"
+          },
+          "derive": true
+        },
+        {
+          "entry": {},
+          "inherited": {
+            "type": "wine",
+            "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+          },
+          "derive": true
+        },
+        {
+          "entry": {},
+          "inherited": {
+            "type": "wine",
+            "name": "Wine-Staging-10.5",
+            "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine"
+          },
+          "derive": true
+        },
+        {
+          "entry": {
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            }
+          },
+          "inherited": {
+            "type": "toolkit",
+            "name": "Game-Porting-Toolkit-2",
+            "bin": "<HOME>/gptk/wine64"
+          },
+          "derive": true
+        },
+        {
+          "entry": {
+            "wineVersion": null
+          },
+          "inherited": {
+            "type": "toolkit",
+            "name": "Game-Porting-Toolkit-2",
+            "bin": "<HOME>/gptk/wine64"
+          },
+          "derive": true
+        },
+        {
+          "entry": {},
+          "derive": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "effective-no-entry",
+    "op": "effective",
+    "note": "no stored entry: Automatic derived when derive is off, derived from the inherited Wine when on",
+    "args": {
+      "items": [
+        {
+          "derive": false
+        },
+        {
+          "inherited": {
+            "type": "toolkit",
+            "name": "Game-Porting-Toolkit-2",
+            "bin": "<HOME>/gptk/wine64"
+          },
+          "derive": false
+        },
+        {
+          "derive": true
+        },
+        {
+          "inherited": {
+            "type": "toolkit",
+            "name": "Game-Porting-Toolkit-2",
+            "bin": "<HOME>/gptk/wine64"
+          },
+          "derive": true
+        },
+        {
+          "inherited": {
+            "type": "wine",
+            "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+          },
+          "derive": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "read-game-stored-overrides",
+    "op": "read-for-game",
+    "note": "readEngineForGame over GamesConfig files: a stored engineOverride wins over every wineVersion, in every non-Steam store",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/a1.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"a1\": {\n    \"engineOverride\": \"pinned:wine-staging-11.20\"\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/a2.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"a2\": {\n    \"engineOverride\": \"wine-manager:Wine-Staging-10.5\"\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/a3.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"a3\": {\n    \"engineOverride\": \"legacy:Odd Wine\"\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/a4.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"a4\": {\n    \"engineOverride\": \"crossover\",\n    \"wineVersion\": {\n      \"type\": \"toolkit\",\n      \"name\": \"Game-Porting-Toolkit-2\",\n      \"bin\": \"<HOME>/gptk/wine64\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/a5.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"a5\": {\n    \"engineOverride\": 5,\n    \"wineVersion\": {\n      \"type\": \"wine\",\n      \"name\": \"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\",\n      \"bin\": \"<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/a6.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"a6\": {\n    \"engineOverride\": \"automatic\",\n    \"wineVersion\": {\n      \"type\": \"toolkit\",\n      \"name\": \"Game-Porting-Toolkit-2\",\n      \"bin\": \"<HOME>/gptk/wine64\"\n    }\n  }\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "runner": "gog",
+          "appName": "a1"
+        },
+        {
+          "runner": "legendary",
+          "appName": "a2"
+        },
+        {
+          "runner": "nile",
+          "appName": "a3"
+        },
+        {
+          "runner": "sideload",
+          "appName": "a4"
+        },
+        {
+          "runner": "gog",
+          "appName": "a5"
+        },
+        {
+          "runner": "legendary",
+          "appName": "a6"
+        }
+      ]
+    }
+  },
+  {
+    "id": "read-game-derives-from-own-wine",
+    "op": "read-for-game",
+    "note": "with no engine key the game derives from its own wineVersion, never from the global one when the entry has its own",
+    "seed": [
+      {
+        "path": "<USERDATA>/store/wine-downloader-info.json",
+        "text": "{\n  \"wine-releases\": [\n    {\n      \"version\": \"Wine-Staging-10.5\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5\"\n    }\n  ]\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/g1.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"g1\": {\n    \"wineVersion\": {\n      \"type\": \"wine\",\n      \"name\": \"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\",\n      \"bin\": \"<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/g2.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"g2\": {\n    \"wineVersion\": {\n      \"type\": \"wine\",\n      \"name\": \"Wine-Staging-10.5\",\n      \"bin\": \"<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/g3.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"g3\": {\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/g4.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"g4\": {\n    \"wineVersion\": {\n      \"type\": \"toolkit\",\n      \"name\": \"Game-Porting-Toolkit-2\",\n      \"bin\": \"<HOME>/gptk/wine64\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/g5.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"g5\": {\n    \"wineVersion\": {\n      \"type\": \"wine\",\n      \"name\": \"Odd Wine\",\n      \"bin\": \"<HOME>/odd/bin/wine\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/g6.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"g6\": {\n    \"wineVersion\": {\n      \"type\": \"proton\",\n      \"name\": \"GE-Proton9-1\",\n      \"bin\": \"<HOME>/.steam/proton/proton\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/g7.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"g7\": {\n    \"wineVersion\": {\n      \"type\": \"wine\",\n      \"name\": \"Wine-Staging 11.1\",\n      \"bin\": \"<TOOLS>/steam-engines/wine-staging-11.1/Contents/Resources/wine/bin/wine\"\n    }\n  }\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "runner": "gog",
+          "appName": "g1"
+        },
+        {
+          "runner": "gog",
+          "appName": "g2"
+        },
+        {
+          "runner": "gog",
+          "appName": "g3"
+        },
+        {
+          "runner": "gog",
+          "appName": "g4"
+        },
+        {
+          "runner": "gog",
+          "appName": "g5"
+        },
+        {
+          "runner": "gog",
+          "appName": "g6"
+        },
+        {
+          "runner": "gog",
+          "appName": "g7"
+        }
+      ]
+    }
+  },
+  {
+    "id": "read-game-inherits-global-crossover",
+    "op": "read-for-game",
+    "note": "a game with no wineVersion of its own derives from the global wineVersion (crossover); a game with no file at all does too, and no file is created",
+    "seed": [
+      {
+        "path": "<USERDATA>/store/wine-downloader-info.json",
+        "text": "{\n  \"wine-releases\": [\n    {\n      \"version\": \"Wine-Staging-10.5\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5\"\n    }\n  ]\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/h1.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"h1\": {\n    \"winePrefix\": \"<HOME>/Games/prefix\",\n    \"launcherArgs\": \"-x\"\n  }\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "runner": "legendary",
+          "appName": "h1"
+        },
+        {
+          "runner": "legendary",
+          "appName": "nofile"
+        }
+      ]
+    }
+  },
+  {
+    "id": "read-game-inherits-global-gptk",
+    "op": "read-for-game",
+    "note": "a game with no wineVersion of its own derives from the global wineVersion (gptk); a game with no file at all does too, and no file is created",
+    "seed": [
+      {
+        "path": "<USERDATA>/store/wine-downloader-info.json",
+        "text": "{\n  \"wine-releases\": [\n    {\n      \"version\": \"Wine-Staging-10.5\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5\"\n    }\n  ]\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"wineVersion\": {\n      \"type\": \"toolkit\",\n      \"name\": \"Game-Porting-Toolkit-2\",\n      \"bin\": \"<HOME>/gptk/wine64\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/h1.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"h1\": {\n    \"winePrefix\": \"<HOME>/Games/prefix\",\n    \"launcherArgs\": \"-x\"\n  }\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "runner": "legendary",
+          "appName": "h1"
+        },
+        {
+          "runner": "legendary",
+          "appName": "nofile"
+        }
+      ]
+    }
+  },
+  {
+    "id": "read-game-inherits-global-current-pin",
+    "op": "read-for-game",
+    "note": "a game with no wineVersion of its own derives from the global wineVersion (current-pin); a game with no file at all does too, and no file is created",
+    "seed": [
+      {
+        "path": "<USERDATA>/store/wine-downloader-info.json",
+        "text": "{\n  \"wine-releases\": [\n    {\n      \"version\": \"Wine-Staging-10.5\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5\"\n    }\n  ]\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"wineVersion\": {\n      \"type\": \"wine\",\n      \"name\": \"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\",\n      \"bin\": \"<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/h1.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"h1\": {\n    \"winePrefix\": \"<HOME>/Games/prefix\",\n    \"launcherArgs\": \"-x\"\n  }\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "runner": "legendary",
+          "appName": "h1"
+        },
+        {
+          "runner": "legendary",
+          "appName": "nofile"
+        }
+      ]
+    }
+  },
+  {
+    "id": "read-game-inherits-global-wine-manager",
+    "op": "read-for-game",
+    "note": "a game with no wineVersion of its own derives from the global wineVersion (wine-manager); a game with no file at all does too, and no file is created",
+    "seed": [
+      {
+        "path": "<USERDATA>/store/wine-downloader-info.json",
+        "text": "{\n  \"wine-releases\": [\n    {\n      \"version\": \"Wine-Staging-10.5\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5\"\n    }\n  ]\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"wineVersion\": {\n      \"type\": \"wine\",\n      \"name\": \"Wine-Staging-10.5\",\n      \"bin\": \"<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/h1.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"h1\": {\n    \"winePrefix\": \"<HOME>/Games/prefix\",\n    \"launcherArgs\": \"-x\"\n  }\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "runner": "legendary",
+          "appName": "h1"
+        },
+        {
+          "runner": "legendary",
+          "appName": "nofile"
+        }
+      ]
+    }
+  },
+  {
+    "id": "read-game-no-config-anywhere",
+    "op": "read-for-game",
+    "note": "no config.json and no game file: Automatic, derived; reading creates nothing",
+    "args": {
+      "items": [
+        {
+          "runner": "gog",
+          "appName": "nothing"
+        }
+      ]
+    }
+  },
+  {
+    "id": "read-game-odd-files",
+    "op": "read-for-game",
+    "note": "a corrupt file, a null / array / string entry or a document without the app key reads as no entry: the game derives from the global Wine",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"wineVersion\": {\n      \"type\": \"toolkit\",\n      \"name\": \"Game-Porting-Toolkit-2\",\n      \"bin\": \"<HOME>/gptk/wine64\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/bad.json",
+        "text": "{not json"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/nul.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"nul\": null\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/arr.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"arr\": []\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/str.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"str\": \"x\"\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/other.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"somethingElse\": {\n    \"engineOverride\": \"crossover\"\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/empty.json",
+        "text": ""
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "runner": "gog",
+          "appName": "bad"
+        },
+        {
+          "runner": "gog",
+          "appName": "nul"
+        },
+        {
+          "runner": "gog",
+          "appName": "arr"
+        },
+        {
+          "runner": "gog",
+          "appName": "str"
+        },
+        {
+          "runner": "gog",
+          "appName": "other"
+        },
+        {
+          "runner": "gog",
+          "appName": "empty"
+        }
+      ]
+    }
+  },
+  {
+    "id": "read-game-steam-never-derives",
+    "op": "read-for-game",
+    "note": "a bottle-runtime store (Steam) reads engineOverride, then steamEngineOverride, and never derives from wineVersion",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"wineVersion\": {\n      \"type\": \"toolkit\",\n      \"name\": \"Game-Porting-Toolkit-2\",\n      \"bin\": \"<HOME>/gptk/wine64\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/620.json",
+        "text": "{\n  \"620\": {\n    \"wineVersion\": {\n      \"type\": \"wine\",\n      \"name\": \"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\",\n      \"bin\": \"<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine\"\n    }\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/730.json",
+        "text": "{\n  \"730\": {\n    \"steamEngineOverride\": \"crossover\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/440.json",
+        "text": "{\n  \"440\": {\n    \"steamEngineOverride\": \"pinned:wine-staging-11.20\",\n    \"engineOverride\": \"automatic\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/570.json",
+        "text": "{\n  \"570\": {\n    \"steamEngineOverride\": \"bogus\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/400.json",
+        "text": "{\n  \"400\": {\n    \"steamEngineOverride\": 5\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/10.json",
+        "text": "{\n  \"10\": {\n    \"engineOverride\": \"wine-manager:Wine-Staging-10.5\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "runner": "steam",
+          "appName": "620"
+        },
+        {
+          "runner": "steam",
+          "appName": "730"
+        },
+        {
+          "runner": "steam",
+          "appName": "440"
+        },
+        {
+          "runner": "steam",
+          "appName": "570"
+        },
+        {
+          "runner": "steam",
+          "appName": "400"
+        },
+        {
+          "runner": "steam",
+          "appName": "10"
+        },
+        {
+          "runner": "steam",
+          "appName": "999"
+        }
+      ]
+    }
+  },
+  {
+    "id": "read-stored-name-guards",
+    "op": "read-stored",
+    "note": "readStoredGameConfig refuses an empty, over-long, traversing, separator or NUL name and a non-string; a missing file and a version-only document are undefined",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/ok.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"ok\": {\n    \"engineOverride\": \"crossover\",\n    \"winePrefix\": \"<HOME>/p\"\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/vo.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/dots..in.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"dots..in\": {\n    \"engineOverride\": \"crossover\"\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/outside.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"outside\": {\n    \"engineOverride\": \"crossover\"\n  }\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "appName": "ok"
+        },
+        {
+          "appName": "vo"
+        },
+        {
+          "appName": "missing"
+        },
+        {
+          "appName": "dots..in"
+        },
+        {
+          "appName": ""
+        },
+        {
+          "appName": ".."
+        },
+        {
+          "appName": "."
+        },
+        {
+          "appName": "a/b"
+        },
+        {
+          "appName": "a\\b"
+        },
+        {
+          "appName": "a\u0000b"
+        },
+        {
+          "appName": "../outside"
+        },
+        {
+          "appName": {
+            "repeat": {
+              "char": "a",
+              "count": 255
+            }
+          }
+        },
+        {
+          "appName": {
+            "repeat": {
+              "char": "a",
+              "count": 256
+            }
+          }
+        },
+        {
+          "appName": 5
+        },
+        {
+          "appName": null
+        },
+        {}
+      ]
+    }
+  },
+  {
+    "id": "global-stored-override",
+    "op": "global",
+    "note": "resolveGlobalEngine: a stored engineOverride string is parsed through the grammar and wins over wineVersion",
+    "args": {
+      "items": [
+        {
+          "engineOverride": "crossover"
+        },
+        {
+          "engineOverride": "pinned:wine-staging-11.20"
+        },
+        {
+          "engineOverride": "wine-manager:Wine-Staging-10.5"
+        },
+        {
+          "engineOverride": "bogus"
+        },
+        {
+          "engineOverride": "/etc/passwd"
+        },
+        {
+          "engineOverride": "wine-manager:x-DXMT"
+        },
+        {
+          "engineOverride": "automatic",
+          "wineVersion": {
+            "type": "toolkit",
+            "name": "Game-Porting-Toolkit-2",
+            "bin": "<HOME>/gptk/wine64"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "global-derived",
+    "op": "global",
+    "note": "with no stored override the global default derives from wineVersion the same way a game does; a non-string override falls through",
+    "seed": [
+      {
+        "path": "<USERDATA>/store/wine-downloader-info.json",
+        "text": "{\n  \"wine-releases\": [\n    {\n      \"version\": \"Wine-Staging-10.5\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5\"\n    }\n  ]\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {},
+        {
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+          }
+        },
+        {
+          "wineVersion": {
+            "type": "wine",
+            "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+          }
+        },
+        {
+          "wineVersion": {
+            "type": "wine",
+            "name": "Wine-Staging-10.5",
+            "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine"
+          }
+        },
+        {
+          "wineVersion": {
+            "type": "toolkit",
+            "name": "Game-Porting-Toolkit-2",
+            "bin": "<HOME>/gptk/wine64"
+          }
+        },
+        {
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          }
+        },
+        {
+          "engineOverride": 5,
+          "wineVersion": {
+            "type": "wine",
+            "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+          }
+        },
+        {
+          "wineVersion": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "engine-id-of",
+    "op": "engine-id",
+    "note": "engineIdOf prints the override id, or legacy:<label> for display only",
+    "args": {
+      "items": [
+        {
+          "kind": "override",
+          "id": "automatic",
+          "source": "derived"
+        },
+        {
+          "kind": "override",
+          "id": "crossover",
+          "source": "stored"
+        },
+        {
+          "kind": "override",
+          "id": "pinned:wine-staging-11.20",
+          "source": "derived"
+        },
+        {
+          "kind": "override",
+          "id": "wine-manager:Wine-Staging-10.5",
+          "source": "stored"
+        },
+        {
+          "kind": "legacy",
+          "label": "Odd Wine"
+        },
+        {
+          "kind": "legacy",
+          "label": "with:colon"
+        },
+        {
+          "kind": "legacy",
+          "label": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "options-nothing-installed",
+    "op": "options",
+    "note": "the default engine list with CrossOver absent and no pinned engine on disk: CrossOver unavailable, the pin listed uninstalled",
+    "crossover": "absent",
+    "args": {
+      "items": [
+        {
+          "appName": "default"
+        }
+      ]
+    }
+  },
+  {
+    "id": "options-crossover-and-pin-installed",
+    "op": "options",
+    "note": "CrossOver present and the pinned engine installed: every row installed",
+    "crossover": "present",
+    "engines": "installed",
+    "args": {
+      "items": [
+        {
+          "appName": "default"
+        }
+      ]
+    }
+  },
+  {
+    "id": "options-pin-partial-install",
+    "op": "options",
+    "note": "a pinned engine with wine but no DXVK is not installed",
+    "crossover": "absent",
+    "engines": "wine-only",
+    "args": {
+      "items": [
+        {
+          "appName": "default"
+        }
+      ]
+    }
+  },
+  {
+    "id": "options-wine-manager-releases",
+    "op": "options",
+    "note": "only installed Wine-Staging-macOS releases appear; DXMT, toolkit, gptk and ungrammatical versions are filtered",
+    "crossover": "present",
+    "engines": "installed",
+    "seed": [
+      {
+        "path": "<USERDATA>/store/wine-downloader-info.json",
+        "text": "{\n  \"wine-releases\": [\n    {\n      \"version\": \"Wine-Staging-10.5\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5\"\n    },\n    {\n      \"version\": \"Wine-Staging-9.21\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-9.21\"\n    },\n    {\n      \"version\": \"Wine-Staging-9.0\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": false,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-9.0\"\n    },\n    {\n      \"version\": \"Wine-GE-8\",\n      \"type\": \"Wine-GE\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-GE-8\"\n    },\n    {\n      \"version\": \"Wine-Staging-10.5-DXMT\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5-DXMT\"\n    },\n    {\n      \"version\": \"Wine-Staging-GPTK-2\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-GPTK-2\"\n    },\n    {\n      \"version\": \"Wine-Staging-toolkit\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-toolkit\"\n    },\n    {\n      \"version\": \"bad..version\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/bad..version\"\n    },\n    {\n      \"version\": \"has space\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/has space\"\n    }\n  ]\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "appName": "default"
+        }
+      ]
+    }
+  },
+  {
+    "id": "options-legacy-game",
+    "op": "options",
+    "note": "a game on Legacy gets a read-only Legacy: <name> row, installed, unavailable, id legacy:<name>",
+    "crossover": "present",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/lg1.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"lg1\": {\n    \"wineVersion\": {\n      \"type\": \"toolkit\",\n      \"name\": \"Game-Porting-Toolkit-2\",\n      \"bin\": \"<HOME>/gptk/wine64\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/lg2.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"lg2\": {\n    \"wineVersion\": {\n      \"type\": \"wine\",\n      \"name\": \"Odd Wine\",\n      \"bin\": \"<HOME>/odd/bin/wine\"\n    }\n  }\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "runner": "gog",
+          "appName": "lg1"
+        },
+        {
+          "runner": "legendary",
+          "appName": "lg2"
+        }
+      ]
+    }
+  },
+  {
+    "id": "options-legacy-global-default",
+    "op": "options",
+    "note": "the global default on Legacy shows the same row for { appName: default }",
+    "crossover": "present",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"wineVersion\": {\n      \"type\": \"toolkit\",\n      \"name\": \"Game-Porting-Toolkit-2\",\n      \"bin\": \"<HOME>/gptk/wine64\"\n    }\n  }\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "appName": "default"
+        }
+      ]
+    }
+  },
+  {
+    "id": "options-stored-override-has-no-legacy-row",
+    "op": "options",
+    "note": "a game with a stored engine key never shows Legacy, whatever its wineVersion",
+    "crossover": "present",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/so1.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"so1\": {\n    \"engineOverride\": \"crossover\",\n    \"wineVersion\": {\n      \"type\": \"toolkit\",\n      \"name\": \"Game-Porting-Toolkit-2\",\n      \"bin\": \"<HOME>/gptk/wine64\"\n    }\n  }\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "runner": "gog",
+          "appName": "so1"
+        }
+      ]
+    }
+  },
+  {
+    "id": "options-argument-shapes",
+    "op": "options",
+    "note": "null, non-objects, a Steam game, an unclean appName, an unknown runner and a game with no file get the plain list; { runner, appName: default } is an ordinary app named default",
+    "crossover": "absent",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"wineVersion\": {\n      \"type\": \"toolkit\",\n      \"name\": \"Game-Porting-Toolkit-2\",\n      \"bin\": \"<HOME>/gptk/wine64\"\n    }\n  }\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        null,
+        "x",
+        5,
+        [],
+        {},
+        {
+          "appName": "default"
+        },
+        {
+          "runner": "gog",
+          "appName": "default"
+        },
+        {
+          "runner": "steam",
+          "appName": "620"
+        },
+        {
+          "runner": "gog",
+          "appName": "../x"
+        },
+        {
+          "runner": "unknown",
+          "appName": "1"
+        },
+        {
+          "runner": "gog",
+          "appName": "nofile"
+        }
+      ]
+    }
+  },
+  {
+    "id": "default-engine-empty-global",
+    "op": "default-engine",
+    "note": "getDefaultEngine for a global config of empty-global: effectiveEngineId, engineSource and legacyLabel",
+    "seed": [],
+    "args": {}
+  },
+  {
+    "id": "default-engine-crossover",
+    "op": "default-engine",
+    "note": "getDefaultEngine for a global config of crossover: effectiveEngineId, engineSource and legacyLabel",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    }\n  }\n}\n"
+      }
+    ],
+    "args": {}
+  },
+  {
+    "id": "default-engine-stored-override",
+    "op": "default-engine",
+    "note": "getDefaultEngine for a global config of stored-override: effectiveEngineId, engineSource and legacyLabel",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"engineOverride\": \"pinned:wine-staging-11.20\",\n    \"wineVersion\": {\n      \"type\": \"toolkit\",\n      \"name\": \"Game-Porting-Toolkit-2\",\n      \"bin\": \"<HOME>/gptk/wine64\"\n    }\n  }\n}\n"
+      }
+    ],
+    "args": {}
+  },
+  {
+    "id": "default-engine-current-pin",
+    "op": "default-engine",
+    "note": "getDefaultEngine for a global config of current-pin: effectiveEngineId, engineSource and legacyLabel",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"wineVersion\": {\n      \"type\": \"wine\",\n      \"name\": \"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\",\n      \"bin\": \"<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine\"\n    }\n  }\n}\n"
+      }
+    ],
+    "args": {}
+  },
+  {
+    "id": "default-engine-wine-manager",
+    "op": "default-engine",
+    "note": "getDefaultEngine for a global config of wine-manager: effectiveEngineId, engineSource and legacyLabel",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"wineVersion\": {\n      \"type\": \"wine\",\n      \"name\": \"Wine-Staging-10.5\",\n      \"bin\": \"<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine\"\n    }\n  }\n}\n"
+      },
+      {
+        "path": "<USERDATA>/store/wine-downloader-info.json",
+        "text": "{\n  \"wine-releases\": [\n    {\n      \"version\": \"Wine-Staging-10.5\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5\"\n    }\n  ]\n}\n"
+      }
+    ],
+    "args": {}
+  },
+  {
+    "id": "default-engine-legacy-gptk",
+    "op": "default-engine",
+    "note": "getDefaultEngine for a global config of legacy-gptk: effectiveEngineId, engineSource and legacyLabel",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"wineVersion\": {\n      \"type\": \"toolkit\",\n      \"name\": \"Game-Porting-Toolkit-2\",\n      \"bin\": \"<HOME>/gptk/wine64\"\n    }\n  }\n}\n"
+      }
+    ],
+    "args": {}
+  },
+  {
+    "id": "default-engine-bogus-override",
+    "op": "default-engine",
+    "note": "getDefaultEngine for a global config of bogus-override: effectiveEngineId, engineSource and legacyLabel",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"defaultSettings\": {\n    \"engineOverride\": \"bogus\"\n  }\n}\n"
+      }
+    ],
+    "args": {}
+  },
+  {
+    "id": "bottle-name-by-store",
+    "op": "bottle-name",
+    "note": "the per-game bottle name for every non-Steam store; Steam answers null",
+    "args": {
+      "items": [
+        {
+          "runner": "gog",
+          "appName": "1207658924"
+        },
+        {
+          "runner": "legendary",
+          "appName": "Sugar"
+        },
+        {
+          "runner": "nile",
+          "appName": "amzn1.adg.product.x"
+        },
+        {
+          "runner": "sideload",
+          "appName": "My Game"
+        },
+        {
+          "runner": "steam",
+          "appName": "620"
+        },
+        {
+          "runner": "gog",
+          "appName": "a.b"
+        },
+        {
+          "runner": "gog",
+          "appName": "a..b"
+        },
+        {
+          "runner": "gog",
+          "appName": "ゲーム"
+        }
+      ]
+    }
+  },
+  {
+    "id": "bottle-name-long-and-unusual-names",
+    "op": "bottle-name",
+    "note": "a name past 64 characters is truncated and suffixed with a 10-hex digest; unusual bytes are percent-style escaped",
+    "args": {
+      "items": [
+        {
+          "runner": "gog",
+          "appName": {
+            "repeat": {
+              "char": "a",
+              "count": 40
+            }
+          }
+        },
+        {
+          "runner": "gog",
+          "appName": {
+            "repeat": {
+              "char": "a",
+              "count": 52
+            }
+          }
+        },
+        {
+          "runner": "gog",
+          "appName": {
+            "repeat": {
+              "char": "a",
+              "count": 53
+            }
+          }
+        },
+        {
+          "runner": "gog",
+          "appName": {
+            "repeat": {
+              "char": "a",
+              "count": 255
+            }
+          }
+        },
+        {
+          "runner": "legendary",
+          "appName": {
+            "repeat": {
+              "char": "b",
+              "count": 100
+            }
+          }
+        },
+        {
+          "runner": "gog",
+          "appName": "with space"
+        },
+        {
+          "runner": "gog",
+          "appName": "a:b"
+        },
+        {
+          "runner": "gog",
+          "appName": "a%b"
+        },
+        {
+          "runner": "gog",
+          "appName": "a~b"
+        },
+        {
+          "runner": "gog",
+          "appName": ".hidden"
+        },
+        {
+          "runner": "gog",
+          "appName": "trail."
+        },
+        {
+          "runner": "gog",
+          "appName": "Ünï-ñ"
+        }
+      ]
+    }
+  },
+  {
+    "id": "bottle-name-rejects-bad-arguments",
+    "op": "bottle-name",
+    "note": "non-objects, a missing or non-string field, an unknown runner and an unclean appName have no bottle name",
+    "args": {
+      "items": [
+        null,
+        "x",
+        5,
+        [],
+        {},
+        {
+          "runner": "gog"
+        },
+        {
+          "appName": "1"
+        },
+        {
+          "runner": 5,
+          "appName": "1"
+        },
+        {
+          "runner": "gog",
+          "appName": 5
+        },
+        {
+          "runner": "unknown",
+          "appName": "1"
+        },
+        {
+          "runner": "gog",
+          "appName": ""
+        },
+        {
+          "runner": "gog",
+          "appName": " padded"
+        },
+        {
+          "runner": "gog",
+          "appName": "../x"
+        },
+        {
+          "runner": "gog",
+          "appName": "a/b"
+        },
+        {
+          "runner": "gog",
+          "appName": {
+            "repeat": {
+              "char": "c",
+              "count": 256
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "ids-parse-engine-override",
+    "op": "ids",
+    "note": "parseEngineOverride: the closed grammar; anything else, including every path and every non-string, parses to automatic",
+    "args": {
+      "items": [
+        {
+          "value": "automatic"
+        },
+        {
+          "value": "crossover"
+        },
+        {
+          "value": "pinned:wine-staging-11.20"
+        },
+        {
+          "value": "pinned:wine-staging-11.1"
+        },
+        {
+          "value": "pinned:"
+        },
+        {
+          "value": "wine-manager:Wine-Staging-10.5"
+        },
+        {
+          "value": "wine-manager:a..b"
+        },
+        {
+          "value": "wine-manager:Wine-Staging-10.5-DXMT"
+        },
+        {
+          "value": "wine-manager:Game-Porting-Toolkit-2"
+        },
+        {
+          "value": "legacy:Odd Wine"
+        },
+        {
+          "value": "/usr/local/bin/wine"
+        },
+        {
+          "value": "Automatic"
+        },
+        {
+          "value": ""
+        },
+        {
+          "value": "wine-manager:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "value": "wine-manager:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "value": "wine-manager:wine_gptk"
+        },
+        {
+          "value": "wine-manager:PORTING"
+        },
+        {
+          "value": "wine-manager:Toolkit-1"
+        },
+        {
+          "value": "wine-manager:has space"
+        },
+        {
+          "value": "wine-manager:ok.1_2-3"
+        },
+        {
+          "value": "pinned:wine-staging-11.20 "
+        },
+        {
+          "value": " crossover"
+        },
+        {
+          "value": null
+        },
+        {
+          "value": 5
+        },
+        {
+          "value": true
+        },
+        {
+          "value": []
+        },
+        {
+          "value": {}
+        },
+        {}
+      ]
+    }
+  },
+  {
+    "id": "keys-engine-key-and-app-name",
+    "op": "keys",
+    "note": "isEngineKey accepts a bare Steam appId or runner:appName for a known non-Steam runner; appNameOf returns the part after the first colon",
+    "args": {
+      "keys": [
+        "620",
+        "0",
+        "12345678901",
+        "1234567890",
+        "gog:1207658924",
+        "legendary:Sugar",
+        "nile:amzn1.adg.product.x",
+        "sideload:My Game",
+        "steam:620",
+        "unknown:1",
+        "gog:",
+        "gog:../x",
+        "gog:a/b",
+        "gog: padded",
+        "gog:a:b",
+        ":x",
+        "gog",
+        "",
+        "abc",
+        "-1",
+        "6.2",
+        "humble:abc",
+        {
+          "repeat": {
+            "char": "1",
+            "count": 10
+          }
+        },
+        {
+          "repeat": {
+            "char": "1",
+            "count": 11
+          }
+        },
+        5,
+        null,
+        [
+          "gog:1"
+        ],
+        {}
+      ]
+    }
+  }
+]

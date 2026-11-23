@@ -1,0 +1,14 @@
+{
+  "op": "default-engine",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {},
+  "outcome": {
+    "effectiveEngineId": "pinned:wine-staging-11.20",
+    "engineSource": "derived",
+    "legacyLabel": null
+  },
+  "treeUnchanged": true,
+  "logs": []
+}

@@ -1,0 +1,150 @@
+{
+  "op": "bottle-name",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      null,
+      "x",
+      5,
+      [],
+      {},
+      {
+        "runner": "gog"
+      },
+      {
+        "appName": "1"
+      },
+      {
+        "runner": 5,
+        "appName": "1"
+      },
+      {
+        "runner": "gog",
+        "appName": 5
+      },
+      {
+        "runner": "unknown",
+        "appName": "1"
+      },
+      {
+        "runner": "gog",
+        "appName": ""
+      },
+      {
+        "runner": "gog",
+        "appName": " padded"
+      },
+      {
+        "runner": "gog",
+        "appName": "../x"
+      },
+      {
+        "runner": "gog",
+        "appName": "a/b"
+      },
+      {
+        "runner": "gog",
+        "appName": {
+          "repeat": {
+            "char": "c",
+            "count": 256
+          }
+        }
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": null,
+      "name": null
+    },
+    {
+      "input": "x",
+      "name": null
+    },
+    {
+      "input": 5,
+      "name": null
+    },
+    {
+      "input": [],
+      "name": null
+    },
+    {
+      "input": {},
+      "name": null
+    },
+    {
+      "input": {
+        "runner": "gog"
+      },
+      "name": null
+    },
+    {
+      "input": {
+        "appName": "1"
+      },
+      "name": null
+    },
+    {
+      "input": {
+        "runner": 5,
+        "appName": "1"
+      },
+      "name": null
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": 5
+      },
+      "name": null
+    },
+    {
+      "input": {
+        "runner": "unknown",
+        "appName": "1"
+      },
+      "name": null
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": ""
+      },
+      "name": null
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": " padded"
+      },
+      "name": null
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "../x"
+      },
+      "name": null
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "a/b"
+      },
+      "name": null
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "name": null
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

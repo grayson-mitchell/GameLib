@@ -1,0 +1,79 @@
+{
+  "op": "derive",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "wine": {
+          "type": "wine",
+          "name": "Wine-Staging-10.5",
+          "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine"
+        }
+      },
+      {
+        "wine": {
+          "type": "wine",
+          "name": "Wine-Staging-9.21",
+          "bin": "<TOOLS>/wine/Wine-Staging-9.21/Contents/Resources/wine/bin/wine"
+        }
+      },
+      {
+        "wine": {
+          "type": "wine",
+          "name": "Wine-Staging-10.5",
+          "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver"
+        }
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "wine": {
+          "type": "wine",
+          "name": "Wine-Staging-10.5",
+          "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine"
+        }
+      },
+      "effective": {
+        "kind": "override",
+        "id": "wine-manager:Wine-Staging-10.5",
+        "source": "derived"
+      },
+      "id": "wine-manager:Wine-Staging-10.5"
+    },
+    {
+      "input": {
+        "wine": {
+          "type": "wine",
+          "name": "Wine-Staging-9.21",
+          "bin": "<TOOLS>/wine/Wine-Staging-9.21/Contents/Resources/wine/bin/wine"
+        }
+      },
+      "effective": {
+        "kind": "override",
+        "id": "wine-manager:Wine-Staging-9.21",
+        "source": "derived"
+      },
+      "id": "wine-manager:Wine-Staging-9.21"
+    },
+    {
+      "input": {
+        "wine": {
+          "type": "wine",
+          "name": "Wine-Staging-10.5",
+          "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver"
+        }
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "Wine-Staging-10.5"
+      },
+      "id": "legacy:Wine-Staging-10.5"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

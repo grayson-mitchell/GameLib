@@ -1,0 +1,14 @@
+{
+  "op": "default-engine",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {},
+  "outcome": {
+    "effectiveEngineId": "legacy:Game-Porting-Toolkit-2",
+    "engineSource": "derived",
+    "legacyLabel": "Game-Porting-Toolkit-2"
+  },
+  "treeUnchanged": true,
+  "logs": []
+}

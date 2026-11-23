@@ -1,0 +1,169 @@
+{
+  "op": "read-stored",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "appName": "ok"
+      },
+      {
+        "appName": "vo"
+      },
+      {
+        "appName": "missing"
+      },
+      {
+        "appName": "dots..in"
+      },
+      {
+        "appName": ""
+      },
+      {
+        "appName": ".."
+      },
+      {
+        "appName": "."
+      },
+      {
+        "appName": "a/b"
+      },
+      {
+        "appName": "a\\b"
+      },
+      {
+        "appName": "a\u0000b"
+      },
+      {
+        "appName": "../outside"
+      },
+      {
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        }
+      },
+      {
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 256
+          }
+        }
+      },
+      {
+        "appName": 5
+      },
+      {
+        "appName": null
+      },
+      {}
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "appName": "ok"
+      },
+      "entry": {
+        "engineOverride": "crossover",
+        "winePrefix": "<HOME>/p"
+      }
+    },
+    {
+      "input": {
+        "appName": "vo"
+      },
+      "entry": null
+    },
+    {
+      "input": {
+        "appName": "missing"
+      },
+      "entry": null
+    },
+    {
+      "input": {
+        "appName": "dots..in"
+      },
+      "entry": {
+        "engineOverride": "crossover"
+      }
+    },
+    {
+      "input": {
+        "appName": ""
+      },
+      "entry": null
+    },
+    {
+      "input": {
+        "appName": ".."
+      },
+      "entry": null
+    },
+    {
+      "input": {
+        "appName": "."
+      },
+      "entry": null
+    },
+    {
+      "input": {
+        "appName": "a/b"
+      },
+      "entry": null
+    },
+    {
+      "input": {
+        "appName": "a\\b"
+      },
+      "entry": null
+    },
+    {
+      "input": {
+        "appName": "a\u0000b"
+      },
+      "entry": null
+    },
+    {
+      "input": {
+        "appName": "../outside"
+      },
+      "entry": null
+    },
+    {
+      "input": {
+        "appName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "entry": null
+    },
+    {
+      "input": {
+        "appName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "entry": null
+    },
+    {
+      "input": {
+        "appName": 5
+      },
+      "entry": null
+    },
+    {
+      "input": {
+        "appName": null
+      },
+      "entry": null
+    },
+    {
+      "input": {},
+      "entry": null
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

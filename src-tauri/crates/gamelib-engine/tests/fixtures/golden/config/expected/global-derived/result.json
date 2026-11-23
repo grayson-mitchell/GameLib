@@ -1,0 +1,170 @@
+{
+  "op": "global",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {},
+      {
+        "wineVersion": {
+          "type": "crossover",
+          "name": "CrossOver",
+          "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+        }
+      },
+      {
+        "wineVersion": {
+          "type": "wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+        }
+      },
+      {
+        "wineVersion": {
+          "type": "wine",
+          "name": "Wine-Staging-10.5",
+          "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine"
+        }
+      },
+      {
+        "wineVersion": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        }
+      },
+      {
+        "wineVersion": {
+          "type": "wine",
+          "name": "Odd Wine",
+          "bin": "<HOME>/odd/bin/wine"
+        }
+      },
+      {
+        "engineOverride": 5,
+        "wineVersion": {
+          "type": "wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+        }
+      },
+      {
+        "wineVersion": null
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {},
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "wineVersion": {
+          "type": "crossover",
+          "name": "CrossOver",
+          "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+        }
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    },
+    {
+      "input": {
+        "wineVersion": {
+          "type": "wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+        }
+      },
+      "effective": {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "derived"
+      },
+      "id": "pinned:wine-staging-11.20"
+    },
+    {
+      "input": {
+        "wineVersion": {
+          "type": "wine",
+          "name": "Wine-Staging-10.5",
+          "bin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine"
+        }
+      },
+      "effective": {
+        "kind": "override",
+        "id": "wine-manager:Wine-Staging-10.5",
+        "source": "derived"
+      },
+      "id": "wine-manager:Wine-Staging-10.5"
+    },
+    {
+      "input": {
+        "wineVersion": {
+          "type": "toolkit",
+          "name": "Game-Porting-Toolkit-2",
+          "bin": "<HOME>/gptk/wine64"
+        }
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "Game-Porting-Toolkit-2"
+      },
+      "id": "legacy:Game-Porting-Toolkit-2"
+    },
+    {
+      "input": {
+        "wineVersion": {
+          "type": "wine",
+          "name": "Odd Wine",
+          "bin": "<HOME>/odd/bin/wine"
+        }
+      },
+      "effective": {
+        "kind": "legacy",
+        "label": "Odd Wine"
+      },
+      "id": "legacy:Odd Wine"
+    },
+    {
+      "input": {
+        "engineOverride": 5,
+        "wineVersion": {
+          "type": "wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine"
+        }
+      },
+      "effective": {
+        "kind": "override",
+        "id": "pinned:wine-staging-11.20",
+        "source": "derived"
+      },
+      "id": "pinned:wine-staging-11.20"
+    },
+    {
+      "input": {
+        "wineVersion": null
+      },
+      "effective": {
+        "kind": "override",
+        "id": "automatic",
+        "source": "derived"
+      },
+      "id": "automatic"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

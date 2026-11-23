@@ -1,0 +1,91 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/g1.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6b4e5dc77c88e16d67527bbc2386d6a875d9614f67ebb9cfb02773d9d14a5670"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/g2.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "fd3b30b6b68eec5b60b4cc9ecbee6296c86ef2e2a316061e94538addcfc0b8d6"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/g3.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e6d73c92eac917ea39083ca337cbb1269489ccf74fb6882eae7d7cff605d81b8"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/g4.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "29055c48ffeed34475babb693f6809210560703c43c429cbd1fd800cea491e32"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/g5.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6d01ab256c44ac3d9ff558b2ca30dbf6335cde46d84d69806cea034960d2dc96"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/g6.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3035c934c5aadb3d5704bf41ea4aeae2e9a57f8dfd99ffb72ee5b505f11582fd"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/g7.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "f1d37806a82fbb80cb35d35cbef238189db9d06824bdce0a1f7844a6ac8dd82e"
+  },
+  {
+    "path": ".config/GameLib/config.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "5764135efe5e030ebd03750e89e7c659037627a8736074c61966f453a5a7084d"
+  },
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store/wine-downloader-info.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e316c5f167dfa456d6795a2672a8192581deb138ccd95369f9774733899ec1bc"
+  }
+]

@@ -1,0 +1,55 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/h1.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1c9cc46e573f59360f3bbc0e6b9ead097f32155540552fcb2f419708a668e587"
+  },
+  {
+    "path": ".config/GameLib/config.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "5764135efe5e030ebd03750e89e7c659037627a8736074c61966f453a5a7084d"
+  },
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store/wine-downloader-info.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e316c5f167dfa456d6795a2672a8192581deb138ccd95369f9774733899ec1bc"
+  }
+]
