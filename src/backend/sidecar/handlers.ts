@@ -369,7 +369,8 @@ export function registerHandlers(deps: {
     gogRuntime: deps.services.gogRuntime,
     nileRuntime: deps.services.nileRuntime,
     paths: deps.services.paths,
-    sendFrontendMessage: deps.services.host.sendFrontendMessage
+    sendFrontendMessage: deps.services.host.sendFrontendMessage,
+    requestRustInvoke: deps.services.host.requestRustInvoke
   })
   registerWineToolsFlows({
     ipc,

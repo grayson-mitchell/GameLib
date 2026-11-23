@@ -74,7 +74,7 @@ describe('clearCache and the wiki cache', () => {
     expect(deps.stores.systemInfo.deviceNameCache.clear).toHaveBeenCalled()
   })
 
-  it('leaves the wiki cache alone on a path with no Rust transport (the per-library sign-outs, OWED)', () => {
+  it('leaves the wiki cache alone when the deps carry no Rust transport', () => {
     const { deps } = fakeDeps()
     expect(() => clearCache(deps, 'nile')).not.toThrow()
     expect(deps.stores.nile.libraryStore.clear).toHaveBeenCalled()
