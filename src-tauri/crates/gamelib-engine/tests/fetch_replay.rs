@@ -5,13 +5,12 @@
 
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
-use gamelib_core::clock::Clock;
 use gamelib_engine::fetch::{
     user_agent, DownloadOutcome, Fetch, FetchError, FetchRequest, Progress, Replay, ReqwestFetch,
 };
+use gamelib_engine::testing::FixedClock;
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
@@ -39,28 +38,6 @@ fn sha256_hex(bytes: &[u8]) -> String {
         .iter()
         .map(|b| format!("{b:02x}"))
         .collect()
-}
-
-/// A clock that answers `start`, `start + step`, ... one call at a time, so a test decides how many
-/// "seconds" each chunk costs without sleeping.
-struct StepClock {
-    next: AtomicU64,
-    step: u64,
-}
-
-impl StepClock {
-    fn new(step: u64) -> Arc<StepClock> {
-        Arc::new(StepClock {
-            next: AtomicU64::new(0),
-            step,
-        })
-    }
-}
-
-impl Clock for StepClock {
-    fn now_ms(&self) -> u64 {
-        self.next.fetch_add(self.step, Ordering::SeqCst)
-    }
 }
 
 fn recorded_get(url: &str) -> FetchRequest {
@@ -201,7 +178,7 @@ async fn progress_is_throttled_to_once_a_second_plus_a_final_hundred() {
     let replay = Replay::from_case(&case("download"))
         .unwrap()
         .with_chunk_size(1024)
-        .with_clock(StepClock::new(400));
+        .with_clock(Arc::new(FixedClock::stepping(0, 400)));
     let tmp = tempfile::tempdir().unwrap();
     let seen = Mutex::new(Vec::new());
 
@@ -228,7 +205,7 @@ async fn a_cancel_mid_download_is_aborted_and_removes_the_partial_file() {
     let replay = Replay::from_case(&case("download"))
         .unwrap()
         .with_chunk_size(1024)
-        .with_clock(StepClock::new(1000));
+        .with_clock(Arc::new(FixedClock::stepping(0, 1000)));
     let tmp = tempfile::tempdir().unwrap();
     let dest = tmp.path().join("tool.tar.xz");
     let cancel = CancellationToken::new();

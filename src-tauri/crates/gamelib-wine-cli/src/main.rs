@@ -3,11 +3,16 @@
 //!
 //! `ops`
 //!     print the op names, one per line (none until the first wine port lands)
-//! `op <name> <json-args> --user-data <dir> [--now-ms <ms>]`
+//! `op <name> <json-args> --user-data <dir> [--home <dir>] [--replay <case-dir>] [--now-ms <ms>]`
 //!     run one op through `dispatch_sync` over a context rooted in `<dir>` (tools under `<dir>/tools`,
 //!     the Wine runtime under `<dir>/tools/runtime`, scratch files under `<dir>/temp`, the home
 //!     directory `<dir>/home`) and print the JSON result. `<json-args>` is a JSON array of the op's
-//!     arguments. An op error prints on stderr and exits 2.
+//!     arguments. An op error prints on stderr and exits 2. `--home <dir>` is the operator's home
+//!     directory the ops see (default `<dir>/home`: the real profile is never read). `--replay
+//!     <case-dir>` serves every request from a recorded case (`exchanges.json` and its body files)
+//!     instead of the network, and fails the run (exit 2) on a request the case does not hold or an
+//!     exchange left unrequested. The context has no UI, no log, no DXVK installer, and spawns
+//!     through `gamelib-proc`.
 //! anything else: usage on stderr (exit 64); bad input (a bad number, arguments that are not a JSON
 //! array) exits 2.
 
@@ -18,10 +23,12 @@ use std::sync::Arc;
 use gamelib_core::clock::{Clock, SystemClock};
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
+use gamelib_engine::fetch::{Fetch, Replay};
+use gamelib_engine::testing::FixedClock;
 use gamelib_store::host::StoreHost;
 use gamelib_wine::ctx::WineCtx;
 
-const USAGE: &str = "usage: gamelib-wine-cli ops\n       gamelib-wine-cli op <name> <json-args> --user-data <dir> [--now-ms <ms>]";
+const USAGE: &str = "usage: gamelib-wine-cli ops\n       gamelib-wine-cli op <name> <json-args> --user-data <dir> [--home <dir>] [--replay <case-dir>] [--now-ms <ms>]";
 
 fn usage() -> ! {
     eprintln!("{USAGE}");
@@ -31,15 +38,6 @@ fn usage() -> ! {
 fn bad(message: &str) -> ! {
     eprintln!("{message}");
     exit(2)
-}
-
-/// A clock that always says the same millisecond: the CLI is a replay tool, not a wall-clock one.
-struct FixedClock(u64);
-
-impl Clock for FixedClock {
-    fn now_ms(&self) -> u64 {
-        self.0
-    }
 }
 
 /// The value of `--flag <value>` in `args`, or a usage exit.
@@ -83,30 +81,58 @@ fn run_op(args: &[String]) {
     };
     let clock: Arc<dyn Clock> = match opt_flag(rest, "--now-ms") {
         Some(ms) => {
-            Arc::new(FixedClock(ms.parse().unwrap_or_else(|_| {
+            Arc::new(FixedClock::new(ms.parse().unwrap_or_else(|_| {
                 bad("--now-ms must be a whole number of milliseconds")
             })))
         }
         None => Arc::new(SystemClock),
     };
     let tools_path = user_data.join("tools");
-    let engine = EngineCtx::new(
+    let home = match opt_flag(rest, "--home") {
+        Some(dir) => PathBuf::from(dir),
+        None => user_data.join("home"),
+    };
+    // `--replay`: every request is served from a recorded case, and `finish` below fails the run on
+    // drift. Otherwise the real network seam (built lazily: nothing connects unless an op fetches).
+    let replay =
+        opt_flag(rest, "--replay").map(|dir| match Replay::from_case(&PathBuf::from(dir)) {
+            Ok(replay) => Arc::new(replay.with_clock(clock.clone())),
+            Err(e) => bad(&e),
+        });
+    let mut engine = EngineCtx::new(
         Arc::new(StoreHost::new()),
         clock,
         platform(),
         EnginePaths {
             app_folder: user_data.clone(),
             tools_path: tools_path.clone(),
-            user_home: user_data.join("home"),
+            user_home: home,
             temp: user_data.join("temp"),
             user_data,
         },
         Shutdown::new(),
     );
+    if let Some(replay) = &replay {
+        let fetch: Arc<dyn Fetch> = replay.clone();
+        engine = engine.with_fetch(fetch);
+    }
     let ctx = WineCtx::new(Arc::new(engine), tools_path.join("runtime"));
-    match gamelib_wine::dispatch_sync(name, &op_args, &ctx) {
-        Ok(value) => println!("{value}"),
-        Err(e) => bad(&e),
+    let result = gamelib_wine::dispatch_sync(name, &op_args, &ctx);
+    match result {
+        Ok(value) => {
+            if let Some(Err(drift)) = replay.as_ref().map(|r| r.finish()) {
+                bad(&drift);
+            }
+            println!("{value}");
+        }
+        Err(e) => {
+            // An op that failed on a request the case does not hold says only a category; the
+            // replay's report names the request.
+            if let Some(Err(drift)) = replay.as_ref().map(|r| r.finish()) {
+                eprintln!("{drift}");
+            }
+            bad(&e)
+        }
     }
 }
 

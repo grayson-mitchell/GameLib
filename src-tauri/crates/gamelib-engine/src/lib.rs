@@ -9,8 +9,12 @@
 //! This crate never depends on `gamelib-wine` (D-04): the dependency runs the other way.
 
 pub mod ctx;
+pub mod dxvk;
 pub mod fetch;
 pub mod pins;
+pub mod sinks;
+#[cfg(feature = "testing")]
+pub mod testing;
 
 use ctx::EngineCtx;
 use serde_json::Value;
