@@ -18,7 +18,7 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use gamelib_core::process::{ChunkSink, Pipe, ProcSpec, SpecOutput};
@@ -31,8 +31,12 @@ use super::classify::{
     append_log_line, classify_line, is_unsupported_wine_version, parse_unsupported_wine_version,
     parse_wine_version_output, split_output_chunk, LineKind, LogLine, MAX_BUFFERED_LINES,
 };
+use super::guard::filter_visible_catalog;
+use super::list_parse::{parse_list_all, Component};
+use super::metadata::ScriptMetadata;
 use super::{
-    is_windows, Session, Target, ToolSettings, DEPENDENCIES, SCRIPT_MAX_AGE_MS, SCRIPT_URL,
+    catalog_cache_key, is_windows, Session, Target, ToolSettings, DEPENDENCIES, SCRIPT_MAX_AGE_MS,
+    SCRIPT_URL,
 };
 use crate::ctx::WineCtx;
 use crate::manager::{log_error, log_info, log_warn};
@@ -804,5 +808,152 @@ pub async fn install<'a>(
     match run.failed {
         Some(false) => InstallOutcome::Installed,
         _ => InstallOutcome::Failed,
+    }
+}
+
+/// `Winetricks.scriptMetadata` (D-19): parses the already-downloaded `<tools>/winetricks` (a fixed
+/// path, never a caller-supplied one) and caches the result keyed by the file's modification time and
+/// size, so a script re-downloaded by the 7-day cache is picked up and an unchanged one is read once.
+/// `None` (after one warning) when the file cannot be read.
+///
+/// On the umu path the winetricks that actually runs is umu's own, which may differ in version from
+/// this download; the metadata still comes from the downloaded script (acceptable, recorded).
+pub fn script_metadata(ctx: &WineCtx) -> Option<Arc<ScriptMetadata>> {
+    let path = script_path(ctx);
+    let read = || -> std::io::Result<(String, Arc<ScriptMetadata>)> {
+        let meta = std::fs::metadata(&path)?;
+        let stamp = meta
+            .modified()
+            .ok()
+            .and_then(|m| m.duration_since(std::time::UNIX_EPOCH).ok())
+            .map_or(0, |d| d.as_nanos());
+        let key = format!("{stamp}:{}", meta.len());
+        if let Some((cached_key, cached)) = ctx.tools.script_metadata() {
+            if cached_key == key {
+                return Ok((key, cached));
+            }
+        }
+        let text = String::from_utf8_lossy(&std::fs::read(&path)?).into_owned();
+        let value = Arc::new(ScriptMetadata::from_script(&text));
+        ctx.tools
+            .set_script_metadata(Some((key.clone(), Arc::clone(&value))));
+        Ok((key, value))
+    };
+    match read() {
+        Ok((_, value)) => Some(value),
+        Err(error) => {
+            log_warn(
+                ctx,
+                &format!(
+                    "Could not read the winetricks script for its metadata: {}",
+                    io_category(&error)
+                ),
+            );
+            None
+        }
+    }
+}
+
+/// The catalog as list-all gave it, annotated from the script on disk (D-19/D-17): no second wine or
+/// winetricks run. When the script cannot be read the components stay unannotated (and, with no
+/// `needsGui`, only the category half of D-09 applies) rather than failing the whole list.
+fn annotate(components: Vec<Component>, metadata: Option<&ScriptMetadata>) -> Vec<Component> {
+    let Some(metadata) = metadata else {
+        return components;
+    };
+    components
+        .into_iter()
+        .map(|component| {
+            let upstream = metadata.by_verb.get(&component.verb);
+            Component {
+                // The untruncated upstream title; list-all's is cut to one line.
+                title: upstream
+                    .and_then(|u| u.title.clone())
+                    .unwrap_or(component.title),
+                publisher: upstream.and_then(|u| u.publisher.clone()),
+                year: upstream.and_then(|u| u.year.clone()),
+                media: upstream.and_then(|u| u.media.clone()),
+                conflicts: upstream.and_then(|u| u.conflicts.clone()),
+                homepage: upstream.and_then(|u| u.homepage.clone()),
+                needs_gui: Some(metadata.needs_gui.contains(&component.verb)),
+                verb: component.verb,
+                category: component.category,
+                cached: component.cached,
+            }
+        })
+        .collect()
+}
+
+/// `Winetricks.listAvailable` (quick-260915-ajd): every verb winetricks can install for the game,
+/// visible ones only (D-09), from one `winetricks list-all` run. That run supplies `category` for free
+/// and does not drop the apps, benchmarks and settings verbs; the `===== prefix =====` block it emits is
+/// category names, not verbs, and the parser discards it (F-6, do not "restore" it as a bug fix).
+///
+/// `LANG` is the load-bearing variable: `winetricks_list_all` switches on `case ${LANG} in` and
+/// localises the `[downloadable]`/`[cached]` flag words for several locales (F-4); `LC_ALL=C` is set
+/// too, belt and braces, but inert alone. The override is scoped to ONLY this call: the install path
+/// keeps the user's locale. The list the cache holds (the one the apply guard validates against) is
+/// the same filtered list; an empty one is never cached.
+pub async fn list_available<'a>(session: &Session<'a>, target: &Target<'_>) -> Vec<Component> {
+    let ctx = session.ctx;
+    let run = run_with_args(
+        session,
+        target,
+        RunRequest {
+            args: vec!["list-all".to_string()],
+            return_output: true,
+            env_overrides: vec![
+                ("LANG".to_string(), "C".to_string()),
+                ("LC_ALL".to_string(), "C".to_string()),
+            ],
+            component: String::new(),
+            on_line: None,
+        },
+    )
+    .await;
+    let components = parse_list_all(&run.output);
+    let metadata = script_metadata(ctx);
+    let visible = filter_visible_catalog(annotate(components, metadata.as_deref()));
+    if !visible.is_empty() {
+        let values: Vec<Value> = visible
+            .iter()
+            .filter_map(|c| serde_json::to_value(c).ok())
+            .collect();
+        ctx.tools
+            .set_catalog(&catalog_cache_key(target.runner, target.app_name), values);
+    }
+    visible
+}
+
+/// `Winetricks.catalogFor` (D-01/T-45-01): the catalog the apply guard validates a renderer's verbs
+/// against: the cached list when present, otherwise `list_available` (which fills the cache).
+pub async fn catalog_for<'a>(session: &Session<'a>, target: &Target<'_>) -> Vec<Component> {
+    let key = catalog_cache_key(target.runner, target.app_name);
+    if let Some(cached) = session.ctx.tools.catalog(&key) {
+        let components: Vec<Component> = cached
+            .into_iter()
+            .filter_map(|value| serde_json::from_value(value).ok())
+            .collect();
+        return components;
+    }
+    list_available(session, target).await
+}
+
+/// `Winetricks.listInstalled`: the lines of the `winetricks.log` of the bottle the game really runs in
+/// (Phase 61); a read never creates one. Empty when the settings are unavailable or the log is not
+/// there. A Proton umu does not run keeps its log in the prefix's `pfx` subdirectory.
+pub fn list_installed(session: &Session<'_>, target: &Target<'_>) -> Vec<String> {
+    let ToolSettings::Resolved(settings) = &target.settings else {
+        return Vec::new();
+    };
+    let (prefix, _) = wine_from_proton(session, settings);
+    let log = js_join(&[&prefix, "winetricks.log"]);
+    match std::fs::read(&log) {
+        Ok(bytes) => String::from_utf8_lossy(&bytes)
+            .split('\n')
+            .filter(|line| !line.is_empty())
+            .map(str::to_string)
+            .collect(),
+        Err(_) => Vec::new(),
     }
 }

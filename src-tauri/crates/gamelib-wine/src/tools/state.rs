@@ -9,18 +9,19 @@
 //! use, and the plan assigns the whole object to this slice.
 
 use std::collections::HashMap;
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use serde_json::Value;
 
 use crate::winetricks::env::WinetricksEnvironment;
+use crate::winetricks::metadata::ScriptMetadata;
 
 /// The state of the tools of one boot.
 #[derive(Default)]
 pub struct ToolsState {
     installing: Mutex<String>,
     catalog: Mutex<HashMap<String, Vec<Value>>>,
-    script_metadata: Mutex<Option<(String, Value)>>,
+    script_metadata: Mutex<Option<(String, Arc<ScriptMetadata>)>>,
     /// The winetricks environment reports and their one change listener (87-32).
     pub winetricks_env: WinetricksEnvironment,
 }
@@ -79,11 +80,11 @@ impl ToolsState {
     }
 
     /// The parsed script metadata and the `mtimeMs:size` key it was derived under.
-    pub fn script_metadata(&self) -> Option<(String, Value)> {
+    pub fn script_metadata(&self) -> Option<(String, Arc<ScriptMetadata>)> {
         lock(&self.script_metadata).clone()
     }
 
-    pub fn set_script_metadata(&self, entry: Option<(String, Value)>) {
+    pub fn set_script_metadata(&self, entry: Option<(String, Arc<ScriptMetadata>)>) {
         *lock(&self.script_metadata) = entry;
     }
 }
@@ -140,13 +141,16 @@ mod tests {
     #[test]
     fn script_metadata_is_kept_under_its_key_until_cleared() {
         let state = ToolsState::new();
-        assert_eq!(state.script_metadata(), None);
-        state.set_script_metadata(Some(("1:2".to_string(), json!({"needsGui": []}))));
+        assert!(state.script_metadata().is_none());
+        state.set_script_metadata(Some((
+            "1:2".to_string(),
+            Arc::new(ScriptMetadata::default()),
+        )));
         assert_eq!(
             state.script_metadata().map(|(k, _)| k).as_deref(),
             Some("1:2")
         );
         state.set_script_metadata(None);
-        assert_eq!(state.script_metadata(), None);
+        assert!(state.script_metadata().is_none());
     }
 }

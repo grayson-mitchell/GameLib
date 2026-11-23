@@ -40,8 +40,12 @@ use gamelib_testutil::FakeHome;
 use gamelib_wine::ctx::{Arch, WineCtx};
 use gamelib_wine::wine_cmd::env::{EnvSnapshot, GameSettingsView};
 use gamelib_wine::wine_cmd::{WineHost, WineInstallation};
+use gamelib_wine::winetricks::catalog_cache_key;
 use gamelib_wine::winetricks::classify::LogLine;
-use gamelib_wine::winetricks::install::{download_script, install};
+use gamelib_wine::winetricks::install::{
+    catalog_for, check_dependencies, check_wine_version, download_script, install, list_available,
+    list_installed,
+};
 use gamelib_wine::winetricks::{Launcher, Session, Target, ToolSettings};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -644,16 +648,26 @@ impl Launcher for OracleLauncher {
     }
 }
 
-/// The launcher calls the oracle logged, reduced to what the Rust asks: the TS built both platforms'
-/// environments eagerly (five calls), the Rust only the platform's own (three).
+/// The launcher calls the oracle logged, reduced to what the Rust asks: every run the TS made asked
+/// `validWine` and then built both platforms' environments eagerly (five calls); the Rust builds only
+/// the platform's own (three). Each run's calls start at a `validWine`.
 fn rust_launcher(expected: &Value, platform: &str) -> Value {
     let calls = expected.as_array().unwrap();
-    if calls.len() < 5 {
-        return expected.clone();
+    let starts: Vec<usize> = (0..calls.len())
+        .filter(|&i| calls[i]["fn"] == "validWine")
+        .collect();
+    let mut out = Vec::new();
+    for (n, &start) in starts.iter().enumerate() {
+        let end = starts.get(n + 1).copied().unwrap_or(calls.len());
+        let group = &calls[start..end];
+        out.push(group[0].clone());
+        if group.len() == 5 {
+            let range = if platform == "mac" { 3..5 } else { 1..3 };
+            out.extend(group[range].iter().cloned());
+        } else {
+            out.extend(group[1..].iter().cloned());
+        }
     }
-    let range = if platform == "mac" { 3..5 } else { 1..3 };
-    let mut out = vec![calls[0].clone()];
-    out.extend(calls[range].iter().cloned());
     Value::Array(out)
 }
 
@@ -717,11 +731,14 @@ fn comparable_spawns(spawns: &Value) -> Vec<String> {
         .iter()
         .map(|s| {
             let mut s = s.clone();
-            // The order of the unset names is the base environment's, not a behaviour.
+            // The order of the unset names is the base environment's, not a behaviour; and the oracle's
+            // tracer never reports `PATH` or `LANG` as unset (the two keys the case adds to the fake
+            // profile's own environment), so neither side is compared on them.
             if let Some(unset) = s["envDiff"]["unset"].as_array().cloned() {
                 let mut names: Vec<String> = unset
                     .iter()
                     .map(|n| n.as_str().unwrap().to_string())
+                    .filter(|n| n != "PATH" && n != "LANG")
                     .collect();
                 names.sort();
                 s["envDiff"]["unset"] = json!(names);
@@ -986,6 +1003,14 @@ impl Run {
         ToolSettings::Resolved(Box::new(settings))
     }
 
+    /// `{ WINEPREFIX: winePrefix }`, the environment the probe ops are called with.
+    fn prefix_env(&self) -> BTreeMap<String, String> {
+        BTreeMap::from([(
+            "WINEPREFIX".to_string(),
+            self.settings["winePrefix"].as_str().unwrap().to_string(),
+        )])
+    }
+
     fn target(&self, case: &Value) -> Target<'_> {
         Target {
             runner: &self.runner_name,
@@ -1010,6 +1035,53 @@ async fn run_op(run: &Run, case: &Value) -> Value {
             let mut sink = |line: &LogLine| lines.push(line.clone());
             let outcome = install(&session, &target, verb, Some(&mut sink)).await;
             json!({ "verb": verb, "outcome": outcome.as_str(), "onLines": lines })
+        }
+        "list-available" => {
+            let target = run.target(case);
+            let components = list_available(&session, &target).await;
+            let cache = run
+                .ctx
+                .tools
+                .catalog(&catalog_cache_key(&run.runner_name, &run.app_name));
+            json!({ "components": components, "catalogCache": cache })
+        }
+        "catalog-for" => {
+            let target = run.target(case);
+            let verbs =
+                |list: Vec<gamelib_wine::winetricks::list_parse::Component>| -> Vec<String> {
+                    list.into_iter().map(|c| c.verb).collect()
+                };
+            let first = verbs(catalog_for(&session, &target).await);
+            let second = verbs(catalog_for(&session, &target).await);
+            json!({ "first": first, "second": second })
+        }
+        "list-installed" => {
+            let target = run.target(case);
+            json!({ "lines": list_installed(&session, &target) })
+        }
+        "check-wine-version" => {
+            check_wine_version(
+                &session,
+                &run.runner_name,
+                &run.app_name,
+                &run.wine_bin,
+                &run.prefix_env(),
+            )
+            .await;
+            json!({})
+        }
+        "check-dependencies" => {
+            let mut messages: Vec<String> = Vec::new();
+            let mut append = |message: String| messages.push(message);
+            check_dependencies(
+                &session,
+                &run.runner_name,
+                &run.app_name,
+                &run.prefix_env(),
+                &mut append,
+            )
+            .await;
+            json!({ "messages": messages })
         }
         other => panic!("op {other} is not replayed here"),
     }
@@ -1128,17 +1200,32 @@ async fn the_single_verb_install_replays() {
     replay_case(&case_of("install-single-verb-linux")).await;
 }
 
-/// Every install and every script-download case of the oracle: the install lifecycle (the refusal, the
-/// missing dependencies, the unsupported wine, a failing verb, a signal, a spawn error, umu and Proton)
-/// and the script download (fresh, cached, stale, offline, a failing server, no tools directory).
+/// Every case of the oracle but the queue's (87-33): the install lifecycle (the refusal, the missing
+/// dependencies, the unsupported wine, a failing verb, a signal, a spawn error, umu and Proton), the
+/// script download (fresh, cached, stale, offline, a failing server, no tools directory), the catalog
+/// reads (list, annotate from the script, cache, installed log) and the two environment probes.
 #[tokio::test(start_paused = true)]
-async fn every_install_and_download_case_replays() {
-    let mut replayed = 0;
+async fn every_case_but_the_queues_replays() {
+    let mut by_op: BTreeMap<String, usize> = BTreeMap::new();
     for case in cases() {
-        if matches!(case["op"].as_str(), Some("install" | "download")) {
-            replay_case(&case).await;
-            replayed += 1;
+        let op = case["op"].as_str().unwrap().to_string();
+        if op == "queue" {
+            continue;
         }
+        replay_case(&case).await;
+        *by_op.entry(op).or_default() += 1;
     }
-    assert!(replayed >= 20, "only {replayed} install and download cases");
+    // Each op the plan names has its cases, and a quiet loop is not a pass.
+    for op in [
+        "download",
+        "install",
+        "list-available",
+        "catalog-for",
+        "list-installed",
+        "check-wine-version",
+        "check-dependencies",
+    ] {
+        assert!(by_op.get(op).copied().unwrap_or(0) >= 2, "{op}: {by_op:?}");
+    }
+    assert!(by_op.values().sum::<usize>() >= 55, "{by_op:?}");
 }

@@ -26,7 +26,10 @@
 
 pub mod classify;
 pub mod env;
+pub mod guard;
 pub mod install;
+pub mod list_parse;
+pub mod metadata;
 
 use std::collections::BTreeMap;
 use std::path::Path;

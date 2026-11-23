@@ -49,7 +49,9 @@ pub const OPS: &[&str] = &[
     "wine_runtime_download",
     "wine_runtime_is_installed",
     "wine_valid",
+    "wine_winetricks_available",
     "wine_winetricks_install",
+    "wine_winetricks_installed",
 ];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
@@ -162,6 +164,40 @@ async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String>
                 ctx.engine.platform,
                 host.darwin_release.as_deref(),
                 &|path| path.exists(),
+            )))
+        }
+        // The verbs winetricks can install for a game (`listAvailable`, visible ones only), cached for
+        // the apply guard. Answers the components as the TS object had them.
+        "wine_winetricks_available" => {
+            let (request, host) = winetricks_args(op, args)?;
+            let target = request.target().ok_or_else(|| format!("{op}:bad-args"))?;
+            if request.verb.is_some() {
+                return Err(format!("{op}:bad-args"));
+            }
+            let launcher = winetricks::HostLauncher { host: &host };
+            let session = winetricks::Session {
+                ctx,
+                host: &host,
+                launcher: &launcher,
+            };
+            let components = winetricks::install::list_available(&session, &target).await;
+            serde_json::to_value(components).map_err(|_| format!("{op}:bad-result"))
+        }
+        // The lines of the game's `winetricks.log` (`listInstalled`).
+        "wine_winetricks_installed" => {
+            let (request, host) = winetricks_args(op, args)?;
+            let target = request.target().ok_or_else(|| format!("{op}:bad-args"))?;
+            if request.verb.is_some() {
+                return Err(format!("{op}:bad-args"));
+            }
+            let launcher = winetricks::HostLauncher { host: &host };
+            let session = winetricks::Session {
+                ctx,
+                host: &host,
+                launcher: &launcher,
+            };
+            Ok(serde_json::json!(winetricks::install::list_installed(
+                &session, &target
             )))
         }
         "wine_winetricks_install" => {
@@ -523,6 +559,67 @@ mod tests {
         }
         assert_eq!(run(vec![json!("not an object")]), bad);
         assert_eq!(run(vec![]), bad);
+    }
+
+    fn block_on(fut: impl Future<Output = Result<Value, String>>) -> Result<Value, String> {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(fut)
+    }
+
+    #[test]
+    fn the_winetricks_catalog_ops_take_no_verb_and_need_settings_or_a_reason() {
+        let home = FakeHome::new("wine-winetricks-catalog-op-");
+        let ctx = ctx(&home);
+        for op in ["wine_winetricks_available", "wine_winetricks_installed"] {
+            let bad = Err(format!("{op}:bad-args"));
+            let request =
+                json!({"runner": "gog", "appName": "1", "unavailable": "r", "verb": "vcrun2019"});
+            assert_eq!(block_on(dispatch(op, &[request], &ctx)), bad, "{op}");
+            let neither = json!({"runner": "gog", "appName": "1"});
+            assert_eq!(block_on(dispatch(op, &[neither], &ctx)), bad, "{op}");
+        }
+    }
+
+    #[test]
+    fn the_installed_op_reads_the_games_winetricks_log_and_an_unavailable_game_has_none() {
+        let home = FakeHome::new("wine-winetricks-installed-op-");
+        let ctx = ctx(&home);
+        let prefix = home.root().join("prefix");
+        std::fs::create_dir_all(&prefix).unwrap();
+        std::fs::write(
+            prefix.join("winetricks.log"),
+            "vcrun2019\ncorefonts\n\nfontsmooth=rgb\n",
+        )
+        .unwrap();
+        let settings = json!({
+            "winePrefix": prefix.to_string_lossy(),
+            "wineVersion": {"bin": "/b", "name": "n", "type": "wine"},
+        });
+        let lines = block_on(dispatch(
+            "wine_winetricks_installed",
+            &[json!({"runner": "gog", "appName": "1", "settings": settings})],
+            &ctx,
+        ));
+        assert_eq!(
+            lines,
+            Ok(json!(["vcrun2019", "corefonts", "fontsmooth=rgb"]))
+        );
+        let none = block_on(dispatch(
+            "wine_winetricks_installed",
+            &[json!({"runner": "steam", "appName": "480", "unavailable": "not-own-bottle"})],
+            &ctx,
+        ));
+        assert_eq!(none, Ok(json!([])));
+        // The available op for a game with no usable wine runs nothing and lists nothing.
+        let available = block_on(dispatch(
+            "wine_winetricks_available",
+            &[json!({"runner": "steam", "appName": "480", "unavailable": "not-own-bottle"})],
+            &ctx,
+        ));
+        assert_eq!(available, Ok(json!([])));
     }
 
     #[test]
