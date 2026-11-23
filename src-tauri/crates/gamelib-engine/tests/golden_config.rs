@@ -433,6 +433,29 @@ fn the_tracer_goldens_replay() {
     replay(&TRACER_OPS);
 }
 
+/// Every config golden, the 87-25 contract: `MANIFEST count >= 20` and all of them pass.
+const ALL_OPS: [&str; 14] = [
+    "derive",
+    "effective",
+    "read-for-game",
+    "read-stored",
+    "global",
+    "engine-id",
+    "options",
+    "default-engine",
+    "bottle-name",
+    "ids",
+    "keys",
+    "eligibility",
+    "tool-settings",
+    "offline",
+];
+
+#[test]
+fn every_config_golden_replays() {
+    replay(&ALL_OPS);
+}
+
 #[test]
 fn the_tracer_ops_cover_the_names_the_task_promises() {
     let all = cases();
