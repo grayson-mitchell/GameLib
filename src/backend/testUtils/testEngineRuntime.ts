@@ -1,19 +1,17 @@
 /**
  * A fresh, isolated engine runtime for consumer tests (66.4-05). Plain object, no jest APIs:
- * every call builds its own ledger, registry, deadlines and single-flight maps, so two tests never
+ * every call builds its own ledger, registry and single-flight maps, so two tests never
  * share state. The engine chain is required lazily (testServices builds one by default for every
  * suite, and loading it at import would pull `backend/utils` in ahead of suites that mock it).
- * Defaults: a fake clock and paths under `/test-gamelib`, and a Rust transport that answers the
+ * Defaults: paths under `/test-gamelib`, and a Rust transport that answers the
  * bottle version gate (`store_version_gate`, Phase 85 D-17) with `ok`, so a marker write goes
  * ahead; pass `requestRustInvoke` to answer it otherwise.
  */
 import { join } from 'path'
 import type { AppPaths } from '../process/context'
-import type { Clock } from '../process/types'
 import type { EngineRuntime, EngineRuntimeDeps } from '../engine/engineRuntime'
 import { engineSelectionView } from '../enginewine/selectionView'
 import { createTestAbortRegistry } from './testAbortRegistry'
-import { createFakeClock } from './fakeClock'
 import {
   RUST_ENGINE_CX_RESOLVE_BIN_DIR,
   RUST_ENGINE_LEDGER_MARK_RUNNING,
@@ -42,7 +40,6 @@ const okBottleGateTransport: EngineRuntimeDeps['requestRustInvoke'] = (
 
 export function createTestEngineRuntime(
   opts: {
-    clock?: Clock
     paths?: Partial<TestEnginePaths>
     aborts?: EngineRuntimeDeps['aborts']
     requestRustInvoke?: EngineRuntimeDeps['requestRustInvoke']
@@ -56,7 +53,6 @@ export function createTestEngineRuntime(
   /* eslint-enable @typescript-eslint/no-require-imports */
   const root = '/test-gamelib'
   return createEngineRuntime({
-    clock: opts.clock ?? createFakeClock(),
     aborts: opts.aborts ?? createTestAbortRegistry(),
     requestRustInvoke: opts.requestRustInvoke ?? okBottleGateTransport,
     // 87-42 (D-24): the Steam bridge reads selections through the process-wide view, so the runtime a test builds

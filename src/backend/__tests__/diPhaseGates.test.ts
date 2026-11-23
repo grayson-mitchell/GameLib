@@ -652,8 +652,6 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     'src/backend/engine/engineNoticeStore.ts',
     'src/backend/engine/engineRegistry.ts',
     'src/backend/engine/fallbackEngine.ts',
-    'src/backend/engine/launchDeadline.ts',
-    'src/backend/engine/launchEngine.ts',
     'src/backend/engine/launchSettings.ts',
     'src/backend/engine/perGameBottle.ts',
     'src/backend/gamedetails/overrides.ts',
@@ -763,7 +761,8 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     // Phase 87 Plan 36 deleted sidecar/wineToolsFlowRegistration.ts with the wine tools cluster (D-06, D-23): 68 -> 67.
     // Phase 87 Plan 37 deleted tools/index.ts and tools/winetricksEnvironment.ts with the TS tools tree (D-06): 67 -> 65.
     // Phase 87 Plan 43 deleted engine/bottlePrimitives.ts and engine/engineSwitch.ts with the TS bottle switch (D-06): 65 -> 63.
-    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 63)
+    // Phase 87 Plan 56 deleted engine/launchDeadline.ts and engine/launchEngine.ts with the TS launch step (D-06): 63 -> 61.
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 61)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {

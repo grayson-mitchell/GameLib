@@ -214,7 +214,6 @@ function buildServices(
   })
   const gate = createFakeBottleGateRust()
   const engineRuntime = createEngineRuntime({
-    clock: {} as never,
     paths: { userHome: profile.home, toolsPath: profile.toolsPath },
     aborts: {
       create: () => ({}) as never,

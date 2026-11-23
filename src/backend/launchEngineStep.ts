@@ -36,7 +36,7 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
  * Narrows the `engine_launch_select` answer. A shape the crate never produces is an error, not a skipped step: a
  * launch that guessed would run on an engine nobody chose.
  */
-export function parseLaunchEngineStep(reply: unknown): {
+function parseLaunchEngineStep(reply: unknown): {
   step: LaunchEngineStep
   logLines: string[]
 } {

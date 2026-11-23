@@ -14,7 +14,7 @@
  * callers in Phase 92; `isWritableEngineOverride`, `importEngineSettings` and `getPerGameBottleNameFor` go
  * with the settings and install flows in Phase 98. `perGameBottleName` is the naming rule the two bottle
  * functions share; it is exported only because the engine TS that is still alive in Phase 87 (`gamePrefix`,
- * `launchEngine`, `gameEngineState`, through `perGameBottle.ts`) calls it, so it is an intra-phase row
+ * `gameEngineState`, through `perGameBottle.ts`) calls it, so it is an intra-phase row
  * (`deletedBy: 87`) and 87-56 makes it private when that TS goes.
  *
  * The grammar of an engine override id and the Steam / clean-name rules are imported, not copied: they

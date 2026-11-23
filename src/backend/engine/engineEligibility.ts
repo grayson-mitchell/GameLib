@@ -1,6 +1,6 @@
 /**
- * Phase 61: the one eligibility test for the engine layer, shared by the launch step
- * (launchEngine.ts) and the Wine tools resolver (toolSettings.ts) so the two cannot disagree on
+ * Phase 61: the one eligibility test for the engine layer, shared by the (now Rust) launch step
+ * and the Wine tools resolver (toolSettings.ts) so the two cannot disagree on
  * which games the engine controls. A leaf: no spawning, nothing runs at import.
  */
 import type { Game } from 'common/types/game_manager'

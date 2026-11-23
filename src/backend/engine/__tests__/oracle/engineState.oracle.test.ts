@@ -368,7 +368,6 @@ describeSkipOnWindows('engine state oracle (87-14)', () => {
             configPath: profile.paths.configPath
           },
           engineRuntime: createEngineRuntime({
-            clock: {} as never,
             paths: { userHome: profile.home, toolsPath: profile.toolsPath },
             aborts: {
               create: () => ({}) as never,

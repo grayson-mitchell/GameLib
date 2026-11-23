@@ -862,7 +862,6 @@ interface Built {
 function makeRuntime(profile: EngineOracleProfile): EngineRuntime {
   const gate = createFakeBottleGateRust()
   return createEngineRuntime({
-    clock: {} as never,
     paths: { userHome: profile.home, toolsPath: profile.toolsPath },
     aborts: {
       create: () => ({}) as never,

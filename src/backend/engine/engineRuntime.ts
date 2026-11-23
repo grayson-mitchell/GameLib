@@ -2,16 +2,13 @@
  * The boot-owned engine runtime (66.4-05, D-05).
  *
  * The engine family's former module-level state (running-games ledger, selection registry, launch
- * overlay contexts, launch deadlines, switch / bottle-creation / pinned-download single-flight maps,
- * the CrossOver bin-dir memo, the per-launch bookkeeping of launchEngine) lives in per-file
+ * overlay contexts, bottle-creation / pinned-download single-flight maps, the CrossOver bin-dir memo) lives in per-file
  * `createX()` closures. This bundle builds one of each, once per boot, in the 'engine-runtime' boot
  * step, and consumers reach it through `Pick<EngineRuntime, ...>` slices (D-01).
  *
  * Construction only allocates empty maps: it does no I/O and arms no timer (sidecar exit contract).
- * Launch deadlines run on the injected clock, whose timers are unref'd by default.
  */
 import type { AppPaths } from 'backend/process/context'
-import type { Clock } from 'backend/process/types'
 import { createBottleLedger } from './bottleLedger'
 import type { BottleLedger } from './bottleLedger'
 import { createCrossoverLocator } from './crossoverLocation'
@@ -22,10 +19,6 @@ import type { EngineRegistry } from './engineRegistry'
 import { createFallbackEngine } from './fallbackEngine'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { FallbackEngine } from './fallbackEngine'
-import { createLaunchDeadlines } from './launchDeadline'
-import type { LaunchDeadlines } from './launchDeadline'
-import { createLaunchEngineState } from './launchEngine'
-import type { LaunchEngineState } from './launchEngine'
 import { createLaunchSettingsRegistry } from './launchSettings'
 import type { LaunchSettingsRegistry } from './launchSettings'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
@@ -37,8 +30,6 @@ export interface EngineRuntime {
   crossover: CrossoverLocator
   registry: EngineRegistry
   fallback: FallbackEngine
-  deadlines: LaunchDeadlines
-  launchState: LaunchEngineState
   launchSettings: LaunchSettingsRegistry
   perGameBottle: PerGameBottleFlights
   /** The sidecar -> Rust transport the engine's bottle, ledger and selection shims send through (87-42). */
@@ -46,7 +37,6 @@ export interface EngineRuntime {
 }
 
 export interface EngineRuntimeDeps {
-  clock: Clock
   paths: Pick<AppPaths, 'userHome' | 'toolsPath'>
   /** The boot-owned abort registry the Steam engine download registers in (66.4-13). */
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
@@ -69,8 +59,6 @@ export function createEngineRuntime(deps: EngineRuntimeDeps): EngineRuntime {
     }),
     registry,
     fallback: createFallbackEngine({ paths: deps.paths, aborts: deps.aborts }),
-    deadlines: createLaunchDeadlines({ clock: deps.clock }),
-    launchState: createLaunchEngineState(),
     launchSettings: createLaunchSettingsRegistry({
       registry,
       paths: deps.paths

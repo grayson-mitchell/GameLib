@@ -326,7 +326,7 @@ const mockPrepareBottleForEngine = jest.fn()
 const mockEnsurePinnedEngine = jest.fn()
 const mockIsPinnedEngineInstalled = jest.fn()
 const gamesClock = createFakeClock()
-const testRuntime = createTestEngineRuntime({ clock: gamesClock })
+const testRuntime = createTestEngineRuntime()
 const getEngineSelection = (k: string) =>
   testRuntime.registry.getEngineSelection(k)
 const clearEngineSelection = (k: string) =>

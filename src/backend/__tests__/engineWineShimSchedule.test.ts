@@ -115,7 +115,6 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/engine/fallbackEngine.ts',
   'src/backend/engine/gameEngineState.ts',
   'src/backend/engine/gamePrefix.ts',
-  'src/backend/engine/launchEngine.ts',
   'src/backend/engine/launchSettings.ts',
   'src/backend/engine/perGameBottle.ts',
   'src/backend/engine/prepareBottle.ts',
@@ -810,7 +809,7 @@ const SCHEDULE: readonly ScheduleRow[] = [
   // cannot become async shims; each lives once in `enginewine/twin.ts`, pinned to Rust by the shared
   // `engine_twin.json` vectors that `twinVectors.test.ts` and `gamelib-engine`'s `twin_vectors.rs` both replay.
   // `callers` is every importer of the file (the check is per file). `perGameBottleName` is the naming rule the
-  // bottle functions share: the engine TS alive until 87-56 (gamePrefix, launchEngine, gameEngineState, through
+  // bottle functions share: the engine TS alive until 87-56 (gamePrefix, gameEngineState, through
   // perGameBottle.ts) calls it, so it is an intra-phase row that 87-56 makes private; the plan named four rows.
   {
     name: 'engineKeyFor',

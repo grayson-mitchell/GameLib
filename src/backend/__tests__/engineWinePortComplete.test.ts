@@ -377,6 +377,77 @@ describe('bottlesPortComplete', () => {
   })
 })
 
+/**
+ * 87-56, D-06 and D-21: the engine sub-slice, as far as it can go. 87-52 moved the launch step to Rust (the select,
+ * the settings read, the deadline and the end), 87-53 the dialogs and the flows, 87-54 the Steam decision, deadline and
+ * state record, 87-55 the bridge's tool runs. `launchEngine.ts` (the step, its deadline arming and its end),
+ * `launchDeadline.ts`, `gameProcessWatch.ts` (the first-match watcher), `engineDialogs.ts` and `pinEngine.ts` (the TS
+ * pin download the step handed its switch) have no caller left, so they are deleted with their unit tests, the launch
+ * oracle and `legacyBottleUntouched.test.ts` (it ran the TS step over a legacy bottle; the legacy bottle is replayed
+ * by `gamelib-engine`'s switch goldens, `switch_incidents.rs`, and its launch goldens). The runtime builds no
+ * deadlines and no per-launch state. The launch goldens stay for the Rust replay (`golden_launch.rs`).
+ *
+ * The rest of `src/backend/engine` stays, and the 87-56 SUMMARY lists why, module by module: a live TS caller outside
+ * the engine still reads it (the Steam launch and install files read the caller-side halves `prepareBottle`,
+ * `engineSync`, `offlineRefusal`, `fallbackBottleCall`, `pinnedEngineProgress` and `processListing`; the Wine tools
+ * read `toolSettings`; the boot builds `engineRuntime` and `engineState`), or one of its oracles replays it against
+ * goldens Rust also owns (`engineConfig.oracle`, `engineDecision.oracle`, `engineState.oracle`,
+ * `fallbackEngine.oracle`). Those modules and the `describe('enginePortComplete')` that deletes them whole are owed to
+ * the plan that routes their callers (see the SUMMARY's decision list). The identifiers below are the ones the deleted
+ * files owned and no scheduled shim or Steam caller reuses (`armEngineLaunchDeadline`, `bindDeadlineToMonitor` and
+ * `showEngineDialog` are names the launch shims and the Steam files carry too, so they cannot be forbidden).
+ */
+const ENGINE: SliceSpec = {
+  deleted: [
+    'src/backend/engine/launchEngine.ts',
+    'src/backend/engine/launchDeadline.ts',
+    'src/backend/engine/gameProcessWatch.ts',
+    'src/backend/engine/engineDialogs.ts',
+    'src/backend/engine/pinEngine.ts',
+    'src/backend/engine/__tests__/launchEngine.test.ts',
+    'src/backend/engine/__tests__/launchEngine.deadline.test.ts',
+    'src/backend/engine/__tests__/launchDeadline.test.ts',
+    'src/backend/engine/__tests__/gameProcessWatch.test.ts',
+    'src/backend/engine/__tests__/legacyBottleUntouched.test.ts',
+    'src/backend/engine/__tests__/oracle/launchEngine.oracle.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-engine/tests/fixtures/golden/launch',
+    'src-tauri/crates/gamelib-engine/tests/fixtures/golden/config',
+    'src-tauri/crates/gamelib-engine/tests/fixtures/golden/decision'
+  ],
+  forbiddenIdentifiers: [
+    'createLaunchEngineState',
+    'LaunchEngineState',
+    'createLaunchDeadlines',
+    'LaunchDeadlines',
+    'watchForGameProcess',
+    'deriveGameProcessPrefixes',
+    'deriveGameProcessPrefix',
+    'GameProcessWatchDeps',
+    'showEngineNotice',
+    'notifyEngineFallback',
+    'ensurePinEngineFrom',
+    'EnsurePinEngine'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_ENGINE',
+  manifestSlice: 'engine',
+  channelsFloor: 3
+}
+
+describe('enginePortComplete', () => {
+  runSlice(ENGINE)
+
+  it('the engine runtime builds no launch deadlines and no per-launch state', () => {
+    const runtime = tsWalk.files.find(
+      (f) => f.path === 'src/backend/engine/engineRuntime.ts'
+    )
+    expect(runtime).toBeDefined()
+    expect(runtime?.code).not.toMatch(/deadlines|launchState/)
+  })
+})
+
 describe('noRollbackFlag', () => {
   it('anti-vacuity: the walks read real trees', () => {
     assertAtOrAboveFloor(

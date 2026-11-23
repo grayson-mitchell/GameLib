@@ -1,16 +1,14 @@
 /**
  * 66.4-05: the boot-owned engine runtime. Two runtimes share nothing; single-flight is per
  * instance (the bottle switch's own serialisation is Rust's, `golden_switch.rs` cases
- * `concurrent-same-target-wr02` and `concurrent-different-bottles-independent-wr02`); launch deadlines run on the injected clock and leave no timer behind; construction
- * arms nothing.
+ * `concurrent-same-target-wr02` and `concurrent-different-bottles-independent-wr02`); construction arms nothing. The launch deadlines
+ * and the per-launch bookkeeping went with the TS launch step (87-56): Rust owns them.
  */
 import type { GameSettings } from 'common/types'
 import * as logger from 'backend/logger'
 
-import { createFakeClock } from 'backend/testUtils/fakeClock'
 import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
 import { createTestEngineServices } from 'backend/testUtils/testServices'
-import { LAUNCH_DEADLINE_MS } from '../launchDeadline'
 import { buildFallbackGameSettings } from 'backend/enginewine/twin'
 import type { EngineSelection } from '../engineTypes'
 
@@ -30,44 +28,19 @@ beforeEach(() => {
 
 describe('createEngineRuntime', () => {
   it('construction arms no timer', () => {
-    const clock = createFakeClock()
-    createTestEngineRuntime({ clock })
-    expect(clock.pendingCount()).toBe(0)
+    const runtime = createTestEngineRuntime()
+    expect(runtime.ledger.gamesRunningIn('GameLib')).toEqual([])
   })
 
-  it('two runtimes share no ledger, selection, overlay context or deadline', () => {
-    const clock = createFakeClock()
-    const a = createTestEngineRuntime({ clock })
-    const b = createTestEngineRuntime({ clock })
+  it('two runtimes share no ledger, selection or overlay context', () => {
+    const a = createTestEngineRuntime()
+    const b = createTestEngineRuntime()
     a.ledger.markGameRunning('GameLib', 'gog:1')
     expect(b.ledger.gamesRunningIn('GameLib')).toEqual([])
     a.launchSettings.setLaunchOverlayContext('gog:1', {
       prefix: { kind: 'plain' }
     })
     expect(b.launchSettings.getLaunchOverlayContext('gog:1')).toBeUndefined()
-    a.deadlines.armLaunchDeadline({ key: 'gog:1', onDeadline: jest.fn() })
-    expect(a.deadlines.activeCount()).toBe(1)
-    expect(b.deadlines.activeCount()).toBe(0)
-    a.launchState.rememberLedgerBottle('gog:1', 'GameLib')
-    expect(b.launchState.takeLedgerBottle('gog:1')).toBeUndefined()
-    expect(a.launchState.takeLedgerBottle('gog:1')).toBe('GameLib')
-  })
-
-  it('a launch deadline fires on the injected clock and leaves no timer after stop', () => {
-    const clock = createFakeClock()
-    const rt = createTestEngineRuntime({ clock })
-    const onDeadline = jest.fn()
-    rt.deadlines.armLaunchDeadline({ key: 'gog:1', onDeadline })
-    expect(clock.pendingCount()).toBe(1)
-    expect(clock.keepAliveReasons()).toEqual([])
-    clock.advance(LAUNCH_DEADLINE_MS - 1)
-    expect(onDeadline).not.toHaveBeenCalled()
-    clock.advance(1)
-    expect(onDeadline).toHaveBeenCalledTimes(1)
-    rt.deadlines.armLaunchDeadline({ key: 'gog:2', onDeadline: jest.fn() })
-    rt.deadlines.cancelLaunchDeadline('gog:2', 'launcher-exited')
-    expect(clock.pendingCount()).toBe(0)
-    expect(rt.deadlines.activeCount()).toBe(0)
   })
 
   it('the CrossOver memo is per instance', () => {
