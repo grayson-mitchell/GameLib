@@ -33,7 +33,6 @@
  *
  * `GAMELIB_WRITE_HUMBLE_GOLDEN=1` writes the goldens and recordings; the default compares.
  */
-import type { GameInfo } from 'common/types'
 import {
   assertManifest,
   expectEmptyCasesToFail,
@@ -41,216 +40,45 @@ import {
   writeOrCompareGolden
 } from 'backend/testUtils/humbleOracle/harness'
 import type { SyntheticResponse } from 'backend/testUtils/humbleOracle/wireRecorder'
-import { ownedSteamLibrary } from '../fixtures/steamGames'
 import {
   LIBRARY_ACTION_ID,
-  FAKE_KEY_VALUE,
   LIBRARY_PATH,
   discoveryResponses,
-  fullLibraryResponses,
-  getAnswer,
   libraryFlightPage,
-  libraryPageResponses,
   postAnswer,
-  redeemAnswer,
-  redeemDiscoveryResponses,
-  redeemFlight,
-  type FlightItem
+  redeemFlight
 } from './flight'
 import { runFlowCase, type FlowEnv, type FlowSteam } from './flowHarness'
+import {
+  CACTUS,
+  CACTUS_ID,
+  CACTUS_MISS,
+  EXPIRED,
+  EXPIRING,
+  FRAMED_MISS,
+  FRAMED_REVEALED,
+  GOG,
+  OTHER,
+  OTHER_ID,
+  OWNED,
+  PORTAL,
+  PORTAL_HIT,
+  PORTAL_ID,
+  PORTAL_REVEALED,
+  REVEALED_ID,
+  REVEALED_OTHER,
+  SIGNED_IN_EMPTY,
+  SIGNED_OUT,
+  itemN,
+  libraryDiscovery,
+  resyncAnswers,
+  revealOk,
+  revealStatus,
+  syncAnswers
+} from './libraryFixtures'
 
 const SLICE = 'library'
 const LIBRARY_FLOOR = 40
-const REVEALED_AT = '2026-11-01T00:00:00.000Z'
-
-// ---------------------------------------------------------------------------------------------
-// Library fixtures: one key per item, the gamekey is the item id
-// ---------------------------------------------------------------------------------------------
-
-const PORTAL_ID = 'fake-gamekey-0001'
-const CACTUS_ID = 'fake-gamekey-0002'
-const OTHER_ID = 'fake-gamekey-0003'
-const GOG_ID = 'fake-gamekey-0004'
-const REVEALED_ID = 'fake-gamekey-0005'
-const EXPIRING_ID = 'fake-gamekey-0006'
-const EXPIRED_ID = 'fake-gamekey-0007'
-const FRAMED_ID = 'fake-gamekey-0008'
-
-/** Unrevealed; Steam's exact tier finds it through the resolver (`Portal 2` is app 620). */
-const PORTAL: FlightItem = {
-  id: PORTAL_ID,
-  title: 'Fake Bundle Portal',
-  keys: [{ id: 'portal2_steam', title: 'Portal 2' }]
-}
-/** The same key revealed on the website: the exact owned match auto-settles it. */
-const PORTAL_REVEALED: FlightItem = {
-  id: PORTAL_ID,
-  title: 'Fake Bundle Portal',
-  keys: [
-    {
-      id: 'portal2_steam',
-      title: 'Portal 2',
-      gameKey: null,
-      redeemedAt: REVEALED_AT,
-      keyFormatted: FAKE_KEY_VALUE
-    }
-  ]
-}
-/** Unrevealed; matches the owned `Assault Android Cactus` only fuzzily. */
-const CACTUS: FlightItem = {
-  id: CACTUS_ID,
-  title: 'Fake Bundle Cactus',
-  keys: [{ id: 'cactus_steam', title: 'Assault Android Cactus+' }]
-}
-const OTHER: FlightItem = {
-  id: OTHER_ID,
-  title: 'Fake Bundle Other',
-  keys: [{ id: 'other_steam', title: 'Fake Unowned Game' }]
-}
-const GOG: FlightItem = {
-  id: GOG_ID,
-  title: 'Fake Bundle GOG',
-  keys: [{ id: 'fake_gog', title: 'Fake GOG Game', keyIntegrationId: 'gog' }]
-}
-const REVEALED_OTHER: FlightItem = {
-  id: REVEALED_ID,
-  title: 'Fake Bundle Revealed',
-  keys: [
-    {
-      id: 'revealed_steam',
-      title: 'Fake Revealed Game',
-      gameKey: null,
-      redeemedAt: REVEALED_AT,
-      keyFormatted: FAKE_KEY_VALUE
-    }
-  ]
-}
-const EXPIRING: FlightItem = {
-  id: EXPIRING_ID,
-  title: 'Fake Bundle Expiring',
-  keys: [
-    {
-      id: 'expiring_steam',
-      title: 'Fake Expiring Game',
-      keyIntegrationId: 'gog',
-      redemptionExpiryDate: '$D2027-03-04T00:00:00.000Z'
-    }
-  ]
-}
-const EXPIRED: FlightItem = {
-  id: EXPIRED_ID,
-  title: 'Fake Bundle Expired',
-  keys: [
-    {
-      id: 'expired_gog',
-      title: 'Fake Expired Game',
-      keyIntegrationId: 'gog',
-      expired: true
-    }
-  ]
-}
-/** Revealed and fuzzily owned (`Framed Collection`): owned elsewhere but never auto-settled. */
-const FRAMED_REVEALED: FlightItem = {
-  id: FRAMED_ID,
-  title: 'Fake Bundle Framed',
-  keys: [
-    {
-      id: 'framed_steam',
-      title: 'FRAMED Collection',
-      gameKey: null,
-      redeemedAt: REVEALED_AT,
-      keyFormatted: FAKE_KEY_VALUE
-    }
-  ]
-}
-
-const itemN = (n: number): FlightItem => ({
-  id: `fake-gamekey-${String(n + 100).padStart(4, '0')}`,
-  title: `Fake Bundle ${n}`,
-  keys: [
-    {
-      id: `fake_game_${n}_gog`,
-      title: `Fake Game ${n}`,
-      keyIntegrationId: 'gog'
-    }
-  ]
-})
-
-const OWNED: FlowSteam = {
-  loggedIn: true,
-  games: ownedSteamLibrary as GameInfo[]
-}
-const SIGNED_OUT: FlowSteam = {
-  loggedIn: false,
-  games: ownedSteamLibrary as GameInfo[]
-}
-const SIGNED_IN_EMPTY: FlowSteam = { loggedIn: true, games: [] }
-
-// ---------------------------------------------------------------------------------------------
-// Synthetic answers
-// ---------------------------------------------------------------------------------------------
-
-/** axios's query encoding: a space is `+`, the rest of `encodeURIComponent`. */
-const axiosEncode = (value: string): string =>
-  encodeURIComponent(value)
-    .replace(/%3A/gi, ':')
-    .replace(/%24/g, '$')
-    .replace(/%2C/gi, ',')
-    .replace(/%20/g, '+')
-    .replace(/%5B/gi, '[')
-    .replace(/%5D/gi, ']')
-
-const storeSearch = (
-  term: string,
-  items: { type: string; name: string; id: number }[]
-): SyntheticResponse =>
-  getAnswer(
-    `/api/storesearch/?term=${axiosEncode(term)}&l=english&cc=US`,
-    200,
-    JSON.stringify({ total: items.length, items }),
-    'application/json'
-  )
-
-const PORTAL_HIT = storeSearch('Portal 2', [
-  { type: 'app', name: 'Portal 2', id: 620 }
-])
-const CACTUS_MISS = storeSearch('Assault Android Cactus+', [])
-const FRAMED_MISS = storeSearch('FRAMED Collection', [])
-
-const libraryDiscovery = (): SyntheticResponse[] =>
-  discoveryResponses({
-    pagePath: LIBRARY_PATH,
-    actionId: LIBRARY_ACTION_ID,
-    actionName: 'filterUserLibrary'
-  })
-
-const syncAnswers = (items: readonly FlightItem[]): SyntheticResponse[] =>
-  fullLibraryResponses(items)
-/** A later sync of the same boot: the action id is cached, so only the pages are asked. */
-const resyncAnswers = (items: readonly FlightItem[]): SyntheticResponse[] =>
-  libraryPageResponses(items)
-
-const revealOk = (gamekey: string): SyntheticResponse[] => [
-  ...redeemDiscoveryResponses(gamekey),
-  redeemAnswer(
-    gamekey,
-    200,
-    redeemFlight({
-      success: true,
-      key: FAKE_KEY_VALUE,
-      orderStatus: 'complete'
-    })
-  )
-]
-const revealStatus = (
-  gamekey: string,
-  status: number,
-  body = '',
-  contentType = 'text/x-component'
-): SyntheticResponse[] => [
-  ...redeemDiscoveryResponses(gamekey),
-  redeemAnswer(gamekey, status, body, contentType)
-]
 
 // ---------------------------------------------------------------------------------------------
 // Script helpers

@@ -92,7 +92,8 @@ export interface FlowOptions {
   steam?: FlowSteam
   /** Run the real expiry digest instead of only recording that it was called. */
   realDigest?: boolean
-  script: (env: FlowEnv) => Promise<void>
+  /** What the script returns, if anything, is recorded as the golden's `result`. */
+  script: (env: FlowEnv) => Promise<unknown>
 }
 
 export interface FlowEnv {
@@ -115,11 +116,7 @@ export interface FlowEnv {
     ...args: unknown[]
   ): Promise<unknown>
   /** Calls a library method that has no sidecar channel, recording the call. */
-  direct(
-    name: string,
-    args: unknown[],
-    fn: () => unknown | Promise<unknown>
-  ): Promise<unknown>
+  direct(name: string, args: unknown[], fn: () => unknown): Promise<unknown>
   /** Changes the Steam session and the owned library the cases read. */
   setSteam(steam: FlowSteam): void
   setCookie(cookie: string): void
@@ -204,14 +201,16 @@ function memorySecretStore(initial: string): {
   if (initial !== '') secrets.sessionCookie = initial
   return {
     store: {
-      isAvailable: async () => true,
-      getSecret: async (key) => secrets[key] ?? '',
-      setSecret: async (key, value) => {
+      isAvailable: () => Promise.resolve(true),
+      getSecret: (key) => Promise.resolve(secrets[key] ?? ''),
+      setSecret: (key, value) => {
         secrets[key] = value
+        return Promise.resolve()
       },
-      clearSecrets: async () => {
+      clearSecrets: () => {
         delete secrets.sessionCookie
         delete secrets.csrfToken
+        return Promise.resolve()
       }
     },
     set(cookie) {
@@ -335,7 +334,7 @@ export async function runFlowCase(options: FlowOptions): Promise<unknown> {
         const record = async (
           name: string,
           args: unknown[],
-          fn: () => unknown | Promise<unknown>
+          fn: () => unknown
         ): Promise<unknown> => {
           events.length = 0
           warnings.length = 0
@@ -385,7 +384,7 @@ export async function runFlowCase(options: FlowOptions): Promise<unknown> {
           direct: (name, args, fn) => record(name, args, fn),
           step: (name, args, fn) => record(name, args, fn),
           setSteam,
-          setCookie: secrets.set,
+          setCookie: (cookie) => secrets.set(cookie),
           advance: (ms) => jest.setSystemTime(Date.now() + ms),
           settleAppIdPass: (entries) =>
             // The wait is inside the recorded call: the events the pass raises (the patch and
@@ -410,6 +409,7 @@ export async function runFlowCase(options: FlowOptions): Promise<unknown> {
         }
 
         let requests: unknown
+        let scriptResult: unknown
         await withWireRecorder(
           {
             slice: options.slice,
@@ -417,7 +417,7 @@ export async function runFlowCase(options: FlowOptions): Promise<unknown> {
             synthetic: options.synthetic
           },
           async (recorder) => {
-            await options.script(env)
+            scriptResult = await options.script(env)
             requests = [...recorder.requests]
           }
         )
@@ -437,7 +437,8 @@ export async function runFlowCase(options: FlowOptions): Promise<unknown> {
           },
           calls,
           requests,
-          stateAfter: env.snapshot()
+          stateAfter: env.snapshot(),
+          ...(scriptResult === undefined ? {} : { result: plain(scriptResult) })
         }
       } finally {
         digestSpy.mockRestore()

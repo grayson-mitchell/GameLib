@@ -1,0 +1,3195 @@
+{
+  "input": {
+    "cookie": "fake",
+    "steam": {
+      "loggedIn": true,
+      "games": [
+        {
+          "app_name": "620",
+          "title": "Portal 2"
+        },
+        {
+          "app_name": "250110",
+          "title": "Assault Android Cactus"
+        },
+        {
+          "app_name": "388390",
+          "title": "Framed Collection"
+        },
+        {
+          "app_name": "590380",
+          "title": "Into The Breach (Steam)"
+        },
+        {
+          "app_name": "900001",
+          "title": "Game X"
+        },
+        {
+          "app_name": "208650",
+          "title": "Batman: Arkham Knight"
+        },
+        {
+          "app_name": "413150",
+          "title": "Stardew Valley"
+        }
+      ]
+    },
+    "seed": {}
+  },
+  "calls": [
+    {
+      "name": "configStoreAsSignInWritesIt",
+      "args": [],
+      "result": null,
+      "events": [],
+      "warnings": [],
+      "expiryDigest": [],
+      "notifications": []
+    },
+    {
+      "name": "humbleSync",
+      "args": [],
+      "result": {
+        "status": "ok"
+      },
+      "events": [
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 0,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 1,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 2,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 3,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 4,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 5,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REVEALED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 6,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REVEALED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REVEALED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncStateChanged",
+          "payload": {
+            "syncedAt": 1795521600000,
+            "syncError": "none",
+            "classifierVersion": 7
+          }
+        }
+      ],
+      "warnings": [],
+      "expiryDigest": [
+        {
+          "keyCount": 6,
+          "suppressNotifications": true
+        }
+      ],
+      "notifications": []
+    },
+    {
+      "name": "settleAppIdPass",
+      "args": [
+        5
+      ],
+      "result": null,
+      "events": [
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REDEEMED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppId": "620",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REVEALED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        }
+      ],
+      "warnings": [],
+      "expiryDigest": [],
+      "notifications": []
+    },
+    {
+      "name": "humbleSetOwnershipOverride",
+      "args": [
+        "cactus_steam"
+      ],
+      "result": null,
+      "events": [
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REDEEMED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppId": "620",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REVEALED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        }
+      ],
+      "warnings": [],
+      "expiryDigest": [],
+      "notifications": []
+    },
+    {
+      "name": "humbleRecordGiftLinkOpened",
+      "args": [
+        "framed_steam"
+      ],
+      "result": null,
+      "events": [],
+      "warnings": [],
+      "expiryDigest": [],
+      "notifications": []
+    },
+    {
+      "name": "humbleMarkRedeemed",
+      "args": [
+        {
+          "gamekey": "fake-gamekey-0005",
+          "machineName": "revealed_steam"
+        }
+      ],
+      "result": {
+        "status": "ok"
+      },
+      "events": [
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REDEEMED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppId": "620",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        }
+      ],
+      "warnings": [],
+      "expiryDigest": [],
+      "notifications": []
+    },
+    {
+      "name": "revealKey",
+      "args": [
+        "fake-gamekey-0003",
+        "other_steam"
+      ],
+      "result": {
+        "status": "revealed",
+        "key": "REDACTED"
+      },
+      "events": [
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REDEEMED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppId": "620",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        }
+      ],
+      "warnings": [],
+      "expiryDigest": [],
+      "notifications": []
+    },
+    {
+      "name": "humbleUndoRedeemed",
+      "args": [
+        {
+          "gamekey": "fake-gamekey-0001",
+          "machineName": "portal2_steam"
+        }
+      ],
+      "result": null,
+      "events": [
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppId": "620",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        }
+      ],
+      "warnings": [],
+      "expiryDigest": [],
+      "notifications": []
+    },
+    {
+      "name": "humbleSync",
+      "args": [],
+      "result": {
+        "status": "ok"
+      },
+      "events": [
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 0,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 1,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "steamAppId": "620",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 2,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "steamAppId": "620",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 3,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "steamAppId": "620",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 4,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "steamAppId": "620",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 5,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "steamAppId": "620",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 6,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "steamAppId": "620",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "steamAppId": "620",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncStateChanged",
+          "payload": {
+            "syncedAt": 1795521600100,
+            "syncError": "none",
+            "classifierVersion": 7
+          }
+        }
+      ],
+      "warnings": [],
+      "expiryDigest": [
+        {
+          "keyCount": 6,
+          "suppressNotifications": false
+        }
+      ],
+      "notifications": []
+    },
+    {
+      "name": "settleAppIdPass",
+      "args": [
+        5
+      ],
+      "result": null,
+      "events": [],
+      "warnings": [],
+      "expiryDigest": [],
+      "notifications": []
+    },
+    {
+      "name": "humbleSync",
+      "args": [],
+      "result": {
+        "status": "ok"
+      },
+      "events": [
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 0,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 1,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "steamAppId": "620",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 2,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "steamAppId": "620",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 3,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "steamAppId": "620",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 4,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "steamAppId": "620",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 5,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "steamAppId": "620",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 6,
+            "total": 6
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "steamAppId": "620",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0001",
+              "machineName": "portal2_steam",
+              "state": "REVEALED",
+              "title": "Portal 2",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Portal",
+              "steamAppId": "620",
+              "ownedElsewhere": true,
+              "matchConfidence": "exact",
+              "steamAppIdResolved": true
+            },
+            {
+              "gamekey": "fake-gamekey-0002",
+              "machineName": "cactus_steam",
+              "state": "UNREVEALED",
+              "title": "Assault Android Cactus+",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Cactus",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0008",
+              "machineName": "framed_steam",
+              "state": "UNREVEALED",
+              "title": "FRAMED Collection",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Framed",
+              "ownedElsewhere": true,
+              "matchConfidence": "fuzzy"
+            },
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "REVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0005",
+              "machineName": "revealed_steam",
+              "state": "REDEEMED",
+              "title": "Fake Revealed Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Revealed",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0006",
+              "machineName": "expiring_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Expiring Game",
+              "platform": "gog",
+              "expiration": "2027-03-04T00:00:00.000Z",
+              "origin": "Fake Bundle Expiring",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncStateChanged",
+          "payload": {
+            "syncedAt": 1795521660100,
+            "syncError": "none",
+            "classifierVersion": 7
+          }
+        }
+      ],
+      "warnings": [],
+      "expiryDigest": [
+        {
+          "keyCount": 6,
+          "suppressNotifications": false
+        }
+      ],
+      "notifications": []
+    },
+    {
+      "name": "settleAppIdPass",
+      "args": [
+        5
+      ],
+      "result": null,
+      "events": [],
+      "warnings": [],
+      "expiryDigest": [],
+      "notifications": []
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/home/library",
+      "headers": [
+        [
+          "Accept",
+          "text/html"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/_next/static/chunks/aaa.js",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/_next/static/chunks/bbb.js",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "POST",
+      "target": "/home/library",
+      "headers": [
+        [
+          "host",
+          "www.humblebundle.com"
+        ],
+        [
+          "connection",
+          "keep-alive"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept",
+          "text/x-component"
+        ],
+        [
+          "Next-Action",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ],
+        [
+          "Next-Router-State-Tree",
+          "%5B%22%22%2C%7B%22children%22%3A%5B%22(default)%22%2C%7B%22children%22%3A%5B%22(account)%22%2C%7B%22children%22%3A%5B%22home%22%2C%7B%22children%22%3A%5B%22library%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C4%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C24%5D"
+        ],
+        [
+          "Origin",
+          "https://www.humblebundle.com"
+        ],
+        [
+          "Referer",
+          "https://www.humblebundle.com/home/library"
+        ],
+        [
+          "content-type",
+          "multipart/form-data; boundary=<BOUNDARY>"
+        ],
+        [
+          "accept-language",
+          "*"
+        ],
+        [
+          "sec-fetch-mode",
+          "cors"
+        ],
+        [
+          "accept-encoding",
+          "gzip, deflate"
+        ],
+        [
+          "content-length",
+          "<LENGTH>"
+        ]
+      ],
+      "multipart": [
+        {
+          "name": "_1_requestId",
+          "value": "1"
+        },
+        {
+          "name": "_1_query",
+          "value": ""
+        },
+        {
+          "name": "_1_sort",
+          "value": "mostRecent"
+        },
+        {
+          "name": "_1_cursor",
+          "value": "5"
+        },
+        {
+          "name": "_1_page",
+          "value": "1"
+        },
+        {
+          "name": "_1_limit",
+          "value": "5"
+        },
+        {
+          "name": "_1_hideRevealed",
+          "value": "false"
+        },
+        {
+          "name": "_1_hideExpired",
+          "value": "false"
+        },
+        {
+          "name": "_1_dateExpires",
+          "value": ""
+        },
+        {
+          "name": "0",
+          "value": "[{\"results\":[],\"pagination\":{\"page\":1,\"totalPages\":1,\"totalDocs\":0},\"success\":true},\"$K1\"]"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "target": "/home/library?page=2",
+      "headers": [
+        [
+          "host",
+          "www.humblebundle.com"
+        ],
+        [
+          "connection",
+          "keep-alive"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept",
+          "text/x-component"
+        ],
+        [
+          "Next-Action",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ],
+        [
+          "Next-Router-State-Tree",
+          "%5B%22%22%2C%7B%22children%22%3A%5B%22(default)%22%2C%7B%22children%22%3A%5B%22(account)%22%2C%7B%22children%22%3A%5B%22home%22%2C%7B%22children%22%3A%5B%22library%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C4%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C24%5D"
+        ],
+        [
+          "Origin",
+          "https://www.humblebundle.com"
+        ],
+        [
+          "Referer",
+          "https://www.humblebundle.com/home/library?page=2"
+        ],
+        [
+          "content-type",
+          "multipart/form-data; boundary=<BOUNDARY>"
+        ],
+        [
+          "accept-language",
+          "*"
+        ],
+        [
+          "sec-fetch-mode",
+          "cors"
+        ],
+        [
+          "accept-encoding",
+          "gzip, deflate"
+        ],
+        [
+          "content-length",
+          "<LENGTH>"
+        ]
+      ],
+      "multipart": [
+        {
+          "name": "_1_requestId",
+          "value": "1"
+        },
+        {
+          "name": "_1_query",
+          "value": ""
+        },
+        {
+          "name": "_1_sort",
+          "value": "mostRecent"
+        },
+        {
+          "name": "_1_cursor",
+          "value": "10"
+        },
+        {
+          "name": "_1_page",
+          "value": "2"
+        },
+        {
+          "name": "_1_limit",
+          "value": "5"
+        },
+        {
+          "name": "_1_hideRevealed",
+          "value": "false"
+        },
+        {
+          "name": "_1_hideExpired",
+          "value": "false"
+        },
+        {
+          "name": "_1_dateExpires",
+          "value": ""
+        },
+        {
+          "name": "0",
+          "value": "[{\"results\":[{\"id\":\"fake-gamekey-0001\",\"title\":\"Fake Bundle Portal\",\"entitlements\":{\"keys\":[{\"id\":\"portal2_steam\",\"title\":\"Portal 2\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":\"2026-11-01T00:00:00.000Z\",\"expired\":false,\"redemptionData\":{\"keyFormatted\":\"REDACTED\"}}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0002\",\"title\":\"Fake Bundle Cactus\",\"entitlements\":{\"keys\":[{\"id\":\"cactus_steam\",\"title\":\"Assault Android Cactus+\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0008\",\"title\":\"Fake Bundle Framed\",\"entitlements\":{\"keys\":[{\"id\":\"framed_steam\",\"title\":\"FRAMED Collection\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0003\",\"title\":\"Fake Bundle Other\",\"entitlements\":{\"keys\":[{\"id\":\"other_steam\",\"title\":\"Fake Unowned Game\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0005\",\"title\":\"Fake Bundle Revealed\",\"entitlements\":{\"keys\":[{\"id\":\"revealed_steam\",\"title\":\"Fake Revealed Game\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":\"2026-11-01T00:00:00.000Z\",\"expired\":false,\"redemptionData\":{\"keyFormatted\":\"REDACTED\"}}],\"downloads\":[]}}],\"bundlesCount\":0,\"pagination\":{\"page\":1,\"totalPages\":2,\"totalDocs\":6},\"success\":true},\"$K1\"]"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Portal+2&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Assault+Android+Cactus%2B&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=FRAMED+Collection&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Unowned+Game&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Revealed+Game&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/home/library/REDACTED",
+      "headers": [
+        [
+          "Accept",
+          "text/html"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/_next/static/chunks/aaa.js",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "POST",
+      "target": "/home/library/REDACTED",
+      "headers": [
+        [
+          "host",
+          "www.humblebundle.com"
+        ],
+        [
+          "connection",
+          "keep-alive"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept",
+          "text/x-component"
+        ],
+        [
+          "Content-Type",
+          "text/plain;charset=UTF-8"
+        ],
+        [
+          "Next-Action",
+          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        ],
+        [
+          "Origin",
+          "https://www.humblebundle.com"
+        ],
+        [
+          "Referer",
+          "https://www.humblebundle.com/home/library/REDACTED"
+        ],
+        [
+          "accept-language",
+          "*"
+        ],
+        [
+          "sec-fetch-mode",
+          "cors"
+        ],
+        [
+          "accept-encoding",
+          "gzip, deflate"
+        ],
+        [
+          "content-length",
+          "<LENGTH>"
+        ]
+      ],
+      "body": {
+        "utf8": "[\"REDACTED\",\"REDACTED\",\"$undefined\"]"
+      }
+    },
+    {
+      "method": "POST",
+      "target": "/home/library",
+      "headers": [
+        [
+          "host",
+          "www.humblebundle.com"
+        ],
+        [
+          "connection",
+          "keep-alive"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept",
+          "text/x-component"
+        ],
+        [
+          "Next-Action",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ],
+        [
+          "Next-Router-State-Tree",
+          "%5B%22%22%2C%7B%22children%22%3A%5B%22(default)%22%2C%7B%22children%22%3A%5B%22(account)%22%2C%7B%22children%22%3A%5B%22home%22%2C%7B%22children%22%3A%5B%22library%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C4%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C24%5D"
+        ],
+        [
+          "Origin",
+          "https://www.humblebundle.com"
+        ],
+        [
+          "Referer",
+          "https://www.humblebundle.com/home/library"
+        ],
+        [
+          "content-type",
+          "multipart/form-data; boundary=<BOUNDARY>"
+        ],
+        [
+          "accept-language",
+          "*"
+        ],
+        [
+          "sec-fetch-mode",
+          "cors"
+        ],
+        [
+          "accept-encoding",
+          "gzip, deflate"
+        ],
+        [
+          "content-length",
+          "<LENGTH>"
+        ]
+      ],
+      "multipart": [
+        {
+          "name": "_1_requestId",
+          "value": "1"
+        },
+        {
+          "name": "_1_query",
+          "value": ""
+        },
+        {
+          "name": "_1_sort",
+          "value": "mostRecent"
+        },
+        {
+          "name": "_1_cursor",
+          "value": "5"
+        },
+        {
+          "name": "_1_page",
+          "value": "1"
+        },
+        {
+          "name": "_1_limit",
+          "value": "5"
+        },
+        {
+          "name": "_1_hideRevealed",
+          "value": "false"
+        },
+        {
+          "name": "_1_hideExpired",
+          "value": "false"
+        },
+        {
+          "name": "_1_dateExpires",
+          "value": ""
+        },
+        {
+          "name": "0",
+          "value": "[{\"results\":[],\"pagination\":{\"page\":1,\"totalPages\":1,\"totalDocs\":0},\"success\":true},\"$K1\"]"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "target": "/home/library?page=2",
+      "headers": [
+        [
+          "host",
+          "www.humblebundle.com"
+        ],
+        [
+          "connection",
+          "keep-alive"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept",
+          "text/x-component"
+        ],
+        [
+          "Next-Action",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ],
+        [
+          "Next-Router-State-Tree",
+          "%5B%22%22%2C%7B%22children%22%3A%5B%22(default)%22%2C%7B%22children%22%3A%5B%22(account)%22%2C%7B%22children%22%3A%5B%22home%22%2C%7B%22children%22%3A%5B%22library%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C4%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C24%5D"
+        ],
+        [
+          "Origin",
+          "https://www.humblebundle.com"
+        ],
+        [
+          "Referer",
+          "https://www.humblebundle.com/home/library?page=2"
+        ],
+        [
+          "content-type",
+          "multipart/form-data; boundary=<BOUNDARY>"
+        ],
+        [
+          "accept-language",
+          "*"
+        ],
+        [
+          "sec-fetch-mode",
+          "cors"
+        ],
+        [
+          "accept-encoding",
+          "gzip, deflate"
+        ],
+        [
+          "content-length",
+          "<LENGTH>"
+        ]
+      ],
+      "multipart": [
+        {
+          "name": "_1_requestId",
+          "value": "1"
+        },
+        {
+          "name": "_1_query",
+          "value": ""
+        },
+        {
+          "name": "_1_sort",
+          "value": "mostRecent"
+        },
+        {
+          "name": "_1_cursor",
+          "value": "10"
+        },
+        {
+          "name": "_1_page",
+          "value": "2"
+        },
+        {
+          "name": "_1_limit",
+          "value": "5"
+        },
+        {
+          "name": "_1_hideRevealed",
+          "value": "false"
+        },
+        {
+          "name": "_1_hideExpired",
+          "value": "false"
+        },
+        {
+          "name": "_1_dateExpires",
+          "value": ""
+        },
+        {
+          "name": "0",
+          "value": "[{\"results\":[{\"id\":\"fake-gamekey-0001\",\"title\":\"Fake Bundle Portal\",\"entitlements\":{\"keys\":[{\"id\":\"portal2_steam\",\"title\":\"Portal 2\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":\"2026-11-01T00:00:00.000Z\",\"expired\":false,\"redemptionData\":{\"keyFormatted\":\"REDACTED\"}}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0002\",\"title\":\"Fake Bundle Cactus\",\"entitlements\":{\"keys\":[{\"id\":\"cactus_steam\",\"title\":\"Assault Android Cactus+\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0008\",\"title\":\"Fake Bundle Framed\",\"entitlements\":{\"keys\":[{\"id\":\"framed_steam\",\"title\":\"FRAMED Collection\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0003\",\"title\":\"Fake Bundle Other\",\"entitlements\":{\"keys\":[{\"id\":\"other_steam\",\"title\":\"Fake Unowned Game\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0005\",\"title\":\"Fake Bundle Revealed\",\"entitlements\":{\"keys\":[{\"id\":\"revealed_steam\",\"title\":\"Fake Revealed Game\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":\"2026-11-01T00:00:00.000Z\",\"expired\":false,\"redemptionData\":{\"keyFormatted\":\"REDACTED\"}}],\"downloads\":[]}}],\"bundlesCount\":0,\"pagination\":{\"page\":1,\"totalPages\":2,\"totalDocs\":6},\"success\":true},\"$K1\"]"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "target": "/home/library",
+      "headers": [
+        [
+          "host",
+          "www.humblebundle.com"
+        ],
+        [
+          "connection",
+          "keep-alive"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept",
+          "text/x-component"
+        ],
+        [
+          "Next-Action",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ],
+        [
+          "Next-Router-State-Tree",
+          "%5B%22%22%2C%7B%22children%22%3A%5B%22(default)%22%2C%7B%22children%22%3A%5B%22(account)%22%2C%7B%22children%22%3A%5B%22home%22%2C%7B%22children%22%3A%5B%22library%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C4%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C24%5D"
+        ],
+        [
+          "Origin",
+          "https://www.humblebundle.com"
+        ],
+        [
+          "Referer",
+          "https://www.humblebundle.com/home/library"
+        ],
+        [
+          "content-type",
+          "multipart/form-data; boundary=<BOUNDARY>"
+        ],
+        [
+          "accept-language",
+          "*"
+        ],
+        [
+          "sec-fetch-mode",
+          "cors"
+        ],
+        [
+          "accept-encoding",
+          "gzip, deflate"
+        ],
+        [
+          "content-length",
+          "<LENGTH>"
+        ]
+      ],
+      "multipart": [
+        {
+          "name": "_1_requestId",
+          "value": "1"
+        },
+        {
+          "name": "_1_query",
+          "value": ""
+        },
+        {
+          "name": "_1_sort",
+          "value": "mostRecent"
+        },
+        {
+          "name": "_1_cursor",
+          "value": "5"
+        },
+        {
+          "name": "_1_page",
+          "value": "1"
+        },
+        {
+          "name": "_1_limit",
+          "value": "5"
+        },
+        {
+          "name": "_1_hideRevealed",
+          "value": "false"
+        },
+        {
+          "name": "_1_hideExpired",
+          "value": "false"
+        },
+        {
+          "name": "_1_dateExpires",
+          "value": ""
+        },
+        {
+          "name": "0",
+          "value": "[{\"results\":[],\"pagination\":{\"page\":1,\"totalPages\":1,\"totalDocs\":0},\"success\":true},\"$K1\"]"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "target": "/home/library?page=2",
+      "headers": [
+        [
+          "host",
+          "www.humblebundle.com"
+        ],
+        [
+          "connection",
+          "keep-alive"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept",
+          "text/x-component"
+        ],
+        [
+          "Next-Action",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ],
+        [
+          "Next-Router-State-Tree",
+          "%5B%22%22%2C%7B%22children%22%3A%5B%22(default)%22%2C%7B%22children%22%3A%5B%22(account)%22%2C%7B%22children%22%3A%5B%22home%22%2C%7B%22children%22%3A%5B%22library%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C4%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C24%5D"
+        ],
+        [
+          "Origin",
+          "https://www.humblebundle.com"
+        ],
+        [
+          "Referer",
+          "https://www.humblebundle.com/home/library?page=2"
+        ],
+        [
+          "content-type",
+          "multipart/form-data; boundary=<BOUNDARY>"
+        ],
+        [
+          "accept-language",
+          "*"
+        ],
+        [
+          "sec-fetch-mode",
+          "cors"
+        ],
+        [
+          "accept-encoding",
+          "gzip, deflate"
+        ],
+        [
+          "content-length",
+          "<LENGTH>"
+        ]
+      ],
+      "multipart": [
+        {
+          "name": "_1_requestId",
+          "value": "1"
+        },
+        {
+          "name": "_1_query",
+          "value": ""
+        },
+        {
+          "name": "_1_sort",
+          "value": "mostRecent"
+        },
+        {
+          "name": "_1_cursor",
+          "value": "10"
+        },
+        {
+          "name": "_1_page",
+          "value": "2"
+        },
+        {
+          "name": "_1_limit",
+          "value": "5"
+        },
+        {
+          "name": "_1_hideRevealed",
+          "value": "false"
+        },
+        {
+          "name": "_1_hideExpired",
+          "value": "false"
+        },
+        {
+          "name": "_1_dateExpires",
+          "value": ""
+        },
+        {
+          "name": "0",
+          "value": "[{\"results\":[{\"id\":\"fake-gamekey-0001\",\"title\":\"Fake Bundle Portal\",\"entitlements\":{\"keys\":[{\"id\":\"portal2_steam\",\"title\":\"Portal 2\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":\"2026-11-01T00:00:00.000Z\",\"expired\":false,\"redemptionData\":{\"keyFormatted\":\"REDACTED\"}}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0002\",\"title\":\"Fake Bundle Cactus\",\"entitlements\":{\"keys\":[{\"id\":\"cactus_steam\",\"title\":\"Assault Android Cactus+\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0008\",\"title\":\"Fake Bundle Framed\",\"entitlements\":{\"keys\":[{\"id\":\"framed_steam\",\"title\":\"FRAMED Collection\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0003\",\"title\":\"Fake Bundle Other\",\"entitlements\":{\"keys\":[{\"id\":\"other_steam\",\"title\":\"Fake Unowned Game\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0005\",\"title\":\"Fake Bundle Revealed\",\"entitlements\":{\"keys\":[{\"id\":\"revealed_steam\",\"title\":\"Fake Revealed Game\",\"keyIntegrationId\":\"steam\",\"gameKey\":null,\"redeemedAt\":\"2026-11-01T00:00:00.000Z\",\"expired\":false,\"redemptionData\":{\"keyFormatted\":\"REDACTED\"}}],\"downloads\":[]}}],\"bundlesCount\":0,\"pagination\":{\"page\":1,\"totalPages\":2,\"totalDocs\":6},\"success\":true},\"$K1\"]"
+        }
+      ]
+    }
+  ],
+  "stateAfter": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"encryptionDegraded\": false,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"isLoggedIn\": true,\n\t\"expired\": false,\n\t\"userData\": {\n\t\t\"username\": \"REDACTED\"\n\t}\n}"
+    },
+    "store_cache/humble_audit.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:portal2_steam\": [\n\t\t{\n\t\t\t\"event\": \"ownership_settled\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Portal 2\",\n\t\t\t\"platform\": \"steam\"\n\t\t},\n\t\t{\n\t\t\t\"event\": \"undo_redeemed\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Portal 2\",\n\t\t\t\"platform\": \"steam\"\n\t\t}\n\t],\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:portal2_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0005:revealed_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0003:other_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake-gamekey-0005:revealed_steam\": [\n\t\t{\n\t\t\t\"event\": \"mark_redeemed\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Fake Revealed Game\",\n\t\t\t\"platform\": \"steam\"\n\t\t}\n\t],\n\t\"fake-gamekey-0003:other_steam\": [\n\t\t{\n\t\t\t\"event\": \"reveal_attempt\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Fake Unowned Game\",\n\t\t\t\"platform\": \"steam\"\n\t\t},\n\t\t{\n\t\t\t\"event\": \"reveal_success\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Fake Unowned Game\",\n\t\t\t\"platform\": \"steam\",\n\t\t\t\"outcome\": \"ok\"\n\t\t}\n\t]\n}"
+    },
+    "store_cache/humble_gifted_at.json": {
+      "utf8": "{\n\t\"framed_steam\": {\n\t\t\"giftedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"framed_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_library.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001\": {\n\t\t\"gamekey\": \"fake-gamekey-0001\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0001\",\n\t\t\t\t\"machineName\": \"portal2_steam\",\n\t\t\t\t\"state\": \"REVEALED\",\n\t\t\t\t\"title\": \"Portal 2\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Portal\",\n\t\t\t\t\"steamAppId\": \"620\",\n\t\t\t\t\"ownedElsewhere\": true,\n\t\t\t\t\"matchConfidence\": \"exact\",\n\t\t\t\t\"steamAppIdResolved\": true,\n\t\t\t\t\"keyindex\": \"steam\",\n\t\t\t\t\"revealedKeyValue\": \"REDACTED\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": true\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001\": \"Tue Nov 24 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0002\": \"Tue Nov 24 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0008\": \"Tue Nov 24 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0003\": \"Tue Nov 24 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0005\": \"Tue Nov 24 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0006\": \"Tue Nov 24 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake-gamekey-0002\": {\n\t\t\"gamekey\": \"fake-gamekey-0002\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0002\",\n\t\t\t\t\"machineName\": \"cactus_steam\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Assault Android Cactus+\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Cactus\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"steam\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0008\": {\n\t\t\"gamekey\": \"fake-gamekey-0008\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0008\",\n\t\t\t\t\"machineName\": \"framed_steam\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"FRAMED Collection\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Framed\",\n\t\t\t\t\"ownedElsewhere\": true,\n\t\t\t\t\"matchConfidence\": \"fuzzy\",\n\t\t\t\t\"keyindex\": \"steam\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0003\": {\n\t\t\"gamekey\": \"fake-gamekey-0003\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0003\",\n\t\t\t\t\"machineName\": \"other_steam\",\n\t\t\t\t\"state\": \"REVEALED\",\n\t\t\t\t\"title\": \"Fake Unowned Game\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Other\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"steam\",\n\t\t\t\t\"revealedKeyValue\": \"REDACTED\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": true\n\t},\n\t\"fake-gamekey-0005\": {\n\t\t\"gamekey\": \"fake-gamekey-0005\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0005\",\n\t\t\t\t\"machineName\": \"revealed_steam\",\n\t\t\t\t\"state\": \"REDEEMED\",\n\t\t\t\t\"title\": \"Fake Revealed Game\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Revealed\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"steam\",\n\t\t\t\t\"revealedKeyValue\": \"REDACTED\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": true,\n\t\t\"freezeEligible\": true\n\t},\n\t\"fake-gamekey-0006\": {\n\t\t\"gamekey\": \"fake-gamekey-0006\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0006\",\n\t\t\t\t\"machineName\": \"expiring_steam\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Expiring Game\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": \"2027-03-04T00:00:00.000Z\",\n\t\t\t\t\"origin\": \"Fake Bundle Expiring\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t}\n}"
+    },
+    "store_cache/humble_local_redeemed.json": {
+      "utf8": "{\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0005:revealed_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake-gamekey-0005:revealed_steam\": {\n\t\t\"redeemedAt\": 1795521600000,\n\t\t\"source\": \"user\"\n\t}\n}"
+    },
+    "store_cache/humble_notified_expiration.json": {
+      "utf8": "{\n\t\"fake-gamekey-0006:expiring_steam\": {\n\t\t\"expiration\": \"2027-03-04T00:00:00.000Z\"\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0006:expiring_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_ownership_override.json": {
+      "utf8": "{\n\t\"cactus_steam\": {\n\t\t\"overriddenAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"cactus_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_revealed.json": {
+      "utf8": "{\n\t\"other_steam\": {\n\t\t\"revealedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"other_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_settle_declined.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:portal2_steam\": {\n\t\t\"declinedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:portal2_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_steam_appid.json": {
+      "utf8": "{\n\t\"portal 2\": {\n\t\t\"appId\": \"620\",\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"portal 2\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"assault android cactus\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"framed collection\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake unowned game\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake revealed game\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"assault android cactus\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"framed collection\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake unowned game\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake revealed game\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t}\n}"
+    },
+    "store_cache/humble_sync.json": {
+      "utf8": "{\n\t\"state\": {\n\t\t\"syncedAt\": 1795521660100,\n\t\t\"syncError\": \"none\",\n\t\t\"classifierVersion\": 7\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"state\": \"Tue Nov 24 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    }
+  },
+  "result": {
+    "advancedMs": 60000,
+    "settled": true,
+    "files": {
+      "humble_store/config.json": {
+        "before": {
+          "utf8": "{\n\t\"encryptionDegraded\": false,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"isLoggedIn\": true,\n\t\"expired\": false,\n\t\"userData\": {\n\t\t\"username\": \"REDACTED\"\n\t}\n}"
+        },
+        "after": {
+          "utf8": "{\n\t\"encryptionDegraded\": false,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"isLoggedIn\": true,\n\t\"expired\": false,\n\t\"userData\": {\n\t\t\"username\": \"REDACTED\"\n\t}\n}"
+        },
+        "identical": true
+      },
+      "store_cache/humble_audit.json": {
+        "before": {
+          "utf8": "{\n\t\"fake-gamekey-0001:portal2_steam\": [\n\t\t{\n\t\t\t\"event\": \"ownership_settled\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Portal 2\",\n\t\t\t\"platform\": \"steam\"\n\t\t},\n\t\t{\n\t\t\t\"event\": \"undo_redeemed\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Portal 2\",\n\t\t\t\"platform\": \"steam\"\n\t\t}\n\t],\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:portal2_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0005:revealed_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0003:other_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake-gamekey-0005:revealed_steam\": [\n\t\t{\n\t\t\t\"event\": \"mark_redeemed\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Fake Revealed Game\",\n\t\t\t\"platform\": \"steam\"\n\t\t}\n\t],\n\t\"fake-gamekey-0003:other_steam\": [\n\t\t{\n\t\t\t\"event\": \"reveal_attempt\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Fake Unowned Game\",\n\t\t\t\"platform\": \"steam\"\n\t\t},\n\t\t{\n\t\t\t\"event\": \"reveal_success\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Fake Unowned Game\",\n\t\t\t\"platform\": \"steam\",\n\t\t\t\"outcome\": \"ok\"\n\t\t}\n\t]\n}"
+        },
+        "after": {
+          "utf8": "{\n\t\"fake-gamekey-0001:portal2_steam\": [\n\t\t{\n\t\t\t\"event\": \"ownership_settled\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Portal 2\",\n\t\t\t\"platform\": \"steam\"\n\t\t},\n\t\t{\n\t\t\t\"event\": \"undo_redeemed\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Portal 2\",\n\t\t\t\"platform\": \"steam\"\n\t\t}\n\t],\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:portal2_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0005:revealed_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0003:other_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake-gamekey-0005:revealed_steam\": [\n\t\t{\n\t\t\t\"event\": \"mark_redeemed\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Fake Revealed Game\",\n\t\t\t\"platform\": \"steam\"\n\t\t}\n\t],\n\t\"fake-gamekey-0003:other_steam\": [\n\t\t{\n\t\t\t\"event\": \"reveal_attempt\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Fake Unowned Game\",\n\t\t\t\"platform\": \"steam\"\n\t\t},\n\t\t{\n\t\t\t\"event\": \"reveal_success\",\n\t\t\t\"at\": 1795521600000,\n\t\t\t\"title\": \"Fake Unowned Game\",\n\t\t\t\"platform\": \"steam\",\n\t\t\t\"outcome\": \"ok\"\n\t\t}\n\t]\n}"
+        },
+        "identical": true
+      },
+      "store_cache/humble_gifted_at.json": {
+        "before": {
+          "utf8": "{\n\t\"framed_steam\": {\n\t\t\"giftedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"framed_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+        },
+        "after": {
+          "utf8": "{\n\t\"framed_steam\": {\n\t\t\"giftedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"framed_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+        },
+        "identical": true
+      },
+      "store_cache/humble_library.json": {
+        "before": {
+          "utf8": "{\n\t\"fake-gamekey-0001\": {\n\t\t\"gamekey\": \"fake-gamekey-0001\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0001\",\n\t\t\t\t\"machineName\": \"portal2_steam\",\n\t\t\t\t\"state\": \"REVEALED\",\n\t\t\t\t\"title\": \"Portal 2\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Portal\",\n\t\t\t\t\"steamAppId\": \"620\",\n\t\t\t\t\"ownedElsewhere\": true,\n\t\t\t\t\"matchConfidence\": \"exact\",\n\t\t\t\t\"steamAppIdResolved\": true,\n\t\t\t\t\"keyindex\": \"steam\",\n\t\t\t\t\"revealedKeyValue\": \"REDACTED\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": true\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0002\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0008\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0003\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0005\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0006\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake-gamekey-0002\": {\n\t\t\"gamekey\": \"fake-gamekey-0002\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0002\",\n\t\t\t\t\"machineName\": \"cactus_steam\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Assault Android Cactus+\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Cactus\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"steam\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0008\": {\n\t\t\"gamekey\": \"fake-gamekey-0008\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0008\",\n\t\t\t\t\"machineName\": \"framed_steam\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"FRAMED Collection\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Framed\",\n\t\t\t\t\"ownedElsewhere\": true,\n\t\t\t\t\"matchConfidence\": \"fuzzy\",\n\t\t\t\t\"keyindex\": \"steam\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0003\": {\n\t\t\"gamekey\": \"fake-gamekey-0003\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0003\",\n\t\t\t\t\"machineName\": \"other_steam\",\n\t\t\t\t\"state\": \"REVEALED\",\n\t\t\t\t\"title\": \"Fake Unowned Game\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Other\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"steam\",\n\t\t\t\t\"revealedKeyValue\": \"REDACTED\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": true\n\t},\n\t\"fake-gamekey-0005\": {\n\t\t\"gamekey\": \"fake-gamekey-0005\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0005\",\n\t\t\t\t\"machineName\": \"revealed_steam\",\n\t\t\t\t\"state\": \"REDEEMED\",\n\t\t\t\t\"title\": \"Fake Revealed Game\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Revealed\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"steam\",\n\t\t\t\t\"revealedKeyValue\": \"REDACTED\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": true,\n\t\t\"freezeEligible\": true\n\t},\n\t\"fake-gamekey-0006\": {\n\t\t\"gamekey\": \"fake-gamekey-0006\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0006\",\n\t\t\t\t\"machineName\": \"expiring_steam\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Expiring Game\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": \"2027-03-04T00:00:00.000Z\",\n\t\t\t\t\"origin\": \"Fake Bundle Expiring\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t}\n}"
+        },
+        "after": {
+          "utf8": "{\n\t\"fake-gamekey-0001\": {\n\t\t\"gamekey\": \"fake-gamekey-0001\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0001\",\n\t\t\t\t\"machineName\": \"portal2_steam\",\n\t\t\t\t\"state\": \"REVEALED\",\n\t\t\t\t\"title\": \"Portal 2\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Portal\",\n\t\t\t\t\"steamAppId\": \"620\",\n\t\t\t\t\"ownedElsewhere\": true,\n\t\t\t\t\"matchConfidence\": \"exact\",\n\t\t\t\t\"steamAppIdResolved\": true,\n\t\t\t\t\"keyindex\": \"steam\",\n\t\t\t\t\"revealedKeyValue\": \"REDACTED\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": true\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001\": \"Tue Nov 24 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0002\": \"Tue Nov 24 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0008\": \"Tue Nov 24 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0003\": \"Tue Nov 24 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0005\": \"Tue Nov 24 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0006\": \"Tue Nov 24 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake-gamekey-0002\": {\n\t\t\"gamekey\": \"fake-gamekey-0002\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0002\",\n\t\t\t\t\"machineName\": \"cactus_steam\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Assault Android Cactus+\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Cactus\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"steam\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0008\": {\n\t\t\"gamekey\": \"fake-gamekey-0008\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0008\",\n\t\t\t\t\"machineName\": \"framed_steam\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"FRAMED Collection\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Framed\",\n\t\t\t\t\"ownedElsewhere\": true,\n\t\t\t\t\"matchConfidence\": \"fuzzy\",\n\t\t\t\t\"keyindex\": \"steam\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0003\": {\n\t\t\"gamekey\": \"fake-gamekey-0003\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0003\",\n\t\t\t\t\"machineName\": \"other_steam\",\n\t\t\t\t\"state\": \"REVEALED\",\n\t\t\t\t\"title\": \"Fake Unowned Game\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Other\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"steam\",\n\t\t\t\t\"revealedKeyValue\": \"REDACTED\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": true\n\t},\n\t\"fake-gamekey-0005\": {\n\t\t\"gamekey\": \"fake-gamekey-0005\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0005\",\n\t\t\t\t\"machineName\": \"revealed_steam\",\n\t\t\t\t\"state\": \"REDEEMED\",\n\t\t\t\t\"title\": \"Fake Revealed Game\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Revealed\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"steam\",\n\t\t\t\t\"revealedKeyValue\": \"REDACTED\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": true,\n\t\t\"freezeEligible\": true\n\t},\n\t\"fake-gamekey-0006\": {\n\t\t\"gamekey\": \"fake-gamekey-0006\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0006\",\n\t\t\t\t\"machineName\": \"expiring_steam\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Expiring Game\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": \"2027-03-04T00:00:00.000Z\",\n\t\t\t\t\"origin\": \"Fake Bundle Expiring\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t}\n}"
+        },
+        "identical": false
+      },
+      "store_cache/humble_local_redeemed.json": {
+        "before": {
+          "utf8": "{\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0005:revealed_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake-gamekey-0005:revealed_steam\": {\n\t\t\"redeemedAt\": 1795521600000,\n\t\t\"source\": \"user\"\n\t}\n}"
+        },
+        "after": {
+          "utf8": "{\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0005:revealed_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake-gamekey-0005:revealed_steam\": {\n\t\t\"redeemedAt\": 1795521600000,\n\t\t\"source\": \"user\"\n\t}\n}"
+        },
+        "identical": true
+      },
+      "store_cache/humble_notified_expiration.json": {
+        "before": {
+          "utf8": "{\n\t\"fake-gamekey-0006:expiring_steam\": {\n\t\t\"expiration\": \"2027-03-04T00:00:00.000Z\"\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0006:expiring_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+        },
+        "after": {
+          "utf8": "{\n\t\"fake-gamekey-0006:expiring_steam\": {\n\t\t\"expiration\": \"2027-03-04T00:00:00.000Z\"\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0006:expiring_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+        },
+        "identical": true
+      },
+      "store_cache/humble_ownership_override.json": {
+        "before": {
+          "utf8": "{\n\t\"cactus_steam\": {\n\t\t\"overriddenAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"cactus_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+        },
+        "after": {
+          "utf8": "{\n\t\"cactus_steam\": {\n\t\t\"overriddenAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"cactus_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+        },
+        "identical": true
+      },
+      "store_cache/humble_revealed.json": {
+        "before": {
+          "utf8": "{\n\t\"other_steam\": {\n\t\t\"revealedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"other_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+        },
+        "after": {
+          "utf8": "{\n\t\"other_steam\": {\n\t\t\"revealedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"other_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+        },
+        "identical": true
+      },
+      "store_cache/humble_settle_declined.json": {
+        "before": {
+          "utf8": "{\n\t\"fake-gamekey-0001:portal2_steam\": {\n\t\t\"declinedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:portal2_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+        },
+        "after": {
+          "utf8": "{\n\t\"fake-gamekey-0001:portal2_steam\": {\n\t\t\"declinedAt\": 1795521600000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:portal2_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+        },
+        "identical": true
+      },
+      "store_cache/humble_steam_appid.json": {
+        "before": {
+          "utf8": "{\n\t\"portal 2\": {\n\t\t\"appId\": \"620\",\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"portal 2\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"assault android cactus\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"framed collection\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake unowned game\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake revealed game\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"assault android cactus\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"framed collection\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake unowned game\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake revealed game\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t}\n}"
+        },
+        "after": {
+          "utf8": "{\n\t\"portal 2\": {\n\t\t\"appId\": \"620\",\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"portal 2\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"assault android cactus\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"framed collection\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake unowned game\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake revealed game\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"assault android cactus\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"framed collection\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake unowned game\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake revealed game\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t}\n}"
+        },
+        "identical": true
+      },
+      "store_cache/humble_sync.json": {
+        "before": {
+          "utf8": "{\n\t\"state\": {\n\t\t\"syncedAt\": 1795521600100,\n\t\t\"syncError\": \"none\",\n\t\t\"classifierVersion\": 7\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"state\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+        },
+        "after": {
+          "utf8": "{\n\t\"state\": {\n\t\t\"syncedAt\": 1795521660100,\n\t\t\"syncError\": \"none\",\n\t\t\"classifierVersion\": 7\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"state\": \"Tue Nov 24 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+        },
+        "identical": false
+      }
+    },
+    "changed": [
+      "store_cache/humble_library.json",
+      "store_cache/humble_sync.json"
+    ]
+  }
+}

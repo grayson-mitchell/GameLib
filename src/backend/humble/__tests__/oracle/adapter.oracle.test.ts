@@ -25,8 +25,9 @@
  * `GAMELIB_WRITE_HUMBLE_GOLDEN=1` writes the goldens and recordings; the default compares and
  * replays offline.
  */
-import { getLibraryOrders, getSessionStatus } from '../../adapter'
 import {
+  getLibraryOrders,
+  getSessionStatus,
   libraryItemToOrderDetail,
   revealKey as adapterRevealKey
 } from '../../adapter'

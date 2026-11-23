@@ -1,0 +1,8 @@
+{
+  "rustOnly": "FND-06 copy-aside, 85 D-05",
+  "reason": "The TypeScript test store root does not implement copy-aside, so there is no TS behaviour to record: the Rust store owner moves a file it cannot parse aside and starts empty (FND-06), which 85 D-05 specifies.",
+  "corruptInputs": {
+    "store_cache/humble_library.json": "{\"fake-gamekey-0001\": {\"keys\": [",
+    "humble_store/config.json": "\u0000\u0000not json"
+  }
+}
