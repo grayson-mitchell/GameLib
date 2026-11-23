@@ -8,6 +8,7 @@
 //! HOME, the roots are injected, and the `PATH` is the case's own. A count floor lives in this file
 //! next to each replay, so editing the JSON alone cannot lower the bar, and an empty list fails.
 //! The replays are POSIX only, as the TS oracle's are (`describeSkipOnWindows`).
+#![cfg(unix)]
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

@@ -8,6 +8,7 @@
 //! to the golden's `outcome` after the profile roots are turned back into placeholders. A count
 //! floor lives here next to the replay, so editing the JSON alone cannot lower the bar, and an empty
 //! case list fails. The replays are POSIX only, as the TS oracle's are (`describeSkipOnWindows`).
+#![cfg(unix)]
 
 use std::future::Future;
 use std::path::{Path, PathBuf};
