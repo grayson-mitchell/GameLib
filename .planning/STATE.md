@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-24-PLAN.md
-last_updated: "2026-11-23T06:27:38.613Z"
+stopped_at: Completed 87-25-PLAN.md
+last_updated: "2026-11-23T06:45:51.531Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 7dfa98e16dca30fa35267b1a8138905b7730ba1b
+state_head: ea1e6dce730f9e8923e69fce9c68e4025f9b8ef7
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 25 of 59
+Plan: 26 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -434,6 +434,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P22 | 25 min | 2 tasks | 22 files |
 | Phase 87 P23 | 35min | 2 tasks | 11 files |
 | Phase 87 P24 | 30min | 2 tasks | 21 files |
+| Phase 87 P25 | 17 min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -893,6 +894,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-23: discovery takes a DiscoveryHost (roots, PATH, settings, Steam-library answer) from the shell; no applications root exists because the TS reads no /Applications of its own
 - [Phase 87]: 87-23: default_wine_from_path takes two probes (executable for wine, exists for the wineserver); plist (already locked via tauri) reads bundle plists
 - [Phase 87]: 87-24: the wine_valid rustInvoke arm keeps the six declared installation keys and answers false for a non-installation (legacy key, Windows {}), the renderer's native wine.isValidVersion stays strict; Launcher keeps a deps-bound validWine member; setupEnvVars, setupWineEnvVars and createCommandRunner are scheduled twins (D-22 deviation) pinned by the wineCore oracle goldens
+- [Phase 87]: 87-25: EngineCtx.default_wine and EngineCtx.crossover_bin_dir hooks keep gamelib-engine independent of gamelib-wine; tool settings are generic over a ToolSettingsDeps seam whose live registry and bottle flight arrive with 87-38/87-39
 
 ### Pending Todos
 
@@ -1172,8 +1174,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T06:27:36.277Z
-Stopped at: Completed 87-24-PLAN.md
+Last session: 2026-11-23T06:45:49.505Z
+Stopped at: Completed 87-25-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
