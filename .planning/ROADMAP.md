@@ -651,7 +651,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 47/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
+**Plans:** 48/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
 
 Plans:
 **Wave 1**
@@ -754,7 +754,7 @@ Plans:
 - [x] 87-47-PLAN.md — The pinned fallback engine in Rust (download, verify, extract, prune)
 
 **Wave 27** *(blocked on Wave 26 completion)*
-- [ ] 87-48-PLAN.md — Bounded Rust boot sweep, moved from the sidecar in one commit
+- [x] 87-48-PLAN.md — Bounded Rust boot sweep, moved from the sidecar in one commit
 
 **Wave 28** *(blocked on Wave 27 completion)*
 - [ ] 87-49-PLAN.md — Engine state and notices in Rust; `dismissEngineNotice` native

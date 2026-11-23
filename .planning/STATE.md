@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-47-PLAN.md
-last_updated: "2026-11-23T15:25:16.035Z"
+stopped_at: Completed 87-48-PLAN.md
+last_updated: "2026-11-23T15:38:59.319Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: f8b2b0431c7772602ec37551ef7670ae223a3e23
+state_head: ab8c5d1f0a9d6628a0b45cdbdeb11de67f5b415c
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 48 of 59
+Plan: 49 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -457,6 +457,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P45 | 17 min | 2 tasks | 9 files |
 | Phase 87 P46 | 10 min | 2 tasks | 5 files |
 | Phase 87 P47 | n/a | 2 tasks | 11 files |
+| Phase 87 P48 | not recorded | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -969,6 +970,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-45: engine_decide_launch takes only the stored override and the process monitor's phase from the caller; the pin table is always the shared one and the bottle's marker is read in Rust, so a caller cannot name an engine the shared table does not ship (T-87-46)
 - [Phase 87]: 87-46: decision::offline re-exports the gate (stays in offline.rs); the gate is not composed into a production fn here, 87-50 does that
 - [Phase 87]: 87-47: the fallback engine ops take a shipped pin id only; tar runs without a cancel token (as the TS), a quit ends it via the shutdown token; the sha256 is re-read from disk after the size check
+- [Phase 87]: 87-48: the engine temp sweep lists .tmp-* first and reads the in-flight counters after, so a Rust boot sweep beside the app cannot delete a fresh install's temp dir; the shell logs a word and a count only (no shell EngineLog yet)
 
 ### Pending Todos
 
@@ -1249,8 +1251,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T15:25:13.654Z
-Stopped at: Completed 87-47-PLAN.md
+Last session: 2026-11-23T15:38:56.670Z
+Stopped at: Completed 87-48-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
