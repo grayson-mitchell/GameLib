@@ -1026,6 +1026,8 @@ Plans:
 - [ ] 94-32-PLAN.md — Run the live macOS gate (signed base -> signed Phase 94); delete the reveal fallback only if the Rust reveal passed (D-26)
 
 **Cross-cutting constraints:** <!-- gsd:generated -->
+- 82 D-05: every golden slice carries `MANIFEST.json` `{count, floor}` and every case runs on a fresh createFakeHomeProfile()
+
 - Memory-note shape: any offline step turns the network off only for the action (off, act, on, report)
 - Two-profile rule: every golden runs on an isolated createFakeHomeProfile(); no case reads the real HOME
 - D-02: rebase the worktree onto main before each wave and re-run `pnpm gen:ipc-contract`; 94's STATE stays worktree-local until the merge
