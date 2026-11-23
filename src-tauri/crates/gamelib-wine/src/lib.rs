@@ -33,6 +33,7 @@ pub const OPS: &[&str] = &[
     "wine_manager_refresh",
     "wine_manager_remove",
     "wine_releases_info_ready",
+    "wine_run_command",
     "wine_runtime_download",
     "wine_runtime_is_installed",
     "wine_valid",
@@ -91,6 +92,12 @@ async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String>
             manager::releases::update_lists_if_outdated(ctx, &info).await;
             Ok(Value::Null)
         }
+        "wine_run_command" => {
+            let (command, host) = wine_run_command_args(op, args)?;
+            Ok(wine_cmd::command::run_wine_command(ctx, command, &host)
+                .await
+                .to_json())
+        }
         "wine_valid" => {
             let (wine, host) = wine_valid_args(op, args)?;
             Ok(Value::Bool(wine_cmd::valid::valid_wine(
@@ -134,6 +141,27 @@ fn wine_valid_args(
         Some(host) => serde_json::from_value(host.clone()).map_err(|_| bad())?,
     };
     Ok((wine, host))
+}
+
+/// `wine_run_command`'s arguments: the [`wine_cmd::command::WineCommandArgs`] object and,
+/// optionally, the [`wine_cmd::WineHost`] facts the shell read (the process environment, the default
+/// settings). A bad shape is a fixed `<op>:bad-args`.
+fn wine_run_command_args(
+    op: &str,
+    args: &[Value],
+) -> Result<(wine_cmd::command::WineCommandArgs, wine_cmd::WineHost), String> {
+    let bad = || format!("{op}:bad-args");
+    let (command, host) = match args {
+        [command @ Value::Object(_)] => (command, None),
+        [command @ Value::Object(_), host] => (command, Some(host)),
+        _ => return Err(bad()),
+    };
+    let command = serde_json::from_value(command.clone()).map_err(|_| bad())?;
+    let host = match host {
+        None | Some(Value::Null) => wine_cmd::WineHost::default(),
+        Some(host) => serde_json::from_value(host.clone()).map_err(|_| bad())?,
+    };
+    Ok((command, host))
 }
 
 /// The one string argument of a runtime op: exactly one string that is a [`runtimes::valid_name`].

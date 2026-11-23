@@ -13,10 +13,13 @@
 //! (D-06); 87-24 serves them to the renderer and switches the TS callers. A launched game's wine is
 //! not spawned here (Phase 88).
 
+pub mod command;
+pub mod env;
+pub mod prefix;
 pub mod valid;
 
 use serde::Deserialize;
-use std::collections::BTreeMap;
+use std::path::{Component, Path, PathBuf};
 
 /// The wine flavour of an installation (`WineInstallation.type`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -52,52 +55,87 @@ pub struct WineHost {
     /// The process environment (`process.env`): the base of a wine command's environment, the six
     /// keys the builders read and the `PATH` the umu lookup scans.
     #[serde(default)]
-    pub env: EnvSnapshot,
+    pub env: env::EnvSnapshot,
     /// The Darwin kernel release (`os.release()` on macOS, e.g. `24.1.0`); `validWine` compares its
     /// major to 14 for a toolkit. `None` is "not recent enough", as on any other OS.
     #[serde(default)]
     pub darwin_release: Option<String>,
+    /// What `runWineCommand` runs with when it is given no settings (`getDefaultSettings()`).
+    #[serde(default)]
+    pub default_settings: Option<env::GameSettingsView>,
+    /// A cancel the caller owns: it ends the running wine child and the wineserver wait.
+    #[serde(skip)]
+    pub cancel: Option<tokio_util::sync::CancellationToken>,
 }
 
-/// A snapshot of the process environment.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
-#[serde(transparent)]
-pub struct EnvSnapshot(BTreeMap<String, String>);
-
-impl EnvSnapshot {
-    pub fn new(vars: BTreeMap<String, String>) -> EnvSnapshot {
-        EnvSnapshot(vars)
+/// `path.join` as Node does on POSIX: the parts joined, then normalised (duplicate separators and
+/// `.` dropped, `..` resolved against the part before it). An empty result is `.`.
+pub(crate) fn js_join(parts: &[&str]) -> PathBuf {
+    let mut joined = PathBuf::new();
+    for part in parts.iter().filter(|p| !p.is_empty()) {
+        joined.push(part);
     }
-
-    pub fn from_pairs<K: Into<String>, V: Into<String>>(
-        pairs: impl IntoIterator<Item = (K, V)>,
-    ) -> EnvSnapshot {
-        EnvSnapshot(
-            pairs
-                .into_iter()
-                .map(|(k, v)| (k.into(), v.into()))
-                .collect(),
-        )
+    let rooted = joined.has_root();
+    let mut out: Vec<Component> = Vec::new();
+    for component in joined.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => match out.last() {
+                Some(Component::Normal(_)) => {
+                    out.pop();
+                }
+                Some(Component::RootDir | Component::Prefix(_)) => {}
+                _ if rooted => {}
+                _ => out.push(component),
+            },
+            other => out.push(other),
+        }
     }
-
-    pub fn vars(&self) -> &BTreeMap<String, String> {
-        &self.0
+    let result: PathBuf = out.iter().collect();
+    if result.as_os_str().is_empty() {
+        PathBuf::from(".")
+    } else {
+        result
     }
+}
 
-    /// The value of `key`, `None` when unset.
-    pub fn get(&self, key: &str) -> Option<&str> {
-        self.0.get(key).map(String::as_str)
-    }
-
-    /// The value of `key` when it is set and not empty: a JS truthiness test of `process.env.KEY`.
-    pub fn truthy(&self, key: &str) -> Option<&str> {
-        self.get(key).filter(|v| !v.is_empty())
+/// `path.dirname`: the parent, `.` for a bare name and the root for the root.
+pub(crate) fn js_dirname(path: &str) -> String {
+    match Path::new(path).parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent.to_string_lossy().into_owned(),
+        Some(_) => ".".to_string(),
+        None => {
+            if path.is_empty() {
+                ".".to_string()
+            } else {
+                path.to_string()
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn js_join_normalises_like_node() {
+        assert_eq!(js_join(&["/a/b/", "c"]), PathBuf::from("/a/b/c"));
+        assert_eq!(js_join(&["/a", "./b", "../c"]), PathBuf::from("/a/c"));
+        assert_eq!(js_join(&["/a", "..", ".."]), PathBuf::from("/"));
+        assert_eq!(js_join(&["", "dosdevices"]), PathBuf::from("dosdevices"));
+        assert_eq!(js_join(&["a", ".."]), PathBuf::from("."));
+        assert_eq!(js_join(&["..", "a"]), PathBuf::from("../a"));
+        assert_eq!(js_join(&[]), PathBuf::from("."));
+    }
+
+    #[test]
+    fn js_dirname_matches_node() {
+        assert_eq!(js_dirname("/a/b/proton"), "/a/b");
+        assert_eq!(js_dirname("proton"), ".");
+        assert_eq!(js_dirname("/"), "/");
+        assert_eq!(js_dirname("/proton"), "/");
+    }
 
     #[test]
     fn a_wine_installation_rejects_unknown_fields_and_types() {
@@ -107,14 +145,5 @@ mod tests {
         assert!(serde_json::from_value::<WineInstallation>(extra).is_err());
         let kind = serde_json::json!({"bin": "/b", "name": "n", "type": "lutris"});
         assert!(serde_json::from_value::<WineInstallation>(kind).is_err());
-    }
-
-    #[test]
-    fn env_truthy_is_javascript_truthiness() {
-        let env = EnvSnapshot::from_pairs([("A", ""), ("B", "x")]);
-        assert_eq!(env.get("A"), Some(""));
-        assert_eq!(env.truthy("A"), None);
-        assert_eq!(env.truthy("B"), Some("x"));
-        assert_eq!(env.truthy("C"), None);
     }
 }
