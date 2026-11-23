@@ -17,7 +17,7 @@ use crate::ctx::InfoCtx;
 use crate::js::{encode_uri_component, index, opt_prop, prop, to_js_text, truthy};
 
 use super::regexes;
-use super::{get_data, Thrown};
+use super::{get_data, is_numeric_id, Thrown};
 
 const API: &str = "https://www.applegamingwiki.com/w/api.php";
 
@@ -108,10 +108,12 @@ async fn page_id(ctx: &InfoCtx, title: &str) -> Result<Option<Value>, Thrown> {
 
 /// `getWikiText(id)`: the page's wikitext (`data.parse.wikitext['*']`), `None` when the page has none.
 async fn wiki_text(ctx: &InfoCtx, id: &Value) -> Result<Option<Value>, Thrown> {
-    let url = format!(
-        "{API}?action=parse&format=json&pageid={}&redirects=true&prop=wikitext",
-        to_js_text(id)
-    );
+    // WR-03: a page id is digits; anything else is not put into the request.
+    let id = to_js_text(id);
+    if !is_numeric_id(&id) {
+        return Ok(None);
+    }
+    let url = format!("{API}?action=parse&format=json&pageid={id}&redirects=true&prop=wikitext");
     let data = get_data(ctx, url, BROWSER_USER_AGENT).await?;
     let wikitext = prop(prop(Some(&data), "parse")?, "wikitext")?;
     if !wikitext.is_some_and(truthy) {

@@ -672,3 +672,49 @@ async fn the_deck_answers_none_unless_the_category_is_a_finite_number() {
         );
     }
 }
+
+/// WR-03: a Steam id or page id that is not digits is never put into a request URL, and a GOG id or
+/// store name is encoded, so none of them can rewrite the path or the query.
+#[tokio::test]
+async fn ids_that_are_not_digits_never_reach_a_request_url() {
+    let quiet = run(vec![]);
+    for id in ["12/../x", "1?a=b", "1#frag", "1&b=2", "abc", " 1"] {
+        assert_eq!(protondb::get_info(&quiet.ctx, Some(id)).await, None, "{id}");
+        assert_eq!(deck::get_comp(&quiet.ctx, Some(id)).await, None, "{id}");
+    }
+    assert!(urls(&quiet).is_empty(), "{:?}", urls(&quiet));
+
+    // A page id from the search answer that is not digits is not asked for, on either wiki.
+    let bad_page = ok(json!({ "query": { "search": [ { "pageid": "5&redirects=false" } ] } }));
+    let pcgw_run = run(vec![("list=search", bad_page.clone())]);
+    let got = pcgw::get_info(&pcgw_run.ctx, "Game", None).await;
+    assert_eq!(got.outcome, Outcome::NotFound);
+    assert!(urls(&pcgw_run).iter().all(|u| !u.contains("action=parse")));
+    let agw_run = run(vec![("list=search", bad_page)]);
+    agw::get_info(&agw_run.ctx, "Game").await;
+    assert!(urls(&agw_run).iter().all(|u| !u.contains("action=parse")));
+}
+
+#[tokio::test]
+async fn a_gog_id_and_a_store_name_are_encoded_into_their_urls() {
+    let cargo = run(vec![("action=cargoquery", ok(json!({ "cargoquery": [] })))]);
+    pcgw::get_info(&cargo.ctx, "Game", Some("1&format=xml#x")).await;
+    assert!(
+        urls(&cargo)[0].contains("HOLDS%201%26format%3Dxml%23x&format=json"),
+        "{:?}",
+        urls(&cargo)
+    );
+
+    let gog = run(vec![("gamesdb.gog.com", ok(json!({})))]);
+    gamelib_info::wiki::gog_ctx::gamesdb_release(&gog.ctx, "epic", "a/b?c").await;
+    assert_eq!(
+        urls(&gog),
+        ["https://gamesdb.gog.com/platforms/epic/external_releases/a%2Fb%3Fc"]
+    );
+    let store = run(vec![("api.gog.com", ok(json!({})))]);
+    let _ = gamelib_info::wiki::gog_ctx::gog_store_url(&store.ctx, "x/../y?z").await;
+    assert_eq!(
+        urls(&store),
+        ["https://api.gog.com/v2/games/x%2F..%2Fy%3Fz?locale=en-US"]
+    );
+}

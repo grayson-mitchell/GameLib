@@ -110,30 +110,32 @@ fn check_grid_args(op: &str, args: &GridArgs) -> Result<(), String> {
 
 /// The stored key, or `None` when there is none or it cannot be read (TS `getApiKey` was total: a
 /// failed read was the same as no key).
-fn stored_key(ctx: &InfoCtx, op: &str) -> Option<String> {
+async fn stored_key(ctx: &InfoCtx, op: &str) -> Option<String> {
+    // The Keychain read runs on the blocking pool, so the op can still answer `<op>:shutdown` (WR-04).
     ctx.sgdb_key
-        .get(ctx, op)
+        .get_async(ctx, op)
+        .await
         .ok()
         .flatten()
         .filter(|key| !key.is_empty())
 }
 
 /// `{ hasKey }` as the renderer's boolean: whether a key is stored.
-pub fn has_api_key(ctx: &InfoCtx, _args: HasKeyArgs) -> Result<Value, String> {
+pub async fn has_api_key(ctx: &InfoCtx, _args: HasKeyArgs) -> Result<Value, String> {
     Ok(Value::Bool(
-        stored_key(ctx, "info_steamgrid_has_key").is_some(),
+        stored_key(ctx, "info_steamgrid_has_key").await.is_some(),
     ))
 }
 
 /// Stores the key trimmed; a value that is empty after trimming clears the slot. A failed keyring
 /// write is an `Err` naming only the category (`<op>:secret-timeout|unavailable`); TS swallowed it
 /// and told the renderer it had worked, which left the user believing a key was saved.
-pub fn set_api_key(ctx: &InfoCtx, args: SetKeyArgs) -> Result<Value, String> {
+pub async fn set_api_key(ctx: &InfoCtx, args: SetKeyArgs) -> Result<Value, String> {
     const OP: &str = "info_steamgrid_set_key";
     if utf16_len(&args.key) > TEXT_MAX_UTF16 {
         return Err(format!("{OP}:bad-args"));
     }
-    ctx.sgdb_key.set(ctx, OP, &args.key)?;
+    ctx.sgdb_key.set_async(ctx, OP, &args.key).await?;
     Ok(Value::Null)
 }
 
@@ -244,7 +246,7 @@ pub async fn search_game(ctx: &InfoCtx, args: SearchArgs) -> Result<Value, Strin
     if utf16_len(&args.query) > TEXT_MAX_UTF16 {
         return Err(format!("{OP}:bad-args"));
     }
-    let Some(key) = stored_key(ctx, OP) else {
+    let Some(key) = stored_key(ctx, OP).await else {
         return Ok(json!([]));
     };
     let url = format!(
@@ -286,7 +288,7 @@ async fn artwork(
     args: GridArgs,
 ) -> Result<Value, String> {
     check_grid_args(op, &args)?;
-    let Some(key) = stored_key(ctx, op) else {
+    let Some(key) = stored_key(ctx, op).await else {
         return Ok(json!([]));
     };
     let items = fetch_list(ctx, &key, artwork_url(kind, &args), fallback).await?;

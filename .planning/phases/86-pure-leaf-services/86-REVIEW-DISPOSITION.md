@@ -9,27 +9,27 @@ findings:
     title: "unguarded `await addRecentGame` aborts the post-game callback when the Rust write rejects"
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "SlotOwner read cache can keep a stale key after a concurrent `set`"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "ITAD price-cache `index` read-modify-write is not serialised (cap can be exceeded, entries orphaned)"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Remote- and caller-sourced values are interpolated into request URLs without encoding"
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Synchronous Keychain read inside a guarded op cannot be cancelled by shutdown"
   - id: WR-21
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Dev-vault file handling is racy and non-atomic (symlink TOCTOU, truncate-then-write, cross-process lost update)"
   - id: WR-22
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`getGameMetadataOverride` bound (256) is tighter than the TS schema (4096) and than the crate's own bound (1024)"
   - id: WR-41
     severity: warning
@@ -41,15 +41,15 @@ findings:
     title: "`getGameInfo` and the non-Steam shortcut flow now fail whole on a Rust round-trip rejection"
   - id: WR-61
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "fixtureRedaction scan floor is stale and no longer proves a full-tree walk"
   - id: WR-62
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "fixtureRedaction rules cover fewer secret shapes than the recorder redacted"
   - id: WR-63
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "the \"crate bakes nothing\" assertion scans 3 of about 25 crate source files"
   - id: IN-01
     severity: info
@@ -173,7 +173,7 @@ findings:
     title: "gameDetails round-trip cases now test a double that re-implements the Rust rule"
   - id: WR-64
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`ClearCacheDeps.requestRustInvoke` still optional and `LegendaryUserDeps` lacks it; the silent-skip guard that hid the 86-23 regression is now unreachable in production (round 2, 86-REVIEW-ROUND2.md)"
   - id: IN-69
     severity: info
@@ -183,7 +183,7 @@ findings:
     severity: info
     disposition: open
     title: "the three `launch()` bodies' best-effort umu lookup is covered only by a source-regex gate, no behavioural launch test (round 2)"
-open: 42
+open: 32
 total: 45
 recorded: 2026-11-22T19:54:24.939Z
 ---
@@ -193,17 +193,17 @@ recorded: 2026-11-22T19:54:24.939Z
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
 | CR-41 | critical | fixed | 9acbfc580 |
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| WR-04 | warning | open | - |
-| WR-21 | warning | open | - |
-| WR-22 | warning | open | - |
+| WR-01 | warning | fixed | 1fe59191e |
+| WR-02 | warning | fixed | af85c9090 |
+| WR-03 | warning | fixed | 3f57a909f |
+| WR-04 | warning | fixed | 95badff10 |
+| WR-21 | warning | fixed | a28705392 |
+| WR-22 | warning | fixed | bf8d257a8 |
 | WR-41 | warning | fixed | 97b62cb2d |
 | WR-42 | warning | fixed | 92d18429d |
-| WR-61 | warning | open | - |
-| WR-62 | warning | open | - |
-| WR-63 | warning | open | - |
+| WR-61 | warning | fixed | d4e9f140f |
+| WR-62 | warning | fixed | d4e9f140f |
+| WR-63 | warning | fixed | 417dd183b |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
@@ -234,7 +234,7 @@ recorded: 2026-11-22T19:54:24.939Z
 | IN-66 | info | open | - |
 | IN-67 | info | open | - |
 | IN-68 | info | open | - |
-| WR-64 | warning | open | 86-REVIEW-ROUND2.md |
+| WR-64 | warning | fixed | a85189b85 |
 | IN-69 | info | open | 86-REVIEW-ROUND2.md |
 | IN-70 | info | open | 86-REVIEW-ROUND2.md |
 

@@ -426,3 +426,34 @@ fn a_read_only_store_refuses_writes_silently_as_ts_does() {
     assert!(!view.has("a"));
     assert!(!view.has("foo"));
 }
+
+#[test]
+fn concurrent_price_writes_for_different_keys_leave_every_entry_in_the_index() {
+    use gamelib_info::cache_view::ITAD_PRICES;
+    use gamelib_info::itad::cache::write_price_entry;
+
+    let f = Fixture::new();
+    let threads = 8;
+    let per_thread = 25;
+    std::thread::scope(|scope| {
+        for t in 0..threads {
+            let view = f.view(ITAD_PRICES);
+            scope.spawn(move || {
+                for n in 0..per_thread {
+                    write_price_entry(&view, &format!("search:US:t{t}n{n}"), text("d"), NOW);
+                }
+            });
+        }
+    });
+
+    let view = f.view(ITAD_PRICES);
+    let index = match view.get_opt("index") {
+        Some(Json::Obj(entry)) => match entry.get("data") {
+            Some(Json::Arr(items)) => items.len(),
+            other => panic!("index data is not a list: {other:?}"),
+        },
+        other => panic!("no index entry: {other:?}"),
+    };
+    // Every written key is indexed (so the 500 cap can evict it), and no write lost another's update.
+    assert_eq!(index, threads * per_thread);
+}

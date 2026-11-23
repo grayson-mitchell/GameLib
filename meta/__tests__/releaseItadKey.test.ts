@@ -12,6 +12,8 @@
 import { load } from 'js-yaml'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { assertAtOrAboveFloor } from '../../src/backend/testUtils/censusFloor'
+import { walkStripped } from '../../src/backend/testUtils/infoPortGate'
 
 const REPO_ROOT = join(__dirname, '..', '..')
 
@@ -37,6 +39,18 @@ const rustCode = (rel: string): string =>
     .split('\n')
     .filter((line) => !line.trimStart().startsWith('//'))
     .join('\n')
+
+/** What the gamelib-info crate may not contain; the names of the rules `code` breaks. */
+const findBanned = (code: string): string[] => {
+  const banned: string[] = []
+  if (/option_env!/.test(code)) banned.push('option_env!')
+  if (/(?<![A-Za-z_])env!\((?!\s*"CARGO_MANIFEST_DIR")/.test(code)) {
+    banned.push('env!')
+  }
+  if (/env::var\("/.test(code)) banned.push('env::var with a literal name')
+  if (code.includes('ITAD_API_KEY')) banned.push('ITAD_API_KEY')
+  return banned
+}
 
 function releaseSteps(doc: Workflow): Step[] {
   const steps = doc.jobs.release?.steps
@@ -170,11 +184,31 @@ describe('the Rust shell reads the baked key at compile time (D-25)', () => {
   })
 
   test('the crate hard-codes no environment variable name and bakes nothing (D-25)', () => {
-    // EnvSecretSource takes its variable names from the caller; the crate itself names none.
-    for (const file of ['secrets.rs', 'ctx.rs', 'lib.rs']) {
-      const code = rustCode(`src-tauri/crates/gamelib-info/src/${file}`)
-      expect(code).not.toMatch(/option_env!|[^_]env!\(|env::var\("/)
-      expect(code).not.toContain('ITAD_API_KEY')
+    // EnvSecretSource takes its variable names from the caller; the crate itself names none. Every
+    // source file of the crate is read (not just the three that hold the key seam), so a later
+    // `option_env!("ITAD_API_KEY")` in `itad/gate.rs` or `wiki/*` cannot slip past.
+    const walk = walkStripped(['src-tauri/crates/gamelib-info/src'], {
+      ext: /\.rs$/
+    })
+    // 35 files when this was measured (86 review WR-63); a mis-rooted walk reads none.
+    assertAtOrAboveFloor('gamelib-info crate sources read', walk.count, 30)
+    for (const file of walk.files) {
+      // `env!("CARGO_MANIFEST_DIR")` (runner_caps.rs, itad/coverage.rs) is the one compile-time
+      // read the crate makes, and it names no key.
+      expect({ file: file.path, banned: findBanned(file.code) }).toEqual({
+        file: file.path,
+        banned: []
+      })
     }
+  })
+
+  test('the crate scan fails on a planted baked key or variable read', () => {
+    expect(findBanned('const K: &str = option_env!("X");')).not.toEqual([])
+    expect(findBanned('let k = std::env::var("ITAD_API_KEY");')).not.toEqual([])
+    expect(findBanned('let k = env!("ITAD_API_KEY");')).not.toEqual([])
+    expect(findBanned('let k = "ITAD_API_KEY";')).not.toEqual([])
+    expect(
+      findBanned('include_str!(\n    env!("CARGO_MANIFEST_DIR"),\n)')
+    ).toEqual([])
   })
 })

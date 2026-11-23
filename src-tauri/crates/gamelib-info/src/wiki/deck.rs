@@ -4,10 +4,10 @@
 //!
 //! The request is the one the TS made and the 86-06 goldens pin (D-10): `GET
 //! https://store.steampowered.com/saleaction/ajaxgetdeckappcompatibilityreport?nAppID=<steamID>` with the
-//! `GameLib/<version>` User-Agent; the id is interpolated as the caller gave it.
+//! `GameLib/<version>` User-Agent; the id is interpolated as given once it is all digits (WR-03).
 //!
 //! Parity points copied, not fixed (D-03):
-//! - an absent or empty id answers `None` with no request;
+//! - an absent, empty or non-numeric id answers `None` with no request;
 //! - any failure of the request, or an answer whose `results.resolved_category` is not a finite number
 //!   (`Number.isFinite`: a numeric text is not one), answers `None`;
 //! - the category is passed through as the number the server sent (a non-integer is not rejected).
@@ -17,7 +17,7 @@ use serde_json::Value;
 use crate::ctx::InfoCtx;
 use crate::js::opt_prop;
 
-use super::{get_data, user_agent};
+use super::{get_data, is_numeric_id, user_agent};
 
 /// `SteamDeckComp`: `{ category }`.
 #[derive(Debug, Clone, PartialEq)]
@@ -33,7 +33,7 @@ impl DeckComp {
 
 /// `getSteamDeckComp(steamID)`.
 pub async fn get_comp(ctx: &InfoCtx, steam_id: Option<&str>) -> Option<DeckComp> {
-    let steam_id = steam_id.filter(|id| !id.is_empty())?;
+    let steam_id = steam_id.filter(|id| is_numeric_id(id))?;
     let url = format!(
         "https://store.steampowered.com/saleaction/ajaxgetdeckappcompatibilityreport?nAppID={steam_id}"
     );

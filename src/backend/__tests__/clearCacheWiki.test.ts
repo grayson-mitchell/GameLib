@@ -6,6 +6,7 @@
 import * as logger from 'backend/logger'
 import { clearCache } from 'backend/utils'
 import type { ClearCacheDeps } from 'backend/utils'
+import type { LegendaryUserDeps } from 'backend/storeManagers/legendary/user'
 import { RUST_INFO_WIKI_CACHE_CLEAR } from 'common/types/sidecarTransport'
 
 function fakeStores(): ClearCacheDeps['stores'] {
@@ -25,12 +26,12 @@ function fakeStores(): ClearCacheDeps['stores'] {
 }
 
 function fakeDeps(
-  request?: (channel: string, args: unknown[]) => Promise<unknown>
+  request: (channel: string, args: unknown[]) => Promise<unknown>
 ) {
-  const requestRustInvoke = request ? jest.fn(request) : undefined
+  const requestRustInvoke = jest.fn(request)
   const deps = {
     stores: fakeStores(),
-    ...(requestRustInvoke ? { requestRustInvoke } : {})
+    requestRustInvoke
   } as unknown as ClearCacheDeps
   return { deps, requestRustInvoke }
 }
@@ -74,9 +75,17 @@ describe('clearCache and the wiki cache', () => {
     expect(deps.stores.systemInfo.deviceNameCache.clear).toHaveBeenCalled()
   })
 
-  it('leaves the wiki cache alone when the deps carry no Rust transport', () => {
-    const { deps } = fakeDeps()
-    expect(() => clearCache(deps, 'nile')).not.toThrow()
-    expect(deps.stores.nile.libraryStore.clear).toHaveBeenCalled()
+  // WR-64: the transport is a required member. These are compile-time checks (codecheck compiles
+  // test files): an `@ts-expect-error` that stops being an error fails the type check, so the
+  // omission that stopped sign-outs emptying the wiki cache (86-23, fixed at one site in 86-27)
+  // cannot come back without a compile error at the construction.
+  it('requires requestRustInvoke on ClearCacheDeps and on the Legendary sign-out deps', () => {
+    type WithoutTransport<T> = Omit<T, 'requestRustInvoke'>
+    // @ts-expect-error a ClearCacheDeps without the Rust transport is not assignable
+    const clearDeps: ClearCacheDeps = {} as WithoutTransport<ClearCacheDeps>
+    // @ts-expect-error nor are the Epic sign-out's deps
+    const legendaryDeps: LegendaryUserDeps =
+      {} as WithoutTransport<LegendaryUserDeps>
+    expect([clearDeps, legendaryDeps]).toHaveLength(2)
   })
 })

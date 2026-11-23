@@ -125,6 +125,13 @@ pub(crate) async fn get_data(
     Ok(data_of(&response))
 }
 
+/// `true` for a non-empty run of ASCII digits: the shape of a Steam app id and of a wiki page id. A
+/// remote- or caller-sourced id that is not one is not interpolated into a request URL, where a `?`,
+/// `#`, `&` or `/` would rewrite the path or query.
+pub(crate) fn is_numeric_id(id: &str) -> bool {
+    !id.is_empty() && id.bytes().all(|b| b.is_ascii_digit())
+}
+
 /// axios's `response.data` for any status: the body parsed as JSON when it parses (a leading BOM is
 /// stripped first, as axios strips it) and otherwise the text itself.
 pub(crate) fn data_of(response: &Response) -> Value {

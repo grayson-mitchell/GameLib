@@ -25,7 +25,7 @@ use crate::ctx::InfoCtx;
 use crate::js::{encode_uri_component, index, opt_prop, prop, to_js_text, truthy};
 
 use super::regexes;
-use super::{get_data, user_agent, Outcome, Thrown};
+use super::{get_data, is_numeric_id, user_agent, Outcome, Thrown};
 
 const API: &str = "https://www.pcgamingwiki.com/w/api.php";
 
@@ -183,7 +183,8 @@ async fn page_id(
     let agent = user_agent(ctx);
     if let Some(id) = gog_id {
         let url = format!(
-            "{API}?action=cargoquery&tables=Infobox_game&fields=Infobox_game._pageID%3DpageID%2C&where=Infobox_game.GOGcom_ID%20HOLDS%20{id}&format=json"
+            "{API}?action=cargoquery&tables=Infobox_game&fields=Infobox_game._pageID%3DpageID%2C&where=Infobox_game.GOGcom_ID%20HOLDS%20{}&format=json",
+            encode_uri_component(id)
         );
         let data = get_data(ctx, url, &agent).await?;
         // `data.cargoquery[0]?.title?.pageID`
@@ -207,10 +208,12 @@ async fn page_id(
 
 /// `getWikiText(id)`: the page's wikitext (`data.parse.wikitext['*']`), `None` when the page has none.
 async fn wiki_text(ctx: &InfoCtx, id: &Value) -> Result<Option<Value>, Thrown> {
-    let url = format!(
-        "{API}?action=parse&format=json&pageid={}&redirects=true&prop=wikitext",
-        to_js_text(id)
-    );
+    // WR-03: a page id is digits; anything else is not put into the request.
+    let id = to_js_text(id);
+    if !is_numeric_id(&id) {
+        return Ok(None);
+    }
+    let url = format!("{API}?action=parse&format=json&pageid={id}&redirects=true&prop=wikitext");
     let data = get_data(ctx, url, &user_agent(ctx)).await?;
     let wikitext = prop(prop(Some(&data), "parse")?, "wikitext")?;
     if !wikitext.is_some_and(truthy) {

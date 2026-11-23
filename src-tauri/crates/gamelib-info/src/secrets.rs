@@ -8,6 +8,11 @@
 //! `ctx.secrets`: [`ItadKey`] (`storeSearch/itadSecrets.ts` plus the precedence in `itad.ts`) and
 //! [`SgdbKey`] (`sidecar/steamgridSecretStore.ts`), and the one-time plaintext migration
 //! [`migrate_sgdb_plaintext`] that replaces the TS `migrateSteamGridDbApiKey`.
+//!
+//! Both owners have a blocking form (`get`, `set`, `effective`) and an `_async` form. The ops use the
+//! `_async` one: it runs the Keychain call, which the shell bounds at 45 s, on the blocking pool, so
+//! an op's `guarded` race can still see the shutdown token while it waits (WR-04). The blocking form
+//! stays for the boot migration, which runs on its own bounded thread.
 
 #[cfg(feature = "testing")]
 use std::collections::HashMap;
@@ -168,6 +173,8 @@ struct SlotOwner {
     cache: Mutex<SlotCache>,
     /// Serialises fetches so concurrent readers wait for one Keychain read and then hit its cache.
     fetch: Mutex<()>,
+    /// The same serialisation for [`SlotOwner::get_async`], whose guard is held across an `await`.
+    fetch_async: tokio::sync::Mutex<()>,
 }
 
 impl SlotOwner {
@@ -176,6 +183,7 @@ impl SlotOwner {
             slot,
             cache: Mutex::new(SlotCache::default()),
             fetch: Mutex::new(()),
+            fetch_async: tokio::sync::Mutex::new(()),
         }
     }
 
@@ -206,6 +214,41 @@ impl SlotOwner {
         }
         let epoch = locked(&self.cache).epoch;
         let outcome = source.get(self.slot);
+        self.finish_read(ctx, op, epoch, outcome)
+    }
+
+    /// [`SlotOwner::get`] with the Keychain read on the blocking pool (WR-04). The read can take as
+    /// long as the shell's 45 s bound, and a synchronous one inside a guarded op stops the op's
+    /// `select!` from ever seeing the shutdown token; awaiting the blocking task lets it win. A read
+    /// abandoned that way finishes on its pool thread and its answer is dropped, never cached.
+    async fn get_async(&self, ctx: &InfoCtx, op: &str) -> Result<Option<String>, String> {
+        let Some(source) = ctx.secrets.clone() else {
+            return Err(format!("{op}:no-secret-source"));
+        };
+        if let Some(hit) = self.peek(ctx, op) {
+            return hit;
+        }
+        let _fetching = self.fetch_async.lock().await;
+        if let Some(hit) = self.peek(ctx, op) {
+            return hit;
+        }
+        let epoch = locked(&self.cache).epoch;
+        let slot = self.slot;
+        let outcome = tokio::task::spawn_blocking(move || source.get(slot))
+            .await
+            .unwrap_or_else(|_| Err("unavailable".to_string()));
+        self.finish_read(ctx, op, epoch, outcome)
+    }
+
+    /// Caches (or memoises the failure of) a read that began at `epoch`, unless a write moved the
+    /// epoch since.
+    fn finish_read(
+        &self,
+        ctx: &InfoCtx,
+        op: &str,
+        epoch: u64,
+        outcome: Result<Option<String>, String>,
+    ) -> Result<Option<String>, String> {
         let mut cache = locked(&self.cache);
         match outcome {
             Ok(value) => {
@@ -238,9 +281,45 @@ impl SlotOwner {
         } else {
             (Some(value.to_string()), source.set(self.slot, value))
         };
+        self.finish_write(op, written, outcome)
+    }
+
+    /// [`SlotOwner::set`] with the Keychain write on the blocking pool (WR-04), for the same reason
+    /// as [`SlotOwner::get_async`].
+    async fn set_async(&self, ctx: &InfoCtx, op: &str, value: &str) -> Result<(), String> {
+        let Some(source) = ctx.secrets.clone() else {
+            return Err(format!("{op}:no-secret-source"));
+        };
+        self.invalidate();
+        let value = value.trim().to_string();
+        let slot = self.slot;
+        let written = (!value.is_empty()).then(|| value.clone());
+        let outcome = tokio::task::spawn_blocking(move || {
+            if value.is_empty() {
+                source.delete(slot)
+            } else {
+                source.set(slot, &value)
+            }
+        })
+        .await
+        .unwrap_or_else(|_| Err("unavailable".to_string()));
+        self.finish_write(op, written, outcome)
+    }
+
+    fn finish_write(
+        &self,
+        op: &str,
+        written: Option<String>,
+        outcome: Result<(), String>,
+    ) -> Result<(), String> {
         match outcome {
             Ok(()) => {
-                locked(&self.cache).value = Some(written);
+                let mut cache = locked(&self.cache);
+                // A read that began after `invalidate` but before this write finished holds the
+                // older answer; the epoch moves again so it cannot cache it over the written value.
+                cache.epoch += 1;
+                cache.value = Some(written);
+                cache.failed = None;
                 Ok(())
             }
             Err(reason) => Err(format!("{op}:secret-{reason}")),
@@ -319,11 +398,23 @@ impl ItadKey {
         self.owner.get(ctx, op)
     }
 
+    /// [`ItadKey::get`] with the Keychain read on the blocking pool, so a guarded op can still be
+    /// cancelled by shutdown while it waits (WR-04).
+    pub async fn get_async(&self, ctx: &InfoCtx, op: &str) -> Result<Option<String>, String> {
+        self.owner.get_async(ctx, op).await
+    }
+
     /// Clears the rejected flag, trims, then stores; an empty or whitespace-only value clears the
     /// slot. The flag is cleared even when the write fails, as in TS.
     pub fn set(&self, ctx: &InfoCtx, op: &str, value: &str) -> Result<(), String> {
         self.rejected.store(false, Ordering::SeqCst);
         self.owner.set(ctx, op, value)
+    }
+
+    /// [`ItadKey::set`] with the Keychain write on the blocking pool (WR-04).
+    pub async fn set_async(&self, ctx: &InfoCtx, op: &str, value: &str) -> Result<(), String> {
+        self.rejected.store(false, Ordering::SeqCst);
+        self.owner.set_async(ctx, op, value).await
     }
 
     /// The key a request uses, or `None` when there is none at all (the adapter raises
@@ -338,6 +429,25 @@ impl ItadKey {
                 });
             }
         }
+        Self::fallback(ctx)
+    }
+
+    /// [`ItadKey::effective`] with the Keychain read on the blocking pool (WR-04): the request path
+    /// uses this one, so a slow Keychain does not keep an op from answering `<op>:shutdown`.
+    pub async fn effective_async(&self, ctx: &InfoCtx) -> Option<ResolvedKey> {
+        if !self.is_rejected() {
+            if let Ok(Some(user)) = self.owner.get_async(ctx, "itad_key").await {
+                return Some(ResolvedKey {
+                    key: user,
+                    source: KeySource::User,
+                });
+            }
+        }
+        Self::fallback(ctx)
+    }
+
+    /// The env key, then the baked key.
+    fn fallback(ctx: &InfoCtx) -> Option<ResolvedKey> {
         let pick = |key: &Option<String>| {
             key.as_deref()
                 .map(str::trim)
@@ -389,9 +499,19 @@ impl SgdbKey {
         self.owner.get(ctx, op)
     }
 
+    /// [`SgdbKey::get`] with the Keychain read on the blocking pool (WR-04).
+    pub async fn get_async(&self, ctx: &InfoCtx, op: &str) -> Result<Option<String>, String> {
+        self.owner.get_async(ctx, op).await
+    }
+
     /// Trims, then stores; an empty or whitespace-only value clears the slot (WR-02 in TS).
     pub fn set(&self, ctx: &InfoCtx, op: &str, value: &str) -> Result<(), String> {
         self.owner.set(ctx, op, value)
+    }
+
+    /// [`SgdbKey::set`] with the Keychain write on the blocking pool (WR-04).
+    pub async fn set_async(&self, ctx: &InfoCtx, op: &str, value: &str) -> Result<(), String> {
+        self.owner.set_async(ctx, op, value).await
     }
 
     /// Drops the read cache, so the next `get` is a real round trip (the migration's proof).

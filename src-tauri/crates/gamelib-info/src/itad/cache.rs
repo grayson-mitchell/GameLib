@@ -109,10 +109,20 @@ fn entry_json(data: Json, now: u64) -> Json {
     Json::Obj(object)
 }
 
+/// Serialises [`write_price_entry`]. The TS ran this read-modify-write on the one Node thread; here
+/// several shell worker threads call it for different keys, and an unserialised `index` update
+/// from one would overwrite the other's, leaving an entry in no index (never evicted) and the cap
+/// exceeded. Module-level because each op opens its own [`CacheView`] over the same store.
+fn write_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 /// `writePriceEntry`: the entry, then the `index` key list (the key moved to the end), deleting the
 /// oldest while the list is over [`PRICES_ENTRY_CAP`]. A failed write is dropped: the cache is a
 /// best-effort copy and the answer is already in hand.
 pub fn write_price_entry(view: &CacheView, key: &str, data: Json, now: u64) {
+    let _serialised = write_lock();
     let _ = view.set(key, entry_json(data, now));
     let prior: Vec<String> = match read_entry(view, INDEX_KEY).and_then(|e| e.data) {
         Some(Json::Arr(items)) => items
