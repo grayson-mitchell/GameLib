@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 94
 current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 94-08-PLAN.md
-last_updated: "2026-11-23T22:38:27.999Z"
+stopped_at: Completed 94-09-PLAN.md
+last_updated: "2026-11-23T23:22:33.030Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 94 execution started
-state_head: 55dd219e8445d2b58499e0b7e9cf5e583e8d99ea
+state_head: b31640993196589d424423785237926455a1a84b
 progress:
   total_phases: 22
   completed_phases: 23
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
-Plan: 8 of 32
-Status: Ready to execute (94-09 next; 94-07 is open, awaiting four macOS icon_geometry goldens that need a Mac; worktree-local STATE, D-02)
-Last activity: 2026-11-24 — Completed 94-08 (Humble adapter request pinning on the wire, 51 library/reveal/key-state flow goldens, the D-07 byte set for all eleven state files)
+Plan: 9 of 32
+Status: Ready to execute (94-12 next; 94-07 is open, awaiting four macOS icon_geometry goldens that need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-09 (Humble user flows on a fake clock: login watch, disconnect, probe, health, verdict; the keyring-backed secret owner and its migration; expiry digest; Steam app-id resolver; user-agent vectors; i18n rows for the digest and shortcut toasts and Catalog::t_unescaped)
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -478,6 +478,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P05 | 90min | 2 tasks | 365 files |
 | Phase 94 P06 | 95min | 3 tasks | 22 files |
 | Phase 94 P08 | 190min | 3 tasks | 14 files |
+| Phase 94 P09 | 45min | 3 tasks | 314 files |
 
 ## Accumulated Context
 
@@ -1029,6 +1030,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-06: zone-dependent classify goldens are recorded in UTC, America/Phoenix and Asia/Kolkata via the real process TZ (vm.runInThisContext), host faults never recorded; title-match vectors carry similarity and pin three exact-0.85 matches
 - [Phase 94]: 94-08: synthetic key values are the literal REDACTED (the recorder redacts a key field and the scan requires it), so a replayed response equals the one the golden saw
 - [Phase 94]: 94-08: D-07 state bytes come from the in-process disk sink (the shell's writer in miniature); timestamps are second-resolution Date() zone strings, and JSON key order is part of the bytes (the app-id pass reorders a library entry on the next sync)
+- [Phase 94]: 94-09: the user oracle drives the real SidecarHumbleSecretStore over a fake keyring (not a recording fake) so invalidate-before-delete is the real slot store's order; a closure map is the only secret storage, T-94-16
+- [Phase 94]: 94-09: the digest date is pinned to en-US in the golden (the TS renders the host default locale) and i18next escapes its slashes (1&#x2F;2&#x2F;2027) in the OS notification: the Rust digest must choose to replicate or fix
+- [Phase 94]: 94-09: a dead cookie API (zero cookies from the first read) aborts the watch with error on the first tick; the 10-minute deadline is reached only by a live jar with no candidate or a window that never opens
+- [Phase 94]: 94-09: Catalog::t_unescaped is for the one dialog row the TS renders with escapeValue false, flagged per row in rendered.json; plural suffixes stay unported because the en count keys equal the base key
 
 ### Pending Todos
 
@@ -1310,8 +1315,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T22:38:27.865Z
-Stopped at: Completed 94-08-PLAN.md
+Last session: 2026-11-23T23:22:32.897Z
+Stopped at: Completed 94-09-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
