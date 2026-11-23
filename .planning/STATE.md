@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 87-21-PLAN.md
-last_updated: "2026-11-23T05:44:35.903Z"
+last_updated: "2026-11-23T05:52:58.030Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 3bfb47bf961a7c808ed8cc0719ad352be06784a6
+state_head: 3d588119a2577ffda2cca8fde731ccff66aba641
 progress:
   total_phases: 20
   completed_phases: 23
@@ -966,6 +966,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261123-9x9 | resetHeroic deletes the settings documents but never drops their mirror cells (Phase 85 review C-WR-01) | 2026-11-23 | 31bd2e304 | — | [261123-9x9-resetheroic-deletes-the-settings-documen](./quick/261123-9x9-resetheroic-deletes-the-settings-documen/) |
 | 261123-bax | Cap the stored recent-games list at 50, trimming on add | 2026-11-23 | cf1ec2291 | — | [261123-bax-cap-the-stored-recent-games-list-at-50-t](./quick/261123-bax-cap-the-stored-recent-games-list-at-50-t/) |
 | 261123-bbi | Refresh buttons spin at least 1 s per click via useMinimumSpin (Humble Keys acceptance; Library header, Wine Manager, error screen, wiki refresh/Retry) | 2026-11-23 | 17cf992c2 | — | [261123-bbi-refresh-buttons-spin-at-least-1s-per-cli](./quick/261123-bbi-refresh-buttons-spin-at-least-1s-per-cli/) |
+| 261123-pnl | GameLib Light clean retheme: light chrome, single accent, neutral greys | 2026-11-23 | 3d588119a | — | [261123-pnl-gamelib-light-clean-retheme-light-chrome](./quick/261123-pnl-gamelib-light-clean-retheme-light-chrome/) |
 
 ## Deferred Items
 
