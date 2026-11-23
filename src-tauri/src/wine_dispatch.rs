@@ -1942,7 +1942,10 @@ mod tests {
         full["lib32"] = json!(null);
         full["wineserver"] = json!("/ws");
         for ok in [wine_json("proton", "/p"), wine_json("toolkit", "/g"), full] {
-            assert!(parse_wine_installation(&[ok.clone()]).is_ok(), "{ok}");
+            assert!(
+                parse_wine_installation(std::slice::from_ref(&ok)).is_ok(),
+                "{ok}"
+            );
         }
         let mut extra = wine_json("wine", "/b");
         extra["legacyKey"] = json!(1);
@@ -2509,7 +2512,7 @@ mod tests {
         ];
         for (op, arm) in arms {
             assert_eq!(
-                arm(&[target.clone()]),
+                arm(std::slice::from_ref(&target)),
                 Err(format!("{op}:not-ready")),
                 "{op}"
             );

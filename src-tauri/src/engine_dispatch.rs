@@ -1309,7 +1309,7 @@ mod tests {
     #[test]
     fn get_per_game_bottle_name_decodes_one_strict_game_identity() {
         let game = serde_json::json!({"runner": "gog", "appName": "1234"});
-        assert_eq!(parse_game_args(&[game.clone()]), Ok(vec![game]));
+        assert_eq!(parse_game_args(std::slice::from_ref(&game)), Ok(vec![game]));
         let long_runner = "r".repeat(65);
         let cases: Vec<(Vec<Value>, Rejection)> = vec![
             (vec![], ("(args)", "too_small")),
@@ -1421,9 +1421,12 @@ mod tests {
     #[test]
     fn list_engine_options_decodes_a_game_or_the_default_picker() {
         let game = serde_json::json!({"runner": "legendary", "appName": "abc"});
-        assert_eq!(parse_list_args(&[game.clone()]), Ok(vec![game]));
+        assert_eq!(parse_list_args(std::slice::from_ref(&game)), Ok(vec![game]));
         let picker = serde_json::json!({"appName": "default"});
-        assert_eq!(parse_list_args(&[picker.clone()]), Ok(vec![picker]));
+        assert_eq!(
+            parse_list_args(std::slice::from_ref(&picker)),
+            Ok(vec![picker])
+        );
         let cases: Vec<(Vec<Value>, Rejection)> = vec![
             (vec![], ("(args)", "too_small")),
             (vec![Value::Null], ("0", "invalid_type")),
@@ -1564,12 +1567,21 @@ mod tests {
     #[test]
     fn dismiss_engine_notice_decodes_the_two_strict_arms_and_nothing_else() {
         let none = serde_json::json!({"kind": "no-crossover"});
-        assert_eq!(parse_dismissal_args(&[none.clone()]), Ok(vec![none]));
+        assert_eq!(
+            parse_dismissal_args(std::slice::from_ref(&none)),
+            Ok(vec![none])
+        );
         let build = serde_json::json!({"kind": "untested-crossover", "build": "27.0.0.1"});
-        assert_eq!(parse_dismissal_args(&[build.clone()]), Ok(vec![build]));
+        assert_eq!(
+            parse_dismissal_args(std::slice::from_ref(&build)),
+            Ok(vec![build])
+        );
         // A build the op will refuse still decodes: the schema never held that rule.
         let odd = serde_json::json!({"kind": "untested-crossover", "build": "1.2.3"});
-        assert_eq!(parse_dismissal_args(&[odd.clone()]), Ok(vec![odd]));
+        assert_eq!(
+            parse_dismissal_args(std::slice::from_ref(&odd)),
+            Ok(vec![odd])
+        );
         let long = "9".repeat(257);
         let cases: Vec<(Vec<Value>, Rejection)> = vec![
             (vec![], ("(args)", "too_small")),
