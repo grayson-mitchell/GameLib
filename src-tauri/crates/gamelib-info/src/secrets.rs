@@ -240,7 +240,12 @@ impl SlotOwner {
         };
         match outcome {
             Ok(()) => {
-                locked(&self.cache).value = Some(written);
+                let mut cache = locked(&self.cache);
+                // A read that began after `invalidate` but before this write finished holds the
+                // older answer; the epoch moves again so it cannot cache it over the written value.
+                cache.epoch += 1;
+                cache.value = Some(written);
+                cache.failed = None;
                 Ok(())
             }
             Err(reason) => Err(format!("{op}:secret-{reason}")),
