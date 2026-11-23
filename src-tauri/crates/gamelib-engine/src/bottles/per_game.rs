@@ -16,6 +16,8 @@
 //!   pin's built-in engine; a cancelled one is final.
 
 use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
 
@@ -31,8 +33,9 @@ use super::lifecycle::{
 };
 use super::paths::is_clean_bottle_name;
 use crate::ctx::EngineCtx;
-use crate::engines::{
-    is_bottle_provisioned, is_pinned_engine_installed, pin_engine, NonCrossoverEngine,
+use crate::engines::{is_bottle_provisioned, NonCrossoverEngine};
+use crate::fallback::ensure::{
+    ensure_pinned_engine, EnsureArgs as FallbackEnsureArgs, PinnedEngineResult,
 };
 use crate::pins::{pins, EnginePin};
 
@@ -78,8 +81,13 @@ pub trait PerGameDeps: Send + Sync {
     fn decide(&self, key: &str) -> BoxFuture<CreationDecision>;
     /// `resolveBinDir`: CrossOver's `bin` directory, `None` when it cannot be found.
     fn resolve_bin_dir(&self) -> BoxFuture<Option<String>>;
-    /// `ensurePin`: makes the pin's engine available (downloading it when absent).
-    fn ensure_pin(&self, pin: EnginePin, args: &EnsureArgs) -> BoxFuture<PinOutcome>;
+    /// `ensurePin`: makes the pin's engine available (downloading it when absent). The future may
+    /// borrow the deps, so a context-backed implementation can run the download through its context.
+    fn ensure_pin<'a>(
+        &'a self,
+        pin: EnginePin,
+        args: &'a EnsureArgs,
+    ) -> Pin<Box<dyn Future<Output = PinOutcome> + Send + 'a>>;
     /// `currentPin`: the pin a fallback creation uses. `None` when the table cannot be read.
     fn current_pin(&self) -> Option<EnginePin>;
     /// `globalGameSettings`: the settings the DXVK step's fallback settings are built over.
@@ -322,9 +330,9 @@ async fn create_with_pinned(
 }
 
 /// The deps a context supplies on its own: CrossOver where `ctx.crossover_bin_dir` finds it, the pin as
-/// the table's current one, and a pinned engine that is installed already. The decision is the
-/// caller's; the pinned-engine download is a later plan's, so an engine that is not installed is a
-/// download failure here, never a silent fetch.
+/// the table's current one, and the pinned engine made available through the fallback engine's own
+/// download (`ensure_pinned_engine`: single flight, progress, hash check, shutdown). The decision is
+/// the caller's.
 pub struct CtxPerGameDeps<'a> {
     ctx: &'a EngineCtx,
     decision: CreationDecision,
@@ -355,13 +363,25 @@ impl PerGameDeps for CtxPerGameDeps<'_> {
         (self.ctx.crossover_bin_dir)()
     }
 
-    fn ensure_pin(&self, pin: EnginePin, _args: &EnsureArgs) -> BoxFuture<PinOutcome> {
-        let outcome = if is_pinned_engine_installed(self.ctx, &pin) {
-            PinOutcome::Ready(pin_engine(self.ctx, &pin))
-        } else {
-            PinOutcome::Failed("the pinned engine is not installed".to_string())
-        };
-        Box::pin(async move { outcome })
+    fn ensure_pin<'a>(
+        &'a self,
+        pin: EnginePin,
+        args: &'a EnsureArgs,
+    ) -> Pin<Box<dyn Future<Output = PinOutcome> + Send + 'a>> {
+        Box::pin(async move {
+            let request = FallbackEnsureArgs {
+                pin_id: pin.id.clone(),
+                app_name: args.app_name.clone(),
+                runner: args.runner.clone(),
+                cancel_id: None,
+            };
+            match ensure_pinned_engine(self.ctx, &request).await {
+                Ok(PinnedEngineResult::Ready(engine)) => PinOutcome::Ready(engine),
+                Ok(PinnedEngineResult::Failed { aborted: true, .. }) => PinOutcome::Aborted,
+                Ok(PinnedEngineResult::Failed { error, .. }) => PinOutcome::Failed(error),
+                Err(error) => PinOutcome::Failed(error),
+            }
+        })
     }
 
     fn current_pin(&self) -> Option<EnginePin> {
@@ -439,7 +459,11 @@ mod tests {
             Box::pin(async { None })
         }
 
-        fn ensure_pin(&self, _pin: EnginePin, _args: &EnsureArgs) -> BoxFuture<PinOutcome> {
+        fn ensure_pin<'a>(
+            &'a self,
+            _pin: EnginePin,
+            _args: &'a EnsureArgs,
+        ) -> Pin<Box<dyn Future<Output = PinOutcome> + Send + 'a>> {
             Box::pin(async { PinOutcome::Failed("offline".to_string()) })
         }
 
@@ -501,7 +525,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn the_contexts_deps_do_not_download_a_pin_that_is_not_installed() {
+    async fn the_contexts_deps_make_a_pin_available_through_the_fallback_download() {
         let home = FakeHome::new("engine-pergame-");
         let ctx = ctx(&home);
         let pin = pins().unwrap().current.clone();
@@ -510,19 +534,18 @@ mod tests {
             CreationDecision::Pinned { pin: Box::new(pin) },
             json!({}),
         );
+        // The context starts offline (the monitor's first reading), so the download is refused before any
+        // request: the answer is the engine's own `offline` failure, not a silent fetch.
         let out = ensure_per_game_bottle(&ctx, &deps, &args("GameLib-gog-1")).await;
-        assert_eq!(
-            out,
-            EnsureOutcome::failed(
-                Some(ENGINE_DOWNLOAD_FAILED),
-                "the pinned engine is not installed"
-            )
-        );
+        let EnsureOutcome::Failed { error_code, error } = &out else {
+            panic!("expected a failure, got {out:?}");
+        };
+        assert_eq!(*error_code, Some(ENGINE_DOWNLOAD_FAILED));
+        assert!(error.starts_with("offline"), "{error}");
         // The wire shape the sidecar's `EnsureGameBottleResult` has.
         assert_eq!(
             out.to_value(),
-            json!({"status": "error", "errorCode": "engine-download-failed",
-                   "error": "the pinned engine is not installed"})
+            json!({"status": "error", "errorCode": "engine-download-failed", "error": error})
         );
         assert_eq!(
             EnsureOutcome::Done {

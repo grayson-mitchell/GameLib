@@ -64,6 +64,7 @@ pub const OPS: &[&str] = &[
     "engine_fallback_ensure",
     "engine_fallback_is_installed",
     "engine_is_crossover_missing",
+    "engine_launch_select",
     "engine_ledger_mark_running",
     "engine_ledger_mark_stopped",
     "engine_list_options",
@@ -535,6 +536,21 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
                 &request.app_name,
             )))
         }
+        // The launch-time engine step of a non-Steam launch on macOS (D-01): eligibility, the effective
+        // engine, the prefix, the game's own bottle, the offline refusal, the decision, the first-need
+        // pinned-engine download, the registration and the bottle switch. The answer is
+        // `{kind, key, selection, prefix, logLines, launchSettings}` (`kind: 'skip'` alone when the engine
+        // layer does not apply). The collaborators are the real ones (`CtxStepDeps`).
+        "engine_launch_select" => {
+            let request: LaunchSelectRequest = decode(op, args)?;
+            let select = request
+                .into_args()
+                .ok_or_else(|| format!("{op}:bad-args"))?;
+            let reply =
+                launch::step::select_engine_for_launch(ctx, &launch::step::CtxStepDeps, &select)
+                    .await;
+            Ok(reply.to_value())
+        }
         // G25: true when CrossOver is not installed; never probes.
         "engine_is_crossover_missing" => {
             let request: ResolveBinDirRequest = decode(op, args)?;
@@ -937,6 +953,58 @@ struct GameIdentityRequest {
     app_name: String,
 }
 
+/// The argument of `engine_launch_select`: the slice of the game and the launch options the step reads.
+/// The strings are the launcher's own, bounded here; the stored settings are read for three keys only.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct LaunchSelectRequest {
+    runner: String,
+    app_name: String,
+    title: String,
+    #[serde(default)]
+    install_path: Option<String>,
+    #[serde(default)]
+    platform: Option<String>,
+    #[serde(default)]
+    is_native: bool,
+    #[serde(default)]
+    settings: Value,
+    #[serde(default)]
+    offline: bool,
+    #[serde(default)]
+    purpose: Option<String>,
+}
+
+impl LaunchSelectRequest {
+    fn into_args(self) -> Option<launch::step::SelectArgs> {
+        let within = |text: &str, max: usize| (1..=max).contains(&jsutil::utf16_len(text));
+        let settings = match self.settings {
+            Value::Null => serde_json::json!({}),
+            object @ Value::Object(_) => object,
+            _ => return None,
+        };
+        let purpose = match self.purpose.as_deref() {
+            None | Some("launch") => launch::step::Purpose::Launch,
+            Some("setup") => launch::step::Purpose::Setup,
+            Some(_) => return None,
+        };
+        (within(&self.runner, 64)
+            && within(&self.app_name, 4096)
+            && jsutil::utf16_len(&self.title) <= 4096)
+            .then_some(launch::step::SelectArgs {
+                runner: self.runner,
+                app_name: self.app_name,
+                title: self.title,
+                install_path: self.install_path,
+                platform: self.platform,
+                is_native: self.is_native,
+                settings,
+                offline: self.offline,
+                purpose,
+            })
+    }
+}
+
 /// The argument of `engine_state_publish_overlay_notice`.
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
@@ -1233,6 +1301,7 @@ mod tests {
             "engine_fallback_ensure",
             "engine_fallback_is_installed",
             "engine_is_crossover_missing",
+            "engine_launch_select",
             "engine_ledger_mark_running",
             "engine_ledger_mark_stopped",
             "engine_list_options",
@@ -1246,6 +1315,49 @@ mod tests {
         ] {
             assert!(OPS.contains(&op), "{op}");
         }
+    }
+
+    #[tokio::test]
+    async fn the_launch_select_op_takes_a_strict_object_and_skips_where_the_engine_layer_does_not_apply(
+    ) {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        let game = |extra: Value| {
+            let mut base = json!({"runner": "gog", "appName": "1207658924", "title": "Quail"});
+            for (key, value) in extra.as_object().unwrap() {
+                base[key] = value.clone();
+            }
+            base
+        };
+        for bad in [
+            json!({}),
+            game(json!({"extra": 1})),
+            game(json!({"runner": ""})),
+            game(json!({"appName": ""})),
+            game(json!({"purpose": "other"})),
+            game(json!({"settings": []})),
+        ] {
+            assert_eq!(
+                dispatch("engine_launch_select", &[bad], &ctx).await,
+                Err("engine_launch_select:bad-args".to_string())
+            );
+        }
+        // The context is a Linux one here, so the engine layer does not apply to any game.
+        assert_eq!(
+            dispatch("engine_launch_select", &[game(json!({}))], &ctx).await,
+            Ok(json!({"kind": "skip"}))
+        );
+        assert_eq!(
+            dispatch(
+                "engine_launch_select",
+                &[game(
+                    json!({"isNative": true, "purpose": "setup", "settings": null})
+                )],
+                &ctx
+            )
+            .await,
+            Ok(json!({"kind": "skip"}))
+        );
     }
 
     #[tokio::test]

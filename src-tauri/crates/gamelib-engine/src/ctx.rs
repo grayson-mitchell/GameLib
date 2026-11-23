@@ -23,6 +23,8 @@ use crate::crossover::locate::{CrossoverDiscovery, CrossoverLocator, NoCrossover
 use crate::dxvk::{DxvkInstaller, NoDxvk};
 use crate::fallback::Flights;
 use crate::fetch::{Fetch, ReqwestFetch};
+use crate::launch::settings::LaunchSettingsRegistry;
+use crate::launch::LaunchState;
 use crate::sinks::{EngineLog, EngineUi, NullEmitter};
 use crate::state::engine_state::EngineStateOwner;
 use crate::state::notices::Notices;
@@ -216,6 +218,12 @@ pub struct EngineCtx {
     /// The engine-state caches, the page pre-flight single flight and the notice sequence (D-05). In
     /// memory only: empty at construction.
     pub engine_state: EngineStateOwner,
+    /// The per-launch settings overlay contexts (59 D-07): which prefix a running launch is on. In memory
+    /// only: empty at construction.
+    pub launch_settings: LaunchSettingsRegistry,
+    /// The bottle each running launch was marked running in, for the end of the launch. In memory only:
+    /// empty at construction.
+    pub launch_state: LaunchState,
 }
 
 impl EngineCtx {
@@ -249,6 +257,8 @@ impl EngineCtx {
             fallback: Flights::new(),
             notices: Notices::new(),
             engine_state: EngineStateOwner::new(),
+            launch_settings: LaunchSettingsRegistry::new(),
+            launch_state: LaunchState::new(),
             host,
             clock,
             platform,
