@@ -1,0 +1,709 @@
+/**
+ * The Phase 87 survivor schedule (87-03, D-15, D-23 and D-24).
+ *
+ * D-15: once the engine and wine services are ported, their TS survives only as one of four scheduled
+ * shapes, each with a deletion phase. This test lists every one, so a survivor cannot exist
+ * unscheduled and cannot outlive its row.
+ *
+ * - shim: one returned typed `requestRustInvoke` call whose arguments are built from the shim's
+ *   parameters (the 86 shape rule, `checkShimShape`).
+ * - resolver (D-23): `const` declarations that gather TS-only inputs, then exactly one returned typed
+ *   call. The resolvers live in `src/backend/sidecar/engineWineResolvers.ts`.
+ * - twin (D-24): a synchronous TS copy of a Rust-owned pure function, pinned to Rust by shared
+ *   vectors. A twin row names the `vectors` test file that exercises it, and that test must import
+ *   the twin's file.
+ * - view (D-24): a write-through mirror of Rust's in-memory state, pinned the same way.
+ *
+ * `deletedBy` is the phase that deletes the row, an integer in 87..99. 87 marks an intra-phase shim
+ * that a TS module still alive inside Phase 87 uses; 87-56 asserts no 87 row remains
+ * (`noIntraPhaseRowsLeft`), and 87-57 compares the final schedule item by item with the D-22, D-23
+ * and D-24 survivor list.
+ *
+ * Discovery, in both directions against the in-scope rows (by file and name): every exported value
+ * binding (a function or a const, never a type) under `src/backend/enginewine/`, every function
+ * holding a `requestRustInvoke(RUST_ENGINE_*` or `RUST_WINE_*` call outside that directory, and every
+ * export of `src/backend/sidecar/engineWineResolvers.ts`. An exported `register*` helper that only
+ * installs `ipc.on` or `ipc.handle` listeners is covered only when a row in the same file names it in
+ * its `wiring` list. Twin and view rows whose file lies outside that scope (launcher.ts,
+ * commandRunner.ts, compatibility_layers.ts) are checked by file, export and vectors instead.
+ *
+ * The schedule starts empty and the directory does not exist yet, so the discovered set equals it
+ * and the test is green from the first commit. The planted fixtures keep each detector proven rather
+ * than vacuous (82 D-05).
+ *
+ * Floor: the walk read 611 non-test .ts/.tsx files under src/backend when measured on 2026-11-22
+ * (86-05). The floor sits under that so later deletions cannot trip it; never lower it.
+ */
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
+import {
+  checkShimShape,
+  findExportedValues,
+  findImporters,
+  findRustCalls,
+  REPO_ROOT,
+  walkStripped
+} from 'backend/testUtils/infoPortGate'
+import type { ShimRow, StrippedFile } from 'backend/testUtils/infoPortGate'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'fs'
+import { tmpdir } from 'os'
+import { dirname, join } from 'path'
+
+const BACKEND_FILES_FLOOR = 400
+const ENGINEWINE_DIR = 'src/backend/enginewine'
+const RESOLVERS_FILE = 'src/backend/sidecar/engineWineResolvers.ts'
+const CHANNEL_PREFIXES = ['RUST_ENGINE_', 'RUST_WINE_'] as const
+
+interface ScheduleRow extends ShimRow {
+  /** The exported name (a function, or a const for a view). */
+  name: string
+  /** Repo-relative file holding it. */
+  file: string
+  /** Shims and resolvers: the `RUST_ENGINE_*` or `RUST_WINE_*` constant its one typed call sends. */
+  channel?: string
+  /** Twins and views: the repo-relative test file that pins the row to Rust; it must import `file`. */
+  vectors?: string
+  /**
+   * `register*` helpers in `file` that only install this row's `ipc.on` or `ipc.handle` listeners.
+   * A helper is covered by being named here, by a row in the same file.
+   */
+  wiring?: readonly string[]
+  /** Repo-relative non-test files that import `file`. */
+  callers: readonly string[]
+  /** The phase that deletes this row, 87..99. 87 is an intra-phase shim; 87-56 asserts none remain. */
+  deletedBy: number
+}
+
+/**
+ * Rows are added by the plan that creates the survivor, in the same commit. Each row needs its file,
+ * name, shape and callers; shims and resolvers a channel; twins and views a vectors test.
+ */
+const SCHEDULE: readonly ScheduleRow[] = []
+
+const key = (file: string, name: string): string => `${file}#${name}`
+
+/** True for the files discovery reads exports from: the enginewine directory and the resolvers file. */
+const inScopeFile = (path: string): boolean =>
+  path.startsWith(`${ENGINEWINE_DIR}/`) || path === RESOLVERS_FILE
+
+/** `file#name` for every survivor the schedule must list, found in `files`. */
+function discover(files: readonly StrippedFile[]): string[] {
+  const found = new Set<string>()
+  for (const f of files) {
+    if (inScopeFile(f.path) && /\.tsx?$/.test(f.path)) {
+      for (const name of findExportedValues(f.path, f.code)) {
+        found.add(key(f.path, name))
+      }
+    }
+  }
+  for (const call of findRustCalls(
+    files.filter((f) => !f.path.startsWith(`${ENGINEWINE_DIR}/`)),
+    CHANNEL_PREFIXES
+  )) {
+    found.add(key(call.path, call.fn))
+  }
+  return [...found].sort()
+}
+
+/**
+ * `file#name` the in-scope rows cover: a row's own name, and every `register*` helper in its file
+ * that it lists in `wiring`. Twin and view rows outside the discovery scope are not in this set.
+ */
+function scheduledKeys(schedule: readonly ScheduleRow[]): string[] {
+  const keys = new Set<string>()
+  for (const row of schedule) {
+    const isTwinOrView = row.shape === 'twin' || row.shape === 'view'
+    if (isTwinOrView && !inScopeFile(row.file)) continue
+    keys.add(key(row.file, row.name))
+    for (const w of row.wiring ?? []) keys.add(key(row.file, w))
+  }
+  return [...keys].sort()
+}
+
+/** Both directions of the set-equality check. */
+function diff(
+  discovered: readonly string[],
+  scheduled: readonly string[]
+): { unscheduled: string[]; orphaned: string[] } {
+  return {
+    unscheduled: discovered.filter((k) => !scheduled.includes(k)),
+    orphaned: scheduled.filter((k) => !discovered.includes(k))
+  }
+}
+
+/** Why `row.wiring` is not valid: each entry must be a `register*` name the file exports. */
+function wiringProblems(row: ScheduleRow, source: string): string[] {
+  const exported = findExportedValues(row.file, source)
+  const problems: string[] = []
+  for (const w of row.wiring ?? []) {
+    if (!/^register[A-Z0-9]/.test(w)) {
+      problems.push(`${row.name}: wiring '${w}' is not a register* helper`)
+    } else if (!exported.includes(w)) {
+      problems.push(`${row.name}: wiring '${w}' is not exported by ${row.file}`)
+    }
+  }
+  return problems
+}
+
+/**
+ * Why a twin or view row is not pinned to Rust: its file must exist, export its name, and name a
+ * `vectors` test that exists and imports the file. Empty when the row is sound.
+ */
+function twinViewProblems(
+  row: ScheduleRow,
+  base: string = REPO_ROOT
+): string[] {
+  const label = `${row.name} (${row.shape})`
+  const filePath = join(base, row.file)
+  if (!existsSync(filePath))
+    return [`${label}: file ${row.file} does not exist`]
+  const problems: string[] = []
+  const source = readFileSync(filePath, 'utf8')
+  if (!findExportedValues(row.file, source).includes(row.name)) {
+    problems.push(`${label}: ${row.file} does not export '${row.name}'`)
+  }
+  if (row.vectors === undefined || row.vectors === '') {
+    problems.push(`${label}: no vectors test names how it is pinned to Rust`)
+    return problems
+  }
+  const vectorsPath = join(base, row.vectors)
+  if (!existsSync(vectorsPath)) {
+    problems.push(`${label}: vectors test ${row.vectors} does not exist`)
+    return problems
+  }
+  const vectorsRaw = readFileSync(vectorsPath, 'utf8')
+  const asFile: StrippedFile = {
+    path: row.vectors,
+    raw: vectorsRaw,
+    code: vectorsRaw
+  }
+  if (findImporters([asFile], row.file).length === 0) {
+    problems.push(
+      `${label}: vectors test ${row.vectors} does not import ${row.file}`
+    )
+  }
+  return problems
+}
+
+/** Why a row's `deletedBy` is not an integer in 87..99. */
+function deletedByProblems(schedule: readonly ScheduleRow[]): string[] {
+  return schedule
+    .filter(
+      (r) =>
+        !Number.isInteger(r.deletedBy) || r.deletedBy < 87 || r.deletedBy > 99
+    )
+    .map(
+      (r) =>
+        `${key(r.file, r.name)}: deletedBy ${String(r.deletedBy)} is not an integer in 87..99`
+    )
+}
+
+/**
+ * 87-56 calls this over the final schedule: throws naming every row still marked `deletedBy: 87`,
+ * an intra-phase shim that a TS module alive inside Phase 87 used and that must be gone by the end.
+ */
+export function noIntraPhaseRowsLeft(
+  schedule: readonly Pick<ScheduleRow, 'name' | 'file' | 'deletedBy'>[]
+): void {
+  const left = schedule
+    .filter((r) => r.deletedBy === 87)
+    .map((r) => key(r.file, r.name))
+  if (left.length > 0) {
+    throw new Error(
+      `intra-phase rows (deletedBy 87) still scheduled: ${left.join(', ')}`
+    )
+  }
+}
+
+const planted = (path: string, code: string): StrippedFile => ({
+  path,
+  raw: code,
+  code
+})
+
+const backendWalk = walkStripped(['src/backend'], { ext: /\.tsx?$/ })
+const allWalk = walkStripped(['src', 'meta'], { ext: /\.tsx?$/ })
+
+describe('engineWineShimSchedule', () => {
+  it('anti-vacuity: the walk read a real src/backend tree', () => {
+    assertAtOrAboveFloor(
+      'engineWineShimSchedule src/backend files',
+      backendWalk.count,
+      BACKEND_FILES_FLOOR
+    )
+  })
+
+  it('the discovered survivors equal the in-scope schedule rows, by file and name', () => {
+    expect(diff(discover(allWalk.files), scheduledKeys(SCHEDULE))).toEqual({
+      unscheduled: [],
+      orphaned: []
+    })
+  })
+
+  it('every row has a unique file and name', () => {
+    const keys = SCHEDULE.map((r) => key(r.file, r.name))
+    expect(new Set(keys).size).toBe(keys.length)
+  })
+
+  // One loop per check rather than `it.each`, so an empty schedule does not trip jest's empty-table refusal.
+  it('every shim and resolver row has the shape it claims and sends its row channel', () => {
+    const calls = findRustCalls(allWalk.files, CHANNEL_PREFIXES)
+    for (const row of SCHEDULE) {
+      if (row.shape !== 'shim' && row.shape !== 'resolver') continue
+      const source = readFileSync(join(REPO_ROOT, row.file), 'utf8')
+      expect({
+        row: row.name,
+        problems: checkShimShape(source, row.name, row, CHANNEL_PREFIXES)
+      }).toEqual({ row: row.name, problems: [] })
+      const sent = calls.find((c) => c.path === row.file && c.fn === row.name)
+      expect({ row: row.name, channel: sent?.constant }).toEqual({
+        row: row.name,
+        channel: row.channel
+      })
+    }
+  })
+
+  it('every twin and view row exists, exports its name and is pinned by a vectors test that imports it', () => {
+    for (const row of SCHEDULE) {
+      if (row.shape !== 'twin' && row.shape !== 'view') continue
+      expect({ row: row.name, problems: twinViewProblems(row) }).toEqual({
+        row: row.name,
+        problems: []
+      })
+    }
+  })
+
+  it('every wiring entry is an exported register* helper in the row file', () => {
+    for (const row of SCHEDULE) {
+      if (!row.wiring || row.wiring.length === 0) continue
+      const source = readFileSync(join(REPO_ROOT, row.file), 'utf8')
+      expect({ row: row.name, problems: wiringProblems(row, source) }).toEqual({
+        row: row.name,
+        problems: []
+      })
+    }
+  })
+
+  it('every row is scheduled for deletion in an integer phase 87..99', () => {
+    expect(deletedByProblems(SCHEDULE)).toEqual([])
+  })
+
+  it('every row is imported by exactly its listed callers', () => {
+    for (const row of SCHEDULE) {
+      expect({
+        row: row.name,
+        importers: findImporters(allWalk.files, row.file).sort()
+      }).toEqual({ row: row.name, importers: [...row.callers].sort() })
+    }
+  })
+})
+
+describe('engineWineShimSchedule detector (planted fixtures)', () => {
+  const SHIM =
+    'export async function f(deps, a) { return deps.requestRustInvoke(RUST_ENGINE_X, [{ a }]) }'
+
+  describe('discovery set-equality', () => {
+    it('with no rows and no enginewine directory the discovered set is empty and equals the schedule', () => {
+      expect(diff(discover([]), scheduledKeys([]))).toEqual({
+        unscheduled: [],
+        orphaned: []
+      })
+      expect(
+        diff(
+          discover([planted('src/backend/a.ts', 'export const a = 1')]),
+          scheduledKeys([])
+        )
+      ).toEqual({ unscheduled: [], orphaned: [] })
+    })
+
+    it('a planted unscheduled exported function in a temp enginewine directory fails set equality', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'engine-wine-shim-schedule-'))
+      try {
+        mkdirSync(join(dir, ENGINEWINE_DIR), { recursive: true })
+        writeFileSync(
+          join(dir, ENGINEWINE_DIR, 'things.ts'),
+          `${SHIM}\nexport const g = 1\nfunction hidden() {}\n`
+        )
+        const walk = walkStripped(['src/backend'], {
+          base: dir,
+          ext: /\.tsx?$/
+        })
+        expect(walk.count).toBe(1)
+        expect(diff(discover(walk.files), [])).toEqual({
+          unscheduled: [
+            `${ENGINEWINE_DIR}/things.ts#f`,
+            `${ENGINEWINE_DIR}/things.ts#g`
+          ],
+          orphaned: []
+        })
+      } finally {
+        rmSync(dir, { recursive: true, force: true })
+      }
+    })
+
+    it('discovers exported values (functions, consts, classes) and never a type', () => {
+      const file = planted(
+        `${ENGINEWINE_DIR}/mixed.ts`,
+        [
+          'export function fn() {}',
+          'export const value = 1',
+          'export const arrow = () => 1',
+          'export class Holder {}',
+          'export type Alias = string',
+          'export interface Shape { a: string }',
+          'export { fn as renamed }',
+          'export type { Alias as Other }',
+          'const local = 1'
+        ].join('\n')
+      )
+      expect(discover([file])).toEqual([
+        `${ENGINEWINE_DIR}/mixed.ts#Holder`,
+        `${ENGINEWINE_DIR}/mixed.ts#arrow`,
+        `${ENGINEWINE_DIR}/mixed.ts#fn`,
+        `${ENGINEWINE_DIR}/mixed.ts#renamed`,
+        `${ENGINEWINE_DIR}/mixed.ts#value`
+      ])
+    })
+
+    it('a planted registerX export that no row lists in wiring fails set equality, and passes once a row in the same file lists it', () => {
+      const file = planted(
+        `${ENGINEWINE_DIR}/wire.ts`,
+        `${SHIM}\nexport function registerX(ipc) { ipc.handle('x', () => 1) }`
+      )
+      const row: ScheduleRow = {
+        name: 'f',
+        file: `${ENGINEWINE_DIR}/wire.ts`,
+        shape: 'shim',
+        channel: 'RUST_ENGINE_X',
+        callers: [],
+        deletedBy: 98
+      }
+      expect(diff(discover([file]), scheduledKeys([row]))).toEqual({
+        unscheduled: [`${ENGINEWINE_DIR}/wire.ts#registerX`],
+        orphaned: []
+      })
+      expect(
+        diff(
+          discover([file]),
+          scheduledKeys([{ ...row, wiring: ['registerX'] }])
+        )
+      ).toEqual({ unscheduled: [], orphaned: [] })
+    })
+
+    it('a wiring entry in another file does not cover a register helper, and a non-register name is refused', () => {
+      const file = planted(
+        `${ENGINEWINE_DIR}/wire.ts`,
+        'export function registerX(ipc) { ipc.on("x", () => 1) }'
+      )
+      const elsewhere: ScheduleRow = {
+        name: 'h',
+        file: `${ENGINEWINE_DIR}/other.ts`,
+        shape: 'shim',
+        channel: 'RUST_ENGINE_X',
+        callers: [],
+        deletedBy: 98,
+        wiring: ['registerX']
+      }
+      expect(
+        diff(discover([file]), scheduledKeys([elsewhere])).unscheduled
+      ).toEqual([`${ENGINEWINE_DIR}/wire.ts#registerX`])
+      const row: ScheduleRow = {
+        name: 'f',
+        file: `${ENGINEWINE_DIR}/wire.ts`,
+        shape: 'shim',
+        channel: 'RUST_ENGINE_X',
+        callers: [],
+        deletedBy: 98,
+        wiring: ['f', 'registerGone']
+      }
+      expect(
+        wiringProblems(row, `${SHIM}\nexport function registerX() {}`)
+      ).toEqual([
+        "f: wiring 'f' is not a register* helper",
+        `f: wiring 'registerGone' is not exported by ${ENGINEWINE_DIR}/wire.ts`
+      ])
+    })
+
+    it('a row with no discovered survivor fails the check', () => {
+      const file = planted(`${ENGINEWINE_DIR}/things.ts`, SHIM)
+      const rows: ScheduleRow[] = [
+        {
+          name: 'f',
+          file: `${ENGINEWINE_DIR}/things.ts`,
+          shape: 'shim',
+          channel: 'RUST_ENGINE_X',
+          callers: [],
+          deletedBy: 98
+        },
+        {
+          name: 'gone',
+          file: `${ENGINEWINE_DIR}/things.ts`,
+          shape: 'shim',
+          channel: 'RUST_ENGINE_Y',
+          callers: [],
+          deletedBy: 98
+        }
+      ]
+      expect(diff(discover([file]), scheduledKeys(rows))).toEqual({
+        unscheduled: [],
+        orphaned: [`${ENGINEWINE_DIR}/things.ts#gone`]
+      })
+    })
+
+    it('an outside call is discovered by the function holding it, for RUST_ENGINE_ and RUST_WINE_ but no other prefix', () => {
+      const engine = planted(
+        'src/backend/launch/engine.ts',
+        'export function useEngine(deps) { return deps.requestRustInvoke(RUST_ENGINE_Z, []) }'
+      )
+      const wine = planted(
+        'src/backend/launch/wine.ts',
+        'export const useWine = (deps) => { deps.list.forEach(() => deps.requestRustInvoke(RUST_WINE_Z, [])) }'
+      )
+      const info = planted(
+        'src/backend/launch/info.ts',
+        'export function useInfo(deps) { return deps.requestRustInvoke(RUST_INFO_Z, []) }'
+      )
+      expect(discover([engine, wine, info])).toEqual([
+        'src/backend/launch/engine.ts#useEngine',
+        'src/backend/launch/wine.ts#useWine'
+      ])
+      expect(diff(discover([engine]), [])).toEqual({
+        unscheduled: ['src/backend/launch/engine.ts#useEngine'],
+        orphaned: []
+      })
+    })
+
+    it('every export of the resolvers file is discovered, and a sibling sidecar file is not', () => {
+      const resolvers = planted(
+        RESOLVERS_FILE,
+        'export async function getEngineState(deps) { return deps.requestRustInvoke(RUST_ENGINE_STATE, []) }\nexport const toggleDXVK = 1\nexport type T = string'
+      )
+      const sibling = planted(
+        'src/backend/sidecar/other.ts',
+        'export const notScanned = 1'
+      )
+      expect(discover([resolvers, sibling])).toEqual([
+        `${RESOLVERS_FILE}#getEngineState`,
+        `${RESOLVERS_FILE}#toggleDXVK`
+      ])
+    })
+  })
+
+  describe('shim shape with the engine and wine channel prefixes', () => {
+    it('a planted shim passes as shape shim for a RUST_ENGINE_ and a RUST_WINE_ channel', () => {
+      expect(
+        checkShimShape(SHIM, 'f', { shape: 'shim' }, CHANNEL_PREFIXES)
+      ).toEqual([])
+      expect(
+        checkShimShape(
+          'export const g = (deps, a) => deps.requestRustInvoke(RUST_WINE_Y, [a])',
+          'g',
+          { shape: 'shim' },
+          CHANNEL_PREFIXES
+        )
+      ).toEqual([])
+    })
+
+    it('a planted shim body with two requestRustInvoke calls fails checkShimShape', () => {
+      const twice =
+        'export async function f(deps, a) { await deps.requestRustInvoke(RUST_ENGINE_X, [a]); return deps.requestRustInvoke(RUST_WINE_Y, [a]) }'
+      expect(
+        checkShimShape(twice, 'f', { shape: 'shim' }, CHANNEL_PREFIXES)
+      ).toEqual([expect.stringContaining('holds 2 requestRustInvoke calls')])
+    })
+
+    it('a planted call to an info channel or an unrelated channel fails for the engine prefixes', () => {
+      const info =
+        'export async function f(deps, a) { return deps.requestRustInvoke(RUST_INFO_X, [a]) }'
+      expect(
+        checkShimShape(info, 'f', { shape: 'shim' }, CHANNEL_PREFIXES)
+      ).toEqual([
+        expect.stringContaining(
+          'the first argument must be a RUST_ENGINE_* or RUST_WINE_* constant'
+        )
+      ])
+    })
+
+    it('the default prefix stays RUST_INFO_ so the 86 schedule is unchanged', () => {
+      expect(
+        checkShimShape(
+          'export async function f(deps, a) { return deps.requestRustInvoke(RUST_INFO_X, [a]) }',
+          'f',
+          { shape: 'shim' }
+        )
+      ).toEqual([])
+      expect(checkShimShape(SHIM, 'f', { shape: 'shim' })).toEqual([
+        expect.stringContaining('the first argument must be a RUST_INFO_*')
+      ])
+    })
+
+    it('a planted resolver passes with its const inputs and an engine channel', () => {
+      const src =
+        'export async function r(deps, id) { const settings = await load(id); return deps.requestRustInvoke(RUST_ENGINE_Y, [{ settings }]) }'
+      expect(
+        checkShimShape(
+          src,
+          'r',
+          { shape: 'resolver', inputs: ['settings'] },
+          CHANNEL_PREFIXES
+        )
+      ).toEqual([])
+    })
+  })
+
+  describe('twin and view rows', () => {
+    const makeTree = (
+      files: Record<string, string>
+    ): { dir: string; cleanup: () => void } => {
+      const dir = mkdtempSync(join(tmpdir(), 'engine-wine-shim-schedule-'))
+      for (const [path, content] of Object.entries(files)) {
+        mkdirSync(dirname(join(dir, path)), { recursive: true })
+        writeFileSync(join(dir, path), content)
+      }
+      return {
+        dir,
+        cleanup: () => rmSync(dir, { recursive: true, force: true })
+      }
+    }
+
+    const TWIN: ScheduleRow = {
+      name: 'getBottleDir',
+      file: 'src/backend/launcher.ts',
+      shape: 'twin',
+      vectors: 'src/backend/__tests__/bottleVectors.test.ts',
+      callers: [],
+      deletedBy: 96
+    }
+
+    it('a twin whose file exports its name and whose vectors test imports the file passes', () => {
+      const { dir, cleanup } = makeTree({
+        [TWIN.file]: 'export function getBottleDir() { return 1 }',
+        [TWIN.vectors as string]:
+          "import { getBottleDir } from 'backend/launcher'\nit('x', () => getBottleDir())"
+      })
+      try {
+        expect(twinViewProblems(TWIN, dir)).toEqual([])
+        expect(twinViewProblems({ ...TWIN, shape: 'view' }, dir)).toEqual([])
+      } finally {
+        cleanup()
+      }
+    })
+
+    it('a planted twin row with no vectors field fails', () => {
+      const { dir, cleanup } = makeTree({
+        [TWIN.file]: 'export function getBottleDir() { return 1 }'
+      })
+      try {
+        const { vectors: _omit, ...noVectors } = TWIN
+        void _omit
+        expect(twinViewProblems(noVectors, dir)).toEqual([
+          expect.stringContaining('no vectors test names how it is pinned')
+        ])
+      } finally {
+        cleanup()
+      }
+    })
+
+    it('a planted twin row whose vectors test file does not exist fails', () => {
+      const { dir, cleanup } = makeTree({
+        [TWIN.file]: 'export function getBottleDir() { return 1 }'
+      })
+      try {
+        expect(twinViewProblems(TWIN, dir)).toEqual([
+          expect.stringContaining('vectors test')
+        ])
+        expect(twinViewProblems(TWIN, dir)[0]).toContain('does not exist')
+      } finally {
+        cleanup()
+      }
+    })
+
+    it('a twin row whose vectors test does not import the twin file fails, a sibling import is not enough', () => {
+      const { dir, cleanup } = makeTree({
+        [TWIN.file]: 'export function getBottleDir() { return 1 }',
+        [TWIN.vectors as string]:
+          "import { x } from 'backend/launcherMore'\nit('x', () => x)"
+      })
+      try {
+        expect(twinViewProblems(TWIN, dir)).toEqual([
+          expect.stringContaining('does not import src/backend/launcher.ts')
+        ])
+      } finally {
+        cleanup()
+      }
+    })
+
+    it('a twin row whose file does not export its name, or does not exist, fails', () => {
+      const { dir, cleanup } = makeTree({
+        [TWIN.file]: 'function getBottleDir() { return 1 }',
+        [TWIN.vectors as string]: "import 'backend/launcher'"
+      })
+      try {
+        expect(twinViewProblems(TWIN, dir)).toEqual([
+          expect.stringContaining("does not export 'getBottleDir'")
+        ])
+        expect(
+          twinViewProblems({ ...TWIN, file: 'src/backend/missing.ts' }, dir)
+        ).toEqual([expect.stringContaining('does not exist')])
+      } finally {
+        cleanup()
+      }
+    })
+
+    it('a twin row outside the discovery scope is not part of the set-equality check', () => {
+      expect(scheduledKeys([TWIN])).toEqual([])
+      expect(
+        scheduledKeys([{ ...TWIN, file: `${ENGINEWINE_DIR}/bottlePaths.ts` }])
+      ).toEqual([`${ENGINEWINE_DIR}/bottlePaths.ts#getBottleDir`])
+    })
+  })
+
+  describe('deletedBy', () => {
+    const row = (deletedBy: number): ScheduleRow => ({
+      name: 'f',
+      file: `${ENGINEWINE_DIR}/f.ts`,
+      shape: 'shim',
+      channel: 'RUST_ENGINE_X',
+      callers: [],
+      deletedBy
+    })
+
+    it('a deletedBy outside 87..99, or not an integer, fails', () => {
+      expect(deletedByProblems([row(87), row(99), row(93)])).toEqual([])
+      for (const bad of [86, 100, 0, 92.5, Number.NaN]) {
+        expect(deletedByProblems([row(bad)])).toHaveLength(1)
+      }
+    })
+
+    it('noIntraPhaseRowsLeft fails while a row has deletedBy 87 and passes once none does', () => {
+      expect(() => noIntraPhaseRowsLeft([row(87), row(98)])).toThrow(
+        /intra-phase rows.*f\.ts#f/
+      )
+      expect(() => noIntraPhaseRowsLeft([row(88), row(98)])).not.toThrow()
+      expect(() => noIntraPhaseRowsLeft([])).not.toThrow()
+    })
+  })
+
+  it('self-test: an empty directory walks no files and fails the schedule floor', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'engine-wine-shim-schedule-'))
+    try {
+      const walk = walkStripped(['src/backend'], { base: dir })
+      expect(walk.count).toBe(0)
+      expect(() =>
+        assertAtOrAboveFloor(
+          'engineWineShimSchedule src/backend files',
+          walk.count,
+          BACKEND_FILES_FLOOR
+        )
+      ).toThrow(/engineWineShimSchedule src\/backend files/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
