@@ -648,7 +648,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 3/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
+**Plans:** 4/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
 
 Plans:
 **Wave 1**
@@ -657,7 +657,7 @@ Plans:
 - [x] 87-03-PLAN.md — Delete-gate machinery: engineWinePortComplete (no rollback flag) and the shim/resolver/twin/view schedule with exact discovery rules
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 87-04-PLAN.md — SpecRunner spawn seam in gamelib-core/gamelib-proc with the spec-tree orphan arm (D-17)
+- [x] 87-04-PLAN.md — SpecRunner spawn seam in gamelib-core/gamelib-proc with the spec-tree orphan arm (D-17)
 - [ ] 87-05-PLAN.md — TS oracle harness (HTTP, spawn-trace, tree recorders), the runtimes goldens and the fixture redaction scan
 
 **Wave 3** *(blocked on Wave 2 completion)*

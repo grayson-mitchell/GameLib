@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-03-PLAN.md
-last_updated: "2026-11-23T00:56:07.163Z"
+stopped_at: Completed 87-04-PLAN.md
+last_updated: "2026-11-23T01:06:12.609Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 188e1e1f1eee2cfecd662764321b8ef54911019c
+state_head: 0892aa9ef07d48dead4da8faa97e956de5b10e9c
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 4 of 59
+Plan: 5 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -413,6 +413,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P01 | 5 min | 3 tasks | 5 files |
 | Phase 87 P02 | 25min | 2 tasks | 21 files |
 | Phase 87 P03 | 20 min | 2 tasks | 5 files |
+| Phase 87 P04 | 25 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -830,6 +831,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-02: dispatch panic and shutdown tests drive guarded() directly; OPS never carries a test-only op
 - [Phase 87]: 87-03: sub-slice describes are added red by the deleting plan, never pre-created empty (an empty SliceSpec passes vacuously)
 - [Phase 87]: 87-03: checkShimShape takes an optional channel-prefix list (default RUST_INFO_) so engine shims pass the shape rule without changing 86
+- [Phase 87]: 87-04: a timeout, cancel or shutdown kills a spec run's process group through kill_tree::kill_process_group, not only the leader; a run asked for after shutdown began is not spawned — kill_on_drop kills the leader only, so a hung winetricks would leave its wine processes until app exit
 
 ### Pending Todos
 
@@ -1108,8 +1110,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T00:56:05.350Z
-Stopped at: Completed 87-03-PLAN.md
+Last session: 2026-11-23T01:06:10.845Z
+Stopped at: Completed 87-04-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
