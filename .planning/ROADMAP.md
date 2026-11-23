@@ -648,7 +648,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 8/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
+**Plans:** 9/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
 
 Plans:
 **Wave 1**
@@ -664,7 +664,7 @@ Plans:
 - [x] 87-06-PLAN.md — Fetch with pinned Replay, the full EngineCtx/WineCtx, the DxvkInstaller trait and the UI sinks
 - [x] 87-07-PLAN.md — Goldens: wine manager (seven feeds, checksum, install, abort, remove)
 - [x] 87-08-PLAN.md — Goldens: wine command core and discovery (D-22)
-- [ ] 87-09-PLAN.md — Goldens: DXVK/vkd3d/nvapi and DXMT
+- [x] 87-09-PLAN.md — Goldens: DXVK/vkd3d/nvapi and DXMT
 - [ ] 87-10-PLAN.md — Goldens: Winetricks (install lifecycle, pure vectors, queue)
 - [ ] 87-11-PLAN.md — Goldens: bottles, markers, the D-07 fixture set and the twin/view vectors
 - [ ] 87-12-PLAN.md — Goldens: engine configuration and the engine twin vectors

@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-08-PLAN.md
-last_updated: "2026-11-23T01:54:02.622Z"
+stopped_at: Completed 87-09-PLAN.md
+last_updated: "2026-11-23T02:09:03.917Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 7d474807012eee78a50611fb8aa1c20afbe9f78f
+state_head: 10ba59bd81a58b3aabbb80d521295df19cc07d50
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 9 of 59
+Plan: 10 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -418,6 +418,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P06 | 12 min | 2 tasks | 22 files |
 | Phase 87 P07 | 36 min | 2 tasks | 145 files |
 | Phase 87 P08 | 8 min | 2 tasks | 345 files |
+| Phase 87 P09 | 20 min | 2 tasks | 407 files |
 
 ## Accumulated Context
 
@@ -845,6 +846,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-07: wine-manager goldens use per_page=3 for the live feeds and run install/remove through the registered handlers; restore-on-unzip-failure, abort-during-update and swallowed tar failures recorded as TS quirks for 87-19 D-19 deltas
 - [Phase 87]: 87-08: directory listings are sorted in the discovery oracle; the TS lists in filesystem order, so the goldens pin the sorted order and the Rust port sorts too (D-19 hardening)
 - [Phase 87]: 87-08: env-builder vectors carry only the 21 GameSettings fields the builders read plus wineVersion; paths are placeholders expanded onto each side's fake profile
+- [Phase 87]: DXVK-family and DXMT behaviour is pinned by 59 TS goldens (38 dxvk, 21 dxmt) with the GitHub feeds recorded live once and synthetic tar.gz archives; wine commands are recorded at the runWineCommand seam, not as real wine spawns
+- [Phase 87]: DXMT oracle calls each registered handler directly so a handler rejection is recorded; the TS tools oracles share toolsOracleSupport.ts (archive builder, platform pin, log capture)
 
 ### Pending Todos
 
@@ -1123,8 +1126,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T01:54:00.766Z
-Stopped at: Completed 87-08-PLAN.md
+Last session: 2026-11-23T02:09:02.071Z
+Stopped at: Completed 87-09-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
