@@ -5,7 +5,7 @@ titles: json
 findings:
   - id: CR-41
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "unguarded `await addRecentGame` aborts the post-game callback when the Rust write rejects"
   - id: WR-01
     severity: warning
@@ -33,11 +33,11 @@ findings:
     title: "`getGameMetadataOverride` bound (256) is tighter than the TS schema (4096) and than the crate's own bound (1024)"
   - id: WR-41
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "a failed or refused umu id lookup now aborts a Linux game launch"
   - id: WR-42
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`getGameInfo` and the non-Steam shortcut flow now fail whole on a Rust round-trip rejection"
   - id: WR-61
     severity: warning
@@ -171,7 +171,7 @@ findings:
     severity: info
     disposition: open
     title: "gameDetails round-trip cases now test a double that re-implements the Rust rule"
-open: 42
+open: 39
 total: 42
 recorded: 2026-11-22T19:54:24.939Z
 ---
@@ -180,15 +180,15 @@ recorded: 2026-11-22T19:54:24.939Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-41 | critical | open | - |
+| CR-41 | critical | fixed | 9acbfc580 |
 | WR-01 | warning | open | - |
 | WR-02 | warning | open | - |
 | WR-03 | warning | open | - |
 | WR-04 | warning | open | - |
 | WR-21 | warning | open | - |
 | WR-22 | warning | open | - |
-| WR-41 | warning | open | - |
-| WR-42 | warning | open | - |
+| WR-41 | warning | fixed | 97b62cb2d |
+| WR-42 | warning | fixed | 92d18429d |
 | WR-61 | warning | open | - |
 | WR-62 | warning | open | - |
 | WR-63 | warning | open | - |
