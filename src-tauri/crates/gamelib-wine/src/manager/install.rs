@@ -39,6 +39,7 @@ use super::{
 use crate::ctx::WineCtx;
 use crate::extract::{extract_tar, ExtractError};
 use crate::runtimes::{archive_file_name, request};
+use crate::tools::dxmt;
 
 /// How long `du` may take on a large wine directory on a cold disk (the TS's unmeasured 60 s).
 const DU_TIMEOUT: Duration = Duration::from_secs(60);
@@ -582,7 +583,28 @@ pub async fn install(
     };
     notify(ctx, version, key, default);
     emit_progress(ctx, version, json!({ "status": "idle" }));
+    if outcome == Outcome::Success {
+        dxmt_hook(ctx, release).await;
+    }
     Ok(outcome)
+}
+
+/// The `wineVersionInstalled` listener (87-31): the TS emitted the event inside `installVersion` and DXMT
+/// listened, so a new Wine-Staging-macOS got its `-DXMT` copy. The manager now calls DXMT itself, after the
+/// install is stored, announced and closed (the user is not kept waiting for a download that is not theirs).
+/// A Wine-Staging-macOS always installs into `<tools>/wine` (`install_dir_for`), so the folder is known
+/// without asking it again. Everything else is left to DXMT's own checks (macOS, the staging type, the
+/// export gate). An error is the TS listener's rejection, which nothing handled: it is logged here as its
+/// category word and the install's outcome stands.
+async fn dxmt_hook(ctx: &WineCtx, release: &Map<String, Value>) {
+    let Ok(info) = serde_json::from_value::<dxmt::WineVersionInfo>(Value::Object(release.clone()))
+    else {
+        return;
+    };
+    let install_dir = ctx.engine.paths.tools_path.join("wine");
+    if let Err(error) = dxmt::on_wine_installed(ctx, &info, &install_dir).await {
+        log_warn(ctx, &format!("DXMT install hook: {error}"));
+    }
 }
 
 #[cfg(test)]

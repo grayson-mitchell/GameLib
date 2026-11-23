@@ -21,6 +21,12 @@ describe('bootstrap.ts source shape (D-08)', () => {
     expect(topLevelLets).toEqual(['let booted = false'])
   })
 
+  it('has no DXMT boot wiring: DXMT is Rust-owned, one owner (87-31, D-06)', () => {
+    // The strip drops comment lines, so the prose that records the move does not count.
+    expect(strippedBootstrap).not.toContain('registerDxmtListeners')
+    expect(strippedBootstrap).not.toMatch(/from '\.\.\/tools\/dxmt'/)
+  })
+
   it('has no *Initialized / *Registered once-guard and no module-level i18nReady', () => {
     expect(strippedBootstrap).not.toMatch(
       /\b[a-zA-Z]+(Initialized|Registered)\b/

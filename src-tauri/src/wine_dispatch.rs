@@ -17,11 +17,13 @@
 use super::*;
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
 use gamelib_wine::ctx::WineCtx;
 use gamelib_wine::manager::install::InstallSettings;
 use gamelib_wine::runtimes::RuntimeName;
+use gamelib_wine::tools::dxmt::{spawn_dxmt_boot_update, DxmtReleasesInfo, DXMT_BOOT_BOUND};
 use gamelib_wine::tools::macho::{MachoScan, WinemacMetalCheck};
 use gamelib_wine::CancellationToken;
 use serde_json::Map;
@@ -777,14 +779,51 @@ pub(crate) fn rpc_wine_manager_list(args: &[Value]) -> Result<Value, String> {
     rpc_wine_op(wine_ctx(), "wine_manager_list", args)
 }
 
+/// Whether this run's DXMT boot task has been started. The first `releasesInfoReady` of a run is the boot
+/// fetch (the TS listener ran on it at boot, off the first feed read); every later one is a refresh.
+static DXMT_BOOT_STARTED: AtomicBool = AtomicBool::new(false);
+
+/// DXMT's half of `releasesInfoReady` (87-31, D-06, D-17), after the wine release lists are updated. The
+/// first call of a run starts the bounded boot task (`spawn_dxmt_boot_update`: a `Shutdown` registrant,
+/// [`DXMT_BOOT_BOUND`], offline stops it before any request) and returns at once; every later call is the
+/// listener itself, awaited (`wine_dxmt_releases_info`). `started` is the once-flag, so a test drives its
+/// own. DXMT has exactly one owner here: the TS listener is no longer registered at boot.
+fn dxmt_on_releases_info(
+    wine: &Arc<WineCtx>,
+    started: &AtomicBool,
+    args: &[Value],
+) -> Result<Value, String> {
+    if started.swap(true, Ordering::SeqCst) {
+        return gamelib_wine::dispatch_sync("wine_dxmt_releases_info", args, wine);
+    }
+    // The wire decode of the five feed stamps ignores the `dxmt` one; DXMT reads its tag from the same JSON.
+    let info: DxmtReleasesInfo = args
+        .first()
+        .and_then(|arg| serde_json::from_value(arg.clone()).ok())
+        .unwrap_or_default();
+    if spawn_dxmt_boot_update(Arc::clone(wine), info, DXMT_BOOT_BOUND).is_err() {
+        // The wine runtime could not be built: nothing else in this run could use DXMT either, and the
+        // release lists are already updated, so the call still answers `null`.
+        if let Some(log) = &wine.engine.log {
+            log.warn("DXMT boot update: no runtime");
+        }
+    }
+    Ok(Value::Null)
+}
+
 /// The `wine_releases_info_ready` `rustInvoke` arm (the `releasesInfoReady` listener's shim): one object,
-/// of which the crate reads the five feed stamps. Unbounded in the sidecar, like the refresh it may start.
+/// of which the crate reads the five feed stamps and then DXMT its own ([`dxmt_on_releases_info`]).
+/// Unbounded in the sidecar, like the refresh it may start.
 pub(crate) fn rpc_wine_releases_info_ready(args: &[Value]) -> Result<Value, String> {
     WineReleasesInfoReadyArgs::from_args(args)?;
     if !matches!(args, [Value::Object(_)]) {
         return Err("wine_releases_info_ready:bad-args".to_string());
     }
-    rpc_wine_op(wine_ctx(), "wine_releases_info_ready", args)
+    let answered = rpc_wine_op(wine_ctx(), "wine_releases_info_ready", args)?;
+    if let Some(wine) = wine_ctx() {
+        dxmt_on_releases_info(wine, &DXMT_BOOT_STARTED, args)?;
+    }
+    Ok(answered)
 }
 
 /// The `wine_manager_install` `rustInvoke` arm (the `installWineVersion` shim, the default-wine
@@ -1045,6 +1084,67 @@ mod tests {
                 "{bad:?}"
             );
         }
+    }
+
+    /// A wine context over throwaway paths, for the arms that need one and touch nothing.
+    fn bare_wine() -> Arc<WineCtx> {
+        let missing = std::path::PathBuf::from("gamelib-wine-dxmt-test-missing").join("runtimes");
+        let engine = engine_dispatch::build_ctx(
+            Arc::new(gamelib_store::host::StoreHost::new()),
+            std::path::Path::new("gamelib-wine-dxmt-test-missing"),
+            std::path::PathBuf::from("home"),
+            std::path::PathBuf::from("tmp"),
+            Arc::new(gamelib_engine::sinks::NullEmitter),
+            Arc::new(engine_dispatch::ShellEngineUi::silent(Arc::new(
+                gamelib_engine::sinks::NullEmitter,
+            ))),
+            gamelib_core::shutdown::Shutdown::new(),
+        );
+        Arc::new(WineCtx::new(Arc::new(engine), missing))
+    }
+
+    #[test]
+    fn the_first_releases_info_of_a_run_starts_the_dxmt_boot_task_once_and_later_ones_are_the_listener(
+    ) {
+        let wine = bare_wine();
+        let started = AtomicBool::new(false);
+        let info = [json!({ "dxmt": { "tag": "v0.80" } })];
+        // First: the boot task is started (the once-flag flips), and the call answers at once.
+        assert_eq!(
+            dxmt_on_releases_info(&wine, &started, &info),
+            Ok(Value::Null)
+        );
+        assert!(started.load(Ordering::SeqCst));
+        // Later: the listener runs through the crate op and answers `null`; a payload the op cannot read
+        // is refused by it, which shows the call went to the op and not to a second boot task.
+        assert_eq!(
+            dxmt_on_releases_info(&wine, &started, &info),
+            Ok(Value::Null)
+        );
+        assert_eq!(
+            dxmt_on_releases_info(&wine, &started, &[json!("x")]),
+            Err("wine_dxmt_releases_info:bad-args".to_string())
+        );
+    }
+
+    #[test]
+    fn the_releases_info_arm_decodes_before_it_reaches_the_context_and_is_not_ready_before_install()
+    {
+        for bad in [vec![], vec![json!("x")], vec![json!({}), json!({})]] {
+            assert_eq!(
+                rpc_wine_releases_info_ready(&bad),
+                Err("wine_releases_info_ready:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+        // No test installs the process-wide wine context, so a well-formed call is not ready, and no DXMT
+        // boot task has been started by it.
+        assert!(wine_ctx().is_none());
+        assert_eq!(
+            rpc_wine_releases_info_ready(&[json!({})]),
+            Err("wine_releases_info_ready:not-ready".to_string())
+        );
+        assert!(!DXMT_BOOT_STARTED.load(Ordering::SeqCst));
     }
 
     #[test]

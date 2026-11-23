@@ -31,6 +31,7 @@ use gamelib_testutil::FakeHome;
 use gamelib_wine::ctx::{Arch, WineCtx};
 use gamelib_wine::manager::releases::{self, Repository};
 use gamelib_wine::manager::store;
+use gamelib_wine::tools::macho::{MachoScan, WinemacMetalCheck};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use tokio_util::sync::CancellationToken;
@@ -645,6 +646,35 @@ impl Fetch for StopAfterHead {
     }
 }
 
+/// The DXMT export gate's scan (87-31): fails every bundle it is asked about, so the DXMT hooks a wine
+/// install runs stop at the gate with nothing fetched and nothing copied (the oracle recorded the install
+/// with no DXMT listener), and remembers the bundles it was asked about, which is how the test sees that the
+/// hook ran.
+#[derive(Default)]
+struct AskedScan {
+    asked: Mutex<Vec<PathBuf>>,
+}
+
+impl AskedScan {
+    fn asked(&self) -> Vec<PathBuf> {
+        self.asked.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+}
+
+impl MachoScan for AskedScan {
+    fn winemac_metal_exports(&self, wine_bundle: &Path) -> Result<WinemacMetalCheck, String> {
+        self.asked
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push(wine_bundle.to_path_buf());
+        Ok(WinemacMetalCheck::Fail {
+            winemac_path: String::new(),
+            reason: "scripted".to_string(),
+            missing: Vec::new(),
+        })
+    }
+}
+
 /// Everything one replayed case runs over.
 struct Run {
     profile: Profile,
@@ -653,6 +683,7 @@ struct Run {
     emitter: Arc<RecordingEmitter>,
     ui: Arc<RecordingUi>,
     tracer: Arc<Tracing>,
+    scan: Arc<AskedScan>,
     ctx: WineCtx,
 }
 
@@ -686,6 +717,7 @@ fn start(case: &Value) -> Run {
         .map(|(k, v)| (k.to_string(), v.to_string_lossy().into_owned()))
         .collect();
     let tracer = Arc::new(Tracing::new(base_env, tar));
+    let scan = Arc::new(AskedScan::default());
     let ctx = WineCtx::new(
         Arc::new(
             engine(&profile, platform_of(case))
@@ -699,7 +731,8 @@ fn start(case: &Value) -> Run {
         profile.tools.join("runtimes"),
     )
     // The oracle pinned `process.arch` to x64: GE-Proton picks its asset by it.
-    .with_arch(Arch::X64);
+    .with_arch(Arch::X64)
+    .with_macho_scan(Arc::clone(&scan) as Arc<dyn MachoScan>);
     let run = Run {
         profile,
         replay,
@@ -707,6 +740,7 @@ fn start(case: &Value) -> Run {
         emitter,
         ui,
         tracer,
+        scan,
         ctx,
     };
     seed_store(&run, id);
@@ -751,8 +785,9 @@ fn comparable_events(pushed: Vec<(String, Vec<Value>)>) -> Value {
 }
 
 /// The golden's events without the backend bus entries (`event:wineVersionInstalled` and
-/// `event:wineVersionUninstalled`), which the TS DXMT listener consumed and no Rust op pushes: 87-20
-/// opens that gap on purpose and 87-31 closes it.
+/// `event:wineVersionUninstalled`), which the TS DXMT listener consumed. They are not renderer pushes and
+/// no Rust op pushes them: since 87-31 the manager calls DXMT's `on_wine_installed` and
+/// `on_wine_uninstalled` directly, and the tests of that sit below the install and remove replays.
 fn renderer_events(expected: &Value) -> Value {
     Value::Array(
         expected
@@ -1003,6 +1038,23 @@ async fn replay_install(case: &Value) {
     assert_eq!(outcome, json!(want), "{id}: the outcome");
     compare_run(&run, case, &golden);
     assert_delta(&run, id);
+    assert_dxmt_hook(&run, id);
+}
+
+/// The DXMT hook a successful wine install runs (87-31, closing the gap 87-20 opened): the one case that
+/// installs a Wine-Staging-macOS on a Mac asks the gate about `<tools>/wine/<version>`, and no other case
+/// (Proton, a failed or aborted install) reaches DXMT at all.
+fn assert_dxmt_hook(run: &Run, id: &str) {
+    let wanted: Vec<PathBuf> = if id == "install-checksum-absent" {
+        vec![run
+            .profile
+            .tools
+            .join("wine")
+            .join("Wine-Staging-macOS-9.21")]
+    } else {
+        Vec::new()
+    };
+    assert_eq!(run.scan.asked(), wanted, "{id}: the DXMT gate");
 }
 
 /// What the Rust port leaves where it differs from the TS golden (see `deltas.json`).
@@ -1071,6 +1123,71 @@ async fn replay_remove(case: &Value) {
     let removed = !golden["notifications"].as_array().unwrap().is_empty();
     assert_eq!(result, json!(removed), "{id}: the result");
     compare_run(&run, case, &golden);
+}
+
+/// A wine-manager removal of a Wine-Staging-macOS calls DXMT's `on_wine_uninstalled` (87-31): its `-DXMT`
+/// copy beside it goes with it. The case is `remove-stored-installdir` moved onto a Mac and onto a staging
+/// build in `<tools>/wine`, the only place DXMT writes a copy.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_staging_removal_removes_its_dxmt_copy_and_a_proton_removal_leaves_a_sibling_alone() {
+    let version = "Wine-Staging-macOS-9.21";
+    let case = json!({
+        "id": "remove-stored-installdir",
+        "op": "remove",
+        "platform": "mac",
+        "seed": [
+            { "path": format!("<TOOLS>/wine/{version}/file"), "text": "installed" },
+            { "path": format!("<TOOLS>/wine/{version}-DXMT/file"), "text": "copy" },
+            { "path": "<TOOLS>/proton/GE-Proton9-27/file", "text": "installed" },
+            { "path": "<TOOLS>/proton/GE-Proton9-27-DXMT/file", "text": "not a dxmt copy" },
+        ],
+    });
+    let run = start(&case);
+    let entry = |name: &str, kind: &str, dir: &str| {
+        json!({
+            "version": name, "type": kind, "date": "2025-01-01", "download": "", "downsize": 0,
+            "disksize": 1, "checksum": "", "release_notes_link": "", "isInstalled": true,
+            "hasUpdate": false, "installDir": dir,
+        })
+    };
+    let staging = entry(
+        version,
+        "Wine-Staging-macOS",
+        &format!("<TOOLS>/wine/{version}"),
+    );
+    let proton = entry("GE-Proton9-27", "GE-Proton", "<TOOLS>/proton/GE-Proton9-27");
+    let handle = store::open(&run.ctx).unwrap();
+    store::write(
+        &handle,
+        [&staging, &proton]
+            .iter()
+            .map(|e| run.profile.expand_json(&Json::from((*e).clone())))
+            .collect(),
+    )
+    .unwrap();
+
+    let wine_dir = run.profile.tools.join("wine");
+    let proton_dir = run.profile.tools.join("proton");
+    for (name, release) in [(version, &staging), ("GE-Proton9-27", &proton)] {
+        let result = gamelib_wine::dispatch(
+            "wine_manager_remove",
+            std::slice::from_ref(release),
+            &run.ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(result, json!(true), "{name}");
+    }
+    assert!(!wine_dir.join(version).exists());
+    assert!(
+        !wine_dir.join(format!("{version}-DXMT")).exists(),
+        "the DXMT copy of a removed staging build goes with it"
+    );
+    assert!(!proton_dir.join("GE-Proton9-27").exists());
+    assert!(
+        proton_dir.join("GE-Proton9-27-DXMT").join("file").exists(),
+        "DXMT touches only a Wine-Staging-macOS"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

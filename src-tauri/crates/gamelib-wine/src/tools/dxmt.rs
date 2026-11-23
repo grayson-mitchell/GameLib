@@ -15,9 +15,10 @@
 //!   it ([`spawn_dxmt_boot_update`], D-17: a shutdown registrant, an abandoned-after-the-bound wait
 //!   and one log line).
 //!
-//! Crate-only (D-06): nothing calls these yet. The wine manager's install and remove do not call the
-//! hooks, so the TS DXMT listener stays the only owner of the DXMT work until 87-31 switches every
-//! hook in one commit; a TS and a Rust owner of the same event is what D-06 forbids.
+//! Owned here since 87-31 (D-06), in one commit: the wine manager's install and remove call
+//! [`on_wine_installed`] and [`on_wine_uninstalled`], the shell's `wine_releases_info_ready` starts the
+//! boot task on its first call and [`on_releases_info`] (op `wine_dxmt_releases_info`) on the later ones,
+//! and the TS listeners are no longer registered at boot.
 //!
 //! No log line carries a URL or a response body (T-87-09): a failure is a category word.
 
@@ -458,7 +459,8 @@ pub async fn boot_update(ctx: &WineCtx, info: &DxmtReleasesInfo) -> Result<(), D
 /// it holds a `Shutdown` registrant named `wine-dxmt-boot` for exactly as long as it runs, is dropped
 /// (its in-flight request and download with it) after `bound` or when the application begins to exit,
 /// and logs one line with the outcome word and nothing else: `done`, `failed`, `timeout`, `shutdown` or
-/// `panic`. Nothing starts it yet: 87-31 starts it in the commit that removes the TS boot wiring.
+/// `panic`. The shell starts it once per run, from the first `releasesInfoReady` (87-31, in the commit
+/// that removed the TS boot wiring); the later ones are [`on_releases_info`].
 ///
 /// Callable from any thread. An error is only a runtime that could not be built.
 pub fn spawn_dxmt_boot_update(

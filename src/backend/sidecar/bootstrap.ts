@@ -104,7 +104,6 @@ import {
   type SidecarHumbleSecretStore
 } from './humbleSecretStore'
 import { createHumbleServices } from '../humble'
-import { registerDxmtListeners } from '../tools/dxmt'
 // 34.5 gap cycle 4 plan 36 (developer-scoped Routing addition): the dev-only plaintext vault
 // that this branch installs INSTEAD OF the two keyring stores below, when opted into. Import
 // only — no module-scope call. See installDevSecretVault()'s own header for the full guardrail
@@ -2779,20 +2778,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'secret-stores',
       run: (ctx, _io, state) => {
-        const { stores, host, onlineMonitor, tokenStore, aborts, paths } =
-          requireServices(state)
-        registerDxmtListeners({
-          stores,
-          paths,
-          runner: ctx.runner,
-          aborts,
-          onlineMonitor,
-          dialogs: host.dialogs,
-          appState: host.appState,
-          sendFrontendMessage: host.sendFrontendMessage,
-          requestRustInvoke: host.requestRustInvoke,
-          events: requireAppRuntime(state).events
-        })
+        const { stores, tokenStore } = requireServices(state)
+        // Phase 87 (D-06, D-17, 87-31): DXMT's three listeners (`wineVersionInstalled`,
+        // `wineVersionUninstalled`, `releasesInfoReady`) are Rust's now. The wine manager calls it after an
+        // install and a remove, and `wine_releases_info_ready` starts its bounded boot update, so DXMT has
+        // one owner and no boot wiring here.
+        //
         // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
         // requestRustInvoke can write frames, and BEFORE any invoke handler body can run (those
         // only fire from the RPC loop below, never at module-import time) so no handler ever

@@ -18,6 +18,7 @@ use super::{
     RemoveFailure,
 };
 use crate::ctx::WineCtx;
+use crate::tools::dxmt::{self, WineVersionInfo};
 
 /// The install folder that may hold `dir`, when `dir` is a direct child of one: the three install
 /// folders under `<tools>` and any Steam `compatibilitytools.d` (a Proton install can go there).
@@ -31,6 +32,16 @@ fn install_root(ctx: &WineCtx, dir: &Path) -> Option<PathBuf> {
         .file_name()
         .is_some_and(|name| name == "compatibilitytools.d");
     (known || steam).then(|| parent.to_path_buf())
+}
+
+/// What DXMT is told about a removed version: the keys of the stored entry it reads.
+fn uninstalled_info(entry: &Json) -> WineVersionInfo {
+    WineVersionInfo {
+        version: text_of(entry, "version").unwrap_or_default().to_string(),
+        kind: text_of(entry, "type").unwrap_or_default().to_string(),
+        install_dir: text_of(entry, "installDir").map(str::to_string),
+        is_installed: true,
+    }
 }
 
 /// Removes the wine version `version`: `true` once it is unmarked in the store (and its directory,
@@ -74,7 +85,15 @@ pub async fn remove(ctx: &WineCtx, version: &str) -> bool {
             None => Err(RemoveFailure::Refused),
         };
         match removed {
-            Ok(()) => {}
+            // The `wineVersionUninstalled` listener (87-31): the TS emitted the event here, with a copy of
+            // the stored entry (its `installDir` still set), and DXMT listened. The directory is gone, so
+            // a `-DXMT` copy beside it goes too. Only the stored entry is described to DXMT, never the
+            // caller's.
+            Ok(()) => {
+                if let Some(entry) = releases.get(index) {
+                    dxmt::on_wine_uninstalled(ctx, &uninstalled_info(entry)).await;
+                }
+            }
             Err(RemoveFailure::Refused) => {
                 log_warn(
                     ctx,

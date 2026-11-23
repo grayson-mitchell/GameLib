@@ -451,7 +451,7 @@ describe('sidecar bootstrap wirings (Phase 34.2 Plan 01 -- REQ-34.2-02/04/07/14)
   it('REQ-34.2-07 one boot yields exactly one fetch and one listener', async () => {
     // `backendEvents` is this boot's real, unmocked event bus -- the `./handlers` import
     // graph already registers its OWN unrelated `releasesInfoReady` listeners
-    // (backend/tools/dxmt.ts, backend/wine/manager/ipc_handler.ts), so a raw
+    // (backend/wine/manager/ipc_handler.ts), so a raw
     // `listenerCount('releasesInfoReady')` would be polluted by those legitimate,
     // out-of-scope features. `jest.spyOn` wraps (never replaces) the real `.on` method --
     // it is instrumentation, not a mock of `backend_events` itself -- so it isolates
@@ -471,11 +471,12 @@ describe('sidecar bootstrap wirings (Phase 34.2 Plan 01 -- REQ-34.2-02/04/07/14)
     const releasesInfoReadyRegistrations = onSpy.mock.calls.filter(
       ([eventName]) => eventName === 'releasesInfoReady'
     )
-    // Block A's own, `registerWineToolsFlows()`'s listener (handler registration is the
-    // 'register-handlers' boot step, D-08) and the DXMT census listener (registered by the
-    // 'secret-stores' boot step since 66.3-15, no longer at module scope), all of which run after
-    // the spy is installed. The wine manager's listener still registers at its own module scope.
-    expect(releasesInfoReadyRegistrations).toHaveLength(3)
+    // Block A's own and `registerWineToolsFlows()`'s listener (handler registration is the
+    // 'register-handlers' boot step, D-08), both of which run after the spy is installed. The DXMT
+    // census listener is not among them: DXMT's boot update is Rust's since 87-31 (it started in the
+    // 'secret-stores' boot step from 66.3-15 until then). The wine manager's listener still
+    // registers at its own module scope.
+    expect(releasesInfoReadyRegistrations).toHaveLength(2)
   })
 
   it('REQ-34.2-14: the sidecar still reaches READY_SENTINEL and does not throw', async () => {

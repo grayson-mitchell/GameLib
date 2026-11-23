@@ -37,6 +37,7 @@ pub const OPS: &[&str] = &[
     "wine_default_wine",
     "wine_discover_alternatives",
     "wine_discover_crossover",
+    "wine_dxmt_releases_info",
     "wine_dxvk_install_remove",
     "wine_manager_install",
     "wine_manager_list",
@@ -124,6 +125,20 @@ async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String>
             .await
             {
                 manager::log_error(ctx, &format!("wine versions refresh failed: {error}"));
+            }
+            Ok(Value::Null)
+        }
+        // The `releasesInfoReady` listener of DXMT (87-31): updates the DXMT inside existing `-DXMT` copies
+        // when the feed names a newer one. The TS listener's rejection was handled by nothing, so an error
+        // is logged by DXMT's own category word and the op still answers `null`. The shell calls this for
+        // every `releasesInfoReady` after the first of a run; the first is the boot task
+        // (`tools::dxmt::spawn_dxmt_boot_update`), bounded.
+        "wine_dxmt_releases_info" => {
+            let info: tools::dxmt::DxmtReleasesInfo = decode_lenient(op, args)?;
+            if let Err(error) = tools::dxmt::on_releases_info(ctx, &info).await {
+                if let Some(log) = &ctx.engine.log {
+                    log.warn(&format!("DXMT releases update: {error}"));
+                }
             }
             Ok(Value::Null)
         }
@@ -626,6 +641,26 @@ mod tests {
             assert_eq!(
                 dispatch("wine_releases_info_ready", &bad, &ctx).await,
                 Err("wine_releases_info_ready:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn the_dxmt_releases_op_takes_one_object_and_swallows_the_listeners_rejection() {
+        let home = FakeHome::new("wine-lib-");
+        let ctx = ctx(&home);
+        // Not a Mac: DXMT has nothing to do, and the op says so with `null`, whatever the feed carried.
+        for info in [json!({}), json!({ "dxmt": { "tag": "v0.80" } })] {
+            assert_eq!(
+                dispatch("wine_dxmt_releases_info", &[info], &ctx).await,
+                Ok(Value::Null)
+            );
+        }
+        for bad in [vec![], vec![json!("x")], vec![json!({}), json!({})]] {
+            assert_eq!(
+                dispatch("wine_dxmt_releases_info", &bad, &ctx).await,
+                Err("wine_dxmt_releases_info:bad-args".to_string()),
                 "{bad:?}"
             );
         }
