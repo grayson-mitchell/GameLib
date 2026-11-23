@@ -1,0 +1,19 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/3Shain/dxmt/releases/latest",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 500,
+      "headers": {},
+      "bodyFile": "body-1.bin"
+    },
+    "synthetic": true
+  }
+]

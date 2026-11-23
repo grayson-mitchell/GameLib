@@ -1,0 +1,30 @@
+{
+  "op": "releasesInfoReady",
+  "trigger": "releases-ready",
+  "outcome": {
+    "resolved": true
+  },
+  "registered": [
+    "releasesInfoReady",
+    "wineVersionInstalled",
+    "wineVersionUninstalled"
+  ],
+  "scanRequests": [
+    {
+      "channel": "scan_winemac_metal_exports",
+      "args": [
+        {
+          "wineBundlePath": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT"
+        }
+      ]
+    }
+  ],
+  "downloads": [],
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "ToolInstaller",
+      "message": "Not updating DXMT copy of Wine-Staging-macOS-9: <TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so winemac.so lacks the macdrv metal-view exports; missing _macdrv_functions, _macdrv_view_create_metal_view, _macdrv_view_get_metal_layer, _macdrv_view_release_metal_view. DXMT v0.80 needs _macdrv_functions or all three _macdrv_view_*_metal_* exports, so D3D11 games could not present on it. Existing -DXMT copies are left untouched."
+    }
+  ]
+}

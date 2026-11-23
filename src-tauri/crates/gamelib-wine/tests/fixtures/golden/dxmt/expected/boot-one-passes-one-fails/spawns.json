@@ -1,0 +1,24 @@
+[
+  {
+    "program": "tar",
+    "argv": [
+      "-xf",
+      "<TOOLS>/dxmt/dxmt-v0.80-builtin.tar.gz",
+      "-C",
+      "<TOOLS>/dxmt/dxmt-v0.80-builtin",
+      "--strip-components=1"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

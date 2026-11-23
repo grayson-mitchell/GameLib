@@ -1,0 +1,42 @@
+{
+  "op": "releasesInfoReady",
+  "trigger": "releases-ready",
+  "outcome": {
+    "rejected": "Error: ENOENT: no such file or directory, copyfile '<TOOLS>/dxmt/x86_64-windows/d3d10core.dll' -> '<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll'"
+  },
+  "registered": [
+    "releasesInfoReady",
+    "wineVersionInstalled",
+    "wineVersionUninstalled"
+  ],
+  "scanRequests": [
+    {
+      "channel": "scan_winemac_metal_exports",
+      "args": [
+        {
+          "wineBundlePath": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT"
+        }
+      ]
+    }
+  ],
+  "downloads": [
+    "https://github.com/3Shain/dxmt/releases/download/v0.80/dxmt-v0.80-builtin.tar.gz"
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Updating dxmt to: dxmt-v0.80-builtin"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "ToolInstaller",
+      "message": "Error when downloading dxmt Error: Download failed with AxiosError: Request failed with status code 500"
+    },
+    {
+      "level": "DEBUG",
+      "prefix": "ToolInstaller",
+      "message": "Copying <TOOLS>/dxmt/x86_64-windows/d3d10core.dll in <TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll"
+    }
+  ]
+}

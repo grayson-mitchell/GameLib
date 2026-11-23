@@ -1,0 +1,15 @@
+{
+  "op": "wineVersionUninstalled",
+  "trigger": "wine-uninstalled",
+  "outcome": {
+    "resolved": true
+  },
+  "registered": [
+    "releasesInfoReady",
+    "wineVersionInstalled",
+    "wineVersionUninstalled"
+  ],
+  "scanRequests": [],
+  "downloads": [],
+  "logs": []
+}

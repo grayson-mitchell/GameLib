@@ -1,0 +1,2083 @@
+[
+  {
+    "id": "boot-fetch-online",
+    "trigger": "releases-ready",
+    "note": "releasesInfoReady with a Wine-Staging-macOS that has a passing -DXMT copy and no DXMT in the tools dir: the scan, then the latest release (recorded live once), download, extract, latest_dxmt, and the 11 DXMT files copied into the existing copy.",
+    "live": true,
+    "tag": "v0.80",
+    "wines": [
+      {
+        "version": "Wine-Staging-macOS-9",
+        "type": "Wine-Staging-macOS",
+        "isInstalled": true,
+        "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+      }
+    ],
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0-DXMT</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0-DXMT</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "old dxmt x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "old dxmt x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "old dxmt x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "old dxmt x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "old dxmt x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "old dxmt x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "old dxmt x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "old dxmt i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "old dxmt i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "old dxmt i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "old dxmt i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "boot-fetch-offline",
+    "trigger": "releases-ready",
+    "note": "Offline: the boot update logs \"App offline\", fetches nothing, and then fails copying from an empty version dir (a listener rejection, left as the TS has it).",
+    "tag": "v0.80",
+    "online": false,
+    "wines": [
+      {
+        "version": "Wine-Staging-macOS-9",
+        "type": "Wine-Staging-macOS",
+        "isInstalled": true,
+        "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+      }
+    ],
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0-DXMT</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0-DXMT</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "old dxmt x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "old dxmt x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "old dxmt x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "old dxmt x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "old dxmt x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "old dxmt x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "old dxmt x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "old dxmt i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "old dxmt i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "old dxmt i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "old dxmt i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "boot-fetch-already-current",
+    "trigger": "releases-ready",
+    "note": "The releases feed tag equals the installed latest_dxmt (dxmt-v0.80-builtin -> v0.80): the listener returns before the census, the scan and any request.",
+    "tag": "v0.80",
+    "wines": [
+      {
+        "version": "Wine-Staging-macOS-9",
+        "type": "Wine-Staging-macOS",
+        "isInstalled": true,
+        "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+      }
+    ],
+    "seed": [
+      {
+        "path": "<TOOLS>/dxmt/latest_dxmt",
+        "text": "dxmt-v0.80-builtin"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/d3d10core.dll",
+        "text": "seeded dxmt x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/d3d11.dll",
+        "text": "seeded dxmt x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/dxgi.dll",
+        "text": "seeded dxmt x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/nvapi64.dll",
+        "text": "seeded dxmt x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/nvngx.dll",
+        "text": "seeded dxmt x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/winemetal.dll",
+        "text": "seeded dxmt x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-unix/winemetal.so",
+        "text": "seeded dxmt x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/d3d10core.dll",
+        "text": "seeded dxmt i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/d3d11.dll",
+        "text": "seeded dxmt i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/dxgi.dll",
+        "text": "seeded dxmt i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/winemetal.dll",
+        "text": "seeded dxmt i386-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0-DXMT</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0-DXMT</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "old dxmt x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "old dxmt x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "old dxmt x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "old dxmt x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "old dxmt x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "old dxmt x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "old dxmt x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "old dxmt i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "old dxmt i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "old dxmt i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "old dxmt i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "boot-fetch-tag-differs-feed-current",
+    "trigger": "releases-ready",
+    "note": "The feed tag differs but the GitHub latest asset is the one already in the tools dir: one feed GET, no download, the 11 files are recopied from the tools dir into the copy.",
+    "tag": "v0.81",
+    "wines": [
+      {
+        "version": "Wine-Staging-macOS-9",
+        "type": "Wine-Staging-macOS",
+        "isInstalled": true,
+        "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+      }
+    ],
+    "seed": [
+      {
+        "path": "<TOOLS>/dxmt/latest_dxmt",
+        "text": "dxmt-v0.80-builtin"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/d3d10core.dll",
+        "text": "seeded dxmt x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/d3d11.dll",
+        "text": "seeded dxmt x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/dxgi.dll",
+        "text": "seeded dxmt x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/nvapi64.dll",
+        "text": "seeded dxmt x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/nvngx.dll",
+        "text": "seeded dxmt x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/winemetal.dll",
+        "text": "seeded dxmt x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-unix/winemetal.so",
+        "text": "seeded dxmt x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/d3d10core.dll",
+        "text": "seeded dxmt i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/d3d11.dll",
+        "text": "seeded dxmt i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/dxgi.dll",
+        "text": "seeded dxmt i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/winemetal.dll",
+        "text": "seeded dxmt i386-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0-DXMT</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0-DXMT</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "old dxmt x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "old dxmt x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "old dxmt x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "old dxmt x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "old dxmt x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "old dxmt x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "old dxmt x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "old dxmt i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "old dxmt i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "old dxmt i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "old dxmt i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "boot-no-dxmt-copies",
+    "trigger": "releases-ready",
+    "note": "An installed Wine-Staging-macOS with no -DXMT copy: the boot fetch is not issued (260916-9vh): no scan, no request.",
+    "tag": "v0.80",
+    "wines": [
+      {
+        "version": "Wine-Staging-macOS-9",
+        "type": "Wine-Staging-macOS",
+        "isInstalled": true,
+        "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+      }
+    ],
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "boot-no-installed-wines",
+    "trigger": "releases-ready",
+    "note": "A cold profile with no installed wine: nothing is scanned or fetched.",
+    "tag": "v0.80",
+    "wines": []
+  },
+  {
+    "id": "boot-copy-fails-gate",
+    "trigger": "releases-ready",
+    "note": "The only -DXMT copy fails the export gate: warning \"Not updating DXMT copy\", no fetch, the copy is left untouched.",
+    "tag": "v0.80",
+    "wines": [
+      {
+        "version": "Wine-Staging-macOS-9",
+        "type": "Wine-Staging-macOS",
+        "isInstalled": true,
+        "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+      }
+    ],
+    "scan": {
+      "mode": "fail",
+      "failFor": [
+        "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT"
+      ]
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0-DXMT</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0-DXMT</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "old dxmt x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "old dxmt x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "old dxmt x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "old dxmt x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "old dxmt x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "old dxmt x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "old dxmt x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "old dxmt i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "old dxmt i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "old dxmt i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "old dxmt i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "boot-one-passes-one-fails",
+    "trigger": "releases-ready",
+    "note": "Two -DXMT copies, one failing the gate: the fetch runs once and only the passing copy is updated.",
+    "tag": "v0.80",
+    "wines": [
+      {
+        "version": "Wine-Staging-macOS-9",
+        "type": "Wine-Staging-macOS",
+        "isInstalled": true,
+        "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+      },
+      {
+        "version": "Wine-Staging-macOS-10",
+        "type": "Wine-Staging-macOS",
+        "isInstalled": true,
+        "installDir": "<TOOLS>/wine/Wine-Staging-macOS-10"
+      }
+    ],
+    "scan": {
+      "mode": "fail",
+      "failFor": [
+        "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT"
+      ]
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0-DXMT</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0-DXMT</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "old dxmt x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "old dxmt x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "old dxmt x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "old dxmt x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "old dxmt x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "old dxmt x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "old dxmt x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "old dxmt i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "old dxmt i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "old dxmt i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "old dxmt i386-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0-DXMT</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0-DXMT</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "old dxmt x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "old dxmt x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "old dxmt x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "old dxmt x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "old dxmt x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "old dxmt x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "old dxmt x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "old dxmt i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "old dxmt i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "old dxmt i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "old dxmt i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "boot-update-download-fails",
+    "trigger": "releases-ready",
+    "note": "The DXMT archive answers 500: showDialog ERROR (DXMT title), then the copy step rejects reading the missing latest_dxmt.",
+    "tag": "v0.80",
+    "fail": true,
+    "wines": [
+      {
+        "version": "Wine-Staging-macOS-9",
+        "type": "Wine-Staging-macOS",
+        "isInstalled": true,
+        "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+      }
+    ],
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0-DXMT</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0-DXMT</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "old dxmt x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "old dxmt x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "old dxmt x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "old dxmt x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "old dxmt x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "old dxmt x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "old dxmt x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "old dxmt i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "old dxmt i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "old dxmt i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "old dxmt i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "install-gate-passes",
+    "trigger": "wine-installed",
+    "note": "A new Wine-Staging-macOS that passes the export gate: scan (args recorded), latest DXMT fetched and extracted, the bundle copied to <version>-DXMT, the 11 files and the plist -DXMT suffixes written.",
+    "wine": {
+      "version": "Wine-Staging-macOS-9",
+      "type": "Wine-Staging-macOS",
+      "isInstalled": true,
+      "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "install-gate-fails",
+    "trigger": "wine-installed",
+    "note": "The new wine fails the gate (scan reports the missing symbols): warning, no fetch, no copy.",
+    "wine": {
+      "version": "Wine-Staging-macOS-9",
+      "type": "Wine-Staging-macOS",
+      "isInstalled": true,
+      "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+    },
+    "scan": {
+      "mode": "fail",
+      "failFor": [
+        "<TOOLS>/wine/Wine-Staging-macOS-9"
+      ]
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "install-scan-rejects",
+    "trigger": "wine-installed",
+    "note": "The Rust scan rejects: the check fails closed, the warning carries \"could not read winemac.so: rust scan failed\", no fetch, no copy.",
+    "wine": {
+      "version": "Wine-Staging-macOS-9",
+      "type": "Wine-Staging-macOS",
+      "isInstalled": true,
+      "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+    },
+    "scan": {
+      "mode": "reject"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "install-not-staging",
+    "trigger": "wine-installed",
+    "note": "A wine of another type (Proton) is ignored: no scan, no fetch.",
+    "wine": {
+      "version": "Wine-Staging-macOS-9",
+      "type": "Wine-Proton",
+      "isInstalled": true,
+      "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "install-tools-already-present",
+    "trigger": "wine-installed",
+    "note": "DXMT is already in the tools dir at the feed version: one feed GET, no download, the copy is made from the tools dir.",
+    "wine": {
+      "version": "Wine-Staging-macOS-9",
+      "type": "Wine-Staging-macOS",
+      "isInstalled": true,
+      "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/dxmt/latest_dxmt",
+        "text": "dxmt-v0.80-builtin"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/d3d10core.dll",
+        "text": "seeded dxmt x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/d3d11.dll",
+        "text": "seeded dxmt x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/dxgi.dll",
+        "text": "seeded dxmt x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/nvapi64.dll",
+        "text": "seeded dxmt x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/nvngx.dll",
+        "text": "seeded dxmt x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/winemetal.dll",
+        "text": "seeded dxmt x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-unix/winemetal.so",
+        "text": "seeded dxmt x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/d3d10core.dll",
+        "text": "seeded dxmt i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/d3d11.dll",
+        "text": "seeded dxmt i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/dxgi.dll",
+        "text": "seeded dxmt i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/winemetal.dll",
+        "text": "seeded dxmt i386-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "install-download-fails",
+    "trigger": "wine-installed",
+    "note": "Gate passes, the archive answers 500: showDialog ERROR, the copy step fails reading the missing version, logs the error and removes the half-made -DXMT copy.",
+    "wine": {
+      "version": "Wine-Staging-macOS-9",
+      "type": "Wine-Staging-macOS",
+      "isInstalled": true,
+      "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+    },
+    "fail": true,
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "install-malformed-feed-no-assets",
+    "trigger": "wine-installed",
+    "note": "A feed body with no assets key: installOrUpdateTool throws reading assets[0], the listener rejects, no copy is made.",
+    "wine": {
+      "version": "Wine-Staging-macOS-9",
+      "type": "Wine-Staging-macOS",
+      "isInstalled": true,
+      "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+    },
+    "feed": "no-assets-key",
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "install-empty-assets",
+    "trigger": "wine-installed",
+    "note": "A feed with an empty assets list: \"No release assets found for dxmt\" is logged, then the copy step fails and the half-made copy is removed.",
+    "wine": {
+      "version": "Wine-Staging-macOS-9",
+      "type": "Wine-Staging-macOS",
+      "isInstalled": true,
+      "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+    },
+    "feed": "empty-assets",
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "install-feed-500",
+    "trigger": "wine-installed",
+    "note": "The release feed itself answers 500: the request error rejects out of the listener; no copy.",
+    "wine": {
+      "version": "Wine-Staging-macOS-9",
+      "type": "Wine-Staging-macOS",
+      "isInstalled": true,
+      "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+    },
+    "feed": "status-500",
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "uninstall-removes-copy",
+    "trigger": "wine-uninstalled",
+    "note": "wineVersionUninstalled for a Wine-Staging-macOS removes <installDir>-DXMT.",
+    "wine": {
+      "version": "Wine-Staging-macOS-9",
+      "type": "Wine-Staging-macOS",
+      "isInstalled": true,
+      "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0-DXMT</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0-DXMT</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "old dxmt x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "old dxmt x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "old dxmt x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "old dxmt x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "old dxmt x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "old dxmt x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "old dxmt x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "old dxmt i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "old dxmt i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "old dxmt i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "old dxmt i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "uninstall-no-copy",
+    "trigger": "wine-uninstalled",
+    "note": "No -DXMT copy exists: nothing is removed.",
+    "wine": {
+      "version": "Wine-Staging-macOS-9",
+      "type": "Wine-Staging-macOS",
+      "isInstalled": true,
+      "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      }
+    ]
+  },
+  {
+    "id": "uninstall-not-staging",
+    "trigger": "wine-uninstalled",
+    "note": "A wine of another type is ignored even when a -DXMT directory sits beside it.",
+    "wine": {
+      "version": "Wine-Staging-macOS-9",
+      "type": "Wine-Proton",
+      "isInstalled": true,
+      "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "stock x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "stock x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "stock x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "stock x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "stock x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "stock x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "stock x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "stock i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "stock i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "stock i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "stock i386-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>9.0-DXMT</string>\n\t<key>CFBundleVersion</key>\n\t<string>9.0-DXMT</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+        "text": "synthetic winemac"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll",
+        "text": "old dxmt x86_64-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll",
+        "text": "old dxmt x86_64-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll",
+        "text": "old dxmt x86_64-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll",
+        "text": "old dxmt x86_64-windows/nvapi64.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll",
+        "text": "old dxmt x86_64-windows/nvngx.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll",
+        "text": "old dxmt x86_64-windows/winemetal.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so",
+        "text": "old dxmt x86_64-unix/winemetal.so"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll",
+        "text": "old dxmt i386-windows/d3d10core.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll",
+        "text": "old dxmt i386-windows/d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll",
+        "text": "old dxmt i386-windows/dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll",
+        "text": "old dxmt i386-windows/winemetal.dll"
+      }
+    ]
+  }
+]

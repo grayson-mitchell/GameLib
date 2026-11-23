@@ -1,0 +1,15 @@
+{
+  "op": "releasesInfoReady",
+  "trigger": "releases-ready",
+  "outcome": {
+    "resolved": true
+  },
+  "registered": [
+    "releasesInfoReady",
+    "wineVersionInstalled",
+    "wineVersionUninstalled"
+  ],
+  "scanRequests": [],
+  "downloads": [],
+  "logs": []
+}

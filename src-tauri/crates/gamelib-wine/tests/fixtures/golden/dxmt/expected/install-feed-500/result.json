@@ -1,0 +1,24 @@
+{
+  "op": "wineVersionInstalled",
+  "trigger": "wine-installed",
+  "outcome": {
+    "rejected": "Request failed with status code 500"
+  },
+  "registered": [
+    "releasesInfoReady",
+    "wineVersionInstalled",
+    "wineVersionUninstalled"
+  ],
+  "scanRequests": [
+    {
+      "channel": "scan_winemac_metal_exports",
+      "args": [
+        {
+          "wineBundlePath": "<TOOLS>/wine/Wine-Staging-macOS-9"
+        }
+      ]
+    }
+  ],
+  "downloads": [],
+  "logs": []
+}

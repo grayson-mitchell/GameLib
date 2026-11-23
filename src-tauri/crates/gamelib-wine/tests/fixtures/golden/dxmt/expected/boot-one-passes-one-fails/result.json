@@ -1,0 +1,110 @@
+{
+  "op": "releasesInfoReady",
+  "trigger": "releases-ready",
+  "outcome": {
+    "resolved": true
+  },
+  "registered": [
+    "releasesInfoReady",
+    "wineVersionInstalled",
+    "wineVersionUninstalled"
+  ],
+  "scanRequests": [
+    {
+      "channel": "scan_winemac_metal_exports",
+      "args": [
+        {
+          "wineBundlePath": "<TOOLS>/wine/Wine-Staging-macOS-9-DXMT"
+        }
+      ]
+    },
+    {
+      "channel": "scan_winemac_metal_exports",
+      "args": [
+        {
+          "wineBundlePath": "<TOOLS>/wine/Wine-Staging-macOS-10-DXMT"
+        }
+      ]
+    }
+  ],
+  "downloads": [
+    "https://github.com/3Shain/dxmt/releases/download/v0.80/dxmt-v0.80-builtin.tar.gz"
+  ],
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "ToolInstaller",
+      "message": "Not updating DXMT copy of Wine-Staging-macOS-10: <TOOLS>/wine/Wine-Staging-macOS-10-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so winemac.so lacks the macdrv metal-view exports; missing _macdrv_functions, _macdrv_view_create_metal_view, _macdrv_view_get_metal_layer, _macdrv_view_release_metal_view. DXMT v0.80 needs _macdrv_functions or all three _macdrv_view_*_metal_* exports, so D3D11 games could not present on it. Existing -DXMT copies are left untouched."
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Updating dxmt to: dxmt-v0.80-builtin"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Downloaded dxmt, extracting..."
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "dxmt updated!"
+    },
+    {
+      "level": "DEBUG",
+      "prefix": "ToolInstaller",
+      "message": "Copying <TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/d3d10core.dll in <TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d10core.dll"
+    },
+    {
+      "level": "DEBUG",
+      "prefix": "ToolInstaller",
+      "message": "Copying <TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/d3d11.dll in <TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/d3d11.dll"
+    },
+    {
+      "level": "DEBUG",
+      "prefix": "ToolInstaller",
+      "message": "Copying <TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/dxgi.dll in <TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/dxgi.dll"
+    },
+    {
+      "level": "DEBUG",
+      "prefix": "ToolInstaller",
+      "message": "Copying <TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/nvapi64.dll in <TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvapi64.dll"
+    },
+    {
+      "level": "DEBUG",
+      "prefix": "ToolInstaller",
+      "message": "Copying <TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/nvngx.dll in <TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/nvngx.dll"
+    },
+    {
+      "level": "DEBUG",
+      "prefix": "ToolInstaller",
+      "message": "Copying <TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-windows/winemetal.dll in <TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-windows/winemetal.dll"
+    },
+    {
+      "level": "DEBUG",
+      "prefix": "ToolInstaller",
+      "message": "Copying <TOOLS>/dxmt/dxmt-v0.80-builtin/x86_64-unix/winemetal.so in <TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/x86_64-unix/winemetal.so"
+    },
+    {
+      "level": "DEBUG",
+      "prefix": "ToolInstaller",
+      "message": "Copying <TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/d3d10core.dll in <TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d10core.dll"
+    },
+    {
+      "level": "DEBUG",
+      "prefix": "ToolInstaller",
+      "message": "Copying <TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/d3d11.dll in <TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/d3d11.dll"
+    },
+    {
+      "level": "DEBUG",
+      "prefix": "ToolInstaller",
+      "message": "Copying <TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/dxgi.dll in <TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/dxgi.dll"
+    },
+    {
+      "level": "DEBUG",
+      "prefix": "ToolInstaller",
+      "message": "Copying <TOOLS>/dxmt/dxmt-v0.80-builtin/i386-windows/winemetal.dll in <TOOLS>/wine/Wine-Staging-macOS-9-DXMT/Contents/Resources/wine/lib/wine/i386-windows/winemetal.dll"
+    }
+  ]
+}

@@ -29,7 +29,6 @@
  * golden carries `box.error.dxvk.title` and `box.error.dxvk.message`, not their English text.
  */
 import { existsSync, readFileSync, writeFileSync } from 'fs'
-import { gzipSync } from 'zlib'
 import { basename, join } from 'path'
 import { describeSkipOnWindows } from 'backend/__tests__/skip'
 import {
@@ -54,6 +53,13 @@ import {
 } from 'backend/testUtils/engineWineOracle/recorder'
 import { createSpawnTracer } from 'backend/testUtils/engineWineOracle/spawnTrace'
 import { snapshotTree } from 'backend/testUtils/engineWineOracle/treeSnapshot'
+import {
+  buildTarGz,
+  captureLog,
+  pinProcess,
+  waitForTreeToSettle,
+  type LogLine
+} from 'backend/testUtils/engineWineOracle/toolsOracleSupport'
 import { createRealRunner } from 'backend/testUtils/realRunner'
 import type { SendFrontendMessage } from 'backend/host/frontendMessage'
 import type { ToolsDeps } from 'backend/tools'
@@ -192,34 +198,8 @@ function archiveEntries(kind: ToolKey): { name: string; text: string }[] {
   )
 }
 
-/** One ustar entry: mode 0644, uid/gid 0, mtime 0, so the bytes are reproducible. */
-function tarEntry(name: string, body: Buffer): Buffer {
-  const header = Buffer.alloc(512)
-  header.write(name, 0, 100, 'utf8')
-  header.write('0000644\0', 100)
-  header.write('0000000\0', 108)
-  header.write('0000000\0', 116)
-  header.write(`${body.length.toString(8).padStart(11, '0')}\0`, 124)
-  header.write('00000000000\0', 136)
-  header.write('        ', 148)
-  header.write('0', 156)
-  header.write('ustar\0', 257)
-  header.write('00', 263)
-  let sum = 0
-  for (const byte of header) sum += byte
-  header.write(`${sum.toString(8).padStart(6, '0')}\0 `, 148)
-  const pad = Buffer.alloc((512 - (body.length % 512)) % 512)
-  return Buffer.concat([header, body, pad])
-}
-
 function archiveFor(kind: ToolKey): Buffer {
-  const tar = Buffer.concat([
-    ...archiveEntries(kind).map((e) =>
-      tarEntry(e.name, Buffer.from(e.text, 'utf8'))
-    ),
-    Buffer.alloc(1024)
-  ])
-  return gzipSync(tar, { level: 9 })
+  return buildTarGz(archiveEntries(kind))
 }
 
 function release(tag: string, assets: string[], route: string) {
@@ -291,54 +271,6 @@ type Event = { channel: string; args: unknown[] }
 const expand = <T>(value: T, profile: EngineOracleProfile): T =>
   JSON.parse(expandPlaceholders(JSON.stringify(value), profile)) as T
 
-/** `process.platform` and `process.arch` are read-only: redefine them and put them back. */
-function pinProcess(values: { platform: string; arch: string }): () => void {
-  const originals = (['platform', 'arch'] as const).map((key) => ({
-    key,
-    descriptor: Object.getOwnPropertyDescriptor(process, key)
-  }))
-  for (const key of ['platform', 'arch'] as const) {
-    Object.defineProperty(process, key, {
-      value: values[key],
-      configurable: true
-    })
-  }
-  return () => {
-    for (const { key, descriptor } of originals) {
-      if (descriptor) Object.defineProperty(process, key, descriptor)
-    }
-  }
-}
-
-// `instanceof Error` is false for an error graceful-fs made in another jest realm, so the check is
-// by tag.
-const isError = (item: unknown): item is Error =>
-  Object.prototype.toString.call(item) === '[object Error]'
-
-const renderItem = (item: unknown): string =>
-  typeof item === 'string'
-    ? item
-    : isError(item)
-      ? `${item.name}: ${item.message}`
-      : JSON.stringify(item)
-
-const render = (message: unknown): string =>
-  Array.isArray(message)
-    ? message.map(renderItem).join(' ')
-    : renderItem(message)
-
-/** The copies the install path starts without awaiting: wait until the tree stops changing. */
-async function settled(profile: EngineOracleProfile): Promise<void> {
-  let last = ''
-  let stable = 0
-  for (let i = 0; i < 200 && stable < 3; i++) {
-    const now = JSON.stringify(snapshotTree(profile.home))
-    stable = now === last ? stable + 1 : 0
-    last = now
-    await new Promise((resolve) => setTimeout(resolve, 15))
-  }
-}
-
 interface SliceModules {
   utils: typeof import('backend/utils')
   tools: typeof import('backend/tools')
@@ -393,7 +325,7 @@ describeSkipOnWindows('DXVK family oracle (87-09)', () => {
         url.includes('/releases/')
     })
     const downloads: string[] = []
-    const logs: { level: string; prefix: string; message: string }[] = []
+    const logs: LogLine[] = []
     const spy = jest.spyOn(mods.utils, 'downloadFile')
     const logSpies = (
       [
@@ -406,11 +338,7 @@ describeSkipOnWindows('DXVK family oracle (87-09)', () => {
       jest
         .spyOn(mods.logger, name)
         .mockImplementation((message: unknown, options?: unknown) => {
-          const prefix =
-            typeof options === 'string'
-              ? options
-              : ((options as { prefix?: string } | undefined)?.prefix ?? '')
-          logs.push({ level, prefix, message: render(message) })
+          captureLog(logs, level, message, options)
         })
     )
     try {
@@ -582,7 +510,7 @@ describeSkipOnWindows('DXVK family oracle (87-09)', () => {
               thrown: error instanceof Error ? error.message : String(error)
             }
           }
-          await settled(profile)
+          await waitForTreeToSettle(profile.home)
 
           await recorder.finish()
           writeOrCompareGolden(CRATE, SLICE, c.id, {
