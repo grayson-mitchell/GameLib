@@ -680,7 +680,179 @@ pub fn crossover_preflight_from_value(value: &Value) -> Option<CrossoverPrefligh
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ctx::EnginePaths;
+    use crate::testing::{FixedClock, RecordingEmitter};
+    use gamelib_core::shutdown::Shutdown;
+    use gamelib_store::host::StoreHost;
+    use gamelib_testutil::FakeHome;
     use serde_json::json;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Duration;
+
+    fn ctx(home: &FakeHome) -> EngineCtx {
+        let root = home.root().to_path_buf();
+        EngineCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(FixedClock::new(1_000)),
+            Platform::Mac,
+            EnginePaths {
+                app_folder: root.clone(),
+                user_data: root.join("userData"),
+                tools_path: root.join("tools"),
+                user_home: root.clone(),
+                temp: root.join("tmp"),
+            },
+            Shutdown::new(),
+        )
+        .with_emitter(Arc::new(RecordingEmitter::new()))
+    }
+
+    fn facts() -> GameFacts {
+        GameFacts {
+            bottle: Some("b".to_string()),
+            state_without_bottle: false,
+            override_eligible: true,
+            overlay_eligible: false,
+            wine_tools_eligible: false,
+            effective: EffectiveEngine::Override {
+                id: AUTOMATIC.to_string(),
+                source: EngineSource::Derived,
+            },
+            prefix_kind: None,
+            per_game_bottle_name: None,
+        }
+    }
+
+    fn healthy() -> CrossoverPreflight {
+        CrossoverPreflight::Healthy {
+            bin_dir: "/cx/bin".to_string(),
+            build: Some("26.3.0.39832".to_string()),
+            trial_days_remaining: None,
+        }
+    }
+
+    /// A probe that never answers its first call and answers every later one, counting the calls.
+    struct Stalls {
+        calls: AtomicUsize,
+    }
+
+    impl StateProbes for Stalls {
+        fn resolve_bin_dir<'a>(&'a self, _ctx: &'a EngineCtx) -> ProbeFuture<'a, Option<String>> {
+            Box::pin(async { Some("/cx/bin".to_string()) })
+        }
+
+        fn is_bottle_ready(&self, _ctx: &EngineCtx, _bottle: &str) -> bool {
+            true
+        }
+
+        fn preflight<'a>(
+            &'a self,
+            _ctx: &'a EngineCtx,
+            _bottle: &'a str,
+        ) -> ProbeFuture<'a, Result<CrossoverPreflight, String>> {
+            let first = self.calls.fetch_add(1, Ordering::SeqCst) == 0;
+            Box::pin(async move {
+                if first {
+                    std::future::pending::<()>().await;
+                }
+                Ok(healthy())
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn a_state_read_dropped_mid_probe_does_not_wedge_the_bottle() {
+        let home = FakeHome::new("engine-state-flight-");
+        let ctx = ctx(&home);
+        let probes = Stalls {
+            calls: AtomicUsize::new(0),
+        };
+        let identity = json!({"runner": "legendary", "appName": "game-a"});
+        // The caller gives up while the probe is running (the renderer navigated away).
+        let abandoned = tokio::time::timeout(
+            Duration::from_millis(20),
+            get_engine_state(&ctx, &identity, &facts(), &probes),
+        )
+        .await;
+        assert!(abandoned.is_err(), "the first probe never answers");
+        // The next read starts its own probe, answers, and caches it.
+        let state = get_engine_state(&ctx, &identity, &facts(), &probes)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(state.reason, Some("cx-healthy"));
+        assert_eq!(probes.calls.load(Ordering::SeqCst), 2);
+        // A third read is served from the cache: no probe.
+        get_engine_state(&ctx, &identity, &facts(), &probes)
+            .await
+            .unwrap();
+        assert_eq!(probes.calls.load(Ordering::SeqCst), 2);
+        assert!(ctx.engine_state.lock().inflight.is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_state_read_touches_the_notices_store_only_when_it_computes_a_state() {
+        let home = FakeHome::new("engine-state-lazy-");
+        let ctx = ctx(&home);
+        let probes = Stalls {
+            calls: AtomicUsize::new(1),
+        };
+        // Refused before any file is read: not macOS, an unknown runner, no bottle without the flag.
+        let mut linux = facts();
+        linux.bottle = None;
+        let identity = json!({"runner": "legendary", "appName": "game-a"});
+        assert_eq!(
+            get_engine_state(&ctx, &identity, &linux, &probes).await,
+            Ok(None)
+        );
+        assert!(!ctx.notices.is_loaded());
+        assert_eq!(
+            get_engine_state(
+                &ctx,
+                &json!({"runner": "nope", "appName": "x"}),
+                &facts(),
+                &probes
+            )
+            .await,
+            Ok(None)
+        );
+        assert!(!ctx.notices.is_loaded());
+        // A computed state reads the notices, so the store opens then.
+        get_engine_state(&ctx, &identity, &facts(), &probes)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(ctx.notices.is_loaded());
+        assert!(
+            !home.root().join("userData").exists(),
+            "reading a state creates no file"
+        );
+    }
+
+    #[test]
+    fn an_unavailable_decision_records_and_publishes_nothing_and_a_bad_identity_too() {
+        let home = FakeHome::new("engine-state-record-");
+        let ctx = ctx(&home);
+        let unavailable = LaunchDecision::Unavailable {
+            override_id: "pinned:x".to_string(),
+            detail: "gone".to_string(),
+        };
+        record_launch_decision(&ctx, "legendary", "game-a", &unavailable, "b", &facts());
+        record_launch_decision(&ctx, "nope", "x", &unavailable, "b", &facts());
+        assert!(ctx.engine_state.lock().last_published.is_empty());
+        assert!(ctx.engine_state.lock().labels.is_empty());
+    }
+
+    #[test]
+    fn the_live_bottle_check_refuses_a_name_that_is_not_a_plain_bottle_name() {
+        let home = FakeHome::new("engine-state-live-");
+        let ctx = ctx(&home);
+        for bad in ["", "../x", "a/b", "a\\b"] {
+            assert!(!LiveProbes.is_bottle_ready(&ctx, bad), "{bad:?}");
+        }
+        // A well-formed name with no `cxbottle.conf` is not ready either.
+        assert!(!LiveProbes.is_bottle_ready(&ctx, "Heroic"));
+    }
 
     #[test]
     fn a_preflight_round_trips_through_its_value() {
