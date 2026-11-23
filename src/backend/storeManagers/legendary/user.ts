@@ -12,6 +12,7 @@ import { isMac } from 'backend/constants/environment'
 import { deriveLegendaryPaths } from './constants'
 import type { AppPaths } from 'backend/process/context'
 import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import {
   classifyCookieRead,
   type CookieReadVerdict,
@@ -120,7 +121,7 @@ export type LegendaryPathRoots = Pick<AppPaths, 'appFolder' | 'toolsPath'>
 
 /** What `login` / `logout` need (R3): the legendary manager, its config store and kvs. */
 export interface LegendaryUserDeps
-  extends LegendaryUserInfoDeps, DialogBoxDeps, SignInNoteDeps {
+  extends LegendaryUserInfoDeps, DialogBoxDeps, SignInNoteDeps, RustInvokeDeps {
   appInfo: Pick<AppInfo, 'userAgentFallback'>
   /** The boot's login-window seam slot, for the logout wipe (D-66.3-17). */
   loginWindowSeam: Pick<LoginWindowSeamSlot, 'getOrThrow'>

@@ -331,22 +331,15 @@ function removeSpecialcharacters(text: string): string {
   return text.replaceAll(regexp, '')
 }
 
-/** The cache families `clearCache` empties. */
-export interface ClearCacheDeps extends DialogBoxDeps, Partial<RustInvokeDeps> {
-  stores: Pick<Stores, 'gog' | 'legendary' | 'nile' | 'systemInfo'>
-}
-
 /**
- * Whether `clearCache` can reach the wiki cache, which is Rust's (86-23). `requestRustInvoke` is
- * optional because not every `ClearCacheDeps` construction passes one. The per-library sign-outs
- * (`GOGUser`, `NileUser`, `LegendaryUser`) do: `handlers.ts` hands `requestRustInvoke` to
- * `registerRunnerAuthFlows`, whose `userDeps()` carries it (86-27). OWED: make this member required
- * and drop this guard once every construction passes one.
+ * The cache families `clearCache` empties. `requestRustInvoke` is required: the wiki cache is Rust's
+ * (86-23), and a construction that leaves it out would sign out without emptying that cache, which
+ * is the regression 86-27 fixed by hand at one wiring site (WR-64). Every sign-out dep type
+ * (`GOGUser`, `NileUser`, `LegendaryUser`) and the version-change clear extend this, so an omission
+ * is a compile error.
  */
-function canClearWikiCache(
-  deps: ClearCacheDeps
-): deps is ClearCacheDeps & RustInvokeDeps {
-  return deps.requestRustInvoke !== undefined
+export interface ClearCacheDeps extends DialogBoxDeps, RustInvokeDeps {
+  stores: Pick<Stores, 'gog' | 'legendary' | 'nile' | 'systemInfo'>
 }
 
 /**
@@ -371,14 +364,12 @@ function clearCache(
   const { gog, legendary, nile, systemInfo } = deps.stores
   // The wiki cache is Rust's now. clearCache stays synchronous (its callers do not await), so the
   // clear is started here and a rejection is logged rather than thrown.
-  if (canClearWikiCache(deps)) {
-    void clearWikiGameInfoCache(deps).catch((error: unknown) => {
-      logWarning(
-        ['Could not clear the wiki game info cache:', error],
-        LogPrefix.Backend
-      )
-    })
-  }
+  void clearWikiGameInfoCache(deps).catch((error: unknown) => {
+    logWarning(
+      ['Could not clear the wiki game info cache:', error],
+      LogPrefix.Backend
+    )
+  })
   if (isStore(library, 'gog') || !library) {
     gog.apiInfoCache.clear()
     gog.libraryStore.clear()
