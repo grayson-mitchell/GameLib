@@ -16,7 +16,7 @@ import * as bottle from './bottle'
 import * as bbLifecycle from './bridgeBottleLifecycle'
 import * as bridgeBottle from './bridgeBottle'
 import { buildFallbackGameSettings } from 'backend/enginewine/twin'
-import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
+import type { NonCrossoverEngine } from 'common/types/engine'
 import { placeShimForGame } from './bridge/shimGenerate'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
 import {
@@ -409,7 +409,7 @@ export async function resolveInstallEngineSettings(
   const { decideLaunchEngine } = await import('backend/enginewine/decision')
   const { launchDecisionFrom } = await import('./engine/engineDecisionReply')
   const { prepareBottle } = await import('backend/engine/prepareBottle')
-  const { isNonCrossover } = await import('backend/engine/engineTypes')
+  const { isNonCrossover } = await import('backend/enginewine/twin')
   const { steamEngineFacts, steamPrepareFacts } =
     await import('./engine/steamEngineDeps')
   const { steamEngineServicesFrom } =

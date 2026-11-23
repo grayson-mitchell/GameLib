@@ -527,3 +527,103 @@ mod bottle_twin {
         assert_eq!(replay("isPinnedEngineInstalled", &differs), false);
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// selection_twin.json (87-55)
+// ---------------------------------------------------------------------------------------------
+
+mod selection_twin {
+    use gamelib_engine::bottles::registry::EngineSelection;
+    use serde_json::Value;
+
+    use super::check_floor;
+
+    const VECTORS: &str = include_str!("fixtures/vectors/selection_twin.json");
+
+    /// The file holds 83 vectors in each of its two groups when recorded (87-55); never lower a floor.
+    const GROUP_FLOOR: usize = 83;
+    const GROUPS: [&str; 2] = ["isNonCrossover", "engineLogLabel"];
+
+    fn load() -> serde_json::Map<String, Value> {
+        match serde_json::from_str::<Value>(VECTORS).expect("selection_twin.json parses") {
+            Value::Object(map) => map,
+            other => panic!("selection_twin.json is not an object: {other}"),
+        }
+    }
+
+    /// What the Rust selection answers for one vector's input (`{selection}`).
+    fn replay(group: &str, input: &Value) -> Value {
+        let selection: EngineSelection =
+            serde_json::from_value(input["selection"].clone()).expect("a selection parses");
+        match group {
+            // `isNonCrossover`: the selection carries the binaries of a non-CrossOver engine.
+            "isNonCrossover" => Value::Bool(selection.engine().is_some()),
+            "engineLogLabel" => Value::String(selection.log_label()),
+            other => panic!("unknown group {other}"),
+        }
+    }
+
+    #[test]
+    fn the_selection_vector_file_holds_the_two_groups_over_their_floors() {
+        let groups = load();
+        let mut names: Vec<&str> = groups.keys().map(String::as_str).collect();
+        names.sort_unstable();
+        let mut expected = GROUPS.to_vec();
+        expected.sort_unstable();
+        assert_eq!(names, expected);
+        for group in GROUPS {
+            let list = groups[group].as_array().expect("a group is an array");
+            check_floor(group, list.len(), GROUP_FLOOR).unwrap();
+            let mut ids: Vec<&str> = list.iter().map(|v| v["id"].as_str().unwrap()).collect();
+            ids.sort_unstable();
+            ids.dedup();
+            assert_eq!(ids.len(), list.len(), "{group}: duplicate ids");
+            let mut answers: Vec<String> = list.iter().map(|v| v["expected"].to_string()).collect();
+            answers.sort_unstable();
+            answers.dedup();
+            assert!(answers.len() > 1, "{group}: one answer for every input");
+        }
+    }
+
+    #[test]
+    fn every_recorded_selection_vector_replays_against_the_rust_selection() {
+        let groups = load();
+        let mut replayed = 0;
+        for group in GROUPS {
+            let list = groups[group].as_array().expect("a group is an array");
+            let mismatches: Vec<String> = list
+                .iter()
+                .filter_map(|vector| {
+                    let got = replay(group, &vector["input"]);
+                    (got != vector["expected"]).then(|| {
+                        format!(
+                            "{group}/{}: expected {}, got {got}",
+                            vector["id"].as_str().unwrap(),
+                            vector["expected"]
+                        )
+                    })
+                })
+                .collect();
+            assert!(mismatches.is_empty(), "{mismatches:#?}");
+            replayed += list.len();
+        }
+        check_floor("replayed selection vectors", replayed, GROUP_FLOOR * 2).unwrap();
+    }
+
+    #[test]
+    fn the_selection_replay_is_not_vacuous() {
+        assert!(check_floor("empty", 0, GROUP_FLOOR * 2).is_err());
+        let crossover = serde_json::json!({"selection": {
+            "kind": "crossover", "reason": "cx-healthy", "crossoverBuild": "27.0.0.1", "binDir": "/b"
+        }});
+        assert_eq!(replay("isNonCrossover", &crossover), false);
+        assert_eq!(
+            replay("engineLogLabel", &crossover),
+            "engine=crossover build=27.0.0.1 reason=cx-healthy"
+        );
+        assert_ne!(
+            replay("engineLogLabel", &crossover),
+            "engine=crossover build=27.0.0.2 reason=cx-healthy"
+        );
+    }
+}

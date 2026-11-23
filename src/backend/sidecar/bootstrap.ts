@@ -93,6 +93,7 @@ import {
   clearOrphanedElectronToken
 } from '../storeManagers/steam/tokenStore'
 import { createSteamBottle } from '../storeManagers/steam/bottle'
+import { crossoverBinDir } from '../storeManagers/steam/engine/crossoverBinDir'
 import {
   migrateRestartHolds,
   resumeAdoptionWatches
@@ -1760,10 +1761,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
                 requireEngineRuntime(state).crossover.resolveCrossoverBinDir(
                   opts
                 ),
-              resolveCrossoverBinDirAsync: (d, opts) =>
-                requireEngineRuntime(
-                  state
-                ).crossover.resolveCrossoverBinDirAsync(d, opts)
+              // Rust finds CrossOver (87-55, D-04): the engine runtime's transport carries the call.
+              resolveCrossoverBinDirAsync: (_d, opts) =>
+                crossoverBinDir(requireEngineRuntime(state), opts)
             }
           })
       }

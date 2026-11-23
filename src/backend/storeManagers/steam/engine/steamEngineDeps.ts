@@ -9,10 +9,9 @@
 import type { AppPaths } from 'backend/process/context'
 import type { EngineServices } from 'backend/engine/engineServices'
 import type { PrepareBottleCall } from 'backend/engine/prepareBottle'
-import type { EngineSelection } from 'backend/engine/engineTypes'
 import { readStoredGameConfig } from 'backend/engine/engineConfig'
 import type { EngineConfigDeps } from 'backend/engine/engineConfig'
-import type { EngineState } from 'common/types/engine'
+import type { EngineSelection, EngineState } from 'common/types/engine'
 import type { MonitorPhase } from 'backend/enginewine/decision'
 import type { SteamEngineBottle } from '../bottle'
 import {

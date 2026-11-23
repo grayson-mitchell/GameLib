@@ -26,8 +26,8 @@ import { join, resolve } from 'path'
 import { writeFile, unlink } from 'fs/promises'
 
 import type { AppManagementStatus } from '../../common/types'
-import type { EngineRuntime } from 'backend/engine/engineRuntime'
-import type { ProcessRunner } from 'backend/process/types'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { crossoverBinDir } from 'backend/storeManagers/steam/engine/crossoverBinDir'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 
 export const APP_MANAGEMENT_SETTINGS_URL =
@@ -54,10 +54,8 @@ function errorCode(error: unknown): string {
   return typeof code === 'string' ? code : 'none'
 }
 
-interface AppManagementDeps {
-  /** The boot's CrossOver locator (66.4-05). */
-  engineRuntime: Pick<EngineRuntime, 'crossover'>
-  runner: Pick<ProcessRunner, 'run'>
+/** The boot's sidecar -> Rust transport (`requestRustInvoke`) is what finds CrossOver (87-55, D-04). */
+interface AppManagementDeps extends RustInvokeDeps {
   platform?: NodeJS.Platform
   resolveBinDir?: () => Promise<string | undefined>
   writeFile?: (path: string, data: string) => Promise<void>
@@ -70,13 +68,7 @@ export async function getAppManagementStatus(
   const platform = deps.platform ?? process.platform
   if (platform !== 'darwin') return 'not-needed'
 
-  const binDir = await (
-    deps.resolveBinDir ??
-    (() =>
-      deps.engineRuntime.crossover.resolveCrossoverBinDirAsync({
-        runner: deps.runner
-      }))
-  )()
+  const binDir = await (deps.resolveBinDir ?? (() => crossoverBinDir(deps)))()
   if (!binDir) return 'not-needed'
 
   // bin -> CrossOver -> SharedSupport -> Contents

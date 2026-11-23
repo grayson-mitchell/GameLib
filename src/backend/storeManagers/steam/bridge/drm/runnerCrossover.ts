@@ -11,8 +11,9 @@ import { createReadStream, promises as fsp } from 'fs'
 import type { Stats } from 'fs'
 import { basename, dirname, isAbsolute, join, relative, sep } from 'path'
 
-import type { RunTool } from 'backend/engine/runTool'
+import type { RunTool } from 'common/types/engine'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
+import { crossoverBinDir } from '../../engine/crossoverBinDir'
 import type { ProcessRunner } from 'backend/process/types'
 import { buildDrmPaths } from './drmPaths'
 import {
@@ -98,10 +99,10 @@ export type CrossoverAllowed = {
 export type DetectCrossoverDeps = {
   resolveCrossoverBinDir?: () => Promise<string | undefined>
   runTool: RunTool
-  /** Spotlight (mdfind) for the default bin-dir lookup runs through this runner. */
+  /** No longer read here: Rust runs the Spotlight search for the bin-dir lookup (87-55). Kept for the callers' deps shape. */
   runner: Pick<ProcessRunner, 'run'>
-  /** The boot's CrossOver locator, for the default bin-dir lookup (66.4-05). */
-  engineRuntime: Pick<EngineRuntime, 'crossover'>
+  /** The boot's sidecar -> Rust transport, for the default bin-dir lookup (87-55). */
+  engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
   findRow?: (build: string, cleanSha256: string) => NtdllPatchRow | null
   supportedBuilds?: () => string[]
   platform?: NodeJS.Platform
@@ -110,13 +111,10 @@ export type DetectCrossoverDeps = {
 export const CX_ROOT_SUFFIX = `${sep}Contents${sep}SharedSupport${sep}CrossOver`
 
 export async function defaultResolveBinDir(deps: {
-  runner: Pick<ProcessRunner, 'run'>
-  engineRuntime: Pick<EngineRuntime, 'crossover'>
+  engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
 }): Promise<string | undefined> {
   try {
-    return await deps.engineRuntime.crossover.resolveCrossoverBinDirAsync({
-      runner: deps.runner
-    })
+    return await crossoverBinDir(deps.engineRuntime)
   } catch {
     return undefined
   }

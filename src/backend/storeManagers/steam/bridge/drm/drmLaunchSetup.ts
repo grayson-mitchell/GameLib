@@ -25,7 +25,7 @@
  *   deadline and abort id.
  */
 import type { StatusUpdateDeps } from 'backend/appRuntime'
-import type { RunTool } from 'backend/engine/runTool'
+import type { RunTool } from 'common/types/engine'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { AppPaths } from 'backend/process/context'
 import type { ProcessRunner } from 'backend/process/types'
@@ -150,10 +150,10 @@ type DrmInstanceSteps = {
 export type DrmSetupOverrides = StatusUpdateDeps & {
   /** The caller's tool runner (66.2-03); the clone and allowlist steps spawn through it. */
   runTool: RunTool
-  /** The runner behind `runTool`; the CrossOver bin-dir lookup (mdfind) runs through it (66.2-07). */
+  /** The runner behind `runTool` (66.2-07). The CrossOver bin-dir lookup no longer reads it: Rust runs the search (87-55). */
   runner: Pick<ProcessRunner, 'run'>
-  /** The boot's CrossOver locator and the path roots the stage reads (66.4-05). */
-  engineRuntime: Pick<EngineRuntime, 'crossover'>
+  /** The boot's Rust transport (the CrossOver lookup, 87-55) and the path roots the stage reads (66.4-05). */
+  engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
   paths: Pick<AppPaths, 'userHome'>
   /** The boot's runner clone flights (66.4-08). */
   bridgeRuntime: Pick<BridgeRuntime, 'runnerClone'>

@@ -7,7 +7,7 @@
 import { promises as fsp } from 'fs'
 import { basename, join } from 'path'
 
-import type { RunTool } from 'backend/engine/runTool'
+import type { RunTool } from 'common/types/engine'
 import {
   DLL_REL,
   LOADER_REL,

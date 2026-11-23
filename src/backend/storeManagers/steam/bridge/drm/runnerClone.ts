@@ -37,7 +37,7 @@ import { constants as fsConstants, promises as fsp } from 'fs'
 import { basename, dirname, join } from 'path'
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import type { RunTool } from 'backend/engine/runTool'
+import type { RunTool } from 'common/types/engine'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { buildDrmPaths } from './drmPaths'
 import { applyNtdllPatch, type NtdllPatchResult } from './ntdllPatch'

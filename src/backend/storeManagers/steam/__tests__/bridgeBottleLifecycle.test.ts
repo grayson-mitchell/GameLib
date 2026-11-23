@@ -136,7 +136,10 @@ const crossover = {
 // 87-42: the selections the bridge reads are the process-wide view. The bottle kill, removal, creation and markers are
 // Rust's, answered here by `fakeBottleRust`, which records the calls (a case that needs another answer scripts it).
 const bottleRustOthers: Record<string, (arg: unknown) => unknown> = {}
-const bottleRust = createFakeBottleRust({ others: bottleRustOthers })
+const bottleRust = createFakeBottleRust({
+  others: bottleRustOthers,
+  crossoverBinDir: () => cxState.binDir
+})
 beforeEach(() => {
   bottleRust.calls.length = 0
   for (const key of Object.keys(bottleRustOthers)) delete bottleRustOthers[key]

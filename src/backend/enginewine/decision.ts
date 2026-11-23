@@ -1,10 +1,11 @@
-import type { EnginePin } from 'common/types/engine'
-import type { EngineOverrideId } from 'backend/engine/engineIds'
 import type {
+  EnginePin,
   EngineSelection,
   FallbackReason
-} from 'backend/engine/engineTypes'
+} from 'common/types/engine'
+import type { EngineOverrideId } from 'backend/engine/engineIds'
 import {
+  RUST_ENGINE_CX_RESOLVE_BIN_DIR,
   RUST_ENGINE_DECIDE_CREATION,
   RUST_ENGINE_DECIDE_LAUNCH,
   RUST_ENGINE_IS_CROSSOVER_MISSING,
@@ -117,6 +118,24 @@ export async function preflightCrossover(
   args: PreflightRequest
 ): Promise<unknown> {
   return deps.requestRustInvoke(RUST_ENGINE_PREFLIGHT_CROSSOVER, [args])
+}
+
+/** The CrossOver bin-dir lookup's argument: the wine binaries the caller already knows (the persisted `wineVersion.bin`). */
+export interface ResolveBinDirRequest {
+  hintWineBins?: string[]
+}
+
+/**
+ * Where CrossOver's `bin` directory is (D-04): the hinted wine binaries, the memo, the two default install locations,
+ * then the shell's Spotlight search. Resolves the path, or `null` for "not installed"; rejects with Rust's category word
+ * when the call could not be made. The bridge's call sites go through `storeManagers/steam/engine/crossoverBinDir.ts`,
+ * which folds a rejection into "not installed" as the TS locator's `resolveCrossoverBinDirAsync` did.
+ */
+export async function resolveCrossoverBinDir(
+  deps: RustInvokeDeps,
+  args: ResolveBinDirRequest
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_ENGINE_CX_RESOLVE_BIN_DIR, [args])
 }
 
 /**

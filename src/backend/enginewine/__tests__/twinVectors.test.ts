@@ -8,6 +8,10 @@
  * fresh fake profile (the placeholders `<HOME>`, `<TOOLS>`, `<APPFOLDER>`, `<USERDATA>` expanded), exactly as the
  * Rust replay does, and the answer is compared with the profile's roots turned back into placeholders.
  *
+ * 87-55 adds `selection_twin.json`: `isNonCrossover` and `engineLogLabel`, the engine selection's two pure helpers
+ * (Rust: `EngineSelection::engine` and `EngineSelection::log_label`). The last describe block replays its 83 + 83
+ * vectors, which `twin_vectors.rs` replays against the Rust selection.
+ *
  * The engine twin's vector test (Phase 87, 87-28, D-24 extended).
  *
  * `engineKeyFor`, `isWritableEngineOverride`, `importEngineSettings` and `getPerGameBottleNameFor`
@@ -43,10 +47,12 @@ import {
   ENGINE_PINS,
   buildFallbackGameSettings,
   engineKeyFor,
+  engineLogLabel,
   getBottleDir,
   getPerGameBottleNameFor,
   importEngineSettings,
   isBottleProvisioned,
+  isNonCrossover,
   isPinnedEngineInstalled,
   isWritableEngineOverride,
   readBottleEngineMarkerKind,
@@ -55,6 +61,7 @@ import {
   sanitizeBottleName
 } from '../twin'
 import type { BottleReadContext } from '../twin'
+import type { EngineSelection } from 'common/types/engine'
 
 const VECTORS = join(
   REPO_ROOT,
@@ -479,5 +486,89 @@ describe('twin vectors (bottle_twin.json)', () => {
         true
       )
     }
+  })
+})
+
+// ---------------------------------------------------------------------------------------------
+// selection_twin.json (87-55): the engine selection's two pure helpers
+// ---------------------------------------------------------------------------------------------
+
+const SELECTION_VECTORS = join(
+  REPO_ROOT,
+  'src-tauri',
+  'crates',
+  'gamelib-engine',
+  'tests',
+  'fixtures',
+  'vectors',
+  'selection_twin.json'
+)
+// `selection_twin.json` holds 83 vectors in each of its two groups when recorded (87-55). Never lower a floor to turn
+// a red run green.
+const SELECTION_GROUP_FLOOR = 83
+
+const selectionVectors = JSON.parse(
+  readFileSync(SELECTION_VECTORS, 'utf8')
+) as Record<string, Vector[]>
+
+const SELECTION_REPLAY: Record<
+  string,
+  (selection: EngineSelection) => unknown
+> = {
+  isNonCrossover: (selection) => isNonCrossover(selection),
+  engineLogLabel: (selection) => engineLogLabel(selection)
+}
+
+describe('twin vectors (selection_twin.json)', () => {
+  it('anti-vacuity: the file holds the two groups, each over its floor, and both answers occur', () => {
+    expect(Object.keys(selectionVectors).sort()).toEqual(
+      Object.keys(SELECTION_REPLAY).sort()
+    )
+    for (const [name, list] of Object.entries(selectionVectors)) {
+      assertAtOrAboveFloor(
+        `selection twin ${name} vectors`,
+        list.length,
+        SELECTION_GROUP_FLOOR
+      )
+      const ids = list.map((v) => v.id)
+      expect(new Set(ids).size).toBe(ids.length)
+      // A group that answered one value for every input would pass a helper that ignores its argument.
+      expect(
+        new Set(list.map((v) => JSON.stringify(v.expected))).size
+      ).toBeGreaterThan(1)
+    }
+    // Every selection kind and every reason the bridge writes is covered.
+    const kinds = new Set(
+      (selectionVectors['isNonCrossover'] ?? []).map(
+        (v) => (v.input as { selection: EngineSelection }).selection.kind
+      )
+    )
+    expect([...kinds].sort()).toEqual(['crossover', 'pinned', 'wine-manager'])
+  })
+
+  for (const [name, replay] of Object.entries(SELECTION_REPLAY)) {
+    it(`${name} answers every recorded vector`, () => {
+      const list = selectionVectors[name] ?? []
+      const mismatches = list
+        .map((v) => ({
+          id: v.id,
+          got: replay((v.input as { selection: EngineSelection }).selection),
+          want: v.expected
+        }))
+        .filter((r) => JSON.stringify(r.got) !== JSON.stringify(r.want))
+      expect(mismatches).toEqual([])
+    })
+  }
+
+  it('a vector whose expected answer is wrong is caught (the replay is not vacuous)', () => {
+    const vector = (selectionVectors['engineLogLabel'] ?? []).find(
+      (v) => v.id === 'crossover/cx-healthy/27.0.0.1'
+    ) as Vector
+    const selection = (vector.input as { selection: EngineSelection }).selection
+    expect(engineLogLabel(selection)).toBe(vector.expected)
+    expect(engineLogLabel(selection)).not.toBe(
+      String(vector.expected).replace('27.0.0.1', '27.0.0.2')
+    )
+    expect(isNonCrossover(selection)).toBe(false)
   })
 })

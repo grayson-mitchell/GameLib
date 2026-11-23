@@ -29,7 +29,7 @@ import {
   parseOverlayOverride
 } from './bridge/overlay/overlayPolicy'
 import { readStoredTitleConfig, pickTitleSettings } from './titleSettings'
-import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
+import type { NonCrossoverEngine } from 'common/types/engine'
 import type { EnginePin } from 'common/types/engine'
 import { isNative, isBottleEligible } from './gameEligibility'
 import { install, ensureBuiltInEngineForInstall } from './gameInstall'

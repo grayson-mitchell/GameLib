@@ -130,6 +130,44 @@ export type EnginePin = {
  */
 export const LAUNCH_DEADLINE_MS = 180_000
 
+/**
+ * Phase 87 (87-55, D-24): the engine types the Steam bridge and the Rust-backed shims share. They moved here from
+ * `backend/engine/engineTypes.ts` (which re-exports them until 87-56 deletes the TS engine) so the bridge no longer imports
+ * `src/backend/engine`. The Rust `gamelib-engine` `types` module owns the same shapes.
+ */
+export type FallbackReason = 'cx-missing' | 'cx-expired' | 'cx-broken'
+
+export interface NonCrossoverEngine {
+  wineBin: string
+  wineserverBin: string
+  label: string
+  version: string
+  dxvk: { dir: string; version: string } | null
+}
+
+export type EngineSelection =
+  | {
+      kind: 'crossover'
+      reason: 'cx-healthy' | 'cx-inconclusive' | 'override'
+      crossoverBuild: string | null
+      binDir: string
+    }
+  | ({
+      kind: 'pinned'
+      pinId: string
+      reason: FallbackReason | 'cx-inconclusive' | 'override'
+    } & NonCrossoverEngine)
+  | ({
+      kind: 'wine-manager'
+      managerVersion: string
+      reason: 'override' | 'cx-inconclusive'
+    } & NonCrossoverEngine)
+
+export type NonCrossoverSelection = Extract<
+  EngineSelection,
+  { kind: 'pinned' | 'wine-manager' }
+>
+
 /** The five absolute-path programs a bridge tool run may start (the Rust `run_tool` allowlist). */
 export type RunnerTool =
   | '/bin/cp'

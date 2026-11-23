@@ -1,4 +1,4 @@
-import type { EngineSelection } from 'backend/engine/engineTypes'
+import type { EngineSelection } from 'common/types/engine'
 import { sidecarInternalSendArgs } from 'common/types/ipc/sidecarInternal'
 import type { IpcRegistry } from 'backend/sidecar/ipcRegistry'
 

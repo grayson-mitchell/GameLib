@@ -7,7 +7,7 @@
  * gameLaunch -> gameBridgeLaunch). A call a test spies on stays a
  * `steamGame.X()` call (quick-261107-an2).
  */
-import { createRunTool } from 'backend/engine/runTool'
+import { createRustRunTool } from './engine/rustRunTool'
 import i18next from 'i18next'
 import { existsSync } from 'graceful-fs'
 import { join } from 'node:path'
@@ -31,7 +31,7 @@ import { getBottleDir } from 'backend/enginewine/twin'
 import { prepareOverlayTokens } from './bridge/overlay/overlayLaunch'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import type { CrossoverPreflight } from 'backend/enginewine/decision'
-import type { EngineSelection } from 'backend/engine/engineTypes'
+import type { EngineSelection } from 'common/types/engine'
 import { dropEngineSelection } from 'backend/engine/engineSync'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
 import { detectLaunchDrmWrapper } from './bridge/drm/drmScanExe'
@@ -440,7 +440,7 @@ export async function selectLaunchEngine(
   const { prepareBottle } = await import('backend/engine/prepareBottle')
   const { STEAM_ENGINE_RUNNER, steamEngineStateFacts } =
     await import('./engine/steamEngineDeps')
-  const { isNonCrossover } = await import('backend/engine/engineTypes')
+  const { isNonCrossover } = await import('backend/enginewine/twin')
   const title = steamGame.getGameInfo().title
 
   // G22/G25: offline, some launches cannot start on any branch: CrossOver missing needs the
@@ -741,7 +741,7 @@ export async function onBridgeLaunchDeadline(
   clearLaunchRecord: () => void,
   armedSelection: EngineSelection | undefined
 ): Promise<void> {
-  const { engineLogLabel } = await import('backend/engine/engineTypes')
+  const { engineLogLabel } = await import('backend/enginewine/twin')
   const { LAUNCH_DEADLINE_MS } = await import('common/types/engine')
   // Phase 59 UAT (G5): the monitor's onStopped can clear the registry entry
   // before the deadline fires, so fall back to the selection seen at arm time.
@@ -810,7 +810,7 @@ export async function prefetchBridgeDrmDownloads(
       cegMarkers
     },
     {
-      runTool: createRunTool({ runner: steamGame.deps.runner }),
+      runTool: createRustRunTool(steamGame.deps),
       runner: steamGame.deps.runner,
       sendFrontendMessage: steamGame.deps.sendFrontendMessage,
       appRuntime: steamGame.deps.appRuntime,

@@ -229,7 +229,6 @@ export function registerHandlers(deps: {
     stores: deps.services.stores,
     config: deps.services.config,
     runner: deps.services.runner,
-    engineRuntime: deps.services.engineRuntime,
     dialogs: deps.services.host.dialogs,
     appState: deps.services.host.appState,
     notifications: deps.services.host.notifications,

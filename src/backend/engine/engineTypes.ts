@@ -1,51 +1,12 @@
 /**
- * Shared contract for the Steam engine layer (phase 59). Types and two pure
- * helpers only: nothing runs at module load.
+ * Shared contract for the Steam engine layer (phase 59). The types moved to `common/types/engine.ts` and the two pure
+ * helpers to the twin (`enginewine/twin.ts`) in Phase 87 (87-55); this file only re-exports them for the TS engine that
+ * 87-56 deletes with it.
  */
-
-export type FallbackReason = 'cx-missing' | 'cx-expired' | 'cx-broken'
-
-export interface NonCrossoverEngine {
-  wineBin: string
-  wineserverBin: string
-  label: string
-  version: string
-  dxvk: { dir: string; version: string } | null
-}
-
-export type EngineSelection =
-  | {
-      kind: 'crossover'
-      reason: 'cx-healthy' | 'cx-inconclusive' | 'override'
-      crossoverBuild: string | null
-      binDir: string
-    }
-  | ({
-      kind: 'pinned'
-      pinId: string
-      reason: FallbackReason | 'cx-inconclusive' | 'override'
-    } & NonCrossoverEngine)
-  | ({
-      kind: 'wine-manager'
-      managerVersion: string
-      reason: 'override' | 'cx-inconclusive'
-    } & NonCrossoverEngine)
-
-export type NonCrossoverSelection = Extract<
+export type {
   EngineSelection,
-  { kind: 'pinned' | 'wine-manager' }
->
-
-export function isNonCrossover(
-  sel: EngineSelection
-): sel is NonCrossoverSelection {
-  return sel.kind !== 'crossover'
-}
-
-/** The exact engine and version launch-log line (D-14). */
-export function engineLogLabel(sel: EngineSelection): string {
-  if (sel.kind === 'crossover') {
-    return `engine=crossover build=${sel.crossoverBuild ?? 'unknown'} reason=${sel.reason}`
-  }
-  return `engine=${sel.kind} name="${sel.label}" version=${sel.version} reason=${sel.reason}`
-}
+  FallbackReason,
+  NonCrossoverEngine,
+  NonCrossoverSelection
+} from 'common/types/engine'
+export { engineLogLabel, isNonCrossover } from 'backend/enginewine/twin'

@@ -30,7 +30,6 @@ import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import { getBottleDir, isBottleProvisioned } from 'backend/enginewine/twin'
 import type { AppPaths } from 'backend/process/context'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
-import type { CrossoverLocator } from 'backend/engine/crossoverLocation'
 import type { SteamLaunchRuntime } from './steamLaunchRuntime'
 
 // ── Phase 24 (24-04): dedicated bridge bottle (macOS native Steam bridge) ──
@@ -194,16 +193,29 @@ export function bottleWineArch(
   }
 }
 
+/**
+ * How the Steam bottle finds CrossOver (87-55): the sync fast path (the hinted wine binaries, the memo, the two default
+ * install locations; `resolveCrossoverWine` reads it inline) is still the boot's TS locator, and the async lookup is
+ * Rust's (`crossoverBinDir`, wired by the boot's facade). `deps` is what the TS locator took; Rust needs nothing from it.
+ */
+export interface SteamCrossoverLocator {
+  resolveCrossoverBinDir: (opts?: {
+    wineVersion?: WineInstallation
+    hintWineBins?: string[]
+  }) => string | undefined
+  resolveCrossoverBinDirAsync: (
+    deps: { runner: Pick<ProcessRunner, 'run'> },
+    opts?: { wineVersion?: WineInstallation; hintWineBins?: string[] }
+  ) => Promise<string | undefined>
+}
+
 /** What the bottle helpers read: the bottle config store and the global settings. */
 export interface SteamBottleDeps {
   /**
    * The boot's CrossOver locator. Read lazily: the 'steam-bottle' boot step runs before
    * 'engine-runtime', so the boot passes a facade that resolves the runtime at call time.
    */
-  crossover: Pick<
-    CrossoverLocator,
-    'resolveCrossoverBinDir' | 'resolveCrossoverBinDirAsync'
-  >
+  crossover: SteamCrossoverLocator
   stores: { steam: Pick<Stores['steam'], 'steamBottleConfigStore'> }
   config: Pick<GlobalConfigSlice, 'getSettings'>
   paths: Pick<AppPaths, 'userHome'>

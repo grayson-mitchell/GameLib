@@ -101,6 +101,8 @@ const COMPATIBILITY_LAYERS_IMPORTERS: readonly string[] = [
  * the launcher and the five `games.ts` (`engineKeyFor`), the settings and install flows (the override
  * validation and the import settings), the engine flows, the engine TS alive until 87-56 (87-42 adds `prepareBottle`),
  * and (87-43) every bridge file that used to reach the helpers through the re-exporting engine modules.
+ * 87-55 adds `engine/engineTypes.ts`, which re-exports the two selection helpers for the TS engine until 87-56, and
+ * `gameLaunchOverlay.ts`, which takes `isNonCrossover` from here now.
  */
 const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/engine/bottleLedger.ts',
@@ -109,6 +111,7 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/engine/engineEligibility.ts',
   'src/backend/engine/enginePins.ts',
   'src/backend/engine/engineState.ts',
+  'src/backend/engine/engineTypes.ts',
   'src/backend/engine/fallbackEngine.ts',
   'src/backend/engine/gameEngineState.ts',
   'src/backend/engine/gamePrefix.ts',
@@ -142,6 +145,7 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/gameEngineDialogs.ts',
   'src/backend/storeManagers/steam/gameInstallBridge.ts',
   'src/backend/storeManagers/steam/gameLaunch.ts',
+  'src/backend/storeManagers/steam/gameLaunchOverlay.ts',
   'src/backend/storeManagers/steam/provisionBottle.ts',
   'src/backend/storeManagers/storeManagerCommon/games.ts'
 ]
@@ -174,12 +178,13 @@ const LAUNCH_SHIM_IMPORTERS: readonly string[] = [
 ]
 /**
  * Every non-test importer of `enginewine/decision.ts` (the check is per file, so every row of that file lists them all):
- * the Steam launch and its engine adapter (87-54) and the still-TS decision module, which takes its types from here
+ * the Steam launch and its engine adapter (87-54), the CrossOver bin-dir lookup (87-55) and the still-TS decision module, which takes its types from here
  * until 87-56 deletes it.
  */
 const DECISION_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/engine/engineDecision.ts',
   'src/backend/enginewine/state.ts',
+  'src/backend/storeManagers/steam/engine/crossoverBinDir.ts',
   'src/backend/storeManagers/steam/engine/engineDecisionReply.ts',
   'src/backend/storeManagers/steam/engine/steamEngineDeps.ts',
   'src/backend/storeManagers/steam/gameBridgeLaunch.ts',
@@ -506,6 +511,18 @@ const SCHEDULE: readonly ScheduleRow[] = [
     callers: DECISION_SHIM_IMPORTERS,
     deletedBy: 96
   },
+  // 87-55 (D-04, D-15): where CrossOver's bin directory is. The bridge's call sites (`steam/engine/crossoverBinDir.ts`, which
+  // folds a rejection into "not installed" as the TS locator did) and the app shell's App Management probe ask Rust; the
+  // sync fast path `bottle.ts` reads inline stays the boot's TS locator until 87-56. Phase 98 moves the lookup's last
+  // callers (the App Management probe, with the settings flows) into Rust.
+  {
+    name: 'resolveCrossoverBinDir',
+    file: 'src/backend/enginewine/decision.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_CX_RESOLVE_BIN_DIR',
+    callers: DECISION_SHIM_IMPORTERS,
+    deletedBy: 98
+  },
   // 87-54 (D-03, D-15): the Steam bridge's engine-state writes. The launch records what it used (`recordLaunchDecision`,
   // with the bridge's facts as values) and the overlay setup and exit notices are pushed over the last state; Rust
   // pushes `engineStateChanged` itself. Phase 96 moves the launch's decision record, Phase 97 the overlay's notices.
@@ -802,6 +819,26 @@ const SCHEDULE: readonly ScheduleRow[] = [
     vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
     callers: ENGINE_TWIN_IMPORTERS,
     deletedBy: 92
+  },
+  // 87-55 (D-24): the engine selection's two pure helpers, which the bridge calls inline (a type guard in the bottle and
+  // launch code, the launch-log line in the deadline handler). Rust owns them as `EngineSelection::engine` and
+  // `log_label`; `selection_twin.json` pins the two sides (`twinVectors.test.ts` and `twin_vectors.rs`). They go with the
+  // bridge's launch in Phase 96.
+  {
+    name: 'isNonCrossover',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'engineLogLabel',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 96
   },
   {
     name: 'isWritableEngineOverride',

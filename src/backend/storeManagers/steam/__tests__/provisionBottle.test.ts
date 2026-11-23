@@ -10,6 +10,7 @@
  */
 import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
+import { createFakeBottleRust } from 'backend/testUtils/fakeBottleRust'
 import {
   existsSync,
   mkdirSync,
@@ -88,7 +89,14 @@ const crossover = {
   resolveCrossoverBinDir: () => cxState.binDir,
   resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir)
 }
-const engineRuntime = { crossover, registry: createEngineRegistry() }
+// 87-55: the async CrossOver lookup is Rust's, answered from the same state.
+const engineRuntime = {
+  crossover,
+  registry: createEngineRegistry(),
+  requestRustInvoke: createFakeBottleRust({
+    crossoverBinDir: () => cxState.binDir
+  }).requestRustInvoke
+}
 // One per-boot Steam launch runtime for this suite, on the global-timer clock so jest fake timers drive it (66.4-06).
 const steamLaunchRuntime = createTestSteamLaunchRuntime({
   clock: createGlobalTimerClock()

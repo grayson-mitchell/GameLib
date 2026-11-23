@@ -19,7 +19,7 @@ import {
   type OverlayRunnerReady
 } from './overlayRunnerClone'
 import type { BridgeRuntime } from '../bridgeRuntime'
-import type { RunTool } from 'backend/engine/runTool'
+import type { RunTool } from 'common/types/engine'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { ProcessRunner } from 'backend/process/types'
 
@@ -310,7 +310,7 @@ export async function prepareOverlayLaunch(
     bridgeRuntime: Pick<BridgeRuntime, 'overlayRunnerClone'>
     runTool: RunTool
     runner: Pick<ProcessRunner, 'run'>
-    engineRuntime: Pick<EngineRuntime, 'crossover'>
+    engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
   }
 ): Promise<
   OverlayStepResult<{ runner: OverlayRunnerReady; tokens: string[] }>

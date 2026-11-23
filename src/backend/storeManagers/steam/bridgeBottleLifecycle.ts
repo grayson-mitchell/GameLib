@@ -28,12 +28,12 @@ import {
   type SteamBottle
 } from './bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
-import { isNonCrossover } from 'backend/engine/engineTypes'
-import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
+import type { NonCrossoverEngine } from 'common/types/engine'
 import {
   sanitizeBottleName,
   getBottleDir,
-  isBottleProvisioned
+  isBottleProvisioned,
+  isNonCrossover
 } from 'backend/enginewine/twin'
 import { createFallbackBottleCancellable } from 'backend/engine/fallbackBottleCall'
 import {
@@ -52,6 +52,7 @@ import {
 import type { RemovalReason } from 'common/types/safety'
 import { steamSafetyRequest, type SteamSafetyDeps } from './safeSteamRemove'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
+import { crossoverBinDir } from './engine/crossoverBinDir'
 
 /**
  * The guard chain shared by removePerGameBridgeBottle and
@@ -246,11 +247,9 @@ export async function removePerGameBridgeBottle(
     // cxbottle mechanism provisionBottle uses, with a guarded delete if the dir survives.
     await killBottleWineServer(deps, name)
 
-    const removeBinDir =
-      await deps.engineRuntime.crossover.resolveCrossoverBinDirAsync(
-        { runner: deps.runner },
-        { hintWineBins: deps.steamBottle.persistedWineBins() }
-      )
+    const removeBinDir = await crossoverBinDir(deps.engineRuntime, {
+      hintWineBins: deps.steamBottle.persistedWineBins()
+    })
     if (!removeBinDir) {
       logWarning(
         `removePerGameBridgeBottle: no CrossOver install found, skipping cxbottle --delete for "${name}" (guarded delete follows)`,
@@ -697,13 +696,10 @@ export async function provisionBridgeBottle(
 
   // (3b) quick 261024-cjq: CrossOver precondition, after the ready
   // short-circuit and before any spawn.
-  const binDir = await deps.engineRuntime.crossover.resolveCrossoverBinDirAsync(
-    { runner: deps.runner },
-    {
-      wineVersion: opts.wineVersion,
-      hintWineBins: deps.steamBottle.persistedWineBins()
-    }
-  )
+  const binDir = await crossoverBinDir(deps.engineRuntime, {
+    wineVersion: opts.wineVersion,
+    hintWineBins: deps.steamBottle.persistedWineBins()
+  })
   if (!binDir) {
     logWarning(
       `provisionBridgeBottle: CrossOver not found, cannot create bridge bottle "${bottleName}"`,

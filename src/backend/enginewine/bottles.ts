@@ -1,7 +1,4 @@
-import type {
-  EngineSelection,
-  NonCrossoverEngine
-} from 'backend/engine/engineTypes'
+import type { EngineSelection, NonCrossoverEngine } from 'common/types/engine'
 import type { GameSettings } from 'common/types'
 import {
   RUST_ENGINE_BOTTLE_CANCEL_CREATE,

@@ -4,6 +4,7 @@
  * comes back untouched.
  */
 import {
+  RUST_ENGINE_CX_RESOLVE_BIN_DIR,
   RUST_ENGINE_DECIDE_CREATION,
   RUST_ENGINE_DECIDE_LAUNCH,
   RUST_ENGINE_IS_CROSSOVER_MISSING,
@@ -14,7 +15,8 @@ import {
   decideCreationEngine,
   decideLaunchEngine,
   isCrossoverMissing,
-  preflightCrossover
+  preflightCrossover,
+  resolveCrossoverBinDir
 } from '../decision'
 
 function fakeTransport(answer: unknown): RustInvokeDeps & {
@@ -93,5 +95,22 @@ describe('isCrossoverMissing', () => {
     expect(deps.calls).toEqual([
       [RUST_ENGINE_IS_CROSSOVER_MISSING, [{ hintWineBins: [] }]]
     ])
+  })
+})
+
+describe('resolveCrossoverBinDir', () => {
+  it('sends the hinted wine binaries as one object and resolves the reply untouched', async () => {
+    const deps = fakeTransport('/Applications/CrossOver.app/bin')
+    const request = { hintWineBins: ['/cx/bin/wine'] }
+    await expect(resolveCrossoverBinDir(deps, request)).resolves.toBe(
+      '/Applications/CrossOver.app/bin'
+    )
+    expect(deps.calls).toEqual([[RUST_ENGINE_CX_RESOLVE_BIN_DIR, [request]]])
+  })
+
+  it('resolves null for "not installed" without interpreting it', async () => {
+    await expect(
+      resolveCrossoverBinDir(fakeTransport(null), {})
+    ).resolves.toBeNull()
   })
 })

@@ -15,6 +15,7 @@ import { engineSelectionView } from '../enginewine/selectionView'
 import { createTestAbortRegistry } from './testAbortRegistry'
 import { createFakeClock } from './fakeClock'
 import {
+  RUST_ENGINE_CX_RESOLVE_BIN_DIR,
   RUST_ENGINE_LEDGER_MARK_RUNNING,
   RUST_ENGINE_LEDGER_MARK_STOPPED,
   RUST_ENGINE_SELECTION_CLEAR,
@@ -34,6 +35,8 @@ const okBottleGateTransport: EngineRuntimeDeps['requestRustInvoke'] = (
   if (channel === RUST_ENGINE_LEDGER_MARK_RUNNING) return Promise.resolve(true)
   if (channel === RUST_ENGINE_LEDGER_MARK_STOPPED) return Promise.resolve(null)
   if (channel === RUST_ENGINE_SELECTION_CLEAR) return Promise.resolve(false)
+  // 87-55: Rust's CrossOver lookup answers as a machine with no CrossOver would.
+  if (channel === RUST_ENGINE_CX_RESOLVE_BIN_DIR) return Promise.resolve(null)
   return Promise.reject(new Error(`testEngineRuntime: unexpected ${channel}`))
 }
 

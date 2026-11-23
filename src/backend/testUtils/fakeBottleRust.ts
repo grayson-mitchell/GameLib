@@ -4,7 +4,8 @@
  * records every call and answers each channel with a scripted value: the kill says it stopped the wineserver, the
  * removal and the markers say they were done, the fallback creation says it created the bottle, and the cancel says it
  * found nothing to cancel. A test that needs another answer (a refused kill, a failed creation, a creation held open
- * until a cancel) passes it in `others`, by channel name; an `others` entry wins over the default.
+ * until a cancel) passes it in `others`, by channel name; an `others` entry wins over the default. `crossoverBinDir`
+ * answers the CrossOver bin-dir lookup (`engine_cx_resolve_bin_dir`, 87-55): the path, or `null` when it returns nothing.
  *
  * It runs no Wine and no TS copy of what Rust does: what the ops do to the filesystem and to the process list is
  * replayed by `gamelib-engine`'s goldens (`golden_bottles.rs`, `golden_switch.rs`, `switch_incidents.rs`) against the
@@ -18,7 +19,8 @@ import {
   RUST_ENGINE_BOTTLE_RECONCILE_MARKER,
   RUST_ENGINE_BOTTLE_RECORD_CROSSOVER,
   RUST_ENGINE_BOTTLE_RECORD_PINNED,
-  RUST_ENGINE_BOTTLE_REMOVE_CREATED
+  RUST_ENGINE_BOTTLE_REMOVE_CREATED,
+  RUST_ENGINE_CX_RESOLVE_BIN_DIR
 } from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
@@ -42,6 +44,8 @@ export function createFakeBottleRust(
   deps: {
     /** Answers for channels, by name; the argument is the call's one object. */
     others?: Record<string, (arg: unknown) => unknown>
+    /** Where CrossOver is, read at each lookup so a test can change it; unset answers "not installed". */
+    crossoverBinDir?: () => string | undefined
   } = {}
 ): FakeBottleRust {
   const calls: FakeBottleRust['calls'] = []
@@ -50,6 +54,9 @@ export function createFakeBottleRust(
     calls.push({ channel, arg })
     const scripted = deps.others?.[channel]
     if (scripted) return Promise.resolve(scripted(arg))
+    if (channel === RUST_ENGINE_CX_RESOLVE_BIN_DIR) {
+      return Promise.resolve(deps.crossoverBinDir?.() ?? null)
+    }
     if (channel in DEFAULT_ANSWERS) {
       return Promise.resolve(DEFAULT_ANSWERS[channel])
     }

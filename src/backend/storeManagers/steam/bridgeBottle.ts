@@ -9,13 +9,13 @@ import type { GameSettings, WineInstallation } from 'common/types'
 import { logInfo, LogPrefix } from 'backend/logger'
 import type { AppPaths } from 'backend/process/context'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
-import { isNonCrossover } from 'backend/engine/engineTypes'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
-import type { NonCrossoverSelection } from 'backend/engine/engineTypes'
+import type { NonCrossoverSelection } from 'common/types/engine'
 import {
   buildFallbackGameSettings,
   getBottleDir,
-  isBottleProvisioned
+  isBottleProvisioned,
+  isNonCrossover
 } from 'backend/enginewine/twin'
 import {
   DEFAULT_BRIDGE_BOTTLE_NAME,

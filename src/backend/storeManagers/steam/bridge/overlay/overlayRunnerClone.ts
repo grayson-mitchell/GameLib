@@ -55,7 +55,7 @@ import type {
   ResignLoader,
   RunnerEntitlementSigner
 } from '../drm/runnerEntitlements'
-import type { RunTool } from 'backend/engine/runTool'
+import type { RunTool } from 'common/types/engine'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { ProcessRunner } from 'backend/process/types'
 import {
@@ -135,7 +135,7 @@ export async function detectCrossoverForOverlay(
     resolveCrossoverBinDir?: () => Promise<string | undefined>
     runTool: RunTool
     runner: Pick<ProcessRunner, 'run'>
-    engineRuntime: Pick<EngineRuntime, 'crossover'>
+    engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
     platform?: NodeJS.Platform
   }
 ): Promise<OverlayStepResult<{ crossover: OverlayCrossover }>> {

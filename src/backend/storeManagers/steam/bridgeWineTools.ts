@@ -24,7 +24,7 @@ import {
   readBottleEngineMarkerKind
 } from 'backend/enginewine/twin'
 import { parseEngineOverride } from 'backend/engine/engineIds'
-import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
+import type { NonCrossoverEngine } from 'common/types/engine'
 import type { EngineServices } from 'backend/engine/engineServices'
 import { nonCrossoverEngineFor } from 'backend/engine/toolSettings'
 import type { ToolSettingsResult } from 'backend/engine/toolSettings'

@@ -8,7 +8,7 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import { sendGameStatusUpdate } from 'backend/utils'
 import type { CrossoverPreflight } from 'backend/enginewine/decision'
-import type { EngineSelection } from 'backend/engine/engineTypes'
+import type { EngineSelection } from 'common/types/engine'
 import type SteamGame from './games'
 
 /**

@@ -32,6 +32,11 @@
  * pinned-engine installer share with the readers (`readEngineMarker`, `hasStagingDxvk`,
  * `isContradictedCrossover`, `isInside`, `pinMarkerMatches`, `pinnedEnginePaths`) are intra-phase rows
  * (`deletedBy: 87`): 87-56 deletes their callers and makes them private, as with `perGameBottleName`.
+ *
+ * 87-55 (D-24) adds `isNonCrossover` and `engineLogLabel`, the two pure helpers of the engine selection that the bridge
+ * calls inline (a type guard and the launch-log line). The Rust owners are `EngineSelection::engine` and
+ * `EngineSelection::log_label` (`bottles::registry`); the shared `selection_twin.json` vectors pin the two sides
+ * (`twinVectors.test.ts` here, `twin_vectors.rs` in Rust). Both go with the bridge's launch in Phase 96.
  */
 import { createHash } from 'crypto'
 import { existsSync, readFileSync } from 'fs'
@@ -41,8 +46,13 @@ import enginePinsTable from 'common/enginePins.json'
 import { hasCapability } from 'common/storeCapabilities'
 import type { GameSettings } from 'common/types'
 import type { AppPaths } from 'backend/process/context'
-import type { EnginePin, PinnedArtifact } from 'common/types/engine'
-import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
+import type {
+  EnginePin,
+  EngineSelection,
+  NonCrossoverEngine,
+  NonCrossoverSelection,
+  PinnedArtifact
+} from 'common/types/engine'
 import { parseEngineOverride } from 'backend/engine/engineIds'
 import type { EngineOverrideId } from 'backend/engine/engineIds'
 import {
@@ -66,6 +76,21 @@ export function engineKeyFor(
     return STEAM_APP_ID_RE.test(appName) ? appName : null
   }
   return `${runner}:${appName}`
+}
+
+/** True for a selection that is not CrossOver (the pinned fallback or a Wine Manager build). Rust: `EngineSelection::engine` is `Some`. */
+export function isNonCrossover(
+  sel: EngineSelection
+): sel is NonCrossoverSelection {
+  return sel.kind !== 'crossover'
+}
+
+/** The exact engine and version launch-log line (D-14). Rust: `EngineSelection::log_label`. */
+export function engineLogLabel(sel: EngineSelection): string {
+  if (sel.kind === 'crossover') {
+    return `engine=crossover build=${sel.crossoverBuild ?? 'unknown'} reason=${sel.reason}`
+  }
+  return `engine=${sel.kind} name="${sel.label}" version=${sel.version} reason=${sel.reason}`
 }
 
 /** True only for a value that survives the closed grammar unchanged. */

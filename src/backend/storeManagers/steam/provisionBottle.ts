@@ -9,6 +9,7 @@ import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { GlobalConfigSlice } from 'backend/config'
 import type { AppPaths } from 'backend/process/context'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
+import { crossoverBinDir } from './engine/crossoverBinDir'
 import type { GameConfigs } from 'backend/game_config'
 import type { AppState } from 'backend/host/appState'
 import type { Dialogs } from 'backend/host/dialogs'
@@ -100,8 +101,8 @@ export type KillBottleDeps = SpawnDeps & {
   /** The path roots the bottle kill reads (66.4-05). */
   paths: Pick<AppPaths, 'userHome'>
   steamBottle: Pick<SteamBottle, 'persistedWineBins'>
-  /** The boot's CrossOver locator (66.4-05). */
-  engineRuntime: Pick<EngineRuntime, 'crossover'>
+  /** The boot's sidecar -> Rust transport: Rust finds CrossOver (87-55, D-04). */
+  engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
 }
 
 export async function killBottleWineServer(
@@ -112,10 +113,9 @@ export async function killBottleWineServer(
 ): Promise<boolean> {
   const binDir =
     knownBinDir ??
-    (await deps.engineRuntime.crossover.resolveCrossoverBinDirAsync(
-      { runner: deps.runner },
-      { hintWineBins: deps.steamBottle.persistedWineBins() }
-    ))
+    (await crossoverBinDir(deps.engineRuntime, {
+      hintWineBins: deps.steamBottle.persistedWineBins()
+    }))
   if (!binDir) {
     logWarning(
       `killBottleWineServer: no CrossOver install found, skipping wineserver -k for "${bottleName}"`,
@@ -180,7 +180,7 @@ export async function provisionBottle(
         AppPaths,
         'userHome' | 'steamSupportPath' | 'toolsPath' | 'configPath'
       >
-      engineRuntime: Pick<EngineRuntime, 'crossover'>
+      engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
       steamLaunchRuntime: Pick<SteamLaunchRuntime, 'raiser'>
       config: Pick<
         GlobalConfigSlice,
@@ -262,13 +262,10 @@ export async function provisionBottle(
   // CrossOver since uninstalled still short-circuits 'done' (step 3), so the
   // missing-CrossOver error is returned only when a recreate or a create is
   // actually needed.
-  const binDir = await deps.engineRuntime.crossover.resolveCrossoverBinDirAsync(
-    { runner: deps.runner },
-    {
-      wineVersion: opts?.wineVersion,
-      hintWineBins: deps.steamBottle.persistedWineBins()
-    }
-  )
+  const binDir = await crossoverBinDir(deps.engineRuntime, {
+    wineVersion: opts?.wineVersion,
+    hintWineBins: deps.steamBottle.persistedWineBins()
+  })
   const needsCxbottle =
     !deps.steamBottle.isBottleReady(bottleName) ||
     (isBottleProvisioned(deps.paths, bottleName) &&

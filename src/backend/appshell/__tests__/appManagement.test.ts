@@ -7,8 +7,7 @@ jest.mock('../../logger', () => ({
 }))
 
 import { logWarning } from '../../logger'
-import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
-import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
+import { RUST_ENGINE_CX_RESOLVE_BIN_DIR } from 'common/types/sidecarTransport'
 
 const BIN = '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'
 const PROBE = '/Applications/CrossOver.app/Contents/.gamelib-appmgmt-probe'
@@ -30,9 +29,8 @@ describe('classifyProbeError', () => {
 
 describe('getAppManagementStatus', () => {
   const mk = (over = {}) => ({
-    runner: createScriptedRunner([]),
+    requestRustInvoke: jest.fn().mockResolvedValue(null),
     platform: 'darwin' as NodeJS.Platform,
-    engineRuntime: createTestEngineRuntime(),
     resolveBinDir: jest.fn().mockResolvedValue(BIN),
     writeFile: jest.fn().mockResolvedValue(undefined),
     unlink: jest.fn().mockResolvedValue(undefined),
@@ -74,5 +72,41 @@ describe('getAppManagementStatus', () => {
     const d = mk({ unlink: jest.fn().mockRejectedValue(err('EPERM')) })
     expect(await getAppManagementStatus(d)).toBe('granted')
     expect(logWarning).toHaveBeenCalled()
+  })
+
+  // 87-55 (D-04): with no injected lookup, Rust finds CrossOver through engine_cx_resolve_bin_dir.
+  describe('the default CrossOver lookup', () => {
+    const noLookup = (requestRustInvoke: jest.Mock) =>
+      mk({ resolveBinDir: undefined, requestRustInvoke })
+
+    it('asks Rust and probes inside the bundle it names', async () => {
+      const requestRustInvoke = jest.fn().mockResolvedValue(BIN)
+      const d = noLookup(requestRustInvoke)
+      expect(await getAppManagementStatus(d)).toBe('granted')
+      expect(requestRustInvoke).toHaveBeenCalledWith(
+        RUST_ENGINE_CX_RESOLVE_BIN_DIR,
+        [{ hintWineBins: [] }]
+      )
+      expect(d.writeFile).toHaveBeenCalledWith(PROBE, '')
+    })
+
+    it.each([null, '', 5])(
+      'a reply of %p is "no CrossOver": not-needed, no write',
+      async (reply) => {
+        const d = noLookup(jest.fn().mockResolvedValue(reply))
+        expect(await getAppManagementStatus(d)).toBe('not-needed')
+        expect(d.writeFile).not.toHaveBeenCalled()
+      }
+    )
+
+    it('a failed call is "no CrossOver", never a rejection', async () => {
+      const d = noLookup(
+        jest
+          .fn()
+          .mockRejectedValue(new Error('engine_cx_resolve_bin_dir:not-ready'))
+      )
+      expect(await getAppManagementStatus(d)).toBe('not-needed')
+      expect(d.writeFile).not.toHaveBeenCalled()
+    })
   })
 })

@@ -10,7 +10,7 @@
 import { engineSelectionView } from 'backend/enginewine/selectionView'
 import { publishOverlayNotice } from 'backend/enginewine/state'
 import type { OverlayNoticeStep } from 'common/types/engine'
-import { createRunTool } from 'backend/engine/runTool'
+import { createRustRunTool } from './engine/rustRunTool'
 import i18next from 'i18next'
 import { lstatSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -315,7 +315,7 @@ export async function prepareTcpOverlay(
       ? getBridgeBottleSettings(steamGame.deps, steamGame.appId)
       : settings
   try {
-    const { isNonCrossover } = await import('backend/engine/engineTypes')
+    const { isNonCrossover } = await import('backend/enginewine/twin')
     const sel = engineSelectionView.get(steamGame.appId)
     const fallbackEngine = sel
       ? isNonCrossover(sel)
@@ -361,7 +361,7 @@ export async function prepareTcpOverlay(
           ...overlayProbeArg(steamGame)
         },
         {
-          runTool: createRunTool({ runner: steamGame.deps.runner }),
+          runTool: createRustRunTool(steamGame.deps),
           engineRuntime: steamGame.deps.engineRuntime,
           runner: steamGame.deps.runner,
           bridgeRuntime: steamGame.deps.bridgeRuntime

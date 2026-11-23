@@ -1,0 +1,2614 @@
+{
+ "isNonCrossover": [
+  {
+   "id": "crossover/cx-healthy/null",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-healthy",
+     "crossoverBuild": null,
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "crossover/cx-healthy/27.0.0.1",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-healthy",
+     "crossoverBuild": "27.0.0.1",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "crossover/cx-healthy/",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-healthy",
+     "crossoverBuild": "",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "crossover/cx-healthy/unknown",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-healthy",
+     "crossoverBuild": "unknown",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "crossover/cx-healthy/3 \"x\" 4",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-healthy",
+     "crossoverBuild": "3 \"x\" 4",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "crossover/cx-inconclusive/null",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-inconclusive",
+     "crossoverBuild": null,
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "crossover/cx-inconclusive/27.0.0.1",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-inconclusive",
+     "crossoverBuild": "27.0.0.1",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "crossover/cx-inconclusive/",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-inconclusive",
+     "crossoverBuild": "",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "crossover/cx-inconclusive/unknown",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-inconclusive",
+     "crossoverBuild": "unknown",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "crossover/cx-inconclusive/3 \"x\" 4",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-inconclusive",
+     "crossoverBuild": "3 \"x\" 4",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "crossover/override/null",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "override",
+     "crossoverBuild": null,
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "crossover/override/27.0.0.1",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "override",
+     "crossoverBuild": "27.0.0.1",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "crossover/override/",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "override",
+     "crossoverBuild": "",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "crossover/override/unknown",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "override",
+     "crossoverBuild": "unknown",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "crossover/override/3 \"x\" 4",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "override",
+     "crossoverBuild": "3 \"x\" 4",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": false
+  },
+  {
+   "id": "pinned/cx-missing/0",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-missing/1",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-missing/2",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-missing/3",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-expired/4",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-expired",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-expired/5",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-expired",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-expired/6",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-expired",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-expired/7",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-expired",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-broken/8",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-broken",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-broken/9",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-broken",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-broken/10",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-broken",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-broken/11",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-broken",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-inconclusive/12",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-inconclusive/13",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-inconclusive/14",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/cx-inconclusive/15",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/override/16",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/override/17",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/override/18",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/override/19",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/20",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/21",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/22",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/23",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/24",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/25",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "1.2.3-rc1",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/26",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/27",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/28",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/29",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/30",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/31",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "1.2.3-rc1",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/32",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/33",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "9.0",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/34",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/35",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/36",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/37",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "1.2.3-rc1",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/38",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/39",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "9.0",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/40",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/41",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/42",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "pinned/mix/43",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "1.2.3-rc1",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/override/44",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/override/45",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/override/46",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/override/47",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/override/48",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/override/49",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/override/50",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/override/51",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/override/52",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/override/53",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/override/54",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/override/55",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/56",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/57",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/58",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/59",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/60",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/61",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/62",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/63",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/64",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/65",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/66",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/67",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": true
+  }
+ ],
+ "engineLogLabel": [
+  {
+   "id": "crossover/cx-healthy/null",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-healthy",
+     "crossoverBuild": null,
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build=unknown reason=cx-healthy"
+  },
+  {
+   "id": "crossover/cx-healthy/27.0.0.1",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-healthy",
+     "crossoverBuild": "27.0.0.1",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build=27.0.0.1 reason=cx-healthy"
+  },
+  {
+   "id": "crossover/cx-healthy/",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-healthy",
+     "crossoverBuild": "",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build= reason=cx-healthy"
+  },
+  {
+   "id": "crossover/cx-healthy/unknown",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-healthy",
+     "crossoverBuild": "unknown",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build=unknown reason=cx-healthy"
+  },
+  {
+   "id": "crossover/cx-healthy/3 \"x\" 4",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-healthy",
+     "crossoverBuild": "3 \"x\" 4",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build=3 \"x\" 4 reason=cx-healthy"
+  },
+  {
+   "id": "crossover/cx-inconclusive/null",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-inconclusive",
+     "crossoverBuild": null,
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build=unknown reason=cx-inconclusive"
+  },
+  {
+   "id": "crossover/cx-inconclusive/27.0.0.1",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-inconclusive",
+     "crossoverBuild": "27.0.0.1",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build=27.0.0.1 reason=cx-inconclusive"
+  },
+  {
+   "id": "crossover/cx-inconclusive/",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-inconclusive",
+     "crossoverBuild": "",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build= reason=cx-inconclusive"
+  },
+  {
+   "id": "crossover/cx-inconclusive/unknown",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-inconclusive",
+     "crossoverBuild": "unknown",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build=unknown reason=cx-inconclusive"
+  },
+  {
+   "id": "crossover/cx-inconclusive/3 \"x\" 4",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "cx-inconclusive",
+     "crossoverBuild": "3 \"x\" 4",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build=3 \"x\" 4 reason=cx-inconclusive"
+  },
+  {
+   "id": "crossover/override/null",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "override",
+     "crossoverBuild": null,
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build=unknown reason=override"
+  },
+  {
+   "id": "crossover/override/27.0.0.1",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "override",
+     "crossoverBuild": "27.0.0.1",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build=27.0.0.1 reason=override"
+  },
+  {
+   "id": "crossover/override/",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "override",
+     "crossoverBuild": "",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build= reason=override"
+  },
+  {
+   "id": "crossover/override/unknown",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "override",
+     "crossoverBuild": "unknown",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build=unknown reason=override"
+  },
+  {
+   "id": "crossover/override/3 \"x\" 4",
+   "input": {
+    "selection": {
+     "kind": "crossover",
+     "reason": "override",
+     "crossoverBuild": "3 \"x\" 4",
+     "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
+   },
+   "expected": "engine=crossover build=3 \"x\" 4 reason=override"
+  },
+  {
+   "id": "pinned/cx-missing/0",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version=9.0 reason=cx-missing"
+  },
+  {
+   "id": "pinned/cx-missing/1",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version= reason=cx-missing"
+  },
+  {
+   "id": "pinned/cx-missing/2",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version=9.0 reason=cx-missing"
+  },
+  {
+   "id": "pinned/cx-missing/3",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version= reason=cx-missing"
+  },
+  {
+   "id": "pinned/cx-expired/4",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-expired",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version=9.0 reason=cx-expired"
+  },
+  {
+   "id": "pinned/cx-expired/5",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-expired",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version= reason=cx-expired"
+  },
+  {
+   "id": "pinned/cx-expired/6",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-expired",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version=9.0 reason=cx-expired"
+  },
+  {
+   "id": "pinned/cx-expired/7",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-expired",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version= reason=cx-expired"
+  },
+  {
+   "id": "pinned/cx-broken/8",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-broken",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version=9.0 reason=cx-broken"
+  },
+  {
+   "id": "pinned/cx-broken/9",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-broken",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version= reason=cx-broken"
+  },
+  {
+   "id": "pinned/cx-broken/10",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-broken",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version=9.0 reason=cx-broken"
+  },
+  {
+   "id": "pinned/cx-broken/11",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-broken",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version= reason=cx-broken"
+  },
+  {
+   "id": "pinned/cx-inconclusive/12",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version=9.0 reason=cx-inconclusive"
+  },
+  {
+   "id": "pinned/cx-inconclusive/13",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version= reason=cx-inconclusive"
+  },
+  {
+   "id": "pinned/cx-inconclusive/14",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version=9.0 reason=cx-inconclusive"
+  },
+  {
+   "id": "pinned/cx-inconclusive/15",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version= reason=cx-inconclusive"
+  },
+  {
+   "id": "pinned/override/16",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version=9.0 reason=override"
+  },
+  {
+   "id": "pinned/override/17",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version= reason=override"
+  },
+  {
+   "id": "pinned/override/18",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version=9.0 reason=override"
+  },
+  {
+   "id": "pinned/override/19",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "wine-staging-9",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version= reason=override"
+  },
+  {
+   "id": "pinned/mix/20",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version=9.0 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/21",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version=9.0 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/22",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version= reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/23",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version= reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/24",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version=1.2.3-rc1 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/25",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "1.2.3-rc1",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": "engine=pinned name=\"Wine-Staging 9.0\" version=1.2.3-rc1 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/26",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version=9.0 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/27",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version=9.0 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/28",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version= reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/29",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version= reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/30",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version=1.2.3-rc1 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/31",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "1.2.3-rc1",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": "engine=pinned name=\"a \"quoted\" label\" version=1.2.3-rc1 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/32",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"\" version=9.0 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/33",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "9.0",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": "engine=pinned name=\"\" version=9.0 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/34",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"\" version= reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/35",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": "engine=pinned name=\"\" version= reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/36",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"\" version=1.2.3-rc1 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/37",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "1.2.3-rc1",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": "engine=pinned name=\"\" version=1.2.3-rc1 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/38",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"ünïcode ✓\" version=9.0 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/39",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "9.0",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": "engine=pinned name=\"ünïcode ✓\" version=9.0 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/40",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"ünïcode ✓\" version= reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/41",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": "engine=pinned name=\"ünïcode ✓\" version= reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/42",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=pinned name=\"ünïcode ✓\" version=1.2.3-rc1 reason=cx-missing"
+  },
+  {
+   "id": "pinned/mix/43",
+   "input": {
+    "selection": {
+     "kind": "pinned",
+     "pinId": "p",
+     "reason": "cx-missing",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "1.2.3-rc1",
+     "dxvk": {
+      "dir": "/d",
+      "version": "2.4"
+     }
+    }
+   },
+   "expected": "engine=pinned name=\"ünïcode ✓\" version=1.2.3-rc1 reason=cx-missing"
+  },
+  {
+   "id": "wine-manager/override/44",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"Wine-Staging 9.0\" version=9.0 reason=override"
+  },
+  {
+   "id": "wine-manager/override/45",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"Wine-Staging 9.0\" version= reason=override"
+  },
+  {
+   "id": "wine-manager/override/46",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"Wine-Staging 9.0\" version=1.2.3-rc1 reason=override"
+  },
+  {
+   "id": "wine-manager/override/47",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"a \"quoted\" label\" version=9.0 reason=override"
+  },
+  {
+   "id": "wine-manager/override/48",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"a \"quoted\" label\" version= reason=override"
+  },
+  {
+   "id": "wine-manager/override/49",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"a \"quoted\" label\" version=1.2.3-rc1 reason=override"
+  },
+  {
+   "id": "wine-manager/override/50",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"\" version=9.0 reason=override"
+  },
+  {
+   "id": "wine-manager/override/51",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"\" version= reason=override"
+  },
+  {
+   "id": "wine-manager/override/52",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"\" version=1.2.3-rc1 reason=override"
+  },
+  {
+   "id": "wine-manager/override/53",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"ünïcode ✓\" version=9.0 reason=override"
+  },
+  {
+   "id": "wine-manager/override/54",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"ünïcode ✓\" version= reason=override"
+  },
+  {
+   "id": "wine-manager/override/55",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "override",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"ünïcode ✓\" version=1.2.3-rc1 reason=override"
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/56",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"Wine-Staging 9.0\" version=9.0 reason=cx-inconclusive"
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/57",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"Wine-Staging 9.0\" version= reason=cx-inconclusive"
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/58",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "Wine-Staging 9.0",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"Wine-Staging 9.0\" version=1.2.3-rc1 reason=cx-inconclusive"
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/59",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"a \"quoted\" label\" version=9.0 reason=cx-inconclusive"
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/60",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"a \"quoted\" label\" version= reason=cx-inconclusive"
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/61",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "a \"quoted\" label",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"a \"quoted\" label\" version=1.2.3-rc1 reason=cx-inconclusive"
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/62",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"\" version=9.0 reason=cx-inconclusive"
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/63",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"\" version= reason=cx-inconclusive"
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/64",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"\" version=1.2.3-rc1 reason=cx-inconclusive"
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/65",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "9.0",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"ünïcode ✓\" version=9.0 reason=cx-inconclusive"
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/66",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"ünïcode ✓\" version= reason=cx-inconclusive"
+  },
+  {
+   "id": "wine-manager/cx-inconclusive/67",
+   "input": {
+    "selection": {
+     "kind": "wine-manager",
+     "managerVersion": "Wine-9.0",
+     "reason": "cx-inconclusive",
+     "wineBin": "/e/bin/wine",
+     "wineserverBin": "/e/bin/wineserver",
+     "label": "ünïcode ✓",
+     "version": "1.2.3-rc1",
+     "dxvk": null
+    }
+   },
+   "expected": "engine=wine-manager name=\"ünïcode ✓\" version=1.2.3-rc1 reason=cx-inconclusive"
+  }
+ ]
+}

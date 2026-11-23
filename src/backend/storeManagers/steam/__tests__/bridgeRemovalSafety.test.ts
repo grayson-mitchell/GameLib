@@ -17,6 +17,7 @@ import {
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import type { RequestRustInvoke } from 'backend/host'
+import { RUST_ENGINE_CX_RESOLVE_BIN_DIR } from 'common/types/sidecarTransport'
 import { initHeadless } from 'backend/logger'
 import {
   fakeSafetyRustInvoke,
@@ -107,6 +108,7 @@ function makeHarness(
       }))
     }
   }
+  const engineRuntime = createTestEngineRuntime()
   const managers = createTestManagers().library
   const otherGames = options.otherGames ?? []
   // Every manager answers its list (a manager that throws reads as an unknown known-installs list).
@@ -132,11 +134,17 @@ function makeHarness(
     }) as ManagerDeps['sendFrontendMessage'],
     // CrossOver is installed (a fixed bin dir); its cxbottle --delete removes the bottle like the real one.
     engineRuntime: {
-      ...createTestEngineRuntime(),
-      crossover: {
-        resolveCrossoverBinDir: () => CX_BIN_DIR,
-        resolveCrossoverBinDirAsync: () => Promise.resolve(CX_BIN_DIR)
-      }
+      ...engineRuntime,
+      // 87-55: Rust finds CrossOver; every other channel keeps the test runtime's own answers.
+      requestRustInvoke: ((channel: string, args: unknown[]) =>
+        channel === RUST_ENGINE_CX_RESOLVE_BIN_DIR
+          ? Promise.resolve(CX_BIN_DIR)
+          : (
+              engineRuntime.requestRustInvoke as (
+                c: string,
+                a: unknown[]
+              ) => Promise<unknown>
+            )(channel, args)) as RequestRustInvoke
     } as unknown as ManagerDeps['engineRuntime'],
     spawnAsync: ((bin: string, args: string[]) => {
       spawned.push({ bin, args })
