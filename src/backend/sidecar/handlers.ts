@@ -404,7 +404,26 @@ export function registerHandlers(deps: {
     winetricksTarget: (runner, appName, opts) =>
       resolveWinetricksTarget(engineSource, runner, appName, opts),
     gameCommandFacts: (runner, appName, opts) =>
-      gatherGameCommandFacts(engineSource, runner, appName, opts)
+      gatherGameCommandFacts(engineSource, runner, appName, opts),
+    // `getEngineState` (87-52, D-23): a Steam title's bridge facts, read through the Steam adapter, which stays a lazy
+    // import as it was behind the TS handle.
+    steamEngineFacts: async (appId) => {
+      const { steamEngineFacts } =
+        await import('backend/storeManagers/steam/engine/steamEngineDeps')
+      return steamEngineFacts(
+        {
+          stores: deps.services.stores,
+          spawnAsync: deps.services.spawnAsync,
+          runner: deps.services.runner,
+          engineRuntime: deps.services.engineRuntime,
+          storeRoot: deps.services.storeRoot,
+          paths: deps.services.paths,
+          steamBottle: deps.services.steamBottle,
+          steamLaunchRuntime: deps.services.steamLaunchRuntime
+        },
+        appId
+      )
+    }
   })
   // Rust's engine registry changed on its own (87-42, D-24): the sync selection view applies the frame.
   registerEngineSelectionView(ipc)

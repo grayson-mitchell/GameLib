@@ -118,7 +118,7 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/engine/prepareBottle.ts',
   'src/backend/engine/toolSettings.ts',
   'src/backend/launcher.ts',
-  'src/backend/sidecar/engineFlowRegistration.ts',
+  'src/backend/sidecar/engineWineResolvers.ts',
   'src/backend/sidecar/installFlowRegistration.ts',
   'src/backend/sidecar/settingsFlowRegistration.ts',
   'src/backend/storeManagers/gog/games.ts',
@@ -475,6 +475,18 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['gameSettings'],
     channel: 'RUST_WINE_DXVK_INSTALL_REMOVE',
+    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
+    deletedBy: 98
+  },
+  // 87-52 (D-23): the renderer's `getEngineState`. TypeScript gathers the library's native and Browser facts and a Steam
+  // title's bridge facts as one request value, then makes the one typed call; Rust derives the rest. Phase 98 deletes it
+  // with the config and the library it reads.
+  {
+    name: 'getEngineState',
+    file: 'src/backend/sidecar/engineWineResolvers.ts',
+    shape: 'resolver',
+    inputs: ['request'],
+    channel: 'RUST_ENGINE_STATE_GET',
     callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },

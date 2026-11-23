@@ -232,6 +232,39 @@ export function steamEngineStateDeps(
   }
 }
 
+/**
+ * The facts of a Steam title's engine state as values (87-52, D-23): what `steamEngineStateDeps` held as callbacks, for the
+ * one typed call into Rust's `engine_state_get`. Rust reads the effective engine itself (the stored override, the
+ * older `steamEngineOverride` key as the fallback), runs the pre-flight and the notices; TypeScript keeps only what
+ * lives in the bridge: the title's install bottle, whether the override and the Wine tools apply to it, and its own
+ * bottle name. Read-only, like the rest of a page view.
+ */
+export interface SteamEngineFacts {
+  bottle: string | null
+  overrideEligible: boolean
+  overlayEligible: boolean
+  wineToolsEligible: boolean
+  prefixKind: NonNullable<EngineState['prefixKind']>
+  perGameBottleName: string | null
+}
+
+export function steamEngineFacts(
+  deps: Parameters<typeof steamEngineStateDeps>[0],
+  appId: string
+): SteamEngineFacts {
+  const state = steamEngineStateDeps(deps, appId)
+  const identity = { runner: STEAM_ENGINE_RUNNER, appName: appId }
+  const bottle = state.bottleFor(identity)
+  return {
+    bottle,
+    overrideEligible: state.overrideEligible(identity, bottle),
+    overlayEligible: state.overlayEligible,
+    wineToolsEligible: state.wineToolsEligible?.(identity, bottle) ?? false,
+    prefixKind: state.prefixKind ?? 'bottle',
+    perGameBottleName: state.perGameBottleName ?? null
+  }
+}
+
 export async function getSteamEngineState(
   deps: SteamStoresDeps &
     Parameters<typeof steamDecisionServices>[0] & {

@@ -1,32 +1,20 @@
 /**
- * Engine channel registration (Phase 61 Plan 13, D-09/D-12/D-17).
+ * Engine channel registration (Phase 61 Plan 13, D-09/D-12/D-17); empty since Phase 87 Plan 52.
  *
- * One store-agnostic domain replaces the three Steam-named engine channels.
- *
- *   invoke (ipcMain.handle, 1): getEngineState (`listEngineOptions`, `getDefaultEngine` and
- *     `getPerGameBottleName` are native `engine` channels since 87-28, `dismissEngineNotice` since 87-49)
+ *   invoke: none. `getEngineState` is a scheduled resolver in `engineWineResolvers.ts` (D-23); `listEngineOptions`,
+ *     `getDefaultEngine` and `getPerGameBottleName` are native `engine` channels since 87-28, `dismissEngineNotice`
+ *     since 87-49.
  *   push (sendFrontendMessage): engineStateChanged
  *
- * Renderer args[0] is passed UNCAST to the module guards (engineKeyFor / asNonSteamIdentity /
- * dismissEngineNotice's own closed-set checks); an invalid identity resolves null with no game
- * lookup (T-61-37). Payloads carry ids, labels and bottle names, never paths (T-61-38).
- * Steam games are dispatched to the Steam adapter by capability, not by runner literal.
- *
- * Registering installs a closure only: no I/O, timer or handle at register time (sidecar exit
- * contract).
+ * 87-53 deletes this file with the engine TypeScript it still imports types from.
  */
 import type { GlobalConfigSlice } from 'backend/config'
-import { hasCapability } from 'common/storeCapabilities'
 import type { IpcRegistry } from './ipcRegistry'
 import type {
   BootServices,
   StoreManagers,
   Stores
 } from 'backend/services/types'
-import { isMac } from '../constants/environment'
-import { getGameEngineState } from 'backend/engine/gameEngineState'
-import { engineKeyFor } from 'backend/enginewine/twin'
-import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
 import type { EngineServices } from 'backend/engine/engineServices'
 import type { SteamEngineBottle } from 'backend/storeManagers/steam/bottle'
 
@@ -53,76 +41,13 @@ export interface EngineFlowDeps {
   steamLaunchRuntime: SteamEngineBottle['steamLaunchRuntime']
 }
 
-function engineServicesOf(
-  deps: EngineFlowDeps
-): Pick<BootServices, 'spawnAsync'> &
-  Pick<
-    EngineServices,
-    | 'runner'
-    | 'wineManagerReleases'
-    | 'globalSettings'
-    | 'engineState'
-    | 'engineRuntime'
-    | 'storeRoot'
-    | 'paths'
-  > {
-  return {
-    spawnAsync: deps.spawnAsync,
-    engineState: deps.engineState,
-    engineRuntime: deps.engineRuntime,
-    storeRoot: deps.storeRoot,
-    paths: deps.paths,
-    runner: deps.runner,
-    wineManagerReleases: wineManagerReleasesFrom(deps),
-    globalSettings: () =>
-      deps.config.getSettings() as unknown as Record<string, unknown>
-  }
-}
-
-async function getEngineStateFor(
-  deps: EngineFlowDeps,
-  arg: unknown
-): Promise<unknown> {
-  const library = deps.managers.library
-  if (typeof arg !== 'object' || arg === null) return null
-  const { runner, appName } = arg as Record<string, unknown>
-  if (typeof runner !== 'string') return null
-  if (engineKeyFor(runner, appName) === null) return null
-  if (hasCapability(runner, 'usesBottleRuntime')) {
-    const { getSteamEngineState } =
-      await import('backend/storeManagers/steam/engine/steamEngineDeps')
-    return getSteamEngineState(deps, appName)
-  }
-  if (!isMac) return null
-  if (!Object.prototype.hasOwnProperty.call(library, runner)) {
-    return null
-  }
-  try {
-    const game = library[runner as keyof typeof library].getGame(
-      appName as string
-    )
-    if (game.getGameInfo().install?.platform === 'Browser') return null
-    if (game.isNative()) return null
-  } catch {
-    return null
-  }
-  return getGameEngineState(engineServicesOf(deps), arg)
-}
-
 /**
- * Registers the one engine invoke channel (`getEngineState`; the other four are native `engine` channels,
- * 87-28 and 87-49). Invoke channels use
- * `ipcMain.handle`; the `engineStateChanged` push is the boot-built engine state's publisher.
+ * Registers nothing (87-52, D-23): `getEngineState` was the last handle of this file and is the scheduled resolver
+ * `getEngineState` in `engineWineResolvers.ts` now, registered once by `registerEngineWineResolvers`; the other four
+ * engine channels are native `engine` channels (87-28, 87-49). The file and its call in `handlers.ts` go in 87-53. The
+ * `engineStateChanged` push is the boot-built engine state's publisher, not a registration.
  */
 export function registerEngineFlows(deps: EngineFlowDeps): void {
-  deps.ipc.handle(
-    'getEngineState',
-    async (_event: unknown, ...args: unknown[]) =>
-      getEngineStateFor(deps, args[0])
-  )
-
-  // Phase 87 (87-28, 87-49, D-14): `listEngineOptions`, `getDefaultEngine`, `getPerGameBottleName` and
-  // `dismissEngineNotice` are native `engine` channels (the Rust `engine_list_options`,
-  // `engine_default_engine`, `engine_per_game_bottle_name` and `engine_notice_dismiss`); the sidecar
-  // registers no handle for any of them (one owner, D-06).
+  // One owner per channel (D-06): nothing is registered here.
+  void deps
 }

@@ -75,6 +75,9 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   // Phase 87 Plan 36 (D-23): `runWineCommand` and `callTool` are scheduled resolvers too.
   'Async:runWineCommand': 'wineTools',
   'Async:callTool': 'runnerMisc',
+  // Phase 87 Plan 52 (D-23): `getEngineState` is a scheduled resolver (`engineWineResolvers.ts`), no longer registered by
+  // `engineFlowRegistration.ts`.
+  'Async:getEngineState': 'engine',
   'Async:gamepadAction': 'testStubs',
   'Async:get-connectivity-status': 'mainProcess',
   'Async:getSignInProbeOutcomes': 'mainProcess',
@@ -217,6 +220,13 @@ function ownerlessChannels(
  * the same count as the on-disk listing. The declaration total is unchanged.
  */
 const FILES_FLOOR = 20
+
+/**
+ * Registration files that register nothing for a while. 87-52 moved `getEngineState`, the last handle of
+ * `engineFlowRegistration.ts`, to a scheduled resolver; 87-53 deletes the file (and this entry, and the count of 20 in
+ * (a) becomes 19, as it did for the wine tools module in 87-36).
+ */
+const REGISTERS_NOTHING = new Set(['engineFlowRegistration.ts'])
 const DECLARATIONS_FLOOR = 284
 
 /** Declared channels across every domain part, all kinds. */
@@ -252,6 +262,10 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
       expect(Object.keys(domains)).toContain(domain)
       const source = readFileSync(join(SIDECAR_DIR, f), 'utf-8')
       const registered = registeredChannels(source, constants)
+      if (REGISTERS_NOTHING.has(f)) {
+        expect(registered).toEqual([])
+        continue
+      }
       expect(registered.length).toBeGreaterThan(0)
       // Shared-transport constants that are not part of the typed IPC contract are exempt
       // only when no domain declares them at all.
@@ -363,7 +377,8 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Phase 87 Plan 35 (D-23): +3 Async (winetricksApply, winetricksAvailable, winetricksInstalled, now scheduled
     // resolvers); owner-less allowlist 64 -> 67. winetricksQueueState and winetricksCancelRemaining became native channels.
     // Phase 87 Plan 36 (D-23): +3 Async (runWineCommandForGame, runWineCommand, callTool, now scheduled resolvers); 67 -> 70.
-    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(70)
+    // Phase 87 Plan 52 (D-23): +1 Async (getEngineState, now a scheduled resolver); 70 -> 71.
+    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(71)
   })
 
   it('(d) near-miss: a manifest-owned channel leaves the computed owner-less set', () => {

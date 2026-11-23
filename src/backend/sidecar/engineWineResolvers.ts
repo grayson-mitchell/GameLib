@@ -4,11 +4,14 @@ import type { StatusUpdateDeps } from '../appRuntime'
 import type { RustInvokeDeps } from '../host/rustInvokeDeps'
 import type { StoreManagers } from 'backend/services/types'
 import type { Runner, WineCommandArgs } from 'common/types'
-import { isStore } from 'common/storeCapabilities'
+import { hasCapability, isStore } from 'common/storeCapabilities'
 import { sendGameStatusUpdate } from '../utils'
 import { logDebug, logError, LogPrefix } from '../logger'
 import { wineReleasesInfoReady } from '../enginewine/wineManager'
+import { engineKeyFor } from '../enginewine/twin'
+import type { SteamEngineFacts } from '../storeManagers/steam/engine/steamEngineDeps'
 import {
+  RUST_ENGINE_STATE_GET,
   RUST_WINE_DXVK_INSTALL_REMOVE,
   RUST_WINE_RUN_COMMAND,
   RUST_WINE_RUN_COMMAND_FOR_GAME,
@@ -81,6 +84,12 @@ export interface EngineWineResolverDeps
     appName: string,
     opts: { ensureBottle: boolean }
   ) => Promise<WinetricksTarget>
+  /**
+   * The facts of a Steam title's engine state that only TypeScript holds (its install bottle, whether the override and
+   * the Wine tools apply to it, its own bottle name), gathered by the Steam adapter (`steamEngineDeps.ts`) for an
+   * app id that is digits.
+   */
+  steamEngineFacts: (appId: string) => Promise<SteamEngineFacts>
 }
 
 /** What a renderer Winetricks read sends: the game. */
@@ -265,6 +274,67 @@ export async function callTool(
 }
 
 /**
+ * What `getEngineState` sends Rust: the game, or `identity: null` when TypeScript knows the game has no engine state, and
+ * a bottle-runtime title's facts. The renderer's argument is untrusted and arrives uncast: anything that is not a
+ * `{runner, appName}` of two strings with a valid engine key is a null identity, a title of a bottle-runtime store must
+ * have an app id of digits, and a non-Steam game is looked up in the library only to refuse a native game and a Browser
+ * install (the facts TypeScript alone holds; Rust refuses a host that is not macOS and derives the rest from the stored
+ * settings). Never throws: a failing library lookup is a game with no state.
+ */
+async function engineStateRequest(
+  deps: Pick<EngineWineResolverDeps, 'managers' | 'steamEngineFacts'>,
+  arg: unknown
+): Promise<{
+  identity: { runner: string; appName: string } | null
+  facts?: SteamEngineFacts
+}> {
+  if (typeof arg !== 'object' || arg === null) return { identity: null }
+  const { runner, appName } = arg as Record<string, unknown>
+  if (typeof runner !== 'string' || typeof appName !== 'string') {
+    return { identity: null }
+  }
+  if (engineKeyFor(runner, appName) === null) return { identity: null }
+  if (hasCapability(runner, 'usesBottleRuntime')) {
+    if (!/^\d+$/.test(appName)) return { identity: null }
+    return {
+      identity: { runner, appName },
+      facts: await deps.steamEngineFacts(appName)
+    }
+  }
+  const library = deps.managers.library
+  if (!Object.prototype.hasOwnProperty.call(library, runner)) {
+    return { identity: null }
+  }
+  try {
+    const game = library[runner as keyof typeof library].getGame(appName)
+    if (game.getGameInfo().install?.platform === 'Browser') {
+      return { identity: null }
+    }
+    if (game.isNative()) return { identity: null }
+  } catch {
+    return { identity: null }
+  }
+  return { identity: { runner, appName } }
+}
+
+/**
+ * The `getEngineState` channel: the per-title engine state the game page and the badge read (the same state the Rust
+ * launch step records, D-06), or `null` for a game with none. TypeScript gathers only what it alone holds (the library's
+ * native and Browser facts, a Steam title's bridge facts), as a request value, and makes the one typed call; Rust derives
+ * the rest and decides.
+ */
+export async function getEngineState(
+  deps: Pick<
+    EngineWineResolverDeps,
+    'managers' | 'steamEngineFacts' | 'requestRustInvoke'
+  >,
+  arg: unknown
+): Promise<unknown> {
+  const request = await engineStateRequest(deps, arg)
+  return deps.requestRustInvoke(RUST_ENGINE_STATE_GET, [request])
+}
+
+/**
  * Registers every channel this file resolves, once per boot, from `handlers.ts` (pinned by
  * `registrationOncePerBoot.test.ts`). Every channel of the wine tools cluster is registered
  * here, or native, and the cluster's own registration file is gone (87-36): a channel has one owner (D-06).
@@ -299,6 +369,9 @@ export function registerEngineWineResolvers(
         runner: args[0] as Runner,
         appName: args[1] as string
       })
+  )
+  deps.ipc.handle('getEngineState', (_event: unknown, ...args: unknown[]) =>
+    getEngineState(deps, args[0])
   )
   // The renderer's wine command on a game runs `wait: false` with `runinprefix`, as the TS handler did; only a
   // pending install (Run installer) carries the caller's `wait`. The Rust op forces `runinprefix` for it too.

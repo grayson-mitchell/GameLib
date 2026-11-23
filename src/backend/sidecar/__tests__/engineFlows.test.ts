@@ -1,7 +1,7 @@
 /**
- * Phase 61 Plan 13: the store-agnostic engine IPC channels registered by registerEngineFlows --
- * renderer args pass through UNCAST to the backend validators, Steam is dispatched by capability,
- * and the state publisher pushes `engineStateChanged`.
+ * Phase 61 Plan 13, 87-52: the engine registration file. `getEngineState` was its last handle and is the
+ * scheduled resolver in `engineWineResolvers.ts` now (its cases are in `engineWineResolvers.test.ts`), so
+ * `registerEngineFlows` registers nothing; 87-53 deletes it. This pins that no channel has two owners (D-06).
  */
 const handlers = new Map<string, (...a: unknown[]) => Promise<unknown>>()
 
@@ -10,22 +10,6 @@ const ipc = {
     handlers.set(ch, fn as (...a: unknown[]) => Promise<unknown>)
   }
 }
-const envState = { isMac: true }
-jest.mock('../../constants/environment', () => ({
-  get isMac() {
-    return envState.isMac
-  }
-}))
-const getGame = jest.fn()
-
-const gameState = jest.fn()
-jest.mock('backend/engine/gameEngineState', () => ({
-  getGameEngineState: (...a: unknown[]) => gameState(...a)
-}))
-const steamState = jest.fn()
-jest.mock('backend/storeManagers/steam/engine/steamEngineDeps', () => ({
-  getSteamEngineState: (...a: unknown[]) => steamState(...a)
-}))
 
 import { registerEngineFlows } from '../engineFlowRegistration'
 import { createTestServices } from 'backend/testUtils/testServices'
@@ -40,144 +24,24 @@ import {
 } from 'backend/testUtils/testServices'
 
 const stores = createTestStores()
-const managers = createTestManagers({
-  library: {
-    legendary: { getGame: (...a: [string]) => getGame(...a) },
-    gog: { getGame: (...a: [string]) => getGame(...a) },
-    steam: { getGame: (...a: [string]) => getGame(...a) }
-  }
-})
-
-function fakeGame(over: { native?: boolean; platform?: string } = {}) {
-  return {
-    isNative: () => over.native ?? false,
-    getGameInfo: () => ({ install: { platform: over.platform ?? 'Windows' } })
-  }
-}
-
-const spawnAsync = createTestServices().spawnAsync
-const runner = createTestServices().runner
 const config = createTestGlobalConfig()
 const engineServices = createTestEngineServices()
-const steamBottle = createTestSteamBottle({ stores, config })
-const steamLaunchRuntime = createTestSteamLaunchRuntime()
-const engineState = createTestEngineState()
 
 describe('engine flows', () => {
-  beforeAll(() =>
+  it('registers no channel: getEngineState is a resolver and the other four are native engine channels', () => {
     registerEngineFlows({
       ipc,
-      managers,
+      managers: createTestManagers(),
       stores,
-      spawnAsync,
-      runner,
+      spawnAsync: createTestServices().spawnAsync,
+      runner: createTestServices().runner,
       config,
-      engineState,
+      engineState: createTestEngineState(),
       engineRuntime: engineServices.engineRuntime,
       paths: engineServices.paths,
-      steamBottle,
-      steamLaunchRuntime
+      steamBottle: createTestSteamBottle({ stores, config }),
+      steamLaunchRuntime: createTestSteamLaunchRuntime()
     })
-  )
-  beforeEach(() => {
-    jest.clearAllMocks()
-    envState.isMac = true
-  })
-
-  it('registers the one invoke channel (the other four are native engine channels, Phase 87 Plans 28 and 49)', () => {
-    expect([...handlers.keys()].sort()).toEqual(['getEngineState'])
-  })
-
-  it('dispatches a bottle-runtime store to the Steam adapter with the app id', async () => {
-    steamState.mockResolvedValue({ kind: 's' })
-    expect(
-      await handlers.get('getEngineState')!(
-        {},
-        { runner: 'steam', appName: '220' }
-      )
-    ).toEqual({ kind: 's' })
-    expect(steamState).toHaveBeenCalledWith(
-      {
-        ipc,
-        managers,
-        stores,
-        spawnAsync,
-        runner,
-        config,
-        engineState,
-        engineRuntime: engineServices.engineRuntime,
-        paths: engineServices.paths,
-        steamBottle,
-        steamLaunchRuntime
-      },
-      '220'
-    )
-    expect(getGame).not.toHaveBeenCalled()
-    expect(gameState).not.toHaveBeenCalled()
-  })
-
-  it('dispatches a non-Steam Windows game to the non-Steam state, args uncast', async () => {
-    getGame.mockReturnValue(fakeGame())
-    gameState.mockResolvedValue({ kind: 'n' })
-    const arg = { runner: 'legendary', appName: 'abc' }
-    expect(await handlers.get('getEngineState')!({}, arg)).toEqual({
-      kind: 'n'
-    })
-    expect(gameState).toHaveBeenCalledWith(
-      {
-        spawnAsync,
-        runner,
-        wineManagerReleases: expect.any(Function),
-        globalSettings: expect.any(Function),
-        engineState,
-        engineRuntime: engineServices.engineRuntime,
-        paths: engineServices.paths
-      },
-      arg
-    )
-  })
-
-  it('returns null for an invalid identity without any game lookup', async () => {
-    for (const bad of [
-      null,
-      'x',
-      {},
-      { runner: 5, appName: 'a' },
-      { runner: 'nope', appName: 'a' },
-      { runner: 'legendary', appName: '../x' },
-      { runner: 'steam', appName: 'notanumber' }
-    ]) {
-      expect(await handlers.get('getEngineState')!({}, bad)).toBeNull()
-    }
-    expect(getGame).not.toHaveBeenCalled()
-    expect(gameState).not.toHaveBeenCalled()
-    expect(steamState).not.toHaveBeenCalled()
-  })
-
-  it('returns null for a native or Browser game, off macOS, or a failing lookup', async () => {
-    const arg = { runner: 'gog', appName: 'abc' }
-    getGame.mockReturnValue(fakeGame({ native: true }))
-    expect(await handlers.get('getEngineState')!({}, arg)).toBeNull()
-    getGame.mockReturnValue(fakeGame({ platform: 'Browser' }))
-    expect(await handlers.get('getEngineState')!({}, arg)).toBeNull()
-    getGame.mockImplementation(() => {
-      throw new Error('boom')
-    })
-    expect(await handlers.get('getEngineState')!({}, arg)).toBeNull()
-    getGame.mockReturnValue(fakeGame())
-    envState.isMac = false
-    expect(await handlers.get('getEngineState')!({}, arg)).toBeNull()
-    expect(gameState).not.toHaveBeenCalled()
-  })
-
-  it('registers no handle for the four native engine channels (one owner, D-06)', () => {
-    for (const channel of [
-      'listEngineOptions',
-      'getDefaultEngine',
-      'getPerGameBottleName',
-      'dismissEngineNotice'
-    ]) {
-      expect(handlers.has(channel)).toBe(false)
-    }
+    expect([...handlers.keys()]).toEqual([])
   })
 })
