@@ -1,0 +1,14 @@
+[
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      "vcrun2019"
+    ]
+  },
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      ""
+    ]
+  }
+]

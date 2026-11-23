@@ -1,0 +1,71 @@
+{
+  "op": "queue",
+  "platform": "linux",
+  "applies": [
+    {
+      "accepted": false,
+      "reason": "invalid",
+      "detail": "winetricksApply: verbs must match the winetricks verb shape"
+    }
+  ],
+  "duringRun": [],
+  "finalState": {
+    "runner": "gog",
+    "appName": "game",
+    "run": null,
+    "busy": false,
+    "environment": {
+      "unsupportedWineVersion": null,
+      "missingDependencies": []
+    },
+    "revision": 1
+  },
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks list-all"
+    }
+  ]
+}

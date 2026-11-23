@@ -1,0 +1,359 @@
+[
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Done"
+        ],
+        "installingComponent": "",
+        "failed": false
+      }
+    ]
+  },
+  {
+    "channel": "queue:sendGameStatus",
+    "args": [
+      {
+        "appName": "game",
+        "runner": "gog",
+        "status": "winetricks"
+      }
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": {
+          "runId": 1,
+          "runner": "gog",
+          "appName": "game",
+          "verbs": [
+            "vcrun2019",
+            "corefonts",
+            "d3dx9"
+          ],
+          "outcomes": {
+            "vcrun2019": "pending",
+            "corefonts": "pending",
+            "d3dx9": "pending"
+          },
+          "currentVerb": "",
+          "status": "running",
+          "cancelRequested": false,
+          "log": []
+        },
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": []
+        },
+        "revision": 1
+      }
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": {
+          "runId": 1,
+          "runner": "gog",
+          "appName": "game",
+          "verbs": [
+            "vcrun2019",
+            "corefonts",
+            "d3dx9"
+          ],
+          "outcomes": {
+            "vcrun2019": "installing",
+            "corefonts": "pending",
+            "d3dx9": "pending"
+          },
+          "currentVerb": "vcrun2019",
+          "status": "running",
+          "cancelRequested": false,
+          "log": []
+        },
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": []
+        },
+        "revision": 2
+      }
+    ]
+  },
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      "vcrun2019"
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": {
+          "runId": 1,
+          "runner": "gog",
+          "appName": "game",
+          "verbs": [
+            "vcrun2019",
+            "corefonts",
+            "d3dx9"
+          ],
+          "outcomes": {
+            "vcrun2019": "installing",
+            "corefonts": "cancelled",
+            "d3dx9": "cancelled"
+          },
+          "currentVerb": "vcrun2019",
+          "status": "running",
+          "cancelRequested": true,
+          "log": [
+            {
+              "kind": "info",
+              "text": "Executing w_do_call vcrun2019"
+            }
+          ]
+        },
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": []
+        },
+        "revision": 4
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Executing w_do_call vcrun2019",
+          "vcrun2019 installed"
+        ],
+        "installingComponent": "vcrun2019",
+        "lines": [
+          {
+            "kind": "info",
+            "text": "Executing w_do_call vcrun2019"
+          },
+          {
+            "kind": "info",
+            "text": "vcrun2019 installed"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Done"
+        ],
+        "installingComponent": "vcrun2019",
+        "failed": false
+      }
+    ]
+  },
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      ""
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": {
+          "runId": 1,
+          "runner": "gog",
+          "appName": "game",
+          "verbs": [
+            "vcrun2019",
+            "corefonts",
+            "d3dx9"
+          ],
+          "outcomes": {
+            "vcrun2019": "installed",
+            "corefonts": "cancelled",
+            "d3dx9": "cancelled"
+          },
+          "currentVerb": "",
+          "status": "running",
+          "cancelRequested": true,
+          "log": [
+            {
+              "kind": "info",
+              "text": "Executing w_do_call vcrun2019"
+            },
+            {
+              "kind": "info",
+              "text": "vcrun2019 installed"
+            }
+          ]
+        },
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": []
+        },
+        "revision": 6
+      }
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": {
+          "runId": 1,
+          "runner": "gog",
+          "appName": "game",
+          "verbs": [
+            "vcrun2019",
+            "corefonts",
+            "d3dx9"
+          ],
+          "outcomes": {
+            "vcrun2019": "installed",
+            "corefonts": "cancelled",
+            "d3dx9": "cancelled"
+          },
+          "currentVerb": "",
+          "status": "running",
+          "cancelRequested": true,
+          "log": [
+            {
+              "kind": "info",
+              "text": "Executing w_do_call vcrun2019"
+            },
+            {
+              "kind": "info",
+              "text": "vcrun2019 installed"
+            }
+          ]
+        },
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": []
+        },
+        "revision": 7
+      }
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": {
+          "runId": 1,
+          "runner": "gog",
+          "appName": "game",
+          "verbs": [
+            "vcrun2019",
+            "corefonts",
+            "d3dx9"
+          ],
+          "outcomes": {
+            "vcrun2019": "installed",
+            "corefonts": "cancelled",
+            "d3dx9": "cancelled"
+          },
+          "currentVerb": "",
+          "status": "running",
+          "cancelRequested": true,
+          "log": [
+            {
+              "kind": "info",
+              "text": "Executing w_do_call vcrun2019"
+            },
+            {
+              "kind": "info",
+              "text": "vcrun2019 installed"
+            }
+          ]
+        },
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": []
+        },
+        "revision": 8
+      }
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": {
+          "runId": 1,
+          "runner": "gog",
+          "appName": "game",
+          "verbs": [
+            "vcrun2019",
+            "corefonts",
+            "d3dx9"
+          ],
+          "outcomes": {
+            "vcrun2019": "installed",
+            "corefonts": "cancelled",
+            "d3dx9": "cancelled"
+          },
+          "currentVerb": "",
+          "status": "done",
+          "cancelRequested": true,
+          "log": [
+            {
+              "kind": "info",
+              "text": "Executing w_do_call vcrun2019"
+            },
+            {
+              "kind": "info",
+              "text": "vcrun2019 installed"
+            }
+          ]
+        },
+        "busy": false,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": []
+        },
+        "revision": 9
+      }
+    ]
+  },
+  {
+    "channel": "queue:sendGameStatus",
+    "args": [
+      {
+        "appName": "game",
+        "runner": "gog",
+        "status": "done"
+      }
+    ]
+  }
+]

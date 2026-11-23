@@ -8,7 +8,7 @@
       "set": {
         "ORACLE_SETUP_ENV": "1",
         "ORACLE_WINE_ENV": "game",
-        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin:/usr/bin",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
         "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
         "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
         "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
@@ -34,7 +34,7 @@
       "set": {
         "ORACLE_SETUP_ENV": "1",
         "ORACLE_WINE_ENV": "game",
-        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin:/usr/bin",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
         "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
         "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
         "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
@@ -60,7 +60,7 @@
       "set": {
         "ORACLE_SETUP_ENV": "1",
         "ORACLE_WINE_ENV": "game",
-        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin:/usr/bin",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
         "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
         "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
         "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
@@ -86,7 +86,7 @@
       "set": {
         "ORACLE_SETUP_ENV": "1",
         "ORACLE_WINE_ENV": "game",
-        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin:/usr/bin",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
         "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
         "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
         "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
@@ -112,7 +112,7 @@
       "set": {
         "ORACLE_SETUP_ENV": "1",
         "ORACLE_WINE_ENV": "game",
-        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin:/usr/bin",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
         "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
         "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
         "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
@@ -139,7 +139,7 @@
       "set": {
         "ORACLE_SETUP_ENV": "1",
         "ORACLE_WINE_ENV": "game",
-        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin:/usr/bin",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
         "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
         "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
         "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",

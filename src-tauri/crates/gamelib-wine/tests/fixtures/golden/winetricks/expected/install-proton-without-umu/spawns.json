@@ -1,0 +1,153 @@
+[
+  {
+    "program": "which",
+    "argv": [
+      "7z"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<HOME>/proton/GE-Proton9-20/files/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/proton-prefix/pfx"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "cabextract"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<HOME>/proton/GE-Proton9-20/files/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/proton-prefix/pfx"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "zenity"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<HOME>/proton/GE-Proton9-20/files/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/proton-prefix/pfx"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "unzip"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<HOME>/proton/GE-Proton9-20/files/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/proton-prefix/pfx"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "curl"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<HOME>/proton/GE-Proton9-20/files/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/proton-prefix/pfx"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<TOOLS>/winetricks",
+    "argv": [
+      "-q",
+      "vcrun2019"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<HOME>/proton/GE-Proton9-20/files/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/proton-prefix/pfx"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": "Executing w_do_call vcrun2019\n"
+    }
+  }
+]

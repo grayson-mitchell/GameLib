@@ -1,0 +1,11 @@
+{
+  "op": "check-wine-version",
+  "platform": "linux",
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [],
+  "logs": []
+}

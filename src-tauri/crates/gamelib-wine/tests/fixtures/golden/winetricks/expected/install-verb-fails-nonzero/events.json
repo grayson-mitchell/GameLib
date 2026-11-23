@@ -1,0 +1,59 @@
+[
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      "dotnet48"
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Executing w_do_call dotnet48",
+          "Note: command \"wine setup.exe\" returned status 1. Aborting.",
+          "warning: fatal: the installer failed"
+        ],
+        "installingComponent": "dotnet48",
+        "lines": [
+          {
+            "kind": "info",
+            "text": "Executing w_do_call dotnet48"
+          },
+          {
+            "kind": "error",
+            "text": "Note: command \"wine setup.exe\" returned status 1. Aborting."
+          },
+          {
+            "kind": "environment",
+            "text": "warning: fatal: the installer failed"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Done"
+        ],
+        "installingComponent": "dotnet48",
+        "failed": true,
+        "lines": [
+          {
+            "kind": "error",
+            "text": "winetricks exited with code 1"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      ""
+    ]
+  }
+]

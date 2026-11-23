@@ -1,0 +1,65 @@
+{
+  "op": "install",
+  "platform": "mac",
+  "verb": "d3dx9",
+  "outcome": "installed",
+  "onLines": [
+    {
+      "kind": "info",
+      "text": "Executing w_do_call d3dx9"
+    }
+  ],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [
+    {
+      "fn": "validWine",
+      "name": "CrossOver 25"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "crossover",
+        "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "crossover",
+        "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "appName": "480"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "crossover",
+        "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "crossover",
+        "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "appName": "480"
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks -q d3dx9"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Executing w_do_call d3dx9"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+[
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      "vcrun2019"
+    ]
+  },
+  {
+    "channel": "showDialog",
+    "args": [
+      "box.error.winetricks.title",
+      "box.error.winetricks.message",
+      "ERROR",
+      null,
+      null
+    ]
+  },
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      ""
+    ]
+  }
+]

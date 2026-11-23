@@ -1,0 +1,12 @@
+{
+  "op": "list-installed",
+  "platform": "linux",
+  "lines": [],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [],
+  "logs": []
+}

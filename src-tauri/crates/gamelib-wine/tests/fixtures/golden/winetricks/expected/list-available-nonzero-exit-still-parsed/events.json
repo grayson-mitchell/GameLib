@@ -1,0 +1,20 @@
+[
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Done"
+        ],
+        "installingComponent": "",
+        "failed": true,
+        "lines": [
+          {
+            "kind": "error",
+            "text": "winetricks exited with code 1"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,20 @@
+{
+  "op": "install",
+  "platform": "linux",
+  "verb": "vcrun2019",
+  "outcome": "failed",
+  "onLines": [],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [],
+  "logs": [
+    {
+      "level": "ERROR",
+      "prefix": "Winetricks",
+      "message": "Winetricks not run for 480: no usable Wine environment (not-own-bottle)"
+    }
+  ]
+}

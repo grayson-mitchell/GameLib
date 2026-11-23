@@ -1,0 +1,65 @@
+{
+  "op": "install",
+  "platform": "linux",
+  "verb": "vcrun2019",
+  "outcome": "installed",
+  "onLines": [
+    {
+      "kind": "info",
+      "text": "Executing w_do_call vcrun2019"
+    }
+  ],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [
+    {
+      "fn": "validWine",
+      "name": "GE-Proton9-20"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "proton",
+        "bin": "<HOME>/proton/GE-Proton9-20/proton"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "proton",
+        "bin": "<HOME>/proton/GE-Proton9-20/proton"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "proton",
+        "bin": "<HOME>/proton/GE-Proton9-20/proton"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "proton",
+        "bin": "<HOME>/proton/GE-Proton9-20/proton"
+      },
+      "appName": "game"
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/runtimes/umu/umu_run.py winetricks vcrun2019"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Executing w_do_call vcrun2019"
+    }
+  ]
+}

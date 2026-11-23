@@ -1,0 +1,93 @@
+{
+  "op": "catalog-for",
+  "platform": "linux",
+  "first": [],
+  "second": [],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks list-all"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks list-all"
+    }
+  ]
+}

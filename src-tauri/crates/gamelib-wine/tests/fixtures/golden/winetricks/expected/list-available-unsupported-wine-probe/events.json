@@ -1,0 +1,30 @@
+[
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": null,
+        "busy": false,
+        "environment": {
+          "unsupportedWineVersion": "7.7",
+          "missingDependencies": []
+        },
+        "revision": 1
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Done"
+        ],
+        "installingComponent": "",
+        "failed": false
+      }
+    ]
+  }
+]

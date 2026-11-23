@@ -1,0 +1,22 @@
+{
+  "op": "check-dependencies",
+  "platform": "linux",
+  "messages": [
+    "zenity not installed! Winetricks might fail to install some packages or even open"
+  ],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": [
+      "zenity"
+    ]
+  },
+  "launcher": [],
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "zenity not installed! Winetricks might fail to install some packages or even open"
+    }
+  ]
+}

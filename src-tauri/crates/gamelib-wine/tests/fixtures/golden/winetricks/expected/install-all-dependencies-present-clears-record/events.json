@@ -1,0 +1,59 @@
+[
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      "vcrun2019"
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": null,
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": []
+        },
+        "revision": 1
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Executing w_do_call vcrun2019"
+        ],
+        "installingComponent": "vcrun2019",
+        "lines": [
+          {
+            "kind": "info",
+            "text": "Executing w_do_call vcrun2019"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Done"
+        ],
+        "installingComponent": "vcrun2019",
+        "failed": false
+      }
+    ]
+  },
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      ""
+    ]
+  }
+]

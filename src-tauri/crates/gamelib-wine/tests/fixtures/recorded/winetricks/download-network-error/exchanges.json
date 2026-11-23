@@ -1,0 +1,19 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "HeroicGamesLauncher/0.0.0-test"
+      }
+    },
+    "response": {
+      "status": 0,
+      "headers": {}
+    },
+    "synthetic": true,
+    "networkError": true
+  }
+]

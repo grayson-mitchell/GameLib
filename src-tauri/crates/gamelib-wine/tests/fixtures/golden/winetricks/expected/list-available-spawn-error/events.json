@@ -1,0 +1,12 @@
+[
+  {
+    "channel": "showDialog",
+    "args": [
+      "box.error.winetricks.title",
+      "box.error.winetricks.message",
+      "ERROR",
+      null,
+      null
+    ]
+  }
+]

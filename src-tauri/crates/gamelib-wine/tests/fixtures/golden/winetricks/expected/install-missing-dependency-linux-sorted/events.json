@@ -1,0 +1,72 @@
+[
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      "vcrun2019"
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": null,
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": [
+            "7z",
+            "zenity"
+          ]
+        },
+        "revision": 1
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "7z not installed! Winetricks might fail to install some packages or even open",
+          "zenity not installed! Winetricks might fail to install some packages or even open",
+          "Executing w_do_call vcrun2019"
+        ],
+        "installingComponent": "vcrun2019",
+        "lines": [
+          {
+            "kind": "environment",
+            "text": "7z not installed! Winetricks might fail to install some packages or even open"
+          },
+          {
+            "kind": "environment",
+            "text": "zenity not installed! Winetricks might fail to install some packages or even open"
+          },
+          {
+            "kind": "info",
+            "text": "Executing w_do_call vcrun2019"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Done"
+        ],
+        "installingComponent": "vcrun2019",
+        "failed": false
+      }
+    ]
+  },
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      ""
+    ]
+  }
+]

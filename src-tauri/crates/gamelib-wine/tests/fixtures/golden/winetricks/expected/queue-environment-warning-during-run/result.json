@@ -1,0 +1,166 @@
+{
+  "op": "queue",
+  "platform": "linux",
+  "applies": [
+    {
+      "accepted": true,
+      "state": {
+        "runner": "gog",
+        "appName": "game",
+        "run": {
+          "runId": 1,
+          "runner": "gog",
+          "appName": "game",
+          "verbs": [
+            "vcrun2019"
+          ],
+          "outcomes": {
+            "vcrun2019": "installing"
+          },
+          "currentVerb": "vcrun2019",
+          "status": "running",
+          "cancelRequested": false,
+          "log": []
+        },
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": []
+        },
+        "revision": 3
+      }
+    }
+  ],
+  "duringRun": [],
+  "finalState": {
+    "runner": "gog",
+    "appName": "game",
+    "run": {
+      "runId": 1,
+      "runner": "gog",
+      "appName": "game",
+      "verbs": [
+        "vcrun2019"
+      ],
+      "outcomes": {
+        "vcrun2019": "installed"
+      },
+      "currentVerb": "",
+      "status": "done",
+      "cancelRequested": false,
+      "log": [
+        {
+          "kind": "environment",
+          "text": "warning: Your version of wine 7.7 is no longer supported upstream. You should upgrade to 8.x"
+        },
+        {
+          "kind": "info",
+          "text": "Executing w_do_call vcrun2019"
+        }
+      ]
+    },
+    "busy": false,
+    "environment": {
+      "unsupportedWineVersion": "7.7",
+      "missingDependencies": []
+    },
+    "revision": 7
+  },
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": "7.7",
+    "missingDependencies": []
+  },
+  "launcher": [
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks list-all"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks -q vcrun2019"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "warning: Your version of wine 7.7 is no longer supported upstream. You should upgrade to 8.x"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Executing w_do_call vcrun2019"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "op": "install",
+  "platform": "linux",
+  "verb": "vcrun2019",
+  "outcome": "failed",
+  "onLines": [],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    }
+  ],
+  "logs": []
+}

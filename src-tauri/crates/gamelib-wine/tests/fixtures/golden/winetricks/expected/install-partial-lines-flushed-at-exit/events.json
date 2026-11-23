@@ -1,0 +1,53 @@
+[
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      "d3dx9"
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "first stdout line",
+          "last stdout fragment",
+          "last stderr fragment"
+        ],
+        "installingComponent": "d3dx9",
+        "lines": [
+          {
+            "kind": "info",
+            "text": "first stdout line"
+          },
+          {
+            "kind": "info",
+            "text": "last stdout fragment"
+          },
+          {
+            "kind": "info",
+            "text": "last stderr fragment"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Done"
+        ],
+        "installingComponent": "d3dx9",
+        "failed": false
+      }
+    ]
+  },
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      ""
+    ]
+  }
+]

@@ -1,0 +1,17 @@
+{
+  "op": "check-wine-version",
+  "platform": "linux",
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": "7.7",
+    "missingDependencies": []
+  },
+  "launcher": [],
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "Could not read the wine version for the winetricks environment banner: Error: wine --version output exceeded the buffer"
+    }
+  ]
+}

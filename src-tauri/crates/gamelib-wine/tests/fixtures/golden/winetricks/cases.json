@@ -134,5 +134,1538 @@
         }
       ]
     }
+  },
+  {
+    "id": "download-stale-script-refetched",
+    "op": "download",
+    "platform": "linux",
+    "script": "stale",
+    "note": "the script on disk is 8 days old, past the 7-day cache: it is fetched again and rewritten"
+  },
+  {
+    "id": "download-fresh-script-served-from-cache",
+    "op": "download",
+    "platform": "linux",
+    "script": "absent",
+    "seed": [
+      {
+        "path": "<TOOLS>/winetricks",
+        "text": "#!/bin/sh\n# synthetic cached script\n",
+        "mode": "0644"
+      }
+    ],
+    "note": "a script younger than 7 days: no request, and the chmod still runs, so mode 0644 becomes 0755"
+  },
+  {
+    "id": "download-network-error",
+    "op": "download",
+    "platform": "linux",
+    "script": "absent",
+    "serve": "network-error",
+    "note": "no response at all: downloadFile returns the AxiosError, the chmod of the missing file fails and the same warning is logged"
+  },
+  {
+    "id": "install-verb-fails-nonzero",
+    "op": "install",
+    "platform": "linux",
+    "verb": "dotnet48",
+    "note": "exit 1 after a w_try abort line: the abort line is an error line, the synthetic 'winetricks exited with code 1' line follows, Done carries failed true, the outcome is failed",
+    "run": {
+      "code": 1,
+      "steps": [
+        {
+          "err": "Executing w_do_call dotnet48\n"
+        },
+        {
+          "err": "Note: command \"wine setup.exe\" returned status 1. Aborting.\n"
+        },
+        {
+          "err": "warning: fatal: the installer failed\n"
+        }
+      ]
+    }
+  },
+  {
+    "id": "install-killed-by-signal",
+    "op": "install",
+    "platform": "linux",
+    "verb": "dotnet48",
+    "note": "a run with no exit code (killed): code null still means failed, and the exit line names null",
+    "run": {
+      "code": null,
+      "steps": [
+        {
+          "err": "Executing w_do_call dotnet48\n"
+        }
+      ]
+    }
+  },
+  {
+    "id": "install-partial-lines-flushed-at-exit",
+    "op": "install",
+    "platform": "linux",
+    "verb": "d3dx9",
+    "note": "stdout and stderr both end without a newline: each remainder is still a line and lands before Done",
+    "run": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "first stdout line\nlast stdout "
+        },
+        {
+          "out": "fragment"
+        },
+        {
+          "err": "last stderr fragment"
+        }
+      ]
+    }
+  },
+  {
+    "id": "install-spawn-error-dialog",
+    "op": "install",
+    "platform": "linux",
+    "verb": "vcrun2019",
+    "note": "the winetricks spawn rejects: the error is logged, the in-app dialog event is sent, no Done event, the outcome is failed and the installing flag is cleared",
+    "run": {
+      "code": 0,
+      "throws": "spawn <TOOLS>/winetricks EACCES"
+    }
+  },
+  {
+    "id": "install-refused-already-installing",
+    "op": "install",
+    "platform": "linux",
+    "verb": "vcrun2019",
+    "installing": "dotnet48",
+    "note": "another component is installing: refused, nothing spawned, no event sent, the running install's flag untouched",
+    "run": {
+      "code": 0,
+      "steps": []
+    }
+  },
+  {
+    "id": "install-invalid-wine-not-spawned",
+    "op": "install",
+    "platform": "linux",
+    "verb": "vcrun2019",
+    "validWine": false,
+    "note": "validWine says no: the run never spawns, onDone(true) makes the outcome failed, and only the two installing-winetricks-component events are sent",
+    "run": {
+      "code": 0,
+      "steps": []
+    }
+  },
+  {
+    "id": "install-umu-proton",
+    "op": "install",
+    "platform": "linux",
+    "verb": "vcrun2019",
+    "wineVersion": {
+      "type": "proton",
+      "name": "GE-Proton9-20",
+      "bin": "<HOME>/proton/GE-Proton9-20/proton"
+    },
+    "umu": true,
+    "seed": [
+      {
+        "path": "<TOOLS>/runtimes/umu/umu_run.py",
+        "text": ""
+      }
+    ],
+    "note": "Proton with umu installed: the program is umu's, the -q flag is dropped, argv starts with winetricks, the prefix is not given a pfx subdirectory and WINEPREFIX is the stored prefix",
+    "run": {
+      "code": 0,
+      "steps": [
+        {
+          "err": "Executing w_do_call vcrun2019\n"
+        }
+      ]
+    }
+  },
+  {
+    "id": "install-proton-without-umu",
+    "op": "install",
+    "platform": "linux",
+    "verb": "vcrun2019",
+    "wineVersion": {
+      "type": "proton",
+      "name": "GE-Proton9-20",
+      "bin": "<HOME>/proton/GE-Proton9-20/proton"
+    },
+    "disableUMU": true,
+    "seed": [
+      {
+        "path": "<HOME>/proton/GE-Proton9-20/files/bin/wine",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "winePrefix": "<HOME>/proton-prefix",
+    "note": "Proton with umu disabled: the unpacked files/bin/wine runs, the prefix gains /pfx, the linux env sees the always-wine settings and PATH starts with files/bin",
+    "run": {
+      "code": 0,
+      "steps": [
+        {
+          "err": "Executing w_do_call vcrun2019\n"
+        }
+      ]
+    }
+  },
+  {
+    "id": "install-explicit-settings-steam-bottle",
+    "op": "install",
+    "platform": "mac",
+    "verb": "d3dx9",
+    "runner": "steam",
+    "appName": "480",
+    "explicitSettings": true,
+    "wineVersion": {
+      "type": "crossover",
+      "name": "CrossOver 25",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+    },
+    "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-480",
+    "note": "the Steam bridge applier passes its own settings: no library lookup for the steam runner and the run is in the bridge bottle",
+    "run": {
+      "code": 0,
+      "steps": [
+        {
+          "err": "Executing w_do_call d3dx9\n"
+        }
+      ]
+    }
+  },
+  {
+    "id": "install-steam-no-own-bottle-unavailable",
+    "op": "install",
+    "platform": "linux",
+    "verb": "vcrun2019",
+    "runner": "steam",
+    "appName": "480",
+    "note": "a Steam title with no per-game bottle and no explicit settings: the tool settings are unavailable, the error is logged, the run never spawns and the outcome is failed",
+    "run": {
+      "code": 0,
+      "steps": []
+    }
+  },
+  {
+    "id": "install-script-missing-offline",
+    "op": "install",
+    "platform": "linux",
+    "verb": "vcrun2019",
+    "script": "absent",
+    "online": false,
+    "note": "no script on disk and offline: the download is skipped and winetricks is still spawned at the missing path",
+    "run": {
+      "code": 0,
+      "steps": [
+        {
+          "err": "Executing w_do_call vcrun2019\n"
+        }
+      ]
+    }
+  },
+  {
+    "id": "install-missing-dependency-linux-sorted",
+    "op": "install",
+    "platform": "linux",
+    "verb": "vcrun2019",
+    "missing": [
+      "zenity",
+      "7z"
+    ],
+    "note": "linux: two dependencies missing, one environment line each, no wiki line, the recorded subset sorted",
+    "run": {
+      "code": 0,
+      "steps": [
+        {
+          "err": "Executing w_do_call vcrun2019\n"
+        }
+      ]
+    }
+  },
+  {
+    "id": "install-which-probe-throws",
+    "op": "install",
+    "platform": "linux",
+    "verb": "vcrun2019",
+    "whichThrows": true,
+    "note": "the which probe itself throws: every dependency counts as missing and the install still runs",
+    "run": {
+      "code": 0,
+      "steps": [
+        {
+          "err": "Executing w_do_call vcrun2019\n"
+        }
+      ]
+    }
+  },
+  {
+    "id": "install-all-dependencies-present-clears-record",
+    "op": "install",
+    "platform": "linux",
+    "verb": "vcrun2019",
+    "preset": {
+      "missingDependencies": [
+        "zenity"
+      ]
+    },
+    "note": "the game already had zenity recorded missing: every probe finds its dependency, an empty subset clears the record and the queue pushes the change",
+    "run": {
+      "code": 0,
+      "steps": [
+        {
+          "err": "Executing w_do_call vcrun2019\n"
+        }
+      ]
+    }
+  },
+  {
+    "id": "list-available-annotated-linux",
+    "op": "list-available",
+    "platform": "linux",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "note": "list-all output split across two chunks, a prefix category block, apps and benchmarks, a needs-GUI verb and the hidden verbs: only visible verbs come back, annotated from the script on disk, and the catalog cache holds the same list; list-all runs with LANG and LC_ALL C and the wine --version probe follows"
+  },
+  {
+    "id": "list-available-annotated-mac-bottle",
+    "op": "list-available",
+    "platform": "mac",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "wineVersion": {
+      "type": "crossover",
+      "name": "CrossOver 25",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+    },
+    "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+    "note": "the same read on a CrossOver bottle on macOS: the mac env and the same visible list"
+  },
+  {
+    "id": "list-available-script-missing-downloads",
+    "op": "list-available",
+    "platform": "linux",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "script": "absent",
+    "note": "no script on disk and online: the script is fetched first (one recorded GET) and the list is annotated from it"
+  },
+  {
+    "id": "list-available-script-missing-offline",
+    "op": "list-available",
+    "platform": "linux",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "script": "absent",
+    "online": false,
+    "note": "no script and offline: no download, the metadata read fails with one warning, and the components come back unannotated but still category-filtered"
+  },
+  {
+    "id": "list-available-unsupported-wine-probe",
+    "op": "list-available",
+    "platform": "linux",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "versionProbe": {
+      "stdout": "wine-7.7 (Game Porting Toolkit 1.1)\n"
+    },
+    "note": "the wine --version probe reports 7.7: the unsupported version is recorded before any install and the queue pushes the report for the game"
+  },
+  {
+    "id": "list-available-probe-nonzero-exit",
+    "op": "list-available",
+    "platform": "linux",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "versionProbe": {
+      "stdout": "wine-7.7\n",
+      "code": 1
+    },
+    "note": "the probe exits 1: one warning, nothing recorded even though the stdout parses"
+  },
+  {
+    "id": "list-available-stderr-warning-recorded",
+    "op": "list-available",
+    "platform": "linux",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "err": "warning: Your version of wine 7.7 is no longer supported upstream. You should upgrade to 8.x\n"
+        },
+        {
+          "err": "warning: taskset/cpuset not available on your platform!\n"
+        },
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9                   MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "note": "winetricks' own unsupported-wine warning on stderr during list-all is classified and recorded (stdout stays unclassified) alongside the probe"
+  },
+  {
+    "id": "list-available-empty-output",
+    "op": "list-available",
+    "platform": "linux",
+    "list": {
+      "code": 0,
+      "steps": []
+    },
+    "note": "list-all prints nothing: an empty list comes back and the catalog cache is not written"
+  },
+  {
+    "id": "list-available-nonzero-exit-still-parsed",
+    "op": "list-available",
+    "platform": "linux",
+    "list": {
+      "code": 1,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9                   MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "note": "list-all exits 1 with output: the output is still parsed and returned, and the run's Done carries failed true"
+  },
+  {
+    "id": "list-available-spawn-error",
+    "op": "list-available",
+    "platform": "linux",
+    "list": {
+      "code": 0,
+      "throws": "spawn <TOOLS>/winetricks EACCES"
+    },
+    "note": "the list-all spawn rejects: the in-app dialog event is sent and an empty list comes back"
+  },
+  {
+    "id": "list-available-umu-proton",
+    "op": "list-available",
+    "platform": "linux",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "wineVersion": {
+      "type": "proton",
+      "name": "GE-Proton9-20",
+      "bin": "<HOME>/proton/GE-Proton9-20/proton"
+    },
+    "umu": true,
+    "seed": [
+      {
+        "path": "<TOOLS>/runtimes/umu/umu_run.py",
+        "text": ""
+      }
+    ],
+    "note": "Proton with umu: list-all runs through umu with argv winetricks list-all"
+  },
+  {
+    "id": "catalog-for-miss-then-cached",
+    "op": "catalog-for",
+    "platform": "linux",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "note": "the first read lists (one list-all run), the second is served from the cache with no further spawn"
+  },
+  {
+    "id": "catalog-for-empty-list-not-cached",
+    "op": "catalog-for",
+    "platform": "linux",
+    "list": {
+      "code": 0,
+      "steps": []
+    },
+    "note": "an empty list is never cached, so each read runs list-all again"
+  },
+  {
+    "id": "list-installed-log-present",
+    "op": "list-installed",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<HOME>/prefix/winetricks.log",
+        "text": "vcrun2019\ncorefonts\n\nfontsmooth=rgb\n"
+      }
+    ],
+    "note": "a prefix with a winetricks.log: its non-empty lines, in order"
+  },
+  {
+    "id": "list-installed-bottle-log",
+    "op": "list-installed",
+    "platform": "mac",
+    "wineVersion": {
+      "type": "crossover",
+      "name": "CrossOver 25",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+    },
+    "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+    "seed": [
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle/winetricks.log",
+        "text": "vcrun2019\ncorefonts\n\nfontsmooth=rgb\n"
+      }
+    ],
+    "note": "a CrossOver bottle with a winetricks.log: read from the bottle"
+  },
+  {
+    "id": "list-installed-log-missing",
+    "op": "list-installed",
+    "platform": "linux",
+    "note": "no winetricks.log: an empty list"
+  },
+  {
+    "id": "list-installed-proton-pfx-subdir",
+    "op": "list-installed",
+    "platform": "linux",
+    "wineVersion": {
+      "type": "proton",
+      "name": "GE-Proton9-20",
+      "bin": "<HOME>/proton/GE-Proton9-20/proton"
+    },
+    "disableUMU": true,
+    "winePrefix": "<HOME>/proton-prefix",
+    "seed": [
+      {
+        "path": "<HOME>/proton/GE-Proton9-20/files/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/proton-prefix/pfx/winetricks.log",
+        "text": "vcrun2019\ncorefonts\n\nfontsmooth=rgb\n"
+      },
+      {
+        "path": "<HOME>/proton-prefix/winetricks.log",
+        "text": "not-this-one\n"
+      }
+    ],
+    "note": "Proton without umu: the log is read from <prefix>/pfx, not the prefix root"
+  },
+  {
+    "id": "list-installed-steam-unavailable",
+    "op": "list-installed",
+    "platform": "linux",
+    "runner": "steam",
+    "appName": "480",
+    "note": "a Steam title with no per-game bottle: the tool settings are unavailable and the list is empty"
+  },
+  {
+    "id": "check-wine-version-unsupported-7-7",
+    "op": "check-wine-version",
+    "platform": "linux",
+    "versionProbe": {
+      "stdout": "wine-7.7 (Game Porting Toolkit 1.1)\n"
+    },
+    "note": "wine 7.7 is below the threshold: recorded as unsupported and pushed"
+  },
+  {
+    "id": "check-wine-version-threshold-7-99-unsupported",
+    "op": "check-wine-version",
+    "platform": "linux",
+    "versionProbe": {
+      "stdout": "wine-7.99\n"
+    },
+    "note": "7.99 is the inclusive upper edge of unsupported"
+  },
+  {
+    "id": "check-wine-version-8-0-supported",
+    "op": "check-wine-version",
+    "platform": "linux",
+    "versionProbe": {
+      "stdout": "wine-8.0\n"
+    },
+    "note": "8.0 is supported: nothing is recorded and nothing is pushed"
+  },
+  {
+    "id": "check-wine-version-10-0-compared-numerically",
+    "op": "check-wine-version",
+    "platform": "linux",
+    "versionProbe": {
+      "stdout": "wine-10.0\n"
+    },
+    "note": "10.0 sorts above 7.99 numerically, not as a string: supported"
+  },
+  {
+    "id": "check-wine-version-supported-clears-stale",
+    "op": "check-wine-version",
+    "platform": "linux",
+    "versionProbe": {
+      "stdout": "wine-9.0\n"
+    },
+    "note": "a supported wine clears an older unsupported record",
+    "preset": {
+      "unsupportedWineVersion": "7.7"
+    }
+  },
+  {
+    "id": "check-wine-version-unparseable-keeps-record",
+    "op": "check-wine-version",
+    "platform": "linux",
+    "versionProbe": {
+      "stdout": "garbage\n"
+    },
+    "note": "stdout that does not parse logs one warning and never clears an existing record",
+    "preset": {
+      "unsupportedWineVersion": "7.7"
+    }
+  },
+  {
+    "id": "check-wine-version-nonzero-exit-keeps-record",
+    "op": "check-wine-version",
+    "platform": "linux",
+    "versionProbe": {
+      "stdout": "wine-9.0\n",
+      "code": 1
+    },
+    "note": "a non-zero exit logs one warning and leaves the record alone",
+    "preset": {
+      "unsupportedWineVersion": "7.7"
+    }
+  },
+  {
+    "id": "check-wine-version-timeout-keeps-record",
+    "op": "check-wine-version",
+    "platform": "linux",
+    "versionProbe": {
+      "stdout": "wine-9.0\n",
+      "code": null,
+      "timedOut": true
+    },
+    "note": "a timed-out probe logs one warning and leaves the record alone",
+    "preset": {
+      "unsupportedWineVersion": "7.7"
+    }
+  },
+  {
+    "id": "check-wine-version-truncated-keeps-record",
+    "op": "check-wine-version",
+    "platform": "linux",
+    "versionProbe": {
+      "stdout": "wine-9.0\n",
+      "truncated": true
+    },
+    "note": "an oversized probe output logs one warning and leaves the record alone",
+    "preset": {
+      "unsupportedWineVersion": "7.7"
+    }
+  },
+  {
+    "id": "check-wine-version-spawn-throws-keeps-record",
+    "op": "check-wine-version",
+    "platform": "linux",
+    "versionProbe": {
+      "throws": "spawn ENOENT"
+    },
+    "note": "a probe that fails to spawn logs one warning and leaves the record alone",
+    "preset": {
+      "unsupportedWineVersion": "7.7"
+    }
+  },
+  {
+    "id": "check-dependencies-all-present-clears-record",
+    "op": "check-dependencies",
+    "platform": "linux",
+    "note": "every probe finds its dependency: an empty subset clears an older record and pushes",
+    "preset": {
+      "missingDependencies": [
+        "zenity"
+      ]
+    }
+  },
+  {
+    "id": "check-dependencies-same-subset-no-push",
+    "op": "check-dependencies",
+    "platform": "linux",
+    "note": "the same missing subset as the record: no write and no push",
+    "missing": [
+      "zenity"
+    ],
+    "preset": {
+      "missingDependencies": [
+        "zenity"
+      ]
+    }
+  },
+  {
+    "id": "check-dependencies-missing-subset-linux",
+    "op": "check-dependencies",
+    "platform": "linux",
+    "note": "linux: one line per missing dependency, sorted subset recorded, no wiki line",
+    "missing": [
+      "unzip",
+      "7z"
+    ]
+  },
+  {
+    "id": "check-dependencies-missing-all-mac-wiki",
+    "op": "check-dependencies",
+    "platform": "mac",
+    "note": "macOS: all five missing, five lines and then the wiki line",
+    "missing": [
+      "7z",
+      "cabextract",
+      "zenity",
+      "unzip",
+      "curl"
+    ]
+  },
+  {
+    "id": "check-dependencies-probe-throws-counts-missing",
+    "op": "check-dependencies",
+    "platform": "linux",
+    "note": "the probe throws for every dependency: all five count as missing and none escapes",
+    "whichThrows": true
+  },
+  {
+    "id": "queue-apply-three-verbs-sequential",
+    "op": "queue",
+    "platform": "linux",
+    "note": "apply with no cached catalog: catalogFor lists first, the run is accepted, the three verbs install one after another in order, each state transition is pushed and the game status goes winetricks then done",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "installs": {
+      "vcrun2019": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call vcrun2019\n"
+          },
+          {
+            "out": "vcrun2019 installed\n"
+          }
+        ]
+      },
+      "corefonts": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call corefonts\n"
+          },
+          {
+            "out": "corefonts installed\n"
+          }
+        ]
+      },
+      "d3dx9": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call d3dx9\n"
+          },
+          {
+            "out": "d3dx9 installed\n"
+          }
+        ]
+      }
+    },
+    "applies": [
+      [
+        "vcrun2019",
+        "corefonts",
+        "d3dx9"
+      ]
+    ]
+  },
+  {
+    "id": "queue-apply-with-cached-catalog",
+    "op": "queue",
+    "platform": "linux",
+    "note": "the catalog was read before: apply validates against the cache with no second list-all",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "installs": {
+      "vcrun2019": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call vcrun2019\n"
+          },
+          {
+            "out": "vcrun2019 installed\n"
+          }
+        ]
+      },
+      "corefonts": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call corefonts\n"
+          },
+          {
+            "out": "corefonts installed\n"
+          }
+        ]
+      },
+      "d3dx9": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call d3dx9\n"
+          },
+          {
+            "out": "d3dx9 installed\n"
+          }
+        ]
+      }
+    },
+    "applies": [
+      [
+        "vcrun2019",
+        "corefonts",
+        "d3dx9"
+      ]
+    ],
+    "prelist": true
+  },
+  {
+    "id": "queue-apply-dedupes-verbs-preserving-order",
+    "op": "queue",
+    "platform": "linux",
+    "note": "duplicate verbs collapse to their first occurrence",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "installs": {
+      "d3dx9": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call d3dx9\n"
+          },
+          {
+            "out": "d3dx9 installed\n"
+          }
+        ]
+      },
+      "vcrun2019": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call vcrun2019\n"
+          },
+          {
+            "out": "vcrun2019 installed\n"
+          }
+        ]
+      }
+    },
+    "applies": [
+      [
+        "d3dx9",
+        "vcrun2019",
+        "d3dx9",
+        "vcrun2019"
+      ]
+    ],
+    "prelist": true
+  },
+  {
+    "id": "queue-cancel-remaining-mid-queue",
+    "op": "queue",
+    "platform": "linux",
+    "note": "cancelRemaining while the first verb runs: the two pending verbs become cancelled, the running verb finishes installed, the run ends done",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "installs": {
+      "vcrun2019": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call vcrun2019\n"
+          },
+          {
+            "cancel": true
+          },
+          {
+            "out": "vcrun2019 installed\n"
+          }
+        ]
+      }
+    },
+    "applies": [
+      [
+        "vcrun2019",
+        "corefonts",
+        "d3dx9"
+      ]
+    ],
+    "prelist": true
+  },
+  {
+    "id": "queue-failing-verb-continues",
+    "op": "queue",
+    "platform": "linux",
+    "note": "the second verb exits 1: it is failed with its exit line, the third still installs and the run ends done",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "installs": {
+      "vcrun2019": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call vcrun2019\n"
+          },
+          {
+            "out": "vcrun2019 installed\n"
+          }
+        ]
+      },
+      "corefonts": {
+        "code": 1,
+        "steps": [
+          {
+            "err": "Note: command x returned status 1. Aborting.\n"
+          }
+        ]
+      },
+      "d3dx9": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call d3dx9\n"
+          },
+          {
+            "out": "d3dx9 installed\n"
+          }
+        ]
+      }
+    },
+    "applies": [
+      [
+        "vcrun2019",
+        "corefonts",
+        "d3dx9"
+      ]
+    ],
+    "prelist": true
+  },
+  {
+    "id": "queue-spawn-error-verb-fails-and-queue-continues",
+    "op": "queue",
+    "platform": "linux",
+    "note": "the second verb's spawn rejects: the dialog event is sent, it is failed, the third verb still installs",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "installs": {
+      "vcrun2019": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call vcrun2019\n"
+          },
+          {
+            "out": "vcrun2019 installed\n"
+          }
+        ]
+      },
+      "corefonts": {
+        "code": 0,
+        "throws": "spawn <TOOLS>/winetricks EACCES"
+      },
+      "d3dx9": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call d3dx9\n"
+          },
+          {
+            "out": "d3dx9 installed\n"
+          }
+        ]
+      }
+    },
+    "applies": [
+      [
+        "vcrun2019",
+        "corefonts",
+        "d3dx9"
+      ]
+    ],
+    "prelist": true
+  },
+  {
+    "id": "queue-second-apply-while-running-is-busy",
+    "op": "queue",
+    "platform": "linux",
+    "note": "a second apply right after an accepted one is refused busy with the fixed detail",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "installs": {
+      "vcrun2019": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call vcrun2019\n"
+          },
+          {
+            "out": "vcrun2019 installed\n"
+          }
+        ]
+      },
+      "corefonts": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call corefonts\n"
+          },
+          {
+            "out": "corefonts installed\n"
+          }
+        ]
+      },
+      "d3dx9": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call d3dx9\n"
+          },
+          {
+            "out": "d3dx9 installed\n"
+          }
+        ]
+      }
+    },
+    "applies": [
+      [
+        "vcrun2019",
+        "corefonts",
+        "d3dx9"
+      ],
+      [
+        "d3dx9"
+      ]
+    ],
+    "prelist": true
+  },
+  {
+    "id": "queue-same-tick-applies-one-accepted",
+    "op": "queue",
+    "platform": "linux",
+    "note": "two applies issued in the same tick: the in-flight latch makes exactly one accepted and the other busy",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "installs": {
+      "vcrun2019": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call vcrun2019\n"
+          },
+          {
+            "out": "vcrun2019 installed\n"
+          }
+        ]
+      },
+      "corefonts": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call corefonts\n"
+          },
+          {
+            "out": "corefonts installed\n"
+          }
+        ]
+      },
+      "d3dx9": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call d3dx9\n"
+          },
+          {
+            "out": "d3dx9 installed\n"
+          }
+        ]
+      }
+    },
+    "applies": [
+      [
+        "vcrun2019",
+        "corefonts",
+        "d3dx9"
+      ],
+      [
+        "d3dx9"
+      ]
+    ],
+    "prelist": true,
+    "concurrent": true
+  },
+  {
+    "id": "queue-apply-during-run-is-busy",
+    "op": "queue",
+    "platform": "linux",
+    "note": "an apply made from inside a running verb is refused busy",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "installs": {
+      "vcrun2019": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "Executing w_do_call vcrun2019\n"
+          },
+          {
+            "applyAgain": [
+              "d3dx9"
+            ]
+          }
+        ]
+      }
+    },
+    "applies": [
+      [
+        "vcrun2019"
+      ]
+    ],
+    "prelist": true
+  },
+  {
+    "id": "queue-busy-while-a-component-installs",
+    "op": "queue",
+    "platform": "linux",
+    "note": "a tools-installer component is running: apply is refused busy and nothing spawns",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "applies": [
+      [
+        "vcrun2019"
+      ]
+    ],
+    "prelist": true,
+    "installing": "dotnet48"
+  },
+  {
+    "id": "queue-invalid-not-an-array",
+    "op": "queue",
+    "platform": "linux",
+    "note": "a verbs payload that is not an array is rejected with the typeof detail",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "applies": [
+      "vcrun2019"
+    ],
+    "prelist": true
+  },
+  {
+    "id": "queue-invalid-empty-list",
+    "op": "queue",
+    "platform": "linux",
+    "note": "an empty list is rejected",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "applies": [
+      []
+    ],
+    "prelist": true
+  },
+  {
+    "id": "queue-invalid-not-in-catalog",
+    "op": "queue",
+    "platform": "linux",
+    "note": "a verb absent from the visible catalog is rejected",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "applies": [
+      [
+        "vcrun2019",
+        "dotnet48"
+      ]
+    ],
+    "prelist": true
+  },
+  {
+    "id": "queue-invalid-hidden-verb-is-not-in-catalog",
+    "op": "queue",
+    "platform": "linux",
+    "note": "a hidden verb (annihilate) never reaches the catalog, so it is rejected as not in the catalog",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "applies": [
+      [
+        "annihilate"
+      ]
+    ],
+    "prelist": true
+  },
+  {
+    "id": "queue-invalid-shape",
+    "op": "queue",
+    "platform": "linux",
+    "note": "a verb with shell metacharacters is rejected on its shape before the catalog",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "applies": [
+      [
+        "vcrun2019;rm"
+      ]
+    ],
+    "prelist": true
+  },
+  {
+    "id": "queue-invalid-over-the-maximum",
+    "op": "queue",
+    "platform": "linux",
+    "note": "101 verbs are rejected on the count before anything else",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "applies": [
+      [
+        "v000",
+        "v001",
+        "v002",
+        "v003",
+        "v004",
+        "v005",
+        "v006",
+        "v007",
+        "v008",
+        "v009",
+        "v010",
+        "v011",
+        "v012",
+        "v013",
+        "v014",
+        "v015",
+        "v016",
+        "v017",
+        "v018",
+        "v019",
+        "v020",
+        "v021",
+        "v022",
+        "v023",
+        "v024",
+        "v025",
+        "v026",
+        "v027",
+        "v028",
+        "v029",
+        "v030",
+        "v031",
+        "v032",
+        "v033",
+        "v034",
+        "v035",
+        "v036",
+        "v037",
+        "v038",
+        "v039",
+        "v040",
+        "v041",
+        "v042",
+        "v043",
+        "v044",
+        "v045",
+        "v046",
+        "v047",
+        "v048",
+        "v049",
+        "v050",
+        "v051",
+        "v052",
+        "v053",
+        "v054",
+        "v055",
+        "v056",
+        "v057",
+        "v058",
+        "v059",
+        "v060",
+        "v061",
+        "v062",
+        "v063",
+        "v064",
+        "v065",
+        "v066",
+        "v067",
+        "v068",
+        "v069",
+        "v070",
+        "v071",
+        "v072",
+        "v073",
+        "v074",
+        "v075",
+        "v076",
+        "v077",
+        "v078",
+        "v079",
+        "v080",
+        "v081",
+        "v082",
+        "v083",
+        "v084",
+        "v085",
+        "v086",
+        "v087",
+        "v088",
+        "v089",
+        "v090",
+        "v091",
+        "v092",
+        "v093",
+        "v094",
+        "v095",
+        "v096",
+        "v097",
+        "v098",
+        "v099",
+        "v100"
+      ]
+    ],
+    "prelist": true
+  },
+  {
+    "id": "queue-environment-warning-during-run",
+    "op": "queue",
+    "platform": "linux",
+    "note": "winetricks prints its unsupported-wine warning mid-run: the report is pushed for the game while the run is going",
+    "list": {
+      "code": 0,
+      "steps": [
+        {
+          "out": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9  "
+        },
+        {
+          "out": "                 MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n"
+        }
+      ]
+    },
+    "installs": {
+      "vcrun2019": {
+        "code": 0,
+        "steps": [
+          {
+            "err": "warning: Your version of wine 7.7 is no longer supported upstream. You should upgrade to 8.x\n"
+          },
+          {
+            "err": "Executing w_do_call vcrun2019\n"
+          }
+        ]
+      }
+    },
+    "applies": [
+      [
+        "vcrun2019"
+      ]
+    ],
+    "prelist": true
   }
 ]

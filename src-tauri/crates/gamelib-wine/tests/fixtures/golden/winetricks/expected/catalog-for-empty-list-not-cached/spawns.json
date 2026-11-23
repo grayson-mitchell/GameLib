@@ -1,0 +1,382 @@
+[
+  {
+    "program": "which",
+    "argv": [
+      "7z"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<TOOLS>/wine/Wine-9/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<TOOLS>/wine/Wine-9/bin/wine",
+    "argv": [
+      "--version"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<TOOLS>/wine/Wine-9/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEDEBUG": "-all",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "wine-9.0\n",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "cabextract"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<TOOLS>/wine/Wine-9/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "zenity"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<TOOLS>/wine/Wine-9/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "unzip"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<TOOLS>/wine/Wine-9/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "curl"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<TOOLS>/wine/Wine-9/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<TOOLS>/winetricks",
+    "argv": [
+      "list-all"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<TOOLS>/wine/Wine-9/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "7z"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<TOOLS>/wine/Wine-9/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<TOOLS>/wine/Wine-9/bin/wine",
+    "argv": [
+      "--version"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<TOOLS>/wine/Wine-9/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEDEBUG": "-all",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "wine-9.0\n",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "cabextract"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<TOOLS>/wine/Wine-9/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "zenity"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<TOOLS>/wine/Wine-9/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "unzip"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<TOOLS>/wine/Wine-9/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "curl"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<TOOLS>/wine/Wine-9/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<TOOLS>/winetricks",
+    "argv": [
+      "list-all"
+    ],
+    "envDiff": {
+      "set": {
+        "GAMEID": "umu-0",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "<TOOLS>/wine/Wine-9/bin:/oracle/bin",
+        "UMU_RUNTIME_UPDATE": "0",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

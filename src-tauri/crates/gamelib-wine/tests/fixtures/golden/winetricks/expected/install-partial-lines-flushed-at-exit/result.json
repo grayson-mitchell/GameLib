@@ -1,0 +1,83 @@
+{
+  "op": "install",
+  "platform": "linux",
+  "verb": "d3dx9",
+  "outcome": "installed",
+  "onLines": [
+    {
+      "kind": "info",
+      "text": "first stdout line"
+    },
+    {
+      "kind": "info",
+      "text": "last stdout fragment"
+    },
+    {
+      "kind": "info",
+      "text": "last stderr fragment"
+    }
+  ],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks -q d3dx9"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "first stdout line"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "last stdout fragment"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "last stderr fragment"
+    }
+  ]
+}

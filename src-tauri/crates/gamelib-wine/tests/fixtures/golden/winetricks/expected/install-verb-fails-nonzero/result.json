@@ -1,0 +1,92 @@
+{
+  "op": "install",
+  "platform": "linux",
+  "verb": "dotnet48",
+  "outcome": "failed",
+  "onLines": [
+    {
+      "kind": "info",
+      "text": "Executing w_do_call dotnet48"
+    },
+    {
+      "kind": "error",
+      "text": "Note: command \"wine setup.exe\" returned status 1. Aborting."
+    },
+    {
+      "kind": "environment",
+      "text": "warning: fatal: the installer failed"
+    },
+    {
+      "kind": "error",
+      "text": "winetricks exited with code 1"
+    }
+  ],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks -q dotnet48"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Executing w_do_call dotnet48"
+    },
+    {
+      "level": "ERROR",
+      "prefix": "Winetricks",
+      "message": "Note: command \"wine setup.exe\" returned status 1. Aborting."
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "warning: fatal: the installer failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "winetricks exited with code 1"
+    }
+  ]
+}

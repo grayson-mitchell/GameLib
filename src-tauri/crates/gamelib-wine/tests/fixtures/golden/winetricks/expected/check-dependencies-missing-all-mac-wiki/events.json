@@ -1,0 +1,24 @@
+[
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": null,
+        "busy": false,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": [
+            "7z",
+            "cabextract",
+            "curl",
+            "unzip",
+            "zenity"
+          ]
+        },
+        "revision": 1
+      }
+    ]
+  }
+]

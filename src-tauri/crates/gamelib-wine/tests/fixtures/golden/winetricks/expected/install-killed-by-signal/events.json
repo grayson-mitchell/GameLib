@@ -1,0 +1,49 @@
+[
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      "dotnet48"
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Executing w_do_call dotnet48"
+        ],
+        "installingComponent": "dotnet48",
+        "lines": [
+          {
+            "kind": "info",
+            "text": "Executing w_do_call dotnet48"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Done"
+        ],
+        "installingComponent": "dotnet48",
+        "failed": true,
+        "lines": [
+          {
+            "kind": "error",
+            "text": "winetricks exited with code null"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      ""
+    ]
+  }
+]

@@ -1,0 +1,121 @@
+{
+  "op": "list-available",
+  "platform": "linux",
+  "components": [
+    {
+      "verb": "vcrun2019",
+      "title": "Visual C++ 2015-2019 libraries (Microsoft, 2019)",
+      "category": "dlls",
+      "cached": true
+    },
+    {
+      "verb": "d3dx9",
+      "title": "MS d3dx9 DLLs (Microsoft, 2010)",
+      "category": "dlls",
+      "cached": false
+    },
+    {
+      "verb": "manualdll",
+      "title": "Needs a manual download (Example, 2020)",
+      "category": "dlls",
+      "cached": false
+    },
+    {
+      "verb": "corefonts",
+      "title": "MS Arial, Courier, Times fonts (Microsoft, 2008)",
+      "category": "fonts",
+      "cached": false
+    },
+    {
+      "verb": "fontsmooth=rgb",
+      "title": "Enable subpixel font smoothing for RGB LCDs",
+      "category": "settings",
+      "cached": false
+    }
+  ],
+  "catalogCache": [
+    {
+      "verb": "vcrun2019",
+      "title": "Visual C++ 2015-2019 libraries (Microsoft, 2019)",
+      "category": "dlls",
+      "cached": true
+    },
+    {
+      "verb": "d3dx9",
+      "title": "MS d3dx9 DLLs (Microsoft, 2010)",
+      "category": "dlls",
+      "cached": false
+    },
+    {
+      "verb": "manualdll",
+      "title": "Needs a manual download (Example, 2020)",
+      "category": "dlls",
+      "cached": false
+    },
+    {
+      "verb": "corefonts",
+      "title": "MS Arial, Courier, Times fonts (Microsoft, 2008)",
+      "category": "fonts",
+      "cached": false
+    },
+    {
+      "verb": "fontsmooth=rgb",
+      "title": "Enable subpixel font smoothing for RGB LCDs",
+      "category": "settings",
+      "cached": false
+    }
+  ],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks list-all"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "Could not read the winetricks script for its metadata: Error: ENOENT: no such file or directory, stat '<TOOLS>/winetricks'"
+    }
+  ]
+}

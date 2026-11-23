@@ -1,0 +1,30 @@
+#!/bin/sh
+# synthetic winetricks script for the GameLib oracle (87-10); not the upstream script
+w_metadata vcrun2019 dlls \
+    title="Visual C++ 2015-2019 libraries" \
+    publisher="Microsoft" \
+    year="2019" \
+    media="download" \
+    conflicts="vcrun2022"
+w_metadata corefonts fonts \
+    title="MS Arial, Courier, Times fonts" \
+    publisher="Microsoft" \
+    year="2008" \
+    media="download"
+w_metadata d3dx9 dlls \
+    title="MS d3dx9 DLLs" \
+    publisher="Microsoft" \
+    year="2010" \
+    media="download"
+w_metadata manualdll dlls \
+    title="Needs a manual download" \
+    publisher="Example" \
+    year="2020" \
+    media="manual_download"
+w_metadata fontsmooth=rgb settings \
+    title="Enable subpixel font smoothing for RGB LCDs"
+
+load_manualdll()
+{
+    w_download_manual https://example.invalid/x x.exe 0000
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "program": "<TOOLS>/wine/Wine-9/bin/wine",
+    "argv": [
+      "--version"
+    ],
+    "envDiff": {
+      "set": {
+        "WINEDEBUG": "-all",
+        "WINEPREFIX": "<HOME>/prefix"
+      },
+      "unset": [
+        "HOME",
+        "USERPROFILE",
+        "APPDATA",
+        "LOCALAPPDATA",
+        "XDG_CONFIG_HOME",
+        "XDG_STATE_HOME",
+        "XDG_DATA_HOME",
+        "XDG_CACHE_HOME"
+      ]
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 1,
+      "stdout": "wine-9.0\n",
+      "stderr": ""
+    }
+  }
+]

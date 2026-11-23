@@ -1,0 +1,199 @@
+[
+  {
+    "program": "which",
+    "argv": [
+      "7z"
+    ],
+    "envDiff": {
+      "set": {
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--version"
+    ],
+    "envDiff": {
+      "set": {
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEDEBUG": "-all",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "wine-9.0\n",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "cabextract"
+    ],
+    "envDiff": {
+      "set": {
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "zenity"
+    ],
+    "envDiff": {
+      "set": {
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "unzip"
+    ],
+    "envDiff": {
+      "set": {
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "curl"
+    ],
+    "envDiff": {
+      "set": {
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<TOOLS>/winetricks",
+    "argv": [
+      "list-all"
+    ],
+    "envDiff": {
+      "set": {
+        "LANG": "C",
+        "LC_ALL": "C",
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "===== prefix =====\napps\ndlls\nfonts\nsettings\n===== apps =====\nfoobar2000              foobar2000 v1.4 (Peter Pawlowski, 2018) [downloadable]\n===== benchmarks =====\n3dmark06                3D Mark 06 (Futuremark, 2006) [downloadable]\n===== dlls =====\nvcrun2019               Visual C++ 2015-2019 libraries (Microsoft, 2019) [downloadable,cached]\nd3dx9                   MS d3dx9 DLLs (Microsoft, 2010) [downloadable]\nmanualdll               Needs a manual download (Example, 2020) [downloadable]\n===== fonts =====\ncorefonts               MS Arial, Courier, Times fonts (Microsoft, 2008) [downloadable]\n===== settings =====\nfontsmooth=rgb          Enable subpixel font smoothing for RGB LCDs\nwinecfg                 Run winecfg\nannihilate              Delete everything in the prefix\n",
+      "stderr": ""
+    }
+  }
+]

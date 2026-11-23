@@ -1,0 +1,23 @@
+{
+  "op": "download",
+  "platform": "linux",
+  "returned": null,
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Downloading Winetricks"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "Error Downloading Winetricks Error: ENOENT: no such file or directory, chmod '<TOOLS>/winetricks'"
+    }
+  ]
+}

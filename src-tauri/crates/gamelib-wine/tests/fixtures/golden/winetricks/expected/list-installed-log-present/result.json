@@ -1,0 +1,16 @@
+{
+  "op": "list-installed",
+  "platform": "linux",
+  "lines": [
+    "vcrun2019",
+    "corefonts",
+    "fontsmooth=rgb"
+  ],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [],
+  "logs": []
+}

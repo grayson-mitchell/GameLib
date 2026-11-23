@@ -1,0 +1,141 @@
+{
+  "op": "list-available",
+  "platform": "linux",
+  "components": [
+    {
+      "verb": "vcrun2019",
+      "title": "Visual C++ 2015-2019 libraries",
+      "category": "dlls",
+      "cached": true,
+      "publisher": "Microsoft",
+      "year": "2019",
+      "media": "download",
+      "conflicts": [
+        "vcrun2022"
+      ],
+      "needsGui": false
+    },
+    {
+      "verb": "d3dx9",
+      "title": "MS d3dx9 DLLs",
+      "category": "dlls",
+      "cached": false,
+      "publisher": "Microsoft",
+      "year": "2010",
+      "media": "download",
+      "needsGui": false
+    },
+    {
+      "verb": "corefonts",
+      "title": "MS Arial, Courier, Times fonts",
+      "category": "fonts",
+      "cached": false,
+      "publisher": "Microsoft",
+      "year": "2008",
+      "media": "download",
+      "needsGui": false
+    },
+    {
+      "verb": "fontsmooth=rgb",
+      "title": "Enable subpixel font smoothing for RGB LCDs",
+      "category": "settings",
+      "cached": false,
+      "needsGui": false
+    }
+  ],
+  "catalogCache": [
+    {
+      "verb": "vcrun2019",
+      "title": "Visual C++ 2015-2019 libraries",
+      "category": "dlls",
+      "cached": true,
+      "publisher": "Microsoft",
+      "year": "2019",
+      "media": "download",
+      "conflicts": [
+        "vcrun2022"
+      ],
+      "needsGui": false
+    },
+    {
+      "verb": "d3dx9",
+      "title": "MS d3dx9 DLLs",
+      "category": "dlls",
+      "cached": false,
+      "publisher": "Microsoft",
+      "year": "2010",
+      "media": "download",
+      "needsGui": false
+    },
+    {
+      "verb": "corefonts",
+      "title": "MS Arial, Courier, Times fonts",
+      "category": "fonts",
+      "cached": false,
+      "publisher": "Microsoft",
+      "year": "2008",
+      "media": "download",
+      "needsGui": false
+    },
+    {
+      "verb": "fontsmooth=rgb",
+      "title": "Enable subpixel font smoothing for RGB LCDs",
+      "category": "settings",
+      "cached": false,
+      "needsGui": false
+    }
+  ],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Downloading Winetricks"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks list-all"
+    }
+  ]
+}

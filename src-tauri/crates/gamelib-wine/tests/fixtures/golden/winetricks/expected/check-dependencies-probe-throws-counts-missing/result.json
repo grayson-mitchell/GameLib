@@ -1,0 +1,50 @@
+{
+  "op": "check-dependencies",
+  "platform": "linux",
+  "messages": [
+    "7z not installed! Winetricks might fail to install some packages or even open",
+    "cabextract not installed! Winetricks might fail to install some packages or even open",
+    "zenity not installed! Winetricks might fail to install some packages or even open",
+    "unzip not installed! Winetricks might fail to install some packages or even open",
+    "curl not installed! Winetricks might fail to install some packages or even open"
+  ],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": [
+      "7z",
+      "cabextract",
+      "curl",
+      "unzip",
+      "zenity"
+    ]
+  },
+  "launcher": [],
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "7z not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "cabextract not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "zenity not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "unzip not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "curl not installed! Winetricks might fail to install some packages or even open"
+    }
+  ]
+}

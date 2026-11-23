@@ -1,0 +1,71 @@
+{
+  "op": "queue",
+  "platform": "linux",
+  "applies": [
+    {
+      "accepted": false,
+      "reason": "busy",
+      "detail": "A winetricks install is already running."
+    }
+  ],
+  "duringRun": [],
+  "finalState": {
+    "runner": "gog",
+    "appName": "game",
+    "run": null,
+    "busy": true,
+    "environment": {
+      "unsupportedWineVersion": null,
+      "missingDependencies": []
+    },
+    "revision": 1
+  },
+  "installing": "dotnet48",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks list-all"
+    }
+  ]
+}

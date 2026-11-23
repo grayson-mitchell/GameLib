@@ -1,0 +1,56 @@
+{
+  "op": "check-dependencies",
+  "platform": "mac",
+  "messages": [
+    "7z not installed! Winetricks might fail to install some packages or even open",
+    "cabextract not installed! Winetricks might fail to install some packages or even open",
+    "zenity not installed! Winetricks might fail to install some packages or even open",
+    "unzip not installed! Winetricks might fail to install some packages or even open",
+    "curl not installed! Winetricks might fail to install some packages or even open",
+    "Check https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/Using-Heroic-on-a-Mac-computer#winetricks-setup to install the missing dependencies."
+  ],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": [
+      "7z",
+      "cabextract",
+      "curl",
+      "unzip",
+      "zenity"
+    ]
+  },
+  "launcher": [],
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "7z not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "cabextract not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "zenity not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "unzip not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "curl not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "Check https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/Using-Heroic-on-a-Mac-computer#winetricks-setup to install the missing dependencies."
+    }
+  ]
+}

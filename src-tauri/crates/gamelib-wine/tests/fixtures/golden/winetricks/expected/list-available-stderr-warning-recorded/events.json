@@ -1,0 +1,52 @@
+[
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": null,
+        "busy": false,
+        "environment": {
+          "unsupportedWineVersion": "7.7",
+          "missingDependencies": []
+        },
+        "revision": 1
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "warning: Your version of wine 7.7 is no longer supported upstream. You should upgrade to 8.x",
+          "warning: taskset/cpuset not available on your platform!"
+        ],
+        "installingComponent": "",
+        "lines": [
+          {
+            "kind": "environment",
+            "text": "warning: Your version of wine 7.7 is no longer supported upstream. You should upgrade to 8.x"
+          },
+          {
+            "kind": "environment",
+            "text": "warning: taskset/cpuset not available on your platform!"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Done"
+        ],
+        "installingComponent": "",
+        "failed": false
+      }
+    ]
+  }
+]

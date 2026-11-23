@@ -1,0 +1,248 @@
+[
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Done"
+        ],
+        "installingComponent": "",
+        "failed": false
+      }
+    ]
+  },
+  {
+    "channel": "queue:sendGameStatus",
+    "args": [
+      {
+        "appName": "game",
+        "runner": "gog",
+        "status": "winetricks"
+      }
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": {
+          "runId": 1,
+          "runner": "gog",
+          "appName": "game",
+          "verbs": [
+            "vcrun2019"
+          ],
+          "outcomes": {
+            "vcrun2019": "pending"
+          },
+          "currentVerb": "",
+          "status": "running",
+          "cancelRequested": false,
+          "log": []
+        },
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": []
+        },
+        "revision": 1
+      }
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": {
+          "runId": 1,
+          "runner": "gog",
+          "appName": "game",
+          "verbs": [
+            "vcrun2019"
+          ],
+          "outcomes": {
+            "vcrun2019": "installing"
+          },
+          "currentVerb": "vcrun2019",
+          "status": "running",
+          "cancelRequested": false,
+          "log": []
+        },
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": []
+        },
+        "revision": 2
+      }
+    ]
+  },
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      "vcrun2019"
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": {
+          "runId": 1,
+          "runner": "gog",
+          "appName": "game",
+          "verbs": [
+            "vcrun2019"
+          ],
+          "outcomes": {
+            "vcrun2019": "installing"
+          },
+          "currentVerb": "vcrun2019",
+          "status": "running",
+          "cancelRequested": false,
+          "log": []
+        },
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": "7.7",
+          "missingDependencies": []
+        },
+        "revision": 4
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "warning: Your version of wine 7.7 is no longer supported upstream. You should upgrade to 8.x",
+          "Executing w_do_call vcrun2019"
+        ],
+        "installingComponent": "vcrun2019",
+        "lines": [
+          {
+            "kind": "environment",
+            "text": "warning: Your version of wine 7.7 is no longer supported upstream. You should upgrade to 8.x"
+          },
+          {
+            "kind": "info",
+            "text": "Executing w_do_call vcrun2019"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Done"
+        ],
+        "installingComponent": "vcrun2019",
+        "failed": false
+      }
+    ]
+  },
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      ""
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": {
+          "runId": 1,
+          "runner": "gog",
+          "appName": "game",
+          "verbs": [
+            "vcrun2019"
+          ],
+          "outcomes": {
+            "vcrun2019": "installed"
+          },
+          "currentVerb": "",
+          "status": "running",
+          "cancelRequested": false,
+          "log": [
+            {
+              "kind": "environment",
+              "text": "warning: Your version of wine 7.7 is no longer supported upstream. You should upgrade to 8.x"
+            },
+            {
+              "kind": "info",
+              "text": "Executing w_do_call vcrun2019"
+            }
+          ]
+        },
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": "7.7",
+          "missingDependencies": []
+        },
+        "revision": 5
+      }
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": {
+          "runId": 1,
+          "runner": "gog",
+          "appName": "game",
+          "verbs": [
+            "vcrun2019"
+          ],
+          "outcomes": {
+            "vcrun2019": "installed"
+          },
+          "currentVerb": "",
+          "status": "done",
+          "cancelRequested": false,
+          "log": [
+            {
+              "kind": "environment",
+              "text": "warning: Your version of wine 7.7 is no longer supported upstream. You should upgrade to 8.x"
+            },
+            {
+              "kind": "info",
+              "text": "Executing w_do_call vcrun2019"
+            }
+          ]
+        },
+        "busy": false,
+        "environment": {
+          "unsupportedWineVersion": "7.7",
+          "missingDependencies": []
+        },
+        "revision": 6
+      }
+    ]
+  },
+  {
+    "channel": "queue:sendGameStatus",
+    "args": [
+      {
+        "appName": "game",
+        "runner": "gog",
+        "status": "done"
+      }
+    ]
+  }
+]

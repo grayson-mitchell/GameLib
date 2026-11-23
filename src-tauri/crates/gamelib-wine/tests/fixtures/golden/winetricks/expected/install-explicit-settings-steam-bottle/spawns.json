@@ -1,0 +1,159 @@
+[
+  {
+    "program": "which",
+    "argv": [
+      "7z"
+    ],
+    "envDiff": {
+      "set": {
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "480",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-480",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "cabextract"
+    ],
+    "envDiff": {
+      "set": {
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "480",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-480",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "zenity"
+    ],
+    "envDiff": {
+      "set": {
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "480",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-480",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "unzip"
+    ],
+    "envDiff": {
+      "set": {
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "480",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-480",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "curl"
+    ],
+    "envDiff": {
+      "set": {
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "480",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-480",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<TOOLS>/winetricks",
+    "argv": [
+      "-q",
+      "d3dx9"
+    ],
+    "envDiff": {
+      "set": {
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "480",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-480",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": "Executing w_do_call d3dx9\n"
+    }
+  }
+]

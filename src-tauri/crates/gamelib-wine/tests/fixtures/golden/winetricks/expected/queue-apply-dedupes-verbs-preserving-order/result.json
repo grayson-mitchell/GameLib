@@ -1,0 +1,227 @@
+{
+  "op": "queue",
+  "platform": "linux",
+  "applies": [
+    {
+      "accepted": true,
+      "state": {
+        "runner": "gog",
+        "appName": "game",
+        "run": {
+          "runId": 1,
+          "runner": "gog",
+          "appName": "game",
+          "verbs": [
+            "d3dx9",
+            "vcrun2019"
+          ],
+          "outcomes": {
+            "d3dx9": "installing",
+            "vcrun2019": "pending"
+          },
+          "currentVerb": "d3dx9",
+          "status": "running",
+          "cancelRequested": false,
+          "log": []
+        },
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": []
+        },
+        "revision": 3
+      }
+    }
+  ],
+  "duringRun": [],
+  "finalState": {
+    "runner": "gog",
+    "appName": "game",
+    "run": {
+      "runId": 1,
+      "runner": "gog",
+      "appName": "game",
+      "verbs": [
+        "d3dx9",
+        "vcrun2019"
+      ],
+      "outcomes": {
+        "d3dx9": "installed",
+        "vcrun2019": "installed"
+      },
+      "currentVerb": "",
+      "status": "done",
+      "cancelRequested": false,
+      "log": [
+        {
+          "kind": "info",
+          "text": "Executing w_do_call d3dx9"
+        },
+        {
+          "kind": "info",
+          "text": "d3dx9 installed"
+        },
+        {
+          "kind": "info",
+          "text": "Executing w_do_call vcrun2019"
+        },
+        {
+          "kind": "info",
+          "text": "vcrun2019 installed"
+        }
+      ]
+    },
+    "busy": false,
+    "environment": {
+      "unsupportedWineVersion": null,
+      "missingDependencies": []
+    },
+    "revision": 8
+  },
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks list-all"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks -q d3dx9"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Executing w_do_call d3dx9"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "d3dx9 installed"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks -q vcrun2019"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Executing w_do_call vcrun2019"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "vcrun2019 installed"
+    }
+  ]
+}

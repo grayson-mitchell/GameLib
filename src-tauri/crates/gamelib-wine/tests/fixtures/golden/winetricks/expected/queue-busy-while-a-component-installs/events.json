@@ -1,0 +1,14 @@
+[
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Done"
+        ],
+        "installingComponent": "",
+        "failed": false
+      }
+    ]
+  }
+]

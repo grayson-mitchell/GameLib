@@ -1,0 +1,86 @@
+{
+  "op": "install",
+  "platform": "linux",
+  "verb": "vcrun2019",
+  "outcome": "installed",
+  "onLines": [
+    {
+      "kind": "environment",
+      "text": "7z not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "kind": "environment",
+      "text": "zenity not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "kind": "info",
+      "text": "Executing w_do_call vcrun2019"
+    }
+  ],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": [
+      "7z",
+      "zenity"
+    ]
+  },
+  "launcher": [
+    {
+      "fn": "validWine",
+      "name": "Wine-9"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "wine",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine"
+      },
+      "appName": "game"
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks -q vcrun2019"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "7z not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "zenity not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Executing w_do_call vcrun2019"
+    }
+  ]
+}

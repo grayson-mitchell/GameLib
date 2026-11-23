@@ -1,0 +1,23 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/winetricks",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "b17c0d159aab66d4020fa29aa1b8c123e592352ddd89395067b363be07ebdc79"
+  }
+]

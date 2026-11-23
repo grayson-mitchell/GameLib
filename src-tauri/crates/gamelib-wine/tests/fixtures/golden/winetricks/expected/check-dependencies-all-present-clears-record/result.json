@@ -1,0 +1,12 @@
+{
+  "op": "check-dependencies",
+  "platform": "linux",
+  "messages": [],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [],
+  "logs": []
+}
