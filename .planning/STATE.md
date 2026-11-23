@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-45-PLAN.md
-last_updated: "2026-11-23T14:56:52.135Z"
+stopped_at: Completed 87-46-PLAN.md
+last_updated: "2026-11-23T15:06:07.254Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 46e951936c5bd51a8e7dbcd92baa491b462c680b
+state_head: 153095c86a074783ad4271e81cb254de66148178
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 46 of 59
+Plan: 47 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -455,6 +455,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P43 | 24 min | 3 tasks | 83 files |
 | Phase 87 P44 | 20 min | 3 tasks | 13 files |
 | Phase 87 P45 | 17 min | 2 tasks | 9 files |
+| Phase 87 P46 | 10 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -965,6 +966,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: Demo-status is the one real-profile spawn (replace_env false, CX_BOTTLE added, spike 060 reason in code); run_tool is the isolated arm (five programs, eight variables at a fresh 0700 dir); a SpecRunner cannot tell a failed spawn from a killed child so spawn-error reads as nonzero-exit (87-44).
 - [Phase 87]: 87-45: the engine decision is ported whole in Rust (decision::{preflight,launch,creation,override_options}): the G29 two-probe pre-flight, decide_launch_engine over closed kinds with no bottled-Steam, GPTK or DXMT variant, the WR-01 inconclusive branch included; 1798 items of the 87-13 decision goldens replay
 - [Phase 87]: 87-45: engine_decide_launch takes only the stored override and the process monitor's phase from the caller; the pin table is always the shared one and the bottle's marker is read in Rust, so a caller cannot name an engine the shared table does not ship (T-87-46)
+- [Phase 87]: 87-46: decision::offline re-exports the gate (stays in offline.rs); the gate is not composed into a production fn here, 87-50 does that
 
 ### Pending Todos
 
@@ -1245,8 +1247,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T14:56:49.686Z
-Stopped at: Completed 87-45-PLAN.md
+Last session: 2026-11-23T15:06:04.843Z
+Stopped at: Completed 87-46-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
