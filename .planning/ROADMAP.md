@@ -187,7 +187,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 83: Native seam, gamelib-core and process/shutdown contract** — 11/11 plans; completed 2026-11-21
 - [x] **Phase 84: Logger** — 18/18 plans (11 + 7 gap closure); completed 2026-11-22
 - [x] **Phase 85: Store host, config and versioned migrations** — 25/25 plans in 20 waves (the D-03 deletion split into four plans for context budget); completed 2026-11-22
-- [ ] **Phase 86: Pure leaf services** — 26 plans in 21 waves; planned 2026-11-22 (executes after 85-19/20)
+- [x] **Phase 86: Pure leaf services** — 27/27 plans in 21 waves (26 + 1 gap closure); completed 2026-11-23
 - [ ] **Phase 87: Engine, Wine and tools** — 59 plans in 38 waves; planned 2026-11-23 (executes after Phase 86 closes)
 - [ ] **Phase 88: Launch pipeline** — not planned
 - [ ] **Phase 89: Steam library state** — not planned
@@ -562,7 +562,7 @@ Plans:
   3. Recorded fixtures exist for each previously untested directory before it is ported
   4. Each ported slice's TypeScript and sidecar registrations are deleted in this phase (the delete gate per slice passes)
 
-**Plans:** 26/26 plans executed in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
+**Plans:** 27/27 plans complete in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
 
 Plans:
 **Wave 1**
@@ -632,6 +632,9 @@ Plans:
 
 **Wave 21** *(blocked on Wave 20 completion)*
 - [x] 86-26-PLAN.md — Run the live macOS gate (signed Phase 85 -> signed Phase 86, D-14/D-15)
+
+**Gap closure**
+- [x] 86-27-PLAN.md — Failure-path hardening: CR-41, WR-41, WR-42 and the sign-out wiki-cache clear (truth G)
 
 **Cross-cutting constraints:** <!-- gsd:generated -->
 - Memory-note shape: any offline step turns the network off only for the action (off, act, on, report)
