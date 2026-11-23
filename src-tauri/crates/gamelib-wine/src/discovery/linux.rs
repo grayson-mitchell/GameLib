@@ -174,6 +174,8 @@ mod tests {
         }
     }
 
+    // POSIX PATH and path-separator fixtures (the Linux and macOS discovery rules).
+    #[cfg(unix)]
     #[test]
     fn the_lib_folders_are_named_when_present_and_empty_when_not() {
         let home = FakeHome::new("wine-linux-libs-");

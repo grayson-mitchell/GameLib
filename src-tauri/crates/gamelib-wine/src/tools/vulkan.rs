@@ -176,6 +176,8 @@ mod tests {
         }
     }
 
+    // POSIX PATH and path-separator fixtures (the Linux and macOS discovery rules).
+    #[cfg(unix)]
     #[tokio::test]
     async fn the_version_probes_are_memoised_and_read_the_helpers_json() {
         let home = FakeHome::new("vulkan-");

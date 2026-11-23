@@ -80,12 +80,15 @@ pub fn is_executable_file(path: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(unix)]
     use std::path::PathBuf;
 
     fn always(_: &Path) -> bool {
         true
     }
 
+    // POSIX PATH and path-separator fixtures (the Linux and macOS discovery rules).
+    #[cfg(unix)]
     #[test]
     fn the_first_directory_that_holds_an_executable_wine_wins_and_names_its_sibling_wineserver() {
         let present = |p: &Path| p == Path::new("/b/wine") || p == Path::new("/a/wine");
@@ -109,6 +112,8 @@ mod tests {
         }
     }
 
+    // POSIX PATH and path-separator fixtures (the Linux and macOS discovery rules).
+    #[cfg(unix)]
     #[test]
     fn an_empty_path_entry_is_not_the_current_directory() {
         let seen: std::cell::RefCell<Vec<PathBuf>> = Default::default();

@@ -319,6 +319,8 @@ mod tests {
         assert!(list_dir(&home.root().join("nope")).is_empty());
     }
 
+    // POSIX PATH and path-separator fixtures (the Linux and macOS discovery rules).
+    #[cfg(unix)]
     #[test]
     fn the_wine_execs_rule_names_the_sibling_wineserver_or_nothing() {
         let home = gamelib_testutil::FakeHome::new("wine-disc-execs-");
