@@ -3,10 +3,12 @@
  * Value-imports `backend/tools`, so steam modules reach it lazily.
  *
  * Phase 87 (87-34): this left `services/engineServices.ts`, which no longer value-imports the tools module
- * (its DXVK `installRemove` reaches Rust through the `dxvkInstallRemove` shim). What it still builds is the
- * Winetricks and wine-command tools: the launcher's known-fix step and the Steam bridge's known fixes call them
- * until 87-35 (Winetricks) and 87-36 (the wine-command family) flip those to Rust, and 87-37 deletes the TS
- * tools. The DXVK member of the `Tools` it returns has no live caller.
+ * (its DXVK `installRemove` reaches Rust through the `dxvkInstallRemove` shim).
+ * Phase 87 (87-35): the Winetricks callers left too. The launcher's known-fix install and installed-packages log
+ * line and the Steam bridge's known fixes reach Rust through the `winetricksInstallVerbs` and `winetricksListInstalled`
+ * shims (`enginewine/tools.ts`), so the `Winetricks` and `DXVK` members of the `Tools` it returns have no live caller.
+ * What it still builds for a caller is `runWineCommandOnGame`, which the launcher's known-fix `runInPrefix` step uses
+ * until 87-36 flips the wine-command family; 87-37 deletes the TS tools and this module with them.
  */
 import { createTools } from 'backend/tools'
 import type { Tools } from 'backend/tools'

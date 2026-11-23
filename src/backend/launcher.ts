@@ -64,7 +64,11 @@ import { showDialogBoxModalAuto, type DialogBoxDeps } from './dialog/dialog'
 import { readFileSync, writeFileSync } from 'fs'
 import { searchForExecutableOnPath } from './utils/os/path'
 import { downloadRuntime, isRuntimeInstalled } from './enginewine/runtimes'
-import { dxvkInstallRemove } from './enginewine/tools'
+import {
+  dxvkInstallRemove,
+  winetricksInstallVerbs,
+  winetricksListInstalled
+} from './enginewine/tools'
 import { validWine } from './enginewine/wineCore'
 import { recordPlaySession } from './runsForMe'
 import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
@@ -972,13 +976,16 @@ async function prepareWineLaunch(
     }
   }
 
+  // Phase 87 (87-35): the log is read in Rust (`wine_winetricks_installed`), with the settings this step holds.
   logWriter.logInfo(
-    toolsFrom(engineSource(deps))
-      .Winetricks.listInstalled(game)
-      .then((installedPackages) => {
-        const packagesString = installedPackages.join(', ')
-        return `Winetricks packages: ${packagesString}\n\n`
-      })
+    winetricksListInstalled(deps, {
+      settings: gameSettings,
+      runner: gameInfo.runner,
+      appName: gameInfo.app_name
+    }).then((installedPackages) => {
+      const packagesString = (installedPackages as string[]).join(', ')
+      return `Winetricks packages: ${packagesString}\n\n`
+    })
   )
 
   // We only want to log this for legendary on Linux
@@ -1042,7 +1049,7 @@ async function prepareWineLaunch(
       logWriter
     )
 
-    await installFixes(deps, gameInfo.app_name, gameInfo.runner)
+    await installFixes(deps, gameInfo.app_name, gameInfo.runner, gameSettings)
   }
 
   // Tier-2 profile registry, every launch (Decision 1, quick 261026-j6x).
@@ -1180,7 +1187,8 @@ async function prepareWineLaunch(
 async function installFixes(
   deps: LauncherDeps,
   appName: string,
-  runner: Runner
+  runner: Runner,
+  gameSettings: GameSettings
 ) {
   const knownFixes = readKnownFixes(deps, appName, runner)
 
@@ -1193,13 +1201,13 @@ async function installFixes(
       status: 'winetricks'
     })
 
-    for (const winetricksPackage of knownFixes.winetricks) {
-      await toolsFrom(engineSource(deps)).Winetricks.install(
-        runner,
-        appName,
-        winetricksPackage
-      )
-    }
+    // Phase 87 (87-35): the verbs install in Rust, one after another, with the launch settings this step holds.
+    await winetricksInstallVerbs(deps, {
+      settings: gameSettings,
+      runner,
+      appName,
+      verbs: knownFixes.winetricks
+    })
   }
 
   if (knownFixes.runInPrefix) {

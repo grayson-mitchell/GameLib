@@ -118,6 +118,15 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/sideload/games.ts',
   'src/backend/storeManagers/storeManagerCommon/games.ts'
 ]
+/**
+ * Every non-test importer of `enginewine/tools.ts` (the check is per file, so every row of that file lists them all):
+ * the launcher, the Steam bridge's known fixes and the still-TS engine's `installRemove` (87-56 deletes the last).
+ */
+const TOOLS_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/launcher.ts',
+  'src/backend/services/engineServices.ts',
+  'src/backend/storeManagers/steam/bridgeKnownFixes.ts'
+]
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
   'src/backend/services/types.ts',
   'src/backend/sidecar/bootstrap.ts',
@@ -278,10 +287,26 @@ const SCHEDULE: readonly ScheduleRow[] = [
     file: 'src/backend/enginewine/tools.ts',
     shape: 'shim',
     channel: 'RUST_WINE_DXVK_INSTALL_REMOVE',
-    callers: [
-      'src/backend/launcher.ts',
-      'src/backend/services/engineServices.ts'
-    ],
+    callers: TOOLS_SHIM_IMPORTERS,
+    deletedBy: 88
+  },
+  // 87-35 (D-15): the Winetricks shims. The launcher's known-fix install and its installed-packages log line, and the
+  // Steam bridge's known fixes, reach the Rust Winetricks ops through them with the settings they already hold; Phase
+  // 88 moves launch into Rust and deletes them. `callers` is every importer of the file (the check is per file).
+  {
+    name: 'winetricksInstallVerbs',
+    file: 'src/backend/enginewine/tools.ts',
+    shape: 'shim',
+    channel: 'RUST_WINE_WINETRICKS_INSTALL',
+    callers: TOOLS_SHIM_IMPORTERS,
+    deletedBy: 88
+  },
+  {
+    name: 'winetricksListInstalled',
+    file: 'src/backend/enginewine/tools.ts',
+    shape: 'shim',
+    channel: 'RUST_WINE_WINETRICKS_LIST_INSTALLED',
+    callers: TOOLS_SHIM_IMPORTERS,
     deletedBy: 88
   },
   // 87-35 (D-23): the Winetricks family's resolvers, registered by the same `registerEngineWineResolvers`. The

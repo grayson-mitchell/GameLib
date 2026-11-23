@@ -72,14 +72,11 @@ describe('winetricksInstallPathInvariant (Phase 45 Plan 02, D-11 promote: winetr
     expect(sources.length).toBeGreaterThanOrEqual(MIN_FILES_SCANNED)
   })
 
-  it('Invariant 1: Winetricks.install( appears only in backend/tools/winetricksQueue.ts, backend/launcher.ts and the Steam bridge applier', () => {
-    const expectedCallers = new Set([
-      'backend/tools/winetricksQueue.ts',
-      'backend/launcher.ts',
-      // quick 261024-tny: backend-only caller (the Steam bridge launch applier);
-      // not reachable from the renderer, so the invariant's intent holds.
-      'backend/storeManagers/steam/bridgeKnownFixes.ts'
-    ])
+  it('Invariant 1: Winetricks.install( appears only in backend/tools/winetricksQueue.ts (the launcher and the Steam bridge applier install through the Rust shim, Phase 87 Plan 35)', () => {
+    // Phase 87 Plan 35 (D-06): the launcher's known-fix step and the Steam bridge applier call the
+    // `winetricksInstallVerbs` shim (`enginewine/tools.ts`) over the Rust install, so the TS `Winetricks.install(`
+    // survives only in the dead TS queue, which 87-37 deletes together with this gate.
+    const expectedCallers = new Set(['backend/tools/winetricksQueue.ts'])
     const actualCallers = new Set(
       sources
         .filter((f) => f.stripped.includes('Winetricks.install('))
@@ -122,10 +119,8 @@ describe('winetricksInstallPathInvariant (Phase 45 Plan 02, D-11 promote: winetr
     )
   })
 
-  it('non-vacuity: winetricksApply is actually found in the sidecar registration module', () => {
-    const registration = findFile(
-      'backend/sidecar/wineToolsFlowRegistration.ts'
-    )
+  it('non-vacuity: winetricksApply is actually found in the sidecar registration module (the scheduled resolvers, Phase 87 Plan 35)', () => {
+    const registration = findFile('backend/sidecar/engineWineResolvers.ts')
     expect(registration.stripped).toContain('winetricksApply')
   })
 })

@@ -2,8 +2,8 @@
  * quick 261024-tny: applySteamBridgeKnownFixes -- the Steam bridge launch's
  * known-fixes hook. Uses the REAL readKnownFixes (fixes file written under a
  * tmp-redirected fixesPath) so the `<appId>-steam.json` name is proven end to
- * end. Winetricks, runWineCommand, the status sender and the bottle helper are
- * mocked; no child process is spawned.
+ * end. The Rust Winetricks install (`requestRustInvoke`), runWineCommand, the status sender and the bottle
+ * helper are mocked; no child process is spawned.
  */
 
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
@@ -17,8 +17,7 @@ import {
 } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import * as toolsFromModule from 'backend/services/toolsFrom'
-import type { Tools } from 'backend/tools'
+import { RUST_WINE_WINETRICKS_INSTALL } from 'common/types/sidecarTransport'
 
 jest.mock('os', () => {
   const actual = jest.requireActual('os')
@@ -33,7 +32,8 @@ jest.mock('os', () => {
 // Under jest app.getAppPath() resolves to the repo root, so the real
 // bundledFixesPath is the repo's own public/fixes. Point it at a tmp dir so the
 // tests can never write to or delete the shipped profiles.
-const mockWinetricksInstall = jest.fn()
+// The one Rust call the Winetricks verbs go through (87-35): `[target, verbs]` on RUST_WINE_WINETRICKS_INSTALL.
+const mockRustInvoke = jest.fn()
 const mockRunWineCommand = jest.fn()
 const mockSendGameStatusUpdate = jest.fn()
 const mockLogWarning = jest.fn()
@@ -96,6 +96,7 @@ const DEPS = {
   commandRunner: {
     runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)
   },
+  requestRustInvoke: (...args: unknown[]) => mockRustInvoke(...args),
   paths
 } as unknown as Parameters<typeof applySteamBridgeKnownFixes>[0]
 
@@ -137,14 +138,11 @@ beforeEach(() => {
   rmSync(join(fixesPath, `${APP_ID}-steam.profile.json`), { force: true })
   rmSync(localFixesPath, { recursive: true, force: true })
   rmSync(bundledFixesPath, { recursive: true, force: true })
-  // The tools instance the known-fix applier builds from its deps (66.1-22f): the Winetricks
-  // seam is observed by spying the builder, not by mocking a module.
-  jest.spyOn(toolsFromModule, 'toolsFrom').mockReturnValue({
-    Winetricks: {
-      install: (...args: unknown[]) => mockWinetricksInstall(...args)
-    }
-  } as unknown as Tools)
-  mockWinetricksInstall.mockResolvedValue('installed')
+  // The Winetricks seam is observed at the one Rust call the verbs go through: it answers one outcome per verb.
+  mockRustInvoke.mockImplementation(
+    async (_channel: string, [, verbs]: [unknown, string[]]) =>
+      verbs.map(() => 'installed')
+  )
   mockRunWineCommand.mockResolvedValue({ stdout: '', stderr: '', code: 0 })
   mockResolveOverlayEnv.mockResolvedValue({})
   mockDetectGameMaker.mockResolvedValue(NO_MATCH)
@@ -198,7 +196,7 @@ describe('applySteamBridgeKnownFixes', () => {
     const result = await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
 
     expect(result).toBe(BRIDGE)
-    expect(mockWinetricksInstall).not.toHaveBeenCalled()
+    expect(mockRustInvoke).not.toHaveBeenCalled()
     expect(mockRunWineCommand).not.toHaveBeenCalled()
     expect(mockSendGameStatusUpdate).not.toHaveBeenCalled()
   })
@@ -214,16 +212,23 @@ describe('applySteamBridgeKnownFixes', () => {
       runner: 'steam',
       status: 'winetricks'
     })
-    expect(mockWinetricksInstall).toHaveBeenCalledTimes(2)
-    for (const [i, verb] of ['vcrun2019', 'd3dx9'].entries()) {
-      const call = mockWinetricksInstall.mock.calls[i]
-      expect(call.slice(0, 4)).toEqual(['steam', APP_ID, verb, undefined])
-      expect(call[4].wineCrossoverBottle).toBe('GameLibSteamBridge-480')
-      expect(call[4].winePrefix).toBe('/mock/Bottles/GameLibSteamBridge-480')
-    }
+    // One call carries every valid verb, in order; the invalid one never reaches Rust.
+    expect(mockRustInvoke).toHaveBeenCalledTimes(1)
+    const [channel, [target, verbs]] = defined(
+      mockRustInvoke.mock.calls[0],
+      'rust call'
+    )
+    expect(channel).toBe(RUST_WINE_WINETRICKS_INSTALL)
+    expect(verbs).toEqual(['vcrun2019', 'd3dx9'])
+    expect(target.runner).toBe('steam')
+    expect(target.appName).toBe(APP_ID)
+    expect(target.settings.wineCrossoverBottle).toBe('GameLibSteamBridge-480')
+    expect(target.settings.winePrefix).toBe(
+      '/mock/Bottles/GameLibSteamBridge-480'
+    )
     expect(mockSendGameStatusUpdate.mock.invocationCallOrder[0]).toBeLessThan(
       defined(
-        mockWinetricksInstall.mock.invocationCallOrder[0],
+        mockRustInvoke.mock.invocationCallOrder[0],
         'winetricks call order'
       )
     )
@@ -293,42 +298,36 @@ describe('applySteamBridgeKnownFixes', () => {
 
   describe('failure tolerance', () => {
     it.each([
-      [
-        'rejects',
-        () => mockWinetricksInstall.mockRejectedValue(new Error('x'))
-      ],
-      [
-        'returns failed',
-        () => mockWinetricksInstall.mockResolvedValue('failed')
-      ],
-      [
-        'returns refused',
-        () => mockWinetricksInstall.mockResolvedValue('refused')
-      ]
-    ])('Winetricks.install %s: warns, resolves, keeps env', async (_n, arm) => {
-      writeFixes({
-        title: 't',
-        winetricks: ['vcrun2019'],
-        envVariables: { DXVK_ASYNC: '1' }
-      })
-      arm()
+      ['rejects', () => mockRustInvoke.mockRejectedValue(new Error('x'))],
+      ['returns failed', () => mockRustInvoke.mockResolvedValue(['failed'])],
+      ['returns refused', () => mockRustInvoke.mockResolvedValue(['refused'])]
+    ])(
+      'the Rust Winetricks install %s: warns, resolves, keeps env',
+      async (_n, arm) => {
+        writeFixes({
+          title: 't',
+          winetricks: ['vcrun2019'],
+          envVariables: { DXVK_ASYNC: '1' }
+        })
+        arm()
 
-      const result = await applySteamBridgeKnownFixes(
-        DEPS,
-        APP_ID,
-        BRIDGE,
-        ROOT
-      )
+        const result = await applySteamBridgeKnownFixes(
+          DEPS,
+          APP_ID,
+          BRIDGE,
+          ROOT
+        )
 
-      expect(mockLogWarning).toHaveBeenCalledWith(
-        expect.stringContaining('vcrun2019'),
-        'Steam'
-      )
-      expect(result.enviromentOptions).toEqual([
-        { key: 'USER', value: 'x' },
-        { key: 'DXVK_ASYNC', value: '1' }
-      ])
-    })
+        expect(mockLogWarning).toHaveBeenCalledWith(
+          expect.stringContaining('vcrun2019'),
+          'Steam'
+        )
+        expect(result.enviromentOptions).toEqual([
+          { key: 'USER', value: 'x' },
+          { key: 'DXVK_ASYNC', value: '1' }
+        ])
+      }
+    )
 
     it('runWineCommand rejecting warns and still resolves with env', async () => {
       writeFixes({

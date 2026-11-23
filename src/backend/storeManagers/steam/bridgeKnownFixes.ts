@@ -54,6 +54,7 @@ import type { AppPaths } from 'backend/process/context'
 import { isAbsolute, relative, resolve } from 'node:path'
 import type { EnviromentVariable, GameSettings } from 'common/types'
 import type { EngineServicesSource } from 'backend/services/engineServices'
+import { winetricksInstallVerbs } from 'backend/enginewine/tools'
 import {
   readKnownFixes,
   readKnownFixProfile,
@@ -226,10 +227,6 @@ export async function applySteamBridgeKnownFixes(
   }
 
   try {
-    // Lazy, mirroring games.ts's lazy launcher import: avoids the cycle.
-    const { Winetricks } = (
-      await import('backend/services/toolsFrom')
-    ).toolsFrom(deps)
     const { runWineCommand } = deps.commandRunner
 
     const registryCtx = { label: `Steam ${appId}`, logPrefix: LogPrefix.Steam }
@@ -276,6 +273,7 @@ export async function applySteamBridgeKnownFixes(
           bridgeBottleSettings.wineCrossoverBottle
         )
       }
+      const verbs: string[] = []
       for (const verb of fixes.winetricks) {
         if (typeof verb !== 'string' || verb === '' || verb.startsWith('-')) {
           logWarning(
@@ -284,23 +282,28 @@ export async function applySteamBridgeKnownFixes(
           )
           continue
         }
+        verbs.push(verb)
+      }
+      if (verbs.length > 0) {
         try {
-          const outcome = await Winetricks.install(
-            'steam',
-            appId,
-            verb,
-            undefined,
-            winetricksSettings
-          )
-          if (outcome !== 'installed') {
-            logWarning(
-              `Steam ${appId}: winetricks ${verb} did not install (${outcome})`,
-              LogPrefix.Steam
-            )
+          // Phase 87 (87-35): the verbs install in Rust, one after another, one outcome word per verb.
+          const outcomes = (await winetricksInstallVerbs(deps, {
+            settings: winetricksSettings,
+            runner: 'steam',
+            appName: appId,
+            verbs
+          })) as string[]
+          for (const [index, verb] of verbs.entries()) {
+            if (outcomes[index] !== 'installed') {
+              logWarning(
+                `Steam ${appId}: winetricks ${verb} did not install (${outcomes[index]})`,
+                LogPrefix.Steam
+              )
+            }
           }
         } catch (error) {
           logWarning(
-            `Steam ${appId}: winetricks ${verb} threw: ${String(error)}`,
+            `Steam ${appId}: winetricks ${verbs.join(', ')} threw: ${String(error)}`,
             LogPrefix.Steam
           )
         }
