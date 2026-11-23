@@ -6,9 +6,9 @@
 import { RUST_ENGINE_BOTTLE_PREPARE } from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
-import { prepareBottle } from '../prepareBottle'
-import type { EngineSelection } from '../engineTypes'
-import { ENGINE_PINS } from '../enginePins'
+import { prepareBottle } from '../engine/prepareBottle'
+import type { EngineSelection } from 'common/types/engine'
+import { ENGINE_PINS } from 'backend/enginewine/twin'
 
 const CROSSOVER: EngineSelection = {
   kind: 'crossover',
@@ -27,16 +27,11 @@ function services(replies: unknown[]) {
   return {
     calls,
     value: {
-      paths: { userHome: '/nonexistent-home' },
-      engineRuntime: {
-        requestRustInvoke,
-        fallback: {
-          pinnedEngineRoot: () => '/nonexistent-engines',
-          pinnedEnginePaths: jest.fn(),
-          isPinnedEngineInstalled: () => false,
-          ensurePinnedEngine: jest.fn()
-        }
-      }
+      paths: {
+        userHome: '/nonexistent-home',
+        toolsPath: '/nonexistent-tools'
+      },
+      requestRustInvoke
     } as unknown as Parameters<typeof prepareBottle>[0]
   }
 }

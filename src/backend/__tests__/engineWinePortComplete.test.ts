@@ -513,12 +513,6 @@ const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
   ],
   perGameBottle: [],
   pinnedEngineProgress: [],
-  prepareBottle: [
-    'src/backend/storeManagers/steam/engine/steamEngineDeps.ts',
-    'src/backend/storeManagers/steam/gameEngineDialogs.ts',
-    'src/backend/storeManagers/steam/gameInstallBridge.ts',
-    'src/backend/storeManagers/steam/gameLaunch.ts'
-  ],
   runTool: [],
   testedCrossoverVersions: [],
   toolSettings: [],

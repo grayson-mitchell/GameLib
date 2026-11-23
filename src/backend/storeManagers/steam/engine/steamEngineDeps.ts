@@ -7,7 +7,7 @@
  * engine state (`steamEngineStateFacts`). Nothing here is a callback and no Rust code calls back into it.
  */
 import type { AppPaths } from 'backend/process/context'
-import type { PrepareBottleCall } from 'backend/engine/prepareBottle'
+import type { PrepareBottleCall } from './prepareBottle'
 import type { GameSettings } from 'common/types'
 import type { EngineSelection, EngineState } from 'common/types/engine'
 import type { MonitorPhase } from 'backend/enginewine/decision'
@@ -83,7 +83,7 @@ export function steamPrepareFacts(
   services: SteamEngineBottle & {
     paths: BridgeBottleDeps['paths']
     engineRuntime: BridgeBottleDeps['engineRuntime']
-    globalGameSettings: () => GameSettings
+    config: { getSettings(): GameSettings }
   },
   appId: string,
   next: EngineSelection
@@ -105,7 +105,7 @@ export function steamPrepareFacts(
       next.kind === 'crossover'
         ? getBridgeBottleSettings(
             {
-              config: { getSettings: () => services.globalGameSettings() },
+              config: services.config,
               steamBottle: services.steamBottle,
               paths: services.paths,
               engineRuntime: services.engineRuntime,
@@ -114,7 +114,7 @@ export function steamPrepareFacts(
             appId
           )
         : undefined,
-    fallbackSettings: services.globalGameSettings()
+    fallbackSettings: services.config.getSettings()
   }
 }
 

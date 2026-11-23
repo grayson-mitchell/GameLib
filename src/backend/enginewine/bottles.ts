@@ -24,7 +24,7 @@ import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
  * call Rust directly. Each body is one returned typed call (D-06): everything the TS callbacks used to supply
  * (`getMonitorPhase`, `ownBottleName`, `crossoverSettings`, `crossoverHealthy`) is resolved by the caller into a
  * value first, and the pin download, the status update and the selection view are the caller's work around the
- * call (`engine/prepareBottle.ts`). The shim schedule in `engineWineShimSchedule.test.ts` pins the shape and the
+ * call (`steam/engine/prepareBottle.ts`). The shim schedule in `engineWineShimSchedule.test.ts` pins the shape and the
  * phase that deletes each shim.
  */
 

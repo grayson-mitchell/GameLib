@@ -1,5 +1,5 @@
 import * as bottlesModule from 'backend/enginewine/bottles'
-import * as prepareBottleModule from 'backend/engine/prepareBottle'
+import * as prepareBottleModule from '../engine/prepareBottle'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import type { GameConfigSlice } from 'backend/game_config'
 import type { SteamDrm } from '../bridge/drm/drmLaunchSetup'

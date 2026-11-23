@@ -117,7 +117,6 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/engine/gamePrefix.ts',
   'src/backend/engine/launchSettings.ts',
   'src/backend/engine/perGameBottle.ts',
-  'src/backend/engine/prepareBottle.ts',
   'src/backend/engine/toolSettings.ts',
   'src/backend/launcher.ts',
   'src/backend/sidecar/engineWineResolvers.ts',
@@ -140,6 +139,7 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/bridgeWineTools.ts',
   'src/backend/storeManagers/steam/directLaunch/directLaunchProbes.ts',
   'src/backend/storeManagers/steam/engine/pinnedEngine.ts',
+  'src/backend/storeManagers/steam/engine/prepareBottle.ts',
   'src/backend/storeManagers/steam/gameBridgeLaunch.ts',
   'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts',
   'src/backend/storeManagers/steam/gameEngineDialogs.ts',
@@ -164,8 +164,8 @@ const BOTTLES_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/engine/engineSync.ts',
   'src/backend/engine/fallbackBottleCall.ts',
   'src/backend/engine/perGameBottle.ts',
-  'src/backend/engine/prepareBottle.ts',
   'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
+  'src/backend/storeManagers/steam/engine/prepareBottle.ts',
   'src/backend/storeManagers/steam/gameBridgeLaunch.ts'
 ]
 /** Every non-test importer of `enginewine/launch.ts` (the check is per file, so every row of that file lists them all). */
@@ -354,7 +354,7 @@ const SCHEDULE: readonly ScheduleRow[] = [
     deletedBy: 98
   },
   // 87-42 (D-03, D-15): the bottle shims. The engine switch is one typed call into Rust; the TS callbacks became values
-  // and the pin download, the status update and the selection view are `engine/prepareBottle.ts`'s work around it.
+  // and the pin download, the status update and the selection view are `steam/engine/prepareBottle.ts`'s work around it.
   // The Steam launch, the DRM launch, the install's redist step and the still-TS launch step call it through
   // `prepareBottle`; Phase 96 moves the last Steam callers into Rust and deletes the shim.
   {
@@ -657,12 +657,12 @@ const SCHEDULE: readonly ScheduleRow[] = [
     wiring: ['registerEngineSelectionView'],
     callers: [
       'src/backend/engine/engineSync.ts',
-      'src/backend/engine/prepareBottle.ts',
       'src/backend/sidecar/bootstrap.ts',
       'src/backend/sidecar/handlers.ts',
       'src/backend/storeManagers/steam/bridgeBottle.ts',
       'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
       'src/backend/storeManagers/steam/bridgeWineTools.ts',
+      'src/backend/storeManagers/steam/engine/prepareBottle.ts',
       'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts',
       'src/backend/storeManagers/steam/gameLaunch.ts',
       'src/backend/storeManagers/steam/gameLaunchOverlay.ts',

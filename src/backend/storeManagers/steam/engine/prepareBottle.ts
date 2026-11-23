@@ -14,7 +14,6 @@
  * - **The selection view.** The reply's `selection` is what Rust registered; the sync reads see it through the view.
  */
 import type { GameSettings } from 'common/types'
-import type { EngineRuntime } from './engineRuntime'
 import { prepareBottleForEngine } from 'backend/enginewine/bottles'
 import type {
   PrepareBottleReply,
@@ -26,10 +25,10 @@ import {
   ENGINE_PINS,
   pinById
 } from 'backend/enginewine/twin'
-import type { BottleReadContext } from 'backend/enginewine/twin'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import type { EnginePin } from 'common/types/engine'
-import type { NonCrossoverEngine } from './engineTypes'
+import type { AppPaths } from 'backend/process/context'
+import type { EnginePin, NonCrossoverEngine } from 'common/types/engine'
+import { pinnedEngineReader } from './pinnedEngine'
 
 /** The result the callers branch on: the TS `PrepareResult`. */
 export type PrepareOutcome =
@@ -50,14 +49,13 @@ const NO_RESTORE_SOURCE = /^no DXVK source to restore/
 
 export async function prepareBottle(
   services: {
-    paths: BottleReadContext['paths']
-    engineRuntime: Pick<EngineRuntime, 'requestRustInvoke' | 'fallback'>
-  },
+    paths: Pick<AppPaths, 'userHome' | 'toolsPath'>
+  } & RustInvokeDeps,
   call: PrepareBottleCall
 ): Promise<PrepareOutcome> {
   const { ensurePinEngine, onSwitching, ...request } = call
   const deps: RustInvokeDeps = {
-    requestRustInvoke: services.engineRuntime.requestRustInvoke
+    requestRustInvoke: services.requestRustInvoke
   }
   const send = async (): Promise<PrepareBottleReply> =>
     (await prepareBottleForEngine(deps, {
@@ -74,7 +72,7 @@ export async function prepareBottle(
     request.next.kind === 'crossover'
   ) {
     const marker = readBottleEngineMarkerSummary(
-      { paths: services.paths, fallback: services.engineRuntime.fallback },
+      { paths: services.paths, fallback: pinnedEngineReader(services.paths) },
       request.bottleName
     )
     const pin =

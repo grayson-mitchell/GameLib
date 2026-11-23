@@ -116,33 +116,33 @@ export async function prepareDrmBottleForCrossover(
   pre: Extract<CrossoverPreflight, { kind: 'healthy' }>
 ): Promise<{ ok: true } | { ok: false }> {
   const { steamPrepareFacts } = await import('./engine/steamEngineDeps')
-  const { prepareBottle } = await import('backend/engine/prepareBottle')
-  const { steamEngineServicesFrom } =
-    await import('backend/services/engineServices')
+  const { prepareBottle } = await import('./engine/prepareBottle')
   const next: EngineSelection = {
     kind: 'crossover',
     reason: 'cx-healthy',
     crossoverBuild: pre.build,
     binDir: pre.binDir
   }
-  const prep = await prepareBottle(steamEngineServicesFrom(steamGame.deps), {
-    key: steamGame.appId,
-    bottleName,
-    next,
-    ...steamPrepareFacts(
-      steamEngineServicesFrom(steamGame.deps),
-      steamGame.appId,
-      next
-    ),
-    ensurePinEngine: steamGame.restorePinEngine,
-    onSwitching: () =>
-      sendGameStatusUpdate(steamGame.deps, {
-        appName: steamGame.appId,
-        runner: 'steam',
-        status: 'engine-download',
-        context: 'setting-up'
-      })
-  })
+  const prep = await prepareBottle(
+    {
+      paths: steamGame.deps.paths,
+      requestRustInvoke: steamGame.deps.engineRuntime.requestRustInvoke
+    },
+    {
+      key: steamGame.appId,
+      bottleName,
+      next,
+      ...steamPrepareFacts(steamGame.deps, steamGame.appId, next),
+      ensurePinEngine: steamGame.restorePinEngine,
+      onSwitching: () =>
+        sendGameStatusUpdate(steamGame.deps, {
+          appName: steamGame.appId,
+          runner: 'steam',
+          status: 'engine-download',
+          context: 'setting-up'
+        })
+    }
+  )
   if (prep.ok) return { ok: true }
   logWarning(
     `SteamGame: appId ${steamGame.appId} DRM launch cannot switch the bottle back to CrossOver (${prep.reason}: ${prep.detail}); not launching`,

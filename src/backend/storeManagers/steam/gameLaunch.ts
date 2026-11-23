@@ -438,7 +438,7 @@ export async function selectLaunchEngine(
   const { setEngineSelection } = steamGame.deps.engineRuntime.registry
   const clearEngineSelection = (key: string) =>
     dropEngineSelection(steamGame.deps.engineRuntime, key)
-  const { prepareBottle } = await import('backend/engine/prepareBottle')
+  const { prepareBottle } = await import('./engine/prepareBottle')
   const { STEAM_ENGINE_RUNNER, steamEngineStateFacts } =
     await import('./engine/steamEngineDeps')
   const { isNonCrossover } = await import('backend/enginewine/twin')
@@ -454,8 +454,6 @@ export async function selectLaunchEngine(
   const { isCrossoverMissing } = await import('backend/enginewine/decision')
   const { steamPrepareFacts, steamEngineFacts, readSteamEngineOverride } =
     await import('./engine/steamEngineDeps')
-  const { steamEngineServicesFrom } =
-    await import('backend/services/engineServices')
   const { parseEngineOverride } = await import('backend/engine/engineIds')
   const earlyOverride = parseEngineOverride(
     readSteamEngineOverride(steamGame.deps, steamGame.appId)
@@ -567,30 +565,32 @@ export async function selectLaunchEngine(
     )
     return { ok: false }
   }
-  const prep = await prepareBottle(steamEngineServicesFrom(steamGame.deps), {
-    key: steamGame.appId,
-    bottleName,
-    next: sel,
-    // 59-UAT G10: an override to CrossOver on an expired bottle must not run
-    // the DXVK restore through CrossOver.
-    crossoverHealthy: decision.preflight?.kind === 'healthy',
-    ...steamPrepareFacts(
-      steamEngineServicesFrom(steamGame.deps),
-      steamGame.appId,
-      sel
-    ),
-    // WR-05: a restore's pin download reports the same progress as a launch download.
-    ensurePinEngine: steamGame.restorePinEngine,
-    // IN-05 (59-22): a real engine switch is "setting up", not a stale
-    // "Downloading (100%)", until the monitor's launching status.
-    onSwitching: () =>
-      sendGameStatusUpdate(steamGame.deps, {
-        appName: steamGame.appId,
-        runner: 'steam',
-        status: 'engine-download',
-        context: 'setting-up'
-      })
-  })
+  const prep = await prepareBottle(
+    {
+      paths: steamGame.deps.paths,
+      requestRustInvoke: steamGame.deps.engineRuntime.requestRustInvoke
+    },
+    {
+      key: steamGame.appId,
+      bottleName,
+      next: sel,
+      // 59-UAT G10: an override to CrossOver on an expired bottle must not run
+      // the DXVK restore through CrossOver.
+      crossoverHealthy: decision.preflight?.kind === 'healthy',
+      ...steamPrepareFacts(steamGame.deps, steamGame.appId, sel),
+      // WR-05: a restore's pin download reports the same progress as a launch download.
+      ensurePinEngine: steamGame.restorePinEngine,
+      // IN-05 (59-22): a real engine switch is "setting up", not a stale
+      // "Downloading (100%)", until the monitor's launching status.
+      onSwitching: () =>
+        sendGameStatusUpdate(steamGame.deps, {
+          appName: steamGame.appId,
+          runner: 'steam',
+          status: 'engine-download',
+          context: 'setting-up'
+        })
+    }
+  )
   if (!prep.ok) {
     if (prep.reason === 'dxvk-failed' && sel.kind === 'crossover') {
       // CR-03 (D-03/D-07): never start on CrossOver over DXVK-macOS DLLs. No reroute to

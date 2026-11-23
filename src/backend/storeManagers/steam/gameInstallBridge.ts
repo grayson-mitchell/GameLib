@@ -408,12 +408,10 @@ export async function resolveInstallEngineSettings(
   // Bottle already existed: the same decision + preparation as a launch.
   const { decideLaunchEngine } = await import('backend/enginewine/decision')
   const { launchDecisionFrom } = await import('./engine/engineDecisionReply')
-  const { prepareBottle } = await import('backend/engine/prepareBottle')
+  const { prepareBottle } = await import('./engine/prepareBottle')
   const { isNonCrossover } = await import('backend/enginewine/twin')
   const { steamEngineFacts, steamPrepareFacts } =
     await import('./engine/steamEngineDeps')
-  const { steamEngineServicesFrom } =
-    await import('backend/services/engineServices')
   const decision = launchDecisionFrom(
     await decideLaunchEngine(steamGame.deps, {
       key: steamGame.appId,
@@ -429,18 +427,20 @@ export async function resolveInstallEngineSettings(
     if ('status' in engine) return { skipped: 'engine download failed' }
   }
   const sel = decision.selection
-  const prep = await prepareBottle(steamEngineServicesFrom(steamGame.deps), {
-    key: steamGame.appId,
-    bottleName: bridgeBottleName,
-    next: sel,
-    crossoverHealthy: decision.preflight?.kind === 'healthy',
-    ...steamPrepareFacts(
-      steamEngineServicesFrom(steamGame.deps),
-      steamGame.appId,
-      sel
-    ),
-    ensurePinEngine: steamGame.restorePinEngine
-  })
+  const prep = await prepareBottle(
+    {
+      paths: steamGame.deps.paths,
+      requestRustInvoke: steamGame.deps.engineRuntime.requestRustInvoke
+    },
+    {
+      key: steamGame.appId,
+      bottleName: bridgeBottleName,
+      next: sel,
+      crossoverHealthy: decision.preflight?.kind === 'healthy',
+      ...steamPrepareFacts(steamGame.deps, steamGame.appId, sel),
+      ensurePinEngine: steamGame.restorePinEngine
+    }
+  )
   if (!prep.ok && prep.reason !== 'dxvk-failed') {
     return { skipped: `${prep.reason}: ${prep.detail}` }
   }
