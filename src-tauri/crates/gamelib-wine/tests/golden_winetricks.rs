@@ -185,7 +185,11 @@ impl Profile {
         for (token, root) in self.placeholders() {
             out = out.replace(root.as_str(), token);
         }
-        if cfg!(windows) {
+        if cfg!(windows)
+            && ["<TOOLS>", "<APPFOLDER>", "<USERDATA>", "<TMP>", "<HOME>"]
+                .iter()
+                .any(|t| out.contains(t))
+        {
             out = out.replace('\\', "/");
         }
         out

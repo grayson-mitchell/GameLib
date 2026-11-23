@@ -180,7 +180,11 @@ impl Profile {
                     for (token, root) in table {
                         s = s.replace(root.as_str(), token);
                     }
-                    if cfg!(windows) {
+                    if cfg!(windows)
+                        && ["<TOOLS>", "<APPFOLDER>", "<USERDATA>", "<TMP>", "<HOME>"]
+                            .iter()
+                            .any(|t| s.contains(t))
+                    {
                         s = s.replace('\\', "/");
                     }
                     Value::String(s)

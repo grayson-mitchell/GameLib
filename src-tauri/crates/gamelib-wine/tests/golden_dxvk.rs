@@ -179,11 +179,17 @@ impl Profile {
         match value {
             Value::String(s) => {
                 let s = self.normalise_text(&s);
-                Value::String(if cfg!(windows) {
-                    s.replace('\\', "/")
-                } else {
-                    s
-                })
+                Value::String(
+                    if cfg!(windows)
+                        && ["<TOOLS>", "<APPFOLDER>", "<USERDATA>", "<TMP>", "<HOME>"]
+                            .iter()
+                            .any(|t| s.contains(t))
+                    {
+                        s.replace('\\', "/")
+                    } else {
+                        s
+                    },
+                )
             }
             Value::Array(items) => {
                 Value::Array(items.into_iter().map(|v| self.normalise(v)).collect())
