@@ -467,3 +467,71 @@ fn node_standin_children_die_with_the_parent() {
     });
     assert_helpers_die_and_game_survives(&run, &paths);
 }
+
+/// The winetricks shape (D-17): a child run through `SpecProcRunner` that itself starts a
+/// grandchild. The stand-in's `--spec-tree` flag adds that child to `helpers` and its grandchild to
+/// `grandchildren`, so the shared assertion covers both. Unix has the reaper after a SIGKILL;
+/// Windows has the kill-on-close Job. The game tree is not registered, so it survives (D-08).
+#[test]
+fn sigkill_kills_spec_child_and_grandchild() {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let mut run = Run::start_with(&home, &paths, &["--spec-tree"]);
+    let _strays = Strays(
+        run.pids("games")
+            .into_iter()
+            .chain(run.pids("helpers"))
+            .chain(run.pids("grandchildren"))
+            .collect(),
+    );
+    let helpers = run.pids("helpers");
+    let grandchildren = run.pids("grandchildren");
+    assert_eq!(helpers.len(), 4, "the spec child is the fourth helper");
+    assert_eq!(grandchildren.len(), 2, "and its grandchild the second");
+    let (spec_child, spec_grandchild) = (helpers[3], grandchildren[1]);
+    assert!(is_alive(spec_child), "spec child alive before the kill");
+    assert!(
+        is_alive(spec_grandchild),
+        "spec grandchild alive before the kill"
+    );
+
+    run.kill_parent();
+    run.wait_for_parent_exit();
+    wait_until("the spec child and its grandchild to die", || {
+        !is_alive(spec_child) && !is_alive(spec_grandchild)
+    });
+    assert_helpers_die_and_game_survives(&run, &paths);
+}
+
+/// As above, after a graceful quit: the stand-in drains the `ChildSet`, which reaches the spec
+/// child's group (unix) or Job (Windows) and so its grandchild.
+#[test]
+fn graceful_quit_kills_spec_child_and_grandchild() {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let mut run = Run::start_with(&home, &paths, &["--spec-tree"]);
+    let _strays = Strays(
+        run.pids("games")
+            .into_iter()
+            .chain(run.pids("helpers"))
+            .chain(run.pids("grandchildren"))
+            .collect(),
+    );
+    let helpers = run.pids("helpers");
+    let grandchildren = run.pids("grandchildren");
+    assert_eq!(helpers.len(), 4, "the spec child is the fourth helper");
+    assert_eq!(grandchildren.len(), 2, "and its grandchild the second");
+    let (spec_child, spec_grandchild) = (helpers[3], grandchildren[1]);
+    assert!(is_alive(spec_child), "spec child alive before quit");
+    assert!(
+        is_alive(spec_grandchild),
+        "spec grandchild alive before quit"
+    );
+
+    run.quit();
+    run.wait_for_parent_exit();
+    wait_until("the spec child and its grandchild to die", || {
+        !is_alive(spec_child) && !is_alive(spec_grandchild)
+    });
+    assert_helpers_die_and_game_survives(&run, &paths);
+}

@@ -12,19 +12,28 @@
 //!   50 ms forever. Its stdout is a file or null, which is the Pitfall 5 point: the writes must
 //!   keep succeeding after the parent is gone.
 //! - `game-child`: idle.
+//! - `spec-tree`: the winetricks shape. Waits for `go` on stdin, spawns one `idle` grandchild with a
+//!   plain std `Command` (so it shares the child's group or Job), prints its own pid and the
+//!   grandchild's as two lines on stdout, then idles. `parent --spec-tree` runs it through
+//!   `SpecProcRunner`, as an engine or wine port runs a helper that starts further processes.
 //! - `lines`: prints its own pid as one line on stdout, then idles (the streaming-runner test).
 //! - `--gamelib-reaper` (as argv[1]): reaper mode. `main` hands over to the reaper before doing
 //!   anything else, exactly as the shell's `fn main` does (plan 83-08), because the reaper is this
 //!   same executable re-exec'd.
 //!
-//! `parent` flags: `--no-reaper` skips starting the reaper (the negative control: a SIGKILL of the
+//! `parent` flags: `--spec-tree` runs one `spec-tree` child through `SpecProcRunner` (on a background
+//! runtime thread, so the run stays in flight) and adds its pid to `helpers` and its grandchild's to
+//! `grandchildren`. `--no-reaper` skips starting the reaper (the negative control: a SIGKILL of the
 //! parent must then leave its helpers alive). `--leak-pipe` (unix) adds a fourth helper holding a
 //! duplicate of the reaper pipe's write end as its stdin, so EOF never reaches the reaper.
 //! `--node-sidecar <pids-file>` adds a Node process as a helper, standing in for the TS sidecar: it
 //! spawns two children with plain `child_process.spawn` (no options beyond `stdio`, exactly like the
 //! TS runner's tracked children), so they stay in its process group (unix) or Job (Windows).
 
-use gamelib_proc::{global, reaper, spawn_game, spawn_helper, spawn_helper_with_pipes};
+use gamelib_core::process::{ProcSpec, SpecRunner};
+use gamelib_proc::{
+    global, reaper, spawn_game, spawn_helper, spawn_helper_with_pipes, SpecProcRunner,
+};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -37,11 +46,14 @@ fn main() {
     match args.first().map(String::as_str) {
         Some("idle") | Some("game-child") => idle(),
         Some("tree") => tree(),
+        Some("spec-tree") => spec_tree(),
         Some("lines") => lines(),
         Some("game") => game(&args[1..]),
         Some("parent") => parent(&args[1..]),
         _ => {
-            eprintln!("usage: gamelib-proc-standin <parent|idle|tree|game|game-child> [flags]");
+            eprintln!(
+                "usage: gamelib-proc-standin <parent|idle|tree|spec-tree|game|game-child> [flags]"
+            );
             std::process::exit(2);
         }
     }
@@ -149,6 +161,49 @@ fn tree() -> ! {
 
 // The child is deliberately never waited for: it idles until something kills it.
 #[allow(clippy::zombie_processes)]
+fn spec_tree() -> ! {
+    // `SpecProcRunner` writes `go` after the child is in its Job, so the grandchild can never be
+    // created before the assignment (the known Windows limit).
+    let mut line = String::new();
+    let _ = std::io::stdin().lock().read_line(&mut line);
+    let grandchild = self_command("idle", &[]).spawn().expect("spawn grandchild");
+    let mut out = std::io::stdout();
+    writeln!(out, "{}", std::process::id()).expect("write own pid");
+    writeln!(out, "{}", grandchild.id()).expect("write grandchild pid");
+    out.flush().expect("flush pids");
+    idle()
+}
+
+/// Runs one `spec-tree` child through `SpecProcRunner` on a background runtime thread, the way an
+/// engine or wine port runs winetricks, and returns (child pid, grandchild pid) once it has
+/// reported both. The run stays in flight until the child is killed.
+fn run_spec_tree() -> (u32, u32) {
+    let (tx, rx) = std::sync::mpsc::channel::<u32>();
+    let exe = std::env::current_exe().expect("current_exe");
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("build runtime");
+        let mut spec = ProcSpec::new("standin-spec-tree", exe.to_string_lossy());
+        spec.argv = vec!["spec-tree".into()];
+        spec.stdin = Some("go\n".into());
+        let on_line = Box::new(move |l: &str| {
+            if let Ok(pid) = l.trim().parse::<u32>() {
+                let _ = tx.send(pid);
+            }
+        });
+        let out = rt.block_on(SpecProcRunner.run(spec, Some(on_line)));
+        eprintln!("[standin] spec-tree run ended: code {:?}", out.code);
+    });
+    let wait = Duration::from_secs(15);
+    let child = rx.recv_timeout(wait).expect("spec-tree child pid");
+    let grandchild = rx.recv_timeout(wait).expect("spec-tree grandchild pid");
+    (child, grandchild)
+}
+
+// The child is deliberately never waited for: it idles until something kills it.
+#[allow(clippy::zombie_processes)]
 fn game(args: &[String]) -> ! {
     let pids_path = flag(args, "--game-pids");
     let child = self_command("game-child", &[])
@@ -215,6 +270,11 @@ fn parent(args: &[String]) {
     #[cfg_attr(not(unix), allow(unused_mut, clippy::useless_vec))]
     let mut helpers = vec![h1, h2, tree_pid];
     let mut grandchildren = vec![grandchild];
+    if has_flag(args, "--spec-tree") {
+        let (child, grandchild) = run_spec_tree();
+        helpers.push(child);
+        grandchildren.push(grandchild);
+    }
     // Held until exit so the node sidecar's stdin stays open, as the shell's would.
     let _node_stdin = if has_flag(args, "--node-sidecar") {
         let (node, kids, stdin) = node_sidecar(&flag(args, "--node-sidecar"));
