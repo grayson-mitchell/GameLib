@@ -101,7 +101,7 @@ pub fn gate_allows_write(state: Option<GateState>) -> bool {
     )
 }
 
-fn marker_path(bottle_dir: &str) -> String {
+pub(crate) fn marker_path(bottle_dir: &str) -> String {
     path_join(&[bottle_dir, MARKER_FILE])
 }
 
@@ -157,7 +157,7 @@ pub fn read(ctx: &EngineCtx, bottle_dir: &str) -> Option<Marker> {
 /// `hasStagingDxvk`: DXVK-macOS is installed only by non-CrossOver paths and every switch to
 /// CrossOver removes it, so a bottle that carries it was set up by a non-CrossOver engine
 /// (76-VERIFICATION CR-01).
-fn has_staging_dxvk(bottle_dir: &str) -> bool {
+pub(crate) fn has_staging_dxvk(bottle_dir: &str) -> bool {
     Path::new(bottle_dir).join(DXVK_VERSION_FILE).exists()
 }
 
@@ -207,7 +207,7 @@ pub fn trusted(
 }
 
 /// The current pin as an installed engine, or `None` when it is not on disk (`defaultCurrentPinEngine`).
-fn current_pin_engine(ctx: &EngineCtx) -> Option<NonCrossoverEngine> {
+pub(crate) fn current_pin_engine(ctx: &EngineCtx) -> Option<NonCrossoverEngine> {
     let pin = current_pin()?;
     is_pinned_engine_installed(ctx, pin).then(|| pin_engine(ctx, pin))
 }
@@ -429,7 +429,8 @@ impl Reconciled {
     }
 }
 
-fn identity_of(marker: &Marker) -> String {
+/// `identityOf`: `crossover`, else `<kind>:<id>`.
+pub fn identity_of(marker: &Marker) -> String {
     if marker.kind == EngineKind::Crossover {
         "crossover".to_string()
     } else {

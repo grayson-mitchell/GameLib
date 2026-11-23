@@ -58,7 +58,7 @@ pub fn is_inside(root: &str, path: &str) -> bool {
 /// `path.resolve` over an absolute path: normalised, no trailing slash. A relative root is made
 /// absolute against `/`, which never matches a real tools directory; the callers' roots are
 /// absolute by construction.
-fn lexical_resolve(path: &str) -> String {
+pub(crate) fn lexical_resolve(path: &str) -> String {
     let joined = path_join(&["/", path]);
     if joined.len() > 1 {
         joined.trim_end_matches('/').to_string()

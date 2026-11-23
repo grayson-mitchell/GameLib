@@ -43,7 +43,7 @@ pub enum EngineSelection {
 
 impl EngineSelection {
     /// The binaries of a non-CrossOver selection (`isNonCrossover`).
-    fn engine(&self) -> Option<&NonCrossoverEngine> {
+    pub fn engine(&self) -> Option<&NonCrossoverEngine> {
         match self {
             EngineSelection::Crossover { .. } => None,
             EngineSelection::Pinned { engine, .. }

@@ -42,6 +42,7 @@ pub const OPS: &[&str] = &[
     "engine_bottle_create_crossover",
     "engine_bottle_is_provisioned",
     "engine_bottle_kill_wineserver",
+    "engine_bottle_prepare",
     "engine_bottle_record_pinned",
     "engine_bottle_remove_created",
     "engine_default_engine",
@@ -71,6 +72,18 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
             let provisioned = bottles::paths::is_clean_bottle_name(&request.bottle_name)
                 && engines::is_bottle_provisioned(ctx, &request.bottle_name);
             Ok(Value::Bool(provisioned))
+        }
+        // Makes a bottle's engine the requested one: stops the previous engine's wineserver, installs the
+        // next engine's DXVK and writes the marker (D-07). The answer is the sidecar's `PrepareResult`
+        // plus the selection the bottle is now on. A marker from a newer build, a running game, a
+        // shared bottle and another game in the bottle are refusals, not errors.
+        "engine_bottle_prepare" => {
+            let request: PrepareRequest = decode(op, args)?;
+            let prepare = request
+                .into_args(ctx)
+                .ok_or_else(|| format!("{op}:bad-args"))?;
+            let result = bottles::switch::prepare_bottle_for_engine(ctx, &prepare).await;
+            Ok(result.to_value())
         }
         // The marker a pinned-engine bottle gets at creation: written through the in-process version
         // gate, `false` when nothing was written (a newer marker, an absent bottle, an unsafe name).
@@ -250,6 +263,96 @@ struct RecordedEngine {
     dxvk: Option<engines::DxvkBuild>,
 }
 
+/// The argument of `engine_bottle_prepare`: the bottle, the engine it must be on and the facts the TS
+/// switch read through callbacks (the monitor phase, the title's own bottle, the settings).
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct PrepareRequest {
+    key: String,
+    bottle_name: String,
+    next: bottles::registry::EngineSelection,
+    #[serde(default)]
+    monitor_phase: Option<bottles::switch::MonitorPhase>,
+    /// Present when the store has an own-bottle notion (Steam); its `name` is `null` for a title with
+    /// no own bottle.
+    #[serde(default)]
+    own_bottle: Option<OwnBottleRequest>,
+    #[serde(default = "empty_object")]
+    crossover_settings: Value,
+    #[serde(default = "yes")]
+    crossover_healthy: bool,
+    #[serde(default = "empty_object")]
+    fallback_settings: Value,
+    #[serde(default)]
+    register_selection: bool,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct OwnBottleRequest {
+    name: Option<String>,
+}
+
+fn empty_object() -> Value {
+    Value::Object(serde_json::Map::new())
+}
+
+fn yes() -> bool {
+    true
+}
+
+impl PrepareRequest {
+    /// The library arguments, or `None` for a key that is not an engine key, a program path that is not
+    /// absolute, a DXVK directory outside the pinned-engine root, or settings that are not objects: the
+    /// op is a surface a sidecar string can reach (T-87-82).
+    fn into_args(self, ctx: &EngineCtx) -> Option<bottles::switch::PrepareArgs> {
+        use bottles::registry::EngineSelection;
+        if !key::is_engine_key(&self.key)
+            || !self.crossover_settings.is_object()
+            || !self.fallback_settings.is_object()
+        {
+            return None;
+        }
+        match &self.next {
+            EngineSelection::Crossover { bin_dir, .. } => {
+                if !Path::new(bin_dir).is_absolute() {
+                    return None;
+                }
+            }
+            EngineSelection::Pinned { engine, .. }
+            | EngineSelection::WineManager { engine, .. } => {
+                if !Path::new(&engine.wine_bin).is_absolute()
+                    || !Path::new(&engine.wineserver_bin).is_absolute()
+                {
+                    return None;
+                }
+                if let Some(dxvk) = &engine.dxvk {
+                    if !bottles::paths::is_inside(&engines::pinned_engine_root(ctx), &dxvk.dir) {
+                        return None;
+                    }
+                }
+            }
+        }
+        let own_bottle_name = match self.own_bottle {
+            None => bottles::switch::OwnBottle::NoNotion,
+            Some(OwnBottleRequest { name: Some(name) }) => bottles::switch::OwnBottle::Named(name),
+            Some(OwnBottleRequest { name: None }) => bottles::switch::OwnBottle::Unnamed,
+        };
+        Some(bottles::switch::PrepareArgs {
+            key: self.key,
+            bottle_name: self.bottle_name,
+            next: self.next,
+            monitor_phase: self.monitor_phase,
+            own_bottle_name,
+            crossover_settings: self.crossover_settings,
+            crossover_healthy: self.crossover_healthy,
+            fallback_settings: self.fallback_settings,
+            on_switching: None,
+            register_selection: self.register_selection,
+        })
+    }
+}
+
 /// The argument of `engine_set_online`: the monitor's answer.
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -387,6 +490,7 @@ mod tests {
             "engine_bottle_create_crossover",
             "engine_bottle_is_provisioned",
             "engine_bottle_kill_wineserver",
+            "engine_bottle_prepare",
             "engine_bottle_record_pinned",
             "engine_bottle_remove_created",
             "engine_default_engine",
@@ -529,6 +633,86 @@ mod tests {
                 .unwrap_err(),
             "engine_bottle_record_pinned:bad-args"
         );
+    }
+
+    #[tokio::test]
+    async fn the_prepare_op_switches_a_bottle_and_takes_strict_arguments() {
+        use crate::testing::{ScriptedDxvk, ScriptedSpecRunner};
+        use gamelib_core::process::SpecOutput;
+
+        let home = FakeHome::new("engine-lib-");
+        let runner = std::sync::Arc::new(ScriptedSpecRunner::new(Vec::new()).on_program(
+            "/cx/bin/wineserver",
+            SpecOutput {
+                code: Some(0),
+                ..SpecOutput::default()
+            },
+        ));
+        let ctx = ctx(&home)
+            .with_proc(runner.clone())
+            .with_dxvk(std::sync::Arc::new(ScriptedDxvk::new(&[true])))
+            .with_crossover_bin_dir(std::sync::Arc::new(|| {
+                Box::pin(async { Some("/cx/bin".to_string()) })
+            }));
+        let dir = lay_bottle(&home, "GameLib-gog-1", true, false);
+        std::fs::write(
+            dir.join(".gamelib-engine.json"),
+            r#"{"kind":"crossover","id":"crossover","wineserverBin":"/cx/bin/wineserver","version":1}"#,
+        )
+        .unwrap();
+        let tools = home.root().join("tools/steam-engines");
+        let engine = |dxvk_dir: &str| {
+            json!({
+                "kind": "wine-manager", "managerVersion": "Wine-Staging-10.5", "reason": "override",
+                "wineBin": "/t/wine", "wineserverBin": "/t/wineserver", "label": "Wine Manager",
+                "version": "10.5", "dxvk": {"dir": dxvk_dir, "version": "v1"}
+            })
+        };
+        let good = json!({
+            "key": "gog:1", "bottleName": "GameLib-gog-1",
+            "next": engine(&tools.join("dxvk").to_string_lossy())
+        });
+        // The scripted installer writes no `current_dxvk-macOS`, so the switch ends as a DXVK failure:
+        // the previous wineserver was stopped and the answer carries the TS reason and detail.
+        let answer = dispatch("engine_bottle_prepare", &[good], &ctx)
+            .await
+            .unwrap();
+        assert_eq!(answer["ok"], json!(false));
+        assert_eq!(answer["reason"], json!("dxvk-failed"));
+        assert_eq!(runner.spawns().len(), 1);
+        assert_eq!(runner.spawns()[0].argv, ["-k"]);
+
+        // A key that is not an engine key, a relative program, a DXVK directory outside the pinned
+        // engines, settings that are not objects and an unknown member are all bad arguments, and
+        // nothing is spawned for them.
+        let base = |patch: Value| {
+            let mut request = json!({
+                "key": "gog:1", "bottleName": "GameLib-gog-1",
+                "next": engine(&tools.join("dxvk").to_string_lossy())
+            });
+            for (k, v) in patch.as_object().unwrap() {
+                request[k] = v.clone();
+            }
+            request
+        };
+        let spawned = runner.spawns().len();
+        for bad in [
+            base(json!({"key": "not a key"})),
+            base(json!({"next": engine("/elsewhere/dxvk")})),
+            base(json!({"fallbackSettings": []})),
+            base(json!({"monitorPhase": "paused"})),
+            base(json!({"extra": 1})),
+            base(
+                json!({"next": {"kind": "crossover", "reason": "r", "crossoverBuild": null, "binDir": "cx/bin"}}),
+            ),
+        ] {
+            let err = dispatch("engine_bottle_prepare", std::slice::from_ref(&bad), &ctx)
+                .await
+                .unwrap_err();
+            assert_eq!(err, "engine_bottle_prepare:bad-args", "{bad}");
+        }
+        assert!(dispatch("engine_bottle_prepare", &[], &ctx).await.is_err());
+        assert_eq!(runner.spawns().len(), spawned);
     }
 
     #[tokio::test]

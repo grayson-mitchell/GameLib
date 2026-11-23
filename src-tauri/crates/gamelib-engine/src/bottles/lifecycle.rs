@@ -81,7 +81,7 @@ fn direct_child_dir(ctx: &EngineCtx, name: &str) -> Option<String> {
 }
 
 /// Node's `path.dirname` on POSIX.
-fn dirname(path: &str) -> String {
+pub(crate) fn dirname(path: &str) -> String {
     let trimmed = path.trim_end_matches('/');
     match trimmed.rfind('/') {
         None => ".".to_string(),
@@ -227,7 +227,7 @@ pub struct CreateBottleResult {
 }
 
 impl CreateBottleResult {
-    fn failed(code: Option<&'static str>, message: String) -> CreateBottleResult {
+    pub(crate) fn failed(code: Option<&'static str>, message: String) -> CreateBottleResult {
         CreateBottleResult {
             done: false,
             error: Some(message),
