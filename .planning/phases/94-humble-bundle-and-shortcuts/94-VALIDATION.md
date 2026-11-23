@@ -40,21 +40,21 @@ created: "2026-11-24"
 
 Filled in by the planner and executor. Requirement → test map from research:
 
-| Req | Behavior | Test Type | Automated Command | File Exists | Status |
-|-----|----------|-----------|-------------------|-------------|--------|
-| SVC-04 | classify/dedup/title-match/alerts/app-id resolver port | Rust unit | `cargo test -p gamelib-humble` | ❌ W0 | ⬜ pending |
-| SVC-04 | sync/reveal/mark/undo/overrides/gift/audit golden replay | Rust golden + Jest oracle | `cargo test -p gamelib-humble --test golden_library` | ❌ W0 | ⬜ pending |
-| SVC-04 | request pinning (URL/method/headers/multipart order/no-redirect) | Rust replay | `cargo test -p gamelib-humble --test http_replay` | ❌ W0 | ⬜ pending |
-| SVC-04 | state files round-trip, legacy backfill, corrupt copy-aside | Rust golden | `cargo test -p gamelib-humble --test state_roundtrip` | ❌ W0 | ⬜ pending |
-| SVC-04 | secrets: cache, memo, invalidate-before-delete, no value in logs | Rust unit | `cargo test -p gamelib-humble secrets` | ❌ W0 | ⬜ pending |
-| SVC-04 | shell wiring: native channel vectors, ownership | Rust + Jest | `cargo test --bin gamelib-shell`; sidecar census Jest tests | ✅ | ⬜ pending |
-| SVC-04 | digest strings equal i18next | Rust + Jest | `cargo test -p gamelib-i18n`; `i18nGolden.test.ts` | ✅ extend | ⬜ pending |
-| SVC-05 | `run.sh`/`Info.plist`/`.desktop` byte-identical incl. hostile names | Rust golden | `cargo test -p gamelib-shortcuts --test golden_text` | ❌ W0 | ⬜ pending |
-| SVC-05 | icns decodable; iconless omits `CFBundleIconFile` | Rust test | `cargo test -p gamelib-shortcuts icns` | ❌ W0 | ⬜ pending |
-| SVC-05 | `.lnk` argv/env/stdin/timeout; reg query; icon chain | Rust golden | `cargo test -p gamelib-shortcuts --test golden_windows` | ❌ W0 | ⬜ pending |
-| SVC-05 | removal proof / refuse on unknown | Rust test (FakeHome) | `cargo test -p gamelib-shortcuts remove` | ❌ W0 | ⬜ pending |
-| SVC-05 | add/remove to Steam: ids, entry fields, atomic vdf, grid art | Rust golden | `cargo test -p gamelib-shortcuts --test golden_steam` | ❌ W0 | ⬜ pending |
-| both | deletion gates + schedule | Jest | `humblePortComplete.test.ts`, `shortcutsPortComplete.test.ts`, schedule tests | ❌ new / ✅ amend | ⬜ pending |
+| Req | Behavior | Test Type | Automated Command | Plan | File Exists | Status |
+|-----|----------|-----------|-------------------|------|-------------|--------|
+| SVC-04 | classify/dedup/title-match/alerts/app-id resolver port | Rust unit | `cargo test -p gamelib-humble` | 94-12, 94-15, 94-17, 94-25 | ❌ W0 | ⬜ pending |
+| SVC-04 | sync/reveal/mark/undo/overrides/gift/audit golden replay | Rust golden + Jest oracle | `cargo test -p gamelib-humble --test golden_library` | 94-08, 94-23, 94-25, 94-26 | ❌ W0 | ⬜ pending |
+| SVC-04 | request pinning (URL/method/headers/multipart order/no-redirect) | Rust replay | `cargo test -p gamelib-humble --test http_replay` | 94-08, 94-15, 94-23 | ❌ W0 | ⬜ pending |
+| SVC-04 | state files round-trip, legacy backfill, corrupt copy-aside | Rust golden | `cargo test -p gamelib-humble --test state_roundtrip` | 94-19 | ❌ W0 | ⬜ pending |
+| SVC-04 | secrets: cache, memo, invalidate-before-delete, no value in logs | Rust unit | `cargo test -p gamelib-humble secrets` | 94-21 | ❌ W0 | ⬜ pending |
+| SVC-04 | shell wiring: native channel vectors, ownership | Rust + Jest | `cargo test --bin gamelib-shell`; sidecar census Jest tests | 94-13, 94-28, 94-29 | ✅ | ⬜ pending |
+| SVC-04 | digest strings equal i18next | Rust + Jest | `cargo test -p gamelib-i18n`; `i18nGolden.test.ts` | 94-17 | ✅ extend | ⬜ pending |
+| SVC-05 | `run.sh`/`Info.plist`/`.desktop` byte-identical incl. hostile names | Rust golden | `cargo test -p gamelib-shortcuts --test golden_text` | 94-05, 94-14 | ❌ W0 | ⬜ pending |
+| SVC-05 | icns decodable; iconless omits `CFBundleIconFile` | Rust test | `cargo test -p gamelib-shortcuts icns` | 94-14 | ❌ W0 | ⬜ pending |
+| SVC-05 | `.lnk` argv/env/stdin/timeout; reg query; icon chain | Rust golden | `cargo test -p gamelib-shortcuts --test golden_windows` | 94-07, 94-16 | ❌ W0 | ⬜ pending |
+| SVC-05 | removal proof / refuse on unknown | Rust test (FakeHome) | `cargo test -p gamelib-shortcuts remove` | 94-18 | ❌ W0 | ⬜ pending |
+| SVC-05 | add/remove to Steam: ids, entry fields, atomic vdf, grid art | Rust golden | `cargo test -p gamelib-shortcuts --test golden_steam` | 94-20 | ❌ W0 | ⬜ pending |
+| both | shim schedule, deletion gates and survivor list | Jest | `humbleShortcutsShimSchedule.test.ts`, `humblePortComplete.test.ts`, `shortcutsPortComplete.test.ts` | 94-03, 94-11, 94-22, 94-24, 94-30, 94-31 | ❌ new / ✅ amend | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
