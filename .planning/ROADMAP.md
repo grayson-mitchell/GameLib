@@ -653,7 +653,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 55/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
+**Plans:** 55/62 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder
 
 Plans:
 **Wave 1**
@@ -780,15 +780,24 @@ Plans:
 - [x] 87-55-PLAN.md — Bridge callers switched: run_tool, CrossOver bin dir, engine types to common
 
 **Wave 35** *(blocked on Wave 34 completion)*
-- [ ] 87-56-PLAN.md — Engine TS, boot steps and the notices store registration deleted (PARTIAL, closed 2026-11-23: launch step, deadline, process watch, dialogs and pin download deleted; remainder split by user decision into 87-56a clusters A+B, 87-56b clusters C+D+E, 87-56c cluster F and the finish, to be planned before 87-57)
+- [ ] 87-56-PLAN.md — Engine TS, boot steps and the notices store registration deleted (PARTIAL, closed 2026-11-23: launch step, deadline, process watch, dialogs and pin download deleted; remainder in 87-56a/b/c by user decision)
 
 **Wave 36** *(blocked on Wave 35 completion)*
-- [ ] 87-57-PLAN.md — Survivor sweep item by item against D-22/D-23/D-24, census and ratchets (SC4)
+- [ ] 87-56a-PLAN.md — Tool settings and the pinned-engine download reach Rust; the 87-52 Winetricks/Run EXE live-selection regression closed; engineOutsideImporters map
 
 **Wave 37** *(blocked on Wave 36 completion)*
-- [ ] 87-58-PLAN.md — Clean-worktree proof with the DXMT gap re-check, push checkpoint, three-OS CI, signed Phase 87 build identity
+- [ ] 87-56b-PLAN.md — Steam caller halves relocated to steam/engine, runtime member reads gone, crossoverBinDirSync and parseEngineOverride twins
 
 **Wave 38** *(blocked on Wave 37 completion)*
+- [ ] 87-56c-PLAN.md — Engine runtime and state out of boot and deps, notices store registration and services builder deleted, src/backend/engine deleted; enginePortComplete green
+
+**Wave 39** *(blocked on Wave 38 completion)*
+- [ ] 87-57-PLAN.md — Survivor sweep item by item against D-22/D-23/D-24, census and ratchets (SC4)
+
+**Wave 40** *(blocked on Wave 39 completion)*
+- [ ] 87-58-PLAN.md — Clean-worktree proof with the DXMT gap re-check, push checkpoint, three-OS CI, signed Phase 87 build identity
+
+**Wave 41** *(blocked on Wave 40 completion)*
 - [ ] 87-59-PLAN.md — Run the live macOS gate (signed Phase 86 -> signed Phase 87, D-11/D-12)
 
 **Cross-cutting constraints:** <!-- gsd:generated -->

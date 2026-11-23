@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 56 of 59 (closed partial 2026-11-23; 87-56a/b/c to be planned before 87-57)
-Status: Ready to plan (87-56a/b/c via /gsd-plan-phase)
-Last activity: 2026-11-23 — Phase 87 execution started
+Plan: 56 of 62 (87-56 closed partial 2026-11-23; 87-56a/b/c planned 2026-11-24, waves 36-38, before 87-57)
+Status: Ready to execute (87-56a next via /gsd-execute-phase 87)
+Last activity: 2026-11-24 — Planned 87-56a/b/c (split remainder of 87-56)
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
