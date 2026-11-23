@@ -240,7 +240,13 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // Phase 87 plan 34: wine_dxvk_install_remove downloads a DXVK-family release when it is not cached and
     // runs the prefix's registry commands, so it has no limit of its own beyond the shutdown. Not a dialog
     // channel either.
-    'RUST_WINE_DXVK_INSTALL_REMOVE'
+    'RUST_WINE_DXVK_INSTALL_REMOVE',
+    // Phase 87 plan 35: wine_winetricks_apply and wine_winetricks_available read the catalog, whose first read
+    // downloads the winetricks script and lists it; wine_winetricks_install runs one winetricks per verb. None
+    // has a limit of its own beyond the shutdown. Not a dialog channel either.
+    'RUST_WINE_WINETRICKS_APPLY',
+    'RUST_WINE_WINETRICKS_AVAILABLE',
+    'RUST_WINE_WINETRICKS_INSTALL'
   ]
 
   test('contains exactly the dialog, depot, Rust CM, safety remove, wine runtime download and wine manager channels', () => {

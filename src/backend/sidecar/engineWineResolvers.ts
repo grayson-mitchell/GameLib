@@ -1,6 +1,13 @@
 import type { GameConfigs } from '../game_config'
 import type { RustInvokeDeps } from '../host/rustInvokeDeps'
-import { RUST_WINE_DXVK_INSTALL_REMOVE } from 'common/types/sidecarTransport'
+import type { Runner } from 'common/types'
+import {
+  RUST_WINE_DXVK_INSTALL_REMOVE,
+  RUST_WINE_WINETRICKS_APPLY,
+  RUST_WINE_WINETRICKS_AVAILABLE,
+  RUST_WINE_WINETRICKS_INSTALLED
+} from 'common/types/sidecarTransport'
+import type { WinetricksTarget } from '../services/winetricksTarget'
 import type { IpcRegistry } from './ipcRegistry'
 
 /**
@@ -32,6 +39,22 @@ export interface DxvkToggleArgs {
 export interface EngineWineResolverDeps extends RustInvokeDeps {
   ipc: Pick<IpcRegistry, 'handle'>
   gameConfigs: Pick<GameConfigs, 'get'>
+  /**
+   * The Wine environment a game's Winetricks calls act on: the tool settings, or the reason there are none
+   * (`services/winetricksTarget.ts`). `ensureBottle` is true when the call creates the bottle (an apply, a catalog
+   * read) and false for a read of the installed list. It never rejects.
+   */
+  winetricksTarget: (
+    runner: Runner,
+    appName: string,
+    opts: { ensureBottle: boolean }
+  ) => Promise<WinetricksTarget>
+}
+
+/** What a renderer Winetricks read sends: the game. */
+export interface WinetricksGameArgs {
+  runner: Runner
+  appName: string
 }
 
 /**
@@ -78,6 +101,54 @@ export async function toggleVKD3D(
 }
 
 /**
+ * The `winetricksApply` channel: applies the renderer's verbs to the game through the Rust apply queue. The Rust
+ * op runs the apply guard (the verbs against the game's catalog) before any verb reaches an argv and answers at
+ * once with the state or the refusal; the verbs install detached and the queue's events (`winetricksQueueChanged`,
+ * `progressOfWinetricks`, `installing-winetricks-component`) are Rust's. The verbs travel as the renderer sent
+ * them: the guard, not this resolver, judges their shape.
+ */
+export async function winetricksApply(
+  deps: EngineWineResolverDeps,
+  runner: Runner,
+  appName: string,
+  verbs: unknown
+): Promise<unknown> {
+  const target = await deps.winetricksTarget(runner, appName, {
+    ensureBottle: true
+  })
+  return deps.requestRustInvoke(RUST_WINE_WINETRICKS_APPLY, [target, verbs])
+}
+
+/**
+ * The `winetricksAvailable` channel: the components winetricks can install for the game (the visible ones). Resolves
+ * the list the Rust catalog read answered, which is empty when the game has no usable Wine environment, as the TS
+ * handler's swallow-and-return-empty did.
+ */
+export async function winetricksAvailable(
+  deps: EngineWineResolverDeps,
+  { runner, appName }: WinetricksGameArgs
+): Promise<unknown> {
+  const target = await deps.winetricksTarget(runner, appName, {
+    ensureBottle: true
+  })
+  return deps.requestRustInvoke(RUST_WINE_WINETRICKS_AVAILABLE, [target])
+}
+
+/**
+ * The `winetricksInstalled` channel: the lines of the game's `winetricks.log`. A read: it never creates a bottle, and
+ * a game with no usable environment has none.
+ */
+export async function winetricksInstalled(
+  deps: EngineWineResolverDeps,
+  { runner, appName }: WinetricksGameArgs
+): Promise<unknown> {
+  const target = await deps.winetricksTarget(runner, appName, {
+    ensureBottle: false
+  })
+  return deps.requestRustInvoke(RUST_WINE_WINETRICKS_INSTALLED, [target])
+}
+
+/**
  * Registers every channel this file resolves, once per boot, from `handlers.ts` (pinned by
  * `registrationOncePerBoot.test.ts`). A channel is registered here or in `wineToolsFlowRegistration.ts`,
  * never both: the family moves in one commit.
@@ -93,5 +164,24 @@ export function registerEngineWineResolvers(
   )
   deps.ipc.handle('toggleVKD3D', (_event: unknown, ...args: unknown[]) =>
     toggleVKD3D(deps, args[0] as DxvkToggleArgs)
+  )
+  deps.ipc.handle('winetricksApply', (_event: unknown, ...args: unknown[]) =>
+    winetricksApply(deps, args[0] as Runner, args[1] as string, args[2])
+  )
+  deps.ipc.handle(
+    'winetricksAvailable',
+    (_event: unknown, ...args: unknown[]) =>
+      winetricksAvailable(deps, {
+        runner: args[0] as Runner,
+        appName: args[1] as string
+      })
+  )
+  deps.ipc.handle(
+    'winetricksInstalled',
+    (_event: unknown, ...args: unknown[]) =>
+      winetricksInstalled(deps, {
+        runner: args[0] as Runner,
+        appName: args[1] as string
+      })
   )
 }

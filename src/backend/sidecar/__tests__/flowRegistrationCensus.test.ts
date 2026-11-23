@@ -181,7 +181,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Phase 87 Plan 26 (D-14): invoke 11 -> 10 -- `getAlternativeWine` is a native `wine` channel.
   // Phase 87 Plan 34 (D-23): invoke 10 -> 7 -- the three DXVK toggles are scheduled resolvers
   // (`engineWineResolvers.ts`).
-  'wineToolsFlowRegistration.ts': { invoke: 7, send: 0 }
+  // Phase 87 Plan 35 (D-23, D-14): invoke 7 -> 2 -- winetricksApply/Available/Installed are scheduled resolvers and
+  // winetricksQueueState/winetricksCancelRemaining are native `wine` channels.
+  'wineToolsFlowRegistration.ts': { invoke: 2, send: 0 }
 }
 
 /**

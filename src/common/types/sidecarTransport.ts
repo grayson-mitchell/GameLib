@@ -1182,6 +1182,55 @@ export const RUST_WINE_DISCOVER_CROSSOVER = 'wine_discover_crossover' as const
 export const RUST_WINE_DXVK_INSTALL_REMOVE = 'wine_dxvk_install_remove' as const
 
 /**
+ * Phase 87 (SVC-02, 87-35): `wine_winetricks_apply` is the Winetricks apply queue's start. Args: `[request,
+ * verbs]`, the game's target `{ runner, appName, settings | unavailable }` (the tool settings the resolver
+ * gathered, or the resolver's reason word when the game has no usable Wine environment) and the renderer's
+ * verbs payload exactly as it sent it; the crate's apply guard judges the verbs against the game's catalog
+ * before any reaches an argv. The shell adds the wine host facts (its process environment, the Darwin release).
+ * Resolves the `WinetricksApplyResult` at once; the verbs install detached in Rust, which pushes the queue's
+ * events. Long-running on a first call (the catalog read downloads and lists the script): listed in the
+ * sidecar's `UNBOUNDED_RUST_CHANNELS`. The `winetricksApply` resolver (`engineWineResolvers.ts`) is its caller.
+ */
+export const RUST_WINE_WINETRICKS_APPLY = 'wine_winetricks_apply' as const
+
+/**
+ * Phase 87 (SVC-02, 87-35): `wine_winetricks_available` lists the components winetricks can install for a
+ * game (`listAvailable`, visible ones only; the crate caches the catalog for the apply guard). Args: one
+ * object, the game's target `{ runner, appName, settings | unavailable }`. The shell adds the wine host facts.
+ * Resolves the `WinetricksComponent[]`. The first read downloads the script: unbounded. The
+ * `winetricksAvailable` resolver is its caller.
+ */
+export const RUST_WINE_WINETRICKS_AVAILABLE =
+  'wine_winetricks_available' as const
+
+/**
+ * Phase 87 (SVC-02, 87-35): `wine_winetricks_installed` reads the lines of a game's `winetricks.log`
+ * (`listInstalled`; a read never creates a bottle). Args: one object, the game's target. The shell adds the
+ * wine host facts. Resolves a `string[]`. The `winetricksInstalled` resolver is its caller.
+ */
+export const RUST_WINE_WINETRICKS_INSTALLED =
+  'wine_winetricks_installed' as const
+
+/**
+ * Phase 87 (SVC-02, 87-35): `wine_winetricks_install` installs a list of verbs for a game one after another
+ * (`Winetricks.install` in the launcher's known-fix loop and the Steam bridge's known fixes). Args: `[request,
+ * verbs]`, the game's target and a string list. Resolves one outcome word per verb: `installed`, `failed` or
+ * `refused`; a verb that is not the shape of a real one counts as `failed` and never reaches an argv. The
+ * shell adds the wine host facts. Each verb is a winetricks run: listed in `UNBOUNDED_RUST_CHANNELS`. The
+ * `winetricksInstallVerbs` shim (`enginewine/tools.ts`) is its caller.
+ */
+export const RUST_WINE_WINETRICKS_INSTALL = 'wine_winetricks_install' as const
+
+/**
+ * Phase 87 (SVC-02, 87-35): `wine_winetricks_list_installed` is the same read as `wine_winetricks_installed`
+ * for the launcher's installed-packages log line, which holds the settings it launches with (no Game object
+ * crosses). Args: one object, the game's target. The `winetricksListInstalled` shim (`enginewine/tools.ts`)
+ * is its caller.
+ */
+export const RUST_WINE_WINETRICKS_LIST_INSTALLED =
+  'wine_winetricks_list_installed' as const
+
+/**
  * Phase 87 (SVC-02, 87-31): `engine_set_online` tells the Rust engine whether the machine is online. The
  * sidecar's online monitor is still the one that probes (until Phase 98), so it writes its status through
  * to `EngineCtx.online` at boot and on every change; Rust-initiated network work (the DXMT boot update, the
@@ -1537,6 +1586,11 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_WINE_DISCOVER_ALTERNATIVES,
   RUST_WINE_DISCOVER_CROSSOVER,
   RUST_WINE_DXVK_INSTALL_REMOVE,
+  RUST_WINE_WINETRICKS_APPLY,
+  RUST_WINE_WINETRICKS_AVAILABLE,
+  RUST_WINE_WINETRICKS_INSTALLED,
+  RUST_WINE_WINETRICKS_INSTALL,
+  RUST_WINE_WINETRICKS_LIST_INSTALLED,
   RUST_ENGINE_SET_ONLINE
 ] as const
 

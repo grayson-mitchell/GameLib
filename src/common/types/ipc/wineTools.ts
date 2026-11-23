@@ -70,8 +70,8 @@ export const wineToolsAsyncArgs = {
   // promote) then retired the send-kind `winetricksInstall` that used to sit above this block --
   // `winetricksApply` is now the only renderer-reachable install path.
   winetricksApply: z.tuple([runnerArg(), nonEmptyString(), verbList]),
-  winetricksQueueState: z.tuple([runnerArg(), nonEmptyString()]),
-  winetricksCancelRemaining: z.tuple([runnerArg(), nonEmptyString()]),
+  // Phase 87 (87-35, D-14): `winetricksQueueState` and `winetricksCancelRemaining` are native `wine`
+  // channels (`nativeChannels.json`); the Rust `parse_queue_key` decodes `[runner, appName]`.
   runWineCommandForGame: z.tuple([
     z.strictObject({
       appName: nonEmptyString(),
@@ -97,8 +97,6 @@ interface WineToolsAsyncReturns {
   winetricksInstalled: Promise<string[]>
   winetricksAvailable: Promise<WinetricksComponent[]>
   winetricksApply: Promise<WinetricksApplyResult>
-  winetricksQueueState: Promise<WinetricksQueueState>
-  winetricksCancelRemaining: Promise<WinetricksQueueState>
   runWineCommandForGame: Promise<ExecResult>
   toggleDXVK: Promise<boolean>
   toggleVKD3D: Promise<boolean>

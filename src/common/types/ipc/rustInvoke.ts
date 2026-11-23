@@ -105,6 +105,11 @@ import {
   RUST_WINE_DISCOVER_ALTERNATIVES,
   RUST_WINE_DISCOVER_CROSSOVER,
   RUST_WINE_DXVK_INSTALL_REMOVE,
+  RUST_WINE_WINETRICKS_APPLY,
+  RUST_WINE_WINETRICKS_AVAILABLE,
+  RUST_WINE_WINETRICKS_INSTALLED,
+  RUST_WINE_WINETRICKS_INSTALL,
+  RUST_WINE_WINETRICKS_LIST_INSTALLED,
   RUST_ENGINE_SET_ONLINE,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
@@ -861,6 +866,27 @@ export const rustInvokeArgs = {
   // source? }`, opaque here and decoded strictly by the crate; the host facts (environment, Darwin release,
   // public directory, online) are the shell's, never the sidecar's.
   [RUST_WINE_DXVK_INSTALL_REMOVE]: z.tuple([
+    z.unknown().meta({ title: 'request', 'x-rust-value': true })
+  ]),
+  // Phase 87 (SVC-02, 87-35): the Winetricks family. Each takes the game's target `{ runner, appName,
+  // settings | unavailable }` as one object, opaque here and decoded strictly by the crate (`TargetArg`,
+  // deny_unknown_fields); the wine host facts are the shell's, never the sidecar's. `apply` also takes the
+  // renderer's verbs payload as it sent it (the crate's apply guard judges it); `install` takes a string list.
+  [RUST_WINE_WINETRICKS_APPLY]: z.tuple([
+    z.unknown().meta({ title: 'request', 'x-rust-value': true }),
+    z.unknown().meta({ title: 'verbs', 'x-rust-value': true })
+  ]),
+  [RUST_WINE_WINETRICKS_AVAILABLE]: z.tuple([
+    z.unknown().meta({ title: 'request', 'x-rust-value': true })
+  ]),
+  [RUST_WINE_WINETRICKS_INSTALLED]: z.tuple([
+    z.unknown().meta({ title: 'request', 'x-rust-value': true })
+  ]),
+  [RUST_WINE_WINETRICKS_INSTALL]: z.tuple([
+    z.unknown().meta({ title: 'request', 'x-rust-value': true }),
+    z.array(z.string().meta({ title: 'verb' })).meta({ title: 'verbs' })
+  ]),
+  [RUST_WINE_WINETRICKS_LIST_INSTALLED]: z.tuple([
     z.unknown().meta({ title: 'request', 'x-rust-value': true })
   ]),
   // Phase 87 (SVC-02, 87-31): the sidecar online monitor's status, written through to the engine context.

@@ -65,6 +65,9 @@ import {
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_RUN_COMMAND,
   RUST_WINE_DXVK_INSTALL_REMOVE,
+  RUST_WINE_WINETRICKS_APPLY,
+  RUST_WINE_WINETRICKS_AVAILABLE,
+  RUST_WINE_WINETRICKS_INSTALL,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
   RUST_DIALOG_SAVE,
@@ -173,6 +176,11 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  *
  * Ninth (Phase 87, 87-34): `wine_dxvk_install_remove` downloads a DXVK-family release when it is not cached and
  * runs the registry commands for the prefix, so it has no limit of its own beyond the app shutdown.
+ *
+ * Tenth (Phase 87, 87-35): the Winetricks calls that read the catalog or run a verb. `wine_winetricks_apply` and
+ * `wine_winetricks_available` read the catalog, whose first read downloads the winetricks script and lists it;
+ * `wine_winetricks_install` runs one winetricks per verb. None has a limit of its own beyond the app shutdown.
+ * `wine_winetricks_installed` and `wine_winetricks_list_installed` read one log file and stay bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -205,7 +213,10 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_RUN_COMMAND,
   RUST_WINE_DISCOVER_ALTERNATIVES,
-  RUST_WINE_DXVK_INSTALL_REMOVE
+  RUST_WINE_DXVK_INSTALL_REMOVE,
+  RUST_WINE_WINETRICKS_APPLY,
+  RUST_WINE_WINETRICKS_AVAILABLE,
+  RUST_WINE_WINETRICKS_INSTALL
 ]
 
 function isValidRequest(value: unknown): value is SidecarRpcRequest {

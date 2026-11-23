@@ -5,7 +5,12 @@
  * pinned separately by `engineWineShimSchedule.test.ts`; this file pins the behaviour: which channel, with
  * which arguments, what the renderer gets back, and that a Rust refusal reaches the renderer.
  */
-import { RUST_WINE_DXVK_INSTALL_REMOVE } from 'common/types/sidecarTransport'
+import {
+  RUST_WINE_DXVK_INSTALL_REMOVE,
+  RUST_WINE_WINETRICKS_APPLY,
+  RUST_WINE_WINETRICKS_AVAILABLE,
+  RUST_WINE_WINETRICKS_INSTALLED
+} from 'common/types/sidecarTransport'
 import { defined } from 'backend/testUtils/indexed'
 
 import { createIpcRegistry, type IpcRegistry } from '../ipcRegistry'
@@ -14,18 +19,27 @@ import {
   toggleDXVK,
   toggleDXVKNVAPI,
   toggleVKD3D,
+  winetricksApply,
+  winetricksAvailable,
+  winetricksInstalled,
   type EngineWineResolverDeps
 } from '../engineWineResolvers'
 
 const SETTINGS = { winePrefix: '/prefix', marker: 'merged-game-settings' }
+const TOOL_SETTINGS = {
+  winePrefix: '/bottle',
+  marker: 'resolved-tool-settings'
+}
 
 function makeDeps(answer: unknown = true): EngineWineResolverDeps & {
   registry: IpcRegistry
   calls: Array<[string, unknown[]]>
   settingsFor: string[]
+  targetFor: Array<[string, string, { ensureBottle: boolean }]>
 } {
   const calls: Array<[string, unknown[]]> = []
   const settingsFor: string[] = []
+  const targetFor: Array<[string, string, { ensureBottle: boolean }]> = []
   const requestRustInvoke = ((channel: string, args: unknown[]) => {
     calls.push([channel, args])
     return answer instanceof Error
@@ -43,8 +57,17 @@ function makeDeps(answer: unknown = true): EngineWineResolverDeps & {
       }
     } as unknown as EngineWineResolverDeps['gameConfigs'],
     requestRustInvoke,
+    winetricksTarget: (runner, appName, opts) => {
+      targetFor.push([runner, appName, opts])
+      return Promise.resolve({
+        runner,
+        appName,
+        settings: TOOL_SETTINGS
+      } as never)
+    },
     calls,
-    settingsFor
+    settingsFor,
+    targetFor
   }
 }
 
@@ -144,9 +167,125 @@ describe('registerEngineWineResolvers', () => {
       ])
       expect(deps.registry.listenerMap().has(channel)).toBe(false)
     }
-    // Nothing else is registered here: a channel has one owner (D-06).
+    // Nothing else is registered here beyond the DXVK toggles and the Winetricks family: a channel has one
+    // owner (D-06).
     expect([...deps.registry.handlerMap().keys()].sort()).toEqual(
-      Object.keys(tools).sort()
+      [
+        ...Object.keys(tools),
+        'winetricksApply',
+        'winetricksAvailable',
+        'winetricksInstalled'
+      ].sort()
     )
+  })
+
+  it('registers the three Winetricks resolvers once each, as invoke handles that carry the renderer arguments in order', async () => {
+    const deps = makeDeps({ marker: 'rust-answer' })
+    registerEngineWineResolvers(deps)
+    const handle = (channel: string) =>
+      defined(deps.registry.handlerMap().get(channel), `${channel} handle`)
+    const verbs = ['vcrun2019', 'corefonts']
+    expect(
+      await handle('winetricksApply')(undefined, 'gog', 'app-1', verbs)
+    ).toEqual({ marker: 'rust-answer' })
+    await handle('winetricksAvailable')(undefined, 'sideload', 'app-2')
+    await handle('winetricksInstalled')(undefined, 'legendary', 'app-3')
+    expect(deps.calls.map(([channel]) => channel)).toEqual([
+      RUST_WINE_WINETRICKS_APPLY,
+      RUST_WINE_WINETRICKS_AVAILABLE,
+      RUST_WINE_WINETRICKS_INSTALLED
+    ])
+    expect(deps.calls[0]?.[1][1]).toBe(verbs)
+    for (const channel of [
+      'winetricksApply',
+      'winetricksAvailable',
+      'winetricksInstalled'
+    ]) {
+      expect(deps.registry.listenerMap().has(channel)).toBe(false)
+    }
+  })
+})
+
+// 87-35 (D-23): the Winetricks family. Each resolver gathers the game's Wine environment as one const and makes the
+// one typed call; the apply and the catalog read create the game's bottle, the installed-list read never does.
+describe('winetricksApply', () => {
+  it('resolves the target with a bottle-creating need and sends it with the verbs exactly as the renderer sent them', async () => {
+    const deps = makeDeps({ accepted: true })
+    const verbs = ['xact', 'corefonts']
+    expect(await winetricksApply(deps, 'gog', 'app-1', verbs)).toEqual({
+      accepted: true
+    })
+    expect(deps.targetFor).toEqual([['gog', 'app-1', { ensureBottle: true }]])
+    expect(deps.calls).toEqual([
+      [
+        RUST_WINE_WINETRICKS_APPLY,
+        [{ runner: 'gog', appName: 'app-1', settings: TOOL_SETTINGS }, verbs]
+      ]
+    ])
+    // Identity: the guard in Rust judges the payload, the resolver does not re-shape it.
+    expect(deps.calls[0]?.[1][1]).toBe(verbs)
+  })
+
+  it('sends a payload that is no list as it came (the Rust guard answers an invalid result, not this resolver)', async () => {
+    const deps = makeDeps({ accepted: false, reason: 'invalid' })
+    await winetricksApply(deps, 'gog', 'app-1', 'vcrun2019')
+    expect(deps.calls[0]?.[1][1]).toBe('vcrun2019')
+  })
+
+  it("lets Rust's refusal reach the renderer instead of swallowing it", async () => {
+    const deps = makeDeps(new Error('wine_winetricks_apply:bad-args'))
+    await expect(
+      winetricksApply(deps, 'gog', 'app-1', ['xact'])
+    ).rejects.toThrow('wine_winetricks_apply:bad-args')
+  })
+
+  it('sends the reason when the game has no usable Wine environment, with no settings', async () => {
+    const deps = makeDeps({ accepted: false })
+    deps.winetricksTarget = (runner, appName) =>
+      Promise.resolve({ runner, appName, unavailable: 'bottle-not-created' })
+    await winetricksApply(deps, 'steam', '480', ['xact'])
+    expect(deps.calls[0]?.[1][0]).toEqual({
+      runner: 'steam',
+      appName: '480',
+      unavailable: 'bottle-not-created'
+    })
+  })
+})
+
+describe('winetricksAvailable', () => {
+  it('resolves the target with a bottle-creating need and answers the components Rust listed', async () => {
+    const components = [{ verb: 'vcrun2019', name: 'VC++', category: 'dlls' }]
+    const deps = makeDeps(components)
+    expect(
+      await winetricksAvailable(deps, { runner: 'sideload', appName: 'a-2' })
+    ).toBe(components)
+    expect(deps.targetFor).toEqual([
+      ['sideload', 'a-2', { ensureBottle: true }]
+    ])
+    expect(deps.calls).toEqual([
+      [
+        RUST_WINE_WINETRICKS_AVAILABLE,
+        [{ runner: 'sideload', appName: 'a-2', settings: TOOL_SETTINGS }]
+      ]
+    ])
+  })
+})
+
+describe('winetricksInstalled', () => {
+  it('resolves the target without creating a bottle and answers the log lines Rust read', async () => {
+    const lines = ['vcrun2019', 'corefonts']
+    const deps = makeDeps(lines)
+    expect(
+      await winetricksInstalled(deps, { runner: 'legendary', appName: 'a-3' })
+    ).toBe(lines)
+    expect(deps.targetFor).toEqual([
+      ['legendary', 'a-3', { ensureBottle: false }]
+    ])
+    expect(deps.calls).toEqual([
+      [
+        RUST_WINE_WINETRICKS_INSTALLED,
+        [{ runner: 'legendary', appName: 'a-3', settings: TOOL_SETTINGS }]
+      ]
+    ])
   })
 })

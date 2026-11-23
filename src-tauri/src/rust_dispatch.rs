@@ -217,6 +217,19 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::WineDxvkInstallRemove => {
             wine_dispatch::rpc_wine_dxvk_install_remove(args)
         }
+        RustInvokeChannel::WineWinetricksApply => wine_dispatch::rpc_wine_winetricks_apply(args),
+        RustInvokeChannel::WineWinetricksAvailable => {
+            wine_dispatch::rpc_wine_winetricks_available(args)
+        }
+        RustInvokeChannel::WineWinetricksInstalled => {
+            wine_dispatch::rpc_wine_winetricks_installed(args)
+        }
+        RustInvokeChannel::WineWinetricksInstall => {
+            wine_dispatch::rpc_wine_winetricks_install(args)
+        }
+        RustInvokeChannel::WineWinetricksListInstalled => {
+            wine_dispatch::rpc_wine_winetricks_list_installed(args)
+        }
         RustInvokeChannel::EngineSetOnline => engine_dispatch::rpc_engine_set_online(args),
     }
 }

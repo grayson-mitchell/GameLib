@@ -96,6 +96,8 @@ import { registerStoreEmbedFlows } from './storeEmbedFlowRegistration'
 import { registerDepotHostFlows } from './depotHostRegistration'
 import { registerSteamPollEventFlows } from './steamPollEventRegistration'
 import { managerDepsFromServices } from '../services/managerDeps'
+import type { EngineServicesSource } from '../services/engineServices'
+import { resolveWinetricksTarget } from '../services/winetricksTarget'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 
 /**
@@ -123,6 +125,19 @@ function toolSlices(services: BootServices) {
     appRuntime: services.appRuntime,
     steamBottle: services.steamBottle,
     steamLaunchRuntime: services.steamLaunchRuntime
+  }
+}
+
+/** The engine-services source the Winetricks target resolver reads (`services/winetricksTarget.ts`). */
+function engineSourceFrom(services: BootServices): EngineServicesSource {
+  return {
+    libraryManagers: services.managers.library,
+    commandRunner: services.commandRunner,
+    spawnAsync: services.spawnAsync,
+    runner: services.runner,
+    stores: services.stores,
+    launcher: services.launcher,
+    ...toolSlices(services)
   }
 }
 
@@ -381,16 +396,20 @@ export function registerHandlers(deps: {
     spawnAsync: deps.services.spawnAsync,
     stores: deps.services.stores,
     runner: deps.services.runner,
-    winetricksQueue: deps.services.winetricksQueue,
     requestRustInvoke: deps.services.host.requestRustInvoke,
     ...toolSlices(deps.services)
   })
-  // Phase 87 (D-23): the scheduled resolvers of the engine and wine services (the DXVK toggles as of 87-34).
-  // A channel is registered here or in the wine tools cluster, never both.
+  // Phase 87 (D-23): the scheduled resolvers of the engine and wine services (the DXVK toggles as of 87-34, the
+  // Winetricks apply and catalog reads as of 87-35). A channel is registered here or in the wine tools cluster,
+  // never both. `winetricksTarget` is the one decision TypeScript keeps for Winetricks: which Wine environment
+  // a game's tools act on.
+  const engineSource = engineSourceFrom(deps.services)
   registerEngineWineResolvers({
     ipc,
     gameConfigs: deps.services.gameConfigs,
-    requestRustInvoke: deps.services.host.requestRustInvoke
+    requestRustInvoke: deps.services.host.requestRustInvoke,
+    winetricksTarget: (runner, appName, opts) =>
+      resolveWinetricksTarget(engineSource, runner, appName, opts)
   })
   registerShortcutsFlows({
     ipc,

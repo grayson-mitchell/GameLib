@@ -736,6 +736,82 @@ pub(crate) fn get_alternative_wine(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> Na
     ))
 }
 
+/// The five store runners a queue key may name (the renderer's `Runner` union).
+const QUEUE_RUNNERS: &[&str] = &["legendary", "gog", "sideload", "nile", "steam"];
+
+/// The longest `appName` a queue channel takes (the TS `nonEmptyString()` bound).
+const QUEUE_APP_NAME_MAX: usize = 4096;
+
+/// Decodes `[runner, appName]`, the two arguments of `winetricksQueueState` and
+/// `winetricksCancelRemaining`: one of the five runners and a non-empty string of at most 4096
+/// characters. Every rejection is a fixed path and code, never the renderer's value (T-87-80).
+fn parse_queue_key(args: &[Value]) -> Result<Value, Rejection> {
+    let [runner, app_name] = args else {
+        return Err((
+            "(args)",
+            if args.len() > 2 {
+                "too_big"
+            } else {
+                "too_small"
+            },
+        ));
+    };
+    let Value::String(runner) = runner else {
+        return Err(("0", "invalid_type"));
+    };
+    if !QUEUE_RUNNERS.contains(&runner.as_str()) {
+        return Err(("0", "invalid_value"));
+    }
+    let Value::String(app_name) = app_name else {
+        return Err(("1", "invalid_type"));
+    };
+    if app_name.is_empty() {
+        return Err(("1", "too_small"));
+    }
+    if app_name.chars().count() > QUEUE_APP_NAME_MAX {
+        return Err(("1", "too_big"));
+    }
+    Ok(serde_json::json!({ "runner": runner, "appName": app_name }))
+}
+
+/// The body of a queue channel: decode first (a bad call is rejected the same way before and after the
+/// install), then the crate's queue op on the blocking pool. The answer is the queue's snapshot with one
+/// new revision (`WinetricksQueueState`); the op reads memory only and holds no registrant of its own.
+async fn queue_channel(
+    wine: Option<Arc<WineCtx>>,
+    channel: &'static str,
+    op: &'static str,
+    args: Vec<Value>,
+) -> Result<Value, String> {
+    let key =
+        parse_queue_key(&args).map_err(|(path, code)| invalid_args(channel, &[path], &[code]))?;
+    let wine = wine.ok_or_else(|| format!("{channel}: not ready"))?;
+    run_wine_op(wine, op, vec![key], "the queue did not answer").await
+}
+
+/// The native `winetricksQueueState` handler (slice `wine`, D-14): the state of a game's Winetricks apply
+/// queue, answered by `wine_winetricks_queue_state` (one new snapshot revision). The Rust queue is the
+/// only one; the renderer reads the same queue that `winetricksApply` feeds (D-06).
+pub(crate) fn winetricks_queue_state(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(queue_channel(
+        wine_ctx().cloned(),
+        "winetricksQueueState",
+        "wine_winetricks_queue_state",
+        args,
+    ))
+}
+
+/// The native `winetricksCancelRemaining` handler (slice `wine`, D-14): the verbs not yet started are
+/// cancelled, the one running finishes. Answers the new state, as `wine_winetricks_cancel_remaining` does.
+pub(crate) fn winetricks_cancel_remaining(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(queue_channel(
+        wine_ctx().cloned(),
+        "winetricksCancelRemaining",
+        "wine_winetricks_cancel_remaining",
+        args,
+    ))
+}
+
 /// Runs `op` over `args` for a `rustInvoke` arm. These arms run on the dispatcher's worker thread, never
 /// inside a runtime, so the crate's own `dispatch_sync` drives the op there. Before [`install`] the
 /// answer is `<op>:not-ready`.
@@ -959,6 +1035,96 @@ pub(crate) fn rpc_wine_dxvk_install_remove(args: &[Value]) -> Result<Value, Stri
         "wine_dxvk_install_remove",
         &[request.clone(), tools_host_value()],
     )
+}
+
+/// The most verbs one `wine_winetricks_install` call takes (the renderer's apply payload bound).
+const INSTALL_VERBS_MAX: usize = 1024;
+
+/// The `wine_winetricks_apply` `rustInvoke` arm (the `winetricksApply` resolver, 87-35): `[request, verbs]`,
+/// the game's [`gamelib_wine::winetricks::TargetArg`] the resolver gathered and the renderer's verbs payload
+/// exactly as it sent it. The shell adds the wine host facts (its own environment and Darwin release), so
+/// none travels from the sidecar. The crate runs its apply guard (the verbs against the game's catalog)
+/// before any verb reaches an argv, answers at once with the state or the refusal, and installs the verbs
+/// detached under its own shutdown registrant. Unbounded in the sidecar (a first apply reads the catalog,
+/// which downloads the winetricks script).
+pub(crate) fn rpc_wine_winetricks_apply(args: &[Value]) -> Result<Value, String> {
+    WineWinetricksApplyArgs::from_args(args)?;
+    let [request @ Value::Object(_), verbs] = args else {
+        return Err("wine_winetricks_apply:bad-args".to_string());
+    };
+    rpc_wine_op(
+        wine_ctx(),
+        "wine_winetricks_apply",
+        &[request.clone(), verbs.clone(), wine_run_host()],
+    )
+}
+
+/// The one request a catalog read takes: exactly one object (the game's target), to which the shell adds the
+/// wine host facts. Shared by the `available` and the two `installed` arms.
+fn winetricks_read_op(op: &'static str, args: &[Value]) -> Result<Value, String> {
+    let [request @ Value::Object(_)] = args else {
+        return Err(format!("{op}:bad-args"));
+    };
+    rpc_wine_op(wine_ctx(), op, &[request.clone(), wine_run_host()])
+}
+
+/// The `wine_winetricks_available` `rustInvoke` arm (the `winetricksAvailable` resolver, 87-35): the
+/// components winetricks can install for the game, with the crate's catalog cache. Unbounded in the sidecar
+/// (the first read downloads the script and lists it).
+pub(crate) fn rpc_wine_winetricks_available(args: &[Value]) -> Result<Value, String> {
+    WineWinetricksAvailableArgs::from_args(args)?;
+    winetricks_read_op("wine_winetricks_available", args)
+}
+
+/// The `wine_winetricks_installed` `rustInvoke` arm (the `winetricksInstalled` resolver, 87-35): the lines of
+/// the game's `winetricks.log`. A read: it never creates a bottle.
+pub(crate) fn rpc_wine_winetricks_installed(args: &[Value]) -> Result<Value, String> {
+    WineWinetricksInstalledArgs::from_args(args)?;
+    winetricks_read_op("wine_winetricks_installed", args)
+}
+
+/// The `wine_winetricks_list_installed` `rustInvoke` arm (the `winetricksListInstalled` shim, 87-35): the
+/// same read for the launcher's log line, which holds the settings it launches with.
+pub(crate) fn rpc_wine_winetricks_list_installed(args: &[Value]) -> Result<Value, String> {
+    WineWinetricksListInstalledArgs::from_args(args)?;
+    winetricks_read_op("wine_winetricks_installed", args)
+}
+
+/// The `wine_winetricks_install` `rustInvoke` arm (the `winetricksInstallVerbs` shim, 87-35): `[request, verbs]`,
+/// the game's target and a list of verbs, installed one after another as the launcher's known-fix loop did
+/// (never a batch, never parallel, a failed verb does not stop the rest). Answers one outcome word per verb:
+/// `installed`, `failed` or `refused` (another component was installing). A verb that is not the shape of a
+/// real one never reaches an argv and counts as `failed`. The shell adds the wine host facts. Unbounded in the
+/// sidecar (each verb is a winetricks run).
+pub(crate) fn rpc_wine_winetricks_install(args: &[Value]) -> Result<Value, String> {
+    const OP: &str = "wine_winetricks_install";
+    WineWinetricksInstallArgs::from_args(args)?;
+    let [Value::Object(request), Value::Array(verbs)] = args else {
+        return Err(format!("{OP}:bad-args"));
+    };
+    if verbs.len() > INSTALL_VERBS_MAX {
+        return Err(format!("{OP}:bad-args"));
+    }
+    let mut outcomes = Vec::with_capacity(verbs.len());
+    for verb in verbs {
+        let Value::String(verb) = verb else {
+            return Err(format!("{OP}:bad-args"));
+        };
+        // The crate refuses a verb that is no verb as a bad argument, which would be indistinguishable from
+        // a bad request: decide it here, so nothing ran for it and the request's own faults still surface.
+        if !gamelib_wine::winetricks::is_verb_shape(verb) {
+            outcomes.push(Value::String("failed".to_string()));
+            continue;
+        }
+        let mut one = request.clone();
+        one.insert("verb".to_string(), Value::String(verb.clone()));
+        outcomes.push(rpc_wine_op(
+            wine_ctx(),
+            OP,
+            &[Value::Object(one), wine_run_host()],
+        )?);
+    }
+    Ok(Value::Array(outcomes))
 }
 
 /// The `wine_run_command` `rustInvoke` arm: one `WineCommandArgs` object, to which the shell adds
@@ -2116,6 +2282,188 @@ mod tests {
             assert_eq!(
                 rpc_wine_discover_crossover(&bad),
                 Err("wine_discover_crossover:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_queue_key_is_a_runner_and_a_non_empty_app_name_and_a_rejection_never_echoes_the_value() {
+        assert_eq!(
+            parse_queue_key(&[json!("gog"), json!("1207658924")]),
+            Ok(json!({ "runner": "gog", "appName": "1207658924" }))
+        );
+        for runner in ["legendary", "gog", "sideload", "nile", "steam"] {
+            assert!(
+                parse_queue_key(&[json!(runner), json!("a")]).is_ok(),
+                "{runner}"
+            );
+        }
+        let longest = "x".repeat(QUEUE_APP_NAME_MAX);
+        assert!(parse_queue_key(&[json!("gog"), json!(longest)]).is_ok());
+        let too_long = "x".repeat(QUEUE_APP_NAME_MAX + 1);
+        for (bad, why) in [
+            (vec![], ("(args)", "too_small")),
+            (vec![json!("gog")], ("(args)", "too_small")),
+            (
+                vec![json!("gog"), json!("a"), json!("b")],
+                ("(args)", "too_big"),
+            ),
+            (vec![json!(1), json!("a")], ("0", "invalid_type")),
+            (vec![json!("epic"), json!("a")], ("0", "invalid_value")),
+            (vec![json!("GOG"), json!("a")], ("0", "invalid_value")),
+            (vec![json!("gog"), json!(1)], ("1", "invalid_type")),
+            (vec![json!("gog"), json!("")], ("1", "too_small")),
+            (vec![json!("gog"), json!(too_long)], ("1", "too_big")),
+            (
+                vec![json!({ "runner": "gog", "appName": "a" }), json!("a")],
+                ("0", "invalid_type"),
+            ),
+        ] {
+            assert_eq!(parse_queue_key(&bad), Err(why), "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn the_queue_channels_answer_the_one_queue_over_a_real_context_and_refuse_before_install() {
+        let home = gamelib_testutil::FakeHome::new("wine-dispatch-queue-");
+        let wine = wine_over(&home, Arc::new(Recorded::default()));
+        for (channel, op) in [
+            ("winetricksQueueState", "wine_winetricks_queue_state"),
+            (
+                "winetricksCancelRemaining",
+                "wine_winetricks_cancel_remaining",
+            ),
+        ] {
+            let state = tauri::async_runtime::block_on(queue_channel(
+                Some(Arc::clone(&wine)),
+                channel,
+                op,
+                vec![json!("gog"), json!("app-1")],
+            ))
+            .unwrap_or_else(|error| panic!("{channel}: {error}"));
+            assert_eq!(state["runner"], "gog", "{channel}: {state}");
+            assert_eq!(state["appName"], "app-1", "{channel}: {state}");
+            // A game that never applied has no run: the renderer reads an idle queue.
+            assert_eq!(state["busy"], false, "{channel}: {state}");
+            // Decode comes before the context is looked at, so a bad call is rejected the same way either side
+            // of the install, and a good one before it is `not ready`.
+            let bad = tauri::async_runtime::block_on(queue_channel(
+                None,
+                channel,
+                op,
+                vec![json!("epic"), json!("/SECRET-PATH")],
+            ))
+            .unwrap_err();
+            assert!(bad.contains(IPC_INVALID_ARGS_MARKER), "{channel}: {bad}");
+            assert!(!bad.contains("SECRET"), "{channel}: {bad}");
+            assert_eq!(
+                tauri::async_runtime::block_on(queue_channel(
+                    None,
+                    channel,
+                    op,
+                    vec![json!("gog"), json!("app-1")],
+                )),
+                Err(format!("{channel}: not ready"))
+            );
+        }
+    }
+
+    #[test]
+    fn the_winetricks_apply_arm_takes_a_target_and_the_verbs_as_sent_and_answers_not_ready_before_install(
+    ) {
+        assert!(wine_ctx().is_none());
+        let target = json!({ "runner": "gog", "appName": "1", "unavailable": "no-engine" });
+        // Whatever the renderer sent as the verbs reaches the crate's guard, so it is not judged here.
+        for verbs in [json!(["xact"]), json!("xact"), json!(null), json!([1, 2])] {
+            assert_eq!(
+                rpc_wine_winetricks_apply(&[target.clone(), verbs.clone()]),
+                Err("wine_winetricks_apply:not-ready".to_string()),
+                "{verbs}"
+            );
+        }
+        for bad in [
+            vec![],
+            vec![target.clone()],
+            vec![json!("gog"), json!(["xact"])],
+            vec![json!(null), json!(["xact"])],
+            vec![target.clone(), json!(["xact"]), json!({ "env": {} })],
+        ] {
+            assert_eq!(
+                rpc_wine_winetricks_apply(&bad),
+                Err("wine_winetricks_apply:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_catalog_arms_take_one_target_object_and_answer_not_ready_before_install() {
+        assert!(wine_ctx().is_none());
+        let target =
+            json!({ "runner": "steam", "appName": "480", "unavailable": "not-own-bottle" });
+        type Arm = fn(&[Value]) -> Result<Value, String>;
+        let arms: [(&str, Arm); 3] = [
+            ("wine_winetricks_available", rpc_wine_winetricks_available),
+            ("wine_winetricks_installed", rpc_wine_winetricks_installed),
+            (
+                "wine_winetricks_installed",
+                rpc_wine_winetricks_list_installed,
+            ),
+        ];
+        for (op, arm) in arms {
+            assert_eq!(
+                arm(&[target.clone()]),
+                Err(format!("{op}:not-ready")),
+                "{op}"
+            );
+            for bad in [
+                vec![],
+                vec![json!("steam"), json!("480")],
+                vec![json!(null)],
+                vec![target.clone(), target.clone()],
+            ] {
+                let error = arm(&bad).unwrap_err();
+                assert!(error.ends_with(":bad-args"), "{op}: {bad:?}: {error}");
+            }
+        }
+    }
+
+    #[test]
+    fn the_install_arm_answers_one_outcome_per_verb_and_a_verb_that_is_no_verb_never_reaches_the_crate(
+    ) {
+        assert!(wine_ctx().is_none());
+        let target = json!({ "runner": "gog", "appName": "1", "unavailable": "no-engine" });
+        // No verb has the shape of a real one, so no op is asked and no context is needed.
+        assert_eq!(
+            rpc_wine_winetricks_install(&[
+                target.clone(),
+                json!(["-q", "Not A Verb", "a; rm -rf /", "../x", ""])
+            ]),
+            Ok(json!(["failed", "failed", "failed", "failed", "failed"]))
+        );
+        assert_eq!(
+            rpc_wine_winetricks_install(&[target.clone(), json!([])]),
+            Ok(json!([]))
+        );
+        // A real verb goes to the crate, which is not there before the install.
+        assert_eq!(
+            rpc_wine_winetricks_install(&[target.clone(), json!(["vcrun2019"])]),
+            Err("wine_winetricks_install:not-ready".to_string())
+        );
+        let too_many: Vec<Value> = (0..=INSTALL_VERBS_MAX).map(|_| json!("-x")).collect();
+        for bad in [
+            vec![],
+            vec![target.clone()],
+            vec![target.clone(), json!("vcrun2019")],
+            vec![target.clone(), json!([1])],
+            vec![target.clone(), json!(["a"]), json!(["b"])],
+            vec![json!("gog"), json!(["vcrun2019"])],
+            vec![target.clone(), Value::Array(too_many)],
+        ] {
+            assert_eq!(
+                rpc_wine_winetricks_install(&bad),
+                Err("wine_winetricks_install:bad-args".to_string()),
                 "{bad:?}"
             );
         }

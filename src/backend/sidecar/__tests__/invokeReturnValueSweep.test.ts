@@ -7,7 +7,7 @@
  * the 40 put the channel name on the following line — a single-line-only regex finds fewer),
  * and asserts:
  *
- *   1. The extracted channel count is exactly 35, with the exact per-module tally 10/7/6/12.
+ *   1. The extracted channel count is exactly 30, with the exact per-module tally 10/2/6/12.
  *   2. Every channel classified RETURNS (declared non-void in `AsyncIPCFunctions`, NOT on the
  *      explicit VOID-PARITY allow-list below) has a `return` statement inside its own handler
  *      body -- so a future edit that silently drops a `return` is caught here, not live.
@@ -50,8 +50,10 @@ const MODULES: ModuleSpec[] = [
     // Phase 87 Plan 24 (D-14): 12 -> 11. `wine.isValidVersion` is a native `wine` channel.
     // Phase 87 Plan 26 (D-14): 11 -> 10. `getAlternativeWine` is a native `wine` channel.
     // Phase 87 Plan 34 (D-23): 10 -> 7. The three DXVK toggles are scheduled resolvers (`engineWineResolvers.ts`).
+    // Phase 87 Plan 35 (D-23, D-14): 7 -> 2. winetricksApply/Available/Installed are scheduled resolvers and
+    // winetricksQueueState/winetricksCancelRemaining are native `wine` channels.
     path: join(__dirname, '../wineToolsFlowRegistration.ts'),
-    expectedCount: 7
+    expectedCount: 2
   },
   {
     name: 'shortcuts',
@@ -191,8 +193,9 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
   // Phase 87 Plan 24 (D-14): 40 -> 39, `wine.isValidVersion` is a native `wine` channel.
   // Phase 87 Plan 26 (D-14): 39 -> 38, `getAlternativeWine` is a native `wine` channel.
   // Phase 87 Plan 34 (D-23): 38 -> 35, the three DXVK toggles are scheduled resolvers, not the modules' handles.
-  it('extracts exactly 35 channels total', () => {
-    expect(allChannels).toHaveLength(35)
+  // Phase 87 Plan 35 (D-23, D-14): 35 -> 30, the five Winetricks channels are resolvers or native channels.
+  it('extracts exactly 30 channels total', () => {
+    expect(allChannels).toHaveLength(30)
   })
 
   it.each(MODULES)('$name has exactly $expectedCount channels', (spec) => {

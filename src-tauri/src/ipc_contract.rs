@@ -171,6 +171,11 @@ pub(crate) enum RustInvokeChannel {
     WineDiscoverAlternatives,
     WineDiscoverCrossover,
     WineDxvkInstallRemove,
+    WineWinetricksApply,
+    WineWinetricksAvailable,
+    WineWinetricksInstalled,
+    WineWinetricksInstall,
+    WineWinetricksListInstalled,
     EngineSetOnline,
 }
 
@@ -324,6 +329,11 @@ impl RustInvokeChannel {
         RustInvokeChannel::WineDiscoverAlternatives,
         RustInvokeChannel::WineDiscoverCrossover,
         RustInvokeChannel::WineDxvkInstallRemove,
+        RustInvokeChannel::WineWinetricksApply,
+        RustInvokeChannel::WineWinetricksAvailable,
+        RustInvokeChannel::WineWinetricksInstalled,
+        RustInvokeChannel::WineWinetricksInstall,
+        RustInvokeChannel::WineWinetricksListInstalled,
         RustInvokeChannel::EngineSetOnline,
     ];
 
@@ -477,6 +487,11 @@ impl RustInvokeChannel {
             "wine_discover_alternatives" => Some(RustInvokeChannel::WineDiscoverAlternatives),
             "wine_discover_crossover" => Some(RustInvokeChannel::WineDiscoverCrossover),
             "wine_dxvk_install_remove" => Some(RustInvokeChannel::WineDxvkInstallRemove),
+            "wine_winetricks_apply" => Some(RustInvokeChannel::WineWinetricksApply),
+            "wine_winetricks_available" => Some(RustInvokeChannel::WineWinetricksAvailable),
+            "wine_winetricks_installed" => Some(RustInvokeChannel::WineWinetricksInstalled),
+            "wine_winetricks_install" => Some(RustInvokeChannel::WineWinetricksInstall),
+            "wine_winetricks_list_installed" => Some(RustInvokeChannel::WineWinetricksListInstalled),
             "engine_set_online" => Some(RustInvokeChannel::EngineSetOnline),
             _ => None,
         }
@@ -632,6 +647,11 @@ impl RustInvokeChannel {
             RustInvokeChannel::WineDiscoverAlternatives => "wine_discover_alternatives",
             RustInvokeChannel::WineDiscoverCrossover => "wine_discover_crossover",
             RustInvokeChannel::WineDxvkInstallRemove => "wine_dxvk_install_remove",
+            RustInvokeChannel::WineWinetricksApply => "wine_winetricks_apply",
+            RustInvokeChannel::WineWinetricksAvailable => "wine_winetricks_available",
+            RustInvokeChannel::WineWinetricksInstalled => "wine_winetricks_installed",
+            RustInvokeChannel::WineWinetricksInstall => "wine_winetricks_install",
+            RustInvokeChannel::WineWinetricksListInstalled => "wine_winetricks_list_installed",
             RustInvokeChannel::EngineSetOnline => "engine_set_online",
         }
     }
@@ -921,6 +941,8 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "steamgriddb.setApiKey",
     "uploadLogFile",
     "wine.isValidVersion",
+    "winetricksCancelRemaining",
+    "winetricksQueueState",
 ];
 
 /// Renderer send channels owned by the Rust native router (Phase 83), sorted.
@@ -3289,6 +3311,70 @@ pub(crate) struct WineDxvkInstallRemoveArgs {
 impl WineDxvkInstallRemoveArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let request = serde_json::from_value(args.first().ok_or_else(|| "wine_dxvk_install_remove:bad-args".to_string())?.clone()).map_err(|_| "wine_dxvk_install_remove:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineWinetricksApplyArgs {
+    pub(crate) request: Value,
+    pub(crate) verbs: Value,
+}
+
+impl WineWinetricksApplyArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "wine_winetricks_apply:bad-args".to_string())?.clone()).map_err(|_| "wine_winetricks_apply:bad-args".to_string())?;
+        let verbs = serde_json::from_value(args.get(1).ok_or_else(|| "wine_winetricks_apply:bad-args".to_string())?.clone()).map_err(|_| "wine_winetricks_apply:bad-args".to_string())?;
+        Ok(Self { request, verbs })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineWinetricksAvailableArgs {
+    pub(crate) request: Value,
+}
+
+impl WineWinetricksAvailableArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "wine_winetricks_available:bad-args".to_string())?.clone()).map_err(|_| "wine_winetricks_available:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineWinetricksInstalledArgs {
+    pub(crate) request: Value,
+}
+
+impl WineWinetricksInstalledArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "wine_winetricks_installed:bad-args".to_string())?.clone()).map_err(|_| "wine_winetricks_installed:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineWinetricksInstallArgs {
+    pub(crate) request: Value,
+    pub(crate) verbs: Vec<String>,
+}
+
+impl WineWinetricksInstallArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "wine_winetricks_install:bad-args".to_string())?.clone()).map_err(|_| "wine_winetricks_install:bad-args".to_string())?;
+        let verbs = serde_json::from_value(args.get(1).ok_or_else(|| "wine_winetricks_install:bad-args".to_string())?.clone()).map_err(|_| "wine_winetricks_install:bad-args".to_string())?;
+        Ok(Self { request, verbs })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineWinetricksListInstalledArgs {
+    pub(crate) request: Value,
+}
+
+impl WineWinetricksListInstalledArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "wine_winetricks_list_installed:bad-args".to_string())?.clone()).map_err(|_| "wine_winetricks_list_installed:bad-args".to_string())?;
         Ok(Self { request })
     }
 }

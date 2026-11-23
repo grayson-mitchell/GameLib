@@ -1819,6 +1819,66 @@
       "valid": [[]],
       "invalid": [["extra"], [null], [{}], [1, 2]]
     },
+    "winetricksQueueState": {
+      "kind": "invoke",
+      "slice": "wine",
+      "args": [
+        {
+          "name": "runner",
+          "type": "string",
+          "enum": ["legendary", "gog", "sideload", "nile", "steam"]
+        },
+        { "name": "appName", "type": "string" }
+      ],
+      "returns": "WinetricksQueueState",
+      "valid": [
+        ["gog", "1207658924"],
+        ["steam", "480"],
+        ["sideload", "abc"]
+      ],
+      "invalid": [
+        [],
+        ["gog"],
+        ["gog", ""],
+        ["epic", "1"],
+        ["GOG", "1"],
+        [1, "1"],
+        ["gog", 1],
+        [null, null],
+        ["gog", "1", "extra"],
+        [{ "runner": "gog", "appName": "1" }]
+      ]
+    },
+    "winetricksCancelRemaining": {
+      "kind": "invoke",
+      "slice": "wine",
+      "args": [
+        {
+          "name": "runner",
+          "type": "string",
+          "enum": ["legendary", "gog", "sideload", "nile", "steam"]
+        },
+        { "name": "appName", "type": "string" }
+      ],
+      "returns": "WinetricksQueueState",
+      "valid": [
+        ["gog", "1207658924"],
+        ["steam", "480"],
+        ["sideload", "abc"]
+      ],
+      "invalid": [
+        [],
+        ["gog"],
+        ["gog", ""],
+        ["epic", "1"],
+        ["GOG", "1"],
+        [1, "1"],
+        ["gog", 1],
+        [null, null],
+        ["gog", "1", "extra"],
+        [{ "runner": "gog", "appName": "1" }]
+      ]
+    },
     "getPerGameBottleName": {
       "kind": "invoke",
       "slice": "engine",

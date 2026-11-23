@@ -43,7 +43,8 @@ describe('rustInvokeArgs', () => {
     // Phase 87 plan 26: 145 -> 147, wine_discover_alternatives and wine_discover_crossover.
     // Phase 87 plan 31: 147 -> 148, engine_set_online.
     // Phase 87 plan 34: 148 -> 149, wine_dxvk_install_remove.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(149)
+    // Phase 87 plan 35: 149 -> 154, wine_winetricks_apply, _available, _installed, _install and _list_installed.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(154)
   })
 
   it('parses the store-embed wire fixtures', () => {

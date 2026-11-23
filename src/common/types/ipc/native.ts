@@ -13,7 +13,8 @@ import type {
   UploadedLogData,
   WikiInfo,
   WineInstallation,
-  WineVersionInfo
+  WineVersionInfo,
+  WinetricksQueueState
 } from '../../types'
 import type { EngineOption } from '../engine'
 import type { StoreSearchDeal, StoreSearchResponse } from '../storeSearch'
@@ -167,6 +168,20 @@ export interface NativeAsync {
   // roots, the `PATH` and the settings are the shell's own), and with no release list stored it refreshes
   // it first and pushes `wineVersionsUpdated`, so it has no wall-clock bound of its own.
   getAlternativeWine: () => Promise<WineInstallation[]>
+  // Phase 87 (87-35, D-14): the Winetricks apply queue's state and its cancel, answered by the Rust `wine` slice
+  // (`gamelib-wine`'s `wine_winetricks_queue_state` and `wine_winetricks_cancel_remaining`). Both take
+  // `[runner, appName]` (one of the five runners, a non-empty appName of at most 4096 characters); anything
+  // else rejects with the invalid-args marker. Each answers the queue's snapshot with one new revision.
+  // `cancelRemaining` cancels the verbs not yet started and lets the one running finish. The queue is the
+  // Rust one that `winetricksApply` (a scheduled resolver) feeds, so the renderer reads what it applied.
+  winetricksQueueState: (
+    runner: Runner,
+    appName: string
+  ) => Promise<WinetricksQueueState>
+  winetricksCancelRemaining: (
+    runner: Runner,
+    appName: string
+  ) => Promise<WinetricksQueueState>
   // Phase 87 (87-28, D-14): the per-game bottle name the install dialogs show (`GameLib-<runner>-<appName>`
   // for a game that has one, `null` for a Steam game or a game the engine layer refuses), answered by the
   // Rust `engine` slice (`gamelib-engine`'s `engine_per_game_bottle_name`). It takes exactly one strict

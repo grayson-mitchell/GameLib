@@ -284,6 +284,37 @@ const SCHEDULE: readonly ScheduleRow[] = [
     ],
     deletedBy: 88
   },
+  // 87-35 (D-23): the Winetricks family's resolvers, registered by the same `registerEngineWineResolvers`. The
+  // TS-only input is the Wine environment a game's tools act on (`target`: the tool settings or the reason there are
+  // none, decided by `services/winetricksTarget.ts` from the game config, the live launch selection and the bottle
+  // markers); Phase 98 deletes the resolvers with the config and the engine state those read.
+  {
+    name: 'winetricksApply',
+    file: 'src/backend/sidecar/engineWineResolvers.ts',
+    shape: 'resolver',
+    inputs: ['target'],
+    channel: 'RUST_WINE_WINETRICKS_APPLY',
+    callers: ['src/backend/sidecar/handlers.ts'],
+    deletedBy: 98
+  },
+  {
+    name: 'winetricksAvailable',
+    file: 'src/backend/sidecar/engineWineResolvers.ts',
+    shape: 'resolver',
+    inputs: ['target'],
+    channel: 'RUST_WINE_WINETRICKS_AVAILABLE',
+    callers: ['src/backend/sidecar/handlers.ts'],
+    deletedBy: 98
+  },
+  {
+    name: 'winetricksInstalled',
+    file: 'src/backend/sidecar/engineWineResolvers.ts',
+    shape: 'resolver',
+    inputs: ['target'],
+    channel: 'RUST_WINE_WINETRICKS_INSTALLED',
+    callers: ['src/backend/sidecar/handlers.ts'],
+    deletedBy: 98
+  },
   // 87-26 (D-22 deviation, for the checker and the operator): `getDefaultWineBinary` is read synchronously by
   // `getFactoryDefaults` in config.ts before any rustInvoke transport exists, so it cannot become an async shim over
   // the Rust `default_wine_from_path`; it stays as a twin pinned to the shared `default_wine.json` vectors that

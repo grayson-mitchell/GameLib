@@ -9612,30 +9612,25 @@
     {
       "channel": "winetricksCancelRemaining",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "enum": [
-              "legendary",
-              "gog",
-              "sideload",
-              "nile",
-              "steam"
-            ]
-          },
-          {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 4096
-          }
-        ],
-        "items": false,
-        "minItems": 2,
-        "maxItems": 2
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "runner",
+          "type": "string",
+          "enum": [
+            "legendary",
+            "gog",
+            "sideload",
+            "nile",
+            "steam"
+          ]
+        },
+        {
+          "name": "appName",
+          "type": "string"
+        }
+      ],
+      "returns": "WinetricksQueueState"
     },
     {
       "channel": "winetricksInstalled",
@@ -9668,30 +9663,25 @@
     {
       "channel": "winetricksQueueState",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "enum": [
-              "legendary",
-              "gog",
-              "sideload",
-              "nile",
-              "steam"
-            ]
-          },
-          {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 4096
-          }
-        ],
-        "items": false,
-        "minItems": 2,
-        "maxItems": 2
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "runner",
+          "type": "string",
+          "enum": [
+            "legendary",
+            "gog",
+            "sideload",
+            "nile",
+            "steam"
+          ]
+        },
+        {
+          "name": "appName",
+          "type": "string"
+        }
+      ],
+      "returns": "WinetricksQueueState"
     },
     {
       "channel": "writeConfig",

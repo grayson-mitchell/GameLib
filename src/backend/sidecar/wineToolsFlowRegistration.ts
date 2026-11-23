@@ -45,12 +45,12 @@
  *     - `installWineVersion`     -> native `wine` slice since Phase 87 (87-20, D-14); no handle here
  *     - `refreshWineVersionInfo` -> native `wine` slice since Phase 87 (87-20, D-14); no handle here
  *     - `removeWineVersion`      -> native `wine` slice since Phase 87 (87-20, D-14); no handle here
- *     - `winetricksAvailable`    -> tools/ipc_handler.ts (Phase 34.6 Plan 07)
- *     - `winetricksInstalled`    -> tools/ipc_handler.ts (Phase 34.6 Plan 07)
+ *     - `winetricksAvailable`    -> scheduled resolver since Phase 87 (87-35, D-23); no handle here
+ *     - `winetricksInstalled`    -> scheduled resolver since Phase 87 (87-35, D-23); no handle here
  *     - `runWineCommandForGame`  -> tools/ipc_handler.ts (Phase 34.6 Plan 07, T-34.5-C6-49-03)
- *     - `winetricksApply`           -> tools/winetricksQueue.ts (Phase 45 Plan 01, D-11)
- *     - `winetricksQueueState`      -> tools/winetricksQueue.ts (Phase 45 Plan 01, D-11)
- *     - `winetricksCancelRemaining` -> tools/winetricksQueue.ts (Phase 45 Plan 01, D-11)
+ *     - `winetricksApply`           -> scheduled resolver since Phase 87 (87-35, D-23); no handle here
+ *     - `winetricksQueueState`      -> native `wine` slice since Phase 87 (87-35, D-14); no handle here
+ *     - `winetricksCancelRemaining` -> native `wine` slice since Phase 87 (87-35, D-14); no handle here
  *
  *   send (deps.ipc.on, 0): none — `winetricksInstall` retired, Phase 45 Plan 02 (D-11 promote).
  *
@@ -71,7 +71,6 @@ import type { IpcRegistry } from './ipcRegistry'
 import { wineReleasesInfoReady } from '../enginewine/wineManager'
 import { createTools, type ToolsDeps } from '../tools'
 import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
-import type { WinetricksQueue } from '../tools/winetricksQueue'
 import { isWindows } from '../constants/environment'
 import { assertCommandParts } from './rendererPathGuard'
 import type { DialogBoxDeps, NotifyDeps } from '../dialog/dialog'
@@ -116,8 +115,6 @@ export interface WineToolsFlowDeps
   /** The Steam bottle slice the Steam Wine-tool resolver reads (66.3-15). */
   steamBottle: ToolsDeps['steamBottle']
   steamLaunchRuntime: ToolsDeps['steamLaunchRuntime']
-  /** The boot-owned winetricks apply queue (D-66.3-12). */
-  winetricksQueue: WinetricksQueue
   managers: Pick<StoreManagers, 'library'>
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
   launcher: Pick<Launcher, 'validWine' | 'setupEnvVars' | 'setupWineEnvVars'>
@@ -128,8 +125,10 @@ export interface WineToolsFlowDeps
 }
 
 /**
- * Registers this cluster's 7 channels (7 invoke, 0 send — the three DXVK toggles moved to the scheduled resolvers
- * of `engineWineResolvers.ts`, Phase 87 Plan 34, D-23; `winetricksInstall` retired, Phase 45
+ * Registers this cluster's 2 channels (2 invoke, 0 send — the three Winetricks resolvers (`winetricksApply`,
+ * `winetricksAvailable`, `winetricksInstalled`) joined the three DXVK toggles in the scheduled resolvers of
+ * `engineWineResolvers.ts` (Phase 87 Plans 34 and 35, D-23) and `winetricksQueueState` and
+ * `winetricksCancelRemaining` moved to the Rust native `wine` slice (Plan 35, D-14); `winetricksInstall` retired, Phase 45
  * Plan 02, D-11 promote; `installWineVersion`, `refreshWineVersionInfo` and `removeWineVersion` moved to
  * the Rust native `wine` slice, Phase 87 Plan 20, D-14; so did `wine.isValidVersion`, Plan 24, and `getAlternativeWine`, Plan 26). As of Phase 45 Plan 01 (2026-10-10), the count was 12 invoke + 1 send
  * from Phase 34.6 Plan 07 plus the 3 new winetricks-queue invoke channels (`winetricksApply`,
@@ -141,7 +140,7 @@ export interface WineToolsFlowDeps
  * `registrationOncePerBoot.test.ts`; a second boot in one process throws in `bootSidecar()`.
  */
 export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
-  const { Winetricks, runWineCommandOnGame, runWineCommandForPendingInstall } =
+  const { runWineCommandOnGame, runWineCommandForPendingInstall } =
     createTools(deps)
 
   // ── D-14 seam 3: `runWineCommand` (main.ts:766) ─────────────────────────────────────────────
@@ -228,71 +227,14 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   // OS, so `process.platform` behaves identically. They are not re-decided by this port, and no
   // `macEnvs`/`linuxEnvs` construction is duplicated into this module.
 
-  // ── Winetricks trio + `runWineCommandForGame` (tools/ipc_handler.ts) — Phase 34.6 Plan 07 ─────
+  // ── Winetricks family (Phase 87, 87-35) ───────────────────────────────────────────────────────
   //
-  // A-01 (binding, overrides this module's own earlier D-04 framing — see module docstring above):
-  // `Winetricks` (`tools/index.ts:528`) has NO `!isLinux` guard anywhere; it has genuine macOS
-  // support via a dedicated `macEnvs` branch. No platform-decline branch is ported here. An empty
-  // component list returned by `listAvailable`/`listInstalled` is an ACCEPTABLE RESULT (data-
-  // dependent — e.g. no winetricks cache yet), never a platform decline this registration decides.
-  deps.ipc.handle(
-    'winetricksAvailable',
-    async (_event: unknown, ...args: unknown[]) => {
-      const runner = args[0] as Runner
-      const appName = args[1] as string
-      try {
-        return await Winetricks.listAvailable(runner, appName)
-      } catch {
-        // Source: tools/ipc_handler.ts — swallow-and-return-empty-array shape is inherited
-        // behaviour, kept as-is (not this port's decision to make).
-        return []
-      }
-    }
-  )
-
-  deps.ipc.handle(
-    'winetricksInstalled',
-    async (_event: unknown, ...args: unknown[]) => {
-      const runner = args[0] as Runner
-      const appName = args[1] as string
-      const game = deps.managers.library[runner].getGame(appName)
-      return Winetricks.listInstalled(game)
-    }
-  )
-
-  // ── Winetricks queue (Phase 45 Plan 01, D-11/D-12/D-13/D-18) ───────────────────────────────
-  //
-  // Invoke-kind — each acks immediately with the new queue state (T-45-03 repudiation
-  // mitigation) and the sequential install loop continues detached inside `winetricksQueue.ts`,
-  // never through this registration module. (The send-kind `winetricksInstall` channel this
-  // comment used to contrast against was retired by Phase 45 Plan 02, D-11 promote.)
-  deps.ipc.handle(
-    'winetricksApply',
-    async (_event: unknown, ...args: unknown[]) => {
-      const runner = args[0] as Runner
-      const appName = args[1] as string
-      const verbs = args[2] as string[]
-      return deps.winetricksQueue.apply(Winetricks, runner, appName, verbs)
-    }
-  )
-
-  deps.ipc.handle(
-    'winetricksQueueState',
-    (_event: unknown, ...args: unknown[]) => {
-      const runner = args[0] as Runner
-      const appName = args[1] as string
-      return deps.winetricksQueue.getState(runner, appName)
-    }
-  )
-
-  deps.ipc.handle(
-    'winetricksCancelRemaining',
-    (_event: unknown, ...args: unknown[]) => {
-      const runner = args[0] as Runner
-      const appName = args[1] as string
-      return deps.winetricksQueue.cancelRemaining(runner, appName)
-    }
-  )
+  // `winetricksApply`, `winetricksAvailable` and `winetricksInstalled` are scheduled resolvers
+  // (`sidecar/engineWineResolvers.ts`, D-23) over the Rust Winetricks ops, and `winetricksQueueState` and
+  // `winetricksCancelRemaining` are native `wine` channels over the Rust apply queue (D-14); this module
+  // registers no handle for any of them (one owner, D-06). The A-01 note on Winetricks' macOS support
+  // lives on in the crate: an empty component list is an acceptable result of a catalog read, never a platform
+  // decline.
 
   // T-34.5-C6-49-03 (Tampering, mitigate — HARDENED, Phase 34.6 Plan 11, REQ-34.6-05):
   // `runWineCommandForGame` carries a renderer-supplied `commandParts` array reaching a Wine

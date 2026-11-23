@@ -56,14 +56,8 @@ const asyncTable: FixtureTable<typeof wineToolsAsyncArgs> = {
       ['sideload', 'abc', 'vcrun2019']
     ]
   },
-  winetricksQueueState: {
-    valid: [['legendary', 'abc']],
-    invalid: [['legendary', 5]]
-  },
-  winetricksCancelRemaining: {
-    valid: [['legendary', 'abc']],
-    invalid: [['nope', 'abc']]
-  },
+  // Phase 87 (87-35, D-14): `winetricksQueueState` and `winetricksCancelRemaining` are native `wine` channels;
+  // their vectors are in `nativeChannels.json`.
   runWineCommandForGame: {
     valid: [
       [

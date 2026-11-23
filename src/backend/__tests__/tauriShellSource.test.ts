@@ -481,7 +481,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 149 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 154 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
     // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
@@ -497,7 +497,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 87 plan 26: 145 -> 147, wine_discover_alternatives and wine_discover_crossover.
     // Phase 87 plan 31: 147 -> 148, engine_set_online.
     // Phase 87 plan 34: 148 -> 149, wine_dxvk_install_remove.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(149)
+    // Phase 87 plan 35: 149 -> 154, wine_winetricks_apply, _available, _installed, _install and _list_installed.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(154)
     expect(router).not.toContain('_ =>')
   })
 
@@ -951,7 +952,18 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // (environment, Darwin release, public directory, online); `gamelib-wine`'s `golden_dxvk` and the
       // op's own test drive the install. The callers are the three `engineWineResolvers.ts` toggles and the
       // `dxvkInstallRemove` shim (enginewine/tools.ts).
-      'wine_dxvk_install_remove'
+      'wine_dxvk_install_remove',
+
+      // Phase 87 plan 35 -- the Winetricks family's five arms. PROVEN: `wine_dispatch::tests` drives each arm's strict
+      // decode (a fixed bad-args literal, the object and list shapes, not-ready before install), the shell's own
+      // wine host facts and the install arm's per-verb answers; `gamelib-wine`'s `golden_winetricks` and
+      // `run_for_game_guard` drive the ops. The callers are the three `engineWineResolvers.ts` Winetricks resolvers
+      // and the `winetricksInstallVerbs` and `winetricksListInstalled` shims (enginewine/tools.ts).
+      'wine_winetricks_apply',
+      'wine_winetricks_available',
+      'wine_winetricks_installed',
+      'wine_winetricks_install',
+      'wine_winetricks_list_installed'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)
