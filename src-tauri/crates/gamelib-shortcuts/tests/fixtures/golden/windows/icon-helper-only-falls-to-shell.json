@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Nothing",
+    "installDirectory": "Nothing",
+    "files": {
+      "unins000.exe": 900,
+      "UnityCrashHandler64.exe": 800
+    },
+    "storeExecutable": null,
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\gamelib-shell.exe",
+    "iconIndex": 0,
+    "source": "gamelib-shell"
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "family": "lnk",
+  "platform": "win32",
+  "input": {
+    "title": "Plain Game",
+    "appName": "plainapp",
+    "runner": "sideload",
+    "settings": {
+      "addDesktopShortcuts": true,
+      "addStartMenuShortcuts": true
+    },
+    "fromMenu": false,
+    "registryDesktop": "Z:\\GameLibOracle\\Desktop",
+    "powershell": {
+      "code": 0
+    },
+    "lnkPresentAfterExit0": true,
+    "install": null
+  },
+  "outcome": {
+    "result": "resolved"
+  },
+  "spawns": [
+    {
+      "program": "reg.exe",
+      "argv": [
+        "query",
+        "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders",
+        "/v",
+        "Desktop"
+      ],
+      "options": {
+        "replaceEnv": false,
+        "timeoutMs": 5000,
+        "windowsHide": true,
+        "inheritsProcessEnv": null
+      },
+      "envDiff": {
+        "set": {},
+        "unset": []
+      },
+      "cwd": null,
+      "stdin": null,
+      "result": {
+        "code": 0,
+        "stdout": "\r\nHKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\r\n    Desktop    REG_SZ    Z:\\GameLibOracle\\Desktop\r\n\r\n",
+        "stderr": ""
+      }
+    },
+    {
+      "program": "powershell.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "-"
+      ],
+      "options": {
+        "replaceEnv": true,
+        "timeoutMs": 30000,
+        "windowsHide": true,
+        "inheritsProcessEnv": true
+      },
+      "envDiff": {
+        "set": {
+          "GAMELIB_LNK_ARGS": "\"gamelib://launch?appName=plainapp&runner=sideload\"",
+          "GAMELIB_LNK_ICON": "",
+          "GAMELIB_LNK_ICON_INDEX": "0",
+          "GAMELIB_LNK_PATH": "Z:\\GameLibOracle\\Desktop\\Plain Game.lnk",
+          "GAMELIB_LNK_TARGET": "Z:\\GameLibOracle\\Windows\\explorer.exe"
+        },
+        "unset": []
+      },
+      "cwd": null,
+      "stdin": "$ErrorActionPreference = 'Stop'\r\n$src = 'using System; using System.Text; using System.Runtime.InteropServices; using System.Runtime.InteropServices.ComTypes; namespace GameLibLnk { [ComImport, Guid(\"00021401-0000-0000-C000-000000000046\")] public class ShellLink {} [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid(\"000214F9-0000-0000-C000-000000000046\")] public interface IShellLinkW { void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszFile, int cch, IntPtr pfd, int fFlags); void GetIDList(out IntPtr ppidl); void SetIDList(IntPtr pidl); void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszName, int cch); void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string pszName); void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszDir, int cch); void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string pszDir); void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszArgs, int cch); void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string pszArgs); void GetHotkey(out short pwHotkey); void SetHotkey(short wHotkey); void GetShowCmd(out int piShowCmd); void SetShowCmd(int iShowCmd); void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszIconPath, int cch, out int piIcon); void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string pszIconPath, int iIcon); void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string pszPathRel, int dwReserved); void Resolve(IntPtr hwnd, int fFlags); void SetPath([MarshalAs(UnmanagedType.LPWStr)] string pszFile); } public static class Writer { public static void Write(string lnk, string target, string args, string icon, int iconIndex) { IShellLinkW link = (IShellLinkW)new ShellLink(); link.SetPath(target); if (!string.IsNullOrEmpty(args)) link.SetArguments(args); if (!string.IsNullOrEmpty(icon)) link.SetIconLocation(icon, iconIndex); ((IPersistFile)link).Save(lnk, true); } } }'\r\ntry { Add-Type -TypeDefinition $src; [GameLibLnk.Writer]::Write($env:GAMELIB_LNK_PATH, $env:GAMELIB_LNK_TARGET, $env:GAMELIB_LNK_ARGS, $env:GAMELIB_LNK_ICON, [int]$env:GAMELIB_LNK_ICON_INDEX) } catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }\r\nexit 0\r\n",
+      "result": {
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "program": "powershell.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "-"
+      ],
+      "options": {
+        "replaceEnv": true,
+        "timeoutMs": 30000,
+        "windowsHide": true,
+        "inheritsProcessEnv": true
+      },
+      "envDiff": {
+        "set": {
+          "GAMELIB_LNK_ARGS": "\"gamelib://launch?appName=plainapp&runner=sideload\"",
+          "GAMELIB_LNK_ICON": "",
+          "GAMELIB_LNK_ICON_INDEX": "0",
+          "GAMELIB_LNK_PATH": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\Plain Game.lnk",
+          "GAMELIB_LNK_TARGET": "Z:\\GameLibOracle\\Windows\\explorer.exe"
+        },
+        "unset": []
+      },
+      "cwd": null,
+      "stdin": "$ErrorActionPreference = 'Stop'\r\n$src = 'using System; using System.Text; using System.Runtime.InteropServices; using System.Runtime.InteropServices.ComTypes; namespace GameLibLnk { [ComImport, Guid(\"00021401-0000-0000-C000-000000000046\")] public class ShellLink {} [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid(\"000214F9-0000-0000-C000-000000000046\")] public interface IShellLinkW { void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszFile, int cch, IntPtr pfd, int fFlags); void GetIDList(out IntPtr ppidl); void SetIDList(IntPtr pidl); void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszName, int cch); void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string pszName); void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszDir, int cch); void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string pszDir); void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszArgs, int cch); void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string pszArgs); void GetHotkey(out short pwHotkey); void SetHotkey(short wHotkey); void GetShowCmd(out int piShowCmd); void SetShowCmd(int iShowCmd); void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszIconPath, int cch, out int piIcon); void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string pszIconPath, int iIcon); void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string pszPathRel, int dwReserved); void Resolve(IntPtr hwnd, int fFlags); void SetPath([MarshalAs(UnmanagedType.LPWStr)] string pszFile); } public static class Writer { public static void Write(string lnk, string target, string args, string icon, int iconIndex) { IShellLinkW link = (IShellLinkW)new ShellLink(); link.SetPath(target); if (!string.IsNullOrEmpty(args)) link.SetArguments(args); if (!string.IsNullOrEmpty(icon)) link.SetIconLocation(icon, iconIndex); ((IPersistFile)link).Save(lnk, true); } } }'\r\ntry { Add-Type -TypeDefinition $src; [GameLibLnk.Writer]::Write($env:GAMELIB_LNK_PATH, $env:GAMELIB_LNK_TARGET, $env:GAMELIB_LNK_ARGS, $env:GAMELIB_LNK_ICON, [int]$env:GAMELIB_LNK_ICON_INDEX) } catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }\r\nexit 0\r\n",
+      "result": {
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    }
+  ]
+}

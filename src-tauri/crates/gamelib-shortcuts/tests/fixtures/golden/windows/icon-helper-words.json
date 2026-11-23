@@ -1,0 +1,28 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Zeta",
+    "installDirectory": "Zeta",
+    "files": {
+      "dxsetup.exe": 1,
+      "oalinst.exe": 2,
+      "easyanticheat.exe": 3,
+      "workshop.exe": 4,
+      "editor.exe": 5,
+      "installer.exe": 6,
+      "repair.exe": 7,
+      "wipe.exe": 8,
+      "directx.exe": 9,
+      "setup.exe": 10,
+      "Game.exe": 1
+    },
+    "storeExecutable": null,
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Zeta\\Game.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

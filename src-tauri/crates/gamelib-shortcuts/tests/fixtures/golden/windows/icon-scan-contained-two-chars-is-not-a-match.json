@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Some Long Title",
+    "installDirectory": "Some Long Title",
+    "files": {
+      "So.exe": 10,
+      "zeta.exe": 900
+    },
+    "storeExecutable": null,
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Some Long Title\\zeta.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

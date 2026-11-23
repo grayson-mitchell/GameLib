@@ -1,0 +1,43 @@
+{
+  "family": "reg",
+  "input": {
+    "name": "Desktop",
+    "env": {
+      "USERPROFILE": "Z:\\GameLibOracle\\Home",
+      "ONEDRIVE": "Z:\\GameLibOracle\\OneDrive"
+    },
+    "scripted": {
+      "throws": "spawn reg.exe ENOENT"
+    }
+  },
+  "folder": null,
+  "spawns": [
+    {
+      "program": "reg.exe",
+      "argv": [
+        "query",
+        "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders",
+        "/v",
+        "Desktop"
+      ],
+      "options": {
+        "replaceEnv": false,
+        "timeoutMs": 5000,
+        "windowsHide": true,
+        "inheritsProcessEnv": null
+      },
+      "envDiff": {
+        "set": {},
+        "unset": []
+      },
+      "cwd": null,
+      "stdin": null,
+      "result": {
+        "code": null,
+        "stdout": "",
+        "stderr": "",
+        "error": "spawn reg.exe ENOENT"
+      }
+    }
+  ]
+}

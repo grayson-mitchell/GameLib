@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "WazHack",
+    "installDirectory": "WazHack Install",
+    "files": {
+      "WazHack.exe": 100,
+      "WazHackInstall.exe": 100
+    },
+    "storeExecutable": null,
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\WazHack Install\\WazHack.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

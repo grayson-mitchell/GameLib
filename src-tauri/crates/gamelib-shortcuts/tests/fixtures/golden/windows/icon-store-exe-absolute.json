@@ -1,0 +1,18 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Store Game",
+    "installDirectory": null,
+    "files": {
+      "Elsewhere.exe": 10
+    },
+    "storeExecutable": "abs:Elsewhere.exe",
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Elsewhere.exe",
+    "iconIndex": 0,
+    "source": "store-executable"
+  }
+}

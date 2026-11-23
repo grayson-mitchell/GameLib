@@ -1,0 +1,16 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Zeta",
+    "installDirectory": "Zeta",
+    "files": {},
+    "storeExecutable": null,
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\gamelib-shell.exe",
+    "iconIndex": 0,
+    "source": "gamelib-shell"
+  }
+}

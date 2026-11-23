@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Zeta",
+    "installDirectory": "Zeta",
+    "files": {
+      "deep/Big.exe": 900,
+      "Small.exe": 10
+    },
+    "storeExecutable": null,
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Zeta\\Small.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

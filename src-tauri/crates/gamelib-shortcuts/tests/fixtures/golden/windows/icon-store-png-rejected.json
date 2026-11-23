@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Art",
+    "installDirectory": "Art",
+    "files": {
+      "cover.png": 10,
+      "Art.exe": 50
+    },
+    "storeExecutable": "cover.png",
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Art\\Art.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

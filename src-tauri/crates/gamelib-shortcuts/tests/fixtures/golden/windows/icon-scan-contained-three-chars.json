@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Some Long Title",
+    "installDirectory": "Some Long Title",
+    "files": {
+      "Som.exe": 10,
+      "unrelated.exe": 900
+    },
+    "storeExecutable": null,
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Some Long Title\\Som.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

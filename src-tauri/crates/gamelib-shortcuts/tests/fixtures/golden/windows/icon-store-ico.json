@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Store Game",
+    "installDirectory": "Store Game",
+    "files": {
+      "goggame-1.ico": 10,
+      "Game.exe": 900
+    },
+    "storeExecutable": "goggame-1.ico",
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Store Game\\goggame-1.ico",
+    "iconIndex": 0,
+    "source": "store-executable"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "WazHack",
+    "installDirectory": "WazHack",
+    "files": {
+      "UnityCrashHandler32.exe": 900,
+      "WazHack.exe": 100
+    },
+    "storeExecutable": null,
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\WazHack\\WazHack.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

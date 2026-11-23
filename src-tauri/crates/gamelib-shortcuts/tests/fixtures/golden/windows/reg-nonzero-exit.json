@@ -1,0 +1,43 @@
+{
+  "family": "reg",
+  "input": {
+    "name": "Desktop",
+    "env": {
+      "USERPROFILE": "Z:\\GameLibOracle\\Home",
+      "ONEDRIVE": "Z:\\GameLibOracle\\OneDrive"
+    },
+    "scripted": {
+      "code": 1,
+      "stderr": "ERROR: The system was unable to find the specified registry key or value."
+    }
+  },
+  "folder": null,
+  "spawns": [
+    {
+      "program": "reg.exe",
+      "argv": [
+        "query",
+        "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders",
+        "/v",
+        "Desktop"
+      ],
+      "options": {
+        "replaceEnv": false,
+        "timeoutMs": 5000,
+        "windowsHide": true,
+        "inheritsProcessEnv": null
+      },
+      "envDiff": {
+        "set": {},
+        "unset": []
+      },
+      "cwd": null,
+      "stdin": null,
+      "result": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "ERROR: The system was unable to find the specified registry key or value."
+      }
+    }
+  ]
+}
