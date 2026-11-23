@@ -6,9 +6,9 @@
  * back, a deleted identifier is named in non-test code, a TS `ipc.handle` or `ipc.on` registers one
  * of the slice's native channels, or a rollback flag string appears under src/ or src-tauri/src.
  *
- * The D-06 sub-slices, in the order the phase deletes them: runtimes, wineDownloads, wineCore,
- * tools, bottles, engine. None has a describe yet: a `SliceSpec` with nothing deleted would pass
- * vacuously, so the plan that deletes a sub-slice adds its `describe('<name>PortComplete', () =>
+ * The D-06 sub-slices, in the order the phase deletes them: runtimes (87-18, below), wineDownloads,
+ * wineCore, tools, bottles, engine. A sub-slice with no describe yet has none because a `SliceSpec`
+ * with nothing deleted would pass vacuously, so the plan that deletes a sub-slice adds its `describe('<name>PortComplete', () =>
  * runSlice(SPEC))` here RED first (the files and identifiers still exist), then deletes the TS and
  * watches it go green. Never lower a floor or widen an allow-list to turn a red run green.
  *
@@ -23,10 +23,12 @@
  */
 import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import { findRollbackFlag, walkStripped } from 'backend/testUtils/infoPortGate'
+import type { SliceSpec } from 'backend/testUtils/portSliceGate'
 import {
   BACKEND_FILES_FLOOR,
   flagWalk,
   rustWalk,
+  runSlice,
   RUST_FILES_FLOOR,
   SCANNED_FILES_FLOOR,
   tsWalk
@@ -37,6 +39,37 @@ import { join } from 'path'
 
 /** The two rollback flags D-06 forbids; named here once so the scan and its self-tests agree. */
 const FORBIDDEN_FLAGS = ['GAMELIB_ENGINE', 'GAMELIB_WINE'] as const
+
+/**
+ * 87-18, D-06, D-14 and D-15: the runtimes sub-slice is Rust's. The TS slice (the lutris list, the
+ * installed check, the download and its tar helper), its unit test and its oracle are deleted; the
+ * goldens and the recordings stay for the Rust replay (`golden_runtimes.rs`), and so does the
+ * `test_data` archive the wine-manager oracle still serves until its own port. The renderer's
+ * `isRuntimeInstalled` and `downloadRuntime` are native `wine` channels, and the launcher reaches the
+ * same ops through two scheduled shims (`engineWineShimSchedule`).
+ */
+const RUNTIMES: SliceSpec = {
+  deleted: [
+    'src/backend/wine/runtimes/runtimes.ts',
+    'src/backend/wine/runtimes/util.ts',
+    'src/backend/wine/runtimes/__tests__/runtimes/utils.test.ts',
+    'src/backend/wine/__tests__/oracle/runtimes.oracle.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-wine/tests/fixtures/golden/runtimes',
+    'src-tauri/crates/gamelib-wine/tests/fixtures/recorded/runtimes',
+    'src/backend/wine/runtimes/__tests__/runtimes/test_data/ArchiveWithSubfolder.tar.xz'
+  ],
+  forbiddenIdentifiers: ['getAssetDataFromDownload', 'RuntimePaths'],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_WINE',
+  manifestSlice: 'wine',
+  channelsFloor: 2
+}
+
+describe('runtimesPortComplete', () => {
+  runSlice(RUNTIMES)
+})
 
 describe('noRollbackFlag', () => {
   it('anti-vacuity: the walks read real trees', () => {

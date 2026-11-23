@@ -118,6 +118,35 @@ pub(crate) fn download_runtime(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> Native
     )
 }
 
+/// Runs `op` over `args` for a `rustInvoke` arm. These arms run on the dispatcher's worker thread, never
+/// inside a runtime, so the crate's own `dispatch_sync` drives the op there. Before [`install`] the
+/// answer is `<op>:not-ready`.
+fn rpc_wine_op(
+    wine: Option<&Arc<WineCtx>>,
+    op: &'static str,
+    args: &[Value],
+) -> Result<Value, String> {
+    let wine = wine.ok_or_else(|| format!("{op}:not-ready"))?;
+    gamelib_wine::dispatch_sync(op, args, wine)
+}
+
+/// The `wine_runtime_is_installed` `rustInvoke` arm (the launcher's `isRuntimeInstalled` shim, 87-18):
+/// the generated decode (one string, one of the three names) first, then the crate, which refuses
+/// anything but exactly one plain-component string again (T-87-65). Rejections are fixed
+/// `<op>:bad-args` literals.
+pub(crate) fn rpc_wine_runtime_is_installed(args: &[Value]) -> Result<Value, String> {
+    WineRuntimeIsInstalledArgs::from_args(args)?;
+    rpc_wine_op(wine_ctx(), "wine_runtime_is_installed", args)
+}
+
+/// The `wine_runtime_download` `rustInvoke` arm (the launcher's `downloadRuntime` shim, 87-18), decoded
+/// the same way. The sidecar leaves this channel unbounded (`UNBOUNDED_RUST_CHANNELS`); the crate's
+/// shutdown registrant and the token bound it instead.
+pub(crate) fn rpc_wine_runtime_download(args: &[Value]) -> Result<Value, String> {
+    WineRuntimeDownloadArgs::from_args(args)?;
+    rpc_wine_op(wine_ctx(), "wine_runtime_download", args)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -187,6 +216,66 @@ mod tests {
             );
             assert!(!error.contains("SECRET"), "{error}");
         }
+    }
+
+    #[test]
+    fn the_rpc_arms_validate_first_and_answer_not_ready_before_install() {
+        assert!(wine_ctx().is_none());
+        assert_eq!(
+            rpc_wine_runtime_download(&[json!("umu")]),
+            Err("wine_runtime_download:not-ready".to_string())
+        );
+        assert_eq!(
+            rpc_wine_runtime_is_installed(&[json!("eac_runtime")]),
+            Err("wine_runtime_is_installed:not-ready".to_string())
+        );
+        for bad in [
+            vec![],
+            vec![json!(1)],
+            vec![json!("x")],
+            vec![json!("../umu")],
+            vec![json!({ "name": "umu" })],
+        ] {
+            assert_eq!(
+                rpc_wine_runtime_download(&bad),
+                Err("wine_runtime_download:bad-args".to_string()),
+                "{bad:?}"
+            );
+            assert_eq!(
+                rpc_wine_runtime_is_installed(&bad),
+                Err("wine_runtime_is_installed:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_rpc_arm_runs_the_crate_op_on_the_calling_thread_and_refuses_a_second_argument() {
+        let missing = std::path::PathBuf::from("gamelib-wine-rpc-test-missing").join("runtimes");
+        let engine = engine_dispatch::build_ctx(
+            Arc::new(gamelib_store::host::StoreHost::new()),
+            std::path::Path::new("gamelib-wine-rpc-test-missing"),
+            std::path::PathBuf::from("home"),
+            std::path::PathBuf::from("tmp"),
+            Arc::new(gamelib_engine::sinks::NullEmitter),
+            Arc::new(engine_dispatch::ShellEngineUi::silent(Arc::new(
+                gamelib_engine::sinks::NullEmitter,
+            ))),
+            gamelib_core::shutdown::Shutdown::new(),
+        );
+        let wine = Arc::new(WineCtx::new(Arc::new(engine), missing));
+        assert_eq!(
+            rpc_wine_op(Some(&wine), "wine_runtime_is_installed", &[json!("umu")]),
+            Ok(json!(false))
+        );
+        assert_eq!(
+            rpc_wine_op(
+                Some(&wine),
+                "wine_runtime_is_installed",
+                &[json!("umu"), json!("umu")]
+            ),
+            Err("wine_runtime_is_installed:bad-args".to_string())
+        );
     }
 
     /// A host that does nothing: the runtime handlers never reach the native host.

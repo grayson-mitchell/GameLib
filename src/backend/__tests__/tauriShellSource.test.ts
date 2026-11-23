@@ -481,7 +481,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 137 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 139 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
     // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
@@ -491,7 +491,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 86 plan 19: 133 -> 134, info_crossover_rating_map.
     // Phase 86 plan 20: 134 -> 135, info_umu_get.
     // Phase 86 plan 22: 135 -> 137, info_wiki_get and info_wiki_cache_clear.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(137)
+    // Phase 87 plan 18: 137 -> 139, wine_runtime_is_installed and wine_runtime_download.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(139)
     expect(router).not.toContain('_ =>')
   })
 
@@ -898,7 +899,14 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // over; `info_dispatch::tests` drives both arms' validation. The callers are the non-Steam shortcut
       // resolver's and `clearCache`'s shims (86-23).
       'info_wiki_get',
-      'info_wiki_cache_clear'
+      'info_wiki_cache_clear',
+
+      // Phase 87 plan 18 -- the two wine runtime ops, pass-through arms into `gamelib-wine`. PROVEN:
+      // `golden_runtimes.rs` replays every 87-05 TS golden (the is-installed and download cases)
+      // against the crate's ops, and `wine_dispatch::tests` drives the arms' validation and the
+      // not-ready answer. The callers are the launcher's two runtime shims (enginewine/runtimes.ts).
+      'wine_runtime_is_installed',
+      'wine_runtime_download'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

@@ -58,6 +58,7 @@ import {
   RUST_STEAMCM_SIGNIN_GUARD_SUBMIT,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_SAFETY_REMOVE_TREE,
+  RUST_WINE_RUNTIME_DOWNLOAD,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
   RUST_DIALOG_SAVE,
@@ -140,6 +141,12 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * tree. The read-only `safety_check_removal` stays bounded. Rust catches panics in dispatch and the
  * shell owns the worker thread, so an unanswered entry cannot outlive the sidecar. The entry holds
  * no timer, so the exit contract is unaffected.
+ *
+ * Fifth (Phase 87, 87-18): `wine_runtime_download` is the launcher's runtime download (a lutris archive
+ * of tens of megabytes plus a tar extraction), moved out of the TS `download` that had no deadline
+ * either. The crate holds a shutdown registrant and is cancelled by the token, so a 60 s cut-off would
+ * report the launch's runtime as failed while Rust kept extracting. The read-only
+ * `wine_runtime_is_installed` stays bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -165,7 +172,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_STEAMCM_SIGNIN_CREDENTIALS_START,
   RUST_STEAMCM_SIGNIN_GUARD_SUBMIT,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
-  RUST_SAFETY_REMOVE_TREE
+  RUST_SAFETY_REMOVE_TREE,
+  RUST_WINE_RUNTIME_DOWNLOAD
 ]
 
 function isValidRequest(value: unknown): value is SidecarRpcRequest {

@@ -101,6 +101,8 @@ import {
   RUST_STEAMCM_STORE_ENRICH,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_STEAM_API_PIN_RESOLVE,
+  RUST_WINE_RUNTIME_DOWNLOAD,
+  RUST_WINE_RUNTIME_IS_INSTALLED,
   RUST_SAFETY_CHECK_REMOVAL,
   RUST_SAFETY_REMOVE_TREE,
   RUST_STORE_BACKUP_FILE,
@@ -272,6 +274,11 @@ const exePath = z.tuple([z.object({ exePath: z.string() })])
 const empty = z.tuple([])
 const reasonArg = z.tuple([z.object({ reason: z.string() }).strict()])
 const flowArg = z.tuple([z.object({ flowId: z.string() }).strict()])
+
+/** The runtimes the wine ops take (`RuntimeName`); the generated Rust decode holds the same three. */
+const runtimeName = z
+  .enum(['eac_runtime', 'battleye_runtime', 'umu'])
+  .meta({ title: 'name' })
 
 export const rustInvokeArgs = {
   // ---- Keychain
@@ -794,7 +801,11 @@ export const rustInvokeArgs = {
       .strict()
   ]),
   [RUST_INFO_WIKI_CACHE_CLEAR]: z.tuple([z.object({}).strict()]),
-  [RUST_STEAM_API_PIN_RESOLVE]: empty
+  [RUST_STEAM_API_PIN_RESOLVE]: empty,
+  // Phase 87 (SVC-02, 87-18): the wine runtime ops. One positional string, one of the three runtime
+  // names; the shell decodes the same set again (T-87-65) and the crate validates the name a third time.
+  [RUST_WINE_RUNTIME_IS_INSTALLED]: z.tuple([runtimeName]),
+  [RUST_WINE_RUNTIME_DOWNLOAD]: z.tuple([runtimeName])
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

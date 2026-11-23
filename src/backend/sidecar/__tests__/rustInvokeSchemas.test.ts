@@ -36,7 +36,8 @@ describe('rustInvokeArgs', () => {
     // Phase 86 plan 19: 133 -> 134, info_crossover_rating_map.
     // Phase 86 plan 20: 134 -> 135, info_umu_get.
     // Phase 86 plan 22: 135 -> 137, info_wiki_get and info_wiki_cache_clear.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(137)
+    // Phase 87 plan 18: 137 -> 139, wine_runtime_is_installed and wine_runtime_download.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(139)
   })
 
   it('parses the store-embed wire fixtures', () => {

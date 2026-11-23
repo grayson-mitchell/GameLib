@@ -1048,6 +1048,32 @@ export const RUST_INFO_WIKI_GET = 'info_wiki_get' as const
 export const RUST_INFO_WIKI_CACHE_CLEAR = 'info_wiki_cache_clear' as const
 
 /**
+ * Phase 87 (SVC-02, 87-18): the Rust wine runtime services, pass-throughs to the Tauri-free
+ * `gamelib-wine` crate (the same dispatch `gamelib-wine-cli` uses). Each takes ONE positional string,
+ * the runtime name: exactly one of `eac_runtime`, `battleye_runtime`, `umu`. Any other value, a second
+ * argument or none rejects with the invalid-args marker before the crate sees it.
+ *
+ * `wine_runtime_is_installed`: whether the runtime is installed and current (its `current_version`
+ * matches the lutris list's `created_at`). Resolves a boolean. The launcher's `isRuntimeInstalled`
+ * shim (`backend/enginewine/runtimes.ts`) is the one caller; the renderer's `isRuntimeInstalled` is
+ * the native channel of the same name.
+ */
+export const RUST_WINE_RUNTIME_IS_INSTALLED =
+  'wine_runtime_is_installed' as const
+
+/**
+ * Phase 87 (SVC-02, 87-18): `wine_runtime_download` downloads and extracts the runtime (contained tar
+ * extraction, a guarded replace of the old folder, `current_version` written last). Resolves `true`
+ * when the runtime is installed after the call, `false` on a failed download or extraction.
+ *
+ * Long-running: listed in the sidecar's `UNBOUNDED_RUST_CHANNELS`. A runtime is a download of tens of
+ * megabytes plus an extraction, with no wall-clock ceiling of its own; the crate holds a shutdown
+ * registrant and is cancelled by the token. The launcher's `downloadRuntime` shim is the one caller;
+ * the renderer's `downloadRuntime` is the native channel of the same name.
+ */
+export const RUST_WINE_RUNTIME_DOWNLOAD = 'wine_runtime_download' as const
+
+/**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
  * the macOS bridge helper loads: the GameLib cache, else a snapshot of the Steam client's own copy
  * when it already hashes to the pin, else a fetch from Valve's client-update CDN (sha2vz, VZ decode,
@@ -1381,7 +1407,9 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_INFO_CROSSOVER_RATING_MAP,
   RUST_INFO_UMU_GET,
   RUST_INFO_WIKI_GET,
-  RUST_INFO_WIKI_CACHE_CLEAR
+  RUST_INFO_WIKI_CACHE_CLEAR,
+  RUST_WINE_RUNTIME_IS_INSTALLED,
+  RUST_WINE_RUNTIME_DOWNLOAD
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

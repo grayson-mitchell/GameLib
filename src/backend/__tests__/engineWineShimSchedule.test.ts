@@ -27,9 +27,9 @@
  * its `wiring` list. Twin and view rows whose file lies outside that scope (launcher.ts,
  * commandRunner.ts, compatibility_layers.ts) are checked by file, export and vectors instead.
  *
- * The schedule starts empty and the directory does not exist yet, so the discovered set equals it
- * and the test is green from the first commit. The planted fixtures keep each detector proven rather
- * than vacuous (82 D-05).
+ * The schedule started empty and the directory did not exist, so the discovered set equalled it and
+ * the test was green from the first commit; 87-18 adds the first two rows. The planted fixtures keep
+ * each detector proven rather than vacuous (82 D-05).
  *
  * Floor: the walk read 611 non-test .ts/.tsx files under src/backend when measured on 2026-11-22
  * (86-05). The floor sits under that so later deletions cannot trip it; never lower it.
@@ -84,7 +84,25 @@ interface ScheduleRow extends ShimRow {
  * Rows are added by the plan that creates the survivor, in the same commit. Each row needs its file,
  * name, shape and callers; shims and resolvers a channel; twins and views a vectors test.
  */
-const SCHEDULE: readonly ScheduleRow[] = []
+const SCHEDULE: readonly ScheduleRow[] = [
+  // 87-18 (D-15): the launcher's pre-launch runtime step. Phase 88 moves launch into Rust and deletes both.
+  {
+    name: 'isRuntimeInstalled',
+    file: 'src/backend/enginewine/runtimes.ts',
+    shape: 'shim',
+    channel: 'RUST_WINE_RUNTIME_IS_INSTALLED',
+    callers: ['src/backend/launcher.ts'],
+    deletedBy: 88
+  },
+  {
+    name: 'downloadRuntime',
+    file: 'src/backend/enginewine/runtimes.ts',
+    shape: 'shim',
+    channel: 'RUST_WINE_RUNTIME_DOWNLOAD',
+    callers: ['src/backend/launcher.ts'],
+    deletedBy: 88
+  }
+]
 
 const key = (file: string, name: string): string => `${file}#${name}`
 

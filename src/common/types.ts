@@ -636,14 +636,6 @@ interface AntiCheatReference {
   reference: string
 }
 
-export interface Runtime {
-  id: number
-  name: string
-  created_at: string
-  architecture: string
-  url: string
-}
-
 export type RuntimeName = 'eac_runtime' | 'battleye_runtime' | 'umu'
 
 export type RecentGame = {

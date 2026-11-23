@@ -160,6 +160,8 @@ pub(crate) enum RustInvokeChannel {
     InfoUmuGet,
     InfoWikiGet,
     InfoWikiCacheClear,
+    WineRuntimeIsInstalled,
+    WineRuntimeDownload,
 }
 
 impl RustInvokeChannel {
@@ -301,6 +303,8 @@ impl RustInvokeChannel {
         RustInvokeChannel::InfoUmuGet,
         RustInvokeChannel::InfoWikiGet,
         RustInvokeChannel::InfoWikiCacheClear,
+        RustInvokeChannel::WineRuntimeIsInstalled,
+        RustInvokeChannel::WineRuntimeDownload,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -442,6 +446,8 @@ impl RustInvokeChannel {
             "info_umu_get" => Some(RustInvokeChannel::InfoUmuGet),
             "info_wiki_get" => Some(RustInvokeChannel::InfoWikiGet),
             "info_wiki_cache_clear" => Some(RustInvokeChannel::InfoWikiCacheClear),
+            "wine_runtime_is_installed" => Some(RustInvokeChannel::WineRuntimeIsInstalled),
+            "wine_runtime_download" => Some(RustInvokeChannel::WineRuntimeDownload),
             _ => None,
         }
     }
@@ -585,6 +591,8 @@ impl RustInvokeChannel {
             RustInvokeChannel::InfoUmuGet => "info_umu_get",
             RustInvokeChannel::InfoWikiGet => "info_wiki_get",
             RustInvokeChannel::InfoWikiCacheClear => "info_wiki_cache_clear",
+            RustInvokeChannel::WineRuntimeIsInstalled => "wine_runtime_is_installed",
+            RustInvokeChannel::WineRuntimeDownload => "wine_runtime_download",
         }
     }
 }
@@ -3088,5 +3096,49 @@ impl InfoWikiCacheClearArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "info_wiki_cache_clear:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "info_wiki_cache_clear:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum WineRuntimeIsInstalledArgsName {
+    #[serde(rename = "eac_runtime")]
+    EacRuntime,
+    #[serde(rename = "battleye_runtime")]
+    BattleyeRuntime,
+    #[serde(rename = "umu")]
+    Umu,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineRuntimeIsInstalledArgs {
+    pub(crate) name: WineRuntimeIsInstalledArgsName,
+}
+
+impl WineRuntimeIsInstalledArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let name = serde_json::from_value(args.first().ok_or_else(|| "wine_runtime_is_installed:bad-args".to_string())?.clone()).map_err(|_| "wine_runtime_is_installed:bad-args".to_string())?;
+        Ok(Self { name })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum WineRuntimeDownloadArgsName {
+    #[serde(rename = "eac_runtime")]
+    EacRuntime,
+    #[serde(rename = "battleye_runtime")]
+    BattleyeRuntime,
+    #[serde(rename = "umu")]
+    Umu,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineRuntimeDownloadArgs {
+    pub(crate) name: WineRuntimeDownloadArgsName,
+}
+
+impl WineRuntimeDownloadArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let name = serde_json::from_value(args.first().ok_or_else(|| "wine_runtime_download:bad-args".to_string())?.clone()).map_err(|_| "wine_runtime_download:bad-args".to_string())?;
+        Ok(Self { name })
     }
 }

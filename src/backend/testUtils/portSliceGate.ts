@@ -56,7 +56,7 @@ interface Manifest {
   channels: Record<string, { slice: string }>
 }
 
-export const manifest = JSON.parse(
+const manifest = JSON.parse(
   readFileSync(
     join(REPO_ROOT, 'src', 'common', 'types', 'ipc', 'nativeChannels.json'),
     'utf8'

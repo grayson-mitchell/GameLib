@@ -65,7 +65,7 @@ import type { OnlineMonitor } from './online_monitor'
 import { showDialogBoxModalAuto, type DialogBoxDeps } from './dialog/dialog'
 import { readFileSync, writeFileSync } from 'fs'
 import { searchForExecutableOnPath } from './utils/os/path'
-import { download, isInstalled } from './wine/runtimes/runtimes'
+import { downloadRuntime, isRuntimeInstalled } from './enginewine/runtimes'
 import { recordPlaySession } from './runsForMe'
 import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
 import { copyFile } from 'fs/promises'
@@ -864,10 +864,10 @@ async function prepareLaunch(
   if (
     (await isUmuSupported(deps, gameSettings, false)) &&
     deps.onlineMonitor.isOnline() &&
-    !(await isInstalled(deps, 'umu')) &&
+    !(await isRuntimeInstalled(deps, 'umu')) &&
     (await getUmuPath(deps)) === deps.paths.defaultUmuPath
   ) {
-    await download(deps, 'umu')
+    await downloadRuntime(deps, 'umu')
   }
 
   return {
@@ -1131,17 +1131,17 @@ async function prepareWineLaunch(
   if (
     gameSettings.eacRuntime &&
     deps.onlineMonitor.isOnline() &&
-    !(await isInstalled(deps, 'eac_runtime'))
+    !(await isRuntimeInstalled(deps, 'eac_runtime'))
   ) {
-    await download(deps, 'eac_runtime')
+    await downloadRuntime(deps, 'eac_runtime')
   }
 
   if (
     gameSettings.battlEyeRuntime &&
     deps.onlineMonitor.isOnline() &&
-    !(await isInstalled(deps, 'battleye_runtime'))
+    !(await isRuntimeInstalled(deps, 'battleye_runtime'))
   ) {
-    await download(deps, 'battleye_runtime')
+    await downloadRuntime(deps, 'battleye_runtime')
   }
 
   const envVars = setupWineEnvVars(deps, gameSettings, gameInfo.folder_name)
