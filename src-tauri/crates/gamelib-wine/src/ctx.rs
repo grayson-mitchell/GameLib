@@ -9,6 +9,8 @@ use gamelib_core::process::SpecRunner;
 use gamelib_engine::ctx::EngineCtx;
 use gamelib_engine::fetch::Fetch;
 
+use crate::tools::state::ToolsState;
+
 /// The CPU architecture the app runs on, as the shell reports it. The wine manager picks a release
 /// asset by it (GE-Proton ships an `aarch64` and an `x86_64` build), and a golden pins it so a
 /// recording made on one machine replays the same on another.
@@ -48,6 +50,9 @@ pub struct WineCtx {
     pub proc: Arc<dyn SpecRunner>,
     /// The CPU architecture, [`Arch::host`] unless replaced.
     pub arch: Arch,
+    /// The tools' in-memory state (the single-flight install slot, the catalog caches): one per
+    /// context, so every op of a boot shares it.
+    pub tools: ToolsState,
 }
 
 impl WineCtx {
@@ -56,6 +61,7 @@ impl WineCtx {
             fetch: engine.fetch.clone(),
             proc: engine.proc.clone(),
             arch: Arch::host(),
+            tools: ToolsState::new(),
             engine,
             runtime_path,
         }

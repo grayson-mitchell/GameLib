@@ -12,6 +12,7 @@ pub mod discovery;
 pub mod extract;
 pub mod manager;
 pub mod runtimes;
+pub mod tools;
 pub mod wine_cmd;
 
 /// The cancel token an install takes (`manager::install::install`), re-exported so the shell, which
@@ -32,6 +33,7 @@ pub const OPS: &[&str] = &[
     "wine_default_wine",
     "wine_discover_alternatives",
     "wine_discover_crossover",
+    "wine_dxvk_install_remove",
     "wine_manager_install",
     "wine_manager_list",
     "wine_manager_refresh",
@@ -75,6 +77,15 @@ async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String>
             }
             let found = discovery::discover_crossover(ctx).await;
             serde_json::to_value(found).map_err(|_| format!("{op}:bad-result"))
+        }
+        "wine_dxvk_install_remove" => {
+            let (request, host) = dxvk_args(op, args)?;
+            let runner = tools::HostWineRunner { host: &host.wine };
+            match tools::dxvk::install_remove(ctx, &host, &runner, request).await {
+                Ok(done) => Ok(Value::Bool(done)),
+                // A category word: the TS rejected with Node's error text, which names paths.
+                Err(error) => Err(format!("{op}:{error}")),
+            }
         }
         "wine_manager_install" => {
             let (release, settings) = install_args(op, args)?;
@@ -162,6 +173,28 @@ fn discovery_host_arg(op: &str, args: &[Value]) -> Result<discovery::DiscoveryHo
         return Err(format!("{op}:bad-args"));
     };
     serde_json::from_value(host.clone()).map_err(|_| format!("{op}:bad-args"))
+}
+
+/// `wine_dxvk_install_remove`'s arguments: the request (`{settings, tool, action, source?}`, the TS
+/// `installRemove` arguments) and, optionally, the [`tools::ToolsHost`] facts the shell read (the public
+/// directory holding the Vulkan helper, whether the app is online, the wine host facts). A bad shape
+/// is a fixed `<op>:bad-args`.
+fn dxvk_args(
+    op: &str,
+    args: &[Value],
+) -> Result<(gamelib_engine::dxvk::DxvkRequest, tools::ToolsHost), String> {
+    let bad = || format!("{op}:bad-args");
+    let (request, host) = match args {
+        [request] => (request, None),
+        [request, host] => (request, Some(host)),
+        _ => return Err(bad()),
+    };
+    let request = tools::decode_request(request).ok_or_else(bad)?;
+    let host = match host {
+        None | Some(Value::Null) => tools::ToolsHost::default(),
+        Some(host) => serde_json::from_value(host.clone()).map_err(|_| bad())?,
+    };
+    Ok((request, host))
 }
 
 /// `wine_valid`'s arguments: the `WineInstallation` to check (or `null`, no wine selected) and,
