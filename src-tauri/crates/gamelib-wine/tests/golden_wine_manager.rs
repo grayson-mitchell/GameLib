@@ -10,16 +10,21 @@
 //! path-normalised text) must equal the oracle's golden, and the replay must finish clean: no
 //! unmatched request, no recorded exchange left over.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use gamelib_core::clock::SystemClock;
+use gamelib_core::process::{BoxFuture, LineSink, ProcSpec, SpecOutput, SpecRunner};
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
 use gamelib_engine::fetch::{
-    DownloadOutcome, Fetch, FetchError, FetchFuture, FetchRequest, FetchResponse, Progress, Replay,
+    DownloadOutcome, Fetch, FetchError, FetchFuture, FetchRequest, FetchResponse, Method, Progress,
+    Replay,
 };
-use gamelib_engine::testing::RecordingEmitter;
+use gamelib_engine::testing::{RecordingEmitter, RecordingUi, UiEvent};
+use gamelib_i18n::Catalog;
+use gamelib_proc::spec::SpecProcRunner;
 use gamelib_store::host::StoreHost;
 use gamelib_store::json::{self, Json, Obj};
 use gamelib_testutil::FakeHome;
@@ -491,12 +496,163 @@ fn engine(profile: &Profile, platform: Platform) -> EngineCtx {
     .with_app_version(RECORDED_APP_VERSION)
 }
 
+/// What the oracle did with `tar` in a case: ran it for real, scripted a non-zero exit (recorded), or
+/// had the spawn itself reject (so it never reached the trace).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum TarMode {
+    Real,
+    NonZero,
+    Throws,
+}
+
+/// Runs every spawn through the real runner over the fake profile's environment (the oracle's
+/// `createFakeHomeProfile().childEnv()`) and records it in the oracle's `spawns.json` shape. `du`
+/// measures the machine's block size, so its answer is scripted exactly as the oracle scripted it.
+struct Tracing {
+    inner: SpecProcRunner,
+    base_env: Vec<(String, String)>,
+    tar: TarMode,
+    seen: Arc<Mutex<Vec<Value>>>,
+}
+
+impl Tracing {
+    fn new(base_env: Vec<(String, String)>, tar: TarMode) -> Tracing {
+        Tracing {
+            inner: SpecProcRunner,
+            base_env,
+            tar,
+            seen: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+
+    fn records(&self) -> Vec<Value> {
+        self.seen.lock().unwrap().clone()
+    }
+
+    /// What the oracle scripted for `program`, if it did.
+    fn scripted(&self, program: &str) -> Option<SpecOutput> {
+        match (program, self.tar) {
+            ("du", _) => Some(SpecOutput {
+                code: Some(0),
+                stdout: "4096\n".to_string(),
+                ..SpecOutput::default()
+            }),
+            ("tar", TarMode::NonZero) => Some(SpecOutput {
+                code: Some(2),
+                stderr: "tar: Error is not recoverable: exiting now".to_string(),
+                ..SpecOutput::default()
+            }),
+            _ => None,
+        }
+    }
+}
+
+impl SpecRunner for Tracing {
+    fn run(&self, mut spec: ProcSpec, on_line: Option<LineSink>) -> BoxFuture<SpecOutput> {
+        let base: BTreeMap<&str, &str> = self
+            .base_env
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
+        let set: BTreeMap<String, String> = spec
+            .env
+            .iter()
+            .filter(|(k, v)| base.get(k.as_str()) != Some(&v.as_str()))
+            .cloned()
+            .collect();
+        let unset: Vec<String> = if spec.replace_env {
+            base.keys()
+                .filter(|k| !spec.env.iter().any(|(sk, _)| sk == *k))
+                .map(|k| (*k).to_string())
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let (program, argv, cwd, stdin) = (
+            spec.program.clone(),
+            spec.argv.clone(),
+            spec.cwd.clone(),
+            spec.stdin.clone(),
+        );
+        let scripted = self.scripted(&program);
+        // A spawn that rejects never reached the oracle's trace; here it is a program that could not
+        // be started (no exit code).
+        if program == "tar" && self.tar == TarMode::Throws {
+            return Box::pin(async {
+                SpecOutput {
+                    code: None,
+                    stderr: "spawn tar ENOENT".to_string(),
+                    ..SpecOutput::default()
+                }
+            });
+        }
+        // The child runs with the fake profile's variables under whatever the op set.
+        let mut env = self.base_env.clone();
+        env.extend(std::mem::take(&mut spec.env));
+        spec.env = env;
+        let run = match scripted {
+            Some(_) => None,
+            None => Some(self.inner.run(spec, on_line)),
+        };
+        let seen = Arc::clone(&self.seen);
+        Box::pin(async move {
+            let out = match (run, scripted) {
+                (Some(run), _) => run.await,
+                (None, Some(out)) => out,
+                (None, None) => unreachable!("a spawn is either run or scripted"),
+            };
+            seen.lock().unwrap().push(json!({
+                "program": program,
+                "argv": argv,
+                "envDiff": { "set": set, "unset": unset },
+                "cwd": cwd.map(|p| p.to_string_lossy().into_owned()),
+                "stdin": stdin,
+                "via": "run",
+                "result": { "code": out.code, "stdout": out.stdout, "stderr": out.stderr },
+            }));
+            out
+        })
+    }
+}
+
+/// The oracle's abort stand-in at the download seam: it made the HEAD, set the abort signal and
+/// stopped. Here that is the recorded HEAD, then `aborted` (the replay's own download would go on to a
+/// GET the case never recorded).
+struct StopAfterHead {
+    inner: Arc<dyn Fetch>,
+}
+
+impl Fetch for StopAfterHead {
+    fn get(&self, req: FetchRequest) -> FetchFuture<'_, Result<FetchResponse, FetchError>> {
+        self.inner.get(req)
+    }
+
+    fn download<'a>(
+        &'a self,
+        req: FetchRequest,
+        _dest: &'a Path,
+        _progress: &'a (dyn Fn(Progress) + Send + Sync),
+        _cancel: CancellationToken,
+    ) -> FetchFuture<'a, Result<DownloadOutcome, FetchError>> {
+        Box::pin(async move {
+            let head = FetchRequest {
+                method: Method::Head,
+                ..req
+            };
+            self.inner.get(head).await?;
+            Err(FetchError::Aborted)
+        })
+    }
+}
+
 /// Everything one replayed case runs over.
 struct Run {
     profile: Profile,
     replay: Arc<Replay>,
     tap: Arc<Tap>,
     emitter: Arc<RecordingEmitter>,
+    ui: Arc<RecordingUi>,
+    tracer: Arc<Tracing>,
     ctx: WineCtx,
 }
 
@@ -508,12 +664,34 @@ fn start(case: &Value) -> Run {
         Replay::from_case(&fixtures().join("recorded/wine_manager").join(id))
             .unwrap_or_else(|e| panic!("{id}: {e}")),
     );
-    let tap = Arc::new(Tap::new(Arc::clone(&replay) as Arc<dyn Fetch>, id));
+    let served: Arc<dyn Fetch> = if case["flow"] == "abort" {
+        Arc::new(StopAfterHead {
+            inner: Arc::clone(&replay) as Arc<dyn Fetch>,
+        })
+    } else {
+        Arc::clone(&replay) as Arc<dyn Fetch>
+    };
+    let tap = Arc::new(Tap::new(served, id));
     let emitter = Arc::new(RecordingEmitter::new());
+    let ui = Arc::new(RecordingUi::new());
+    let tar = match case["tar"].as_str() {
+        Some("nonzero") => TarMode::NonZero,
+        Some("throws") => TarMode::Throws,
+        _ => TarMode::Real,
+    };
+    let base_env = profile
+        .home
+        .env()
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v.to_string_lossy().into_owned()))
+        .collect();
+    let tracer = Arc::new(Tracing::new(base_env, tar));
     let ctx = WineCtx::new(
         Arc::new(
             engine(&profile, platform_of(case))
                 .with_fetch(Arc::clone(&tap) as Arc<dyn Fetch>)
+                .with_proc(Arc::clone(&tracer) as Arc<dyn SpecRunner>)
+                .with_ui(Arc::clone(&ui) as Arc<dyn gamelib_engine::sinks::EngineUi>)
                 .with_emitter(
                     Arc::clone(&emitter) as Arc<dyn gamelib_core::emitter::FrontendEmitter>
                 ),
@@ -527,6 +705,8 @@ fn start(case: &Value) -> Run {
         replay,
         tap,
         emitter,
+        ui,
+        tracer,
         ctx,
     };
     seed_store(&run, id);
@@ -683,5 +863,249 @@ async fn every_refresh_case_matches_the_ts_store_bytes_events_and_requests() {
     assert!(wanted.len() >= 4, "{} refresh cases", wanted.len());
     for case in &wanted {
         replay_refresh(case).await;
+    }
+}
+
+/// The cases where the Rust port deliberately differs from the TS golden (D-19), by the golden
+/// fields that differ. Each is explained in `golden/wine_manager/deltas.json`, which this list must
+/// match key for key.
+const DELTAS: &[(&str, &[&str])] = &[
+    ("install-overwrite-aborted", &["tree"]),
+    ("install-overwrite-unzip-throws", &["tree"]),
+    (
+        "install-tar-nonzero-swallowed",
+        &["notifications", "events", "store", "spawns", "tree"],
+    ),
+];
+
+fn differs(id: &str, field: &str) -> bool {
+    DELTAS
+        .iter()
+        .any(|(case, fields)| *case == id && fields.contains(&field))
+}
+
+/// The English catalog the notification keys resolve through. The run itself uses an empty catalog,
+/// so a notification body is the op's inline default: the two must agree with the locale file.
+fn english(key: &str) -> String {
+    let locales = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../public/locales");
+    let text = Catalog::load(&locales, "en").t(key, "", &serde_json::Map::new());
+    assert!(!text.is_empty(), "the English catalog has no {key}");
+    text
+}
+
+/// The notifications of the golden with each key replaced by its English text.
+fn expected_notifications(golden: &Value) -> Value {
+    Value::Array(
+        golden["notifications"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|n| {
+                json!({
+                    "title": n["title"],
+                    "body": english(n["body"].as_str().unwrap()),
+                })
+            })
+            .collect(),
+    )
+}
+
+fn notifications_of(ui: &RecordingUi) -> Value {
+    Value::Array(
+        ui.events()
+            .into_iter()
+            .map(|event| match event {
+                UiEvent::Notify { title, body } => json!({ "title": title, "body": body }),
+                other => panic!("an unexpected UI call: {other:?}"),
+            })
+            .collect(),
+    )
+}
+
+/// The release a case sends, with the profile placeholders expanded.
+fn release_of(run: &Run, case: &Value) -> Value {
+    serde_json::from_str(&run.profile.expand(&case["release"].to_string())).unwrap()
+}
+
+/// What an install or remove case compares, minus what a delta changes.
+fn compare_run(run: &Run, case: &Value, golden: &Value) {
+    let id = case["id"].as_str().unwrap();
+    let expected = golden_dir().join("expected").join(id);
+    let check = |field: &str, got: Value, want: Value| {
+        if !differs(id, field) {
+            assert_eq!(got, want, "{id}: {field}");
+        }
+    };
+    check(
+        "store",
+        run.profile.normalise(run.profile.store_file()),
+        golden["store"].clone(),
+    );
+    check(
+        "downloads",
+        json!(run.tap.downloads()),
+        golden["downloads"].clone(),
+    );
+    check(
+        "notifications",
+        notifications_of(&run.ui),
+        expected_notifications(golden),
+    );
+    check(
+        "requests",
+        json!(run.tap.urls()),
+        read_json(&expected.join("requests.json")),
+    );
+    check(
+        "events",
+        comparable_events(run.emitter.pushed()),
+        renderer_events(&read_json(&expected.join("events.json"))),
+    );
+    check(
+        "spawns",
+        run.profile.normalise(json!(run.tracer.records())),
+        read_json(&expected.join("spawns.json")),
+    );
+    check(
+        "tree",
+        run.profile.normalise(run.profile.tree()),
+        comparable_tree(read_json(&expected.join("tree.json"))),
+    );
+}
+
+/// Replays one install case through the op and compares everything the oracle recorded for it.
+async fn replay_install(case: &Value) {
+    let id = case["id"].as_str().unwrap();
+    let run = start(case);
+    let mut args = vec![release_of(&run, case)];
+    if case.get("settings").is_some() {
+        args.push(
+            serde_json::from_str(&run.profile.expand(&case["settings"].to_string())).unwrap(),
+        );
+    }
+    let outcome = gamelib_wine::dispatch("wine_manager_install", &args, &run.ctx)
+        .await
+        .unwrap_or_else(|e| panic!("{id}: {e}"));
+    run.replay.finish().unwrap_or_else(|e| panic!("{id}: {e}"));
+
+    let golden = read_json(&golden_dir().join("expected").join(id).join("result.json"));
+    let want = match (
+        id,
+        golden["notifications"][1]["body"]
+            .as_str()
+            .unwrap_or_default(),
+    ) {
+        ("install-tar-nonzero-swallowed", _) => "error",
+        (_, "notify.install.finished") => "success",
+        (_, "notify.install.canceled") => "abort",
+        _ => "error",
+    };
+    assert_eq!(outcome, json!(want), "{id}: the outcome");
+    compare_run(&run, case, &golden);
+    assert_delta(&run, id);
+}
+
+/// What the Rust port leaves where it differs from the TS golden (see `deltas.json`).
+fn assert_delta(run: &Run, id: &str) {
+    let proton = run.profile.tools.join("proton");
+    let version = proton.join("GE-Proton9-27");
+    let backup = proton.join("GE-Proton9-27_backup");
+    let archive = proton.join("GE-Proton9-27.tar.xz");
+    match id {
+        // The TS deleted the existing install when an update was aborted, and left the old tree as a
+        // `_backup` beside a half-made install and its archive when the extraction rejected. The Rust
+        // port touches the install only after the download is whole and puts it back on a failed
+        // extraction.
+        "install-overwrite-aborted" | "install-overwrite-unzip-throws" => {
+            assert_eq!(
+                std::fs::read_to_string(version.join("old-file")).unwrap(),
+                "old"
+            );
+            assert!(!backup.exists() && !archive.exists(), "{id}: leftovers");
+        }
+        // The TS counted a failed `tar` as a success and left an empty install directory.
+        "install-tar-nonzero-swallowed" => {
+            assert!(!version.exists() && !backup.exists() && !archive.exists());
+            assert_eq!(
+                comparable_events(run.emitter.pushed()),
+                json!([
+                    { "channel": "progressOfWineManager", "args": ["GE-Proton9-27", {
+                        "status": "downloading", "percentage": 0, "avgSpeed": 0, "eta": "00:00:00" }] },
+                    { "channel": "progressOfWineManager", "args": ["GE-Proton9-27", { "status": "unzipping" }] },
+                    { "channel": "progressOfWineManager", "args": ["GE-Proton9-27", { "status": "idle" }] },
+                ])
+            );
+            assert_eq!(
+                notifications_of(&run.ui),
+                json!([
+                    { "title": "GE-Proton9-27", "body": english("notify.install.startInstall") },
+                    { "title": "GE-Proton9-27", "body": english("notify.install.error") },
+                ])
+            );
+            let stored = run.profile.store_file();
+            assert_eq!(stored["wine-releases"][0]["isInstalled"], json!(false));
+            let programs: Vec<Value> = run
+                .tracer
+                .records()
+                .iter()
+                .map(|r| r["program"].clone())
+                .collect();
+            assert_eq!(programs, [json!("tar")]);
+        }
+        _ => {}
+    }
+}
+
+/// Replays one remove case through the op, which is handed the whole release the renderer sent (its
+/// `installDir` among it) and must use only the stored one.
+async fn replay_remove(case: &Value) {
+    let id = case["id"].as_str().unwrap();
+    let run = start(case);
+    let args = [release_of(&run, case)];
+    let result = gamelib_wine::dispatch("wine_manager_remove", &args, &run.ctx)
+        .await
+        .unwrap_or_else(|e| panic!("{id}: {e}"));
+    run.replay.finish().unwrap_or_else(|e| panic!("{id}: {e}"));
+
+    let golden = read_json(&golden_dir().join("expected").join(id).join("result.json"));
+    let removed = !golden["notifications"].as_array().unwrap().is_empty();
+    assert_eq!(result, json!(removed), "{id}: the result");
+    compare_run(&run, case, &golden);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn every_install_case_matches_the_ts_tree_store_events_and_requests() {
+    let wanted = cases_of_op("install");
+    assert!(wanted.len() >= 12, "{} install cases", wanted.len());
+    for case in &wanted {
+        replay_install(case).await;
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn every_remove_case_matches_the_ts_tree_store_and_notifications() {
+    let wanted = cases_of_op("remove");
+    assert!(wanted.len() >= 3, "{} remove cases", wanted.len());
+    for case in &wanted {
+        replay_remove(case).await;
+    }
+}
+
+#[test]
+fn the_documented_deltas_are_exactly_the_cases_the_test_treats_differently() {
+    let deltas = read_json(&golden_dir().join("deltas.json"));
+    let mut documented: Vec<&str> = deltas
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect();
+    documented.sort_unstable();
+    let mut coded: Vec<&str> = DELTAS.iter().map(|(id, _)| *id).collect();
+    coded.sort_unstable();
+    assert_eq!(documented, coded);
+    for (id, why) in deltas.as_object().unwrap() {
+        assert!(why.as_str().is_some_and(|w| w.len() > 40), "{id}: say why");
+        assert!(cases().iter().any(|c| c["id"] == *id), "{id} is not a case");
     }
 }
