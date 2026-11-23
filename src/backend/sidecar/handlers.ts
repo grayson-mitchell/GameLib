@@ -407,10 +407,10 @@ export function registerHandlers(deps: {
       gatherGameCommandFacts(engineSource, runner, appName, opts),
     // `getEngineState` (87-52, D-23): a Steam title's bridge facts, read through the Steam adapter, which stays a lazy
     // import as it was behind the TS handle.
-    steamEngineFacts: async (appId) => {
-      const { steamEngineFacts } =
+    steamEngineStateFacts: async (appId) => {
+      const { steamEngineStateFacts } =
         await import('backend/storeManagers/steam/engine/steamEngineDeps')
-      return steamEngineFacts(
+      return steamEngineStateFacts(
         {
           stores: deps.services.stores,
           spawnAsync: deps.services.spawnAsync,

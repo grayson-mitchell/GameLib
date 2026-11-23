@@ -110,7 +110,7 @@ function makeDeps(answer: unknown = true): EngineWineResolverDeps & {
       log.push(`push:${channel}`)
     }) as EngineWineResolverDeps['sendFrontendMessage'],
     appRuntime: { events } as unknown as EngineWineResolverDeps['appRuntime'],
-    steamEngineFacts: (appId: string) => {
+    steamEngineStateFacts: (appId: string) => {
       steamFactsFor.push(appId)
       return Promise.resolve(STEAM_FACTS)
     },

@@ -9,7 +9,7 @@ import { sendGameStatusUpdate } from '../utils'
 import { logDebug, logError, LogPrefix } from '../logger'
 import { wineReleasesInfoReady } from '../enginewine/wineManager'
 import { engineKeyFor } from '../enginewine/twin'
-import type { SteamEngineFacts } from '../storeManagers/steam/engine/steamEngineDeps'
+import type { SteamEngineStateFacts } from '../storeManagers/steam/engine/steamEngineDeps'
 import {
   RUST_ENGINE_STATE_GET,
   RUST_WINE_DXVK_INSTALL_REMOVE,
@@ -89,7 +89,7 @@ export interface EngineWineResolverDeps
    * the Wine tools apply to it, its own bottle name), gathered by the Steam adapter (`steamEngineDeps.ts`) for an
    * app id that is digits.
    */
-  steamEngineFacts: (appId: string) => Promise<SteamEngineFacts>
+  steamEngineStateFacts: (appId: string) => Promise<SteamEngineStateFacts>
 }
 
 /** What a renderer Winetricks read sends: the game. */
@@ -282,11 +282,11 @@ export async function callTool(
  * settings). Never throws: a failing library lookup is a game with no state.
  */
 async function engineStateRequest(
-  deps: Pick<EngineWineResolverDeps, 'managers' | 'steamEngineFacts'>,
+  deps: Pick<EngineWineResolverDeps, 'managers' | 'steamEngineStateFacts'>,
   arg: unknown
 ): Promise<{
   identity: { runner: string; appName: string } | null
-  facts?: SteamEngineFacts
+  facts?: SteamEngineStateFacts
 }> {
   if (typeof arg !== 'object' || arg === null) return { identity: null }
   const { runner, appName } = arg as Record<string, unknown>
@@ -298,7 +298,7 @@ async function engineStateRequest(
     if (!/^\d+$/.test(appName)) return { identity: null }
     return {
       identity: { runner, appName },
-      facts: await deps.steamEngineFacts(appName)
+      facts: await deps.steamEngineStateFacts(appName)
     }
   }
   const library = deps.managers.library
@@ -326,7 +326,7 @@ async function engineStateRequest(
 export async function getEngineState(
   deps: Pick<
     EngineWineResolverDeps,
-    'managers' | 'steamEngineFacts' | 'requestRustInvoke'
+    'managers' | 'steamEngineStateFacts' | 'requestRustInvoke'
   >,
   arg: unknown
 ): Promise<unknown> {

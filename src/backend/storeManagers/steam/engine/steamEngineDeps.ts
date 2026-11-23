@@ -239,7 +239,7 @@ export function steamEngineStateDeps(
  * lives in the bridge: the title's install bottle, whether the override and the Wine tools apply to it, and its own
  * bottle name. Read-only, like the rest of a page view.
  */
-export interface SteamEngineFacts {
+export interface SteamEngineStateFacts {
   bottle: string | null
   overrideEligible: boolean
   overlayEligible: boolean
@@ -248,10 +248,10 @@ export interface SteamEngineFacts {
   perGameBottleName: string | null
 }
 
-export function steamEngineFacts(
+export function steamEngineStateFacts(
   deps: Parameters<typeof steamEngineStateDeps>[0],
   appId: string
-): SteamEngineFacts {
+): SteamEngineStateFacts {
   const state = steamEngineStateDeps(deps, appId)
   const identity = { runner: STEAM_ENGINE_RUNNER, appName: appId }
   const bottle = state.bottleFor(identity)
