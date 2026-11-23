@@ -37,6 +37,7 @@ import {
   mixSrgb
 } from 'frontend/customThemes/colour'
 import { CONTRAST_FLOORS } from 'frontend/customThemes/contrastFloors'
+import nordLightPreChange from 'frontend/customThemes/__tests__/fixtures/nordLightPreChange.json'
 import { resolveColour, resolveValue } from 'frontend/customThemes/tokenResolve'
 import { at, defined } from '../../../__tests__/fixtures/indexed'
 
@@ -62,7 +63,8 @@ const HEADER_CSS = 'src/frontend/components/UI/Header/index.css'
  * `grep -n '^body\.' src/frontend/themes.scss`:
  *   midnightMirage; cyberSpaceOasis; gruvbox_dark; high-contrast; dracula;
  *   nord-light; gamelib-light; nord-dark; marine; zombie; sweet.
- * (gamelib-light, quick 261122-qwk, is the pre-change nord-light kept verbatim.)
+ * (gamelib-light began as the pre-261122-qwk nord-light; since quick 261123-pnl it
+ * is its own light-chrome, one-accent palette.)
  * cssBlock() throws if any of these no longer resolves to a real block, so a
  * renamed/removed theme fails loudly instead of a count silently drifting.
  *
@@ -1348,18 +1350,23 @@ describe('Library sign-in row text contrast in every theme (F-49-R1-6)', () => {
     // of 4.5 matters, not the exact ratio a pixel capture would give.
     const OLD_ROW_COLOR = 'var(--text-default)'
     const background = declsAtDepthZero(rowBody, 'background')[0] ?? ''
-    // The live verdict was given on the pre-261122-qwk nord-light palette,
-    // which gamelib-light keeps verbatim. Since 261122-rz8, nord-light's banner
-    // is nord9, and the body text token nord0 reads 4.64:1 there, so nord-light
-    // no longer reproduces it.
+    // The live verdict was given on the pre-261122-qwk nord-light palette. No
+    // shipped theme carries it any more: since 261122-rz8 nord-light's banner
+    // is nord9 (nord0 reads 4.64:1), and since 261123-pnl gamelib-light's bar is
+    // #e5e9f0 (#20242c reads 12.77:1). So that 'fail' row is measured in memory
+    // from the frozen pre-change seed (--text-default #20242c on the
+    // --navbar-background #4c566a, 2.11:1). The three 'pass' rows read shipped themes.
+    const frozen = new Map(Object.entries(nordLightPreChange))
     const expected = [
-      ['body.gamelib-light', 'fail'],
+      ['frozen pre-change nord-light', 'fail'],
       ['body.midnightMirage', 'pass'],
       ['body.gruvbox_dark', 'pass'],
       ['body.dracula', 'pass']
     ] as const
     for (const [selector, verdict] of expected) {
-      const scope = themeTokens(themesScss, selector)
+      const scope = selector.startsWith('body.')
+        ? themeTokens(themesScss, selector)
+        : frozen
       const fg = resolveValue(OLD_ROW_COLOR, scope, globals)
       const bg = resolveValue(background, scope, globals)
       expect(fg).not.toBeNull()
@@ -3041,8 +3048,8 @@ describe('Button .is-link / .is-text families: render-site census and contrast i
     expect(isTextHoverThemeOverrides.length).toBeGreaterThan(0)
   })
 
-  it('pure .is-text HOVER fix (nord-light, gamelib-light, nord-dark): load-bearing, cannot reach disabled, cannot reach an excluded sibling (.is-link)', () => {
-    for (const theme of ['nord-light', 'gamelib-light', 'nord-dark']) {
+  it('pure .is-text HOVER fix (nord-light, nord-dark): load-bearing, cannot reach disabled, cannot reach an excluded sibling (.is-link)', () => {
+    for (const theme of ['nord-light', 'nord-dark']) {
       const override = isTextHoverThemeOverrides.find(
         (rule) =>
           rule.selector === `body.${theme} &:not(.is-link):not(:disabled)`
@@ -3055,15 +3062,13 @@ describe('Button .is-link / .is-text families: render-site census and contrast i
       expect(override.selector.endsWith(':not(:disabled)')).toBe(true)
     }
 
+    // gamelib-light needs no override: its base label #eceff4 reads 5.71:1 on
+    // the #3f5f86 hover fill, and the per-theme 4.5 it.each below gates it.
     // Load-bearing: removing BOTH overrides reproduces the exact pre-fix
     // failing ratios measured during this task.
     const withoutOverrides = isTextHoverBlock
       .replace(
         /body\.nord-light &:not\(\.is-link\):not\(:disabled\) \{[^}]*\}/,
-        ''
-      )
-      .replace(
-        /body\.gamelib-light &:not\(\.is-link\):not\(:disabled\) \{[^}]*\}/,
         ''
       )
       .replace(
@@ -3074,11 +3079,9 @@ describe('Button .is-link / .is-text families: render-site census and contrast i
     const preFixRatios: Record<string, number> = {
       // nord5 on nord9 (261122-rz8: --background is nord5)
       'nord-light': 2.2105479406777806,
-      // #eceff4 on #a17399 (the pre-change hover fill, kept by gamelib-light)
-      'gamelib-light': 3.356770572062584,
       'nord-dark': 4.41083696523498
     }
-    for (const theme of ['nord-light', 'gamelib-light', 'nord-dark']) {
+    for (const theme of ['nord-light', 'nord-dark']) {
       const scope = themeTokens(themesScss, `body.${theme}`)
       const preFixFg = resolveValue(
         applyTextColourDecl(isTextBlock, theme),
@@ -3098,9 +3101,9 @@ describe('Button .is-link / .is-text families: render-site census and contrast i
   })
 
   it('pure .is-text HOVER fix does not regress any other theme: no other theme carries a hover override here', () => {
-    expect(isTextHoverThemeOverrides).toHaveLength(3)
+    expect(isTextHoverThemeOverrides).toHaveLength(2)
     for (const theme of themeClasses.filter(
-      (t) => t !== 'nord-light' && t !== 'gamelib-light' && t !== 'nord-dark'
+      (t) => t !== 'nord-light' && t !== 'nord-dark'
     )) {
       expect(isTextHoverForeground(theme)).toBe(
         applyTextColourDecl(isTextBlock, theme)

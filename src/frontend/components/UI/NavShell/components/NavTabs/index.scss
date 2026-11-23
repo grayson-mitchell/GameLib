@@ -278,7 +278,7 @@
       //
       // Root cause is structural, and is why no earlier gate could see it:
       // `nord-light` was the ONLY light theme in themes.scss (it and its
-      // verbatim copy `gamelib-light` are now the two). Everywhere else
+      // its former verbatim copy `gamelib-light` are now the two). Everywhere else
       // the navbar and the body are both dark, so one navbar-surface token
       // coincidentally serves this body-surface element too. `#d0ddff` is
       // CORRECT where it was chosen -- `NavItem` paints it on
@@ -307,13 +307,12 @@
       // Since 261122-rz8, `--navbar-active` is nord0 on the nord8 active row
       // (6.24:1) and would read 10.84:1 on the body, so the override is no
       // longer load-bearing for contrast; it keeps the selected label on
-      // `--accent`. The hexes quoted above are the pre-change palette, which
-      // gamelib-light keeps.
+      // `--accent`. The hexes quoted above are the pre-change palette.
+      // gamelib-light (261123-pnl) keeps the override too, and its --accent
+      // #4c6f99 reads 4.51:1 on its #eceff4 body.
       body.nord-light & {
         color: var(--accent);
       }
-      // gamelib-light is the pre-261122-qwk nord-light, so it carries the same
-      // override with the same value.
       body.gamelib-light & {
         color: var(--accent);
       }
