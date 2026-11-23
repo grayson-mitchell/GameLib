@@ -12,6 +12,9 @@
  * runSlice(SPEC))` here RED first (the files and identifiers still exist), then deletes the TS and
  * watches it go green. Never lower a floor or widen an allow-list to turn a red run green.
  *
+ * 87-57 adds `describe('engineWineSurvivors')` at the bottom: the explicit survivor table compared with the schedule in both
+ * directions (D-21, D-22, D-23, D-24).
+ *
  * D-06 no rollback: neither `GAMELIB_ENGINE` nor `GAMELIB_WINE` may appear anywhere under src/ or
  * src-tauri/src, from the first commit. There is no flag, no dual path and no fallback window; the
  * `noRollbackFlag` describe holds that for the whole phase, independent of any sub-slice. This file
@@ -26,8 +29,11 @@ import { noIntraPhaseRowsLeft, SCHEDULE } from './engineWineShimSchedule.test'
 import {
   findExportedValues,
   findRollbackFlag,
+  findRustCalls,
+  REPO_ROOT,
   walkStripped
 } from 'backend/testUtils/infoPortGate'
+import type { StrippedFile } from 'backend/testUtils/infoPortGate'
 import type { SliceSpec } from 'backend/testUtils/portSliceGate'
 import {
   BACKEND_FILES_FLOOR,
@@ -38,7 +44,7 @@ import {
   SCANNED_FILES_FLOOR,
   tsWalk
 } from 'backend/testUtils/portSliceGate'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -640,6 +646,473 @@ describe('noRollbackFlag', () => {
       } finally {
         rmSync(dir, { recursive: true, force: true })
       }
+    })
+  })
+})
+
+/**
+ * 87-57 (D-21, D-22, D-23, D-24; T-87-88): the phase's last code plan compares the final schedule with the survivor list
+ * item by item, in both directions. `EXPECTED_SURVIVORS` is written out by hand, one name per row, and is never derived
+ * from `SCHEDULE`: a schedule row nobody wrote down here fails as an extra, a row written down here that the schedule lost
+ * fails as missing, and a row whose shape or wiring helper changed fails as both. The comparison key is (file, name,
+ * shape, wiring); `deletedBy` is held to 88..98 for every row but is not part of the key, because a later plan may move a
+ * deleting phase to the latest phase among a row's callers without changing what survives.
+ *
+ * 77 rows and three wiring helpers. The plan's table named 70; the 87-56a and 87-56b splits added five rows the plan was
+ * written before (`resolveEngineToolSettings`, `resolveNonCrossoverEngine`, `ensureFallbackEngine`, `crossoverBinDirSync`,
+ * `parseEngineOverride`), and two rows were created by plans 87-42 (`cancelFallbackBottle`, a bottles shim) and 87-54
+ * (`bridgeDeadlines`, the D-24 view over the bridge deadline callbacks) that the plan's table did not list.
+ */
+type ScheduleShape = (typeof SCHEDULE)[number]['shape']
+
+interface Survivor {
+  file: string
+  name: string
+  shape: ScheduleShape
+  wiring?: readonly string[]
+}
+
+const ENGINEWINE = 'src/backend/enginewine'
+const RESOLVERS_FILE = 'src/backend/sidecar/engineWineResolvers.ts'
+
+/** One survivor row per name in `names`, all in `file` with `shape`; each name is written out, never matched. */
+const rowsOf = (
+  file: string,
+  shape: ScheduleShape,
+  names: readonly string[]
+): Survivor[] => names.map((name) => ({ file, name, shape }))
+
+const EXPECTED_SURVIVORS: readonly Survivor[] = [
+  ...rowsOf(`${ENGINEWINE}/runtimes.ts`, 'shim', [
+    'isRuntimeInstalled',
+    'downloadRuntime'
+  ]),
+  ...rowsOf(`${ENGINEWINE}/wineManager.ts`, 'shim', [
+    'updateWineVersionInfos',
+    'installWineVersion',
+    'listWineReleases',
+    'wineReleasesInfoReady'
+  ]),
+  ...rowsOf(`${ENGINEWINE}/wineCore.ts`, 'shim', ['validWine']),
+  ...rowsOf('src/backend/launcher.ts', 'twin', [
+    'setupEnvVars',
+    'setupWineEnvVars'
+  ]),
+  ...rowsOf('src/backend/commandRunner.ts', 'twin', ['createCommandRunner']),
+  ...rowsOf(`${ENGINEWINE}/wineDiscovery.ts`, 'shim', [
+    'discoverAlternativeWine'
+  ]),
+  ...rowsOf('src/backend/utils/compatibility_layers.ts', 'twin', [
+    'getDefaultWineBinary'
+  ]),
+  ...rowsOf(`${ENGINEWINE}/engineOnline.ts`, 'shim', ['setEngineOnline']),
+  {
+    file: RESOLVERS_FILE,
+    name: 'toggleDXVK',
+    shape: 'resolver',
+    wiring: ['registerEngineWineResolvers']
+  },
+  ...rowsOf(RESOLVERS_FILE, 'resolver', [
+    'toggleDXVKNVAPI',
+    'toggleVKD3D',
+    'winetricksApply',
+    'winetricksAvailable',
+    'winetricksInstalled',
+    'runWineCommand',
+    'runWineCommandForGame',
+    'callTool',
+    'getEngineState'
+  ]),
+  ...rowsOf(`${ENGINEWINE}/tools.ts`, 'shim', [
+    'dxvkInstallRemove',
+    'winetricksInstallVerbs',
+    'winetricksListInstalled'
+  ]),
+  ...rowsOf(`${ENGINEWINE}/twin.ts`, 'twin', [
+    'engineKeyFor',
+    'isWritableEngineOverride',
+    'importEngineSettings',
+    'getPerGameBottleNameFor',
+    'getBottleDir',
+    'sanitizeBottleName',
+    'isBottleProvisioned',
+    'buildFallbackGameSettings',
+    'readBottleEngineMarkerKind',
+    'readBottleEngineMarkerSummary',
+    'restoreNeedsAbsentPin',
+    'isPinnedEngineInstalled',
+    'ENGINE_PINS',
+    'pinById',
+    'isNonCrossover',
+    'engineLogLabel',
+    'crossoverBinDirSync',
+    'parseEngineOverride'
+  ]),
+  ...rowsOf(`${ENGINEWINE}/bottles.ts`, 'shim', [
+    'prepareBottleForEngine',
+    'killBottleWineServerWith',
+    'removeCreatedBottleDir',
+    'createFallbackBottle',
+    'cancelFallbackBottle',
+    'reconcileBottleEngineMarker',
+    'recordPinnedBottleEngine',
+    'recordCrossoverBottleEngine',
+    'markGameRunning',
+    'markGameStopped',
+    'clearEngineSelection'
+  ]),
+  {
+    file: `${ENGINEWINE}/selectionView.ts`,
+    name: 'engineSelectionView',
+    shape: 'view',
+    wiring: ['registerEngineSelectionView']
+  },
+  ...rowsOf(`${ENGINEWINE}/launch.ts`, 'shim', [
+    'selectEngineForLaunch',
+    'armEngineLaunchDeadline',
+    'endEngineLaunch',
+    'getLaunchSettings',
+    'engineDialogDisplayed'
+  ]),
+  ...rowsOf(`${ENGINEWINE}/decision.ts`, 'shim', [
+    'decideLaunchEngine',
+    'decideCreationEngine',
+    'preflightCrossover',
+    'isCrossoverMissing',
+    'resolveCrossoverBinDir'
+  ]),
+  ...rowsOf(`${ENGINEWINE}/runTool.ts`, 'shim', [
+    'rustRunTool',
+    'cancelRunTool'
+  ]),
+  {
+    file: `${ENGINEWINE}/deadline.ts`,
+    name: 'armBridgeDeadline',
+    shape: 'shim',
+    wiring: ['registerEngineDeadlineFired']
+  },
+  ...rowsOf(`${ENGINEWINE}/deadline.ts`, 'shim', ['cancelBridgeDeadline']),
+  ...rowsOf(`${ENGINEWINE}/deadline.ts`, 'view', ['bridgeDeadlines']),
+  ...rowsOf(`${ENGINEWINE}/state.ts`, 'shim', [
+    'publishOverlayNotice',
+    'publishOverlayExitNotice',
+    'recordLaunchDecision'
+  ]),
+  ...rowsOf(`${ENGINEWINE}/toolSettings.ts`, 'shim', [
+    'resolveEngineToolSettings',
+    'resolveNonCrossoverEngine'
+  ]),
+  ...rowsOf(`${ENGINEWINE}/fallback.ts`, 'shim', ['ensureFallbackEngine'])
+]
+
+/** D-23: the ten resolvers, no others. */
+const D23_RESOLVERS: readonly string[] = [
+  'getEngineState',
+  'winetricksApply',
+  'winetricksAvailable',
+  'winetricksInstalled',
+  'toggleDXVK',
+  'toggleDXVKNVAPI',
+  'toggleVKD3D',
+  'runWineCommand',
+  'runWineCommandForGame',
+  'callTool'
+]
+
+/** D-22: the wine command core's twins that live outside `enginewine/twin.ts`. */
+const D22_TWINS: readonly string[] = [
+  'setupEnvVars',
+  'setupWineEnvVars',
+  'createCommandRunner',
+  'getDefaultWineBinary'
+]
+
+/** D-24: the bridge's sync `bottlePrimitives` helpers, the pin table and its lookup. */
+const D24_BRIDGE_HELPERS: readonly string[] = [
+  'getBottleDir',
+  'sanitizeBottleName',
+  'isBottleProvisioned',
+  'buildFallbackGameSettings',
+  'readBottleEngineMarkerKind',
+  'readBottleEngineMarkerSummary',
+  'restoreNeedsAbsentPin',
+  'isPinnedEngineInstalled',
+  'ENGINE_PINS',
+  'pinById'
+]
+
+/** D-24: the write-through views (the selection read and the bridge deadline callbacks). */
+const D24_VIEWS: readonly string[] = ['engineSelectionView', 'bridgeDeadlines']
+
+/** D-24 extensions, each flagged by the plan that added it (87-28, 87-55, 87-56a, 87-56b). */
+const D24_EXTENSIONS: readonly string[] = [
+  'engineKeyFor',
+  'isWritableEngineOverride',
+  'importEngineSettings',
+  'getPerGameBottleNameFor',
+  'isNonCrossover',
+  'engineLogLabel',
+  'crossoverBinDirSync',
+  'parseEngineOverride'
+]
+
+/**
+ * Non-test `src/backend` files outside the survivor files that may name a `RUST_ENGINE_` or `RUST_WINE_` constant: the
+ * sidecar's one typed channel list, which carries every Rust channel the sidecar may invoke. Nothing else; the
+ * `testUtils` fakes that answer those channels are test support and are not walked.
+ */
+const CHANNEL_NAMING_ALLOWED: readonly string[] = [
+  'src/backend/sidecar/sidecarRpc.ts'
+]
+
+const CHANNEL_CONSTANT = /\bRUST_(?:ENGINE|WINE)_[A-Z0-9_]+\b/
+const CHANNEL_PREFIXES = ['RUST_ENGINE_', 'RUST_WINE_'] as const
+
+/** The comparison key: file, name, shape and the wiring helpers a row names. */
+const survivorKey = (r: Survivor): string =>
+  `${r.file}#${r.name} (${r.shape}${
+    r.wiring && r.wiring.length > 0
+      ? `, wiring ${[...r.wiring].sort().join('+')}`
+      : ''
+  })`
+
+/** `expected` against `actual` in both directions, by key; duplicates on either side are reported too. */
+function compareSurvivors(
+  expected: readonly Survivor[],
+  actual: readonly Survivor[]
+): { missing: string[]; extra: string[]; duplicates: string[] } {
+  const exp = expected.map(survivorKey)
+  const act = actual.map(survivorKey)
+  const dupes = (keys: string[]): string[] =>
+    keys.filter((k, i) => keys.indexOf(k) !== i)
+  return {
+    missing: exp.filter((k) => !act.includes(k)),
+    extra: act.filter((k) => !exp.includes(k)),
+    duplicates: [...dupes(exp), ...dupes(act)]
+  }
+}
+
+/** Files in `files` that name a channel constant and are neither a survivor file nor explicitly allowed. */
+function unscheduledChannelFiles(
+  files: readonly StrippedFile[],
+  survivorFiles: readonly string[],
+  allowed: readonly string[]
+): string[] {
+  return files
+    .filter((f) => CHANNEL_CONSTANT.test(f.code))
+    .map((f) => f.path)
+    .filter((p) => !survivorFiles.includes(p) && !allowed.includes(p))
+}
+
+describe('engineWineSurvivors', () => {
+  const asSurvivor = (r: (typeof SCHEDULE)[number]): Survivor => ({
+    file: r.file,
+    name: r.name,
+    shape: r.shape,
+    ...(r.wiring ? { wiring: r.wiring } : {})
+  })
+  const actual: Survivor[] = SCHEDULE.map(asSurvivor)
+  const survivorFiles = [...new Set(EXPECTED_SURVIVORS.map((r) => r.file))]
+  const names = (rows: readonly Survivor[]): string[] =>
+    rows.map((r) => r.name).sort()
+  const sorted = (list: readonly string[]): string[] => [...list].sort()
+
+  /** Non-test src/backend TypeScript, with the test-support directory left out. */
+  const productionBackend = tsWalk.files.filter(
+    (f) =>
+      /\.tsx?$/.test(f.path) &&
+      f.path.startsWith('src/backend/') &&
+      !f.path.startsWith('src/backend/testUtils/')
+  )
+
+  it('the table holds 77 rows, three of them naming a wiring helper (anti-vacuity)', () => {
+    assertAtOrAboveFloor(
+      'EXPECTED_SURVIVORS rows',
+      EXPECTED_SURVIVORS.length,
+      77
+    )
+    expect(EXPECTED_SURVIVORS).toHaveLength(77)
+    expect(
+      EXPECTED_SURVIVORS.filter((r) => r.wiring).map((r) => r.name)
+    ).toEqual(['toggleDXVK', 'engineSelectionView', 'armBridgeDeadline'])
+  })
+
+  it('SCHEDULE equals EXPECTED_SURVIVORS by (file, name, shape, wiring), in both directions', () => {
+    expect(compareSurvivors(EXPECTED_SURVIVORS, actual)).toEqual({
+      missing: [],
+      extra: [],
+      duplicates: []
+    })
+  })
+
+  it('every survivor file exists, so no row outlives its module', () => {
+    for (const file of survivorFiles) {
+      expect(existsSync(join(REPO_ROOT, file))).toBe(true)
+    }
+  })
+
+  it('every row is scheduled for deletion in a phase from 88 to 98 (D-15; none left in 87)', () => {
+    expect(
+      SCHEDULE.filter((r) => r.deletedBy < 88 || r.deletedBy > 98).map(
+        (r) => `${r.file}#${r.name}: ${r.deletedBy}`
+      )
+    ).toEqual([])
+  })
+
+  it('D-23: the resolver rows are exactly the ten resolvers, all in engineWineResolvers.ts', () => {
+    const resolvers = actual.filter((r) => r.shape === 'resolver')
+    expect(names(resolvers)).toEqual(sorted(D23_RESOLVERS))
+    expect(resolvers.every((r) => r.file === RESOLVERS_FILE)).toBe(true)
+    expect(D23_RESOLVERS).toHaveLength(10)
+  })
+
+  it('D-22: the twins outside enginewine/twin.ts are exactly setupEnvVars, setupWineEnvVars, createCommandRunner and getDefaultWineBinary', () => {
+    const outside = actual.filter(
+      (r) => r.shape === 'twin' && r.file !== `${ENGINEWINE}/twin.ts`
+    )
+    expect(names(outside)).toEqual(sorted(D22_TWINS))
+  })
+
+  it('D-24: the twin.ts rows and the view rows are exactly the bridge helpers, the two views and the flagged extensions', () => {
+    const d24 = actual.filter(
+      (r) => r.file === `${ENGINEWINE}/twin.ts` || r.shape === 'view'
+    )
+    expect(names(d24)).toEqual(
+      sorted([...D24_BRIDGE_HELPERS, ...D24_VIEWS, ...D24_EXTENSIONS])
+    )
+    expect(names(actual.filter((r) => r.shape === 'view')).join()).toEqual(
+      sorted(D24_VIEWS).join()
+    )
+  })
+
+  it('src/backend/engine, src/backend/tools and src/backend/wine/manager do not exist', () => {
+    for (const dir of [
+      'src/backend/engine',
+      'src/backend/tools',
+      'src/backend/wine/manager'
+    ]) {
+      expect(existsSync(join(REPO_ROOT, dir))).toBe(false)
+    }
+  })
+
+  it('only the survivor files and the sidecar channel list name a RUST_ENGINE_ or RUST_WINE_ constant', () => {
+    assertAtOrAboveFloor(
+      'engineWineSurvivors production src/backend files',
+      productionBackend.length,
+      BACKEND_FILES_FLOOR
+    )
+    const naming = productionBackend.filter((f) =>
+      CHANNEL_CONSTANT.test(f.code)
+    )
+    // A walk that finds no naming file proves nothing; the survivor files and the channel list name them today.
+    assertAtOrAboveFloor(
+      'engineWineSurvivors files naming a channel constant',
+      naming.length,
+      12
+    )
+    expect(
+      unscheduledChannelFiles(
+        productionBackend,
+        survivorFiles,
+        CHANNEL_NAMING_ALLOWED
+      )
+    ).toEqual([])
+  })
+
+  it('every requestRustInvoke call on a RUST_ENGINE_ or RUST_WINE_ channel sits in a survivor file', () => {
+    const calls = findRustCalls(productionBackend, CHANNEL_PREFIXES)
+    assertAtOrAboveFloor(
+      'engineWineSurvivors engine and wine channel calls',
+      calls.length,
+      40
+    )
+    expect(
+      calls.filter((c) => !survivorFiles.includes(c.path)).map((c) => c.path)
+    ).toEqual([])
+  })
+
+  describe('planted violations', () => {
+    const planted = (path: string, code: string): StrippedFile => ({
+      path,
+      raw: code,
+      code
+    })
+    const base: readonly Survivor[] = EXPECTED_SURVIVORS
+    const row = (over: Partial<Survivor> = {}): Survivor => ({
+      file: `${ENGINEWINE}/runtimes.ts`,
+      name: 'planted',
+      shape: 'shim',
+      ...over
+    })
+
+    it('self-test: a schedule row the table does not name fails as extra', () => {
+      const result = compareSurvivors(EXPECTED_SURVIVORS, [...base, row()])
+      expect(result.extra).toEqual([survivorKey(row())])
+      expect(result.missing).toEqual([])
+    })
+
+    it('self-test: a table row the schedule lost fails as missing', () => {
+      const result = compareSurvivors(EXPECTED_SURVIVORS, base.slice(1))
+      expect(result.missing).toEqual([survivorKey(EXPECTED_SURVIVORS[0]!)])
+      expect(result.extra).toEqual([])
+    })
+
+    it('self-test: a changed shape, a changed wiring helper and a duplicated row each fail', () => {
+      const first = base[0]!
+      const shapeChanged = compareSurvivors(EXPECTED_SURVIVORS, [
+        { ...first, shape: 'twin' },
+        ...base.slice(1)
+      ])
+      expect(shapeChanged.missing).toHaveLength(1)
+      expect(shapeChanged.extra).toHaveLength(1)
+
+      const wired = base.findIndex((r) => r.name === 'engineSelectionView')
+      const wiringChanged = compareSurvivors(EXPECTED_SURVIVORS, [
+        ...base.slice(0, wired),
+        { ...base[wired]!, wiring: ['registerSomethingElse'] },
+        ...base.slice(wired + 1)
+      ])
+      expect(wiringChanged.missing).toHaveLength(1)
+      expect(wiringChanged.extra).toHaveLength(1)
+
+      const duplicated = compareSurvivors(EXPECTED_SURVIVORS, [...base, first])
+      expect(duplicated.duplicates).toEqual([survivorKey(first)])
+    })
+
+    it('self-test: a planted file naming a channel constant outside the table and the channel list is caught', () => {
+      const files = [
+        planted(
+          'src/backend/enginewine/runtimes.ts',
+          'requestRustInvoke(RUST_WINE_RUNTIME_DOWNLOAD)'
+        ),
+        planted(
+          'src/backend/sidecar/sidecarRpc.ts',
+          'RUST_ENGINE_BOTTLE_PREPARE'
+        ),
+        planted(
+          'src/backend/storeManagers/steam/stray.ts',
+          'requestRustInvoke(RUST_ENGINE_RUN_TOOL, {})'
+        ),
+        planted('src/backend/clean.ts', 'export const clean = 1')
+      ]
+      expect(
+        unscheduledChannelFiles(files, survivorFiles, CHANNEL_NAMING_ALLOWED)
+      ).toEqual(['src/backend/storeManagers/steam/stray.ts'])
+      expect(
+        findRustCalls(files, CHANNEL_PREFIXES)
+          .filter((c) => !survivorFiles.includes(c.path))
+          .map((c) => c.path)
+      ).toEqual(['src/backend/storeManagers/steam/stray.ts'])
+    })
+
+    it('self-test: an empty walk fails the production-files floor', () => {
+      expect(() =>
+        assertAtOrAboveFloor(
+          'engineWineSurvivors production src/backend files',
+          0,
+          BACKEND_FILES_FLOOR
+        )
+      ).toThrow(/engineWineSurvivors production src\/backend files/)
     })
   })
 })
