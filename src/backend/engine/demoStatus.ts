@@ -12,7 +12,7 @@
 import { join } from 'path'
 import { logInfo, LogPrefix } from 'backend/logger'
 import type { ProcessRunner } from 'backend/process/types'
-import { sanitizeBottleName } from './bottlePrimitives'
+import { sanitizeBottleName } from 'backend/enginewine/twin'
 
 // Spike 060 measured 4.2 s cold, 0.9 s warm: about 3.5x headroom.
 const DEMO_STATUS_CAP_MS = 15_000

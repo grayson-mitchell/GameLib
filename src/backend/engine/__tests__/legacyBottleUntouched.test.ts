@@ -63,11 +63,13 @@ import { createTestEngineServices } from 'backend/testUtils/testServices'
 import type { LaunchEngineDeps } from '../launchEngine'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
-import { getBottleDir as getBottleDirIn } from '../bottlePrimitives'
-import { ENGINE_MARKER_FILE, switchContextFrom } from '../engineSwitch'
+import { getBottleDir as getBottleDirIn } from 'backend/enginewine/twin'
 import { perGameBottleName } from '../perGameBottle'
 import type { EffectiveEngine } from '../engineConfig'
 import type { EngineSelection } from '../engineTypes'
+
+/** The marker file Rust's bottle switch writes (the only difference a launch may leave). */
+const ENGINE_MARKER_FILE = '.gamelib-engine.json'
 
 // Bottles live under the jest-contained HOME, the real `userHome` a boot derives.
 const { userHome } = createContainedHomeAppPaths()
@@ -170,8 +172,6 @@ let settings: Partial<GameSettings>
 const profile = createFakeHomeProfile({ prefix: 'gamelib-61-14-' })
 const bottles: string[] = []
 const ensureGameBottle = jest.fn()
-const killWith = jest.fn()
-const installRemove = jest.fn()
 
 const makeGame = (): Game =>
   ({
@@ -195,16 +195,7 @@ const deps = (): Partial<LaunchEngineDeps> => ({
   notifyFallback: jest.fn(),
   ensureGameBottle,
   prepare: () => Promise.resolve({ ok: true, changed: false }),
-  switchDeps: () => ({
-    ctx: switchContextFrom(services),
-    getMonitorPhase: () => null,
-    killWith,
-    installRemove,
-    resolveCrossoverBinDir: () => Promise.resolve('/cx/bin'),
-    currentPinEngine: () => null,
-    ensurePinEngine: () => Promise.resolve(null),
-    fallbackSettings: () => ({}) as GameSettings
-  })
+  ensurePinEngine: () => Promise.resolve(null)
 })
 
 function makeBottle(name: string, withTimestamp: boolean): string {
@@ -237,8 +228,6 @@ beforeEach(() => {
     paths: { ...createTestEngineServices().paths, userHome },
     engineRuntime: createTestEngineRuntime({ paths: { userHome } })
   })
-  killWith.mockResolvedValue(undefined)
-  installRemove.mockResolvedValue(true)
   ensureGameBottle.mockImplementation((args: { bottleName: string }) => {
     const dir = getBottleDir(args.bottleName)
     mkdirSync(dir, { recursive: true })

@@ -26,7 +26,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { writeBridgeConfig, BRIDGE_CONFIG_FILENAME } from '../bridgeConfig'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 
 const { userHome } = createContainedHomeAppPaths()
@@ -40,7 +40,10 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
-jest.mock('backend/engine/bottlePrimitives', () => ({
+jest.mock('backend/enginewine/twin', () => ({
+  ...jest.requireActual<typeof import('backend/enginewine/twin')>(
+    'backend/enginewine/twin'
+  ),
   // Verbatim re-implementation of bottle.ts:170's T-17-01 guard -- kept
   // here (not imported) so this suite never loads bottle.ts's transitive
   // electron/electron-store dependency graph.

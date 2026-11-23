@@ -60,7 +60,10 @@ jest.mock('backend/knownFixOverlays', () => ({
   resolveKnownFixOverlayEnv: (...args: unknown[]) =>
     mockResolveOverlayEnv(...args)
 }))
-jest.mock('backend/engine/bottlePrimitives', () => ({
+jest.mock('backend/enginewine/twin', () => ({
+  ...jest.requireActual<typeof import('backend/enginewine/twin')>(
+    'backend/enginewine/twin'
+  ),
   getBottleDir: (_paths: unknown, name: string) => `${mockBottleRoot}/${name}`
 }))
 jest.mock('../storeManagers/steam/bottle', () => ({}))

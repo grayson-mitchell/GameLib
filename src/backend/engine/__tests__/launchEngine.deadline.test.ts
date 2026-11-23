@@ -34,9 +34,11 @@ jest.mock('../engineDialogs', () => ({
   showEngineDialog: jest.fn(),
   notifyEngineFallback: jest.fn()
 }))
-jest.mock('../bottlePrimitives', () => ({
+jest.mock('backend/enginewine/twin', () => ({
+  ...jest.requireActual<typeof import('backend/enginewine/twin')>(
+    'backend/enginewine/twin'
+  ),
   isBottleProvisioned: jest.fn(),
-  killBottleWineServerWith: jest.fn(),
   getBottleDir: (_paths: unknown, name: string) => `/b/${name}`,
   sanitizeBottleName: (name: string) => name
 }))
@@ -53,7 +55,7 @@ import { logInfo } from 'backend/logger'
 import { createFakeClock } from 'backend/testUtils/fakeClock'
 import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
 import type { EngineSelection } from '../engineTypes'
-import { killBottleWineServerWith } from '../bottlePrimitives'
+import * as bottlesModule from 'backend/enginewine/bottles'
 import { showEngineDialog, showEngineNotice } from '../engineDialogs'
 import { createTestEngineServices } from 'backend/testUtils/testServices'
 import { createTestEngineState } from 'backend/testUtils/testEngineState'
@@ -122,13 +124,17 @@ const advance = async (ms: number) => {
   for (let i = 0; i < 5; i++) await Promise.resolve()
 }
 
+let killSpy: jest.SpyInstance
+
 beforeEach(() => {
   clock = createFakeClock()
   services = {
     ...baseServices,
     engineRuntime: createTestEngineRuntime({ clock })
   }
-  ;(killBottleWineServerWith as jest.Mock).mockClear()
+  killSpy = jest
+    .spyOn(bottlesModule, 'killBottleWineServerWith')
+    .mockResolvedValue(true)
   ;(notify as jest.Mock).mockClear()
   app.raiseMainWindow.mockClear()
   ;(showDialogBoxModalAuto as jest.Mock).mockClear()
@@ -183,7 +189,7 @@ describe('armEngineLaunchDeadline', () => {
     args.onFirstMatch('1')
     expect(activeDeadlineCount()).toBe(0)
     clock.advance(200_000)
-    expect(killBottleWineServerWith).not.toHaveBeenCalled()
+    expect(killSpy).not.toHaveBeenCalled()
   })
 
   it('does nothing for a plain prefix', () => {
@@ -212,7 +218,7 @@ describe('armEngineLaunchDeadline', () => {
       )
     ).toBe(true)
     clock.advance(200_000)
-    expect(killBottleWineServerWith).not.toHaveBeenCalled()
+    expect(killSpy).not.toHaveBeenCalled()
   })
 
   it('on expiry shows a no-kill notice without raising the window (WR-02) and keeps the launch held', async () => {
@@ -224,7 +230,7 @@ describe('armEngineLaunchDeadline', () => {
     markGameRunning('GameLib-legendary-Quail', KEY)
     await advance(180_000)
     expect(watcher.stop).toHaveBeenCalled()
-    expect(killBottleWineServerWith).not.toHaveBeenCalled()
+    expect(killSpy).not.toHaveBeenCalled()
     expect(game.stop).not.toHaveBeenCalled()
     expect(app.raiseMainWindow).not.toHaveBeenCalled()
     expect(showDialogBoxModalAuto).not.toHaveBeenCalled()
@@ -259,7 +265,7 @@ describe('armEngineLaunchDeadline', () => {
     await advance(180_000)
     // The deadline actually fired, so the "untouched" assertions below are not vacuous.
     expect(d.publishNotice).toHaveBeenCalledTimes(1)
-    expect(killBottleWineServerWith).not.toHaveBeenCalled()
+    expect(killSpy).not.toHaveBeenCalled()
     expect(game.stop).not.toHaveBeenCalled()
     expect([...gamesRunningIn('GameLib')].sort()).toEqual(['gog:A', KEY].sort())
     // The deadline is a notice, not a kill: the armed game is not stopped, the bottle's wineserver

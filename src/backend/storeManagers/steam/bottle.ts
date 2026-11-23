@@ -27,10 +27,7 @@ import { logWarning, LogPrefix } from 'backend/logger'
 // its pure helpers (e.g. steam/library.ts consumers like games.test.ts). Only
 // the provisioning/command functions actually need it, so defer the load.
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
-import {
-  getBottleDir,
-  isBottleProvisioned
-} from 'backend/engine/bottlePrimitives'
+import { getBottleDir, isBottleProvisioned } from 'backend/enginewine/twin'
 import type { AppPaths } from 'backend/process/context'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import type { CrossoverLocator } from 'backend/engine/crossoverLocation'

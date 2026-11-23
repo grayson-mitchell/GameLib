@@ -24,7 +24,13 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type LogWriter from 'backend/logger/targetWriter'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { isMac } from 'backend/constants/environment'
-import { getBottleDir, isBottleProvisioned } from './bottlePrimitives'
+import {
+  getBottleDir,
+  isBottleProvisioned,
+  readBottleEngineMarkerKind,
+  restoreNeedsAbsentPin,
+  ENGINE_PINS
+} from 'backend/enginewine/twin'
 import { LAUNCH_DEADLINE_MS, bindDeadlineToMonitor } from './launchDeadline'
 import { watchForGameProcess } from './gameProcessWatch'
 import {
@@ -46,13 +52,8 @@ import {
   showEngineDialog,
   showEngineNotice
 } from './engineDialogs'
-import {
-  readBottleEngineMarkerKind,
-  restoreNeedsAbsentPin,
-  switchContextFrom,
-  switchServicesFrom
-} from './engineSwitch'
-import type { EngineSwitchDeps } from './engineSwitch'
+import { ensurePinEngineFrom } from './pinEngine'
+import type { EnsurePinEngine } from './pinEngine'
 import { prepareBottle } from './prepareBottle'
 import type { PrepareBottleCall, PrepareOutcome } from './prepareBottle'
 import {
@@ -62,7 +63,6 @@ import {
 } from './engineSync'
 import { engineLogLabel, isNonCrossover } from './engineTypes'
 import type { EngineSelection } from './engineTypes'
-import { ENGINE_PINS } from './enginePins'
 import { engineKeyIfEligible } from './engineEligibility'
 import type { EngineKey } from './gameKey'
 import { resolveGamePrefix } from './gamePrefix'
@@ -109,16 +109,8 @@ export interface LaunchEngineDeps {
       | 'appRuntime'
     >
   ) => ReturnType<typeof ensurePinnedEngineReportingStatus>
-  switchDeps(): Partial<EngineSwitchDeps> &
-    Pick<
-      EngineSwitchDeps,
-      | 'ctx'
-      | 'killWith'
-      | 'installRemove'
-      | 'resolveCrossoverBinDir'
-      | 'ensurePinEngine'
-      | 'fallbackSettings'
-    >
+  /** The pin download the Rust bottle switch asks for when a restore has no DXVK source. */
+  ensurePinEngine: EnsurePinEngine
   /** The bottle switch: Rust's, reached through `prepareBottle` (87-42). */
   prepare: (call: PrepareBottleCall) => Promise<PrepareOutcome>
   sendStatus(update: {
@@ -145,7 +137,7 @@ const defaultDeps = (
   | 'ensureGameBottle'
   | 'ensurePinned'
   | 'decisionDeps'
-  | 'switchDeps'
+  | 'ensurePinEngine'
   | 'readEffective'
   | 'isCrossoverMissing'
   | 'recordDecision'
@@ -238,7 +230,7 @@ export async function selectEngineForLaunch(
         sendFrontendMessage: services.notices.sendFrontendMessage,
         appRuntime: services.notices.appRuntime
       }),
-    switchDeps: () => switchServicesFrom(services),
+    ensurePinEngine: ensurePinEngineFrom(services),
     recordDecision(id, decision, bottleName, prefix, effective) {
       services.engineState.recordLaunchDecision(id, decision, bottleName, {
         bottleFor: () => (bottleName === '' ? null : bottleName),
@@ -354,19 +346,17 @@ export async function selectEngineForLaunch(
     opts.offline &&
     (effective.id === 'automatic' || effective.id === 'crossover')
   ) {
+    const readCtx = {
+      paths: services.paths,
+      fallback: services.engineRuntime.fallback
+    }
     const refusal = offlineLaunchCertainlyBlocked({
       offline: true,
       override: effective.id,
       crossoverMissing: await d.isCrossoverMissing(),
-      markerKind: readBottleEngineMarkerKind(
-        switchContextFrom(services),
-        bottleName
-      ),
+      markerKind: readBottleEngineMarkerKind(readCtx, bottleName),
       currentPinInstalled: d.currentPinInstalled(),
-      restoreNeedsAbsentPin: restoreNeedsAbsentPin(
-        switchContextFrom(services),
-        bottleName
-      )
+      restoreNeedsAbsentPin: restoreNeedsAbsentPin(readCtx, bottleName)
     })
     if (refusal.blocked) {
       logWarning(
@@ -473,7 +463,7 @@ export async function selectEngineForLaunch(
         cxBuild
       ),
       fallbackSettings: services.globalGameSettings(),
-      ensurePinEngine: d.switchDeps().ensurePinEngine,
+      ensurePinEngine: d.ensurePinEngine,
       // IN-05 (59-22): a real engine switch is "setting up", not a stale "Downloading (100%)".
       onSwitching: () =>
         d.sendStatus({

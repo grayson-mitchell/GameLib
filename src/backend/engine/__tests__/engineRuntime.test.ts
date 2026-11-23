@@ -15,7 +15,7 @@ import { createTestEngineServices } from 'backend/testUtils/testServices'
 import { LAUNCH_DEADLINE_MS } from '../launchDeadline'
 import { ENGINE_MARKER_FILE, switchContextFrom } from '../engineSwitch'
 import type { EngineSwitchDeps } from '../engineSwitch'
-import { buildFallbackGameSettings } from '../bottlePrimitives'
+import { buildFallbackGameSettings } from 'backend/enginewine/twin'
 import type { EngineSelection } from '../engineTypes'
 
 const cx: EngineSelection = {

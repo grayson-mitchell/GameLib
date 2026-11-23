@@ -99,18 +99,21 @@ const COMPATIBILITY_LAYERS_IMPORTERS: readonly string[] = [
 /**
  * Every non-test importer of `enginewine/twin.ts` (the check is per file, so every twin row lists them all):
  * the launcher and the five `games.ts` (`engineKeyFor`), the settings and install flows (the override
- * validation and the import settings), the engine flows, and the engine TS alive until 87-56 (87-42 adds `prepareBottle`; 87-39 adds the four
- * modules that re-export the bridge's bottle helpers: `bottlePrimitives`, `engineSwitch`, `fallbackEngine`,
- * `enginePins`; 87-43 repoints their callers and deletes them).
+ * validation and the import settings), the engine flows, the engine TS alive until 87-56 (87-42 adds `prepareBottle`),
+ * and (87-43) every bridge file that used to reach the helpers through the re-exporting engine modules.
  */
 const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/engine/bottlePrimitives.ts',
+  'src/backend/engine/demoStatus.ts',
   'src/backend/engine/engineEligibility.ts',
+  'src/backend/engine/enginePins.ts',
   'src/backend/engine/engineState.ts',
   'src/backend/engine/engineSwitch.ts',
-  'src/backend/engine/enginePins.ts',
   'src/backend/engine/fallbackEngine.ts',
   'src/backend/engine/gameEngineState.ts',
+  'src/backend/engine/gamePrefix.ts',
+  'src/backend/engine/launchEngine.ts',
+  'src/backend/engine/launchSettings.ts',
   'src/backend/engine/perGameBottle.ts',
   'src/backend/engine/prepareBottle.ts',
   'src/backend/engine/toolSettings.ts',
@@ -122,6 +125,24 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/legendary/games.ts',
   'src/backend/storeManagers/nile/games.ts',
   'src/backend/storeManagers/sideload/games.ts',
+  'src/backend/storeManagers/steam/bottle.ts',
+  'src/backend/storeManagers/steam/bottledSteam.ts',
+  'src/backend/storeManagers/steam/bridge/bridgeConfig.ts',
+  'src/backend/storeManagers/steam/bridge/drm/stageDrmBottle.ts',
+  'src/backend/storeManagers/steam/bridge/sharedRedistInstall.ts',
+  'src/backend/storeManagers/steam/bridge/shimGenerate.ts',
+  'src/backend/storeManagers/steam/bridge/shimPlacement.ts',
+  'src/backend/storeManagers/steam/bridgeBottle.ts',
+  'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
+  'src/backend/storeManagers/steam/bridgeKnownFixes.ts',
+  'src/backend/storeManagers/steam/bridgeWineTools.ts',
+  'src/backend/storeManagers/steam/directLaunch/directLaunchProbes.ts',
+  'src/backend/storeManagers/steam/gameBridgeLaunch.ts',
+  'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts',
+  'src/backend/storeManagers/steam/gameEngineDialogs.ts',
+  'src/backend/storeManagers/steam/gameInstallBridge.ts',
+  'src/backend/storeManagers/steam/gameLaunch.ts',
+  'src/backend/storeManagers/steam/provisionBottle.ts',
   'src/backend/storeManagers/storeManagerCommon/games.ts'
 ]
 /**

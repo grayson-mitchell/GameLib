@@ -35,7 +35,7 @@ const steamUser = createMockSteamUser()
 import { mockLeaseOk } from './depotLeaseMocks'
 import { selectAllDepots } from '../depot/select'
 import { getBottleSteamappsDir } from '../bottle'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 
 const paths = createContainedHomeAppPaths()

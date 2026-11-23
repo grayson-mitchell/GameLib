@@ -14,7 +14,7 @@ import { checkConnectivityNow } from 'backend/connectivityNow'
 import { readSteamWantsOfflineMode } from './bridge/steamOfflineMode'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { isBridgeBottleReady, getBridgeBottleSettings } from './bridgeBottle'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 // Phase 60: Steam overlay in bridged games (macOS).
 import { type OverlayLaunchPayload } from './bridge/overlay/overlayLaunch'
 import { placeShimForGame } from './bridge/shimGenerate'

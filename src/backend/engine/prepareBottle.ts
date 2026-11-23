@@ -21,11 +21,14 @@ import type {
   PrepareBottleRequest
 } from 'backend/enginewine/bottles'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
-import { readBottleEngineMarkerSummary } from 'backend/enginewine/twin'
+import {
+  readBottleEngineMarkerSummary,
+  ENGINE_PINS,
+  pinById
+} from 'backend/enginewine/twin'
 import type { BottleReadContext } from 'backend/enginewine/twin'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import { ENGINE_PINS, pinById } from './enginePins'
-import type { EnginePin } from './enginePins'
+import type { EnginePin } from 'common/types/engine'
 import type { NonCrossoverEngine } from './engineTypes'
 
 /** The result the callers branch on: the TS `PrepareResult`. */

@@ -104,3 +104,20 @@ export interface EngineOption {
 export type EngineNoticeDismissal =
   | { kind: 'no-crossover' }
   | { kind: 'untested-crossover'; build: string }
+
+/** One half of the pinned fallback engine: a build fixed by size and sha256 (Phase 59, D-08). */
+export type PinnedArtifact = {
+  version: string
+  url: string
+  size: number
+  sha256: string
+  archiveName: string
+}
+
+/** The pinned fallback engine: a Wine-Staging build and the DXVK-macOS build that goes with it. */
+export type EnginePin = {
+  id: string
+  label: string
+  wine: PinnedArtifact
+  dxvk: PinnedArtifact
+}

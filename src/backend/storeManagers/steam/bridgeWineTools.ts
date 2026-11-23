@@ -19,12 +19,11 @@ import type { AppPaths } from 'backend/process/context'
 import type { GameSettings } from 'common/types'
 import { logError, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
-import { buildFallbackGameSettings } from 'backend/engine/bottlePrimitives'
-import { parseEngineOverride } from 'backend/engine/engineIds'
 import {
-  readBottleEngineMarkerKind,
-  switchContextFrom
-} from 'backend/engine/engineSwitch'
+  buildFallbackGameSettings,
+  readBottleEngineMarkerKind
+} from 'backend/enginewine/twin'
+import { parseEngineOverride } from 'backend/engine/engineIds'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
 import type { EngineServices } from 'backend/engine/engineServices'
 import { nonCrossoverEngineFor } from 'backend/engine/toolSettings'
@@ -74,7 +73,10 @@ function defaultSteamWineToolsDeps(
         appId
       ),
     markerKind: (bottle) =>
-      readBottleEngineMarkerKind(switchContextFrom(services), bottle),
+      readBottleEngineMarkerKind(
+        { paths: services.paths, fallback: services.engineRuntime.fallback },
+        bottle
+      ),
     // A cycle with steamEngineDeps (which imports this module); only used at call time.
     engineId: (appId) =>
       parseEngineOverride(readSteamEngineOverride(services, appId)),

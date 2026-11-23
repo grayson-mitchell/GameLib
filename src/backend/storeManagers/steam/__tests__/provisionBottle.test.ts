@@ -23,7 +23,7 @@ import {
 // `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { createSteamBottle } from '../bottle'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
 import { createGlobalTimerClock } from 'backend/testUtils/globalTimerClock'
 import { provisionBottle } from '../provisionBottle'

@@ -12,10 +12,7 @@ import { basename, dirname, join, relative, resolve } from 'node:path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { SteamBridgeScanVerdict } from '../stores'
 import { resolveBridgeBottleName } from '../bridgeBottle'
-import {
-  getBottleDir,
-  sanitizeBottleName
-} from 'backend/engine/bottlePrimitives'
+import { getBottleDir, sanitizeBottleName } from 'backend/enginewine/twin'
 import { scanSteamApiImports } from './importScan'
 import { runtimeLoadedSteamApiMarker } from './importParse'
 import {

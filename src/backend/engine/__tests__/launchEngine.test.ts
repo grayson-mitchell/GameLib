@@ -39,13 +39,10 @@ jest.mock('../engineDialogs', () => ({
   showEngineDialog: jest.fn(),
   notifyEngineFallback: jest.fn()
 }))
-jest.mock('../engineSwitch', () => ({
-  createEngineSwitcher: jest.fn(() => ({ prepareBottleForEngine: jest.fn() })),
-  switchContextFrom: jest.fn(() => ({})),
-  switchServicesFrom: jest.fn(() => ({
-    killWith: jest.fn(),
-    installRemove: jest.fn()
-  })),
+jest.mock('backend/enginewine/twin', () => ({
+  ...jest.requireActual<typeof import('backend/enginewine/twin')>(
+    'backend/enginewine/twin'
+  ),
   readBottleEngineMarkerKind: jest.fn(() => null),
   restoreNeedsAbsentPin: jest.fn(() => false)
 }))
@@ -195,8 +192,8 @@ const deps = (
   currentPinInstalled: () => true,
   ensurePinned,
   prepare,
-  // 87-42: only the pin download is read from the switch deps now (the switch itself is Rust's).
-  switchDeps: (() => ({ ensurePinEngine: jest.fn() })) as never,
+  // The pin download is the only part of the old switch deps the launch still reads (the switch itself is Rust's).
+  ensurePinEngine: jest.fn(),
   sendStatus,
   recordDecision,
   showDialog,

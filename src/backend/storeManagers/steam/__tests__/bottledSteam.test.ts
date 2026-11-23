@@ -26,7 +26,7 @@ import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { createTestStores } from 'backend/testUtils/testServices'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 import { createSteamBottle, getBottleSteamExePath } from '../bottle'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 import {
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall,

@@ -15,7 +15,7 @@ import { join } from 'node:path'
 import { logInfo, logWarning } from 'backend/logger'
 const sendFrontendMessage = jest.fn()
 import { recordPlaySession } from 'backend/runsForMe'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import {

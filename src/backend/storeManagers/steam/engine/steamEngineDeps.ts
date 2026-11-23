@@ -1,7 +1,7 @@
 /**
- * Steam adapter for the store-agnostic engine decision and switch (phase 61, D-16, D-08).
+ * Steam adapter for the store-agnostic engine decision (phase 61, D-16, D-08).
  *
- * `backend/engine/engineDecision` and `engineSwitch` import nothing from this store. Everything
+ * `backend/engine/engineDecision` imports nothing from this store. Everything
  * Steam-only they used to default to is injected here: the persisted wine-bin hint for the
  * CrossOver lookup, the Steam override reader, the bridge monitor phase, the title's own bridge
  * bottle and the bridge bottle's CrossOver settings.
@@ -16,8 +16,6 @@ import type { AppPaths } from 'backend/process/context'
 import type { EngineServices } from 'backend/engine/engineServices'
 import type { PrepareBottleCall } from 'backend/engine/prepareBottle'
 import type { EngineSelection } from 'backend/engine/engineTypes'
-import { switchServicesFrom } from 'backend/engine/engineSwitch'
-import type { EngineSwitchDeps } from 'backend/engine/engineSwitch'
 import { readStoredGameConfig } from 'backend/engine/engineConfig'
 import type {
   EffectiveEngine,
@@ -129,40 +127,8 @@ export function steamDecisionDeps(
   }
 }
 
-export function steamSwitchDeps(
-  services: EngineServices & SteamEngineBottle
-): Partial<EngineSwitchDeps> &
-  Pick<
-    EngineSwitchDeps,
-    | 'ctx'
-    | 'crossoverSettings'
-    | 'killWith'
-    | 'installRemove'
-    | 'resolveCrossoverBinDir'
-    | 'fallbackSettings'
-  > {
-  return {
-    ...switchServicesFrom(services),
-    getMonitorPhase:
-      services.steamLaunchRuntime.monitors.getBottleProcessMonitorPhase,
-    ownBottleName: bridgeBottleNameFor,
-    crossoverSettings: (appId) =>
-      getBridgeBottleSettings(
-        {
-          config: { getSettings: () => services.globalGameSettings() },
-          steamBottle: services.steamBottle,
-          paths: services.paths,
-          engineRuntime: services.engineRuntime,
-          steamLaunchRuntime: services.steamLaunchRuntime
-        },
-        appId
-      ),
-    resolveCrossoverBinDir: () => hintedBinDir(services)
-  }
-}
-
 /**
- * The facts the Rust engine switch takes as values (87-42): what `steamSwitchDeps` handed the TS switch as callbacks.
+ * The facts the Rust engine switch takes as values (87-42): what the TS switch's deps held as callbacks.
  * `monitorPhase` and `ownBottle` are read now, `crossoverSettings` only when the switch is to CrossOver (the one
  * case that runs a restore through it; it reads the registered selection, which the caller has set for `appId`), and
  * `fallbackSettings` is the global game settings the DXVK step builds over.
@@ -179,12 +145,25 @@ export function steamPrepareFacts(
   | 'fallbackSettings'
   | 'ensurePinEngine'
 > {
-  const deps = steamSwitchDeps(services)
   return {
-    monitorPhase: deps.getMonitorPhase?.(appId) ?? null,
+    monitorPhase:
+      services.steamLaunchRuntime.monitors.getBottleProcessMonitorPhase(
+        appId
+      ) ?? null,
     ownBottle: { name: bridgeBottleNameFor(appId) },
     crossoverSettings:
-      next.kind === 'crossover' ? deps.crossoverSettings(appId) : undefined,
+      next.kind === 'crossover'
+        ? getBridgeBottleSettings(
+            {
+              config: { getSettings: () => services.globalGameSettings() },
+              steamBottle: services.steamBottle,
+              paths: services.paths,
+              engineRuntime: services.engineRuntime,
+              steamLaunchRuntime: services.steamLaunchRuntime
+            },
+            appId
+          )
+        : undefined,
     fallbackSettings: services.globalGameSettings()
   }
 }

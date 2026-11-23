@@ -1,4 +1,5 @@
 import { ENGINE_PINS } from 'backend/enginewine/twin'
+import type { EnginePin } from 'common/types/engine'
 
 /**
  * The pinned fallback engine table (phase 59, D-08 release lever).
@@ -18,20 +19,7 @@ import { ENGINE_PINS } from 'backend/enginewine/twin'
  */
 export { ENGINE_PINS, pinById } from 'backend/enginewine/twin'
 
-export type PinnedArtifact = {
-  version: string
-  url: string
-  size: number
-  sha256: string
-  archiveName: string
-}
-
-export type EnginePin = {
-  id: string
-  label: string
-  wine: PinnedArtifact
-  dxvk: PinnedArtifact
-}
+export type { EnginePin, PinnedArtifact } from 'common/types/engine'
 
 export function pinnedEngineIdsFrom(pins: {
   current: EnginePin

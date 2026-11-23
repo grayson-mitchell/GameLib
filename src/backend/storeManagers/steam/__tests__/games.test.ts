@@ -136,8 +136,11 @@ import {
 } from '../bottledSteam'
 import {
   getBottleDir,
-  buildFallbackGameSettings
-} from 'backend/engine/bottlePrimitives'
+  buildFallbackGameSettings,
+  readBottleEngineMarkerKind,
+  restoreNeedsAbsentPin,
+  ENGINE_PINS
+} from 'backend/enginewine/twin'
 import type { DrmLaunchForm } from '../bridgeBottle'
 import type {
   DrmDllPathChannel,
@@ -193,14 +196,9 @@ import {
   decideLaunchEngine,
   preflightCrossover
 } from 'backend/engine/engineDecision'
-import {
-  readBottleEngineMarkerKind,
-  restoreNeedsAbsentPin
-} from 'backend/engine/engineSwitch'
 import { createFakeClock } from 'backend/testUtils/fakeClock'
 import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
 import { checkConnectivityNow } from 'backend/connectivityNow'
-import { ENGINE_PINS } from 'backend/engine/enginePins'
 import { existsSync } from 'graceful-fs'
 import { getSteamLibraries, sendGameStatusUpdate } from 'backend/utils'
 // 260821-rb5: only needed by this task's case-C self-heal test (2) —
@@ -652,8 +650,14 @@ jest.mock('backend/constants/environment', () => ({
 // tellBottledSteamTo*, getSteamBottleSettings). Fully replaced (not spied) —
 // bottle.ts pulls in backend/config's heavy transitive chain and lazily
 // imports backend/launcher, neither of which games.test.ts needs to exercise.
-jest.mock('backend/engine/bottlePrimitives', () => ({
+jest.mock('backend/enginewine/twin', () => ({
+  ...jest.requireActual<typeof import('backend/enginewine/twin')>(
+    'backend/enginewine/twin'
+  ),
   buildFallbackGameSettings: jest.fn(),
+  // The marker views the offline refusal reads (the switch itself is Rust's).
+  readBottleEngineMarkerKind: jest.fn(),
+  restoreNeedsAbsentPin: jest.fn(),
   // Phase 51 Plan 01 (D-51-01): launchBridgeGame()'s bottleProcessMonitor
   // wiring resolves the bottle dir via this.
   getBottleDir: jest.fn(),
@@ -949,22 +953,11 @@ jest.mock('../engine/steamEngineDeps', () => ({
   steamEngineStateDeps: jest.fn(() => ({})),
   steamDecisionDeps: jest.fn(() => ({})),
   steamDecisionServices: jest.fn(() => ({})),
-  steamSwitchDeps: jest.fn(() => ({ crossoverSettings: jest.fn() })),
   steamPrepareFacts: jest.fn(() => ({}))
 }))
 // Phase 59 (59-10): per-launch bottle preparation and state publishing.
 // 66.4-05: the switcher and the fallback-engine owner are boot instances reached through
 // deps.engineRuntime; the runtime built below wraps these recording fakes.
-jest.mock('backend/engine/engineSwitch', () => ({
-  createEngineSwitcher: () => ({
-    prepareBottleForEngine: (...a: unknown[]) =>
-      mockPrepareBottleForEngine(...a)
-  }),
-  switchContextFrom: jest.fn(),
-  readBottleEngineMarkerKind: jest.fn(),
-  reconcileBottleEngineMarker: jest.fn(),
-  restoreNeedsAbsentPin: jest.fn()
-}))
 jest.mock('backend/engine/fallbackEngine', () => ({
   createFallbackEngine: () => ({
     ensurePinnedEngine: (...a: unknown[]) => mockEnsurePinnedEngine(...a),

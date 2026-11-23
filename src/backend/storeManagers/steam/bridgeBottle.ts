@@ -16,7 +16,7 @@ import {
   buildFallbackGameSettings,
   getBottleDir,
   isBottleProvisioned
-} from 'backend/engine/bottlePrimitives'
+} from 'backend/enginewine/twin'
 import {
   DEFAULT_BRIDGE_BOTTLE_NAME,
   getBottleSteamappsDir,

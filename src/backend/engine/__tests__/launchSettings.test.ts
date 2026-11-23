@@ -20,7 +20,10 @@ import {
   buildCrossoverGameSettings,
   createLaunchSettingsRegistry
 } from '../launchSettings'
-import { buildFallbackGameSettings, getBottleDir } from '../bottlePrimitives'
+import {
+  buildFallbackGameSettings,
+  getBottleDir
+} from 'backend/enginewine/twin'
 import { createEngineRegistry } from '../engineRegistry'
 
 const paths = { userHome: mockProfile.root }

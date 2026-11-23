@@ -24,7 +24,7 @@ export type BottledRaiseDeps = SpawnDeps & {
   steamLaunchRuntime: { raiser: BottledSteamRaiser }
 }
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 import { NUMERIC_APP_ID } from './gameConstants'
 import { getBottleSteamExePath, type SteamBottle } from './bottle'
 

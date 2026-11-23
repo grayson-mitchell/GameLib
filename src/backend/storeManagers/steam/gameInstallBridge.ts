@@ -15,7 +15,7 @@ import { RUST_STEAMPOLL_BRIDGE_FINALIZED } from 'common/types/sidecarTransport'
 import * as bottle from './bottle'
 import * as bbLifecycle from './bridgeBottleLifecycle'
 import * as bridgeBottle from './bridgeBottle'
-import { buildFallbackGameSettings } from 'backend/engine/bottlePrimitives'
+import { buildFallbackGameSettings } from 'backend/enginewine/twin'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
 import { placeShimForGame } from './bridge/shimGenerate'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
@@ -318,7 +318,7 @@ export async function provisionBridgeBottleForInstall(
         `SteamGame: CrossOver bottle creation for appId ${steamGame.appId} returned ${provisionResult.errorCode} — creating with the built-in engine`,
         LogPrefix.Steam
       )
-      const { ENGINE_PINS } = await import('backend/engine/enginePins')
+      const { ENGINE_PINS } = await import('backend/enginewine/twin')
       const engine = await ensureBuiltInEngineForInstall(
         steamGame,
         ENGINE_PINS.current,

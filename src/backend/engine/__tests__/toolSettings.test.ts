@@ -23,7 +23,7 @@ import type { ToolSettingsDeps } from '../toolSettings'
 import type { EffectiveEngine } from '../engineConfig'
 import type { NonCrossoverEngine } from '../engineTypes'
 import { perGameBottleName } from '../perGameBottle'
-import { getBottleDir as getBottleDirIn } from '../bottlePrimitives'
+import { getBottleDir as getBottleDirIn } from 'backend/enginewine/twin'
 import type { EngineServices } from '../engineServices'
 import { createTestEngineServices } from 'backend/testUtils/testServices'
 

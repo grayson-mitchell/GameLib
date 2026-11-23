@@ -10,7 +10,7 @@ import type { Runner } from 'common/types'
 import type { ProcessRunner } from 'backend/process/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendGameStatusUpdate } from 'backend/utils'
-import type { EnginePin } from './enginePins'
+import type { EnginePin } from 'common/types/engine'
 import type { FallbackEngine } from './fallbackEngine'
 import type { NonCrossoverEngine } from './engineTypes'
 

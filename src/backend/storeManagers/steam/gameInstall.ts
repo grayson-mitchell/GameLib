@@ -35,7 +35,7 @@ import {
   readBridgeVerdict,
   setBridgeSteamApiPrescreen
 } from './bridge/bridgeVerdict'
-import type { EnginePin } from 'backend/engine/enginePins'
+import type { EnginePin } from 'common/types/engine'
 import { ensurePinnedEngineReportingStatus } from 'backend/engine/pinnedEngineProgress'
 import { markForcedWindowsViaBottle } from './gameSessionState'
 import { buildSteamProtocolUrl } from './gameProtocolUrl'

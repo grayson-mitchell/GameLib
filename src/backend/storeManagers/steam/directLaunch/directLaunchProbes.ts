@@ -10,7 +10,7 @@
 import { dirname, join } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 import { locateMachOBinary } from 'backend/utils/macArch'
 import type SteamGame from '../games'
 import { isBottleEligible } from '../gameEligibility'

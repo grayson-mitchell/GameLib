@@ -22,11 +22,13 @@ import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { EngineServices } from './engineServices'
 import type { NonCrossoverEngine } from './engineTypes'
 import {
-  type BottleSpawnDeps,
   getBottleDir,
   isBottleProvisioned,
-  sanitizeBottleName
-} from './bottlePrimitives'
+  sanitizeBottleName,
+  ENGINE_PINS
+} from 'backend/enginewine/twin'
+import type { SpawnAsync } from 'backend/spawnAsync'
+import type { AppPaths } from 'backend/process/context'
 import {
   killBottleWineServerWith,
   removeCreatedBottleDir
@@ -38,8 +40,7 @@ import {
   decideCreationEngine,
   resolveCrossoverBinDirForEngine
 } from './engineDecision'
-import { ENGINE_PINS } from './enginePins'
-import type { EnginePin } from './enginePins'
+import type { EnginePin } from 'common/types/engine'
 import type { EngineKey } from './gameKey'
 import { ensurePinnedEngineReportingStatus } from './pinnedEngineProgress'
 import type { PinnedEngineResult } from './pinnedEngineProgress'
@@ -66,7 +67,9 @@ export type CreateBottleResult = {
 
 /** CrossOver `cxbottle --create`, capped; on any failure removes what this call created. */
 export async function createCrossoverBottle(
-  deps: BottleSpawnDeps & {
+  deps: {
+    spawnAsync: SpawnAsync
+    paths: Pick<AppPaths, 'userHome'>
     engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
   },
   bottleName: string,

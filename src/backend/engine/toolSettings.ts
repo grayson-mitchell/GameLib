@@ -21,16 +21,16 @@ import type { Game } from 'common/types/game_manager'
 import { isMac } from 'backend/constants/environment'
 import {
   buildFallbackGameSettings,
-  isBottleProvisioned
-} from './bottlePrimitives'
+  isBottleProvisioned,
+  readBottleEngineMarkerKind,
+  ENGINE_PINS,
+  engineKeyFor
+} from 'backend/enginewine/twin'
 import { configPathDepsFrom, readEngineForGame } from './engineConfig'
 import type { EffectiveEngine } from './engineConfig'
 import { resolveWineManagerStaging } from './engineDecision'
 import { engineKeyIfEligible } from './engineEligibility'
-import { readBottleEngineMarkerKind, switchContextFrom } from './engineSwitch'
 import type { NonCrossoverEngine } from './engineTypes'
-import { ENGINE_PINS } from './enginePins'
-import { engineKeyFor } from 'backend/enginewine/twin'
 import type { EngineKey } from './gameKey'
 import { resolveGamePrefix } from './gamePrefix'
 import {
@@ -104,7 +104,10 @@ const defaultDeps = (
   isProvisioned: (bottleName) =>
     isBottleProvisioned(services.paths, bottleName),
   markerKind: (bottleName) =>
-    readBottleEngineMarkerKind(switchContextFrom(services), bottleName)
+    readBottleEngineMarkerKind(
+      { paths: services.paths, fallback: services.engineRuntime.fallback },
+      bottleName
+    )
 })
 
 /** The deps that read the Wine Manager release list through the injected services (66.1-22i). */

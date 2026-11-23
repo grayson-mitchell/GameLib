@@ -30,7 +30,7 @@ import {
 } from './bridge/overlay/overlayPolicy'
 import { readStoredTitleConfig, pickTitleSettings } from './titleSettings'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
-import type { EnginePin } from 'backend/engine/enginePins'
+import type { EnginePin } from 'common/types/engine'
 import { isNative, isBottleEligible } from './gameEligibility'
 import { install, ensureBuiltInEngineForInstall } from './gameInstall'
 import { launch, sendLaunchDone } from './gameLaunch'

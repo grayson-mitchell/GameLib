@@ -22,7 +22,7 @@ import type {
   LaunchDecision,
   ReleasesDeps
 } from './engineDecision'
-import { engineKeyFor } from 'backend/enginewine/twin'
+import { engineKeyFor, isBottleProvisioned } from 'backend/enginewine/twin'
 import type { EngineKey } from './gameKey'
 import {
   configPathDepsFrom,
@@ -30,7 +30,6 @@ import {
   readEngineForGame
 } from './engineConfig'
 import type { EffectiveEngine } from './engineConfig'
-import { isBottleProvisioned } from './bottlePrimitives'
 import type { EngineOverrideId } from './engineIds'
 import { isNonCrossover } from './engineTypes'
 import type { EngineSelection } from './engineTypes'

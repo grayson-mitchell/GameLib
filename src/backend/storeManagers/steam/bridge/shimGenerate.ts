@@ -75,10 +75,7 @@ import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import type { AppPaths } from 'backend/process/context'
 import { resolve } from 'node:path'
 import { resolveBridgeBottleName } from '../bridgeBottle'
-import {
-  getBottleDir,
-  sanitizeBottleName
-} from 'backend/engine/bottlePrimitives'
+import { getBottleDir, sanitizeBottleName } from 'backend/enginewine/twin'
 import { containedGameExeReal, detectLaunchDrmWrapper } from './drm/drmScanExe'
 import type { PlaceShimResult } from './shimOriginals'
 import {

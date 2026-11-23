@@ -23,7 +23,7 @@ import {
   createPerGameBottleFlights,
   perGameBottleName
 } from '../perGameBottle'
-import { getBottleDir, sanitizeBottleName } from '../bottlePrimitives'
+import { getBottleDir, sanitizeBottleName } from 'backend/enginewine/twin'
 import type { PerGameBottleDeps } from '../perGameBottle'
 
 /** The cap the Rust `per_game_bottle_name` and the twin both hold (`PER_GAME_BOTTLE_NAME_MAX`, private in `twin.ts`). */

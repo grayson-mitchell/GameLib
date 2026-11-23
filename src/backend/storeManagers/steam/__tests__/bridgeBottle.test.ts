@@ -45,7 +45,7 @@ import {
   drmRunnerWineInstallation,
   getDrmBridgeBottleSettings
 } from '../bridgeBottle'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 import type { DrmBridgeRunner } from '../bridgeBottle'
 import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
 import { createGlobalTimerClock } from 'backend/testUtils/globalTimerClock'

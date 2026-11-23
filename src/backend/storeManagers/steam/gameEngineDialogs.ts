@@ -58,13 +58,16 @@ export async function drmOfflinePrecheck(
   connectivity: { offline: boolean }
 ): Promise<{ ok: true } | { ok: false }> {
   if (!connectivity.offline) return { ok: true }
-  const sw = await import('backend/engine/engineSwitch')
+  const twin = await import('backend/enginewine/twin')
   const { isCrossoverMissing } = await import('backend/engine/engineDecision')
   const { steamDecisionDeps, steamDecisionServices } =
     await import('./engine/steamEngineDeps')
   const { isPinnedEngineInstalled } = steamGame.deps.engineRuntime.fallback
-  const switchCtx = sw.switchContextFrom(steamGame.deps)
-  const { ENGINE_PINS } = await import('backend/engine/enginePins')
+  const switchCtx = {
+    paths: steamGame.deps.paths,
+    fallback: steamGame.deps.engineRuntime.fallback
+  }
+  const { ENGINE_PINS } = twin
   const { offlineLaunchCertainlyBlocked } =
     await import('backend/engine/offlineRefusal')
   const refusal = offlineLaunchCertainlyBlocked({
@@ -73,9 +76,9 @@ export async function drmOfflinePrecheck(
     crossoverMissing: await isCrossoverMissing(
       steamDecisionDeps(steamDecisionServices(steamGame.deps))
     ),
-    markerKind: sw.readBottleEngineMarkerKind(switchCtx, bottleName),
+    markerKind: twin.readBottleEngineMarkerKind(switchCtx, bottleName),
     currentPinInstalled: isPinnedEngineInstalled(ENGINE_PINS.current),
-    restoreNeedsAbsentPin: sw.restoreNeedsAbsentPin(switchCtx, bottleName)
+    restoreNeedsAbsentPin: twin.restoreNeedsAbsentPin(switchCtx, bottleName)
   })
   if (!refusal.blocked) return { ok: true }
   const why =

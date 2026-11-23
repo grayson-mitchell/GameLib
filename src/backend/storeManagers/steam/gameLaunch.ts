@@ -26,7 +26,7 @@ import {
 } from './bridgeBottle'
 import { gateBridgeLaunchOnUpdate } from './updateLaunchPrompt'
 import { tellBottledSteamToLaunch } from './bottledSteam'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 // Phase 60: Steam overlay in bridged games (macOS).
 import { prepareOverlayTokens } from './bridge/overlay/overlayLaunch'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
@@ -462,10 +462,13 @@ export async function selectLaunchEngine(
     connectivity.offline &&
     (earlyOverride === 'automatic' || earlyOverride === 'crossover')
   ) {
-    const sw = await import('backend/engine/engineSwitch')
+    const twin = await import('backend/enginewine/twin')
     const { isPinnedEngineInstalled } = steamGame.deps.engineRuntime.fallback
-    const switchCtx = sw.switchContextFrom(steamGame.deps)
-    const { ENGINE_PINS } = await import('backend/engine/enginePins')
+    const switchCtx = {
+      paths: steamGame.deps.paths,
+      fallback: steamGame.deps.engineRuntime.fallback
+    }
+    const { ENGINE_PINS } = twin
     const { offlineLaunchCertainlyBlocked } =
       await import('backend/engine/offlineRefusal')
     const refusal = offlineLaunchCertainlyBlocked({
@@ -474,9 +477,9 @@ export async function selectLaunchEngine(
       crossoverMissing: await isCrossoverMissing(
         steamDecisionDeps(steamDecisionServices(steamGame.deps))
       ),
-      markerKind: sw.readBottleEngineMarkerKind(switchCtx, bottleName),
+      markerKind: twin.readBottleEngineMarkerKind(switchCtx, bottleName),
       currentPinInstalled: isPinnedEngineInstalled(ENGINE_PINS.current),
-      restoreNeedsAbsentPin: sw.restoreNeedsAbsentPin(switchCtx, bottleName)
+      restoreNeedsAbsentPin: twin.restoreNeedsAbsentPin(switchCtx, bottleName)
     })
     if (refusal.blocked) {
       const why =

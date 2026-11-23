@@ -30,7 +30,11 @@ import {
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import { isNonCrossover } from 'backend/engine/engineTypes'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
-import { sanitizeBottleName } from 'backend/engine/bottlePrimitives'
+import {
+  sanitizeBottleName,
+  getBottleDir,
+  isBottleProvisioned
+} from 'backend/enginewine/twin'
 import { createFallbackBottleCancellable } from 'backend/engine/fallbackBottleCall'
 import {
   killBottleWineServerWith,
@@ -48,10 +52,6 @@ import {
 import type { RemovalReason } from 'common/types/safety'
 import { steamSafetyRequest, type SteamSafetyDeps } from './safeSteamRemove'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
-import {
-  getBottleDir,
-  isBottleProvisioned
-} from 'backend/engine/bottlePrimitives'
 
 /**
  * The guard chain shared by removePerGameBridgeBottle and
@@ -684,7 +684,7 @@ export async function provisionBridgeBottle(
     })) as ProvisionBottleResult
     if (made.status === 'done') {
       // D-07a: install records the engine it used (the choice is unchanged).
-      const { ENGINE_PINS } = await import('backend/engine/enginePins')
+      const { ENGINE_PINS } = await import('backend/enginewine/twin')
       await recordPinnedBottleEngine(
         rust,
         bottleName,

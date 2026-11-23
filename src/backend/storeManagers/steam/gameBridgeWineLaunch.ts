@@ -15,7 +15,7 @@ import {
   recordGameStopped
 } from 'backend/engine/engineSync'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 // Phase 60: Steam overlay in bridged games (macOS).
 import {
   appendCxEnvTokens,

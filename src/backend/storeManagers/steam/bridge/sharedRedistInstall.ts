@@ -78,7 +78,7 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { endPerGameBridgeBottleSession } from '../bridgeBottleLifecycle'
 import type { ManagerDeps } from 'backend/services/types'
 import { bridgeBottleNameFor } from '../bridgeBottle'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 import {
   BOTTLE_FILE_VERSION,
   SHARED_REDIST_LEDGER_CHAIN,

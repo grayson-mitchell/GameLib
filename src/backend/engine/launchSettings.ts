@@ -9,7 +9,7 @@
  */
 import { join } from 'path'
 import type { GameSettings } from 'common/types'
-import { buildFallbackGameSettings } from './bottlePrimitives'
+import { buildFallbackGameSettings } from 'backend/enginewine/twin'
 import type { AppPaths } from 'backend/process/context'
 import type { EngineRegistry } from './engineRegistry'
 import { isNonCrossover } from './engineTypes'

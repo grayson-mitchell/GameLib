@@ -79,7 +79,10 @@ jest.mock('backend/constants/environment', () => ({
   isMac: false,
   isLinux: true
 }))
-jest.mock('backend/engine/bottlePrimitives', () => ({
+jest.mock('backend/enginewine/twin', () => ({
+  ...jest.requireActual<typeof import('backend/enginewine/twin')>(
+    'backend/enginewine/twin'
+  ),
   buildFallbackGameSettings: jest.fn(),
   getBottleDir: jest.fn(),
   sanitizeBottleName: (name: string | null) => name

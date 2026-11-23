@@ -62,7 +62,7 @@ import { SHIM64_EXPORTED_SYMBOLS } from '../shimCoverage'
 import * as bridgeScan from '../bridgeScan'
 import { buildManagedPe } from './fixtures/managedPe'
 import { resolveBridgeBottleName } from '../../bridgeBottle'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 
 const requestRustInvoke = jest.fn()
 const rust = { requestRustInvoke }
@@ -78,7 +78,10 @@ jest.mock('../importScan', () => ({
   scanSteamApiImports: jest.fn()
 }))
 
-jest.mock('backend/engine/bottlePrimitives', () => ({
+jest.mock('backend/enginewine/twin', () => ({
+  ...jest.requireActual<typeof import('backend/enginewine/twin')>(
+    'backend/enginewine/twin'
+  ),
   // Verbatim re-implementation of bottle.ts:166's T-17-01 guard -- kept
   // here (not imported) so this test suite never has to load bottle.ts's
   // transitive electron/electron-store dependency graph.

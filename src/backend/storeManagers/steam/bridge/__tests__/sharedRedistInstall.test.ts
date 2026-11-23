@@ -50,7 +50,7 @@ import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning } from 'backend/logger'
 import { endPerGameBridgeBottleSession } from '../../bridgeBottleLifecycle'
 import { bridgeBottleNameFor } from '../../bridgeBottle'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 import { BOTTLE_FILE_VERSION } from 'backend/stores/bottleVersionGate'
 
 jest.mock('backend/logger', () => ({
@@ -62,7 +62,10 @@ jest.mock('backend/logger', () => ({
 jest.mock('../../depot', () => ({ downloadSharedRedistDepots: jest.fn() }))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
 jest.mock('backend/knownFixes', () => ({ readKnownFixProfile: jest.fn() }))
-jest.mock('backend/engine/bottlePrimitives', () => ({
+jest.mock('backend/enginewine/twin', () => ({
+  ...jest.requireActual<typeof import('backend/enginewine/twin')>(
+    'backend/enginewine/twin'
+  ),
   getBottleDir: jest.fn()
 }))
 jest.mock('../../bridgeBottleLifecycle', () => ({

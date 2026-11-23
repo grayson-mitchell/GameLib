@@ -29,7 +29,7 @@ import {
   getBottleDir,
   isBottleProvisioned,
   sanitizeBottleName
-} from 'backend/engine/bottlePrimitives'
+} from 'backend/enginewine/twin'
 import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
 import { createGlobalTimerClock } from 'backend/testUtils/globalTimerClock'
 import { provisionBottle } from '../provisionBottle'

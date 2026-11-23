@@ -14,7 +14,7 @@
 import type { GameSettings } from 'common/types'
 import type { EffectiveEngine } from './engineConfig'
 import { perGameBottleName } from './perGameBottle'
-import { sanitizeBottleName } from './bottlePrimitives'
+import { sanitizeBottleName } from 'backend/enginewine/twin'
 
 export type GamePrefix =
   | { kind: 'legacy' }

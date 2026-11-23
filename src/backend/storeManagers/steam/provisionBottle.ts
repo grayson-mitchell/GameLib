@@ -36,7 +36,7 @@ import {
   sanitizeBottleName,
   getBottleDir,
   isBottleProvisioned
-} from 'backend/engine/bottlePrimitives'
+} from 'backend/enginewine/twin'
 import {
   CROSSOVER_CREATE_FAILED,
   CROSSOVER_CREATE_TIMEOUT,

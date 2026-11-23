@@ -25,7 +25,10 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
-jest.mock('backend/engine/bottlePrimitives', () => ({
+jest.mock('backend/enginewine/twin', () => ({
+  ...jest.requireActual<typeof import('backend/enginewine/twin')>(
+    'backend/enginewine/twin'
+  ),
   sanitizeBottleName: (n: string | null) =>
     n && /^[A-Za-z0-9_-]+$/.test(n) ? n : null,
   getBottleDir: jest.fn()

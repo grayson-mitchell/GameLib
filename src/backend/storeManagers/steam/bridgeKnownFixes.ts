@@ -76,7 +76,7 @@ import {
   validateRegistryFixes as sharedValidateRegistryFixes,
   type ValidRegistryFix
 } from 'backend/knownFixesRegistry'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { getBottleDir } from 'backend/enginewine/twin'
 import { detectGameMakerD3d11Runner } from './bridge/gameMakerRunner'
 
 export type { ValidRegistryFix }

@@ -39,10 +39,7 @@ import {
 import { createHash } from 'node:crypto'
 import { join, resolve } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import {
-  getBottleDir,
-  sanitizeBottleName
-} from 'backend/engine/bottlePrimitives'
+import { getBottleDir, sanitizeBottleName } from 'backend/enginewine/twin'
 import { isContainedWithin } from '../bridgeScan'
 import { openStageWineLog } from './stageWineLog'
 import { drmStepError, type DrmStepResult } from './steamclientLayerMode'
