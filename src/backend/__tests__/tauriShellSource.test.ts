@@ -502,8 +502,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 87 plan 42: 156 -> 167, the eleven bottle, ledger and selection ops.
     // Phase 87 plan 52: 167 -> 172, engine_launch_select, _arm_deadline, _end, _settings_get and engine_state_get.
     // Phase 87 plan 53: 172 -> 173, engine_dialog_displayed.
-    // Phase 87 plan 54: 173 -> 181, the four decision ops, the CrossOver bin-dir lookup and the three engine-state writes.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(181)
+    // Phase 87 plan 54: 173 -> 183, the four decision ops, the CrossOver bin-dir lookup, the three engine-state writes and the two
+    // bridge-deadline ops.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(183)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1016,7 +1017,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'engine_cx_resolve_bin_dir',
       'engine_state_record_decision',
       'engine_state_publish_overlay_notice',
-      'engine_state_publish_overlay_exit_notice'
+      'engine_state_publish_overlay_exit_notice',
+      'engine_deadline_arm',
+      'engine_deadline_cancel'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

@@ -138,6 +138,17 @@ const sendTable: FixtureTable<typeof sidecarInternalSendArgs> = {
       [{ key: '620', selection: null, extra: 1 }]
     ]
   },
+  // 87-54: a Steam bridge launch's deadline fired in Rust with no game process seen
+  engineDeadlineFired: {
+    valid: [[{ key: '620', reason: 'no-game-process' }]],
+    invalid: [
+      [],
+      [{ key: '', reason: 'no-game-process' }],
+      [{ key: '620' }],
+      [{ key: '620', reason: 'other' }],
+      [{ key: '620', reason: 'no-game-process', extra: 1 }]
+    ]
+  },
   // 73-11: Rust depot job events (flattened kind tag)
   depotJobEvent: {
     valid: [
@@ -257,7 +268,7 @@ describe('sidecarInternal schemas', () => {
   runFixtureTable(sidecarInternalInvokeArgs, invokeTable)
   runFixtureTable(sidecarInternalSendArgs, sendTable)
 
-  it('registers the ten channels with the right kind and caller', () => {
+  it('registers the twelve channels with the right kind and caller', () => {
     const shell = [
       'health',
       'trayResolveRunner',
@@ -268,7 +279,8 @@ describe('sidecarInternal schemas', () => {
       'depotJobEvent',
       'storeMirrorEvent',
       'steamPollStateEvent',
-      'engineSelectionChanged'
+      'engineSelectionChanged',
+      'engineDeadlineFired'
     ]
     for (const k of Object.keys(sidecarInternalInvokeArgs)) {
       expect(defined(channelSchemas[k], k).kind).toBe('invoke')
@@ -285,6 +297,6 @@ describe('sidecarInternal schemas', () => {
     expect(
       Object.keys(sidecarInternalInvokeArgs).length +
         Object.keys(sidecarInternalSendArgs).length
-    ).toBe(11)
+    ).toBe(12)
   })
 })

@@ -292,5 +292,7 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::EngineStatePublishOverlayExitNotice => {
             engine_dispatch::rpc_state_publish_overlay_exit_notice(args)
         }
+        RustInvokeChannel::EngineDeadlineArm => engine_dispatch::rpc_deadline_arm(args),
+        RustInvokeChannel::EngineDeadlineCancel => engine_dispatch::rpc_deadline_cancel(args),
     }
 }

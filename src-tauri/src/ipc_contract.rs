@@ -204,6 +204,8 @@ pub(crate) enum RustInvokeChannel {
     EngineStateRecordDecision,
     EngineStatePublishOverlayNotice,
     EngineStatePublishOverlayExitNotice,
+    EngineDeadlineArm,
+    EngineDeadlineCancel,
 }
 
 impl RustInvokeChannel {
@@ -389,6 +391,8 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineStateRecordDecision,
         RustInvokeChannel::EngineStatePublishOverlayNotice,
         RustInvokeChannel::EngineStatePublishOverlayExitNotice,
+        RustInvokeChannel::EngineDeadlineArm,
+        RustInvokeChannel::EngineDeadlineCancel,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -574,6 +578,8 @@ impl RustInvokeChannel {
             "engine_state_record_decision" => Some(RustInvokeChannel::EngineStateRecordDecision),
             "engine_state_publish_overlay_notice" => Some(RustInvokeChannel::EngineStatePublishOverlayNotice),
             "engine_state_publish_overlay_exit_notice" => Some(RustInvokeChannel::EngineStatePublishOverlayExitNotice),
+            "engine_deadline_arm" => Some(RustInvokeChannel::EngineDeadlineArm),
+            "engine_deadline_cancel" => Some(RustInvokeChannel::EngineDeadlineCancel),
             _ => None,
         }
     }
@@ -761,6 +767,8 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineStateRecordDecision => "engine_state_record_decision",
             RustInvokeChannel::EngineStatePublishOverlayNotice => "engine_state_publish_overlay_notice",
             RustInvokeChannel::EngineStatePublishOverlayExitNotice => "engine_state_publish_overlay_exit_notice",
+            RustInvokeChannel::EngineDeadlineArm => "engine_deadline_arm",
+            RustInvokeChannel::EngineDeadlineCancel => "engine_deadline_cancel",
         }
     }
 }
@@ -3820,6 +3828,30 @@ pub(crate) struct EngineStatePublishOverlayExitNoticeArgs {
 impl EngineStatePublishOverlayExitNoticeArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let request = serde_json::from_value(args.first().ok_or_else(|| "engine_state_publish_overlay_exit_notice:bad-args".to_string())?.clone()).map_err(|_| "engine_state_publish_overlay_exit_notice:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineDeadlineArmArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineDeadlineArmArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_deadline_arm:bad-args".to_string())?.clone()).map_err(|_| "engine_deadline_arm:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineDeadlineCancelArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineDeadlineCancelArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_deadline_cancel:bad-args".to_string())?.clone()).map_err(|_| "engine_deadline_cancel:bad-args".to_string())?;
         Ok(Self { request })
     }
 }

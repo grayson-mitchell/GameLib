@@ -197,6 +197,8 @@ import {
   preflightCrossover
 } from 'backend/enginewine/decision'
 import * as stateModule from 'backend/enginewine/state'
+import * as deadlineModule from 'backend/enginewine/deadline'
+import { LAUNCH_DEADLINE_MS } from 'common/types/engine'
 import { createFakeClock } from 'backend/testUtils/fakeClock'
 import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
 import { checkConnectivityNow } from 'backend/connectivityNow'
@@ -331,9 +333,21 @@ const clearEngineSelection = (k: string) =>
   testRuntime.registry.clearEngineSelection(k)
 const gamesRunningIn = (bottle: string) =>
   testRuntime.ledger.gamesRunningIn(bottle)
-const __activeLaunchDeadlineCount = () => testRuntime.deadlines.activeCount()
-const cancelLaunchDeadline = (k: string, reason: 'superseded') =>
-  testRuntime.deadlines.cancelLaunchDeadline(k, reason)
+// 87-54: a bridge launch's deadline timer is Rust's. This fake stands in for it on the runtime's fake clock (the file-level
+// beforeEach spies the `enginewine/deadline.ts` arm and cancel shims over it), and its firing is the `engineDeadlineFired`
+// frame: the same `bridgeDeadlines.fire` the registered listener calls.
+const rustDeadlines = new Map<
+  string,
+  ReturnType<typeof gamesClock.setTimeout>
+>()
+const __activeLaunchDeadlineCount = () => rustDeadlines.size
+const cancelLaunchDeadline = (k: string, _reason: 'superseded') => {
+  const timer = rustDeadlines.get(k)
+  if (timer === undefined) return false
+  gamesClock.clear(timer)
+  rustDeadlines.delete(k)
+  return true
+}
 // The launch deadline runs on the runtime clock; timers the mocked redist step arms use jest's.
 const advanceBoth = async (ms: number) => {
   // Let the launch reach its arm point (microtasks) before the runtime clock moves.
@@ -1856,6 +1870,26 @@ afterEach(() => {
 // file's jest.mock count stays at its ceiling): `prepareBottle` sees the call as the TS switcher saw it, the
 // caller's `ensurePinEngine` riding on `deps` as before.
 beforeEach(() => {
+  for (const timer of rustDeadlines.values()) gamesClock.clear(timer)
+  rustDeadlines.clear()
+  deadlineModule.bridgeDeadlines.reset()
+  jest
+    .spyOn(deadlineModule, 'armBridgeDeadline')
+    .mockImplementation((_deps, { key }) => {
+      cancelLaunchDeadline(key, 'superseded')
+      const timer = gamesClock.setTimeout(() => {
+        if (rustDeadlines.get(key) !== timer) return
+        rustDeadlines.delete(key)
+        deadlineModule.bridgeDeadlines.fire(key)
+      }, LAUNCH_DEADLINE_MS)
+      rustDeadlines.set(key, timer)
+      return Promise.resolve(null)
+    })
+  jest
+    .spyOn(deadlineModule, 'cancelBridgeDeadline')
+    .mockImplementation((_deps, { key }) =>
+      Promise.resolve(cancelLaunchDeadline(key, 'superseded'))
+    )
   jest
     .spyOn(stateModule, 'publishOverlayNotice')
     .mockImplementation((_deps, request) =>

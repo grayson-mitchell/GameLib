@@ -87,6 +87,7 @@ import { registerHumbleLoginFlows } from './humbleLoginFlowRegistration'
 import { registerOAuthLoginFlows } from './oauthLoginFlowRegistration'
 import { registerRunnerAuthFlows } from './runnerAuthFlowRegistration'
 import { registerEngineWineResolvers } from './engineWineResolvers'
+import { registerEngineDeadlineFired } from 'backend/enginewine/deadline'
 import { registerEngineSelectionView } from 'backend/enginewine/selectionView'
 import { registerShortcutsFlows } from './shortcutsFlowRegistration'
 import { registerRunnerMiscFlows } from './runnerMiscFlowRegistration'
@@ -403,6 +404,8 @@ export function registerHandlers(deps: {
   })
   // Rust's engine registry changed on its own (87-42, D-24): the sync selection view applies the frame.
   registerEngineSelectionView(ipc)
+  // A Steam bridge launch's deadline fired in Rust (87-54, D-17): the callback the bridge stored when it armed runs.
+  registerEngineDeadlineFired(ipc)
   registerShortcutsFlows({
     ipc,
     appRuntime: deps.services.appRuntime,

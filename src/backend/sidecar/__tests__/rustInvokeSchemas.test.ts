@@ -48,9 +48,9 @@ describe('rustInvokeArgs', () => {
     // Phase 87 plan 42: 156 -> 167, the eleven bottle, ledger and selection ops.
     // Phase 87 plan 52: 167 -> 172, engine_launch_select, _arm_deadline, _end, _settings_get and engine_state_get.
     // Phase 87 plan 53: 172 -> 173, engine_dialog_displayed.
-    // Phase 87 plan 54: 173 -> 181, engine_decide_launch, _decide_creation, _preflight_crossover, _is_crossover_missing,
-    // engine_cx_resolve_bin_dir and the three engine_state_* writes.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(181)
+    // Phase 87 plan 54: 173 -> 183, engine_decide_launch, _decide_creation, _preflight_crossover, _is_crossover_missing,
+    // engine_cx_resolve_bin_dir, the three engine_state_* writes and engine_deadline_arm and _cancel.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(183)
   })
 
   it('parses the store-embed wire fixtures', () => {

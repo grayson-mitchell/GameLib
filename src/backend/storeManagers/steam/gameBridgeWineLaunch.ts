@@ -36,7 +36,7 @@ import {
 import { buildOverlayPaths } from './bridge/overlay/overlayPaths'
 import { formatOverlayExitNoticeLine } from './bridge/overlay/overlayNotice'
 import { STEAM_ENGINE_RUNNER } from './engine/steamEngineDeps'
-import type { LaunchDeadline } from 'backend/engine/launchDeadline'
+import type { BridgeDeadline } from 'backend/enginewine/deadline'
 import {
   formatDirectLaunchStartedLine,
   isDirectLaunchEarlyExit,
@@ -172,7 +172,7 @@ export async function fireBridgeWineLaunch(
   }
 
   // Phase 59 (D-10/D-11): declared before the try so the catch can cancel it.
-  let deadline: LaunchDeadline | undefined
+  let deadline: BridgeDeadline | undefined
   const deadlineFired = () => deadline?.state === 'fired'
 
   // Phase 60: true only where overlay tokens were actually applied to this
@@ -183,9 +183,8 @@ export async function fireBridgeWineLaunch(
     const { runWineCommand } = steamGame.deps.commandRunner
     const { startBottleProcessMonitor, getBottleProcessMonitorPhase } =
       steamGame.deps.steamLaunchRuntime.monitors
-    const { bindDeadlineToMonitor } =
-      await import('backend/engine/launchDeadline')
-    const { armLaunchDeadline } = steamGame.deps.engineRuntime.deadlines
+    const { armBridgeLaunchDeadline, bindDeadlineToMonitor } =
+      await import('./engine/bridgeDeadline')
     // 87-42: the selection is read through the sync view; the clears and the ledger writes land locally at once and
     // in Rust after (`engineSync`), so the callbacks below, which cannot await, only start the Rust half.
     const { engineRuntime } = steamGame.deps
@@ -231,7 +230,9 @@ export async function fireBridgeWineLaunch(
         LogPrefix.Steam
       )
     } else {
-      deadline = armLaunchDeadline({
+      // 87-54: the timer is Rust's; when it fires, `engineDeadlineFired` runs this callback (the bridge keeps the
+      // state its launch reads synchronously in `deadline`).
+      deadline = await armBridgeLaunchDeadline(steamGame.deps, {
         key: steamGame.appId,
         onDeadline: () =>
           onBridgeLaunchDeadline(steamGame, clearLaunchRecord, sel)

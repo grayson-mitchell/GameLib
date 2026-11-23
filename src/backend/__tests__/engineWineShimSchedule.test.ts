@@ -196,6 +196,12 @@ const STATE_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/gameLaunch.ts',
   'src/backend/storeManagers/steam/gameLaunchOverlay.ts'
 ]
+/** Every non-test importer of `enginewine/deadline.ts` (the check is per file, so every row of that file lists them all). */
+const DEADLINE_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/sidecar/handlers.ts',
+  'src/backend/storeManagers/steam/engine/bridgeDeadline.ts',
+  'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts'
+]
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
   'src/backend/services/types.ts',
   'src/backend/sidecar/bootstrap.ts',
@@ -519,6 +525,35 @@ const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_ENGINE_STATE_PUBLISH_OVERLAY_EXIT_NOTICE',
     callers: STATE_SHIM_IMPORTERS,
     deletedBy: 97
+  },
+  // 87-54 (D-17, D-24): a Steam bridge launch's deadline. Rust owns the timer and sends `engineDeadlineFired`; the bridge
+  // stores its callback when it arms (`steam/engine/bridgeDeadline.ts`) and `registerEngineDeadlineFired`, named here in
+  // `wiring`, dispatches the frame to it. The callbacks and the state the launch reads synchronously stay in the
+  // `bridgeDeadlines` view until Phase 96 moves the bridge into Rust.
+  {
+    name: 'armBridgeDeadline',
+    file: 'src/backend/enginewine/deadline.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_DEADLINE_ARM',
+    wiring: ['registerEngineDeadlineFired'],
+    callers: DEADLINE_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'cancelBridgeDeadline',
+    file: 'src/backend/enginewine/deadline.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_DEADLINE_CANCEL',
+    callers: DEADLINE_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'bridgeDeadlines',
+    file: 'src/backend/enginewine/deadline.ts',
+    shape: 'view',
+    vectors: 'src/backend/enginewine/__tests__/deadline.test.ts',
+    callers: DEADLINE_SHIM_IMPORTERS,
+    deletedBy: 96
   },
   // 87-42 (D-24): the engine selection view, the write-through mirror of Rust's registry. The sync bridge reads
   // (`getBridgeBottleSettings` and the launch settings) stay sync; `registerEngineSelectionView` installs the one

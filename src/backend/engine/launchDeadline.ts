@@ -12,16 +12,11 @@
  */
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { Clock } from 'backend/process/types'
+import { LAUNCH_DEADLINE_MS } from 'common/types/engine'
 import { isEngineKey } from './gameKey'
 
-/**
- * Discretion choice (CONTEXT Claude's Discretion; RESEARCH Pitfall 5 / A7):
- * must cover a first-run prefix update after an engine switch (5-7 s, spike
- * 059), the shared-redist step (the deadline is armed before that step in
- * 59-10, per D-11), and a cold Wine-Staging start. Running games are never
- * subject to it because it is cancelled at the first process match.
- */
-export const LAUNCH_DEADLINE_MS = 180_000
+// 87-54: the constant lives in `common/types/engine` now, so the Steam dialog that names it needs no engine module.
+export { LAUNCH_DEADLINE_MS }
 
 type DeadlineCancelReason =
   | 'first-match'

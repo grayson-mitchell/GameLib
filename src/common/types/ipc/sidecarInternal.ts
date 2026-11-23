@@ -228,6 +228,14 @@ const engineSelectionChanged = z.strictObject({
   selection: engineSelectionWire.nullable()
 })
 
+// Phase 87 (87-54, D-17): a Steam bridge launch's deadline passed in Rust with no game process seen; the sidecar's
+// bridge owner stops the bottle and shows its own dialog. `key` is the title's engine key (a Steam app id), `reason` the
+// one word Rust sends.
+const engineDeadlineFired = z.strictObject({
+  key: nonEmptyString(256),
+  reason: z.literal('no-game-process')
+})
+
 const noArgs = z.tuple([])
 
 export const sidecarInternalInvokeArgs = {
@@ -251,7 +259,9 @@ export const sidecarInternalSendArgs = {
   // Shell-originated: the answer to one sidecar store frame (Phase 85).
   storeMirrorEvent: z.tuple([storeMirrorEvent]),
   // Shell-originated: Rust's engine registry changed by itself (87-42). Never renderer-reachable.
-  engineSelectionChanged: z.tuple([engineSelectionChanged])
+  engineSelectionChanged: z.tuple([engineSelectionChanged]),
+  // Shell-originated: a Steam bridge launch's deadline fired in Rust (87-54). Never renderer-reachable.
+  engineDeadlineFired: z.tuple([engineDeadlineFired])
 }
 
 /** Channels only the Rust shell invokes; the 67-19 relay allow-list excludes them. */
@@ -265,7 +275,8 @@ export const sidecarInternalCallers = {
   depotJobEvent: 'shell',
   storeMirrorEvent: 'shell',
   steamPollStateEvent: 'shell',
-  engineSelectionChanged: 'shell'
+  engineSelectionChanged: 'shell',
+  engineDeadlineFired: 'shell'
 } as const
 
 /** One Rust steampoll state event, as validated off the wire. */

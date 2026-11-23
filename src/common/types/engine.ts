@@ -121,3 +121,11 @@ export type EnginePin = {
   wine: PinnedArtifact
   dxvk: PinnedArtifact
 }
+
+/**
+ * Phase 59 (D-10/D-11): how long a launch may go without its game process being seen before the deadline fires. It must
+ * cover a first-run prefix update after an engine switch (5-7 s, spike 059), the shared-redist step and a cold
+ * Wine-Staging start; a running game is never subject to it because the deadline is cancelled at the first process match.
+ * The Rust deadline (`gamelib-engine` `launch::deadline`) holds the same 180 s; this copy is for the dialog that names it.
+ */
+export const LAUNCH_DEADLINE_MS = 180_000

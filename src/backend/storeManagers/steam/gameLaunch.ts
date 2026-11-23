@@ -742,7 +742,7 @@ export async function onBridgeLaunchDeadline(
   armedSelection: EngineSelection | undefined
 ): Promise<void> {
   const { engineLogLabel } = await import('backend/engine/engineTypes')
-  const { LAUNCH_DEADLINE_MS } = await import('backend/engine/launchDeadline')
+  const { LAUNCH_DEADLINE_MS } = await import('common/types/engine')
   // Phase 59 UAT (G5): the monitor's onStopped can clear the registry entry
   // before the deadline fires, so fall back to the selection seen at arm time.
   const sel = engineSelectionView.get(steamGame.appId) ?? armedSelection

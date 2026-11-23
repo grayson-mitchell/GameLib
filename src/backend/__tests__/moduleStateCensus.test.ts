@@ -36,7 +36,11 @@ const SANCTIONED: Readonly<Record<string, number>> = Object.freeze({
   // 87-42 (D-24): the engine selection view, a write-through mirror of Rust's registry. The synchronous bridge reads
   // import it directly, so it is one process-lifetime Map (a sidecar boot is a process); it holds only what Rust
   // answered. Deleted with the Steam bridge callers in Phase 96.
-  'src/backend/enginewine/selectionView.ts': 1
+  'src/backend/enginewine/selectionView.ts': 1,
+  // 87-54 (D-17, D-24): the Steam bridge's deadline callbacks, keyed by the engine key it armed. Rust owns the timer and
+  // sends `engineDeadlineFired`; this Map holds only what the bridge told it to run (state kept in TS until the bridge
+  // moves into Rust). One process-lifetime Map (a sidecar boot is a process), no timer, no handle. Deleted in Phase 96.
+  'src/backend/enginewine/deadline.ts': 1
 })
 
 /** Pure: every way `found` (file -> site count) departs from `sanctioned`. */
@@ -129,6 +133,7 @@ describe('module-state census is zero outside the sanctioned list (D-66.4-02)', 
       throw new Error(`${bad.join('\n')}\nsites:\n${rows.join('\n')}`)
     }
     expect(current.moduleState).toEqual({
+      'src/backend/enginewine/deadline.ts': 1,
       'src/backend/enginewine/selectionView.ts': 1,
       'src/backend/logger/index.ts': 2,
       'src/backend/sidecar/bootstrap.ts': 1
@@ -153,6 +158,9 @@ describe('module-state census is zero outside the sanctioned list (D-66.4-02)', 
         'src/backend/x.ts: 1 site(s), not a sanctioned file'
       ),
       expect.stringContaining(
+        'src/backend/enginewine/deadline.ts: 0 sites < sanctioned 1'
+      ),
+      expect.stringContaining(
         'src/backend/enginewine/selectionView.ts: 0 sites < sanctioned 1'
       ),
       expect.stringContaining(
@@ -164,6 +172,7 @@ describe('module-state census is zero outside the sanctioned list (D-66.4-02)', 
         {
           'src/backend/logger/index.ts': 2,
           'src/backend/sidecar/bootstrap.ts': 1,
+          'src/backend/enginewine/deadline.ts': 1,
           'src/backend/enginewine/selectionView.ts': 1
         },
         SANCTIONED

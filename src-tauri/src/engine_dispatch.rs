@@ -736,6 +736,8 @@ engine_op_arms! {
     rpc_state_record_decision => "engine_state_record_decision",
     rpc_state_publish_overlay_notice => "engine_state_publish_overlay_notice",
     rpc_state_publish_overlay_exit_notice => "engine_state_publish_overlay_exit_notice",
+    rpc_deadline_arm => "engine_deadline_arm",
+    rpc_deadline_cancel => "engine_deadline_cancel",
 }
 
 #[cfg(test)]
@@ -1228,6 +1230,8 @@ mod tests {
                 rpc_state_publish_overlay_exit_notice,
                 "engine_state_publish_overlay_exit_notice",
             ),
+            (rpc_deadline_arm, "engine_deadline_arm"),
+            (rpc_deadline_cancel, "engine_deadline_cancel"),
         ] {
             for bad in [
                 vec![],

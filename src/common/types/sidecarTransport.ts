@@ -1370,6 +1370,15 @@ export const RUST_ENGINE_CX_RESOLVE_BIN_DIR =
  * overlay notices take `{runner, appName, step}` and `{runner, appName}` and answer whether they published. All three are
  * in-memory and bounded.
  */
+/**
+ * Phase 87 (87-54, D-17): a Steam bridge launch's deadline, reached through the shims in `enginewine/deadline.ts`.
+ * `engine_deadline_arm` takes `{key}` and arms the 180 s deadline of a bridge launch (no process watch: the bridge's own
+ * monitor cancels it); when it fires Rust sends the sidecar `engineDeadlineFired {key, reason: 'no-game-process'}`, which
+ * only Rust can send. `engine_deadline_cancel` takes `{key, reason}` (the closed `DeadlineCancelReason` set) and answers
+ * `true` when one was armed. Both are in-memory and bounded.
+ */
+export const RUST_ENGINE_DEADLINE_ARM = 'engine_deadline_arm' as const
+export const RUST_ENGINE_DEADLINE_CANCEL = 'engine_deadline_cancel' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -1755,7 +1764,9 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_CX_RESOLVE_BIN_DIR,
   RUST_ENGINE_STATE_RECORD_DECISION,
   RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE,
-  RUST_ENGINE_STATE_PUBLISH_OVERLAY_EXIT_NOTICE
+  RUST_ENGINE_STATE_PUBLISH_OVERLAY_EXIT_NOTICE,
+  RUST_ENGINE_DEADLINE_ARM,
+  RUST_ENGINE_DEADLINE_CANCEL
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

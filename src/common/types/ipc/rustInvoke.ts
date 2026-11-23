@@ -138,6 +138,8 @@ import {
   RUST_ENGINE_STATE_RECORD_DECISION,
   RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE,
   RUST_ENGINE_STATE_PUBLISH_OVERLAY_EXIT_NOTICE,
+  RUST_ENGINE_DEADLINE_ARM,
+  RUST_ENGINE_DEADLINE_CANCEL,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -973,7 +975,11 @@ export const rustInvokeArgs = {
   // the bottle name are checked by the crate).
   [RUST_ENGINE_STATE_RECORD_DECISION]: engineOpRequest,
   [RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE]: engineOpRequest,
-  [RUST_ENGINE_STATE_PUBLISH_OVERLAY_EXIT_NOTICE]: engineOpRequest
+  [RUST_ENGINE_STATE_PUBLISH_OVERLAY_EXIT_NOTICE]: engineOpRequest,
+  // Phase 87 (87-54, D-17): a bridge launch's deadline. `{key}` to arm, `{key, reason}` to cancel; the crate checks the
+  // key and the closed reason set.
+  [RUST_ENGINE_DEADLINE_ARM]: engineOpRequest,
+  [RUST_ENGINE_DEADLINE_CANCEL]: engineOpRequest
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */
