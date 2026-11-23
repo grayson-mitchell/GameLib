@@ -514,6 +514,12 @@ impl NativeRouter {
             "getPerGameBottleName",
             engine_dispatch::get_per_game_bottle_name,
         );
+        // Phase 87 (87-28, D-14): the engine picker's rows and the global default engine, the same slice,
+        // over `engine_list_options` and `engine_default_engine`. The default engine's Wine is the shell's
+        // `EngineCtx.default_wine` (the Rust PATH rule, D-25 (b)). The sidecar no longer registers either
+        // (one owner, D-06).
+        invoke.insert("listEngineOptions", engine_dispatch::list_engine_options);
+        invoke.insert("getDefaultEngine", engine_dispatch::get_default_engine);
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -935,6 +941,8 @@ mod tests {
             .map(|(name, _)| name.as_str())
             .collect();
         assert!(engine.contains(&"getPerGameBottleName"), "{engine:?}");
+        assert!(engine.contains(&"listEngineOptions"), "{engine:?}");
+        assert!(engine.contains(&"getDefaultEngine"), "{engine:?}");
         for name in engine {
             // The engine slice is invoke-only: no send queue exists for it.
             assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");

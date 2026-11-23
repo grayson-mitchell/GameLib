@@ -20,12 +20,8 @@ const getGame = jest.fn()
 
 const dismiss = jest.fn()
 const gameState = jest.fn()
-const gameOptions = jest.fn()
-const defaultEngine = jest.fn()
 jest.mock('backend/engine/gameEngineState', () => ({
-  getGameEngineState: (...a: unknown[]) => gameState(...a),
-  listGameEngineOptions: (...a: unknown[]) => gameOptions(...a),
-  getDefaultEngine: (...a: unknown[]) => defaultEngine(...a)
+  getGameEngineState: (...a: unknown[]) => gameState(...a)
 }))
 const steamState = jest.fn()
 jest.mock('backend/storeManagers/steam/engine/steamEngineDeps', () => ({
@@ -92,12 +88,10 @@ describe('engine flows', () => {
     envState.isMac = true
   })
 
-  it('registers the four invoke channels (getPerGameBottleName is native, Phase 87 Plan 28)', () => {
+  it('registers the two invoke channels (the other three are native engine channels, Phase 87 Plan 28)', () => {
     expect([...handlers.keys()].sort()).toEqual([
       'dismissEngineNotice',
-      'getDefaultEngine',
-      'getEngineState',
-      'listEngineOptions'
+      'getEngineState'
     ])
   })
 
@@ -183,37 +177,14 @@ describe('engine flows', () => {
     expect(gameState).not.toHaveBeenCalled()
   })
 
-  it('lists options, passes args through, and exposes no path', async () => {
-    gameOptions.mockResolvedValue([{ id: 'a', label: 'A' }])
-    const arg = { appName: 'default' }
-    const out = await handlers.get('listEngineOptions')!({}, arg)
-    expect(gameOptions).toHaveBeenCalledWith(
-      {
-        spawnAsync,
-        runner,
-        wineManagerReleases: expect.any(Function),
-        globalSettings: expect.any(Function),
-        engineState,
-        engineRuntime: engineServices.engineRuntime,
-        paths: engineServices.paths
-      },
-      arg
-    )
-    expect(JSON.stringify(out)).not.toContain('/')
-  })
-
-  it('serves the default engine', async () => {
-    defaultEngine.mockReturnValue({
-      effectiveEngineId: 'x',
-      engineSource: 'derived',
-      legacyLabel: null
-    })
-    expect(await handlers.get('getDefaultEngine')!({})).toEqual({
-      effectiveEngineId: 'x',
-      engineSource: 'derived',
-      legacyLabel: null
-    })
-    expect(handlers.has('getPerGameBottleName')).toBe(false)
+  it('registers no handle for the three native engine channels (one owner, D-06)', () => {
+    for (const channel of [
+      'listEngineOptions',
+      'getDefaultEngine',
+      'getPerGameBottleName'
+    ]) {
+      expect(handlers.has(channel)).toBe(false)
+    }
   })
 
   it('passes dismissEngineNotice args[0] through unmodified', async () => {

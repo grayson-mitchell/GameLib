@@ -11,10 +11,11 @@
 //! context spawns nothing, connects to nothing and waits for nothing: the HTTP client is built on
 //! first use. Until [`install`] has run, an op answers `<op>:not-ready` (see `wine_dispatch`).
 //!
-//! 87-28 (D-14): the `engine` native slice serves the read-only engine channels over the crate's
-//! `engine_*` ops (`getPerGameBottleName` first). Each decode is strict and runs before the context is
-//! looked at, so a bad call is rejected the same way before and after the install; a rejection is a
-//! fixed literal that never echoes the caller's value (T-87-26).
+//! 87-28 (D-14, D-25 (b)): the `engine` native slice serves `getPerGameBottleName`, `listEngineOptions`
+//! and `getDefaultEngine` over the crate's `engine_*` ops, and the context's `default_wine` and
+//! `crossover_bin_dir` hooks are filled here from `gamelib-wine`'s discovery (the shell depends on both
+//! crates; `gamelib-engine` names no `gamelib-wine`). Each decode is strict and runs before the context
+//! is looked at, and a rejection is a fixed literal that never echoes the caller's value (T-87-26).
 
 use super::*;
 
@@ -23,11 +24,14 @@ use std::path::{Path, PathBuf};
 use gamelib_core::clock::SystemClock;
 use gamelib_core::emitter::FrontendEmitter;
 use gamelib_core::shutdown::Shutdown;
-use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
+use gamelib_engine::ctx::{
+    CrossoverBinDirHook, DefaultWineHook, EngineCtx, EnginePaths, Platform, WineInstallationView,
+};
 use gamelib_engine::fetch::ReqwestFetch;
 use gamelib_engine::sinks::EngineUi;
 use gamelib_proc::spec::SpecProcRunner;
 use gamelib_store::host::StoreHost;
+use gamelib_wine::discovery::default_wine::{default_wine_from_path, is_executable_file};
 
 /// The one context, set once by [`install`].
 static ENGINE_CTX: OnceLock<Arc<EngineCtx>> = OnceLock::new();
@@ -214,6 +218,94 @@ pub(crate) fn build_ctx(
     .with_emitter(emitter)
     .with_ui(ui)
     .with_app_version(native_handlers::app_version())
+    .with_default_wine(default_wine_hook(Arc::new(|| std::env::var("PATH").ok())))
+    .with_crossover_bin_dir(crossover_bin_dir_hook())
+}
+
+/// The process `PATH` as the hook reads it each call (`None`: unset). A function so a test scripts it.
+type PathSource = Arc<dyn Fn() -> Option<String> + Send + Sync>;
+
+/// The shell's `EngineCtx.default_wine` (D-25 (b)): the first executable `wine` on `PATH`, answered by
+/// `gamelib-wine`'s `default_wine_from_path`. It always answers an installation (`Default Wine - Not
+/// Found` with an empty `bin` when there is none), as the TS `getDefaultWineBinary` did. Reading `PATH`
+/// and probing files is blocking, which the hook's callers (a config read on the blocking pool) allow.
+pub(crate) fn default_wine_hook(path: PathSource) -> DefaultWineHook {
+    Arc::new(move || {
+        let found = default_wine_from_path(
+            path().as_deref(),
+            &is_executable_file,
+            &|candidate: &Path| candidate.exists(),
+        );
+        // `WineKind` serialises as the lower-case word the view carries; the field names are the same.
+        serde_json::to_value(found)
+            .ok()
+            .and_then(|value| serde_json::from_value::<WineInstallationView>(value).ok())
+    })
+}
+
+/// The tail of a CrossOver wine binary (`<app>/Contents/SharedSupport/CrossOver/bin/wine`).
+const CROSSOVER_WINE_SUFFIX: &str = "/SharedSupport/CrossOver/bin/wine";
+/// A CrossOver bundle's `bin` directory under the app (`crossoverLocation.ts`'s probe candidates).
+const CROSSOVER_BIN_SUBPATH: &str = "Contents/SharedSupport/CrossOver/bin";
+
+/// A `bin` directory that holds `cxbottle` (the TS `hasCxbottle`).
+fn has_cxbottle(dir: &Path) -> bool {
+    dir.join("cxbottle").exists()
+}
+
+/// `crossoverLocation.ts`'s resolver over what it needs from outside: the two default install locations
+/// first (`system_applications`, `/Applications` in production, and `<home>/Applications`), then the bins Spotlight reported (`discovered`, only
+/// asked when neither default holds `cxbottle`). `None` is "CrossOver is not installed". Blocking.
+pub(crate) fn locate_crossover_bin_dir(
+    system_applications: &Path,
+    user_home: &Path,
+    discovered: impl FnOnce() -> Vec<String>,
+) -> Option<String> {
+    let defaults = [
+        system_applications
+            .join("CrossOver.app")
+            .join(CROSSOVER_BIN_SUBPATH),
+        user_home
+            .join("Applications/CrossOver.app")
+            .join(CROSSOVER_BIN_SUBPATH),
+    ];
+    if let Some(found) = defaults.iter().find(|dir| has_cxbottle(dir)) {
+        return Some(found.to_string_lossy().into_owned());
+    }
+    discovered().into_iter().find_map(|bin| {
+        let dir = bin
+            .strip_suffix("/wine")
+            .filter(|_| bin.ends_with(CROSSOVER_WINE_SUFFIX))?;
+        has_cxbottle(Path::new(dir)).then(|| dir.to_string())
+    })
+}
+
+/// The shell's `EngineCtx.crossover_bin_dir` (D-25): the CrossOver `bin` directory, from the two default
+/// locations or the crate's `discover_crossover` (one `mdfind` with its own 10 s limit, macOS only).
+/// The wine context is looked up at call time, not at build time: it is built from this context.
+pub(crate) fn crossover_bin_dir_hook() -> CrossoverBinDirHook {
+    Arc::new(|| {
+        Box::pin(async {
+            let engine = engine_ctx()?;
+            if engine.platform != Platform::Mac {
+                return None;
+            }
+            let home = engine.paths.user_home.clone();
+            // The sync probe first: it needs no process.
+            if let Some(found) =
+                locate_crossover_bin_dir(Path::new("/Applications"), &home, Vec::new)
+            {
+                return Some(found);
+            }
+            let wine = wine_dispatch::wine_ctx()?;
+            let bins: Vec<String> = gamelib_wine::discovery::discover_crossover(wine)
+                .await
+                .into_iter()
+                .map(|installation| installation.bin)
+                .collect();
+            locate_crossover_bin_dir(Path::new("/Applications"), &home, move || bins)
+        })
+    })
 }
 
 /// Builds the one context and stores it. Called from `run_setup` after the store host opened and
@@ -326,6 +418,69 @@ pub(crate) fn get_per_game_bottle_name(_ctx: Arc<NativeCtx>, args: Vec<Value>) -
         engine_ctx().cloned(),
         args,
     ))
+}
+
+/// `listEngineOptions`'s one argument: a game identity, or the strict `{appName: 'default'}` (the global
+/// settings picker). Anything else is the union's one rejection.
+fn parse_list_args(args: &[Value]) -> Result<Vec<Value>, Rejection> {
+    let map = one_object(args)?;
+    if let Ok(game) = parse_game_identity(map) {
+        return Ok(vec![game]);
+    }
+    let is_default =
+        map.len() == 1 && map.get("appName").and_then(Value::as_str) == Some("default");
+    if is_default {
+        return Ok(vec![serde_json::json!({ "appName": "default" })]);
+    }
+    Err(("0", "invalid_union"))
+}
+
+/// The body of `listEngineOptions`: decode first, then the crate's `engine_list_options`.
+async fn list_engine_options_channel(
+    engine: Option<Arc<EngineCtx>>,
+    args: Vec<Value>,
+) -> Result<Value, String> {
+    let op_args = parse_list_args(&args)
+        .map_err(|(path, code)| invalid_args("listEngineOptions", &[path], &[code]))?;
+    let engine = engine.ok_or_else(|| "listEngineOptions: not ready".to_string())?;
+    run_engine_op(
+        engine,
+        "engine_list_options",
+        op_args,
+        "listEngineOptions: the list did not finish",
+    )
+    .await
+}
+
+/// The native `listEngineOptions` handler (slice `engine`, D-14): the engine picker's rows for a game or
+/// for the global default, answered by the crate's `engine_list_options`.
+pub(crate) fn list_engine_options(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(list_engine_options_channel(engine_ctx().cloned(), args))
+}
+
+/// The body of `getDefaultEngine`: it takes no argument, then the crate's `engine_default_engine`. The
+/// default Wine it derives from is the context's `default_wine` hook (the Rust PATH rule, D-25 (b)).
+async fn get_default_engine_channel(
+    engine: Option<Arc<EngineCtx>>,
+    args: Vec<Value>,
+) -> Result<Value, String> {
+    if !args.is_empty() {
+        return Err(invalid_args("getDefaultEngine", &["(args)"], &["too_big"]));
+    }
+    let engine = engine.ok_or_else(|| "getDefaultEngine: not ready".to_string())?;
+    run_engine_op(
+        engine,
+        "engine_default_engine",
+        Vec::new(),
+        "getDefaultEngine: the lookup did not finish",
+    )
+    .await
+}
+
+/// The native `getDefaultEngine` handler (slice `engine`, D-14): the global default engine, derived or
+/// stored, answered by the crate's `engine_default_engine`.
+pub(crate) fn get_default_engine(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(get_default_engine_channel(engine_ctx().cloned(), args))
 }
 
 #[cfg(test)]
@@ -626,5 +781,249 @@ mod tests {
         ))
         .unwrap();
         assert!(steam.is_null());
+    }
+
+    /// A scripted `PATH`: one directory under the fake home holding the given executables.
+    #[cfg(unix)]
+    fn scripted_path(home: &gamelib_testutil::FakeHome, executables: &[&str]) -> String {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = home.root().join("scripted-bin");
+        std::fs::create_dir_all(&dir).unwrap();
+        for name in executables {
+            let file = dir.join(name);
+            std::fs::write(&file, "#!/bin/sh\n").unwrap();
+            std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        dir.to_string_lossy().into_owned()
+    }
+
+    /// The context a channel test runs over: the shell's build, with the default Wine read from the given
+    /// scripted `PATH` and no CrossOver (the developer's real PATH and Spotlight are never consulted).
+    #[cfg(unix)]
+    fn engine_with_path(home: &gamelib_testutil::FakeHome, path: Option<String>) -> Arc<EngineCtx> {
+        let emitter: Arc<dyn FrontendEmitter> = Arc::new(Pushes::default());
+        let ctx = build_ctx(
+            Arc::new(StoreHost::new()),
+            home.root(),
+            home.root().join("home"),
+            home.root().join("tmp"),
+            Arc::clone(&emitter),
+            Arc::new(ShellEngineUi::silent(emitter)),
+            Shutdown::new(),
+        )
+        .with_default_wine(default_wine_hook(Arc::new(move || path.clone())))
+        .with_crossover_bin_dir(Arc::new(|| Box::pin(async { None })));
+        Arc::new(ctx)
+    }
+
+    #[test]
+    fn list_engine_options_decodes_a_game_or_the_default_picker() {
+        let game = serde_json::json!({"runner": "legendary", "appName": "abc"});
+        assert_eq!(parse_list_args(&[game.clone()]), Ok(vec![game]));
+        let picker = serde_json::json!({"appName": "default"});
+        assert_eq!(parse_list_args(&[picker.clone()]), Ok(vec![picker]));
+        let cases: Vec<(Vec<Value>, Rejection)> = vec![
+            (vec![], ("(args)", "too_small")),
+            (vec![Value::Null], ("0", "invalid_type")),
+            (vec![serde_json::json!("default")], ("0", "invalid_type")),
+            (vec![serde_json::json!({})], ("0", "invalid_union")),
+            (
+                vec![serde_json::json!({"appName": "other"})],
+                ("0", "invalid_union"),
+            ),
+            (
+                vec![serde_json::json!({"appName": "default", "extra": 1})],
+                ("0", "invalid_union"),
+            ),
+            (
+                vec![serde_json::json!({"runner": "gog", "appName": "a", "extra": 1})],
+                ("0", "invalid_union"),
+            ),
+            (
+                vec![serde_json::json!({"appName": "default"}), Value::Null],
+                ("(args)", "too_big"),
+            ),
+        ];
+        for (args, expected) in cases {
+            assert_eq!(parse_list_args(&args), Err(expected), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn list_engine_options_and_get_default_engine_reject_before_the_context_and_answer_not_ready() {
+        let err = block(list_engine_options_channel(None, vec![Value::Null])).unwrap_err();
+        assert!(err.starts_with(IPC_INVALID_ARGS_MARKER), "{err}");
+        let err = block(get_default_engine_channel(
+            None,
+            vec![serde_json::json!("x")],
+        ))
+        .unwrap_err();
+        assert_eq!(
+            rejection(&err),
+            (vec!["(args)".to_string()], vec!["too_big".to_string()])
+        );
+        let picker = serde_json::json!({"appName": "default"});
+        assert_eq!(
+            block(list_engine_options_channel(None, vec![picker])).unwrap_err(),
+            "listEngineOptions: not ready"
+        );
+        assert_eq!(
+            block(get_default_engine_channel(None, vec![])).unwrap_err(),
+            "getDefaultEngine: not ready"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_default_wine_hook_reads_the_scripted_path() {
+        let home = gamelib_testutil::FakeHome::new("engine-path-");
+        let path = scripted_path(&home, &["wine", "wineserver"]);
+        let hook = default_wine_hook(Arc::new(move || Some(path.clone())));
+        let wine = hook().expect("the hook always answers");
+        assert_eq!(wine.name, "wine");
+        assert_eq!(wine.kind, "wine");
+        assert!(wine.bin.ends_with("scripted-bin/wine"), "{}", wine.bin);
+        assert!(
+            wine.wineserver
+                .as_deref()
+                .is_some_and(|s| s.ends_with("scripted-bin/wineserver")),
+            "{wine:?}"
+        );
+        // No wine on PATH, or no PATH at all: the TS "not found" installation, with an empty bin.
+        for none in [None, Some(String::new())] {
+            let hook = default_wine_hook(Arc::new(move || none.clone()));
+            let wine = hook().expect("the hook always answers");
+            assert_eq!(wine.name, "Default Wine - Not Found");
+            assert_eq!(wine.bin, "");
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn get_default_engine_answers_the_ts_payload_for_a_populated_and_an_empty_profile() {
+        // Populated: a wine on the scripted PATH is the default Wine a fresh profile names, a Legacy engine.
+        let home = gamelib_testutil::FakeHome::new("engine-default-");
+        let engine = engine_with_path(&home, Some(scripted_path(&home, &["wine"])));
+        let populated = block(get_default_engine_channel(Some(engine), vec![])).unwrap();
+        assert_eq!(populated["effectiveEngineId"], "legacy:wine", "{populated}");
+        assert_eq!(populated["engineSource"], "derived");
+        assert_eq!(populated["legacyLabel"], "wine");
+        // Empty: nothing on PATH. The answer has the TS shape whatever the rule derives.
+        let home = gamelib_testutil::FakeHome::new("engine-default-");
+        let engine = engine_with_path(&home, None);
+        let empty = block(get_default_engine_channel(Some(engine), vec![])).unwrap();
+        let mut keys: Vec<&str> = empty
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["effectiveEngineId", "engineSource", "legacyLabel"]);
+        assert!(empty["effectiveEngineId"].is_string(), "{empty}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn list_engine_options_answers_the_rows_for_the_picker_and_for_a_game() {
+        let home = gamelib_testutil::FakeHome::new("engine-options-");
+        let engine = engine_with_path(&home, Some(scripted_path(&home, &["wine"])));
+        let picker = serde_json::json!({"appName": "default"});
+        let rows = block(list_engine_options_channel(
+            Some(Arc::clone(&engine)),
+            vec![picker],
+        ))
+        .unwrap();
+        let ids: Vec<&str> = rows
+            .as_array()
+            .expect("an array of rows")
+            .iter()
+            .map(|row| row["id"].as_str().unwrap())
+            .collect();
+        assert_eq!(ids[0], "automatic", "{rows}");
+        assert!(ids.contains(&"crossover"), "{ids:?}");
+        assert!(ids.iter().any(|id| id.starts_with("pinned:")), "{ids:?}");
+        let crossover = rows
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["id"] == "crossover")
+            .unwrap();
+        assert_eq!(
+            crossover["installed"], false,
+            "the scripted hook finds no CrossOver"
+        );
+        // A game identity answers the same shape (an empty profile has no stored engine for it).
+        let game = serde_json::json!({"runner": "gog", "appName": "1234"});
+        let rows = block(list_engine_options_channel(Some(engine), vec![game])).unwrap();
+        assert!(rows.is_array(), "{rows}");
+    }
+
+    #[test]
+    fn locating_crossover_prefers_the_default_locations_and_only_then_asks_spotlight() {
+        let root = gamelib_testutil::FakeHome::new("engine-cx-");
+        let system = root.root().join("Applications");
+        let home = root.root().join("home");
+        let bin_in = |apps: &Path, app: &str| apps.join(app).join(CROSSOVER_BIN_SUBPATH);
+        let make = |dir: &Path| {
+            std::fs::create_dir_all(dir).unwrap();
+            std::fs::write(dir.join("cxbottle"), "").unwrap();
+        };
+        let asked = std::cell::Cell::new(false);
+        let spotlight = |bins: Vec<String>| {
+            let asked = &asked;
+            move || {
+                asked.set(true);
+                bins
+            }
+        };
+        // Nothing installed and Spotlight knows nothing: CrossOver is not installed.
+        assert_eq!(
+            locate_crossover_bin_dir(&system, &home, spotlight(vec![])),
+            None
+        );
+        // Spotlight knows a bundle elsewhere, but only a bin that holds cxbottle counts.
+        let elsewhere = root.root().join("Elsewhere");
+        let wine = bin_in(&elsewhere, "CrossOver.app").join("wine");
+        let bins = vec![
+            "/not/a/crossover/wine".to_string(),
+            wine.to_string_lossy().into_owned(),
+        ];
+        assert_eq!(
+            locate_crossover_bin_dir(&system, &home, spotlight(bins.clone())),
+            None,
+            "a bundle without cxbottle is not usable"
+        );
+        make(&bin_in(&elsewhere, "CrossOver.app"));
+        assert_eq!(
+            locate_crossover_bin_dir(&system, &home, spotlight(bins.clone())),
+            Some(
+                bin_in(&elsewhere, "CrossOver.app")
+                    .to_string_lossy()
+                    .into_owned()
+            )
+        );
+        // The user's Applications folder, then the system one, win without asking Spotlight.
+        asked.set(false);
+        make(&bin_in(&home.join("Applications"), "CrossOver.app"));
+        let found = locate_crossover_bin_dir(&system, &home, spotlight(bins.clone()));
+        assert_eq!(
+            found,
+            Some(
+                bin_in(&home.join("Applications"), "CrossOver.app")
+                    .to_string_lossy()
+                    .into_owned()
+            )
+        );
+        assert!(!asked.get(), "the sync probe answered, so no mdfind");
+        make(&bin_in(&system, "CrossOver.app"));
+        assert_eq!(
+            locate_crossover_bin_dir(&system, &home, spotlight(bins)),
+            Some(
+                bin_in(&system, "CrossOver.app")
+                    .to_string_lossy()
+                    .into_owned()
+            )
+        );
     }
 }

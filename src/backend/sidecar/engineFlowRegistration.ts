@@ -3,8 +3,8 @@
  *
  * One store-agnostic domain replaces the three Steam-named engine channels.
  *
- *   invoke (ipcMain.handle, 4): getEngineState, listEngineOptions, getDefaultEngine,
- *     dismissEngineNotice (`getPerGameBottleName` is native since 87-28)
+ *   invoke (ipcMain.handle, 2): getEngineState, dismissEngineNotice (`listEngineOptions`,
+ *     `getDefaultEngine` and `getPerGameBottleName` are native `engine` channels since 87-28)
  *   push (sendFrontendMessage): engineStateChanged
  *
  * Renderer args[0] is passed UNCAST to the module guards (engineKeyFor / asNonSteamIdentity /
@@ -24,11 +24,7 @@ import type {
   Stores
 } from 'backend/services/types'
 import { isMac } from '../constants/environment'
-import {
-  getDefaultEngine,
-  getGameEngineState,
-  listGameEngineOptions
-} from 'backend/engine/gameEngineState'
+import { getGameEngineState } from 'backend/engine/gameEngineState'
 import { engineKeyFor } from 'backend/engine/gameKey'
 import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
 import type { EngineServices } from 'backend/engine/engineServices'
@@ -114,8 +110,8 @@ async function getEngineStateFor(
 }
 
 /**
- * Registers the four engine invoke channels (`getEngineState`, `listEngineOptions`,
- * `getDefaultEngine`, `dismissEngineNotice`; `getPerGameBottleName` is a native `engine` channel, 87-28). Invoke channels use
+ * Registers the two engine invoke channels (`getEngineState`, `dismissEngineNotice`; the other three are
+ * native `engine` channels, 87-28). Invoke channels use
  * `ipcMain.handle`; the `engineStateChanged` push is the boot-built engine state's publisher.
  */
 export function registerEngineFlows(deps: EngineFlowDeps): void {
@@ -125,18 +121,9 @@ export function registerEngineFlows(deps: EngineFlowDeps): void {
       getEngineStateFor(deps, args[0])
   )
 
-  deps.ipc.handle(
-    'listEngineOptions',
-    async (_event: unknown, ...args: unknown[]) =>
-      listGameEngineOptions(engineServicesOf(deps), args[0])
-  )
-
-  deps.ipc.handle('getDefaultEngine', () =>
-    Promise.resolve(getDefaultEngine(engineServicesOf(deps)))
-  )
-
-  // Phase 87 (87-28, D-14): `getPerGameBottleName` is a native `engine` channel (the Rust
-  // `engine_per_game_bottle_name`); the sidecar registers no handle for it (one owner, D-06).
+  // Phase 87 (87-28, D-14): `listEngineOptions`, `getDefaultEngine` and `getPerGameBottleName` are native
+  // `engine` channels (the Rust `engine_list_options`, `engine_default_engine` and
+  // `engine_per_game_bottle_name`); the sidecar registers no handle for any of them (one owner, D-06).
 
   deps.ipc.handle(
     'dismissEngineNotice',

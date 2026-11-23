@@ -15,6 +15,7 @@ import type {
   WineInstallation,
   WineVersionInfo
 } from '../../types'
+import type { EngineOption } from '../engine'
 import type { StoreSearchDeal, StoreSearchResponse } from '../storeSearch'
 import type { GetLogFileArgs } from './logger'
 import type { MetadataOverride } from './gameDetails'
@@ -175,6 +176,22 @@ export interface NativeAsync {
     runner: string
     appName: string
   }) => Promise<string | null>
+  // Phase 87 (87-28, D-14): the engine picker's rows, answered by the Rust `engine` slice
+  // (`engine_list_options`): Automatic, CrossOver, the pinned build and the installed Wine Manager builds,
+  // plus a Legacy row for a game whose stored Wine is none of those. It takes exactly one strict
+  // `{ runner, appName }` or `{ appName: 'default' }` (the global picker); anything else rejects with the
+  // invalid-args marker.
+  listEngineOptions: (
+    target: { runner: string; appName: string } | { appName: 'default' }
+  ) => Promise<EngineOption[]>
+  // Phase 87 (87-28, D-14): the global default engine, derived or stored, answered by `engine_default_engine`.
+  // The Wine it derives from for a profile that never picked one is the shell's PATH default (D-25 (b)),
+  // the first executable `wine` on `PATH`. It takes no argument.
+  getDefaultEngine: () => Promise<{
+    effectiveEngineId: string
+    engineSource: 'stored' | 'derived'
+    legacyLabel: string | null
+  }>
 }
 
 export interface NativeSync {

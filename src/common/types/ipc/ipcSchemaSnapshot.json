@@ -1153,13 +1153,9 @@
     {
       "channel": "getDefaultEngine",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [],
-        "items": false,
-        "maxItems": 0
-      }
+      "owner": "native",
+      "args": [],
+      "returns": "{ effectiveEngineId: string, engineSource: 'stored' | 'derived', legacyLabel: string | null }"
     },
     {
       "channel": "getDefaultSavePath",
@@ -4795,52 +4791,15 @@
     {
       "channel": "listEngineOptions",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "runner": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 64
-                  },
-                  "appName": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 4096
-                  }
-                },
-                "required": [
-                  "runner",
-                  "appName"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "appName": {
-                    "type": "string",
-                    "const": "default"
-                  }
-                },
-                "required": [
-                  "appName"
-                ],
-                "additionalProperties": false
-              }
-            ]
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "target",
+          "type": "{ runner: string, appName: string } | { appName: 'default' }",
+          "strict": true
+        }
+      ],
+      "returns": "EngineOption[]"
     },
     {
       "channel": "listSteamLibraryTargets",

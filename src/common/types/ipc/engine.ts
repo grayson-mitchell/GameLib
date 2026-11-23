@@ -1,13 +1,7 @@
 import { z } from 'zod'
 
-import type {
-  EngineNoticeDismissal,
-  EngineOption,
-  EngineState
-} from '../engine'
+import type { EngineNoticeDismissal, EngineState } from '../engine'
 import { nonEmptyString, type InvokeFns, type PushFns } from './schemaTypes'
-
-const noArgs = z.tuple([])
 
 // Runner here is a plain string, not the Runner union: the sidecar dispatches Steam to its
 // adapter and the module guards (engineKeyFor / asNonSteamIdentity) own the identity check.
@@ -29,11 +23,8 @@ const noticeDismissal = z.union([
 // runner + appName; Steam is dispatched to its adapter by the sidecar.
 export const engineAsyncArgs = {
   getEngineState: z.tuple([gameIdentity]),
-  listEngineOptions: z.tuple([
-    z.union([gameIdentity, z.strictObject({ appName: z.literal('default') })])
-  ]),
-  // D-09: the global default engine
-  getDefaultEngine: noArgs,
+  // Phase 87 (87-28, D-14): `listEngineOptions` and `getDefaultEngine` are native `engine` channels too
+  // (`nativeChannels.json`); the Rust decode accepts a game identity or `{ appName: 'default' }`, strict.
   // Phase 87 (87-28, D-14): `getPerGameBottleName` is a native `engine` channel (`nativeChannels.json`);
   // the strict identity decode lives in the Rust `parse_game_identity`.
   dismissEngineNotice: z.tuple([noticeDismissal])
@@ -41,12 +32,6 @@ export const engineAsyncArgs = {
 
 interface EngineAsyncReturns {
   getEngineState: Promise<EngineState | null>
-  listEngineOptions: Promise<EngineOption[]>
-  getDefaultEngine: Promise<{
-    effectiveEngineId: string
-    engineSource: 'stored' | 'derived'
-    legacyLabel: string | null
-  }>
   dismissEngineNotice: Promise<{ ok: boolean }>
 }
 

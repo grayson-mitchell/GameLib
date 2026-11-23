@@ -1850,6 +1850,44 @@
         [{ "runner": "gog", "appName": "1234", "extra": true }],
         [{ "runner": "gog", "appName": "1234" }, {}]
       ]
+    },
+    "listEngineOptions": {
+      "kind": "invoke",
+      "slice": "engine",
+      "args": [
+        {
+          "name": "target",
+          "type": "{ runner: string, appName: string } | { appName: 'default' }",
+          "strict": true
+        }
+      ],
+      "returns": "EngineOption[]",
+      "valid": [
+        [{ "runner": "steam", "appName": "1234" }],
+        [{ "runner": "gog", "appName": "abc" }],
+        [{ "appName": "default" }]
+      ],
+      "invalid": [
+        [],
+        [null],
+        [1],
+        ["default"],
+        [{}],
+        [{ "appName": "other" }],
+        [{ "appName": "default", "extra": 1 }],
+        [{ "runner": "gog" }],
+        [{ "runner": "", "appName": "1" }],
+        [{ "runner": "gog", "appName": "1", "extra": true }],
+        [{ "appName": "default" }, {}]
+      ]
+    },
+    "getDefaultEngine": {
+      "kind": "invoke",
+      "slice": "engine",
+      "args": [],
+      "returns": "{ effectiveEngineId: string, engineSource: 'stored' | 'derived', legacyLabel: string | null }",
+      "valid": [[]],
+      "invalid": [["x"], [null], [{}], [1, 2]]
     }
   }
 }
