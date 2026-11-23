@@ -34,7 +34,8 @@ jest.mock('backend/runsForMe', () => ({ recordPlaySession: jest.fn() }))
 import { createTestToolsSlices } from 'backend/testUtils/testServices'
 import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 import { createLauncher } from 'backend/launcher'
-import { createGameLogWriter } from 'backend/logger'
+import { createGameLogWriter, logWarning } from 'backend/logger'
+import { addRecentGame } from 'backend/info/recentGames'
 import { defined } from './helpers/defined'
 
 function makeLogWriter() {
@@ -53,10 +54,10 @@ const tsStore = {
   get: (_key: string, fallback: number) => fallback,
   set: jest.fn()
 }
-const buildLauncher = () =>
+const buildLauncher = ({ online = false }: { online?: boolean } = {}) =>
   createLauncher({
     ...createTestToolsSlices(),
-    onlineMonitor: createTestOnlineMonitor({ online: false }),
+    onlineMonitor: createTestOnlineMonitor({ online }),
     libraryManagers: {
       legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
     } as never,
@@ -145,5 +146,59 @@ describe('launchEventCallback single-flight (WR-03)', () => {
     resolvers.forEach((r) => r(true))
     await Promise.all([a, b])
     expect(launchMock).toHaveBeenCalledTimes(2)
+  })
+
+  // CR-41: the Rust recent-games write can reject (write-failed, not-ready,
+  // store-unavailable, the 60 s rustInvoke timeout). That must be a logged
+  // warning, never an abort of the post-game sequence.
+  describe('CR-41: a rejected recent-games write still finishes the launch', () => {
+    const writeFailed = new Error('info_recent_add:write-failed')
+
+    it('CR-41: offline, resolves done, sends done once and logs the failure', async () => {
+      ;(logWarning as jest.Mock).mockClear()
+      ;(addRecentGame as jest.Mock).mockRejectedValueOnce(writeFailed)
+      const result = launchEventCallback({
+        appName: 'Quail',
+        runner: 'legendary'
+      })
+      await tick()
+      defined(resolvers[0], 'launch resolver')(true)
+
+      await expect(result).resolves.toEqual({ status: 'done' })
+      expect(count('done')).toBe(1)
+      expect(logWarning).toHaveBeenCalledTimes(1)
+      const [parts] = (logWarning as jest.Mock).mock.calls[0] as [unknown[]]
+      expect(parts[parts.length - 1]).toBe(writeFailed)
+    })
+
+    it('CR-41: online with autoSyncSaves, the save upload still runs', async () => {
+      const syncSaves = jest.fn().mockResolvedValue('')
+      getGameMock.mockImplementation((appName: string) => ({
+        getGameInfo: () => ({
+          title: appName,
+          app_name: appName,
+          runner: 'legendary',
+          install: {}
+        }),
+        getSettings: async () => ({
+          verboseLogs: true,
+          autoSyncSaves: true,
+          savesPath: '/saves'
+        }),
+        isNative: () => true,
+        launch: launchMock,
+        syncSaves
+      }))
+      const onlineCallback = buildLauncher({ online: true }).launchEventCallback
+      ;(addRecentGame as jest.Mock).mockRejectedValueOnce(writeFailed)
+
+      const result = onlineCallback({ appName: 'Quail', runner: 'legendary' })
+      await tick()
+      defined(resolvers[0], 'launch resolver')(true)
+
+      await expect(result).resolves.toEqual({ status: 'done' })
+      expect(syncSaves).toHaveBeenCalledWith('--skip-download', '/saves', [])
+      expect(count('done')).toBe(2)
+    })
   })
 })

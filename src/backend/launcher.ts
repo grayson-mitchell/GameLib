@@ -471,7 +471,11 @@ async function runLaunchEventCallback(
       )
     }
   }
-  await addRecentGame(deps, gameInfo)
+  try {
+    await addRecentGame(deps, gameInfo)
+  } catch (error) {
+    logWarning(['Recording recent game failed:', error], LogPrefix.Backend)
+  }
 
   if (autoSyncSaves && deps.onlineMonitor.isOnline()) {
     sendGameStatusUpdate(deps, {
