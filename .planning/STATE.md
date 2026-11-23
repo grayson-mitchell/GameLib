@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-19-PLAN.md
-last_updated: "2026-11-23T04:51:54.496Z"
+stopped_at: Completed 87-20-PLAN.md
+last_updated: "2026-11-23T05:27:04.733Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 1ecdf62f1ca87d4794fec143e8455ee7d717e1e3
+state_head: 19d2dde4096a2bef875a8a5c67efe395acb8e26b
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 20 of 59
+Plan: 21 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -429,6 +429,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P17 | 22 min | 2 tasks | 18 files |
 | Phase 87 P18 | 28 min | 3 tasks | 27 files |
 | Phase 87 P19 | 21min | 2 tasks | 11 files |
+| Phase 87 P20 | 33 min | 3 tasks | 31 files |
 
 ## Accumulated Context
 
@@ -878,6 +879,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-19: wine-manager removal trust root is the install folder holding the stored dir (wine, proton, game-porting-toolkit, compatibilitytools.d), not <tools>/wine; a refusal stops the removal
 - [Phase 87]: 87-19: the three TS wine-install bugs (abort deletes the existing install, no restore after a failed extraction, a failing tar counts as success) are fixed and documented in golden/wine_manager/deltas.json
 - [Phase 87]: 87-19: wine_manager_install takes [release] or [release, {downloadProtonToSteam, defaultSteamPath}] since the crate reads no settings; backend events wineVersionInstalled/Uninstalled are not emitted (DXMT gap 87-20 to 87-31)
+- [Phase 87]: An install is cancelled through the renderer's abort(version): sidecar_send offers the id to wine_dispatch first and does not forward when Rust owns the install
+- [Phase 87]: The shell reads downloadProtonToSteam and defaultSteamPath from the global config at install time; the wine-manager shims take no settings argument
+- [Phase 87]: wine_manager_refresh and wine_releases_info_ready join wine_manager_install in the sidecar's unbounded rustInvoke list (up to seven 60 s feeds)
+- [Phase 87]: WineVersionInfo is decoded strictly in the shell (unknown key rejects), stricter than the loose TS zod; the rustInvoke release argument is opaque and decoded by parse_wine_version
 
 ### Pending Todos
 
@@ -1156,8 +1161,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T04:51:52.276Z
-Stopped at: Completed 87-19-PLAN.md
+Last session: 2026-11-23T05:27:02.836Z
+Stopped at: Completed 87-20-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
