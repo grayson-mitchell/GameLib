@@ -164,7 +164,7 @@ describe('registration kind — all 9 Wine channels are registered with the corr
   const HANDLE_CHANNELS = [
     'runWineCommand',
     'getAlternativeWine',
-    'wine.isValidVersion',
+    // Phase 87 Plan 24 (D-14): `wine.isValidVersion` is a native `wine` channel.
     'toggleDXVK',
     'toggleDXVKNVAPI',
     'toggleVKD3D'

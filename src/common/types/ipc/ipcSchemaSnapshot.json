@@ -9598,77 +9598,15 @@
     {
       "channel": "wine.isValidVersion",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "object",
-            "properties": {
-              "bin": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 4096
-              },
-              "name": {
-                "type": "string",
-                "maxLength": 1024
-              },
-              "type": {
-                "type": "string",
-                "enum": [
-                  "wine",
-                  "proton",
-                  "crossover",
-                  "toolkit"
-                ]
-              },
-              "lib": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "maxLength": 4096
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "lib32": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "maxLength": 4096
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "wineserver": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "maxLength": 4096
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "required": [
-              "bin",
-              "name",
-              "type"
-            ],
-            "additionalProperties": {}
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "wine",
+          "type": "{ bin, name, type, lib?, lib32?, wineserver? }",
+          "strict": true
+        }
+      ],
+      "returns": "boolean"
     },
     {
       "channel": "winetricksApply",

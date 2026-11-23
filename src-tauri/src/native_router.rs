@@ -489,6 +489,9 @@ impl NativeRouter {
             "refreshWineVersionInfo",
             wine_dispatch::refresh_wine_version_info,
         );
+        // Phase 87 (87-24, D-14): the renderer's wine validity check, the same slice. The sidecar no
+        // longer registers `wine.isValidVersion` (one owner, D-06).
+        invoke.insert("wine.isValidVersion", wine_dispatch::wine_is_valid_version);
         // Phase 87 (87-20, D-14): the renderer's wine-version install and removal. The sidecar no
         // longer registers either (one owner, D-06); an install's cancel is the renderer's
         // `abort(version)`, which `sidecar_send` offers to `wine_dispatch` first.
@@ -889,6 +892,7 @@ mod tests {
         assert!(wine.contains(&"isRuntimeInstalled"), "{wine:?}");
         assert!(wine.contains(&"downloadRuntime"), "{wine:?}");
         assert!(wine.contains(&"refreshWineVersionInfo"), "{wine:?}");
+        assert!(wine.contains(&"wine.isValidVersion"), "{wine:?}");
         assert!(wine.contains(&"installWineVersion"), "{wine:?}");
         assert!(wine.contains(&"removeWineVersion"), "{wine:?}");
         for name in wine {

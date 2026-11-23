@@ -12,7 +12,6 @@ import type {
 import {
   nonEmptyString,
   runnerArg,
-  wineInstallationArg,
   type InvokeFns,
   type PushFns
 } from './schemaTypes'
@@ -86,7 +85,8 @@ export const wineToolsAsyncArgs = {
   // Phase 87 (87-20, D-14): `installWineVersion` and `removeWineVersion` are native `wine` channels
   // too (`nativeChannels.json`); the strict eleven-key decode lives in the Rust `parse_wine_version`.
   // Phase 87 (87-20, D-14): `refreshWineVersionInfo` is a native `wine` channel (`nativeChannels.json`).
-  'wine.isValidVersion': z.tuple([wineInstallationArg()]),
+  // Phase 87 (87-24, D-14): so is `wine.isValidVersion`; the strict WineInstallation decode lives in the
+  // Rust `parse_wine_installation`.
   toggleDXVK: z.tuple([toolArgs]),
   toggleVKD3D: z.tuple([toolArgs]),
   toggleDXVKNVAPI: z.tuple([toolArgs])
@@ -101,7 +101,6 @@ interface WineToolsAsyncReturns {
   winetricksCancelRemaining: Promise<WinetricksQueueState>
   getAlternativeWine: Promise<WineInstallation[]>
   runWineCommandForGame: Promise<ExecResult>
-  'wine.isValidVersion': Promise<boolean>
   toggleDXVK: Promise<boolean>
   toggleVKD3D: Promise<boolean>
   toggleDXVKNVAPI: Promise<boolean>

@@ -467,6 +467,109 @@ pub(crate) fn remove_wine_version(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> Nat
     Box::pin(remove_channel(wine_ctx().cloned(), args))
 }
 
+/// The four `WineInstallation.type` values.
+const WINE_KINDS: &[&str] = &["wine", "proton", "crossover", "toolkit"];
+
+/// Decodes the one `WineInstallation` argument of `wine.isValidVersion`: a strict object of the six keys
+/// the renderer's settings hold (`bin`, `name`, `type`, and the optional `lib`, `lib32`, `wineserver`,
+/// each absent or null or text), with the bounds the TS zod carried. An unknown key is rejected
+/// (T-87-22). Every rejection is a fixed path and code, never the renderer's value or key.
+fn parse_wine_installation(args: &[Value]) -> Result<&Map<String, Value>, Rejection> {
+    let [arg] = args else {
+        return Err(("(args)", "invalid_type"));
+    };
+    let Value::Object(wine) = arg else {
+        return Err(("0", "invalid_type"));
+    };
+    const KEYS: &[&str] = &["bin", "name", "type", "lib", "lib32", "wineserver"];
+    if wine.keys().any(|key| !KEYS.contains(&key.as_str())) {
+        return Err(("0", "unrecognized_keys"));
+    }
+    let text = |key: &str,
+                path: &'static str,
+                max: usize,
+                required: bool,
+                non_empty: bool|
+     -> Result<(), Rejection> {
+        match wine.get(key) {
+            None | Some(Value::Null) if !required => Ok(()),
+            Some(Value::String(value)) => {
+                let units = value.encode_utf16().count();
+                if units > max {
+                    Err((path, "too_big"))
+                } else if non_empty && units == 0 {
+                    Err((path, "too_small"))
+                } else {
+                    Ok(())
+                }
+            }
+            _ => Err((path, "invalid_type")),
+        }
+    };
+    text("bin", "0.bin", 4096, true, true)?;
+    text("name", "0.name", 1024, true, false)?;
+    match wine.get("type") {
+        Some(Value::String(kind)) if WINE_KINDS.contains(&kind.as_str()) => {}
+        Some(Value::String(_)) => return Err(("0.type", "invalid_value")),
+        _ => return Err(("0.type", "invalid_type")),
+    }
+    text("lib", "0.lib", 4096, false, false)?;
+    text("lib32", "0.lib32", 4096, false, false)?;
+    text("wineserver", "0.wineserver", 4096, false, false)?;
+    Ok(wine)
+}
+
+/// The Darwin kernel release (`os.release()` on macOS, `24.1.0`), which `validWine` compares to 14 for a
+/// toolkit. `None` off macOS (the crate ignores it there) or when `uname` fails.
+#[cfg(target_os = "macos")]
+fn darwin_release() -> Option<String> {
+    // SAFETY: `uname` fills the zeroed struct it is given; `release` is a NUL-terminated C string.
+    let mut info: libc::utsname = unsafe { std::mem::zeroed() };
+    if unsafe { libc::uname(&mut info) } != 0 {
+        return None;
+    }
+    let release = unsafe { std::ffi::CStr::from_ptr(info.release.as_ptr()) };
+    Some(release.to_string_lossy().into_owned())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn darwin_release() -> Option<String> {
+    None
+}
+
+/// The `wine_valid` op's arguments: the installation, and the host facts the shell reads (the Darwin
+/// release, which only a macOS toolkit looks at).
+fn wine_valid_args(wine: &Map<String, Value>) -> Vec<Value> {
+    let host = match darwin_release() {
+        Some(release) => serde_json::json!({ "darwinRelease": release }),
+        None => serde_json::json!({}),
+    };
+    vec![Value::Object(wine.clone()), host]
+}
+
+/// The body of `wine.isValidVersion`: decode first (a bad call is rejected the same way before and after
+/// the install), then `wine_valid` on the blocking pool. `wine` is the installed context, passed in so a
+/// test drives this over a real one.
+async fn wine_valid_channel(wine: Option<Arc<WineCtx>>, args: Vec<Value>) -> Result<Value, String> {
+    let op_args = parse_wine_installation(&args)
+        .map(wine_valid_args)
+        .map_err(|(path, code)| invalid_args("wine.isValidVersion", &[path], &[code]))?;
+    let wine = wine.ok_or_else(|| "wine.isValidVersion: not ready".to_string())?;
+    run_wine_op(
+        wine,
+        "wine_valid",
+        op_args,
+        "wine.isValidVersion: the check did not finish",
+    )
+    .await
+}
+
+/// The native `wine.isValidVersion` handler (slice `wine`, D-14): whether the wine the renderer holds can
+/// run, answered by the crate's `wine_valid` (existence checks only, nothing is spawned, T-87-22).
+pub(crate) fn wine_is_valid_version(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(wine_valid_channel(wine_ctx().cloned(), args))
+}
+
 /// Runs `op` over `args` for a `rustInvoke` arm. These arms run on the dispatcher's worker thread, never
 /// inside a runtime, so the crate's own `dispatch_sync` drives the op there. Before [`install`] the
 /// answer is `<op>:not-ready`.
@@ -1176,6 +1279,137 @@ mod tests {
             rpc_wine_manager_install(&[extra]),
             Err("wine_manager_install:bad-args".to_string())
         );
+    }
+
+    fn wine_json(kind: &str, bin: &str) -> Value {
+        json!({ "bin": bin, "name": "Wine - Test", "type": kind })
+    }
+
+    #[test]
+    fn a_wine_installation_is_its_six_keys_and_nothing_else() {
+        let mut full = wine_json("wine", "/usr/bin/wine");
+        full["lib"] = json!("/l");
+        full["lib32"] = json!(null);
+        full["wineserver"] = json!("/ws");
+        for ok in [wine_json("proton", "/p"), wine_json("toolkit", "/g"), full] {
+            assert!(parse_wine_installation(&[ok.clone()]).is_ok(), "{ok}");
+        }
+        let mut extra = wine_json("wine", "/b");
+        extra["legacyKey"] = json!(1);
+        let mut bad_lib = wine_json("wine", "/b");
+        bad_lib["lib"] = json!(7);
+        let mut long_ws = wine_json("wine", "/b");
+        long_ws["wineserver"] = json!("w".repeat(4097));
+        let mut no_name = wine_json("wine", "/b");
+        no_name.as_object_mut().unwrap().remove("name");
+        for (args, want) in [
+            (vec![], ("(args)", "invalid_type")),
+            (vec![json!(null)], ("0", "invalid_type")),
+            (vec![json!("wine")], ("0", "invalid_type")),
+            (vec![json!([])], ("0", "invalid_type")),
+            (
+                vec![wine_json("wine", "/b"), json!({})],
+                ("(args)", "invalid_type"),
+            ),
+            (vec![extra], ("0", "unrecognized_keys")),
+            (vec![wine_json("dosbox", "/b")], ("0.type", "invalid_value")),
+            (
+                vec![json!({ "bin": "/b", "name": "n" })],
+                ("0.type", "invalid_type"),
+            ),
+            (vec![wine_json("wine", "")], ("0.bin", "too_small")),
+            (
+                vec![json!({ "name": "n", "type": "wine" })],
+                ("0.bin", "invalid_type"),
+            ),
+            (vec![no_name], ("0.name", "invalid_type")),
+            (
+                vec![wine_json("wine", &"b".repeat(4097))],
+                ("0.bin", "too_big"),
+            ),
+            (vec![bad_lib], ("0.lib", "invalid_type")),
+            (vec![long_ws], ("0.wineserver", "too_big")),
+        ] {
+            assert_eq!(
+                parse_wine_installation(&args).map(|_| ()),
+                Err(want),
+                "{args:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_valid_version_handler_validates_first_and_answers_not_ready_before_install() {
+        assert!(wine_ctx().is_none());
+        let router_ctx = Arc::new(crate::native_router::NativeCtx::for_tests(
+            Arc::new(NoHost),
+            None,
+        ));
+        let mut secret = wine_json("wine", "/b");
+        secret["SECRET-KEY-".repeat(40).as_str()] = json!(1);
+        for bad in [vec![secret], vec![], vec![json!("SECRET-WINE")]] {
+            let error =
+                tauri::async_runtime::block_on(wine_is_valid_version(Arc::clone(&router_ctx), bad))
+                    .unwrap_err();
+            assert!(
+                error.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+                "{error}"
+            );
+            assert!(!error.contains("SECRET"), "{error}");
+        }
+        assert_eq!(
+            tauri::async_runtime::block_on(wine_is_valid_version(
+                router_ctx,
+                vec![wine_json("wine", "/b")]
+            )),
+            Err("wine.isValidVersion: not ready".to_string())
+        );
+    }
+
+    #[test]
+    fn the_valid_version_handler_answers_the_crates_wine_valid_over_a_real_context() {
+        let home = gamelib_testutil::FakeHome::new("wine-dispatch-valid-");
+        let wine = wine_over(&home, Arc::new(Recorded::default()));
+        let bin = home.root().join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let wine_bin = bin.join("wine");
+        let wineserver = bin.join("wineserver");
+        std::fs::write(&wine_bin, b"").unwrap();
+        std::fs::write(&wineserver, b"").unwrap();
+        let ask = |args: Value| {
+            tauri::async_runtime::block_on(wine_valid_channel(Some(Arc::clone(&wine)), vec![args]))
+        };
+        let installed = |kind: &str, server: Option<&std::path::Path>| {
+            let mut value = wine_json(kind, &wine_bin.display().to_string());
+            if let Some(server) = server {
+                value["wineserver"] = json!(server.display().to_string());
+            }
+            value
+        };
+        // A wine needs its wineserver; a proton needs only its binary; a missing binary is invalid.
+        assert_eq!(ask(installed("wine", Some(&wineserver))), Ok(json!(true)));
+        assert_eq!(ask(installed("wine", None)), Ok(json!(false)));
+        assert_eq!(ask(installed("proton", None)), Ok(json!(true)));
+        assert_eq!(
+            ask(wine_json(
+                "proton",
+                &bin.join("missing").display().to_string()
+            )),
+            Ok(json!(false))
+        );
+    }
+
+    #[test]
+    fn the_host_facts_carry_only_the_darwin_release_and_the_crate_decodes_them() {
+        let wine = serde_json::Map::new();
+        let args = wine_valid_args(&wine);
+        assert_eq!(args.len(), 2);
+        let host = args[1].as_object().unwrap();
+        assert!(host.keys().all(|key| key == "darwinRelease"), "{host:?}");
+        if cfg!(target_os = "macos") {
+            let release = host["darwinRelease"].as_str().unwrap();
+            assert!(release.split('.').next().unwrap().parse::<u64>().is_ok());
+        }
     }
 
     #[test]

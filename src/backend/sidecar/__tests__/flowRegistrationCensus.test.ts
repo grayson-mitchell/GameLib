@@ -175,7 +175,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Phase 45 Plan 02 (2026-10-10, D-11 promote): send 1 -> 0 -- winetricksInstall retired outright.
   // Phase 87 Plan 20 (D-14): invoke 15 -> 12 -- `installWineVersion`, `refreshWineVersionInfo` and
   // `removeWineVersion` are native `wine` channels.
-  'wineToolsFlowRegistration.ts': { invoke: 12, send: 0 }
+  // Phase 87 Plan 24 (D-14): invoke 12 -> 11 -- `wine.isValidVersion` is a native `wine` channel.
+  'wineToolsFlowRegistration.ts': { invoke: 11, send: 0 }
 }
 
 /**

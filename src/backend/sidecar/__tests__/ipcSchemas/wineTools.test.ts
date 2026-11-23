@@ -93,20 +93,8 @@ const asyncTable: FixtureTable<typeof wineToolsAsyncArgs> = {
   },
   // Phase 87 (87-20, D-14): `installWineVersion`, `refreshWineVersionInfo` and `removeWineVersion` are
   // native `wine` channels; their vectors are in `nativeChannels.json`.
-  'wine.isValidVersion': {
-    valid: [
-      [wineInstallation],
-      [{ ...wineInstallation, lib: '/l', lib32: '/l32', wineserver: '/ws' }],
-      // persisted-config values may carry extra keys or null lib fields (67 review WR-04)
-      [{ ...wineInstallation, legacyKey: 1 }],
-      [{ ...wineInstallation, lib: null, lib32: null, wineserver: null }]
-    ],
-    invalid: [
-      [{ ...wineInstallation, type: 'dosbox' }],
-      [{ bin: '/x' }],
-      [{ name: 'n', type: 'wine' }]
-    ]
-  },
+  // Phase 87 (87-24, D-14): `wine.isValidVersion` is a native `wine` channel; its vectors are in
+  // `nativeChannels.json`.
   toggleDXVK: {
     valid: [[toolArgs], [{ ...toolArgs, action: 'restore' }]],
     invalid: [[{ ...toolArgs, action: 'delete' }], [{ ...toolArgs, x: 1 }]]

@@ -12,6 +12,7 @@ import type {
   RuntimeName,
   UploadedLogData,
   WikiInfo,
+  WineInstallation,
   WineVersionInfo
 } from '../../types'
 import type { StoreSearchDeal, StoreSearchResponse } from '../storeSearch'
@@ -153,6 +154,12 @@ export interface NativeAsync {
   // `undefined`; progress, notifications and `wineVersionsUpdated` are pushed as before.
   installWineVersion: (release: WineVersionInfo) => Promise<void>
   removeWineVersion: (release: WineVersionInfo) => Promise<void>
+  // Phase 87 (87-24, D-14): whether the wine the renderer holds can run, answered by the Rust `wine`
+  // slice (`gamelib-wine`'s `wine_valid`): the binaries its type needs exist (a `wine` also needs its
+  // `wineserver`), and a macOS toolkit needs Darwin 14 or later. Existence checks only, nothing is
+  // spawned. The decode is strict (an unknown key rejects with the invalid-args marker); `lib`, `lib32`
+  // and `wineserver` may be absent or null.
+  'wine.isValidVersion': (wine: WineInstallation) => Promise<boolean>
 }
 
 export interface NativeSync {

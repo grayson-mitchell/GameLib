@@ -892,6 +892,7 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "steamgriddb.searchGame",
     "steamgriddb.setApiKey",
     "uploadLogFile",
+    "wine.isValidVersion",
 ];
 
 /// Renderer send channels owned by the Rust native router (Phase 83), sorted.
