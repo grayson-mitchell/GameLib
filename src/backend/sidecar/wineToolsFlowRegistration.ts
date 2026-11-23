@@ -128,7 +128,8 @@ export interface WineToolsFlowDeps
 }
 
 /**
- * Registers this cluster's 10 channels (10 invoke, 0 send — `winetricksInstall` retired, Phase 45
+ * Registers this cluster's 9 channels (9 invoke, 0 send — `toggleDXVK` moved to the scheduled resolvers of
+ * `engineWineResolvers.ts`, Phase 87 Plan 34, D-23; `winetricksInstall` retired, Phase 45
  * Plan 02, D-11 promote; `installWineVersion`, `refreshWineVersionInfo` and `removeWineVersion` moved to
  * the Rust native `wine` slice, Phase 87 Plan 20, D-14; so did `wine.isValidVersion`, Plan 24, and `getAlternativeWine`, Plan 26). As of Phase 45 Plan 01 (2026-10-10), the count was 12 invoke + 1 send
  * from Phase 34.6 Plan 07 plus the 3 new winetricks-queue invoke channels (`winetricksApply`,
@@ -232,14 +233,8 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   // `platformApi.dialog.showErrorBox`/`showMessageBox`, both async and non-throwing by
   // construction (each has its own internal try/catch that never rethrows). No fix was built here
   // — the existing wiring already satisfies the concern this plan set out to verify.
-  deps.ipc.handle('toggleDXVK', async (_event: unknown, ...args: unknown[]) => {
-    const { appName, action } = args[0] as {
-      appName: string
-      action: 'backup' | 'restore'
-    }
-    const gameSettings = await deps.gameConfigs.get(appName).getSettings()
-    return DXVK.installRemove(gameSettings, 'dxvk', action)
-  })
+  // Phase 87 (87-34, D-23): `toggleDXVK` is a scheduled resolver (`engineWineResolvers.ts`); this module
+  // registers no handle for it (one owner, D-06).
 
   deps.ipc.handle(
     'toggleDXVKNVAPI',

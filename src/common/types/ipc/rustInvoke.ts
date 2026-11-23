@@ -104,6 +104,7 @@ import {
   RUST_WINE_MANAGER_INSTALL,
   RUST_WINE_DISCOVER_ALTERNATIVES,
   RUST_WINE_DISCOVER_CROSSOVER,
+  RUST_WINE_DXVK_INSTALL_REMOVE,
   RUST_ENGINE_SET_ONLINE,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
@@ -856,6 +857,12 @@ export const rustInvokeArgs = {
     z.boolean().meta({ title: 'scanCustom' })
   ]),
   [RUST_WINE_DISCOVER_CROSSOVER]: empty,
+  // Phase 87 (SVC-02, 87-34): one DXVK-family install or remove. One object `{ settings, tool, action,
+  // source? }`, opaque here and decoded strictly by the crate; the host facts (environment, Darwin release,
+  // public directory, online) are the shell's, never the sidecar's.
+  [RUST_WINE_DXVK_INSTALL_REMOVE]: z.tuple([
+    z.unknown().meta({ title: 'request', 'x-rust-value': true })
+  ]),
   // Phase 87 (SVC-02, 87-31): the sidecar online monitor's status, written through to the engine context.
   // One strict object with one boolean; the crate decodes it again (deny_unknown_fields).
   [RUST_ENGINE_SET_ONLINE]: z.tuple([

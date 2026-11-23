@@ -37,8 +37,6 @@ use gamelib_store::host::StoreHost;
 use gamelib_wine::ctx::WineCtx;
 use gamelib_wine::discovery::default_wine::{default_wine_from_path, is_executable_file};
 use gamelib_wine::tools::{ToolsHost, WineRunner};
-use gamelib_wine::wine_cmd::env::EnvSnapshot;
-use gamelib_wine::wine_cmd::WineHost;
 use gamelib_wine::WineDxvkInstaller;
 
 /// The one context, set once by [`install`].
@@ -206,9 +204,8 @@ type WineLookup = Box<dyn Fn() -> Option<Arc<WineCtx>> + Send + Sync>;
 /// order can neither deadlock nor leave a stale handle. Before the wine context exists (or when no
 /// engine context could be built, so none ever will) a call answers `false` with one fixed log line.
 ///
-/// The wine commands run with the shell's process environment, which the crate may not read. The Vulkan
-/// helper's directory and the online answer stay at their defaults until 87-34 builds the full
-/// `ToolsHost`, the same step that flips the TS writers.
+/// The tool runs with the shell's facts ([`process_tools_host`]): the process environment, the Vulkan
+/// helper's directory and the online monitor's answer, which the crate may not read itself.
 pub(crate) struct ShellDxvk {
     wine: WineLookup,
     runner: Option<Arc<dyn WineRunner>>,
@@ -234,18 +231,12 @@ impl ShellDxvk {
     }
 }
 
-/// The host facts a wine command needs from the shell: the process environment, as the TS read
-/// `process.env`. Non-Unicode entries are left out.
+/// The host facts a tool needs from the shell (87-34): the process environment, the Darwin release, the
+/// bundled `public` directory holding the Vulkan helper and the online monitor's last answer. The same
+/// facts the renderer's DXVK toggles and the launcher's DXVK step run under, built once in
+/// [`wine_dispatch::tools_host`].
 fn process_tools_host() -> ToolsHost {
-    let env = std::env::vars_os()
-        .filter_map(|(key, value)| Some((key.into_string().ok()?, value.into_string().ok()?)));
-    ToolsHost {
-        wine: WineHost {
-            env: EnvSnapshot::from_pairs(env),
-            ..WineHost::default()
-        },
-        ..ToolsHost::default()
-    }
+    wine_dispatch::tools_host()
 }
 
 impl DxvkInstaller for ShellDxvk {

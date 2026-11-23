@@ -170,6 +170,7 @@ pub(crate) enum RustInvokeChannel {
     WineRunCommand,
     WineDiscoverAlternatives,
     WineDiscoverCrossover,
+    WineDxvkInstallRemove,
     EngineSetOnline,
 }
 
@@ -322,6 +323,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::WineRunCommand,
         RustInvokeChannel::WineDiscoverAlternatives,
         RustInvokeChannel::WineDiscoverCrossover,
+        RustInvokeChannel::WineDxvkInstallRemove,
         RustInvokeChannel::EngineSetOnline,
     ];
 
@@ -474,6 +476,7 @@ impl RustInvokeChannel {
             "wine_run_command" => Some(RustInvokeChannel::WineRunCommand),
             "wine_discover_alternatives" => Some(RustInvokeChannel::WineDiscoverAlternatives),
             "wine_discover_crossover" => Some(RustInvokeChannel::WineDiscoverCrossover),
+            "wine_dxvk_install_remove" => Some(RustInvokeChannel::WineDxvkInstallRemove),
             "engine_set_online" => Some(RustInvokeChannel::EngineSetOnline),
             _ => None,
         }
@@ -628,6 +631,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::WineRunCommand => "wine_run_command",
             RustInvokeChannel::WineDiscoverAlternatives => "wine_discover_alternatives",
             RustInvokeChannel::WineDiscoverCrossover => "wine_discover_crossover",
+            RustInvokeChannel::WineDxvkInstallRemove => "wine_dxvk_install_remove",
             RustInvokeChannel::EngineSetOnline => "engine_set_online",
         }
     }
@@ -3274,6 +3278,18 @@ pub(crate) struct WineDiscoverCrossoverArgs;
 impl WineDiscoverCrossoverArgs {
     pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
         Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineDxvkInstallRemoveArgs {
+    pub(crate) request: Value,
+}
+
+impl WineDxvkInstallRemoveArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "wine_dxvk_install_remove:bad-args".to_string())?.clone()).map_err(|_| "wine_dxvk_install_remove:bad-args".to_string())?;
+        Ok(Self { request })
     }
 }
 

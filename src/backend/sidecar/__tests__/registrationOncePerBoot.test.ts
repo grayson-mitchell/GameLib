@@ -12,6 +12,7 @@ const REGISTRATIONS = [
   'registerDevEpicCookieSweepFlow',
   'registerRunnerAuthFlows',
   'registerWineToolsFlows',
+  'registerEngineWineResolvers',
   'registerShortcutsFlows',
   'registerStoreWriteHandlers'
 ] as const

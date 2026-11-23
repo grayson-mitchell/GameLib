@@ -64,6 +64,7 @@ import {
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_RUN_COMMAND,
+  RUST_WINE_DXVK_INSTALL_REMOVE,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
   RUST_DIALOG_SAVE,
@@ -169,6 +170,9 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * Eighth (Phase 87, 87-26): `wine_discover_alternatives` refreshes an empty wine release list first (up to
  * seven feeds in turn, as `wine_manager_refresh` does) before it looks at the disk, so it joins them.
  * `wine_discover_crossover` is one `mdfind` with its own 10 s limit and stays bounded.
+ *
+ * Ninth (Phase 87, 87-34): `wine_dxvk_install_remove` downloads a DXVK-family release when it is not cached and
+ * runs the registry commands for the prefix, so it has no limit of its own beyond the app shutdown.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -200,7 +204,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_RUN_COMMAND,
-  RUST_WINE_DISCOVER_ALTERNATIVES
+  RUST_WINE_DISCOVER_ALTERNATIVES,
+  RUST_WINE_DXVK_INSTALL_REMOVE
 ]
 
 function isValidRequest(value: unknown): value is SidecarRpcRequest {

@@ -146,7 +146,7 @@ fn itad_key_source_word(env: &Option<String>, baked: &Option<String>) -> &'stati
 /// release build: the resource directory) joined with `public`, as the sidecar's own `publicDir`
 /// is. The CrossOver index's cold-start snapshot is read from there. `resource_dir()` alone would miss it
 /// in a dev run, where the assets are in the repository and not beside the executable.
-fn bundled_public_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
+pub(crate) fn bundled_public_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
     // The same build-profile gate as `sidecar::use_dev_sidecar`.
     let root = if cfg!(debug_assertions) {
         resolve_dev_app_root()

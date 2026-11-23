@@ -236,7 +236,11 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // Phase 87 plan 26: wine_discover_alternatives refreshes an empty wine release list first (up to seven feeds
     // in turn, like wine_manager_refresh) before it looks at the disk. wine_discover_crossover is one mdfind with
     // its own 10 s limit and stays bounded. Not a dialog channel either.
-    'RUST_WINE_DISCOVER_ALTERNATIVES'
+    'RUST_WINE_DISCOVER_ALTERNATIVES',
+    // Phase 87 plan 34: wine_dxvk_install_remove downloads a DXVK-family release when it is not cached and
+    // runs the prefix's registry commands, so it has no limit of its own beyond the shutdown. Not a dialog
+    // channel either.
+    'RUST_WINE_DXVK_INSTALL_REMOVE'
   ]
 
   test('contains exactly the dialog, depot, Rust CM, safety remove, wine runtime download and wine manager channels', () => {

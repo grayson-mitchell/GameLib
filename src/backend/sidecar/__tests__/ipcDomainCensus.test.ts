@@ -61,6 +61,8 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   'Async:isFrameless': 'window',
   'Async:isMaximized': 'window',
   'Async:isMinimized': 'window',
+  // Phase 87 Plan 34 (D-23): a scheduled resolver (`engineWineResolvers.ts`), not a `*FlowRegistration.ts` handle.
+  'Async:toggleDXVK': 'wineTools',
   'Async:gamepadAction': 'testStubs',
   'Async:get-connectivity-status': 'mainProcess',
   'Async:getSignInProbeOutcomes': 'mainProcess',
@@ -309,6 +311,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Phase 82 Plan 15: -2 TestSync (setLegendaryCommandStub, resetLegendaryCommandStub, the legendary e2e stub deleted, D-19); owner-less allowlist 65 -> 63.
     // Phase 82 Plan 15: -2 TestSync (setNileCommandStub, resetNileCommandStub, the nile e2e stub deleted, D-19); owner-less allowlist 63 -> 61.
     // That removed the last TestSync channel, so the TestSync kind left the census.
+    // Phase 87 Plan 34 (D-23): +1 Async (toggleDXVK, now a scheduled resolver); owner-less allowlist 61 -> 62.
     // Phase 83 Plan 03 (2026-11-20): getHeroicVersion moved from appShell.ts to native.ts (NativeAsync), net 0.
     // Phase 84 Plan 06 (2026-11-21): getUploadedLogFiles and deleteUploadedLogFile moved from logger.ts (LoggerAsync, deleted) to native.ts (NativeAsync), net 0.
     // Phase 85 Plan 16 (2026-11-22): +1 NativeAsync (sidecar:store-fetch, now a native channel; it had no typed declaration before, only its sidecarInternal zod key, which is the renamed store:ts-fetch).
@@ -340,7 +343,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
       nativeChannelNames()
     )
     expect(computed).toEqual(NO_REGISTRATION_OWNER)
-    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(61)
+    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(62)
   })
 
   it('(d) near-miss: a manifest-owned channel leaves the computed owner-less set', () => {

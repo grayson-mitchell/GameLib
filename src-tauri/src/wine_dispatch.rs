@@ -25,21 +25,28 @@ use gamelib_wine::manager::install::InstallSettings;
 use gamelib_wine::runtimes::RuntimeName;
 use gamelib_wine::tools::dxmt::{spawn_dxmt_boot_update, DxmtReleasesInfo, DXMT_BOOT_BOUND};
 use gamelib_wine::tools::macho::{MachoScan, WinemacMetalCheck};
+use gamelib_wine::tools::ToolsHost;
 use gamelib_wine::CancellationToken;
 use serde_json::Map;
 
 /// The one context, set once by [`install`].
 static WINE_CTX: OnceLock<Arc<WineCtx>> = OnceLock::new();
 
+/// The app's bundled `public` directory, where `bin/<arch>/<platform>/vulkan-helper` lives (set once by
+/// [`install`]; `None` when the app root could not be resolved, which the crate reads as "no helper").
+static PUBLIC_DIR: OnceLock<Option<std::path::PathBuf>> = OnceLock::new();
+
 /// The installed context, or `None` before [`install`] (and in a unit test that built its own).
 pub(crate) fn wine_ctx() -> Option<&'static Arc<WineCtx>> {
     WINE_CTX.get()
 }
 
-/// Builds the wine context from the engine context and stores it. A no-op when the engine context
-/// was not installed (no home directory), so every wine op answers not-ready. A second call is
-/// ignored (the first context stays).
-pub(crate) fn install() {
+/// Builds the wine context from the engine context and stores it, with the bundled `public` directory
+/// the tools' Vulkan helper is read from. A no-op for the context when the engine context was not
+/// installed (no home directory), so every wine op answers not-ready. A second call is ignored (the
+/// first context stays).
+pub(crate) fn install(public_dir: Option<std::path::PathBuf>) {
+    let _ = PUBLIC_DIR.set(public_dir);
     let Some(engine) = engine_dispatch::engine_ctx() else {
         return;
     };
@@ -909,6 +916,49 @@ fn wine_run_host() -> Value {
         host.insert("darwinRelease".to_string(), Value::String(release));
     }
     Value::Object(host)
+}
+
+/// The host facts the crate may not read for a tool (the DXVK family): the wine host facts of
+/// [`wine_run_host`], the bundled `public` directory holding the Vulkan helper, and the online monitor's
+/// last answer, which the sidecar reports through `engine_set_online`. Built here, never taken from the
+/// sidecar, so a path or an online claim it sent cannot reach a tool (T-87-34). Before the engine context
+/// exists the app counts as online, which is the crate's own default.
+fn tools_host_value() -> Value {
+    let mut host = Map::new();
+    if let Some(dir) = PUBLIC_DIR.get().and_then(|dir| dir.as_deref()) {
+        if let Some(dir) = dir.to_str() {
+            host.insert("publicDir".to_string(), Value::String(dir.to_string()));
+        }
+    }
+    let online = engine_dispatch::engine_ctx().map_or(true, |engine| engine.is_online());
+    host.insert("online".to_string(), Value::Bool(online));
+    host.insert("wine".to_string(), wine_run_host());
+    Value::Object(host)
+}
+
+/// [`tools_host_value`] as the crate's [`ToolsHost`], for the shell's own callers (the engine's DXVK seam,
+/// `engine_dispatch::ShellDxvk`), so the renderer's toggles, the launcher's DXVK step and the engine all
+/// run a tool under one set of facts.
+pub(crate) fn tools_host() -> ToolsHost {
+    serde_json::from_value(tools_host_value()).unwrap_or_default()
+}
+
+/// The `wine_dxvk_install_remove` `rustInvoke` arm (the three DXVK toggles and the `dxvkInstallRemove`
+/// shim, 87-34): exactly one `{ settings, tool, action, source? }` object, to which the shell adds
+/// [`tools_host_value`]. The crate decodes the request strictly (an unknown key, tool or action is
+/// `wine_dxvk_install_remove:bad-args`) and answers a boolean, or a category word on failure. Runs on the
+/// dispatcher's worker thread until the install ends or the app shuts down; unbounded in the sidecar.
+pub(crate) fn rpc_wine_dxvk_install_remove(args: &[Value]) -> Result<Value, String> {
+    const BAD: &str = "wine_dxvk_install_remove:bad-args";
+    WineDxvkInstallRemoveArgs::from_args(args)?;
+    let [request @ Value::Object(_)] = args else {
+        return Err(BAD.to_string());
+    };
+    rpc_wine_op(
+        wine_ctx(),
+        "wine_dxvk_install_remove",
+        &[request.clone(), tools_host_value()],
+    )
 }
 
 /// The `wine_run_command` `rustInvoke` arm: one `WineCommandArgs` object, to which the shell adds
@@ -1887,6 +1937,44 @@ mod tests {
             env.get("PATH").and_then(Value::as_str),
             std::env::var("PATH").ok().as_deref()
         );
+    }
+
+    #[test]
+    fn the_dxvk_arm_takes_one_object_and_the_host_facts_are_the_shells_own() {
+        assert!(wine_ctx().is_none());
+        for bad in [
+            vec![],
+            vec![json!("dxvk")],
+            vec![json!(null)],
+            vec![json!({}), json!({})],
+            // A second element is where a sidecar could try to send its own host facts.
+            vec![
+                json!({ "settings": {}, "tool": "dxvk", "action": "backup" }),
+                json!({ "publicDir": "/SECRET-PATH", "online": true }),
+            ],
+        ] {
+            assert_eq!(
+                rpc_wine_dxvk_install_remove(&bad),
+                Err("wine_dxvk_install_remove:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+        assert_eq!(
+            rpc_wine_dxvk_install_remove(&[
+                json!({ "settings": {}, "tool": "dxvk", "action": "backup" })
+            ]),
+            Err("wine_dxvk_install_remove:not-ready".to_string())
+        );
+        // The facts: the wine host facts, an online answer (true before the engine context exists),
+        // and a public directory only when the shell was given one.
+        let host = tools_host_value();
+        let host = host.as_object().unwrap();
+        assert!(host
+            .keys()
+            .all(|key| key == "publicDir" || key == "online" || key == "wine"));
+        assert_eq!(host["online"], json!(true));
+        assert!(host["wine"]["env"].is_object());
+        assert!(tools_host().online);
     }
 
     #[test]

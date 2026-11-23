@@ -87,6 +87,7 @@ import { registerHumbleFlows } from './humbleFlowRegistration'
 import { registerHumbleLoginFlows } from './humbleLoginFlowRegistration'
 import { registerOAuthLoginFlows } from './oauthLoginFlowRegistration'
 import { registerRunnerAuthFlows } from './runnerAuthFlowRegistration'
+import { registerEngineWineResolvers } from './engineWineResolvers'
 import { registerWineToolsFlows } from './wineToolsFlowRegistration'
 import { registerShortcutsFlows } from './shortcutsFlowRegistration'
 import { registerRunnerMiscFlows } from './runnerMiscFlowRegistration'
@@ -383,6 +384,13 @@ export function registerHandlers(deps: {
     winetricksQueue: deps.services.winetricksQueue,
     requestRustInvoke: deps.services.host.requestRustInvoke,
     ...toolSlices(deps.services)
+  })
+  // Phase 87 (D-23): the scheduled resolvers of the engine and wine services (the DXVK toggles as of 87-34).
+  // A channel is registered here or in the wine tools cluster, never both.
+  registerEngineWineResolvers({
+    ipc,
+    gameConfigs: deps.services.gameConfigs,
+    requestRustInvoke: deps.services.host.requestRustInvoke
   })
   registerShortcutsFlows({
     ipc,

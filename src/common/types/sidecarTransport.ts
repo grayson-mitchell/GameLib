@@ -1167,6 +1167,21 @@ export const RUST_WINE_DISCOVER_ALTERNATIVES =
 export const RUST_WINE_DISCOVER_CROSSOVER = 'wine_discover_crossover' as const
 
 /**
+ * Phase 87 (SVC-02, 87-34): `wine_dxvk_install_remove` is `DXVK.installRemove`'s body: it installs (`backup`)
+ * or removes (`restore`) one DXVK-family tool (`dxvk`, `dxvk-nvapi`, `vkd3d` or the macOS `dxvk-macOS`) in a
+ * game's Wine prefix, downloading the release when it is not cached. Args: one object,
+ * `{ settings, tool, action, source? }` (the merged game settings the prefix is read from, and optionally the
+ * engine's pinned `{ dir, version }`); the crate decodes it strictly and refuses any other key. The shell adds
+ * the host facts the crate may not read (its process environment, the Darwin release, the bundled `public`
+ * directory holding the Vulkan helper, and whether the app is online), so none of them travels from the
+ * sidecar. Resolves a boolean, the TS `installRemove` answer. Long-running (a download): listed in the
+ * sidecar's `UNBOUNDED_RUST_CHANNELS`. The renderer's three toggles (`engineWineResolvers.ts`) and the
+ * `dxvkInstallRemove` shim (`enginewine/tools.ts`: the launcher's DXVK step and the still-TS engine's
+ * `installRemove`) are its callers, so a prefix's DXVK DLLs have one writer.
+ */
+export const RUST_WINE_DXVK_INSTALL_REMOVE = 'wine_dxvk_install_remove' as const
+
+/**
  * Phase 87 (SVC-02, 87-31): `engine_set_online` tells the Rust engine whether the machine is online. The
  * sidecar's online monitor is still the one that probes (until Phase 98), so it writes its status through
  * to `EngineCtx.online` at boot and on every change; Rust-initiated network work (the DXMT boot update, the
@@ -1521,6 +1536,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_WINE_RUN_COMMAND,
   RUST_WINE_DISCOVER_ALTERNATIVES,
   RUST_WINE_DISCOVER_CROSSOVER,
+  RUST_WINE_DXVK_INSTALL_REMOVE,
   RUST_ENGINE_SET_ONLINE
 ] as const
 

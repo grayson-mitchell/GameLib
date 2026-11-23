@@ -933,6 +933,10 @@ const IN_SCOPE_SUITES = [
  * `createAppShellState()` / `createStoreEmbedSeam()` instances on a fake clock, with no path
  * module, `homedir()`, filesystem or child process.
  *
+ * `engineWineResolvers.test.ts` (Phase 87 Plan 34) is structurally contained: it drives the scheduled
+ * resolvers over a fake `requestRustInvoke` and an in-memory `createIpcRegistry()`, and reaches no path
+ * module, `homedir()`, filesystem or child process.
+ *
  * `ipcRegistry.test.ts` (Phase 66.3 Plan 03) is structurally contained: it exercises
  * `createIpcRegistry()` instances with in-memory handlers, and reaches no path module, `homedir()`,
  * filesystem or child process.
@@ -961,6 +965,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'engineOverrideWriteGuard.test.ts',
   'engineStateWiring.test.ts',
   'engineTempSweepBootWire.test.ts',
+  'engineWineResolvers.test.ts',
   'eosOverlayFlows.test.ts',
   'externalDynamicImportGate.test.ts',
   'flowRegistrationCensus.test.ts',

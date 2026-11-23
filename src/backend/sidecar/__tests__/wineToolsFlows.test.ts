@@ -165,7 +165,7 @@ describe('registration kind — all 9 Wine channels are registered with the corr
     'runWineCommand',
     // Phase 87 Plan 26 (D-14): `getAlternativeWine` is a native `wine` channel.
     // Phase 87 Plan 24 (D-14): `wine.isValidVersion` is a native `wine` channel.
-    'toggleDXVK',
+    // Phase 87 Plan 34 (D-23): `toggleDXVK` is a scheduled resolver (`engineWineResolvers.ts`), proved there.
     'toggleDXVKNVAPI',
     'toggleVKD3D'
   ]

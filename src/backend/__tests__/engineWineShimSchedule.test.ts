@@ -239,6 +239,19 @@ const SCHEDULE: readonly ScheduleRow[] = [
     callers: ['src/backend/sidecar/bootstrap.ts'],
     deletedBy: 98
   },
+  // 87-34 (D-23): the DXVK family's resolvers. `toggleDXVK` is the first, registered by
+  // `registerEngineWineResolvers` (named in `wiring`, one owner, D-06); the TS-only input is the game's merged
+  // settings. Phase 98 deletes the resolvers with the config and the game-config store they read.
+  {
+    name: 'toggleDXVK',
+    file: 'src/backend/sidecar/engineWineResolvers.ts',
+    shape: 'resolver',
+    inputs: ['gameSettings'],
+    channel: 'RUST_WINE_DXVK_INSTALL_REMOVE',
+    wiring: ['registerEngineWineResolvers'],
+    callers: ['src/backend/sidecar/handlers.ts'],
+    deletedBy: 98
+  },
   // 87-26 (D-22 deviation, for the checker and the operator): `getDefaultWineBinary` is read synchronously by
   // `getFactoryDefaults` in config.ts before any rustInvoke transport exists, so it cannot become an async shim over
   // the Rust `default_wine_from_path`; it stays as a twin pinned to the shared `default_wine.json` vectors that

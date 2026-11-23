@@ -1912,7 +1912,7 @@ fn run_setup(
     // the host opened. Nothing here spawns a process or waits; an op before this answers not-ready.
     if let Some(paths) = log_paths.as_ref() {
         engine_dispatch::install(app.handle(), std::path::Path::new(&paths.user_data));
-        wine_dispatch::install();
+        wine_dispatch::install(info_dispatch::bundled_public_dir(app.handle()));
     }
     // Where the sidecar's store frames are resolved: the directory this boot opened.
     if let Some(paths) = log_paths.as_ref() {
