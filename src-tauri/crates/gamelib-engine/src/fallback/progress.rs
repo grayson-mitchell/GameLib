@@ -207,3 +207,104 @@ impl Reporter {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pins::pins;
+    use crate::testing::{RecordingEmitter, RecordingLog};
+
+    fn contexts(emitter: &RecordingEmitter) -> Vec<String> {
+        emitter
+            .pushed()
+            .iter()
+            .map(|(_, args)| {
+                args[0]["context"]
+                    .as_str()
+                    .or(args[0]["status"].as_str())
+                    .unwrap()
+                    .to_string()
+            })
+            .collect()
+    }
+
+    fn step(phase: Phase, artifact: Artifact, percentage: Option<f64>) -> FallbackProgress {
+        FallbackProgress {
+            phase,
+            artifact,
+            percentage,
+        }
+    }
+
+    #[test]
+    fn the_percent_is_weighted_across_both_archives_and_never_goes_down() {
+        let emitter = Arc::new(RecordingEmitter::new());
+        let pin = pins().unwrap().current.clone();
+        let reporter = Reporter::new(emitter.clone(), "app", "nile", &pin);
+        reporter.on_progress(&step(Phase::Downloading, Artifact::Dxvk, Some(0.0)));
+        reporter.on_progress(&step(Phase::Downloading, Artifact::Dxvk, Some(100.0)));
+        reporter.on_progress(&step(Phase::Verifying, Artifact::Dxvk, None));
+        reporter.on_progress(&step(Phase::Extracting, Artifact::Dxvk, None));
+        // Wine starts at 0% of its own: the overall figure is the DXVK share, not a reset to 0.
+        reporter.on_progress(&step(Phase::Downloading, Artifact::Wine, Some(0.0)));
+        reporter.on_progress(&step(Phase::Downloading, Artifact::Wine, Some(100.0)));
+        let dxvk_share =
+            (100.0 * pin.dxvk.size as f64 / (pin.dxvk.size + pin.wine.size) as f64).floor() as i64;
+        assert_eq!(
+            contexts(&emitter),
+            vec![
+                "downloading:0".to_string(),
+                format!("downloading:{dxvk_share}"),
+                "verifying".to_string(),
+                "extracting".to_string(),
+                // The same figure after a phase word is a new context, so it is sent again.
+                format!("downloading:{dxvk_share}"),
+                "downloading:100".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_repeated_context_is_sent_once_and_setting_up_follows_only_after_a_status() {
+        let emitter = Arc::new(RecordingEmitter::new());
+        let pin = pins().unwrap().current.clone();
+        let quiet = Reporter::new(emitter.clone(), "app", "nile", &pin);
+        quiet.ready();
+        assert!(
+            emitter.pushed().is_empty(),
+            "an installed engine says nothing"
+        );
+
+        let reporter = Reporter::new(emitter.clone(), "app", "nile", &pin);
+        let zero = step(Phase::Downloading, Artifact::Dxvk, Some(0.0));
+        reporter.on_progress(&zero);
+        reporter.on_progress(&zero);
+        reporter.on_progress(&step(Phase::Downloading, Artifact::Dxvk, Some(-5.0)));
+        reporter.ready();
+        assert_eq!(contexts(&emitter), vec!["downloading:0", "setting-up"]);
+    }
+
+    #[test]
+    fn a_failure_and_an_abort_are_logged_and_end_with_done() {
+        let emitter = Arc::new(RecordingEmitter::new());
+        let log = RecordingLog::new();
+        let pin = pins().unwrap().current.clone();
+        let reporter = Reporter::new(emitter.clone(), "app", "nile", &pin);
+        reporter.failed(Some(&log), "hash-mismatch");
+        reporter.aborted(Some(&log));
+        assert_eq!(
+            log.lines(),
+            vec![
+                (
+                    "warn",
+                    "built-in engine unavailable for nile app: hash-mismatch".to_string()
+                ),
+                (
+                    "info",
+                    "built-in engine download aborted for nile app".to_string()
+                ),
+            ]
+        );
+        assert_eq!(contexts(&emitter), vec!["done", "done"]);
+    }
+}

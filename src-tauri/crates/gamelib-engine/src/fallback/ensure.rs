@@ -286,13 +286,13 @@ impl Flights {
         }
     }
 
-    fn install_guard(&self) -> InstallGuard {
+    pub(crate) fn install_guard(&self) -> InstallGuard {
         self.inner.installs.fetch_add(1, Ordering::SeqCst);
         InstallGuard(self.inner.clone())
     }
 }
 
-struct InstallGuard(Arc<FlightsInner>);
+pub(crate) struct InstallGuard(Arc<FlightsInner>);
 
 impl Drop for InstallGuard {
     fn drop(&mut self) {

@@ -124,3 +124,113 @@ pub fn prune_at(env: &Env, table: &EnginePins) {
 pub fn prune_unpinned_engines(ctx: &EngineCtx, table: &EnginePins) {
     prune_at(&Env::from_ctx(ctx), table);
 }
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    use crate::testing::RecordingLog;
+    use gamelib_core::clock::SystemClock;
+    use gamelib_core::shutdown::Shutdown;
+    use gamelib_store::host::StoreHost;
+    use gamelib_testutil::FakeHome;
+    use std::sync::Arc;
+
+    use crate::ctx::{EnginePaths, Platform};
+    use crate::pins::pins;
+
+    fn ctx(home: &FakeHome) -> EngineCtx {
+        let root = home.root().to_path_buf();
+        EngineCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            Platform::Mac,
+            EnginePaths {
+                app_folder: root.join("app"),
+                user_data: root.join("data"),
+                tools_path: root.join("app").join("tools"),
+                user_home: root.clone(),
+                temp: root.join("tmp"),
+            },
+            Shutdown::new(),
+        )
+        .with_log(Arc::new(RecordingLog::new()))
+    }
+
+    fn names(env: &Env) -> Vec<String> {
+        let mut out: Vec<String> = fs::read_dir(&env.root)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        out.sort();
+        out
+    }
+
+    fn table() -> EnginePins {
+        let current = pins().unwrap().current.clone();
+        let mut previous = current.clone();
+        previous.id = "wine-staging-11.1".into();
+        previous.dxvk.version = "v1.10.2-20230101-repack".into();
+        EnginePins {
+            current,
+            previous: Some(previous),
+        }
+    }
+
+    #[test]
+    fn prune_keeps_both_pins_removes_other_directories_and_never_touches_a_file_or_link() {
+        let home = FakeHome::new("fallback-prune-");
+        let ctx = ctx(&home);
+        let env = Env::from_ctx(&ctx);
+        let table = table();
+        for dir in [
+            table.current.id.clone(),
+            format!("dxvk-macOS-{}", table.current.dxvk.version),
+            "wine-staging-11.1".to_string(),
+            "dxvk-macOS-v1.10.2-20230101-repack".to_string(),
+            "wine-staging-9.0".to_string(),
+            "dxvk-macOS-old".to_string(),
+            ".tmp-wine-interrupted".to_string(),
+        ] {
+            fs::create_dir_all(env.root.join(dir).join("x")).unwrap();
+        }
+        fs::write(env.root.join("readme.txt"), "keep").unwrap();
+        let outside = home.root().join("outside");
+        fs::create_dir_all(&outside).unwrap();
+        std::os::unix::fs::symlink(&outside, env.root.join("link")).unwrap();
+
+        prune_at(&env, &table);
+        assert_eq!(
+            names(&env),
+            vec![
+                "dxvk-macOS-v1.10.2-20230101-repack".to_string(),
+                format!("dxvk-macOS-{}", table.current.dxvk.version),
+                "link".to_string(),
+                "readme.txt".to_string(),
+                "wine-staging-11.1".to_string(),
+                table.current.id.clone(),
+            ]
+        );
+        assert!(outside.is_dir(), "a link's target is never opened");
+    }
+
+    #[test]
+    fn a_temp_directory_survives_while_an_install_holds_one_and_prune_without_a_root_does_nothing()
+    {
+        let home = FakeHome::new("fallback-prune-");
+        let ctx = ctx(&home);
+        let env = Env::from_ctx(&ctx);
+        // No steam-engines directory: nothing happens and nothing is created.
+        prune_at(&env, &table());
+        assert!(!env.root.exists());
+
+        fs::create_dir_all(env.root.join(".tmp-dxvk-abc123/dl")).unwrap();
+        {
+            let _install = env.flights.install_guard();
+            prune_at(&env, &table());
+            assert_eq!(names(&env), vec![".tmp-dxvk-abc123"]);
+        }
+        prune_at(&env, &table());
+        assert!(names(&env).is_empty());
+    }
+}
