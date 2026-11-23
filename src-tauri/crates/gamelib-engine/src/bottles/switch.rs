@@ -13,8 +13,12 @@
 //! (`crossover -> pinned` is the golden tracer; `pinned -> wine-manager` and the rest of the
 //! non-CrossOver targets share the path). **Not yet ported (87-41):** the restore of CrossOver's
 //! graphics stack when the target is CrossOver and DXVK is present, which answers
-//! [`PrepareReason::RestorePending`] before anything is stopped or written, and the per-bottle
-//! serialisation of concurrent switches (`inFlightSwitches`).
+//! [`PrepareReason::RestorePending`] before anything is stopped or written.
+//!
+//! **One switch per bottle at a time (87-41, WR-02, T-87-39):** [`InFlightSwitches`] is the TS
+//! `inFlightSwitches` map. Every call takes its bottle's lock for its whole run, so a call that
+//! arrives while another is running waits (and logs that it does), then reads the marker the first
+//! one wrote and never repeats a step. Calls on different bottles do not wait for each other.
 //!
 //! Every TS callback is a value here (research Pattern 2): the monitor phase, the title's own bottle,
 //! the stored CrossOver settings and the global settings the fallback settings are built from arrive in
@@ -22,13 +26,15 @@
 //! `ctx.dxvk` installs DXVK, `ctx.crossover_bin_dir` finds CrossOver, `ctx.ledger` lists the running
 //! games). No TS caller is switched here (D-06): 87-42 switches every caller.
 
+use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
 use gamelib_store::version_gate::GateState;
 use serde::Deserialize;
 use serde_json::{json, Value};
+use tokio::sync::{Mutex as AsyncMutex, OwnedMutexGuard};
 
 use super::lifecycle::{dirname, kill_bottle_wineserver, KILL_TIMEOUT_MS};
 use super::marker::{
@@ -342,6 +348,90 @@ async fn kill_previous(ctx: &EngineCtx, bottle_name: &str, prev: &Marker) {
     .await;
 }
 
+/// The TS `inFlightSwitches`: one async lock per bottle name, so concurrent switches of one bottle run
+/// one after another in the order they arrived (a tokio mutex is fair) and switches of different
+/// bottles run together. In memory only; the map holds an entry only while a call is running or
+/// waiting for its bottle.
+#[derive(Default)]
+pub struct InFlightSwitches {
+    locks: StdMutex<HashMap<String, Arc<AsyncMutex<()>>>>,
+}
+
+impl InFlightSwitches {
+    pub fn new() -> InFlightSwitches {
+        InFlightSwitches::default()
+    }
+
+    fn locks(&self) -> std::sync::MutexGuard<'_, HashMap<String, Arc<AsyncMutex<()>>>> {
+        self.locks
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// How many bottles have a switch running or waiting.
+    pub fn len(&self) -> usize {
+        self.locks().len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Takes the bottle's turn. `on_wait` runs once, before waiting, when another switch holds it.
+    async fn enter(&self, bottle_name: &str, on_wait: impl FnOnce()) -> SwitchTurn<'_> {
+        let lock = self
+            .locks()
+            .entry(bottle_name.to_string())
+            .or_default()
+            .clone();
+        let guard = match lock.clone().try_lock_owned() {
+            Ok(guard) => guard,
+            Err(_) => {
+                on_wait();
+                lock.clone().lock_owned().await
+            }
+        };
+        let turn = SwitchTurn {
+            owner: self,
+            name: bottle_name.to_string(),
+            lock,
+            guard: Some(guard),
+        };
+        // The TS entry is registered before its body's first await (the version gate's question), so
+        // a switch started in the same tick sees it and queues. The gate is answered in process here
+        // and nothing else in the body waits that early, so this is that one turn.
+        tokio::task::yield_now().await;
+        turn
+    }
+
+    /// Drops the bottle's entry once nobody else holds or waits on it.
+    fn release(&self, bottle_name: &str, lock: &Arc<AsyncMutex<()>>) {
+        let mut locks = self.locks();
+        // The map's own handle and the finished call's are the only two left.
+        if Arc::strong_count(lock) == 2
+            && locks.get(bottle_name).is_some_and(|l| Arc::ptr_eq(l, lock))
+        {
+            locks.remove(bottle_name);
+        }
+    }
+}
+
+/// A switch's hold on its bottle: released, and the entry tidied, however the call ends (an answer, a
+/// panic or the future being dropped), so a switch that dies never blocks the chain (WR-02).
+struct SwitchTurn<'a> {
+    owner: &'a InFlightSwitches,
+    name: String,
+    lock: Arc<AsyncMutex<()>>,
+    guard: Option<OwnedMutexGuard<()>>,
+}
+
+impl Drop for SwitchTurn<'_> {
+    fn drop(&mut self) {
+        self.guard.take();
+        self.owner.release(&self.name, &self.lock);
+    }
+}
+
 /// `prepareBottleForEngine` over the in-process version gate.
 pub async fn prepare_bottle_for_engine(ctx: &EngineCtx, args: &PrepareArgs) -> PrepareResult {
     prepare_bottle_for_engine_with(ctx, &process_gate, args).await
@@ -354,6 +444,21 @@ pub async fn prepare_bottle_for_engine_with(
     gate: SyncGate<'_>,
     args: &PrepareArgs,
 ) -> PrepareResult {
+    // WR-02: one switch per bottle at a time. The legacy shared bottle is already refused before any
+    // stop (WR-06); this covers the remaining launch-versus-install interleave on a per-game bottle.
+    // The waiting call re-reads the marker in the body, so it never repeats a step.
+    let turn = ctx
+        .in_flight
+        .enter(&args.bottle_name, || {
+            info(
+                ctx,
+                &format!(
+                    "engine switch for \"{}\" waits for an in-flight switch (WR-02)",
+                    args.bottle_name
+                ),
+            );
+        })
+        .await;
     let result = prepare_body(ctx, gate, args).await;
     if result.is_ok() && args.register_selection {
         if let Some(selection) = &result.selection {
@@ -361,6 +466,7 @@ pub async fn prepare_bottle_for_engine_with(
                 .set_engine_selection(ctx.log.as_deref(), &args.key, selection.clone());
         }
     }
+    drop(turn);
     result
 }
 
@@ -769,6 +875,63 @@ mod tests {
                 "{name:?}"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn a_second_turn_on_one_bottle_waits_and_a_turn_on_another_does_not() {
+        let in_flight = InFlightSwitches::new();
+        let first = in_flight.enter("a", || panic!("nothing holds a")).await;
+        // Another bottle's turn is not held up by the first.
+        let other = in_flight.enter("b", || panic!("nothing holds b")).await;
+        assert_eq!(in_flight.len(), 2);
+        let waited = std::sync::atomic::AtomicBool::new(false);
+        let mut second = Box::pin(in_flight.enter("a", || {
+            waited.store(true, std::sync::atomic::Ordering::SeqCst);
+        }));
+        assert!(
+            futures_util::poll!(second.as_mut()).is_pending(),
+            "the second turn on a waits for the first"
+        );
+        assert!(waited.load(std::sync::atomic::Ordering::SeqCst));
+        drop(first);
+        let second = second.await;
+        drop(other);
+        assert_eq!(in_flight.len(), 1, "b is tidied, a is still held");
+        drop(second);
+        assert!(in_flight.is_empty(), "no entry outlives its last turn");
+    }
+
+    #[tokio::test]
+    async fn a_switch_that_panics_does_not_block_the_chain() {
+        let in_flight = Arc::new(InFlightSwitches::new());
+        let held = in_flight.clone();
+        let crashed = tokio::spawn(async move {
+            let _turn = held.enter("a", || ()).await;
+            panic!("the installer blew up");
+        })
+        .await;
+        assert!(crashed.is_err());
+        // The next caller takes its turn at once and the map is empty again afterwards.
+        let turn = in_flight
+            .enter("a", || panic!("a dead switch still holds the bottle"))
+            .await;
+        drop(turn);
+        assert!(in_flight.is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_dropped_waiter_leaves_the_bottle_to_the_next_caller() {
+        let in_flight = InFlightSwitches::new();
+        let first = in_flight.enter("a", || ()).await;
+        let mut waiter = Box::pin(in_flight.enter("a", || ()));
+        assert!(futures_util::poll!(waiter.as_mut()).is_pending());
+        drop(waiter);
+        drop(first);
+        let again = in_flight
+            .enter("a", || panic!("a dropped waiter still holds the bottle"))
+            .await;
+        drop(again);
+        assert!(in_flight.is_empty());
     }
 
     #[test]

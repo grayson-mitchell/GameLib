@@ -48,17 +48,12 @@ use common::{check_floor, first_difference, read_json, sha256_hex, Profile, BOTT
 const CASE_FLOOR: usize = 73;
 
 /// The cases this build replays, at least (the tracer and the non-restore branches).
-const REPLAYED_FLOOR: usize = 50;
+const REPLAYED_FLOOR: usize = 55;
 
-/// The cases 87-41 replays: the concurrent interleaves (the per-bottle serialisation) and the
-/// switches that restore CrossOver's graphics stack.
-const LATER: [&str; 23] = [
-    "concurrent-different-bottles-independent-wr02",
-    "concurrent-first-rejects-wr02",
+/// The cases 87-41 has still to replay: the switches that restore CrossOver's graphics stack (the
+/// concurrent WR-02 interleaves replay since the per-bottle serialisation).
+const LATER: [&str; 18] = [
     "concurrent-opposite-targets-wr02",
-    "concurrent-same-target-wr02",
-    "concurrent-second-refused-busy-wr02",
-    "concurrent-three-same-target-wr02",
     "crossover-contradicted-to-crossover",
     "dxvk-failed-to-crossover-restores",
     "marker-legacy-noversion-to-crossover",
@@ -154,6 +149,16 @@ fn an_empty_case_list_fails_the_manifest_guard() {
 
 type Events = Arc<Mutex<Vec<Value>>>;
 
+tokio::task_local! {
+    /// Which call of the case is running: the scripted seams stamp their events with it, as the
+    /// oracle's did.
+    static CALL: usize;
+}
+
+fn current_call() -> usize {
+    CALL.try_with(|call| *call).unwrap_or(0)
+}
+
 fn push(events: &Events, event: Value) {
     events.lock().unwrap().push(event);
 }
@@ -164,7 +169,6 @@ fn push(events: &Events, event: Value) {
 struct TracedRunner {
     inner: ScriptedSpecRunner,
     events: Events,
-    call: Arc<AtomicUsize>,
     limits: Mutex<Vec<Value>>,
 }
 
@@ -177,7 +181,7 @@ impl SpecRunner for TracedRunner {
             "unbounded": spec.timeout.is_none(),
             "signal": spec.cancel.is_some(),
         }));
-        let call = self.call.load(Ordering::SeqCst);
+        let call = current_call();
         let prefix = spec
             .env
             .iter()
@@ -202,10 +206,14 @@ impl SpecRunner for TracedRunner {
         let events = self.events.clone();
         Box::pin(async move {
             let out = run.await;
+            // Each await of the TS ran one turn of the event loop; a yield either side of the answer
+            // keeps two calls driven together in the same lockstep.
+            tokio::task::yield_now().await;
             push(
                 &events,
                 json!({"ev": "kill-returned", "call": call, "returned": out.code.is_some()}),
             );
+            tokio::task::yield_now().await;
             out
         })
     }
@@ -219,13 +227,12 @@ struct ScriptedInstaller {
     restore: String,
     backup_throws: AtomicUsize,
     events: Events,
-    call: Arc<AtomicUsize>,
     requests: Mutex<Vec<Value>>,
 }
 
 impl DxvkInstaller for ScriptedInstaller {
     fn install_remove(&self, req: DxvkRequest) -> BoxFuture<bool> {
-        let call = self.call.load(Ordering::SeqCst);
+        let call = current_call();
         self.requests.lock().unwrap().push(json!({
             "call": call,
             "tool": req.tool.as_str(),
@@ -242,40 +249,46 @@ impl DxvkInstaller for ScriptedInstaller {
             .unwrap_or_default()
             .to_string();
         let file = Path::new(&prefix).join("current_dxvk-macOS");
-        let answer = match req.action {
-            DxvkAction::Backup => {
-                let how = self.backup.as_str();
-                if how == "throws" {
-                    panic!("DXVK installer blew up");
-                }
-                if how == "throws-once" && self.backup_throws.fetch_add(1, Ordering::SeqCst) == 0 {
-                    panic!("DXVK installer blew up");
-                }
-                if how == "fails" {
-                    false
-                } else {
-                    if how == "ok" || how == "throws-once" {
-                        std::fs::write(&file, format!("{PIN_DXVK_VERSION}\n")).unwrap();
-                    }
-                    true
-                }
-            }
-            DxvkAction::Restore => {
-                let how = self.restore.as_str();
-                if how == "throws" {
-                    panic!("DXVK restore blew up");
-                }
-                if how == "fails" {
-                    false
-                } else {
-                    if how == "ok" {
-                        let _ = std::fs::remove_file(&file);
-                    }
-                    true
-                }
-            }
+        let action = req.action;
+        let how = match action {
+            DxvkAction::Backup => self.backup.clone(),
+            DxvkAction::Restore => self.restore.clone(),
         };
-        Box::pin(async move { answer })
+        let first_throw = action == DxvkAction::Backup
+            && how == "throws-once"
+            && self.backup_throws.fetch_add(1, Ordering::SeqCst) == 0;
+        // The oracle's installer waited a turn before it touched the bottle.
+        Box::pin(async move {
+            tokio::task::yield_now().await;
+            match action {
+                DxvkAction::Backup => {
+                    if how == "throws" || first_throw {
+                        panic!("DXVK installer blew up");
+                    }
+                    if how == "fails" {
+                        false
+                    } else {
+                        if how == "ok" || how == "throws-once" {
+                            std::fs::write(&file, format!("{PIN_DXVK_VERSION}\n")).unwrap();
+                        }
+                        true
+                    }
+                }
+                DxvkAction::Restore => {
+                    if how == "throws" {
+                        panic!("DXVK restore blew up");
+                    }
+                    if how == "fails" {
+                        false
+                    } else {
+                        if how == "ok" {
+                            let _ = std::fs::remove_file(&file);
+                        }
+                        true
+                    }
+                }
+            }
+        })
     }
 }
 
@@ -434,7 +447,6 @@ fn run_case(case: &Value) -> Replayed {
     profile.seed(&case["seed"]);
     let args = &case["args"];
     let events: Events = Arc::new(Mutex::new(Vec::new()));
-    let current_call = Arc::new(AtomicUsize::new(0));
     let kill_how = args["kill"].as_str().unwrap_or("ok");
     let base: Vec<(String, String)> = profile
         .home
@@ -454,7 +466,6 @@ fn run_case(case: &Value) -> Replayed {
     let runner = Arc::new(TracedRunner {
         inner: scripted,
         events: events.clone(),
-        call: current_call.clone(),
         limits: Mutex::new(Vec::new()),
     });
     let installer = Arc::new(ScriptedInstaller {
@@ -468,7 +479,6 @@ fn run_case(case: &Value) -> Replayed {
             .to_string(),
         backup_throws: AtomicUsize::new(0),
         events: events.clone(),
-        call: current_call.clone(),
         requests: Mutex::new(Vec::new()),
     });
     let log = Arc::new(RecordingLog::new());
@@ -477,7 +487,11 @@ fn run_case(case: &Value) -> Replayed {
         .ctx_with(log.clone(), Some(runner.clone()))
         .with_dxvk(installer.clone())
         .with_crossover_bin_dir(Arc::new(move || {
-            Box::pin(async move { (!bin_dir_absent).then(|| CX_BIN_DIR.to_string()) })
+            Box::pin(async move {
+                // `Promise.resolve`: the answer arrives a turn later.
+                tokio::task::yield_now().await;
+                (!bin_dir_absent).then(|| CX_BIN_DIR.to_string())
+            })
         }));
     for running in args["ledger"].as_array().into_iter().flatten() {
         ctx.ledger.mark_game_running(
@@ -489,70 +503,94 @@ fn run_case(case: &Value) -> Replayed {
     let before = profile.snapshot();
     let markers_before = profile.marker_bytes();
     let gate = gate_of(case);
-    let mut outcomes = Vec::new();
-    let mut hit_restore = false;
-    for (index, call) in args["calls"].as_array().unwrap().iter().enumerate() {
-        current_call.store(index, Ordering::SeqCst);
-        let bottle = call["bottle"].as_str().unwrap();
-        push(
-            &events,
-            json!({"ev": "start", "call": index, "bottle": bottle, "next": call["next"]}),
-        );
-        let mut prepare = PrepareArgs::new(
-            call["key"].as_str().unwrap_or("gog:1207658924"),
-            bottle,
-            selection_for(&profile, call),
-        );
-        prepare.monitor_phase = match args["monitor"].as_str() {
-            Some("starting") => Some(MonitorPhase::Starting),
-            Some("running") => Some(MonitorPhase::Running),
-            _ => None,
-        };
-        prepare.own_bottle_name = match args["ownBottle"].as_str() {
-            None => OwnBottle::NoNotion,
-            Some("self") => OwnBottle::Named(bottle.to_string()),
-            Some(other) => OwnBottle::Named(other.to_string()),
-        };
-        prepare.crossover_healthy = call["crossoverHealthy"] != false;
-        prepare.fallback_settings = global_game_settings();
-        let switching = events.clone();
-        prepare.on_switching = Some(Arc::new(move || {
-            push(&switching, json!({"ev": "switching", "call": index}));
-        }));
-        let run = prepare_bottle_for_engine_with(&ctx, &*gate, &prepare);
-        let outcome = block_on(AssertUnwindSafe(run).catch_unwind());
-        match outcome {
-            Ok(result) => {
-                if matches!(
-                    result.outcome,
-                    PrepareOutcome::Refused {
-                        reason: PrepareReason::RestorePending,
-                        ..
-                    }
-                ) {
-                    hit_restore = true;
+    // One call as the TS `runCall` ran it: its `start`, the switch (a panic is the TS throw) and its
+    // `result` or `threw`.
+    let run_call = |index: usize, call: &Value| {
+        let (ctx, gate, events, profile) = (&ctx, &*gate, events.clone(), profile.clone());
+        let call = call.clone();
+        async move {
+            let bottle = call["bottle"].as_str().unwrap().to_string();
+            let mut prepare = PrepareArgs::new(
+                call["key"].as_str().unwrap_or("gog:1207658924"),
+                &bottle,
+                selection_for(&profile, &call),
+            );
+            prepare.monitor_phase = match args["monitor"].as_str() {
+                Some("starting") => Some(MonitorPhase::Starting),
+                Some("running") => Some(MonitorPhase::Running),
+                _ => None,
+            };
+            prepare.own_bottle_name = match args["ownBottle"].as_str() {
+                None => OwnBottle::NoNotion,
+                Some("self") => OwnBottle::Named(bottle.clone()),
+                Some(other) => OwnBottle::Named(other.to_string()),
+            };
+            prepare.crossover_healthy = call["crossoverHealthy"] != false;
+            prepare.fallback_settings = global_game_settings();
+            let switching = events.clone();
+            prepare.on_switching = Some(Arc::new(move || {
+                push(&switching, json!({"ev": "switching", "call": index}));
+            }));
+            let run = CALL.scope(index, prepare_bottle_for_engine_with(ctx, gate, &prepare));
+            match AssertUnwindSafe(run).catch_unwind().await {
+                Ok(result) => {
+                    let restore_pending = matches!(
+                        result.outcome,
+                        PrepareOutcome::Refused {
+                            reason: PrepareReason::RestorePending,
+                            ..
+                        }
+                    );
+                    let value = ts_result(&result);
+                    push(
+                        &events,
+                        json!({"ev": "result", "call": index, "result": value}),
+                    );
+                    (json!({"call": index, "result": value}), restore_pending)
                 }
-                let value = ts_result(&result);
-                push(
-                    &events,
-                    json!({"ev": "result", "call": index, "result": value}),
-                );
-                outcomes.push(json!({"call": index, "result": value}));
-            }
-            Err(payload) => {
-                let message = payload
-                    .downcast_ref::<&str>()
-                    .map(|s| s.to_string())
-                    .or_else(|| payload.downcast_ref::<String>().cloned())
-                    .unwrap_or_default();
-                push(
-                    &events,
-                    json!({"ev": "threw", "call": index, "message": message}),
-                );
-                outcomes.push(json!({"call": index, "threw": message}));
+                Err(payload) => {
+                    let message = payload
+                        .downcast_ref::<&str>()
+                        .map(|s| s.to_string())
+                        .or_else(|| payload.downcast_ref::<String>().cloned())
+                        .unwrap_or_default();
+                    push(
+                        &events,
+                        json!({"ev": "threw", "call": index, "message": message}),
+                    );
+                    (json!({"call": index, "threw": message}), false)
+                }
             }
         }
-    }
+    };
+    let calls = args["calls"].as_array().unwrap();
+    let start = |index: usize, call: &Value| {
+        push(
+            &events,
+            json!({"ev": "start", "call": index, "bottle": call["bottle"], "next": call["next"]}),
+        );
+    };
+    let ran: Vec<(Value, bool)> = if args["mode"] == "concurrent" {
+        // `Promise.all`: every call starts, then they are driven together on one thread, in order.
+        for (index, call) in calls.iter().enumerate() {
+            start(index, call);
+        }
+        block_on(futures_util::future::join_all(
+            calls
+                .iter()
+                .enumerate()
+                .map(|(index, call)| run_call(index, call)),
+        ))
+    } else {
+        let mut ran = Vec::new();
+        for (index, call) in calls.iter().enumerate() {
+            start(index, call);
+            ran.push(block_on(run_call(index, call)));
+        }
+        ran
+    };
+    let hit_restore = ran.iter().any(|(_, pending)| *pending);
+    let outcomes: Vec<Value> = ran.into_iter().map(|(outcome, _)| outcome).collect();
     let after = profile.snapshot();
     let spawns = Value::Array(
         runner
@@ -803,6 +841,66 @@ fn the_crossover_to_pin_tracer_replays() {
     )));
 }
 
+/// The WR-02 tracer: two switches of one bottle started together serialise. The second waits (and says
+/// so), re-reads the marker the first wrote and changes nothing; one stop, one installer call, one
+/// marker write.
+#[test]
+fn the_wr02_interleave_tracer_replays() {
+    let all = cases();
+    let case = all
+        .iter()
+        .find(|c| c["id"] == "concurrent-same-target-wr02")
+        .expect("the WR-02 case is in the list");
+    let actual = run_case(case);
+    let problems = compare(case, &actual);
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+    let order: Vec<(&str, u64)> = actual
+        .timeline
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| (e["ev"].as_str().unwrap(), e["call"].as_u64().unwrap()))
+        .collect();
+    assert_eq!(
+        order,
+        [
+            ("start", 0),
+            ("start", 1),
+            ("switching", 0),
+            ("kill", 0),
+            ("kill-returned", 0),
+            ("installer", 0),
+            ("result", 0),
+            ("result", 1),
+        ],
+        "the second call does nothing until the first has finished"
+    );
+    assert_eq!(
+        actual.outcomes,
+        json!([
+            {"call": 0, "result": {"ok": true, "changed": true}},
+            {"call": 1, "result": {"ok": true, "changed": false}},
+        ])
+    );
+    assert_eq!(
+        actual
+            .logs
+            .iter()
+            .filter(|l| l.contains("waits for an in-flight switch (WR-02)"))
+            .count(),
+        1
+    );
+    // Calls on different bottles do not wait for each other.
+    let apart = all
+        .iter()
+        .find(|c| c["id"] == "concurrent-different-bottles-independent-wr02")
+        .unwrap();
+    assert!(!run_case(apart)
+        .logs
+        .iter()
+        .any(|l| l.contains("waits for an in-flight switch")));
+}
+
 #[test]
 fn every_switch_golden_this_build_ports_replays() {
     let mut replayed = 0;
@@ -826,8 +924,7 @@ fn every_switch_golden_this_build_ports_replays() {
     check_floor("replayed switch cases", replayed, REPLAYED_FLOOR).unwrap();
 }
 
-/// A case in `LATER` is one this build cannot replay: a concurrent interleave, or a switch that needs
-/// the restore. When 87-41 ports one the case moves out of the list; until then the list is exact.
+/// A case in `LATER` is one this build cannot replay: a switch that needs the restore. When 87-41 ports one the case moves out of the list; until then the list is exact.
 #[test]
 fn the_later_list_names_exactly_the_cases_this_build_cannot_replay() {
     let all = cases();
@@ -837,9 +934,6 @@ fn the_later_list_names_exactly_the_cases_this_build_cannot_replay() {
     let mut stale = Vec::new();
     for case in all.iter().filter(|c| is_later(c)) {
         let id = case["id"].as_str().unwrap();
-        if case["args"]["mode"] == "concurrent" {
-            continue;
-        }
         if !run_case(case).hit_restore {
             stale.push(id);
         }
@@ -848,11 +942,6 @@ fn the_later_list_names_exactly_the_cases_this_build_cannot_replay() {
         stale.is_empty(),
         "no longer need the restore, so take them out of LATER and replay them: {stale:?}"
     );
-    let sequential_later = all
-        .iter()
-        .filter(|c| is_later(c) && c["args"]["mode"] != "concurrent")
-        .count();
-    assert_eq!(sequential_later, LATER.len() - 6);
 }
 
 #[test]

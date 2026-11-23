@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use crate::bottles::ledger::Ledger;
 use crate::bottles::per_game::PerGameFlights;
 use crate::bottles::registry::Registry;
+use crate::bottles::switch::InFlightSwitches;
 use crate::dxvk::{DxvkInstaller, NoDxvk};
 use crate::fetch::{Fetch, ReqwestFetch};
 use crate::sinks::{EngineLog, EngineUi, NullEmitter};
@@ -120,6 +121,9 @@ pub struct EngineCtx {
     /// The per-game bottle creations in flight, by bottle name (the single flight of `ensureGameBottle`).
     /// In memory only: empty at construction.
     pub flights: PerGameFlights,
+    /// The bottle switches running or waiting, by bottle name (the TS `inFlightSwitches`, WR-02): one
+    /// switch per bottle at a time. In memory only: empty at construction.
+    pub in_flight: InFlightSwitches,
 }
 
 impl EngineCtx {
@@ -146,6 +150,7 @@ impl EngineCtx {
             ledger: Ledger::new(),
             registry: Registry::new(),
             flights: PerGameFlights::new(),
+            in_flight: InFlightSwitches::new(),
             host,
             clock,
             platform,
