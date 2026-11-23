@@ -1086,3 +1086,44 @@ async fn a_refused_attempt_raises_the_window_and_shows_a_dialog_every_time() {
         assert_eq!(ops.iter().filter(|o| *o == op).count(), want, "{op}");
     }
 }
+
+/// The production switch dep (`CtxStepDeps::prepare`): a restore to CrossOver whose DXVK source is the pinned
+/// engine, which is not installed, answers `dxvk-failed` before it stops or writes anything. The dep asks for
+/// the pin and asks the switch once more (the TS `prepareBottle`'s second half); with the context offline
+/// the download is refused, so the second answer is the same refusal and the bottle is untouched.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_restore_without_a_dxvk_source_asks_for_the_pin_and_asks_the_switch_again() {
+    let profile = Profile::new();
+    profile.build_bottle("fx-pinned-current");
+    let log = Arc::new(RecordingLog::new());
+    let emitter = Arc::new(gamelib_engine::testing::RecordingEmitter::new());
+    let mut ctx = profile.ctx(log.clone());
+    ctx.emitter = emitter.clone();
+    let bin_dir = profile.root().join(BIN_REL).to_string_lossy().into_owned();
+    let next = EngineSelection::Crossover {
+        reason: "cx-healthy".to_string(),
+        crossover_build: Some(BUILD.to_string()),
+        bin_dir,
+    };
+    let marker_before = profile.marker_bytes();
+    let args = PrepareArgs::new("legendary:Quail", "fx-pinned-current", next);
+    let game = GameRef {
+        runner: "legendary",
+        app_name: "Quail",
+    };
+    let result = CtxStepDeps.prepare(&ctx, args, &game).await;
+    match &result.outcome {
+        PrepareOutcome::Refused { reason, detail } => {
+            assert_eq!(*reason, PrepareReason::DxvkFailed);
+            assert!(detail.starts_with("no DXVK source to restore"), "{detail}");
+        }
+        other => panic!("expected a refusal, got {other:?}"),
+    }
+    assert_eq!(profile.marker_bytes(), marker_before, "nothing was written");
+    // The refused download of the pin closes its status once (`done`); that push is the proof the dep asked.
+    let pushes = emitter.pushed();
+    assert_eq!(pushes.len(), 1, "{pushes:?}");
+    assert_eq!(pushes[0].0, "gameStatusUpdate");
+    assert_eq!(pushes[0].1[0]["status"], "done");
+    assert_eq!(pushes[0].1[0]["appName"], "Quail");
+}
