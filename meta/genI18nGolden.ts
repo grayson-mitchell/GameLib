@@ -28,6 +28,8 @@ export interface GoldenRow {
   key: string
   default: string
   params: Record<string, string | number>
+  /** Present only when `false`: the row is one the TS renders with `escapeValue: false`. */
+  escapeValue?: false
   rendered: string
 }
 
@@ -35,6 +37,8 @@ interface Case {
   key: string
   default: string
   params: Record<string, string | number>
+  /** `false` where the TS passes `interpolation: { escapeValue: false }` (a dialog message). */
+  escapeValue?: boolean
 }
 
 // cwd, not __dirname: the bundle runs from a private temp dir (meta/runTs.cjs). Run from the repo root.
@@ -121,6 +125,176 @@ const EDGE_CASES: Case[] = [
   }
 ]
 
+/** A name that carries every character `escapeValue` touches, to prove the escaping per row. */
+const HOSTILE = `Tom & Jerry's <b>"Cheese"</b> / Co`
+
+/**
+ * The Humble expiry digest and the shortcut and Steam-shortcut strings the Rust shell renders
+ * (94-09, Pitfall 8 and 11). The defaults and params are the ones the TS call sites pass
+ * (`humble/expirationAlerts.ts`, `sidecar/shortcutsFlowRegistration.ts`,
+ * `shortcuts/nonesteamgame/nonesteamgame.ts`). `showErrorInFrontend`'s dialog message is the one
+ * the TS renders unescaped, so its row carries `escapeValue: false` and Rust replays it through
+ * `Catalog::t_unescaped`; every other row goes through `Catalog::t`.
+ *
+ * `count` rows: the sidecar's `en` catalog holds `expiringBodyPlural`, `_one` and `_other` with the
+ * same text, which is why Rust's base-key lookup agrees with i18next's plural resolution here (the
+ * crate does not port plural suffixes; this golden fails if the three ever diverge).
+ */
+const HUMBLE_SHORTCUT_CASES: Case[] = [
+  // The expiry digest (count 1 is the single copy, the plural copy runs for 2 and more).
+  {
+    key: 'humble.notification.expiringTitleSingle',
+    default: 'Humble key expiring',
+    params: {}
+  },
+  {
+    key: 'humble.notification.expiringTitlePlural',
+    default: 'Humble keys expiring',
+    params: {}
+  },
+  {
+    key: 'humble.notification.expiringBodySingle',
+    default: "{{title}}'s Humble key now expires on {{date}}",
+    params: { title: 'Fake Game One', date: '1/2/2027' }
+  },
+  {
+    key: 'humble.notification.expiringBodySingle',
+    default: "{{title}}'s Humble key now expires on {{date}}",
+    params: { title: HOSTILE, date: '12/31/2027' }
+  },
+  {
+    key: 'humble.notification.expiringBodyPlural',
+    default: '{{count}} Humble keys gained expiration dates',
+    params: { count: 1 }
+  },
+  {
+    key: 'humble.notification.expiringBodyPlural',
+    default: '{{count}} Humble keys gained expiration dates',
+    params: { count: 2 }
+  },
+  {
+    key: 'humble.notification.expiringBodyPlural',
+    default: '{{count}} Humble keys gained expiration dates',
+    params: { count: 5 }
+  },
+  // The shortcut toasts (`box.shortcuts.*`, `shortcutsFlowRegistration.ts`).
+  { key: 'box.shortcuts.title', default: 'Shortcuts', params: {} },
+  {
+    key: 'box.shortcuts.error',
+    default: 'Shortcuts could not be created. See the log for details.',
+    params: {}
+  },
+  {
+    key: 'box.shortcuts.error-remove',
+    default: 'Shortcuts could not be removed. See the log for details.',
+    params: {}
+  },
+  {
+    key: 'box.shortcuts.message',
+    default: 'Shortcuts were created on Desktop and Start Menu',
+    params: {}
+  },
+  {
+    key: 'box.shortcuts.message-mac',
+    default: 'Shortcuts were created on the Applications folder',
+    params: {}
+  },
+  {
+    key: 'gamelib:box.shortcuts.messageMacDesktop',
+    default:
+      'Shortcuts were created in the Applications folder and on the Desktop',
+    params: {}
+  },
+  {
+    key: 'box.shortcuts.message-remove',
+    default: 'Shortcuts were removed from Desktop and Start Menu',
+    params: {}
+  },
+  {
+    key: 'box.shortcuts.message-remove-mac',
+    default: 'Shortcuts were removed from the Applications folder',
+    params: {}
+  },
+  {
+    key: 'gamelib:box.shortcuts.messageRemoveMacDesktop',
+    default:
+      'Shortcuts were removed from the Applications folder and the Desktop',
+    params: {}
+  },
+  // The Steam shortcut notifications (`nonesteamgame.ts`), escaped like the TS renders them.
+  {
+    key: 'notify.finished.add.steam.title',
+    default: 'Added to Steam',
+    params: {}
+  },
+  {
+    key: 'notify.finished.remove.steam.title',
+    default: 'Removed from Steam',
+    params: {}
+  },
+  {
+    key: 'notify.finished.add.steam.success',
+    default:
+      '{{game}} was successfully added to Steam. A restart of Steam is required for changes to take effect.',
+    params: { game: 'Fake Game One' }
+  },
+  {
+    key: 'notify.finished.add.steam.success',
+    default:
+      '{{game}} was successfully added to Steam. A restart of Steam is required for changes to take effect.',
+    params: { game: HOSTILE }
+  },
+  {
+    key: 'notify.finished.add.steam.corrupt',
+    default:
+      '{{game}} could not be added to all found Steam users. See logs for more info. A restart of Steam is required for changes to take effect.',
+    params: { game: HOSTILE }
+  },
+  {
+    key: 'notify.finished.remove.steam.success',
+    default:
+      '{{game}} was successfully removed from Steam. A restart of Steam is required for changes to take effect.',
+    params: { game: HOSTILE }
+  },
+  {
+    key: 'notify.finished.remove.steam.corrupt',
+    default:
+      '{{game}} could not be removed from all found Steam users. See logs for more info. A restart of Steam is required for changes to take effect.',
+    params: { game: HOSTILE }
+  },
+  // The add-to-Steam error dialog: the title is escaped, the message is rendered unescaped.
+  {
+    key: 'box.error.add.steam.title',
+    default: 'Error Adding Game to Steam',
+    params: {}
+  },
+  {
+    key: 'box.error.add.steam.body',
+    default: 'Adding {{game}} to Steam failed with:{{newLine}} {{error}}',
+    params: { game: 'Fake Game One', newLine: '\n', error: 'plain failure' }
+  },
+  {
+    key: 'box.error.add.steam.body',
+    default: 'Adding {{game}} to Steam failed with:{{newLine}} {{error}}',
+    params: {
+      game: HOSTILE,
+      newLine: '\n',
+      error: `EACCES: <path> "x" & 'y' /z`
+    },
+    escapeValue: false
+  },
+  // The same message escaped, to show the flag changes the render and nothing else does.
+  {
+    key: 'box.error.add.steam.body',
+    default: 'Adding {{game}} to Steam failed with:{{newLine}} {{error}}',
+    params: {
+      game: HOSTILE,
+      newLine: '\n',
+      error: `EACCES: <path> "x" & 'y' /z`
+    }
+  }
+]
+
 /** Language settings beyond the shipped set: not shipped, hyphen variant, empty. */
 const EXTRA_LANGUAGES = ['xx', 'nb-NO', 'pt-BR', 'zh-Hans', '']
 
@@ -149,13 +323,23 @@ export async function generate(): Promise<GoldenRow[]> {
   const languages = [...supportedLanguages, ...EXTRA_LANGUAGES]
   for (const language of languages) {
     const i18n = await instanceFor(language)
-    for (const c of [...POLL_CASES, ...EDGE_CASES]) {
+    for (const c of [...POLL_CASES, ...EDGE_CASES, ...HUMBLE_SHORTCUT_CASES]) {
+      const unescaped = c.escapeValue === false
       rows.push({
         language,
         key: c.key,
         default: c.default,
         params: c.params,
-        rendered: i18n.t(c.key, c.default, c.params)
+        ...(unescaped ? { escapeValue: false as const } : {}),
+        // An unescaped row is rendered the way its TS call site does: an options object carrying
+        // `interpolation: { escapeValue: false }`.
+        rendered: unescaped
+          ? i18n.t(c.key, {
+              defaultValue: c.default,
+              ...c.params,
+              interpolation: { escapeValue: false }
+            })
+          : i18n.t(c.key, c.default, c.params)
       })
     }
   }
@@ -163,7 +347,8 @@ export async function generate(): Promise<GoldenRow[]> {
     (a, b) =>
       a.language.localeCompare(b.language) ||
       a.key.localeCompare(b.key) ||
-      JSON.stringify(a.params).localeCompare(JSON.stringify(b.params))
+      JSON.stringify(a.params).localeCompare(JSON.stringify(b.params)) ||
+      Number(a.escapeValue === false) - Number(b.escapeValue === false)
   )
 }
 
