@@ -70,6 +70,16 @@ function testsEngineAndWineCrates(text: string): boolean {
   )
 }
 
+// Phase 94 (SVC-04, SVC-05): the Humble Bundle and shortcut services are two Tauri-free library
+// crates and run in the multi-crate step.
+function testsHumbleAndShortcutsCrates(text: string): boolean {
+  const line = multiCrateRunLine(text)
+  return (
+    /(^|\s)-p gamelib-humble(\s|$)/.test(line) &&
+    /(^|\s)-p gamelib-shortcuts(\s|$)/.test(line)
+  )
+}
+
 function hasSafetyCrateStep(text: string): boolean {
   const block = steps(text).find((s) => s.includes(SAFETY_TEST_RUN))
   if (!block) return false
@@ -163,6 +173,10 @@ describe('rust-test.yml covers the gamelib-scan crates', () => {
     expect(testsEngineAndWineCrates(workflow)).toBe(true)
   })
 
+  test('the multi-crate step tests gamelib-humble and gamelib-shortcuts (Phase 94)', () => {
+    expect(testsHumbleAndShortcutsCrates(workflow)).toBe(true)
+  })
+
   test('clippy ratchet lints the whole workspace', () => {
     expect(hasWorkspaceClippy(workflow)).toBe(true)
   })
@@ -193,8 +207,8 @@ describe('anti-vacuity: the predicates reject mutated workflows', () => {
 
   test('rejects a workflow whose step is conditional', () => {
     const mutated = workflow.replace(
-      '- name: cargo test (gamelib-core, gamelib-scan, gamelib-depot, gamelib-steamfiles, gamelib-steamcm, gamelib-steampoll, gamelib-i18n, gamelib-log, gamelib-store, gamelib-info, gamelib-engine and gamelib-wine crates)\n',
-      "- name: cargo test (gamelib-core, gamelib-scan, gamelib-depot, gamelib-steamfiles, gamelib-steamcm, gamelib-steampoll, gamelib-i18n, gamelib-log, gamelib-store, gamelib-info, gamelib-engine and gamelib-wine crates)\n        if: runner.os == 'macOS'\n"
+      '- name: cargo test (gamelib-core, gamelib-scan, gamelib-depot, gamelib-steamfiles, gamelib-steamcm, gamelib-steampoll, gamelib-i18n, gamelib-log, gamelib-store, gamelib-info, gamelib-engine, gamelib-wine, gamelib-humble and gamelib-shortcuts crates)\n',
+      "- name: cargo test (gamelib-core, gamelib-scan, gamelib-depot, gamelib-steamfiles, gamelib-steamcm, gamelib-steampoll, gamelib-i18n, gamelib-log, gamelib-store, gamelib-info, gamelib-engine, gamelib-wine, gamelib-humble and gamelib-shortcuts crates)\n        if: runner.os == 'macOS'\n"
     )
     expect(mutated).not.toBe(workflow)
     expect(hasScanCrateStep(mutated)).toBe(false)
@@ -237,6 +251,15 @@ describe('anti-vacuity: the predicates reject mutated workflows', () => {
     const noWine = workflow.replace(' -p gamelib-wine -p gamelib-wine-cli', '')
     expect(noWine).not.toBe(workflow)
     expect(testsEngineAndWineCrates(noWine)).toBe(false)
+  })
+
+  test('rejects a workflow whose multi-crate step omits gamelib-humble or gamelib-shortcuts', () => {
+    const noHumble = workflow.replace(' -p gamelib-humble', '')
+    expect(noHumble).not.toBe(workflow)
+    expect(testsHumbleAndShortcutsCrates(noHumble)).toBe(false)
+    const noShortcuts = workflow.replace(' -p gamelib-shortcuts', '')
+    expect(noShortcuts).not.toBe(workflow)
+    expect(testsHumbleAndShortcutsCrates(noShortcuts)).toBe(false)
   })
 
   test('rejects a workflow without the safety step', () => {

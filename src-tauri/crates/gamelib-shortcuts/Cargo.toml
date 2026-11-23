@@ -1,0 +1,60 @@
+[package]
+name = "gamelib-shortcuts"
+version = "0.1.0"
+edition = "2021"
+# Exception to the README rule (1.77.2): `icns` 0.5 needs 1.87 (the gamelib-depot per-crate precedent).
+rust-version = "1.87"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+# Tauri-free desktop and Steam shortcut services (Phase 94, SVC-05): the Applications `.app` and
+# Desktop link, the Steam `shortcuts.vdf` add and remove, icon generation, ported from the TypeScript
+# sidecar. No `tauri`, no `keyring`, no environment reads, and no dependency on `gamelib-humble` (or the
+# reverse): directories, clock and platform arrive in `ShortcutsCtx`. A child process (PowerShell,
+# `reg`) is only ever spawned through the `SpecRunner` the shell injects.
+gamelib-core = { path = "../gamelib-core" }
+# Persisted state goes through the one store owner (Phase 85), never file I/O of this crate's own.
+gamelib-store = { path = "../gamelib-store" }
+# Destructive deletes (removing a shortcut, a generated icon) are guarded by `gamelib-safety`.
+gamelib-safety = { path = "../gamelib-safety" }
+# User-facing notice text is resolved through the shared catalog.
+gamelib-i18n = { path = "../gamelib-i18n" }
+# `rt-multi-thread` like gamelib-info's runtime: the shell calls `dispatch_sync` from several plain
+# worker threads, and concurrent `block_on` calls on a current-thread runtime stall.
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# The shell's pin (src-tauri/Cargo.toml): no default features, the TLS provider is installed by the
+# shell. Artwork downloads for a shortcut icon.
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+url = "2"
+# JS `encodeURIComponent` parity for the artwork and `steam://` URLs.
+percent-encoding = "2"
+# The VDF and desktop-entry text patterns: every pattern spells its JS semantics out (`.`, `\s`, `\d`),
+# so no Unicode table feature is needed (the gamelib-info rule).
+regex = { version = "1", default-features = false, features = ["std", "perf"] }
+# Node `zlib.crc32` parity for the Steam shortcut app id. Already locked (flate2 and png use it).
+crc32fast = "1"
+# PNG and JPEG decode and PNG encode for the icon pipeline; no other codec is linked. The version the
+# lockfile already holds (tauri's `image-png`).
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+# The macOS `.icns` writer (D-13). No default features: the raw `ic11` element only, so no JPEG 2000
+# decoder is linked. The one new crate of Phase 94; needs Rust 1.87, hence this crate's `rust-version`.
+icns = { version = "0.5", default-features = false }
+
+[features]
+# Replay seams for the golden tests and any CLI (later plans add theirs).
+testing = []
+
+[dev-dependencies]
+gamelib-shortcuts = { path = ".", features = ["testing"] }
+gamelib-testutil = { path = "../gamelib-testutil" }
+tempfile = "3"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"

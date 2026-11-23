@@ -178,7 +178,11 @@ describe('Phase 34.4.2 Plan 13 (operator decision D-A) objc2-app-kit NSGraphicsC
  * of the phase: the anti-cheat data file's change check; its `digest` and `cfg-if` were already
  * locked, research Package Legitimacy Audit verdict OK), and by Phase 87-02 (gamelib-engine,
  * gamelib-engine-cli, gamelib-wine and gamelib-wine-cli alone: every dependency was already locked,
- * so no third-party name enters the tree).
+ * so no third-party name enters the tree), and by Phase 94-02 (gamelib-humble and gamelib-shortcuts:
+ * icns 0.5, the one new crate of the phase (the macOS .icns writer, D-13; default features off so no
+ * JPEG 2000 decoder is linked; research Package Legitimacy Audit verdict OK). Its only dependency,
+ * byteorder, was already locked, as were reqwest, rustls, url, percent-encoding, regex, jiff,
+ * crc32fast, image, tokio, serde and serde_json).
  */
 const CARGO_LOCK_PATH = join(
   __dirname,
@@ -230,7 +234,7 @@ const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "find-msvc-tools", "fixedbitset", "flate2", "fnv", "foldhash", "foreign-types",
   "foreign-types-macros", "foreign-types-shared", "form_urlencoded", "fs_extra", "futures-channel", "futures-core",
   "futures-executor", "futures-io", "futures-lite", "futures-macro", "futures-sink", "futures-task",
-  "futures-util", "gamelib-core", "gamelib-depot", "gamelib-depot-cli", "gamelib-engine", "gamelib-engine-cli", "gamelib-i18n", "gamelib-info", "gamelib-info-cli", "gamelib-log", "gamelib-proc", "gamelib-safety", "gamelib-scan", "gamelib-scan-cli", "gamelib-shell",
+  "futures-util", "gamelib-core", "gamelib-depot", "gamelib-depot-cli", "gamelib-engine", "gamelib-engine-cli", "gamelib-humble", "gamelib-i18n", "gamelib-info", "gamelib-info-cli", "gamelib-log", "gamelib-proc", "gamelib-safety", "gamelib-scan", "gamelib-scan-cli", "gamelib-shell", "gamelib-shortcuts",
   "gamelib-steamcm", "gamelib-steamcm-cli", "gamelib-steamfiles", "gamelib-steamfiles-cli", "gamelib-steampoll", "gamelib-steampoll-cli", "gamelib-store", "gamelib-store-cli", "gamelib-testutil", "gamelib-wine", "gamelib-wine-cli", "gdk", "gdk-pixbuf",
   "gdk-pixbuf-sys", "gdk-sys", "gdkwayland-sys", "gdkx11", "gdkx11-sys", "generic-array",
   "gethostname", "getrandom", "gilrs", "gilrs-core", "gio", "gio-sys",
@@ -238,7 +242,7 @@ const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "gtk-sys", "gtk3-macros", "h2", "half", "hashbrown", "heck",
   "hermit-abi", "hex", "hmac", "html5ever", "http", "http-body",
   "http-body-util", "httparse", "hybrid-array", "hyper", "hyper-rustls", "hyper-util",
-  "iana-time-zone", "iana-time-zone-haiku", "ico", "icu_collections", "icu_locale_core", "icu_normalizer",
+  "iana-time-zone", "iana-time-zone-haiku", "icns", "ico", "icu_collections", "icu_locale_core", "icu_normalizer",
   "icu_normalizer_data", "icu_properties", "icu_properties_data", "icu_provider", "ident_case", "idna",
   "idna_adapter", "image", "indexmap", "infer", "inotify", "inotify-sys",
   "inout", "ipnet", "is-docker", "is-wsl", "itertools", "itoa",
