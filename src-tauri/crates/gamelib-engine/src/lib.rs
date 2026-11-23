@@ -61,6 +61,7 @@ pub const OPS: &[&str] = &[
     "engine_decide_creation",
     "engine_decide_launch",
     "engine_default_engine",
+    "engine_dialog_displayed",
     "engine_fallback_ensure",
     "engine_fallback_is_installed",
     "engine_is_crossover_missing",
@@ -536,6 +537,17 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
                 &request.app_name,
             )))
         }
+        // The renderer says an engine dialog is on screen (`dialogDisplayed`): settles the dialog this
+        // context showed under that id. `true` when it was waiting; a repeated or unknown id is `false`.
+        "engine_dialog_displayed" => {
+            let request: DialogDisplayedRequest = decode(op, args)?;
+            if !launch::dialogs::is_ack_id(&request.ack_id) {
+                return Err(format!("{op}:bad-args"));
+            }
+            Ok(Value::Bool(
+                ctx.display_acks.acknowledge(ctx, &request.ack_id),
+            ))
+        }
         // The launch-time engine step of a non-Steam launch on macOS (D-01): eligibility, the effective
         // engine, the prefix, the game's own bottle, the offline refusal, the decision, the first-need
         // pinned-engine download, the registration and the bottle switch. The answer is
@@ -953,6 +965,13 @@ struct GameIdentityRequest {
     app_name: String,
 }
 
+/// The argument of `engine_dialog_displayed`: the acknowledgement id the dialog was shown under.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct DialogDisplayedRequest {
+    ack_id: String,
+}
+
 /// The argument of `engine_launch_select`: the slice of the game and the launch options the step reads.
 /// The strings are the launcher's own, bounded here; the stored settings are read for three keys only.
 #[derive(serde::Deserialize)]
@@ -1298,6 +1317,7 @@ mod tests {
             "engine_decide_creation",
             "engine_decide_launch",
             "engine_default_engine",
+            "engine_dialog_displayed",
             "engine_fallback_ensure",
             "engine_fallback_is_installed",
             "engine_is_crossover_missing",
@@ -1358,6 +1378,35 @@ mod tests {
             .await,
             Ok(json!({"kind": "skip"}))
         );
+    }
+
+    #[tokio::test]
+    async fn the_dialog_displayed_op_settles_a_waiting_dialog_once_and_refuses_a_foreign_id() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        let id = ctx.display_acks.new_id();
+        ctx.display_acks
+            .track(&ctx, &id, "gog:1", "engine-bottle-busy", 60_000);
+        for bad in [
+            json!({}),
+            json!({"ackId": "ack-1"}),
+            json!({"ackId": id, "x": 1}),
+        ] {
+            assert_eq!(
+                dispatch("engine_dialog_displayed", &[bad], &ctx).await,
+                Err("engine_dialog_displayed:bad-args".to_string())
+            );
+        }
+        assert_eq!(
+            dispatch("engine_dialog_displayed", &[json!({"ackId": id})], &ctx).await,
+            Ok(json!(true))
+        );
+        assert_eq!(
+            dispatch("engine_dialog_displayed", &[json!({"ackId": id})], &ctx).await,
+            Ok(json!(false)),
+            "a repeated acknowledgement is ignored"
+        );
+        assert_eq!(ctx.display_acks.pending_count(), 0);
     }
 
     #[tokio::test]

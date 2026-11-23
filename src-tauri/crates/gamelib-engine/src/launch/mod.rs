@@ -1,12 +1,14 @@
 //! The launch step's Rust side, a module per piece as the plans that move it land.
 //!
 //! - [`step`]: the launch-time engine selection (87-50, D-01).
+//! - [`dialogs`]: the dialogs, notices and toast of the step, and their acknowledgements (87-50, D-02).
 //! - [`settings`]: the per-launch settings overlay (59 D-07, D-08).
 //! - [`process_listing`]: the `ps` listing the first-match watcher polls (87-44).
 
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 
+pub mod dialogs;
 pub mod process_listing;
 pub mod settings;
 pub mod step;

@@ -23,6 +23,7 @@ use crate::crossover::locate::{CrossoverDiscovery, CrossoverLocator, NoCrossover
 use crate::dxvk::{DxvkInstaller, NoDxvk};
 use crate::fallback::Flights;
 use crate::fetch::{Fetch, ReqwestFetch};
+use crate::launch::dialogs::DisplayAcks;
 use crate::launch::settings::LaunchSettingsRegistry;
 use crate::launch::LaunchState;
 use crate::sinks::{EngineLog, EngineUi, NullEmitter};
@@ -224,6 +225,9 @@ pub struct EngineCtx {
     /// The bottle each running launch was marked running in, for the end of the launch. In memory only:
     /// empty at construction.
     pub launch_state: LaunchState,
+    /// The engine dialogs waiting for the renderer's acknowledgement (`engine:<n>` ids). In memory only:
+    /// empty at construction.
+    pub display_acks: DisplayAcks,
 }
 
 impl EngineCtx {
@@ -259,6 +263,7 @@ impl EngineCtx {
             engine_state: EngineStateOwner::new(),
             launch_settings: LaunchSettingsRegistry::new(),
             launch_state: LaunchState::new(),
+            display_acks: DisplayAcks::new(),
             host,
             clock,
             platform,

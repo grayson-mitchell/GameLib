@@ -1034,3 +1034,55 @@ fn an_empty_case_list_fails_the_floor() {
     assert!(check_floor("launch goldens", 0, CASE_FLOOR).is_err());
     assert!(check_floor("launch goldens", CASE_FLOOR - 1, CASE_FLOOR).is_err());
 }
+
+/// The ops of every compared trace entry of a case's steps, in order.
+async fn ops_of(id: &str) -> Vec<String> {
+    let all = cases();
+    let case = all.iter().find(|c| id_of(c) == id).unwrap();
+    replay(case)
+        .await
+        .steps
+        .iter()
+        .flat_map(|step| step["trace"].as_array().unwrap().clone())
+        .map(|entry| entry["op"].as_str().unwrap().to_string())
+        .collect()
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_fallback_toast_is_a_notification_and_never_raises_the_window() {
+    for id in [
+        "fallback-cx-missing-pin-installed",
+        "fallback-cx-expired-pin-installed",
+        "fallback-cx-broken-pin-installed",
+    ] {
+        let ops = ops_of(id).await;
+        assert_eq!(ops.iter().filter(|op| *op == "notify").count(), 1, "{id}");
+        for raise in [
+            "raiseMainWindow",
+            "raiseMainWindowForInAppDialog",
+            "sendFrontendMessage",
+        ] {
+            assert!(!ops.iter().any(|op| op == raise), "{id}: {raise}");
+        }
+    }
+    // A setup run and an inconclusive probe say nothing at all.
+    for id in [
+        "fallback-setup-purpose-no-toast",
+        "inconclusive-keeps-pinned-marker",
+    ] {
+        assert!(!ops_of(id).await.iter().any(|op| op == "notify"), "{id}");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_refused_attempt_raises_the_window_and_shows_a_dialog_every_time() {
+    let ops = ops_of("refused-twice-two-dialogs").await;
+    for (op, want) in [
+        ("notify", 2),
+        ("raiseMainWindow", 2),
+        ("trackAck", 2),
+        ("sendFrontendMessage", 2),
+    ] {
+        assert_eq!(ops.iter().filter(|o| *o == op).count(), want, "{op}");
+    }
+}

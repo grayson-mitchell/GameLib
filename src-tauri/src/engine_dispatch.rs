@@ -1090,6 +1090,52 @@ mod tests {
     }
 
     #[test]
+    fn an_engine_dialog_is_the_show_dialog_frame_with_an_engine_ack_id_and_a_notice_never_raises() {
+        use gamelib_engine::launch::dialogs::{show_engine_dialog, show_engine_notice, Notice};
+
+        let home = gamelib_testutil::FakeHome::new("engine-dialog-");
+        let frames = Arc::new(Frames::default());
+        let seen: Seen = Arc::default();
+        let emitter: Arc<dyn FrontendEmitter> = Arc::clone(&frames) as Arc<dyn FrontendEmitter>;
+        let ctx = build_ctx(
+            Arc::new(StoreHost::new()),
+            home.root(),
+            home.root().join("home"),
+            home.root().join("tmp"),
+            Arc::clone(&emitter),
+            Arc::new(recording_ui(emitter, &seen)),
+            Shutdown::new(),
+        );
+        let notice = Notice {
+            key: "gog:1",
+            title: "Quail",
+            body: "It did not start.",
+            tag: "engine-bottle-busy",
+        };
+        // The ack task needs a runtime, as in an op.
+        tauri::async_runtime::block_on(async {
+            show_engine_dialog(&ctx, &notice);
+            show_engine_notice(&ctx, &notice);
+            assert_eq!(ctx.display_acks.pending_count(), 1);
+            assert!(ctx.display_acks.acknowledge(&ctx, "engine:1"));
+        });
+        // A refused attempt notifies and raises; the notice that follows only notifies.
+        assert_eq!(
+            seen.lock().unwrap().as_slice(),
+            [
+                "notify Quail|It did not start.",
+                "raise",
+                "notify Quail|It did not start."
+            ]
+        );
+        let pushed = frames.0.lock().unwrap();
+        assert_eq!(pushed.len(), 1);
+        assert_eq!(pushed[0].0, "showDialog");
+        assert_eq!(pushed[0].1[2], serde_json::json!("MESSAGE"));
+        assert_eq!(pushed[0].1[4], serde_json::json!("engine:1"));
+    }
+
+    #[test]
     fn a_registry_change_sends_one_selection_changed_frame_and_a_quiet_one_sends_none() {
         let home = gamelib_testutil::FakeHome::new("engine-selection-frame-");
         let frames = Arc::new(Frames::default());

@@ -25,7 +25,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 
 use crate::bottles::marker::{read_marker_summary, restore_needs_absent_pin};
 use crate::bottles::per_game::{
@@ -53,9 +53,35 @@ use crate::fallback::progress::STATUS_CHANNEL;
 use crate::game_prefix::{resolve_game_prefix, GamePrefix};
 use crate::ids::{pin_by_id, AUTOMATIC, CROSSOVER};
 use crate::key::{engine_key_if_eligible, GameIdentity};
+use crate::launch::dialogs::{notify_engine_fallback, show_engine_dialog, Notice};
 use crate::launch::settings::{build_crossover_game_settings, OverlayContext};
 use crate::pins::{pins, EnginePin};
 use crate::state::engine_state::{record_launch_decision, GameFacts};
+
+const BOTTLE_CREATE_FAILED: (&str, &str) = (
+    "gamelib:engine.bottleCreateFailed",
+    "GameLib couldn't set up this game's bottle ({{reason}}), so it did not start. Check the launch log (Settings > Logs).",
+);
+const DOWNLOAD_FAILED: (&str, &str) = (
+    "gamelib:steam.engine.downloadFailed",
+    "GameLib couldn't download its built-in engine ({{reason}}). Check your connection and try again.",
+);
+const OVERRIDE_UNAVAILABLE: (&str, &str) = (
+    "gamelib:steam.engine.overrideUnavailable",
+    "The engine chosen for this game in Wine settings is not available ({{detail}}). Choose Automatic or install it.",
+);
+const SELECTION_REJECTED: (&str, &str) = (
+    "gamelib:steam.engine.selectionRejected",
+    "GameLib couldn't set up {{engine}} for this game, so it did not start. Check the launch log (Settings > Logs).",
+);
+const RESTORE_FAILED: (&str, &str) = (
+    "gamelib:steam.engine.restoreFailed",
+    "GameLib couldn't finish switching {{title}} back to CrossOver, so it did not start. Check your connection and try again; GameLib retries the switch on the next launch.",
+);
+const BOTTLE_BUSY: (&str, &str) = (
+    "gamelib:engine.bottleBusy",
+    "Another game is running in this game's bottle, so GameLib can't switch its engine now. Quit the other game, then try again.",
+);
 
 /// A future that may borrow the deps and the context it runs over.
 pub type Fut<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
@@ -326,6 +352,7 @@ fn preflight_bin_dir(preflight: Option<&CrossoverPreflight>) -> String {
 struct Step<'a> {
     ctx: &'a EngineCtx,
     key: String,
+    title: &'a str,
     log_lines: Vec<String>,
 }
 
@@ -342,6 +369,25 @@ impl Step<'_> {
         if let Some(log) = self.ctx.log.as_deref() {
             log.warn(&format!("Engine: {} {line}", self.key));
         }
+    }
+
+    /// The refusal dialog: `i18n_key` (with its inline default) interpolated with `params`, shown with a
+    /// window raise on every attempt.
+    fn dialog(&self, i18n_key: &str, default: &str, params: &[(&str, &str)], tag: &str) {
+        let params: Map<String, Value> = params
+            .iter()
+            .map(|(name, value)| ((*name).to_string(), Value::String((*value).to_string())))
+            .collect();
+        let body = self.ctx.i18n.t(i18n_key, default, &params);
+        show_engine_dialog(
+            self.ctx,
+            &Notice {
+                key: &self.key,
+                title: self.title,
+                body: &body,
+                tag,
+            },
+        );
     }
 
     /// `dropEngineSelection` and the overlay clear: nothing a refused launch registered stays.
@@ -381,6 +427,7 @@ pub async fn select_engine_for_launch(
     let mut step = Step {
         ctx,
         key,
+        title: &args.title,
         log_lines: Vec::new(),
     };
 
@@ -414,6 +461,12 @@ pub async fn select_engine_for_launch(
         }
         GamePrefix::Invalid => {
             step.warn("has no valid prefix; not launching");
+            step.dialog(
+                BOTTLE_CREATE_FAILED.0,
+                BOTTLE_CREATE_FAILED.1,
+                &[("reason", "invalid game identity")],
+                "engine-invalid-prefix",
+            );
             return step.refuse();
         }
         GamePrefix::Bottle { bottle_name, .. } => bottle_name.clone(),
@@ -446,6 +499,12 @@ pub async fn select_engine_for_launch(
             step.warn(&format!(
                 "bottle \"{bottle_name}\" could not be created: {error}"
             ));
+            step.dialog(
+                BOTTLE_CREATE_FAILED.0,
+                BOTTLE_CREATE_FAILED.1,
+                &[("reason", &error)],
+                "engine-bottle-create-failed",
+            );
             return step.refuse();
         }
     }
@@ -468,6 +527,12 @@ pub async fn select_engine_for_launch(
                 "launch blocked before pre-flight while offline ({})",
                 arm.as_str()
             ));
+            step.dialog(
+                DOWNLOAD_FAILED.0,
+                DOWNLOAD_FAILED.1,
+                &[("reason", "offline")],
+                "engine-download-failed",
+            );
             return step.refuse();
         }
     }
@@ -491,12 +556,24 @@ pub async fn select_engine_for_launch(
             step.warn(&format!(
                 "engine override {override_id} is unavailable: {detail}"
             ));
+            step.dialog(
+                OVERRIDE_UNAVAILABLE.0,
+                OVERRIDE_UNAVAILABLE.1,
+                &[("detail", &detail)],
+                "override-unavailable",
+            );
             return step.refuse();
         }
         Err(error) => {
             step.warn(&format!(
                 "the engine pin table cannot be read ({error}); not launching"
             ));
+            step.dialog(
+                OVERRIDE_UNAVAILABLE.0,
+                OVERRIDE_UNAVAILABLE.1,
+                &[("detail", "the engine table cannot be read")],
+                "override-unavailable",
+            );
             return step.refuse();
         }
     };
@@ -506,7 +583,15 @@ pub async fn select_engine_for_launch(
             match deps.ensure_pinned(ctx, pin, &game).await {
                 PinnedEngineResult::Ready(_) => {}
                 PinnedEngineResult::Failed { aborted: true, .. } => return step.refuse(),
-                PinnedEngineResult::Failed { .. } => return step.refuse(),
+                PinnedEngineResult::Failed { error, .. } => {
+                    step.dialog(
+                        DOWNLOAD_FAILED.0,
+                        DOWNLOAD_FAILED.1,
+                        &[("reason", &error)],
+                        "engine-download-failed",
+                    );
+                    return step.refuse();
+                }
             }
         }
     }
@@ -520,6 +605,16 @@ pub async fn select_engine_for_launch(
             "engine selection was rejected ({}); not launching",
             selection.log_label()
         ));
+        let engine = match selection.engine() {
+            Some(engine) => engine.label.as_str(),
+            None => "CrossOver",
+        };
+        step.dialog(
+            SELECTION_REJECTED.0,
+            SELECTION_REJECTED.1,
+            &[("engine", engine)],
+            "engine-selection-rejected",
+        );
         return step.refuse();
     }
 
@@ -582,6 +677,12 @@ pub async fn select_engine_for_launch(
                     step.warn(&format!(
                         "could not switch back to CrossOver ({detail}); not launching"
                     ));
+                    step.dialog(
+                        RESTORE_FAILED.0,
+                        RESTORE_FAILED.1,
+                        &[("title", &args.title)],
+                        "engine-restore-failed",
+                    );
                     return step.refuse();
                 }
                 PrepareReason::DxvkFailed => {
@@ -596,6 +697,7 @@ pub async fn select_engine_for_launch(
                         "cannot switch engine ({}: {detail}); not launching",
                         reason.as_str()
                     ));
+                    step.dialog(BOTTLE_BUSY.0, BOTTLE_BUSY.1, &[], "engine-bottle-busy");
                     return step.refuse();
                 }
                 _ => {
@@ -640,6 +742,24 @@ pub async fn select_engine_for_launch(
     // D-13: engine and version on every launch, written from the decision so they cannot drift.
     for line in &decision.log_lines {
         step.write_log(line);
+    }
+
+    // The fallback toast: an Automatic launch that fell back for a reason the user should hear about.
+    // A setup run, a forced engine and an inconclusive probe say nothing (59 D-05, D-06).
+    let fallback_reason = match &selection {
+        EngineSelection::Pinned { reason, .. } | EngineSelection::WineManager { reason, .. } => {
+            Some(reason.as_str())
+        }
+        EngineSelection::Crossover { .. } => None,
+    };
+    if let Some(reason) = fallback_reason {
+        if args.purpose != Purpose::Setup
+            && decision.override_id == AUTOMATIC
+            && reason != "override"
+            && reason != "cx-inconclusive"
+        {
+            notify_engine_fallback(ctx, &args.title, reason);
+        }
     }
 
     let launch_settings =
