@@ -697,6 +697,12 @@ pub(crate) fn install_sidecar(state: &Arc<SidecarState>) {
     let _ = SIDECAR.set(Arc::clone(state));
 }
 
+/// The sidecar's state once [`install_sidecar`] has run: how a Rust sink (the engine UI, 87-18) writes
+/// a frame to the sidecar. `None` before the sidecar is spawned.
+pub(crate) fn sidecar_state() -> Option<&'static Arc<SidecarState>> {
+    SIDECAR.get()
+}
+
 fn global() -> Option<&'static Arc<Dispatcher>> {
     if let Some(d) = GLOBAL.get() {
         return Some(d);

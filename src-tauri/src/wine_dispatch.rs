@@ -207,6 +207,9 @@ mod tests {
             std::path::PathBuf::from("home"),
             std::path::PathBuf::from("tmp"),
             Arc::new(gamelib_engine::sinks::NullEmitter),
+            Arc::new(engine_dispatch::ShellEngineUi::silent(Arc::new(
+                gamelib_engine::sinks::NullEmitter,
+            ))),
             gamelib_core::shutdown::Shutdown::new(),
         );
         let wine = Arc::new(WineCtx::new(Arc::new(engine), missing));
