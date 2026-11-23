@@ -646,6 +646,92 @@ pub(crate) fn rpc_wine_manager_install(args: &[Value]) -> Result<Value, String> 
     Ok(Value::String(outcome.as_str().to_string()))
 }
 
+/// What the `wine_valid` arm asks the crate about a persisted wine, from a value the sidecar sent: `None`
+/// when it is no usable installation (not an object, no string `bin`, no `type` of the four), which the
+/// TS `validWine` answered `false` and so does this, never a rejection (the Windows factory default is
+/// `{}`, and a stored wine may carry a legacy key). Otherwise the six declared keys only: `name` as text
+/// (empty when absent, the crate does not read it), and each of `lib`, `lib32` and `wineserver` when it is
+/// text. Nothing else the sidecar sent reaches the crate (T-87-70).
+fn persisted_wine(value: &Value) -> Option<Map<String, Value>> {
+    let Value::Object(wine) = value else {
+        return None;
+    };
+    let bin = wine.get("bin").filter(|bin| bin.is_string())?;
+    let kind = wine
+        .get("type")
+        .and_then(Value::as_str)
+        .filter(|kind| WINE_KINDS.contains(kind))?;
+    let mut kept = Map::new();
+    kept.insert("bin".to_string(), bin.clone());
+    kept.insert(
+        "name".to_string(),
+        match wine.get("name") {
+            Some(name) if name.is_string() => name.clone(),
+            _ => Value::String(String::new()),
+        },
+    );
+    kept.insert("type".to_string(), Value::String(kind.to_string()));
+    for key in ["lib", "lib32", "wineserver"] {
+        if let Some(text) = wine.get(key).filter(|text| text.is_string()) {
+            kept.insert(key.to_string(), text.clone());
+        }
+    }
+    Some(kept)
+}
+
+/// The `wine_valid` `rustInvoke` arm (the `validWine` shim, 87-24): exactly one argument, which is
+/// [`persisted_wine`]'d (a value that is no installation, or `null`, is `false`), then the crate with the
+/// Darwin release the shell reads. Existence checks only; nothing is spawned (T-87-70).
+pub(crate) fn rpc_wine_valid(args: &[Value]) -> Result<Value, String> {
+    WineValidArgs::from_args(args)?;
+    let [wine] = args else {
+        return Err("wine_valid:bad-args".to_string());
+    };
+    let Some(wine) = persisted_wine(wine) else {
+        // Not asked of the crate, so "no wine" is `false` before and after the install alike.
+        return Ok(Value::Bool(false));
+    };
+    rpc_wine_op(wine_ctx(), "wine_valid", &wine_valid_args(&wine))
+}
+
+/// The host facts the crate may not read for `wine_run_command`: this process's environment (the merge
+/// base of a wine command's environment and the `PATH` the umu lookup scans) and the Darwin release. The
+/// sidecar is this shell's child, so its environment is this one's. A variable that is not UTF-8 is left
+/// out, as the crate's snapshot holds text.
+fn wine_run_host() -> Value {
+    let env: Map<String, Value> = std::env::vars_os()
+        .filter_map(|(key, value)| {
+            Some((
+                key.into_string().ok()?,
+                Value::String(value.into_string().ok()?),
+            ))
+        })
+        .collect();
+    let mut host = Map::new();
+    host.insert("env".to_string(), Value::Object(env));
+    if let Some(release) = darwin_release() {
+        host.insert("darwinRelease".to_string(), Value::String(release));
+    }
+    Value::Object(host)
+}
+
+/// The `wine_run_command` `rustInvoke` arm: one `WineCommandArgs` object, to which the shell adds
+/// [`wine_run_host`]. The crate decodes the command strictly (an unknown key is `wine_run_command:bad-args`)
+/// and runs it on this thread, which is the dispatcher's worker, until it ends or the app shuts down. No TS
+/// caller yet (the sync-callback `runWineCommand` stays a scheduled twin until Phase 88), so the arm is
+/// proven by the unit tests and the crate's goldens.
+pub(crate) fn rpc_wine_run_command(args: &[Value]) -> Result<Value, String> {
+    WineRunCommandArgs::from_args(args)?;
+    let [command @ Value::Object(_)] = args else {
+        return Err("wine_run_command:bad-args".to_string());
+    };
+    rpc_wine_op(
+        wine_ctx(),
+        "wine_run_command",
+        &[command.clone(), wine_run_host()],
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1410,6 +1496,84 @@ mod tests {
             let release = host["darwinRelease"].as_str().unwrap();
             assert!(release.split('.').next().unwrap().parse::<u64>().is_ok());
         }
+    }
+
+    #[test]
+    fn a_persisted_wine_keeps_its_six_keys_and_a_non_wine_is_nothing() {
+        let kept = persisted_wine(&json!({
+            "bin": "/b", "name": "n", "type": "proton", "lib": "/l", "lib32": 7,
+            "wineserver": null, "legacyKey": { "x": 1 }
+        }))
+        .unwrap();
+        let mut keys: Vec<&str> = kept.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["bin", "lib", "name", "type"]);
+        // The name is not read by the crate, so an absent one is empty rather than a refusal.
+        let nameless = persisted_wine(&json!({ "bin": "", "type": "wine" })).unwrap();
+        assert_eq!(nameless["name"], json!(""));
+        for not_a_wine in [
+            json!(null),
+            json!("wine"),
+            json!({}),
+            json!({ "name": "n", "type": "wine" }),
+            json!({ "bin": 1, "type": "wine" }),
+            json!({ "bin": "/b", "type": "dosbox" }),
+            json!({ "bin": "/b" }),
+        ] {
+            assert_eq!(persisted_wine(&not_a_wine), None, "{not_a_wine}");
+        }
+    }
+
+    #[test]
+    fn the_valid_arm_answers_false_for_no_wine_and_not_ready_for_a_wine_before_install() {
+        assert!(wine_ctx().is_none());
+        // No wine is false before the context exists, as it was in the TS (no crate is asked).
+        for none in [
+            json!(null),
+            json!({}),
+            json!({ "bin": "/b", "type": "dosbox" }),
+        ] {
+            assert_eq!(rpc_wine_valid(&[none]), Ok(json!(false)));
+        }
+        assert_eq!(
+            rpc_wine_valid(&[json!({ "bin": "/b", "name": "n", "type": "wine", "legacy": 1 })]),
+            Err("wine_valid:not-ready".to_string())
+        );
+        for bad in [vec![], vec![json!(null), json!(null)]] {
+            assert_eq!(rpc_wine_valid(&bad), Err("wine_valid:bad-args".to_string()));
+        }
+    }
+
+    #[test]
+    fn the_run_command_arm_takes_one_object_and_adds_the_host_facts() {
+        assert!(wine_ctx().is_none());
+        for bad in [
+            vec![],
+            vec![json!("winecfg")],
+            vec![json!(null)],
+            vec![json!({}), json!({})],
+        ] {
+            assert_eq!(
+                rpc_wine_run_command(&bad),
+                Err("wine_run_command:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+        assert_eq!(
+            rpc_wine_run_command(&[json!({ "commandParts": ["winecfg"] })]),
+            Err("wine_run_command:not-ready".to_string())
+        );
+        let host = wine_run_host();
+        let host = host.as_object().unwrap();
+        assert!(host
+            .keys()
+            .all(|key| key == "env" || key == "darwinRelease"));
+        let env = host["env"].as_object().unwrap();
+        assert!(env.values().all(Value::is_string));
+        assert_eq!(
+            env.get("PATH").and_then(Value::as_str),
+            std::env::var("PATH").ok().as_deref()
+        );
     }
 
     #[test]

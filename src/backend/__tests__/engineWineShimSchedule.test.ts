@@ -80,6 +80,18 @@ interface ScheduleRow extends ShimRow {
   deletedBy: number
 }
 
+/** Every non-test importer of `launcher.ts` and of `commandRunner.ts` (the twin check is per file). */
+const LAUNCHER_IMPORTERS: readonly string[] = [
+  'src/backend/services/types.ts',
+  'src/backend/sidecar/bootstrap.ts',
+  'src/backend/storeManagers/index.ts'
+]
+const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
+  'src/backend/services/types.ts',
+  'src/backend/sidecar/bootstrap.ts',
+  'src/backend/storeManagers/steam/bridge/bottleDllOverrides.ts'
+]
+
 /**
  * Rows are added by the plan that creates the survivor, in the same commit. Each row needs its file,
  * name, shape and callers; shims and resolvers a channel; twins and views a vectors test.
@@ -152,6 +164,48 @@ const SCHEDULE: readonly ScheduleRow[] = [
       'src/backend/sidecar/wineToolsFlowRegistration.ts',
       'src/backend/utils.ts'
     ],
+    deletedBy: 88
+  },
+  // 87-24 (D-15, D-22): the wine core. `validWine` is the one async TS reach (the launcher's wine check,
+  // checkWineBeforeLaunch and the command runner's binding); Phase 88 moves launch into Rust and deletes it.
+  {
+    name: 'validWine',
+    file: 'src/backend/enginewine/wineCore.ts',
+    shape: 'shim',
+    channel: 'RUST_WINE_VALID',
+    callers: [
+      'src/backend/launcher.ts',
+      'src/backend/sidecar/bootstrap.ts',
+      'src/backend/utils.ts'
+    ],
+    deletedBy: 88
+  },
+  // 87-24 (D-22 deviation, for the checker and the operator): the sync `setupEnvVars` and `setupWineEnvVars` (called
+  // synchronously from the launch paths) and the command runner's `runWineCommand` (its `onSpawn` hands callers a live
+  // ChildHandle) cannot become same-signature async shims without rewriting Phase 88-92 launch code, so these three
+  // TS twins stay, pinned to the Rust `wine_env` and `wine_command` goldens that one oracle test records and both languages replay.
+  {
+    name: 'setupEnvVars',
+    file: 'src/backend/launcher.ts',
+    shape: 'twin',
+    vectors: 'src/backend/wine/__tests__/oracle/wineCore.oracle.test.ts',
+    callers: LAUNCHER_IMPORTERS,
+    deletedBy: 88
+  },
+  {
+    name: 'setupWineEnvVars',
+    file: 'src/backend/launcher.ts',
+    shape: 'twin',
+    vectors: 'src/backend/wine/__tests__/oracle/wineCore.oracle.test.ts',
+    callers: LAUNCHER_IMPORTERS,
+    deletedBy: 88
+  },
+  {
+    name: 'createCommandRunner',
+    file: 'src/backend/commandRunner.ts',
+    shape: 'twin',
+    vectors: 'src/backend/wine/__tests__/oracle/wineCore.oracle.test.ts',
+    callers: COMMAND_RUNNER_IMPORTERS,
     deletedBy: 88
   }
 ]

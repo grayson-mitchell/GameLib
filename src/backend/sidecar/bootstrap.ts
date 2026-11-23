@@ -250,12 +250,8 @@ import { createSteamApiPinResolver } from '../storeManagers/steam/bridge/steamAp
 import { createSteamUser } from '../storeManagers/steam/user'
 // Transitional (removed by plan 27): the legacy registries still hold children until plans
 // 23/24/26 move them onto the runner.
-import {
-  setupEnvVars,
-  setupWineEnvVars,
-  validWine,
-  verifyWinePrefix
-} from '../launcher'
+import { setupEnvVars, setupWineEnvVars, verifyWinePrefix } from '../launcher'
+import { validWine } from '../enginewine/wineCore'
 import { getUmuPath, isUmuSupported } from '../utils/compatibility_layers'
 import { searchForExecutableOnPath } from '../utils/os/path'
 import {
@@ -1916,11 +1912,20 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
                 const { commandRunner } = state.services
                 if (!commandRunner) throw new Error('command runner not built')
                 return verifyWinePrefix(
-                  { commandRunner, paths: ctx.paths },
+                  {
+                    commandRunner,
+                    paths: ctx.paths,
+                    requestRustInvoke: requireHost(state).requestRustInvoke
+                  },
                   settings
                 )
               },
-              validWine,
+              // Read lazily, like the host reads around it: the closure only fires after boot.
+              validWine: (wineVersion) =>
+                validWine(
+                  { requestRustInvoke: requireHost(state).requestRustInvoke },
+                  wineVersion
+                ),
               setupEnvVars,
               setupWineEnvVars: (settings, gameId) =>
                 setupWineEnvVars({ paths: ctx.paths }, settings, gameId),

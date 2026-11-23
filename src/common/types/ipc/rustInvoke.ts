@@ -105,8 +105,10 @@ import {
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
+  RUST_WINE_RUN_COMMAND,
   RUST_WINE_RUNTIME_DOWNLOAD,
   RUST_WINE_RUNTIME_IS_INSTALLED,
+  RUST_WINE_VALID,
   RUST_SAFETY_CHECK_REMOVAL,
   RUST_SAFETY_REMOVE_TREE,
   RUST_STORE_BACKUP_FILE,
@@ -291,6 +293,15 @@ const runtimeName = z
  * and nothing else, each with its bound) before the crate sees it (T-87-68).
  */
 const wineRelease = z.unknown().meta({ title: 'release', 'x-rust-value': true })
+
+/**
+ * A `WineInstallation` (or `null`) as `wine_valid` takes it, opaque to the generated Rust decode
+ * (`x-rust-value`, like `wineRelease`). The shell keeps only the six declared keys, each of the declared
+ * type, before the crate sees it (T-87-70): a persisted wine with a legacy key still answers.
+ */
+const wineInstallation = z
+  .unknown()
+  .meta({ title: 'wine', 'x-rust-value': true })
 
 export const rustInvokeArgs = {
   // ---- Keychain
@@ -827,6 +838,13 @@ export const rustInvokeArgs = {
   [RUST_WINE_MANAGER_LIST]: empty,
   [RUST_WINE_RELEASES_INFO_READY]: z.tuple([
     z.unknown().meta({ title: 'releasesInfo', 'x-rust-value': true })
+  ]),
+  // Phase 87 (SVC-02, 87-24): the wine core ops. `wine_valid` takes one WineInstallation (or null);
+  // `wine_run_command` one WineCommandArgs object, both opaque here and decoded by the shell and the crate
+  // (the shell adds its own process environment and Darwin release as the host facts).
+  [RUST_WINE_VALID]: z.tuple([wineInstallation]),
+  [RUST_WINE_RUN_COMMAND]: z.tuple([
+    z.unknown().meta({ title: 'command', 'x-rust-value': true })
   ])
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 

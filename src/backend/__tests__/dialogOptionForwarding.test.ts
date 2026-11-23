@@ -228,7 +228,11 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // seven feeds in turn. The read-only wine_manager_list stays bounded. Not dialog channels either.
     'RUST_WINE_MANAGER_INSTALL',
     'RUST_WINE_MANAGER_REFRESH',
-    'RUST_WINE_RELEASES_INFO_READY'
+    'RUST_WINE_RELEASES_INFO_READY',
+    // Phase 87 plan 24: wine_run_command runs a wine command with no time limit of its own (winetricks,
+    // an installer), ended by its own exit, a cancel or the shutdown. The existence check wine_valid stays
+    // bounded. Not a dialog channel either.
+    'RUST_WINE_RUN_COMMAND'
   ]
 
   test('contains exactly the dialog, depot, Rust CM, safety remove, wine runtime download and wine manager channels', () => {

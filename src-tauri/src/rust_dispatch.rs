@@ -206,5 +206,7 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::WineReleasesInfoReady => {
             wine_dispatch::rpc_wine_releases_info_ready(args)
         }
+        RustInvokeChannel::WineValid => wine_dispatch::rpc_wine_valid(args),
+        RustInvokeChannel::WineRunCommand => wine_dispatch::rpc_wine_run_command(args),
     }
 }

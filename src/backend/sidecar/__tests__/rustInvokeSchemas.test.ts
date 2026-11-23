@@ -39,7 +39,8 @@ describe('rustInvokeArgs', () => {
     // Phase 87 plan 18: 137 -> 139, wine_runtime_is_installed and wine_runtime_download.
     // Phase 87 plan 20: 139 -> 143, wine_manager_refresh, wine_manager_install, wine_manager_list and
     // wine_releases_info_ready.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(143)
+    // Phase 87 plan 24: 143 -> 145, wine_valid and wine_run_command.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(145)
   })
 
   it('parses the store-embed wire fixtures', () => {

@@ -44,7 +44,7 @@ import type { Notifications } from './host/notifications'
 import type { OpenExternal } from './host/openExternal'
 import type { AppState } from './host/appState'
 import type { AppInfo, AppPaths } from './process/context'
-import { validWine } from './launcher'
+import { validWine } from './enginewine/wineCore'
 import {
   installWineVersion,
   listWineReleases,
@@ -1158,7 +1158,7 @@ export async function checkWineBeforeLaunch(
   gameSettings: GameSettings,
   logWriter: LogWriter
 ): Promise<boolean> {
-  const wineIsValid = await validWine(gameSettings.wineVersion)
+  const wineIsValid = await validWine(deps, gameSettings.wineVersion)
 
   if (wineIsValid) {
     return true
@@ -1181,7 +1181,7 @@ export async function checkWineBeforeLaunch(
 
     // check if the default wine is valid now
     const { wineVersion: defaultwine } = deps.config.getSettings()
-    const defaultWineIsValid = await validWine(defaultwine)
+    const defaultWineIsValid = await validWine(deps, defaultwine)
     if (defaultWineIsValid) {
       const { response } = await ContinueWithFoundWine(
         deps,
@@ -1218,7 +1218,7 @@ export async function checkWineBeforeLaunch(
       const firstFoundWine = wineList[0]
 
       const isValidWine =
-        firstFoundWine !== undefined && (await validWine(firstFoundWine))
+        firstFoundWine !== undefined && (await validWine(deps, firstFoundWine))
 
       if (!wineList.length || !firstFoundWine || !isValidWine) {
         const firstFoundWine = await downloadDefaultWine(deps)

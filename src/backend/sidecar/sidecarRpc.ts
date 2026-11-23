@@ -62,6 +62,7 @@ import {
   RUST_WINE_MANAGER_INSTALL,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
+  RUST_WINE_RUN_COMMAND,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
   RUST_DIALOG_SAVE,
@@ -159,6 +160,10 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * turn, each with its own 60 s request limit in Rust, and the TS refresh they replace swallowed a slow
  * feed rather than failing the caller, so a 60 s cut-off here would turn a slow network into a rejected
  * `getAlternativeWine`. The read-only `wine_manager_list` stays bounded.
+ *
+ * Seventh (Phase 87, 87-24): `wine_run_command` runs a wine command with no time limit of its own (a
+ * winetricks component or an installer runs for minutes) and ends on its own exit, a cancel or the app
+ * shutdown. The existence check `wine_valid` stays bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -188,7 +193,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_WINE_RUNTIME_DOWNLOAD,
   RUST_WINE_MANAGER_INSTALL,
   RUST_WINE_MANAGER_REFRESH,
-  RUST_WINE_RELEASES_INFO_READY
+  RUST_WINE_RELEASES_INFO_READY,
+  RUST_WINE_RUN_COMMAND
 ]
 
 function isValidRequest(value: unknown): value is SidecarRpcRequest {

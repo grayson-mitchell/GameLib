@@ -7,7 +7,7 @@
  * of the slice's native channels, or a rollback flag string appears under src/ or src-tauri/src.
  *
  * The D-06 sub-slices, in the order the phase deletes them: runtimes (87-18, below), wineDownloads,
- * wineCore, tools, bottles, engine. A sub-slice with no describe yet has none because a `SliceSpec`
+ * wineCore (87-24), tools, bottles, engine. A sub-slice with no describe yet has none because a `SliceSpec`
  * with nothing deleted would pass vacuously, so the plan that deletes a sub-slice adds its `describe('<name>PortComplete', () =>
  * runSlice(SPEC))` here RED first (the files and identifiers still exist), then deletes the TS and
  * watches it go green. Never lower a floor or widen an allow-list to turn a red run green.
@@ -22,7 +22,11 @@
  * files it read, and the self-tests at the bottom plant a violation and watch each scan fail.
  */
 import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
-import { findRollbackFlag, walkStripped } from 'backend/testUtils/infoPortGate'
+import {
+  findExportedValues,
+  findRollbackFlag,
+  walkStripped
+} from 'backend/testUtils/infoPortGate'
 import type { SliceSpec } from 'backend/testUtils/portSliceGate'
 import {
   BACKEND_FILES_FLOOR,
@@ -113,6 +117,59 @@ const WINE_DOWNLOADS: SliceSpec = {
 
 describe('wineDownloadsPortComplete', () => {
   runSlice(WINE_DOWNLOADS)
+})
+
+/**
+ * 87-24, D-06, D-14, D-15 and D-22: the wine core is Rust's (87-21 ported it, 87-24 switched its callers).
+ * The renderer's `wine.isValidVersion` is a native `wine` channel and `validWine` is one scheduled shim
+ * (`enginewine/wineCore.ts`). No TS file is deleted outright: the sync env builders (`setupEnvVars`,
+ * `setupWineEnvVars`) and the command runner's `runWineCommand` stay as scheduled twins pinned by the
+ * same goldens until Phase 88 (D-22), so the fixtures and the wineCore oracle that vector them are kept.
+ * The one removed export is `validWine` from `launcher.ts`, which cannot be a forbidden identifier because
+ * the shim carries the name; it is asserted below instead.
+ */
+const WINE_CORE: SliceSpec = {
+  deleted: [],
+  kept: [
+    'src-tauri/crates/gamelib-wine/tests/fixtures/vectors/wine_env.json',
+    'src-tauri/crates/gamelib-wine/tests/fixtures/vectors/valid_wine.json',
+    'src-tauri/crates/gamelib-wine/tests/fixtures/golden/wine_command',
+    'src/backend/wine/__tests__/oracle/wineCore.oracle.test.ts'
+  ],
+  forbiddenIdentifiers: [],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_WINE',
+  manifestSlice: 'wine',
+  channelsFloor: 6
+}
+
+describe('wineCorePortComplete', () => {
+  runSlice(WINE_CORE)
+
+  it('launcher.ts exports no validWine; the shim in enginewine/wineCore.ts does', () => {
+    const launcher = tsWalk.files.find(
+      (f) => f.path === 'src/backend/launcher.ts'
+    )
+    expect(launcher).toBeDefined()
+    expect(
+      findExportedValues(launcher?.path ?? '', launcher?.code ?? '')
+    ).not.toContain('validWine')
+    const shim = tsWalk.files.find(
+      (f) => f.path === 'src/backend/enginewine/wineCore.ts'
+    )
+    expect(findExportedValues(shim?.path ?? '', shim?.code ?? '')).toContain(
+      'validWine'
+    )
+  })
+
+  it('the renderer wine.isValidVersion is native: the sidecar registers no handle for it', () => {
+    const registered = tsWalk.files.filter(
+      (f) =>
+        f.path.startsWith('src/backend/sidecar/') &&
+        /ipc\.handle\(\s*'wine\.isValidVersion'/.test(f.code)
+    )
+    expect(registered.map((f) => f.path)).toEqual([])
+  })
 })
 
 describe('noRollbackFlag', () => {

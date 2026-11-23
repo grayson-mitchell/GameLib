@@ -53,9 +53,10 @@ import { createCommandRunner } from 'backend/commandRunner'
 import {
   setupEnvVars,
   setupWineEnvVars,
-  validWine,
   verifyWinePrefix
 } from 'backend/launcher'
+import * as environment from 'backend/constants/environment'
+import { isMacSonomaOrHigher } from 'backend/utils'
 import { getUmuPath, isUmuSupported } from 'backend/utils/compatibility_layers'
 import type {
   GameSettings,
@@ -71,6 +72,38 @@ const COMMAND_FLOOR = 16
 const ENV_FLOOR = 40
 /** The validWine vector count. */
 const VALID_FLOOR = 14
+
+/**
+ * `validWine` as the TS had it before Phase 87 (87-24, D-22): the launcher's function is now a shim over
+ * the Rust `wine_valid` (`enginewine/wineCore.ts`), so the recorded vectors are driven through this
+ * verbatim body, the way the removed handler bodies live in `wineManager.oracle.test.ts`. It reads
+ * `isMac` through the environment module at call time, as the launcher did, so `mockPlatform` reaches it.
+ * The Rust replay of the same vectors is `golden_wine_core.rs`; this copy and the vectors stay until
+ * Phase 88 deletes the twins.
+ */
+function validWine(wineVersion: WineInstallation): Promise<boolean> {
+  if (!wineVersion) {
+    return Promise.resolve(false)
+  }
+  const { bin, wineserver, type } = wineVersion
+  const necessary = type === 'wine' ? [bin, wineserver] : [bin]
+  const haveAll = necessary.every((binary) => existsSync(binary as string))
+  if (environment.isMac && type === 'toolkit') {
+    if (!isMacSonomaOrHigher()) {
+      return Promise.resolve(false)
+    }
+  }
+  return Promise.resolve(haveAll)
+}
+
+/**
+ * The `rustInvoke` leg of the launcher's `validWine` shim, answered by the TS copy above, so
+ * `verifyWinePrefix` (which calls the shim) is driven over the same rule.
+ */
+const oracleRustInvoke = (
+  _channel: string,
+  args: unknown[]
+): Promise<unknown> => validWine(args[0] as WineInstallation)
 
 /** The `process.env` keys the two env builders read. */
 const ENV_KEYS = [
@@ -900,7 +933,8 @@ describeSkipOnWindows('wine core oracle (87-08)', () => {
                           return self.runner.runWineCommand(a)
                         }
                       },
-                      paths: profile.paths
+                      paths: profile.paths,
+                      requestRustInvoke: oracleRustInvoke as never
                     },
                     s
                   ),

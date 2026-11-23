@@ -166,6 +166,8 @@ pub(crate) enum RustInvokeChannel {
     WineManagerInstall,
     WineManagerList,
     WineReleasesInfoReady,
+    WineValid,
+    WineRunCommand,
 }
 
 impl RustInvokeChannel {
@@ -313,6 +315,8 @@ impl RustInvokeChannel {
         RustInvokeChannel::WineManagerInstall,
         RustInvokeChannel::WineManagerList,
         RustInvokeChannel::WineReleasesInfoReady,
+        RustInvokeChannel::WineValid,
+        RustInvokeChannel::WineRunCommand,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -460,6 +464,8 @@ impl RustInvokeChannel {
             "wine_manager_install" => Some(RustInvokeChannel::WineManagerInstall),
             "wine_manager_list" => Some(RustInvokeChannel::WineManagerList),
             "wine_releases_info_ready" => Some(RustInvokeChannel::WineReleasesInfoReady),
+            "wine_valid" => Some(RustInvokeChannel::WineValid),
+            "wine_run_command" => Some(RustInvokeChannel::WineRunCommand),
             _ => None,
         }
     }
@@ -609,6 +615,8 @@ impl RustInvokeChannel {
             RustInvokeChannel::WineManagerInstall => "wine_manager_install",
             RustInvokeChannel::WineManagerList => "wine_manager_list",
             RustInvokeChannel::WineReleasesInfoReady => "wine_releases_info_ready",
+            RustInvokeChannel::WineValid => "wine_valid",
+            RustInvokeChannel::WineRunCommand => "wine_run_command",
         }
     }
 }
@@ -3205,5 +3213,29 @@ impl WineReleasesInfoReadyArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let releases_info = serde_json::from_value(args.first().ok_or_else(|| "wine_releases_info_ready:bad-args".to_string())?.clone()).map_err(|_| "wine_releases_info_ready:bad-args".to_string())?;
         Ok(Self { releases_info })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineValidArgs {
+    pub(crate) wine: Value,
+}
+
+impl WineValidArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let wine = serde_json::from_value(args.first().ok_or_else(|| "wine_valid:bad-args".to_string())?.clone()).map_err(|_| "wine_valid:bad-args".to_string())?;
+        Ok(Self { wine })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineRunCommandArgs {
+    pub(crate) command: Value,
+}
+
+impl WineRunCommandArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let command = serde_json::from_value(args.first().ok_or_else(|| "wine_run_command:bad-args".to_string())?.clone()).map_err(|_| "wine_run_command:bad-args".to_string())?;
+        Ok(Self { command })
     }
 }

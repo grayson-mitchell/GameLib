@@ -93,9 +93,14 @@ export function runSlice(spec: SliceSpec): void {
     f.path.startsWith(`${spec.identifierRoot}/`)
   )
 
-  it.each(spec.deleted)('%s is deleted', (p) => {
-    expect(() => assertDeleted([p])).not.toThrow()
-  })
+  // A sub-slice may delete no file (87-24: the wine core's TS reach is one shim and three scheduled
+  // twins, none removed outright); jest refuses an empty `it.each` table, so the two lists that can be
+  // empty are guarded, and that sub-slice's own describe states what it deleted by explicit assertion.
+  if (spec.deleted.length > 0) {
+    it.each(spec.deleted)('%s is deleted', (p) => {
+      expect(() => assertDeleted([p])).not.toThrow()
+    })
+  }
 
   if (spec.kept && spec.kept.length > 0) {
     it.each(spec.kept)('%s is kept', (p) => {
@@ -103,12 +108,14 @@ export function runSlice(spec: SliceSpec): void {
     })
   }
 
-  it.each(spec.forbiddenIdentifiers)(
-    `non-test code under ${spec.identifierRoot} never names %s`,
-    (id) => {
-      expect(findIdentifiers(underRoot, [id])).toEqual([])
-    }
-  )
+  if (spec.forbiddenIdentifiers.length > 0) {
+    it.each(spec.forbiddenIdentifiers)(
+      `non-test code under ${spec.identifierRoot} never names %s`,
+      (id) => {
+        expect(findIdentifiers(underRoot, [id])).toEqual([])
+      }
+    )
+  }
 
   if (spec.manifestSlice !== undefined) {
     const slice = spec.manifestSlice

@@ -1118,6 +1118,30 @@ export const RUST_WINE_MANAGER_LIST = 'wine_manager_list' as const
 export const RUST_WINE_RELEASES_INFO_READY = 'wine_releases_info_ready' as const
 
 /**
+ * Phase 87 (SVC-02, 87-24): `wine_valid` is `validWine`'s body: whether a wine installation can run, by the
+ * existence of the binaries its type needs (a `wine` needs its `wineserver` too, a macOS toolkit needs
+ * Darwin 14). Existence checks only, nothing is spawned. Args: one `WineInstallation` (or `null`, which is
+ * `false`). The shell reads the Darwin release itself and keeps only the six declared installation keys, so
+ * a persisted wine carrying a legacy key, or the Windows factory `{}`, answers as the TS `validWine` did
+ * (`false`, never a rejection). Resolves a boolean. The sidecar's `validWine` shim in
+ * `enginewine/wineCore.ts` is its one caller; the renderer's `wine.isValidVersion` is a native channel
+ * over the same op.
+ */
+export const RUST_WINE_VALID = 'wine_valid' as const
+
+/**
+ * Phase 87 (SVC-02, 87-24): `wine_run_command` is `runWineCommand`'s body: the prefix check, the merged
+ * environment and the spawn of one wine command (argv only, never a shell; output capped; a shutdown
+ * registrant held while it runs). Args: one `WineCommandArgs` object; the shell adds the host facts the
+ * crate may not read (its own process environment and the Darwin release). Resolves
+ * `{ stdout, stderr, code }`. No TS caller yet: the sync-callback `runWineCommand` of `commandRunner.ts`
+ * stays a scheduled twin until Phase 88 owns launching a game (its `onSpawn` hands callers a live
+ * ChildHandle). Long-running: listed in the sidecar's `UNBOUNDED_RUST_CHANNELS` (a game's winetricks or
+ * installer runs for minutes, ended by its own exit or the app shutdown).
+ */
+export const RUST_WINE_RUN_COMMAND = 'wine_run_command' as const
+
+/**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
  * the macOS bridge helper loads: the GameLib cache, else a snapshot of the Steam client's own copy
  * when it already hashes to the pin, else a fetch from Valve's client-update CDN (sha2vz, VZ decode,
@@ -1457,7 +1481,9 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_MANAGER_INSTALL,
   RUST_WINE_MANAGER_LIST,
-  RUST_WINE_RELEASES_INFO_READY
+  RUST_WINE_RELEASES_INFO_READY,
+  RUST_WINE_VALID,
+  RUST_WINE_RUN_COMMAND
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

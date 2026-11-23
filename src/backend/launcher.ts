@@ -10,7 +10,6 @@ import {
   ExecResult,
   LaunchPreperationResult,
   RpcClient,
-  WineInstallation,
   GameSettings,
   LaunchParams,
   StatusPromise,
@@ -33,7 +32,6 @@ import {
   removeQuoteIfNecessary,
   sendGameStatusUpdate,
   checkWineBeforeLaunch,
-  isMacSonomaOrHigher,
   askForceUninstall
 } from './utils'
 import type { StoreLaunchHooks } from 'backend/storeManagers'
@@ -66,6 +64,7 @@ import { showDialogBoxModalAuto, type DialogBoxDeps } from './dialog/dialog'
 import { readFileSync, writeFileSync } from 'fs'
 import { searchForExecutableOnPath } from './utils/os/path'
 import { downloadRuntime, isRuntimeInstalled } from './enginewine/runtimes'
+import { validWine } from './enginewine/wineCore'
 import { recordPlaySession } from './runsForMe'
 import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
 import { copyFile } from 'fs/promises'
@@ -200,7 +199,7 @@ function engineSource(deps: LauncherDeps): EngineServicesSource {
       setupEnvVars,
       setupWineEnvVars: (gameSettings, gameId) =>
         setupWineEnvVars(deps, gameSettings, gameId),
-      validWine
+      validWine: (wineVersion) => validWine(deps, wineVersion)
     }
   }
 }
@@ -930,10 +929,10 @@ async function prepareWineLaunch(
     await game.getSettings()
   )
 
-  if (!(await validWine(gameSettings.wineVersion))) {
+  if (!(await validWine(deps, gameSettings.wineVersion))) {
     const defaultWine = deps.config.getSettings().wineVersion
     // now check if the default wine is valid as well
-    if (!(await validWine(defaultWine))) {
+    if (!(await validWine(deps, defaultWine))) {
       return { success: false }
     }
   }
@@ -1540,50 +1539,12 @@ function setupWrappers(
 }
 
 /**
- * Checks if the game's selected Wine version exists
- * @param wineVersion an object of type WineInstallation with binary path and name to check
- * @returns true if the wine version exists, false if it doesn't
- */
-export async function validWine(
-  wineVersion: WineInstallation
-): Promise<boolean> {
-  if (!wineVersion) {
-    return false
-  }
-
-  logInfo(
-    `Checking if wine version exists: ${wineVersion.name}`,
-    LogPrefix.Backend
-  )
-
-  // verify if necessary binaries exist
-  const { bin, wineserver, type } = wineVersion
-  const necessary = type === 'wine' ? [bin, wineserver] : [bin]
-  const haveAll = necessary.every((binary) => existsSync(binary as string))
-
-  if (isMac && type === 'toolkit') {
-    const isMacOSUpToDate = isMacSonomaOrHigher()
-    const isGPTKCompatible: boolean = isMacOSUpToDate
-    if (!isGPTKCompatible) {
-      return false
-    }
-  }
-
-  // if wine version does not exist, use the default one
-  if (!haveAll) {
-    return false
-  }
-
-  return true
-}
-
-/**
  * Verifies that a Wineprefix exists by running 'wineboot --init'
  * @param gameSettings The settings of the game to verify the Wineprefix of
  * @returns stderr & stdout of 'wineboot --init'
  */
 export async function verifyWinePrefix(
-  deps: {
+  deps: RustInvokeDeps & {
     commandRunner: Pick<CommandRunner, 'runWineCommand'>
     paths: Pick<AppPaths, 'defaultUmuPath' | 'sharedWinePrefix'>
   },
@@ -1591,7 +1552,7 @@ export async function verifyWinePrefix(
 ): Promise<{ res: ExecResult }> {
   const { winePrefix = deps.paths.sharedWinePrefix, wineVersion } = settings
 
-  const isValidWine = await validWine(wineVersion)
+  const isValidWine = await validWine(deps, wineVersion)
 
   if (!isValidWine) {
     return { res: { stdout: '', stderr: '' } }
@@ -1703,7 +1664,9 @@ export interface Launcher {
   getKnownFixesEnvVariables(
     ...a: DropFirst<Parameters<typeof getKnownFixesEnvVariables>>
   ): ReturnType<typeof getKnownFixesEnvVariables>
-  validWine: typeof validWine
+  validWine(
+    ...a: DropFirst<Parameters<typeof validWine>>
+  ): ReturnType<typeof validWine>
   verifyWinePrefix(
     ...a: DropFirst<Parameters<typeof verifyWinePrefix>>
   ): ReturnType<typeof verifyWinePrefix>
@@ -1735,7 +1698,7 @@ export function createLauncher(deps: LauncherDeps): Launcher {
     setupWrappers,
     launchEventCallback: (params) => launchEventCallback(ctx, params),
     getKnownFixesEnvVariables: (...a) => getKnownFixesEnvVariables(deps, ...a),
-    validWine,
+    validWine: (...a) => validWine(deps, ...a),
     verifyWinePrefix: (...a) => verifyWinePrefix(deps, ...a),
     // A getter, so a getter-backed deps object stays call-time like the members above.
     get requestRustInvoke() {

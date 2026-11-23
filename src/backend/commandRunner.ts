@@ -78,7 +78,7 @@ export interface CommandRunnerDeps {
   wine: {
     getDefaultSettings(): GameSettings
     verifyWinePrefix(settings: GameSettings): Promise<unknown>
-    validWine(wineVersion: WineInstallation): Promise<boolean>
+    validWine(wineVersion: WineInstallation): Promise<unknown>
     setupEnvVars(
       settings: GameSettings,
       installPath?: string
