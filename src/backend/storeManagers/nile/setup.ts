@@ -12,6 +12,7 @@ import { isWindows } from 'backend/constants/environment'
 import { engineServicesFrom } from 'backend/services/engineServices'
 import type { GameSettings } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import type { FuelSchema } from 'common/types/nile'
 import {
   endEngineLaunch,
@@ -19,6 +20,7 @@ import {
 } from 'backend/engine/launchEngine'
 
 type NileSetupDeps = StatusUpdateDeps &
+  RustInvokeDeps &
   Pick<
     ManagerDeps,
     | 'libraryManagers'

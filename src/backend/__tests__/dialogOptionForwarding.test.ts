@@ -222,10 +222,16 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // Phase 87 plan 18: wine_runtime_download is a lutris archive download plus a tar extraction with
     // no wall-clock ceiling of its own; the crate's shutdown registrant bounds it. The read-only
     // wine_runtime_is_installed stays bounded. Not a dialog channel either.
-    'RUST_WINE_RUNTIME_DOWNLOAD'
+    'RUST_WINE_RUNTIME_DOWNLOAD',
+    // Phase 87 plan 20: the wine-manager install is a download of hundreds of megabytes ended by its own
+    // result, the renderer's abort or the shutdown; the refresh and the releases-info check walk up to
+    // seven feeds in turn. The read-only wine_manager_list stays bounded. Not dialog channels either.
+    'RUST_WINE_MANAGER_INSTALL',
+    'RUST_WINE_MANAGER_REFRESH',
+    'RUST_WINE_RELEASES_INFO_READY'
   ]
 
-  test('contains exactly the dialog, depot, Rust CM, safety remove and wine runtime download channels', () => {
+  test('contains exactly the dialog, depot, Rust CM, safety remove, wine runtime download and wine manager channels', () => {
     // Set equality AND length, not `toContain`: `toContain` catches deletion but is blind to
     // EXTENSION, and an unrelated channel silently acquiring an unbounded timeout is exactly
     // as much of a defect as a dialog channel losing one.

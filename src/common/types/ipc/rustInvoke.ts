@@ -101,6 +101,10 @@ import {
   RUST_STEAMCM_STORE_ENRICH,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_STEAM_API_PIN_RESOLVE,
+  RUST_WINE_MANAGER_INSTALL,
+  RUST_WINE_MANAGER_LIST,
+  RUST_WINE_MANAGER_REFRESH,
+  RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_RUNTIME_DOWNLOAD,
   RUST_WINE_RUNTIME_IS_INSTALLED,
   RUST_SAFETY_CHECK_REMOVAL,
@@ -279,6 +283,14 @@ const flowArg = z.tuple([z.object({ flowId: z.string() }).strict()])
 const runtimeName = z
   .enum(['eac_runtime', 'battleye_runtime', 'umu'])
   .meta({ title: 'name' })
+
+/**
+ * A `WineVersionInfo` as a wine-manager release, opaque to the generated Rust decode (`x-rust-value`; a
+ * single object argument would otherwise be rendered field by field, and the generator has no
+ * length bounds). The shell validates it strictly in `wine_dispatch::parse_wine_version` (the eleven keys
+ * and nothing else, each with its bound) before the crate sees it (T-87-68).
+ */
+const wineRelease = z.unknown().meta({ title: 'release', 'x-rust-value': true })
 
 export const rustInvokeArgs = {
   // ---- Keychain
@@ -805,7 +817,17 @@ export const rustInvokeArgs = {
   // Phase 87 (SVC-02, 87-18): the wine runtime ops. One positional string, one of the three runtime
   // names; the shell decodes the same set again (T-87-65) and the crate validates the name a third time.
   [RUST_WINE_RUNTIME_IS_INSTALLED]: z.tuple([runtimeName]),
-  [RUST_WINE_RUNTIME_DOWNLOAD]: z.tuple([runtimeName])
+  [RUST_WINE_RUNTIME_DOWNLOAD]: z.tuple([runtimeName]),
+  // Phase 87 (SVC-02, 87-20): the wine-manager ops. The refresh takes one boolean (`fetch`); the list takes
+  // nothing; the install takes one WineVersionInfo (opaque here, decoded strictly in the shell); the
+  // releases-info check takes the ReleasesInfo object, of which the crate reads the five feed stamps
+  // (an unknown key is ignored there, as in the TS).
+  [RUST_WINE_MANAGER_REFRESH]: z.tuple([z.boolean().meta({ title: 'fetch' })]),
+  [RUST_WINE_MANAGER_INSTALL]: z.tuple([wineRelease]),
+  [RUST_WINE_MANAGER_LIST]: empty,
+  [RUST_WINE_RELEASES_INFO_READY]: z.tuple([
+    z.unknown().meta({ title: 'releasesInfo', 'x-rust-value': true })
+  ])
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

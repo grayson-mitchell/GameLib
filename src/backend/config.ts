@@ -32,7 +32,7 @@ import { isFlatpak, isLinux, isMac, isWindows } from './constants/environment'
 import { join } from 'path'
 import type { ProcessRunner } from './process/types'
 import type { AppPaths } from './process/context'
-import { updateWineVersionInfos } from './wine/manager/utils'
+import { updateWineVersionInfos } from './enginewine/wineManager'
 import type { Stores } from './services/types'
 
 /**
@@ -157,13 +157,7 @@ abstract class GlobalConfig {
     scanCustom = true
   ): Promise<WineInstallation[]> {
     if (deps.wineDownloaderInfoStore.get('wine-releases', []).length === 0) {
-      await updateWineVersionInfos(
-        {
-          stores: { wineManager: deps },
-          sendFrontendMessage: deps.sendFrontendMessage
-        },
-        true
-      )
+      await updateWineVersionInfos(this.deps, true)
     }
 
     if (isMac) {

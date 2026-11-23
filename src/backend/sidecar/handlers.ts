@@ -380,6 +380,7 @@ export function registerHandlers(deps: {
     stores: deps.services.stores,
     runner: deps.services.runner,
     winetricksQueue: deps.services.winetricksQueue,
+    requestRustInvoke: deps.services.host.requestRustInvoke,
     ...toolSlices(deps.services)
   })
   registerShortcutsFlows({

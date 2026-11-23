@@ -101,6 +101,58 @@ const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_WINE_RUNTIME_DOWNLOAD',
     callers: ['src/backend/launcher.ts'],
     deletedBy: 88
+  },
+  // 87-20 (D-15): the wine manager. utils.ts's default-wine download (checkWineBeforeLaunch, reached from the
+  // launch path and the bottle provisioning) and the `releasesInfoReady` listener go with Phase 88's launch
+  // port; config.ts's `getAlternativeWine` refresh goes with the config in Phase 98. `callers` lists every
+  // importer of the file (the check is per file), so each of the four rows names all three.
+  {
+    name: 'updateWineVersionInfos',
+    file: 'src/backend/enginewine/wineManager.ts',
+    shape: 'shim',
+    channel: 'RUST_WINE_MANAGER_REFRESH',
+    callers: [
+      'src/backend/config.ts',
+      'src/backend/sidecar/wineToolsFlowRegistration.ts',
+      'src/backend/utils.ts'
+    ],
+    deletedBy: 98
+  },
+  {
+    name: 'installWineVersion',
+    file: 'src/backend/enginewine/wineManager.ts',
+    shape: 'shim',
+    channel: 'RUST_WINE_MANAGER_INSTALL',
+    callers: [
+      'src/backend/config.ts',
+      'src/backend/sidecar/wineToolsFlowRegistration.ts',
+      'src/backend/utils.ts'
+    ],
+    deletedBy: 88
+  },
+  {
+    name: 'listWineReleases',
+    file: 'src/backend/enginewine/wineManager.ts',
+    shape: 'shim',
+    channel: 'RUST_WINE_MANAGER_LIST',
+    callers: [
+      'src/backend/config.ts',
+      'src/backend/sidecar/wineToolsFlowRegistration.ts',
+      'src/backend/utils.ts'
+    ],
+    deletedBy: 88
+  },
+  {
+    name: 'wineReleasesInfoReady',
+    file: 'src/backend/enginewine/wineManager.ts',
+    shape: 'shim',
+    channel: 'RUST_WINE_RELEASES_INFO_READY',
+    callers: [
+      'src/backend/config.ts',
+      'src/backend/sidecar/wineToolsFlowRegistration.ts',
+      'src/backend/utils.ts'
+    ],
+    deletedBy: 88
   }
 ]
 

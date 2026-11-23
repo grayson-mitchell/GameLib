@@ -68,7 +68,7 @@ import type { EngineStateService } from 'backend/engine/engineState'
 import type { OnlineMonitor } from '../online_monitor'
 import type { AppState } from '../host/appState'
 import type { IpcRegistry } from './ipcRegistry'
-import { updateWineListsIfOutdated } from '../wine/manager/utils'
+import { wineReleasesInfoReady } from '../enginewine/wineManager'
 import { createTools, type ToolsDeps } from '../tools'
 import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { WinetricksQueue } from '../tools/winetricksQueue'
@@ -78,8 +78,9 @@ import type { DialogBoxDeps, NotifyDeps } from '../dialog/dialog'
 import type { GlobalConfigSlice } from '../config'
 import type { GameConfigs } from '../game_config'
 import type { AppInfo } from '../process/context'
-import { logDebug, LogPrefix } from '../logger'
+import { logDebug, logError, LogPrefix } from '../logger'
 import type { AppRuntimeSlice } from '../appRuntime'
+import type { RustInvokeDeps } from '../host/rustInvokeDeps'
 import type {
   BootServices,
   CommandRunner,
@@ -95,7 +96,7 @@ type WineToolsCommandArgs = Parameters<WineToolsAsync['runWineCommand']>[0]
 
 /** Narrow slice (66.1 D-01): exactly the services the Wine-tools handlers call. */
 export interface WineToolsFlowDeps
-  extends NotifyDeps, DialogBoxDeps, AppRuntimeSlice<'events'> {
+  extends NotifyDeps, DialogBoxDeps, RustInvokeDeps, AppRuntimeSlice<'events'> {
   ipc: Pick<IpcRegistry, 'handle'>
   dialogs: DialogBoxDeps['dialogs'] & Pick<Dialogs, 'displayAcks'>
   appState: Pick<AppState, 'raiseMainWindow' | 'raiseMainWindowForInAppDialog'>
@@ -224,7 +225,11 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   // idempotence assertion.
   deps.appRuntime.events.on('releasesInfoReady', (releasesInfo) => {
     logDebug('Releases info ready, checking wine releases', LogPrefix.Backend)
-    void updateWineListsIfOutdated(deps, releasesInfo)
+    // Phase 87 (87-20, D-15): the check runs in Rust (`wine_releases_info_ready`); a rejected call (the
+    // shell refused it, or the transport failed) is logged, never an unhandled rejection.
+    wineReleasesInfoReady(deps, releasesInfo).catch((error: unknown) =>
+      logError(['Wine releases check failed', error], LogPrefix.WineDownloader)
+    )
   })
 
   // ── DXVK/VKD3D toggle trio (main.ts:999,1007,1015) — the cluster's final 3 channels ─────────

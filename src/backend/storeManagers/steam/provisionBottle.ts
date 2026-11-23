@@ -52,6 +52,7 @@ import {
 } from './bottle'
 import { raiseInstallerWindow } from './bottledSteam'
 import type { SteamLaunchRuntime } from './steamLaunchRuntime'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
 // ── 17-04: bottle provisioning ──────────────────────────────────────────────
 
@@ -167,35 +168,36 @@ export async function killBottleWineServer(
  * own first-run update.
  */
 export async function provisionBottle(
-  deps: AppRuntimeSlice<'events'> & {
-    /** The boot-owned abort registry the default-Wine download registers in (66.4-13). */
-    aborts: Pick<AbortRegistry, 'create' | 'delete'>
-    stores: Pick<Stores, 'kvs' | 'wineManager'>
-    spawnAsync: SpawnAsync
-    commandRunner: Pick<CommandRunner, 'runWineCommand'>
-    runner: Pick<ProcessRunner, 'run'>
-    paths: Pick<
-      AppPaths,
-      'userHome' | 'steamSupportPath' | 'toolsPath' | 'configPath'
-    >
-    engineRuntime: Pick<EngineRuntime, 'crossover'>
-    steamLaunchRuntime: Pick<SteamLaunchRuntime, 'raiser'>
-    config: Pick<
-      GlobalConfigSlice,
-      'getSettings' | 'getAlternativeWine' | 'setSetting'
-    >
-    gameConfigs: Pick<GameConfigs, 'get'>
-    dialogs: Pick<Dialogs, 'showMessageBox'>
-    appState: Pick<AppState, 'hide'>
-    sendFrontendMessage: SendFrontendMessage
-    steamBottle: Pick<
-      SteamBottle,
-      | 'configStore'
-      | 'getSteamBottleSettings'
-      | 'isBottleReady'
-      | 'persistedWineBins'
-    >
-  },
+  deps: AppRuntimeSlice<'events'> &
+    RustInvokeDeps & {
+      /** The boot-owned abort registry the default-Wine download registers in (66.4-13). */
+      aborts: Pick<AbortRegistry, 'create' | 'delete'>
+      stores: Pick<Stores, 'kvs' | 'wineManager'>
+      spawnAsync: SpawnAsync
+      commandRunner: Pick<CommandRunner, 'runWineCommand'>
+      runner: Pick<ProcessRunner, 'run'>
+      paths: Pick<
+        AppPaths,
+        'userHome' | 'steamSupportPath' | 'toolsPath' | 'configPath'
+      >
+      engineRuntime: Pick<EngineRuntime, 'crossover'>
+      steamLaunchRuntime: Pick<SteamLaunchRuntime, 'raiser'>
+      config: Pick<
+        GlobalConfigSlice,
+        'getSettings' | 'getAlternativeWine' | 'setSetting'
+      >
+      gameConfigs: Pick<GameConfigs, 'get'>
+      dialogs: Pick<Dialogs, 'showMessageBox'>
+      appState: Pick<AppState, 'hide'>
+      sendFrontendMessage: SendFrontendMessage
+      steamBottle: Pick<
+        SteamBottle,
+        | 'configStore'
+        | 'getSteamBottleSettings'
+        | 'isBottleReady'
+        | 'persistedWineBins'
+      >
+    },
   opts?: {
     bottleName?: string
     wineVersion?: WineInstallation

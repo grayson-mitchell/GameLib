@@ -200,5 +200,11 @@ pub(crate) fn dispatch_rust_channel(
             wine_dispatch::rpc_wine_runtime_is_installed(args)
         }
         RustInvokeChannel::WineRuntimeDownload => wine_dispatch::rpc_wine_runtime_download(args),
+        RustInvokeChannel::WineManagerRefresh => wine_dispatch::rpc_wine_manager_refresh(args),
+        RustInvokeChannel::WineManagerInstall => wine_dispatch::rpc_wine_manager_install(args),
+        RustInvokeChannel::WineManagerList => wine_dispatch::rpc_wine_manager_list(args),
+        RustInvokeChannel::WineReleasesInfoReady => {
+            wine_dispatch::rpc_wine_releases_info_ready(args)
+        }
     }
 }

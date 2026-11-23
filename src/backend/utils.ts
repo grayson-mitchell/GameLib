@@ -47,14 +47,15 @@ import type { AppInfo, AppPaths } from './process/context'
 import { validWine } from './launcher'
 import {
   installWineVersion,
+  listWineReleases,
   updateWineVersionInfos
-} from './wine/manager/utils'
+} from './enginewine/wineManager'
 import type { CommandRunner, ManagerDeps, Stores } from './services/types'
 import { readdir, lstat, rm } from 'fs/promises'
 import type { AppRuntimeSlice, StatusUpdateDeps } from './appRuntime'
 import EasyDl from 'easydl'
 
-import type { AppSettings, WineManagerStatus } from 'common/types'
+import type { AppSettings, WineVersionInfo } from 'common/types'
 import { isUmuSupported, type UmuDeps } from './utils/compatibility_layers'
 import { isLinux, isMac, isWindows } from './constants/environment'
 import { fixAsarPath } from './process/appPaths'
@@ -1065,26 +1066,28 @@ async function ContinueWithFoundWine(
 }
 
 export async function downloadDefaultWine(
-  deps: AppRuntimeSlice<'events'> & {
-    aborts: Pick<AbortRegistry, 'create' | 'delete'>
-    stores: Pick<Stores, 'kvs' | 'wineManager'>
-    runner: Pick<ProcessRunner, 'run'>
-    paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
-    config: Pick<
-      GlobalConfigSlice,
-      'getSettings' | 'getAlternativeWine' | 'setSetting'
-    >
-    sendFrontendMessage: SendFrontendMessage
-  }
+  deps: AppRuntimeSlice<'events'> &
+    RustInvokeDeps & {
+      aborts: Pick<AbortRegistry, 'create' | 'delete'>
+      stores: Pick<Stores, 'kvs' | 'wineManager'>
+      runner: Pick<ProcessRunner, 'run'>
+      paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
+      config: Pick<
+        GlobalConfigSlice,
+        'getSettings' | 'getAlternativeWine' | 'setSetting'
+      >
+      sendFrontendMessage: SendFrontendMessage
+    }
 ) {
   if (isWindows) return null
-  // refresh wine list
+  // refresh wine list (Rust writes the store; a failed feed is logged there)
   await updateWineVersionInfos(deps, true)
-  // get list of wines on wineDownloaderInfoStore
-  const availableWine = deps.stores.wineManager.wineDownloaderInfoStore.get(
-    'wine-releases',
-    []
-  )
+  // get list of wines on wineDownloaderInfoStore: read from Rust, which wrote it, not from the sidecar's
+  // mirror of the store, which may not have caught up with that write yet
+  const stored = await listWineReleases(deps)
+  const availableWine: WineVersionInfo[] = Array.isArray(stored)
+    ? (stored as WineVersionInfo[])
+    : []
   const isMacOSUpToDate = isMacSonomaOrHigher()
   const release = availableWine.find((version) => {
     if (isLinux) {
@@ -1104,11 +1107,8 @@ export async function downloadDefaultWine(
     return null
   }
 
-  // download the latest version
-  const onProgress = (state: WineManagerStatus) => {
-    deps.sendFrontendMessage('progressOfWineManager', release.version, state)
-  }
-  const result = await installWineVersion(deps, release, onProgress)
+  // download the latest version (Rust pushes the same `progressOfWineManager` payload the TS closure did)
+  const result = await installWineVersion(deps, release)
 
   if (result === 'success') {
     let downloadedWine = null
@@ -1140,19 +1140,20 @@ export async function downloadDefaultWine(
 }
 
 export async function checkWineBeforeLaunch(
-  deps: AppRuntimeSlice<'events'> & {
-    aborts: Pick<AbortRegistry, 'create' | 'delete'>
-    stores: Pick<Stores, 'kvs' | 'wineManager'>
-    runner: Pick<ProcessRunner, 'run'>
-    paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
-    config: Pick<
-      GlobalConfigSlice,
-      'getSettings' | 'getAlternativeWine' | 'setSetting'
-    >
-    gameConfigs: Pick<GameConfigs, 'get'>
-    dialogs: Pick<Dialogs, 'showMessageBox'>
-    sendFrontendMessage: SendFrontendMessage
-  },
+  deps: AppRuntimeSlice<'events'> &
+    RustInvokeDeps & {
+      aborts: Pick<AbortRegistry, 'create' | 'delete'>
+      stores: Pick<Stores, 'kvs' | 'wineManager'>
+      runner: Pick<ProcessRunner, 'run'>
+      paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
+      config: Pick<
+        GlobalConfigSlice,
+        'getSettings' | 'getAlternativeWine' | 'setSetting'
+      >
+      gameConfigs: Pick<GameConfigs, 'get'>
+      dialogs: Pick<Dialogs, 'showMessageBox'>
+      sendFrontendMessage: SendFrontendMessage
+    },
   gameInfo: GameInfo,
   gameSettings: GameSettings,
   logWriter: LogWriter

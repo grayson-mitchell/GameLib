@@ -23,6 +23,7 @@ import {
 } from 'common/types/gog'
 import { deriveGogPaths } from './constants'
 import { isWindows } from 'backend/constants/environment'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { runElevatedSteps, type ElevatedStep } from './windowsElevation'
 import {
   endEngineLaunch,
@@ -31,6 +32,7 @@ import {
 
 /** What GOG setup reads: the manager map, the wine launcher helpers and the runners. */
 export type SetupDeps = StatusUpdateDeps &
+  RustInvokeDeps &
   Pick<
     GOGManagerDeps,
     | 'libraryManagers'

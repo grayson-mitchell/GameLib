@@ -59,6 +59,9 @@ import {
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_SAFETY_REMOVE_TREE,
   RUST_WINE_RUNTIME_DOWNLOAD,
+  RUST_WINE_MANAGER_INSTALL,
+  RUST_WINE_MANAGER_REFRESH,
+  RUST_WINE_RELEASES_INFO_READY,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
   RUST_DIALOG_SAVE,
@@ -147,6 +150,15 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * either. The crate holds a shutdown registrant and is cancelled by the token, so a 60 s cut-off would
  * report the launch's runtime as failed while Rust kept extracting. The read-only
  * `wine_runtime_is_installed` stays bounded.
+ *
+ * Sixth (Phase 87, 87-20): `wine_manager_install` is the default-wine download (a Wine, Proton or GPTK
+ * archive of hundreds of megabytes plus an unpack), moved out of the TS install that had no deadline
+ * either. It ends on its own result, the renderer's `abort(version)` or the app shutdown, so a 60 s
+ * cut-off would report the default wine as not installed while Rust kept downloading.
+ * `wine_manager_refresh` and `wine_releases_info_ready` join it: they walk up to seven release feeds in
+ * turn, each with its own 60 s request limit in Rust, and the TS refresh they replace swallowed a slow
+ * feed rather than failing the caller, so a 60 s cut-off here would turn a slow network into a rejected
+ * `getAlternativeWine`. The read-only `wine_manager_list` stays bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -173,7 +185,10 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_STEAMCM_SIGNIN_GUARD_SUBMIT,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_SAFETY_REMOVE_TREE,
-  RUST_WINE_RUNTIME_DOWNLOAD
+  RUST_WINE_RUNTIME_DOWNLOAD,
+  RUST_WINE_MANAGER_INSTALL,
+  RUST_WINE_MANAGER_REFRESH,
+  RUST_WINE_RELEASES_INFO_READY
 ]
 
 function isValidRequest(value: unknown): value is SidecarRpcRequest {

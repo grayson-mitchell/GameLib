@@ -1,7 +1,9 @@
 /**
  * The wine-manager oracle (87-07, D-08): the seven GitHub release feeds and the stored list they
  * merge into, `installWineVersion` (sha512 checksum present, mismatched and absent, overwrite,
- * abort) and `removeWineVersion`, driven through the same handlers the sidecar registers and recorded
+ * abort) and `removeWineVersion`, driven through the bodies of the handlers the sidecar registered (the handlers
+ * moved to Rust in 87-20; the bodies are kept here, verbatim, so the TS behaviour the goldens pin stays
+ * runnable until 87-22 deletes the TS) and recorded
  * as goldens the Rust `gamelib-wine` wine-manager slice later has to reproduce. The lutris runtimes
  * half of the `wine/` goldens is 87-05.
  *
@@ -64,7 +66,12 @@ import {
 } from 'backend/wine/manager/downloader/constants'
 import type { WineToolsFlowDeps } from 'backend/sidecar/wineToolsFlowRegistration'
 import type { SendFrontendMessage } from 'backend/host/frontendMessage'
-import type { Repositorys, WineVersionInfo } from 'common/types'
+import type {
+  Repositorys,
+  WineManagerStatus,
+  WineVersionInfo
+} from 'common/types'
+import { t } from 'i18next'
 
 const CRATE = 'gamelib-wine'
 const SLICE = 'wine_manager'
@@ -317,7 +324,7 @@ type Handler = (event: unknown, ...args: unknown[]) => Promise<unknown>
 interface SliceModules {
   utils: typeof import('backend/utils')
   manager: typeof import('backend/wine/manager/utils')
-  registration: typeof import('backend/sidecar/wineToolsFlowRegistration')
+  dialog: typeof import('backend/dialog/dialog')
   stores: typeof import('backend/wine/manager/stores')
   storeRegistry: typeof import('backend/stores/storeRegistry')
   testStoreRoot: typeof import('backend/testUtils/testStoreRoot')
@@ -335,7 +342,7 @@ describeSkipOnWindows('wine manager oracle (87-07)', () => {
     mods = {
       utils: await import('backend/utils'),
       manager: await import('backend/wine/manager/utils'),
-      registration: await import('backend/sidecar/wineToolsFlowRegistration'),
+      dialog: await import('backend/dialog/dialog'),
       stores: await import('backend/wine/manager/stores'),
       storeRegistry: await import('backend/stores/storeRegistry'),
       testStoreRoot: await import('backend/testUtils/testStoreRoot'),
@@ -459,7 +466,61 @@ describeSkipOnWindows('wine manager oracle (87-07)', () => {
               delete: () => undefined
             }
           } as unknown as WineToolsFlowDeps
-          mods.registration.registerWineToolsFlows(deps)
+          // The `installWineVersion` and `removeWineVersion` handler bodies of
+          // `wineToolsFlowRegistration.ts` as they were before 87-20 moved them to Rust.
+          handlers.set('installWineVersion', async (_event, ...args) => {
+            const release = args[0] as WineVersionInfo
+            const onProgress = (state: WineManagerStatus) => {
+              deps.sendFrontendMessage(
+                'progressOfWineManager',
+                release.version,
+                state
+              )
+            }
+            mods.dialog.notify(deps, {
+              title: release.version,
+              body: t('notify.install.startInstall')
+            })
+            onProgress({
+              status: 'downloading',
+              percentage: 0,
+              avgSpeed: 0,
+              eta: '00:00:00'
+            })
+            const result = await mods.manager.installWineVersion(
+              deps,
+              release,
+              onProgress
+            )
+            let notifyBody: string | null = null
+            switch (result) {
+              case 'error':
+                notifyBody = t('notify.install.error')
+                break
+              case 'abort':
+                notifyBody = t('notify.install.canceled')
+                break
+              case 'success':
+                notifyBody = t('notify.install.finished')
+            }
+            if (notifyBody) {
+              mods.dialog.notify(deps, {
+                title: release.version,
+                body: notifyBody
+              })
+            }
+            onProgress({ status: 'idle' })
+          })
+          handlers.set('removeWineVersion', async (_event, ...args) => {
+            const release = args[0] as WineVersionInfo
+            const result = await mods.manager.removeWineVersion(deps, release)
+            if (result) {
+              mods.dialog.notify(deps, {
+                title: release.version,
+                body: t('notify.uninstalled')
+              })
+            }
+          })
 
           if (c.op === 'install') {
             spy.mockImplementation(

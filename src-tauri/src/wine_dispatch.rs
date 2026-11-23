@@ -397,27 +397,36 @@ fn read_install_settings(wine: &WineCtx) -> InstallSettings {
     })
 }
 
+/// Runs one install to its end on the calling thread, which must not be inside an async runtime (the
+/// blocking pool, or the sidecar dispatcher's worker): registers the cancel the renderer's
+/// `abort(version)` reaches, reads the install settings, and drives the crate's install. The crate owns
+/// the whole handler (notification, progress, the download, the store, the result notification, the
+/// closing idle), so a cancelled install ends as the TS aborted result. `Err` is the crate refusing a
+/// version or archive name that is not one plain path component, before it does anything.
+fn install_blocking(
+    wine: &Arc<WineCtx>,
+    release: &Value,
+) -> Result<gamelib_wine::manager::install::Outcome, &'static str> {
+    let version = release["version"].as_str().unwrap_or_default();
+    let (cancel, _guard) = register_install(version);
+    let settings = read_install_settings(wine);
+    tauri::async_runtime::block_on(gamelib_wine::manager::install::install(
+        wine, release, &settings, &cancel,
+    ))
+}
+
 /// The body of `installWineVersion`: decode first (a bad call is rejected the same way before and
-/// after the install), then run the crate's install under a cancel the renderer's `abort(version)`
-/// reaches. The crate owns the whole handler (notification, progress, the download, the store, the
-/// result notification, the closing idle), so an install that is cancelled ends as the TS aborted
-/// result and this answers `undefined` like the TS handler.
+/// after the install), then [`install_blocking`] on the blocking pool. It answers `undefined` like the
+/// TS handler.
 async fn install_channel(wine: Option<Arc<WineCtx>>, args: Vec<Value>) -> Result<Value, String> {
     let release = parse_wine_version(&args)
         .map_err(|(path, code)| invalid_args("installWineVersion", &[path], &[code]))?
         .clone();
     let wine = wine.ok_or_else(|| "installWineVersion: not ready".to_string())?;
     let release = Value::Object(release);
-    let version = release["version"].as_str().unwrap_or_default().to_string();
-    let (cancel, _guard) = register_install(&version);
-    let ended = tauri::async_runtime::spawn_blocking(move || {
-        let settings = read_install_settings(&wine);
-        tauri::async_runtime::block_on(gamelib_wine::manager::install::install(
-            &wine, &release, &settings, &cancel,
-        ))
-    })
-    .await
-    .map_err(|_| "installWineVersion: the install did not finish".to_string())?;
+    let ended = tauri::async_runtime::spawn_blocking(move || install_blocking(&wine, &release))
+        .await
+        .map_err(|_| "installWineVersion: the install did not finish".to_string())?;
     // The crate refuses a version or archive name that is not one plain path component before it
     // does anything; that is the renderer's argument being wrong.
     ended.map_err(|_| invalid_args("installWineVersion", &["0"], &["invalid_value"]))?;
@@ -485,6 +494,53 @@ pub(crate) fn rpc_wine_runtime_is_installed(args: &[Value]) -> Result<Value, Str
 pub(crate) fn rpc_wine_runtime_download(args: &[Value]) -> Result<Value, String> {
     WineRuntimeDownloadArgs::from_args(args)?;
     rpc_wine_op(wine_ctx(), "wine_runtime_download", args)
+}
+
+/// The `wine_manager_refresh` `rustInvoke` arm (the `updateWineVersionInfos` shim, 87-20): the generated
+/// decode (one boolean) first, then the crate, which swallows a failed feed as the TS did. The
+/// sidecar leaves this channel unbounded (`UNBOUNDED_RUST_CHANNELS`).
+pub(crate) fn rpc_wine_manager_refresh(args: &[Value]) -> Result<Value, String> {
+    WineManagerRefreshArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("wine_manager_refresh:bad-args".to_string());
+    }
+    rpc_wine_op(wine_ctx(), "wine_manager_refresh", args)
+}
+
+/// The `wine_manager_list` `rustInvoke` arm (the `listWineReleases` shim): the stored release list.
+/// The crate refuses any argument.
+pub(crate) fn rpc_wine_manager_list(args: &[Value]) -> Result<Value, String> {
+    WineManagerListArgs::from_args(args)?;
+    if !args.is_empty() {
+        return Err("wine_manager_list:bad-args".to_string());
+    }
+    rpc_wine_op(wine_ctx(), "wine_manager_list", args)
+}
+
+/// The `wine_releases_info_ready` `rustInvoke` arm (the `releasesInfoReady` listener's shim): one object,
+/// of which the crate reads the five feed stamps. Unbounded in the sidecar, like the refresh it may start.
+pub(crate) fn rpc_wine_releases_info_ready(args: &[Value]) -> Result<Value, String> {
+    WineReleasesInfoReadyArgs::from_args(args)?;
+    if !matches!(args, [Value::Object(_)]) {
+        return Err("wine_releases_info_ready:bad-args".to_string());
+    }
+    rpc_wine_op(wine_ctx(), "wine_releases_info_ready", args)
+}
+
+/// The `wine_manager_install` `rustInvoke` arm (the `installWineVersion` shim, the default-wine
+/// download): the release is decoded as strictly as the renderer's is ([`parse_wine_version`], the
+/// eleven keys and nothing else), then installed to its end on this thread and answered as
+/// `'success' | 'abort' | 'error'`. It registers its cancel under the version like the renderer's
+/// install, so `abort(version)` reaches it. Unbounded in the sidecar.
+pub(crate) fn rpc_wine_manager_install(args: &[Value]) -> Result<Value, String> {
+    const BAD: &str = "wine_manager_install:bad-args";
+    WineManagerInstallArgs::from_args(args)?;
+    // `parse_wine_version` is the strict decode and also refuses a second argument.
+    let release = parse_wine_version(args).map_err(|_| BAD.to_string())?;
+    let wine = wine_ctx().ok_or_else(|| "wine_manager_install:not-ready".to_string())?;
+    let outcome =
+        install_blocking(wine, &Value::Object(release.clone())).map_err(|_| BAD.to_string())?;
+    Ok(Value::String(outcome.as_str().to_string()))
 }
 
 #[cfg(test)]
@@ -1066,6 +1122,60 @@ mod tests {
                 "{junk:?}"
             );
         }
+    }
+
+    #[test]
+    fn the_manager_rpc_arms_validate_first_and_answer_not_ready_before_install() {
+        assert!(wine_ctx().is_none());
+        assert_eq!(
+            rpc_wine_manager_refresh(&[json!(true)]),
+            Err("wine_manager_refresh:not-ready".to_string())
+        );
+        assert_eq!(
+            rpc_wine_manager_list(&[]),
+            Err("wine_manager_list:not-ready".to_string())
+        );
+        assert_eq!(
+            rpc_wine_releases_info_ready(&[json!({})]),
+            Err("wine_releases_info_ready:not-ready".to_string())
+        );
+        assert_eq!(
+            rpc_wine_manager_install(&[release("Wine-Lutris-9")]),
+            Err("wine_manager_install:not-ready".to_string())
+        );
+        // Bad arguments are the fixed `<op>:bad-args` before the context is looked at.
+        for (answer, op) in [
+            (rpc_wine_manager_refresh(&[]), "wine_manager_refresh"),
+            (
+                rpc_wine_manager_refresh(&[json!("yes")]),
+                "wine_manager_refresh",
+            ),
+            (rpc_wine_manager_install(&[]), "wine_manager_install"),
+            (
+                rpc_wine_manager_install(&[json!("x")]),
+                "wine_manager_install",
+            ),
+            (
+                rpc_wine_manager_install(&[json!({ "version": "v" })]),
+                "wine_manager_install",
+            ),
+            (
+                rpc_wine_releases_info_ready(&[]),
+                "wine_releases_info_ready",
+            ),
+            (
+                rpc_wine_releases_info_ready(&[json!(null)]),
+                "wine_releases_info_ready",
+            ),
+        ] {
+            assert_eq!(answer, Err(format!("{op}:bad-args")), "{op}");
+        }
+        let mut extra = release("Wine-Lutris-9");
+        extra["SECRET-KEY"] = json!(1);
+        assert_eq!(
+            rpc_wine_manager_install(&[extra]),
+            Err("wine_manager_install:bad-args".to_string())
+        );
     }
 
     #[test]

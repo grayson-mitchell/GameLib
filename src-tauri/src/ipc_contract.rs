@@ -162,6 +162,10 @@ pub(crate) enum RustInvokeChannel {
     InfoWikiCacheClear,
     WineRuntimeIsInstalled,
     WineRuntimeDownload,
+    WineManagerRefresh,
+    WineManagerInstall,
+    WineManagerList,
+    WineReleasesInfoReady,
 }
 
 impl RustInvokeChannel {
@@ -305,6 +309,10 @@ impl RustInvokeChannel {
         RustInvokeChannel::InfoWikiCacheClear,
         RustInvokeChannel::WineRuntimeIsInstalled,
         RustInvokeChannel::WineRuntimeDownload,
+        RustInvokeChannel::WineManagerRefresh,
+        RustInvokeChannel::WineManagerInstall,
+        RustInvokeChannel::WineManagerList,
+        RustInvokeChannel::WineReleasesInfoReady,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -448,6 +456,10 @@ impl RustInvokeChannel {
             "info_wiki_cache_clear" => Some(RustInvokeChannel::InfoWikiCacheClear),
             "wine_runtime_is_installed" => Some(RustInvokeChannel::WineRuntimeIsInstalled),
             "wine_runtime_download" => Some(RustInvokeChannel::WineRuntimeDownload),
+            "wine_manager_refresh" => Some(RustInvokeChannel::WineManagerRefresh),
+            "wine_manager_install" => Some(RustInvokeChannel::WineManagerInstall),
+            "wine_manager_list" => Some(RustInvokeChannel::WineManagerList),
+            "wine_releases_info_ready" => Some(RustInvokeChannel::WineReleasesInfoReady),
             _ => None,
         }
     }
@@ -593,6 +605,10 @@ impl RustInvokeChannel {
             RustInvokeChannel::InfoWikiCacheClear => "info_wiki_cache_clear",
             RustInvokeChannel::WineRuntimeIsInstalled => "wine_runtime_is_installed",
             RustInvokeChannel::WineRuntimeDownload => "wine_runtime_download",
+            RustInvokeChannel::WineManagerRefresh => "wine_manager_refresh",
+            RustInvokeChannel::WineManagerInstall => "wine_manager_install",
+            RustInvokeChannel::WineManagerList => "wine_manager_list",
+            RustInvokeChannel::WineReleasesInfoReady => "wine_releases_info_ready",
         }
     }
 }
@@ -3143,5 +3159,50 @@ impl WineRuntimeDownloadArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let name = serde_json::from_value(args.first().ok_or_else(|| "wine_runtime_download:bad-args".to_string())?.clone()).map_err(|_| "wine_runtime_download:bad-args".to_string())?;
         Ok(Self { name })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineManagerRefreshArgs {
+    pub(crate) fetch: bool,
+}
+
+impl WineManagerRefreshArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let fetch = serde_json::from_value(args.first().ok_or_else(|| "wine_manager_refresh:bad-args".to_string())?.clone()).map_err(|_| "wine_manager_refresh:bad-args".to_string())?;
+        Ok(Self { fetch })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineManagerInstallArgs {
+    pub(crate) release: Value,
+}
+
+impl WineManagerInstallArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let release = serde_json::from_value(args.first().ok_or_else(|| "wine_manager_install:bad-args".to_string())?.clone()).map_err(|_| "wine_manager_install:bad-args".to_string())?;
+        Ok(Self { release })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct WineManagerListArgs;
+
+impl WineManagerListArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineReleasesInfoReadyArgs {
+    pub(crate) releases_info: Value,
+}
+
+impl WineReleasesInfoReadyArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let releases_info = serde_json::from_value(args.first().ok_or_else(|| "wine_releases_info_ready:bad-args".to_string())?.clone()).map_err(|_| "wine_releases_info_ready:bad-args".to_string())?;
+        Ok(Self { releases_info })
     }
 }

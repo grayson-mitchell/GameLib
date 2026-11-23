@@ -1074,6 +1074,50 @@ export const RUST_WINE_RUNTIME_IS_INSTALLED =
 export const RUST_WINE_RUNTIME_DOWNLOAD = 'wine_runtime_download' as const
 
 /**
+ * Phase 87 (SVC-02, 87-20): the Rust wine-manager ops, pass-throughs to `gamelib-wine`. The sidecar's
+ * callers (the default-wine download in `utils.ts`, `getAlternativeWine` in `config.ts` and the
+ * `releasesInfoReady` listener) reach them only through the `backend/enginewine/wineManager.ts` shims;
+ * the renderer's `refreshWineVersionInfo`, `installWineVersion` and `removeWineVersion` are native
+ * channels over the same ops, so the wine-downloader-info store and `<tools>/wine` have one writer.
+ *
+ * `wine_manager_refresh`: refreshes the store from the seven release feeds. Args: one boolean, `fetch`
+ * (`true` forces the network; `false` merges what is stored). Resolves `null`, and also when a feed
+ * fails (the failure is logged in Rust), as the TS refresh swallowed it. Long-running: listed in the
+ * sidecar's `UNBOUNDED_RUST_CHANNELS` (up to seven feeds in turn).
+ */
+export const RUST_WINE_MANAGER_REFRESH = 'wine_manager_refresh' as const
+
+/**
+ * Phase 87 (SVC-02, 87-20): `wine_manager_install` installs one release, the whole handler (start
+ * notification, `progressOfWineManager`, the sha512-checked download, the unpack, the store entry, the
+ * result notification). Args: one `WineVersionInfo` (the shell decodes it strictly, the eleven keys and
+ * nothing else); the shell reads `downloadProtonToSteam` and `defaultSteamPath` from the global config
+ * itself. Resolves `'success' | 'abort' | 'error'`. The renderer cancels it with `abort(version)`.
+ *
+ * Long-running: listed in the sidecar's `UNBOUNDED_RUST_CHANNELS` (a download of hundreds of megabytes
+ * and an unpack, ended by its own result, the abort or the app shutdown).
+ */
+export const RUST_WINE_MANAGER_INSTALL = 'wine_manager_install' as const
+
+/**
+ * Phase 87 (SVC-02, 87-20): `wine_manager_list` reads the wine-downloader-info store's release list
+ * (the stored `wine-releases`). Args: none. Resolves the array of releases, `[]` when nothing is
+ * stored. The default-wine download reads it after a refresh; the sidecar's own store mirror may not
+ * have caught up with Rust's write by then.
+ */
+export const RUST_WINE_MANAGER_LIST = 'wine_manager_list' as const
+
+/**
+ * Phase 87 (SVC-02, 87-20): `wine_releases_info_ready` is the `releasesInfoReady` listener's body: the
+ * wine lists are refreshed when a feed's latest release is newer than the stored one (Linux and macOS
+ * only). Args: one object, the `ReleasesInfo` the release-info fetch produced (the crate reads the five
+ * feed stamps and ignores the rest). Resolves `null` once the check, and any refresh it started, has
+ * ended; a failure is logged in Rust and never raised. Long-running: listed in the sidecar's
+ * `UNBOUNDED_RUST_CHANNELS`, like the refresh it may start.
+ */
+export const RUST_WINE_RELEASES_INFO_READY = 'wine_releases_info_ready' as const
+
+/**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
  * the macOS bridge helper loads: the GameLib cache, else a snapshot of the Steam client's own copy
  * when it already hashes to the pin, else a fetch from Valve's client-update CDN (sha2vz, VZ decode,
@@ -1409,7 +1453,11 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_INFO_WIKI_GET,
   RUST_INFO_WIKI_CACHE_CLEAR,
   RUST_WINE_RUNTIME_IS_INSTALLED,
-  RUST_WINE_RUNTIME_DOWNLOAD
+  RUST_WINE_RUNTIME_DOWNLOAD,
+  RUST_WINE_MANAGER_REFRESH,
+  RUST_WINE_MANAGER_INSTALL,
+  RUST_WINE_MANAGER_LIST,
+  RUST_WINE_RELEASES_INFO_READY
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

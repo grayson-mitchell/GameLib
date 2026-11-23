@@ -481,7 +481,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 139 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 143 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
     // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
@@ -492,7 +492,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 86 plan 20: 134 -> 135, info_umu_get.
     // Phase 86 plan 22: 135 -> 137, info_wiki_get and info_wiki_cache_clear.
     // Phase 87 plan 18: 137 -> 139, wine_runtime_is_installed and wine_runtime_download.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(139)
+    // Phase 87 plan 20: 139 -> 143, the four wine-manager ops.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(143)
     expect(router).not.toContain('_ =>')
   })
 
@@ -906,7 +907,17 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // against the crate's ops, and `wine_dispatch::tests` drives the arms' validation and the
       // not-ready answer. The callers are the launcher's two runtime shims (enginewine/runtimes.ts).
       'wine_runtime_is_installed',
-      'wine_runtime_download'
+      'wine_runtime_download',
+
+      // Phase 87 plan 20 -- the four wine-manager ops, pass-through arms into `gamelib-wine`. PROVEN:
+      // `golden_wine_manager.rs` replays every 87-07 TS golden (refresh, install, remove) against the
+      // crate's ops, and `wine_dispatch::tests` drives the arms' validation and the not-ready answer.
+      // The callers are the shims in enginewine/wineManager.ts (utils.ts, config.ts and the
+      // releasesInfoReady listener).
+      'wine_manager_refresh',
+      'wine_manager_install',
+      'wine_manager_list',
+      'wine_releases_info_ready'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)
