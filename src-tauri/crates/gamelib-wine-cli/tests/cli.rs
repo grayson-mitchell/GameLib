@@ -9,10 +9,12 @@ fn cli() -> Command {
 }
 
 #[test]
-fn ops_prints_an_empty_list_and_exits_zero() {
+fn ops_prints_the_op_table_and_exits_zero() {
     let out = cli().arg("ops").output().unwrap();
     assert_eq!(out.status.code(), Some(0));
-    assert!(out.stdout.is_empty(), "got: {:?}", out.stdout);
+    let printed = String::from_utf8_lossy(&out.stdout);
+    let names: Vec<&str> = printed.lines().collect();
+    assert_eq!(names, gamelib_wine::OPS);
 }
 
 #[test]

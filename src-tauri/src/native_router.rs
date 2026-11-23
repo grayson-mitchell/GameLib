@@ -24,6 +24,7 @@ use crate::log_upload::{self, PasteClient};
 use crate::native_handlers;
 use crate::relay_commands::echo_channel;
 use crate::store_native;
+use crate::wine_dispatch;
 use gamelib_core::emitter::FrontendEmitter;
 use gamelib_core::paths::{LogTarget, Platform};
 use gamelib_core::shutdown::{Registrant, Shutdown};
@@ -351,6 +352,12 @@ const STORE_SLICE: &str = "store";
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) const INFO_SLICE: &str = "info";
 
+/// The slice that owns the wine channels in `nativeChannels.json` (Phase 87): invoke channels only,
+/// so it has no send queue; the handler runs the `gamelib-wine` op on the blocking pool. Named here,
+/// with the other slices, for the manifest-slice test.
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) const WINE_SLICE: &str = "wine";
+
 /// Run one queued send on its slice worker: the channel picks the handler.
 fn run_send_job(ctx: &Arc<NativeCtx>, job: NativeSendJob) -> Result<(), String> {
     match (job.channel, job.payload) {
@@ -469,6 +476,10 @@ impl NativeRouter {
         // write), over the Keychain owner. The sidecar no longer registers `itad.*`.
         invoke.insert("itad.getKeyStatus", info_dispatch::itad_get_key_status);
         invoke.insert("itad.setApiKey", info_dispatch::itad_set_api_key);
+        // Phase 87 (87-17, D-14): the renderer's runtime check, run by the `wine` slice over the lutris
+        // list and `<tools>/runtimes/<name>/current_version`. The sidecar no longer registers
+        // `isRuntimeInstalled`; `downloadRuntime` stays with the sidecar until 87-18 (D-06).
+        invoke.insert("isRuntimeInstalled", wine_dispatch::is_runtime_installed);
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -849,6 +860,28 @@ mod tests {
             );
         }
         assert!(!router.queues.contains_key(INFO_SLICE));
+    }
+
+    #[test]
+    fn native_manifest_wine_channels_are_registered_in_the_wine_slice() {
+        let m = manifest();
+        let channels = m["channels"].as_object().expect("channels object");
+        let router = router();
+        let wine: Vec<&str> = channels
+            .iter()
+            .filter(|(_, spec)| spec["slice"] == WINE_SLICE)
+            .map(|(name, _)| name.as_str())
+            .collect();
+        assert!(wine.contains(&"isRuntimeInstalled"), "{wine:?}");
+        for name in wine {
+            // The wine slice is invoke-only: no send queue exists for it.
+            assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");
+            assert!(
+                router.invoke_handler(name).is_some(),
+                "{name} has no handler"
+            );
+        }
+        assert!(!router.queues.contains_key(WINE_SLICE));
     }
 
     #[test]

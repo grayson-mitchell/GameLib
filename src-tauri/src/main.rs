@@ -120,6 +120,7 @@ mod app_lifecycle;
 mod clipboard;
 mod depot_dispatch;
 mod dialogs;
+mod engine_dispatch;
 mod info_dispatch;
 mod info_secrets;
 mod ipc_contract;
@@ -151,6 +152,7 @@ mod store_policy;
 mod terminate_veto;
 mod tray;
 mod wake_lock;
+mod wine_dispatch;
 use app_lifecycle::*;
 use clipboard::*;
 use depot_dispatch::*;
@@ -1906,6 +1908,12 @@ fn run_setup(
     if let Some(paths) = log_paths.as_ref() {
         info_dispatch::install(app.handle(), std::path::Path::new(&paths.user_data));
     }
+    // Phase 87 (D-20): the one engine context and the one wine context built from it, right after
+    // the host opened. Nothing here spawns a process or waits; an op before this answers not-ready.
+    if let Some(paths) = log_paths.as_ref() {
+        engine_dispatch::install(app.handle(), std::path::Path::new(&paths.user_data));
+        wine_dispatch::install();
+    }
     // Where the sidecar's store frames are resolved: the directory this boot opened.
     if let Some(paths) = log_paths.as_ref() {
         store_dispatch::configure(std::path::PathBuf::from(&paths.user_data));
@@ -2388,6 +2396,7 @@ mod tests {
         "app_lifecycle.rs",
         "clipboard.rs",
         "dialogs.rs",
+        "engine_dispatch.rs",
         "info_dispatch.rs",
         "info_secrets.rs",
         "ipc_contract.rs",
@@ -2442,6 +2451,7 @@ mod tests {
         "wake_lock/linux.rs",
         "wake_lock/macos.rs",
         "wake_lock/windows.rs",
+        "wine_dispatch.rs",
     ];
 
     const SHELL_SOURCE_PARTS: &[&str] = &[
@@ -2449,6 +2459,7 @@ mod tests {
         include_str!("app_lifecycle.rs"),
         include_str!("clipboard.rs"),
         include_str!("dialogs.rs"),
+        include_str!("engine_dispatch.rs"),
         include_str!("info_dispatch.rs"),
         include_str!("info_secrets.rs"),
         include_str!("ipc_contract.rs"),
@@ -2503,6 +2514,7 @@ mod tests {
         include_str!("wake_lock/linux.rs"),
         include_str!("wake_lock/macos.rs"),
         include_str!("wake_lock/windows.rs"),
+        include_str!("wine_dispatch.rs"),
     ];
 
     #[derive(PartialEq, Eq, Debug)]

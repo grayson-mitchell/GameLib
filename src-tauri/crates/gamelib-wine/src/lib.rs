@@ -8,6 +8,7 @@
 //! This crate may depend on `gamelib-engine`; `gamelib-engine` never depends on this one (D-04).
 
 pub mod ctx;
+pub mod runtimes;
 
 use ctx::WineCtx;
 use serde_json::Value;
@@ -18,9 +19,8 @@ use std::sync::OnceLock;
 use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
-/// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own. Empty until the
-/// first wine port lands.
-pub const OPS: &[&str] = &[];
+/// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
+pub const OPS: &[&str] = &["wine_runtime_is_installed"];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
 /// shutdown, a wrong thread or a panic (`<op>:panic`).
@@ -32,13 +32,28 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, 
 }
 
 /// Each plan adds its arms here, in step with `OPS`.
-async fn route(op: &str, _args: &[Value], _ctx: &WineCtx) -> Result<Value, String> {
-    Err(format!("unknown op: {op}"))
+async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String> {
+    match op {
+        "wine_runtime_is_installed" => {
+            let name = runtime_name_arg(op, args)?;
+            Ok(Value::Bool(runtimes::is_installed(ctx, name).await))
+        }
+        _ => Err(format!("unknown op: {op}")),
+    }
+}
+
+/// The one string argument of a runtime op: exactly one string that is a [`runtimes::valid_name`].
+/// The error is a fixed `<op>:bad-args`; the string never reaches it.
+fn runtime_name_arg<'a>(op: &str, args: &'a [Value]) -> Result<&'a str, String> {
+    match args {
+        [Value::String(name)] if runtimes::valid_name(name) => Ok(name),
+        _ => Err(format!("{op}:bad-args")),
+    }
 }
 
 /// The one object argument of an op, decoded strictly (the arg structs deny unknown fields). The
 /// error is a fixed `<op>:bad-args`: a renderer or sidecar string never reaches it.
-#[allow(dead_code)] // the first op lands in a later plan
+#[allow(dead_code)] // the first op with an object argument lands in a later plan
 fn decode<T: serde::de::DeserializeOwned>(op: &str, args: &[Value]) -> Result<T, String> {
     let [arg] = args else {
         return Err(format!("{op}:bad-args"));
@@ -178,6 +193,34 @@ mod tests {
             decode::<Args>("wine_x", &[json!({"id": "a", "extra": 1})]).unwrap_err(),
             "wine_x:bad-args"
         );
+    }
+
+    #[test]
+    fn the_runtime_ops_are_in_the_sorted_op_table() {
+        assert!(OPS.contains(&"wine_runtime_is_installed"));
+    }
+
+    #[tokio::test]
+    async fn a_runtime_op_takes_exactly_one_plain_string() {
+        let home = FakeHome::new("wine-lib-");
+        let ctx = ctx(&home);
+        for bad in [
+            vec![],
+            vec![json!(1)],
+            vec![json!(null)],
+            vec![json!({ "name": "umu" })],
+            vec![json!("umu"), json!("umu")],
+            vec![json!("")],
+            vec![json!("../umu")],
+            vec![json!("a/b")],
+        ] {
+            let err = dispatch("wine_runtime_is_installed", &bad, &ctx)
+                .await
+                .unwrap_err();
+            assert_eq!(err, "wine_runtime_is_installed:bad-args", "{bad:?}");
+        }
+        // Nothing was created for a refused call.
+        assert!(!home.root().join("tools").exists());
     }
 
     #[tokio::test]

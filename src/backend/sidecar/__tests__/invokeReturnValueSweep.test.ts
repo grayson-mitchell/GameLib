@@ -7,7 +7,7 @@
  * the 40 put the channel name on the following line — a single-line-only regex finds fewer),
  * and asserts:
  *
- *   1. The extracted channel count is exactly 45, with the exact per-module tally 10/15/6/14.
+ *   1. The extracted channel count is exactly 44, with the exact per-module tally 10/15/6/13.
  *   2. Every channel classified RETURNS (declared non-void in `AsyncIPCFunctions`, NOT on the
  *      explicit VOID-PARITY allow-list below) has a `return` statement inside its own handler
  *      body -- so a future edit that silently drops a `return` is caught here, not live.
@@ -60,8 +60,9 @@ const MODULES: ModuleSpec[] = [
     // Phase 34.6 Plan 10 (2026-08-24): 11 -> 14. Three INVOKE-kind late-discovered channels
     // were ported byte-equivalently from main.ts (D-14) -- `getAchievements`,
     // `getDefaultSavePath`, `getPlaytimeFromRunner`.
+    // Phase 87 Plan 17 (D-14): 14 -> 13. `isRuntimeInstalled` is a native `wine` channel.
     path: join(__dirname, '../runnerMiscFlowRegistration.ts'),
-    expectedCount: 14
+    expectedCount: 13
   }
 ]
 
@@ -181,10 +182,12 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
   // invoke-kind, D-11).
   // Quick 261012-ca6 (2026-10-12): 43 -> 45, the same +2 recorded on the `shortcuts` module spec
   // above (`addShortcut`, `removeShortcut`; both moved from send-kind to invoke-kind).
+  // Phase 87 Plan 17 (D-14): 45 -> 44, the -1 recorded on the `runnerMisc` module spec above
+  // (`isRuntimeInstalled` is a native `wine` channel).
   // This total and the per-module counts must always move together -- if they ever disagree, the
   // extraction is wrong and neither number should be adjusted until that is understood.
-  it('extracts exactly 45 channels total', () => {
-    expect(allChannels).toHaveLength(45)
+  it('extracts exactly 44 channels total', () => {
+    expect(allChannels).toHaveLength(44)
   })
 
   it.each(MODULES)('$name has exactly $expectedCount channels', (spec) => {

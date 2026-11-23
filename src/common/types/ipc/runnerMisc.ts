@@ -72,7 +72,8 @@ export const runnerMiscAsyncArgs = {
     })
   ]),
   downloadRuntime: z.tuple([runtimeName]),
-  isRuntimeInstalled: z.tuple([runtimeName]),
+  // Phase 87 (87-17, D-14): `isRuntimeInstalled` is a native `wine` channel (`nativeChannels.json`);
+  // its enum bound lives in the Rust decode. `downloadRuntime` stays here until 87-18 (D-06).
   getDefaultSavePath: z.tuple([
     nonEmptyString(),
     runnerArg(),
@@ -93,7 +94,6 @@ interface RunnerMiscAsyncReturns {
   syncGOGSaves: Promise<string>
   syncSaves: Promise<string>
   downloadRuntime: Promise<boolean>
-  isRuntimeInstalled: Promise<boolean>
   getDefaultSavePath: Promise<string | GOGCloudSavesLocation[]>
   getPlaytimeFromRunner: Promise<number | undefined>
 }

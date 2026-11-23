@@ -2,11 +2,11 @@
 //! crate sees is derived from `--user-data`, and the crate has no `keyring` dependency.
 //!
 //! `ops`
-//!     print the op names, one per line (none until the first wine port lands)
+//!     print the op names, one per line
 //! `op <name> <json-args> --user-data <dir> [--home <dir>] [--replay <case-dir>] [--now-ms <ms>]`
 //!     run one op through `dispatch_sync` over a context rooted in `<dir>` (tools under `<dir>/tools`,
-//!     the Wine runtime under `<dir>/tools/runtime`, scratch files under `<dir>/temp`, the home
-//!     directory `<dir>/home`) and print the JSON result. `<json-args>` is a JSON array of the op's
+//!     the runtimes (EAC, BattlEye, umu) under `<dir>/tools/runtimes`, scratch files under
+//!     `<dir>/temp`, the home directory `<dir>/home`) and print the JSON result. `<json-args>` is a JSON array of the op's
 //!     arguments. An op error prints on stderr and exits 2. `--home <dir>` is the operator's home
 //!     directory the ops see (default `<dir>/home`: the real profile is never read). `--replay
 //!     <case-dir>` serves every request from a recorded case (`exchanges.json` and its body files)
@@ -116,7 +116,7 @@ fn run_op(args: &[String]) {
         let fetch: Arc<dyn Fetch> = replay.clone();
         engine = engine.with_fetch(fetch);
     }
-    let ctx = WineCtx::new(Arc::new(engine), tools_path.join("runtime"));
+    let ctx = WineCtx::new(Arc::new(engine), tools_path.join("runtimes"));
     let result = gamelib_wine::dispatch_sync(name, &op_args, &ctx);
     match result {
         Ok(value) => {

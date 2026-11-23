@@ -9,6 +9,7 @@
 import type {
   AntiCheatInfo,
   Runner,
+  RuntimeName,
   UploadedLogData,
   WikiInfo
 } from '../../types'
@@ -127,6 +128,12 @@ export interface NativeAsync {
   // Keychain that cannot be written rejects with a fixed category, never the key.
   'itad.getKeyStatus': () => Promise<{ hasKey: boolean; rejected: boolean }>
   'itad.setApiKey': (key: string) => Promise<void>
+  // Phase 87 (87-17, D-14): whether a Wine runtime (EAC, BattlEye or umu) is installed and current,
+  // answered by the Rust `wine` slice (`gamelib-wine`'s `wine_runtime_is_installed`) from the lutris
+  // list and `<tools>/runtimes/<name>/current_version`. The name is exactly one of the three; any
+  // other value rejects with the invalid-args marker. `downloadRuntime` stays with the sidecar until
+  // 87-18 flips it together with the TypeScript deletion (D-06).
+  isRuntimeInstalled: (name: RuntimeName) => Promise<boolean>
 }
 
 export interface NativeSync {

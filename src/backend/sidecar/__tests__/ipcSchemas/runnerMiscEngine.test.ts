@@ -79,10 +79,6 @@ const runnerMiscTable: FixtureTable<typeof runnerMiscAsyncArgs> = {
     valid: [['eac_runtime'], ['battleye_runtime'], ['umu']],
     invalid: [['curl'], [''], [], [1]]
   },
-  isRuntimeInstalled: {
-    valid: [['eac_runtime'], ['umu']],
-    invalid: [['../x'], []]
-  },
   getDefaultSavePath: {
     valid: [
       ['abc', 'gog', [loc]],

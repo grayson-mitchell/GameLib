@@ -772,6 +772,29 @@
       "returns": "void",
       "valid": [["k"], [""], ["  padded  "]],
       "invalid": [[], [1], [null], [["k"]], ["a", "b"]]
+    },
+    "isRuntimeInstalled": {
+      "kind": "invoke",
+      "slice": "wine",
+      "args": [
+        {
+          "name": "name",
+          "type": "string",
+          "enum": ["eac_runtime", "battleye_runtime", "umu"]
+        }
+      ],
+      "returns": "boolean",
+      "valid": [["umu"], ["eac_runtime"], ["battleye_runtime"]],
+      "invalid": [
+        [],
+        [1],
+        ["x"],
+        ["umu", "umu"],
+        [null],
+        [""],
+        ["UMU"],
+        [{ "name": "umu" }]
+      ]
     }
   }
 }

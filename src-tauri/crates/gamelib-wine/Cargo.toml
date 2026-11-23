@@ -40,6 +40,9 @@ testing = ["gamelib-engine/testing"]
 gamelib-wine = { path = ".", features = ["testing"] }
 gamelib-testutil = { path = "../gamelib-testutil" }
 tempfile = "3"
+# The golden tests hash the files a replayed case leaves behind (the oracle's tree.json carries a
+# sha256 per file). Already locked for gamelib-engine, not a new lockfile name.
+sha2 = "0.10"
 
 [lints.clippy]
 dbg_macro = "deny"
