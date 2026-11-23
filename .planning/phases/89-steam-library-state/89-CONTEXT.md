@@ -118,23 +118,17 @@ metadata fetch path and its limiter (D-05, Phase 90); the bridge (95–97).
   bounded-boot rule.
 
 ### Live gate
-- **D-14:** **The macOS operator gate is a signed Phase 89 build installed over a signed Phase 88
-  build** (87 D-12, 88 D-17), authored as `89-HUMAN-UAT.md` before coding, with three items:
-  1. **Refresh during install, then launch.** Start a native depot install of a Steam game and run
-     an explicit Refresh mid-download. The install state survives, the install finishes and shows
-     as installed with its size, and one launch moves launching → playing → done with playtime
-     recorded and no stale status (SC1, SC3 install and launch arms).
-  2. **Update badge and update.** A game with a pending update shows the badge. Updating clears it,
-     and the badge stays cleared after a Refresh and after a restart (SC1, SC3 update arm).
-  3. **Upgrade and crash survival.** The 88 → 89 upgrade keeps the library, installed state and
-     badges intact. A `kill -9` of GameLib mid-install followed by reopening shows the game as
-     incomplete/resumable. A game removed outside GameLib disappears after the boot reconcile
-     (D-13).
-  Uninstall is proven by goldens here and live by Phase 90's end-to-end gate.
-- **D-15:** **Gate scope: GameLib-native installs plus one Mac Steam-managed title.** A game that
-  the running Mac Steam client installs or updates goes through the same poll → state path, so
-  one such title in item 1 or 2 proves it. Bridge-bottle library-state rows are pinned by goldens
-  only; their live proof waits for 95–97. Any offline step follows the offline-UAT memory shape.
+- **D-14:** **No live gate in Phase 89 (amended 2026-11-24 by `90-CONTEXT.md` D-13).** At the
+  operator's direction, 89 closes on goldens and three-OS CI only: no signed Phase 89 build
+  checkpoint and no `89-HUMAN-UAT.md`. The three items first planned here (Refresh during install
+  then launch; the update badge and update; upgrade and crash survival with the boot reconcile) are
+  merged into the single Phase 90.2 gate (`90-CONTEXT.md` D-12 items 1–3), which installs a signed
+  90.2 build over a signed Phase 88 build. Because a 90.2 gate failure may trace back to 89, the
+  89 goldens (D-17) must be dense enough to localise it.
+- **D-15:** **The Mac Steam-managed title moves with the gate (amended 2026-11-24).** The one Mac
+  Steam-managed title that proves the shared poll → state path is now in `90-CONTEXT.md` D-12
+  item 4. Bridge-bottle library-state rows are still pinned by goldens only, and their live proof
+  waits for 95–97.
 
 ### Carried forward (already decided, not re-asked)
 - **D-16:** No flag. Each sub-slice's TS is deleted once its goldens pass, and a gate failure is
@@ -249,7 +243,7 @@ metadata fetch path and its limiter (D-05, Phase 90); the bridge (95–97).
 <deferred>
 ## Deferred Ideas
 
-- Live uninstall proof → Phase 90's end-to-end gate (D-14).
+- All live proof, including uninstall → Phase 90.2's gate (D-14, amended; `90-CONTEXT.md` D-12/D-13).
 - Live bridge-bottle library-state proof → Phases 95–97 (D-15).
 - Phase 80 Info findings → individual todos (D-09).
 - Any quirk the port copies → individual todos (D-20).

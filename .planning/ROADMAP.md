@@ -191,7 +191,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 87: Engine, Wine and tools** — 59 plans in 38 waves; planned 2026-11-23 (executes after Phase 86 closes)
 - [ ] **Phase 88: Launch pipeline** — not planned
 - [ ] **Phase 89: Steam library state** — not planned
-- [ ] **Phase 90: Steam services and TypeScript depot path** — not planned
+- [ ] **Phase 90: Steam services and TypeScript depot path** — not planned (session, sign-in and redeem; split 2026-11-24, 90-CONTEXT D-01)
+- [ ] **Phase 90.1: Steam install, update, uninstall and the depot path** — not planned
+- [ ] **Phase 90.2: Steam launch, Mac Steam adoption and the router** — not planned (runs the 90/89 live gate)
 - [ ] **Phase 91: Epic (legendary) runner** — not planned
 - [ ] **Phase 92: GOG, Amazon and sideloaded runners** — not planned
 - [ ] **Phase 93: Download manager** — not planned
@@ -830,26 +832,60 @@ Plans:
 
 ### Phase 90: Steam services and TypeScript depot path
 
-**Goal**: Every Steam operation is served by Rust with no TypeScript Steam services left.
-**Requirements**: STM-02
+**Goal**: The Steam CM session, sign-in, redeem and Refresh are served in-process by Rust, with no TypeScript session or sign-in services left.
+**Requirements**: STM-02 (part 1 of 3; split 2026-11-24, `90-CONTEXT.md` D-01/D-02, which also governs 90.1 and 90.2)
 **Depends on**: Phase 89
 **Research flag**: Standard
 **Success Criteria** (what must be TRUE):
-  1. A user can sign in to Steam (QR, credentials, SteamGuard), redeem a key, install, update, uninstall and launch a Steam game end to end
-  2. Mac Steam adoption of a GameLib install, including the pending-adoption record and restart-on-Play, works as before
-  3. The CM session and depot calls are in-process Rust calls with no `ShellJobHost` sidecar round trip
-  4. `games.ts`, `depot/`, `depotRust/`, `gameLaunch`, `steamLaunchWatch`, `macSteam*` and the Steam TS shims and their sidecar registrations are deleted in this phase
+  1. Sign-in (QR, credentials, SteamGuard), sign-out, redeem and Refresh run on native Rust channels and match goldens recorded from the TypeScript (live proof in 90.2's gate)
+  2. The CM session, anonymous client, token store and configure gate are in-process Rust state; the token stays in the keyring with no new Keychain prompt
+  3. The `user*`, `authTrigger`, `tokenStore`, `rustSession`, `logonVerdict`, `anonymousClient`, `clientSetup` and `cm/` TypeScript and their sidecar registrations are deleted in this phase
+  4. Phase 90 closes on goldens and three-OS CI; no signed build checkpoint or live gate (D-03)
 
 **Plans:** 0 plans
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 90 to break down)
 
+### Phase 90.1: Steam install, update, uninstall and the depot path (INSERTED)
+
+**Goal**: Steam install, update, uninstall and every depot call run in-process in Rust, with no `ShellJobHost` round trip.
+**Requirements**: STM-02 (part 2 of 3; decisions in `90-CONTEXT.md`)
+**Depends on**: Phase 90
+**Research flag**: Standard
+**Success Criteria** (what must be TRUE):
+  1. Native depot install, update (with the update badge and prompt), uninstall and verify match goldens recorded from the TypeScript
+  2. The depot job registry, progress and CDN-token asks are in-process Rust calls; `ShellJobHost` is deleted
+  3. The Steamworks Common Redistributables (228980) download is a Rust depot job that the bridge reaches through a shim deleted in 95; `sharedRedistLocks.ts` moves to `bridge/` (D-09)
+  4. `depot/`, `depotRust/` and the install, update and uninstall TypeScript and their sidecar registrations are deleted in this phase; it closes on goldens and three-OS CI (D-03)
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 90.1 to break down)
+
+### Phase 90.2: Steam launch, Mac Steam adoption and the router (INSERTED)
+
+**Goal**: Every non-bridge Steam operation is served by Rust and `games.ts` is gone, with a thin TS router left only for bridge branches.
+**Requirements**: STM-02 (part 3 of 3; decisions in `90-CONTEXT.md`)
+**Depends on**: Phase 90.1
+**Research flag**: Standard
+**Success Criteria** (what must be TRUE):
+  1. A user can sign in to Steam (QR, credentials, SteamGuard), get the right redeem errors, and install, update, uninstall and launch a Steam game end to end on a signed 90.2 build installed over a signed 88 build (the six-item gate in `90-CONTEXT.md` D-12, which also carries Phase 89's live items, D-13)
+  2. Mac Steam adoption of a GameLib install, including the pending-adoption record and restart-on-Play, works as before
+  3. The route verdict is Rust; the thin TS router branches only between bridge TS and Rust shims, and each bridge branch is a schedule row deleted in 95/96/97 (D-04/D-05)
+  4. `games.ts`, `gameLaunch`, `steamLaunchWatch`, `directLaunch/`, `macSteam*` and the remaining non-bridge Steam TS shims and their sidecar registrations are deleted in this phase; no mirror row or shim with only non-bridge callers remains (D-07/D-08)
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 90.2 to break down)
+
 ### Phase 91: Epic (legendary) runner
 
 **Goal**: Epic sign-in, library and game management run from Rust over the bundled legendary binary.
 **Requirements**: STO-01
-**Depends on**: Phase 90
+**Depends on**: Phase 90.2
 **Research flag**: Needs deeper research (external binary output formats, Windows process-tree kill and quoting; parsers first with real captured transcripts)
 **Success Criteria** (what must be TRUE):
   1. A user can sign in to Epic and see their library, and install, update, repair, move and uninstall a game
@@ -918,7 +954,7 @@ Plans:
 
 **Goal**: Installing a game through the Steam bridge runs in Rust.
 **Requirements**: STM-03
-**Depends on**: Phase 90
+**Depends on**: Phase 90.2
 **Research flag**: Needs deeper research (run the bridge spike early; may overlap Phases 91-94 if a second lane exists)
 **Success Criteria** (what must be TRUE):
   1. A bridge install performs the import scan, shim placement and shared redistributable install and produces the same installed layout as before
