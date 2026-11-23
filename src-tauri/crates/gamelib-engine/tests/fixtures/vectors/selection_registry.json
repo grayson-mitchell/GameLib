@@ -1,0 +1,830 @@
+[
+  {
+    "id": "crossover-set-get-clear",
+    "note": "a CrossOver selection needs no binaries: set stores it, get returns it, clear removes it",
+    "engines": "none",
+    "steps": [
+      {
+        "call": "get",
+        "key": "620"
+      },
+      {
+        "call": "set",
+        "key": "620",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "get",
+        "key": "620"
+      },
+      {
+        "call": "clear",
+        "key": "620"
+      },
+      {
+        "call": "get",
+        "key": "620"
+      }
+    ],
+    "expected": [
+      {
+        "call": "get",
+        "key": "620",
+        "returned": null
+      },
+      {
+        "call": "set",
+        "key": "620",
+        "returned": true
+      },
+      {
+        "call": "get",
+        "key": "620",
+        "returned": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "clear",
+        "key": "620",
+        "returned": null
+      },
+      {
+        "call": "get",
+        "key": "620",
+        "returned": null
+      }
+    ]
+  },
+  {
+    "id": "pinned-with-binaries-on-disk",
+    "note": "a pinned selection is stored when wine and wineserver exist; dxvk is copied",
+    "engines": "installed",
+    "steps": [
+      {
+        "call": "set",
+        "key": "gog:1207658924",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-missing",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Pinned",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        }
+      },
+      {
+        "call": "get",
+        "key": "gog:1207658924"
+      }
+    ],
+    "expected": [
+      {
+        "call": "set",
+        "key": "gog:1207658924",
+        "returned": true
+      },
+      {
+        "call": "get",
+        "key": "gog:1207658924",
+        "returned": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-missing",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Pinned",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "pinned-missing-binaries-refused",
+    "note": "no engine on disk: a non-CrossOver selection is refused and never stored, a later CrossOver one is",
+    "engines": "none",
+    "steps": [
+      {
+        "call": "set",
+        "key": "gog:1",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-missing",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Pinned",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        }
+      },
+      {
+        "call": "get",
+        "key": "gog:1"
+      },
+      {
+        "call": "set",
+        "key": "gog:1",
+        "selection": {
+          "kind": "wine-manager",
+          "managerVersion": "Wine-Staging-10.5",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Manager",
+          "version": "10.5",
+          "dxvk": null
+        }
+      },
+      {
+        "call": "get",
+        "key": "gog:1"
+      },
+      {
+        "call": "set",
+        "key": "gog:1",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "get",
+        "key": "gog:1"
+      }
+    ],
+    "expected": [
+      {
+        "call": "set",
+        "key": "gog:1",
+        "returned": false
+      },
+      {
+        "call": "get",
+        "key": "gog:1",
+        "returned": null
+      },
+      {
+        "call": "set",
+        "key": "gog:1",
+        "returned": false
+      },
+      {
+        "call": "get",
+        "key": "gog:1",
+        "returned": null
+      },
+      {
+        "call": "set",
+        "key": "gog:1",
+        "returned": true
+      },
+      {
+        "call": "get",
+        "key": "gog:1",
+        "returned": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      }
+    ]
+  },
+  {
+    "id": "pinned-missing-wineserver-refused",
+    "note": "wine exists but wineserver does not: refused",
+    "engines": "wineserver-missing",
+    "steps": [
+      {
+        "call": "set",
+        "key": "gog:1",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-missing",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Pinned",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        }
+      },
+      {
+        "call": "get",
+        "key": "gog:1"
+      }
+    ],
+    "expected": [
+      {
+        "call": "set",
+        "key": "gog:1",
+        "returned": false
+      },
+      {
+        "call": "get",
+        "key": "gog:1",
+        "returned": null
+      }
+    ]
+  },
+  {
+    "id": "wine-manager-without-dxvk",
+    "note": "a Wine Manager selection with no DXVK stores dxvk as null",
+    "engines": "installed",
+    "steps": [
+      {
+        "call": "set",
+        "key": "legendary:Sugar",
+        "selection": {
+          "kind": "wine-manager",
+          "managerVersion": "Wine-Staging-10.5",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Manager",
+          "version": "10.5",
+          "dxvk": null
+        }
+      },
+      {
+        "call": "get",
+        "key": "legendary:Sugar"
+      }
+    ],
+    "expected": [
+      {
+        "call": "set",
+        "key": "legendary:Sugar",
+        "returned": true
+      },
+      {
+        "call": "get",
+        "key": "legendary:Sugar",
+        "returned": {
+          "kind": "wine-manager",
+          "managerVersion": "Wine-Staging-10.5",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Manager",
+          "version": "10.5",
+          "dxvk": null
+        }
+      }
+    ]
+  },
+  {
+    "id": "overwrite-replaces",
+    "note": "a later set for the same key replaces the stored selection",
+    "engines": "installed",
+    "steps": [
+      {
+        "call": "set",
+        "key": "620",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-missing",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Pinned",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        }
+      },
+      {
+        "call": "set",
+        "key": "620",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "get",
+        "key": "620"
+      },
+      {
+        "call": "set",
+        "key": "620",
+        "selection": {
+          "kind": "wine-manager",
+          "managerVersion": "Wine-Staging-10.5",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Manager",
+          "version": "10.5",
+          "dxvk": null
+        }
+      },
+      {
+        "call": "get",
+        "key": "620"
+      }
+    ],
+    "expected": [
+      {
+        "call": "set",
+        "key": "620",
+        "returned": true
+      },
+      {
+        "call": "set",
+        "key": "620",
+        "returned": true
+      },
+      {
+        "call": "get",
+        "key": "620",
+        "returned": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "set",
+        "key": "620",
+        "returned": true
+      },
+      {
+        "call": "get",
+        "key": "620",
+        "returned": {
+          "kind": "wine-manager",
+          "managerVersion": "Wine-Staging-10.5",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Manager",
+          "version": "10.5",
+          "dxvk": null
+        }
+      }
+    ]
+  },
+  {
+    "id": "refused-set-keeps-the-previous-selection",
+    "note": "a refused set (missing binaries is simulated by a bad key) leaves what was stored",
+    "engines": "installed",
+    "steps": [
+      {
+        "call": "set",
+        "key": "620",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "set",
+        "key": "not a key",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-missing",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Pinned",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        }
+      },
+      {
+        "call": "get",
+        "key": "620"
+      },
+      {
+        "call": "get",
+        "key": "not a key"
+      }
+    ],
+    "expected": [
+      {
+        "call": "set",
+        "key": "620",
+        "returned": true
+      },
+      {
+        "call": "set",
+        "key": "not a key",
+        "returned": false
+      },
+      {
+        "call": "get",
+        "key": "620",
+        "returned": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "get",
+        "key": "not a key",
+        "returned": null
+      }
+    ]
+  },
+  {
+    "id": "keys-are-independent",
+    "note": "selections for different stores and ids do not interact; a Steam id and a same-numbered GOG id are different keys",
+    "engines": "installed",
+    "steps": [
+      {
+        "call": "set",
+        "key": "620",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "set",
+        "key": "gog:620",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-missing",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Pinned",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        }
+      },
+      {
+        "call": "set",
+        "key": "nile:amzn1.adg.product.x",
+        "selection": {
+          "kind": "wine-manager",
+          "managerVersion": "Wine-Staging-10.5",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Manager",
+          "version": "10.5",
+          "dxvk": null
+        }
+      },
+      {
+        "call": "get",
+        "key": "620"
+      },
+      {
+        "call": "get",
+        "key": "gog:620"
+      },
+      {
+        "call": "get",
+        "key": "nile:amzn1.adg.product.x"
+      },
+      {
+        "call": "clear",
+        "key": "gog:620"
+      },
+      {
+        "call": "get",
+        "key": "gog:620"
+      },
+      {
+        "call": "get",
+        "key": "620"
+      }
+    ],
+    "expected": [
+      {
+        "call": "set",
+        "key": "620",
+        "returned": true
+      },
+      {
+        "call": "set",
+        "key": "gog:620",
+        "returned": true
+      },
+      {
+        "call": "set",
+        "key": "nile:amzn1.adg.product.x",
+        "returned": true
+      },
+      {
+        "call": "get",
+        "key": "620",
+        "returned": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "get",
+        "key": "gog:620",
+        "returned": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-missing",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Pinned",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        }
+      },
+      {
+        "call": "get",
+        "key": "nile:amzn1.adg.product.x",
+        "returned": {
+          "kind": "wine-manager",
+          "managerVersion": "Wine-Staging-10.5",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Manager",
+          "version": "10.5",
+          "dxvk": null
+        }
+      },
+      {
+        "call": "clear",
+        "key": "gog:620",
+        "returned": null
+      },
+      {
+        "call": "get",
+        "key": "gog:620",
+        "returned": null
+      },
+      {
+        "call": "get",
+        "key": "620",
+        "returned": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      }
+    ]
+  },
+  {
+    "id": "invalid-keys-refused",
+    "note": "a key that is not an engine key is refused for every selection kind",
+    "engines": "installed",
+    "steps": [
+      {
+        "call": "set",
+        "key": "abc",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "set",
+        "key": "steam:620",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "set",
+        "key": "unknown:1",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "set",
+        "key": "gog:",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "set",
+        "key": "gog:../x",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "set",
+        "key": "12345678901",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "set",
+        "key": "",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "get",
+        "key": "abc"
+      }
+    ],
+    "expected": [
+      {
+        "call": "set",
+        "key": "abc",
+        "returned": false
+      },
+      {
+        "call": "set",
+        "key": "steam:620",
+        "returned": false
+      },
+      {
+        "call": "set",
+        "key": "unknown:1",
+        "returned": false
+      },
+      {
+        "call": "set",
+        "key": "gog:",
+        "returned": false
+      },
+      {
+        "call": "set",
+        "key": "gog:../x",
+        "returned": false
+      },
+      {
+        "call": "set",
+        "key": "12345678901",
+        "returned": false
+      },
+      {
+        "call": "set",
+        "key": "",
+        "returned": false
+      },
+      {
+        "call": "get",
+        "key": "abc",
+        "returned": null
+      }
+    ]
+  },
+  {
+    "id": "clear-unknown-key-is-harmless",
+    "note": "clearing a key that was never set, twice, does nothing",
+    "engines": "none",
+    "steps": [
+      {
+        "call": "clear",
+        "key": "620"
+      },
+      {
+        "call": "clear",
+        "key": "620"
+      },
+      {
+        "call": "get",
+        "key": "620"
+      }
+    ],
+    "expected": [
+      {
+        "call": "clear",
+        "key": "620",
+        "returned": null
+      },
+      {
+        "call": "clear",
+        "key": "620",
+        "returned": null
+      },
+      {
+        "call": "get",
+        "key": "620",
+        "returned": null
+      }
+    ]
+  },
+  {
+    "id": "input-copy-isolation",
+    "note": "the stored selection is a copy: changing the input (and its dxvk) after set does not change get",
+    "engines": "installed",
+    "steps": [
+      {
+        "call": "set",
+        "key": "gog:1",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-missing",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Pinned",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "mutateInput": true
+      },
+      {
+        "call": "get",
+        "key": "gog:1"
+      }
+    ],
+    "expected": [
+      {
+        "call": "set",
+        "key": "gog:1",
+        "returned": true
+      },
+      {
+        "call": "get",
+        "key": "gog:1",
+        "returned": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-missing",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Pinned",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        }
+      }
+    ]
+  }
+]

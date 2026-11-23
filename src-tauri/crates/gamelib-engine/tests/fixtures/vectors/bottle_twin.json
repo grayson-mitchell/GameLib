@@ -1,0 +1,2701 @@
+{
+  "getBottleDir": [
+    {
+      "id": "dir-clean",
+      "input": {
+        "userHome": "<HOME>",
+        "name": "GameLib-gog-1207658924"
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1207658924"
+    },
+    {
+      "id": "dir-inner-space",
+      "input": {
+        "userHome": "<HOME>",
+        "name": "My Bottle"
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver/Bottles/My Bottle"
+    },
+    {
+      "id": "dir-slash",
+      "input": {
+        "userHome": "<HOME>",
+        "name": "a/b"
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver/Bottles/a/b"
+    },
+    {
+      "id": "dir-backslash",
+      "input": {
+        "userHome": "<HOME>",
+        "name": "a\\b"
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver/Bottles/a\\b"
+    },
+    {
+      "id": "dir-parent",
+      "input": {
+        "userHome": "<HOME>",
+        "name": ".."
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver"
+    },
+    {
+      "id": "dir-parent-then-name",
+      "input": {
+        "userHome": "<HOME>",
+        "name": "../x"
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver/x"
+    },
+    {
+      "id": "dir-climb-out-of-home",
+      "input": {
+        "userHome": "<HOME>",
+        "name": "../../../.."
+      },
+      "expected": "<HOME>"
+    },
+    {
+      "id": "dir-dot",
+      "input": {
+        "userHome": "<HOME>",
+        "name": "."
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver/Bottles"
+    },
+    {
+      "id": "dir-empty",
+      "input": {
+        "userHome": "<HOME>",
+        "name": ""
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver/Bottles"
+    },
+    {
+      "id": "dir-space",
+      "input": {
+        "userHome": "<HOME>",
+        "name": " "
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver/Bottles/ "
+    },
+    {
+      "id": "dir-non-ascii",
+      "input": {
+        "userHome": "<HOME>",
+        "name": "ゲーム-Ünï"
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver/Bottles/ゲーム-Ünï"
+    },
+    {
+      "id": "dir-nul-inside",
+      "input": {
+        "userHome": "<HOME>",
+        "name": "x\u0000y"
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver/Bottles/x\u0000y"
+    },
+    {
+      "id": "dir-255-chars",
+      "input": {
+        "userHome": "<HOME>",
+        "name": {
+          "repeat": {
+            "char": "d",
+            "count": 255
+          }
+        }
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver/Bottles/ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    },
+    {
+      "id": "dir-trailing-slash",
+      "input": {
+        "userHome": "<HOME>",
+        "name": "a/"
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver/Bottles/a/"
+    },
+    {
+      "id": "dir-absolute-looking",
+      "input": {
+        "userHome": "<HOME>",
+        "name": "/etc"
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver/Bottles/etc"
+    },
+    {
+      "id": "dir-home-with-trailing-slash",
+      "input": {
+        "userHome": "<HOME>/",
+        "name": "GameLib-gog-1"
+      },
+      "expected": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1"
+    }
+  ],
+  "sanitizeBottleName": [
+    {
+      "id": "sanitize-clean",
+      "input": {
+        "kind": "string",
+        "value": "GameLib-gog-1207658924"
+      },
+      "expected": "GameLib-gog-1207658924"
+    },
+    {
+      "id": "sanitize-padded-spaces",
+      "input": {
+        "kind": "string",
+        "value": "  Good-Bottle  "
+      },
+      "expected": "Good-Bottle"
+    },
+    {
+      "id": "sanitize-padded-tab-newline",
+      "input": {
+        "kind": "string",
+        "value": "\tGood\n"
+      },
+      "expected": "Good"
+    },
+    {
+      "id": "sanitize-inner-space",
+      "input": {
+        "kind": "string",
+        "value": "My Bottle"
+      },
+      "expected": "My Bottle"
+    },
+    {
+      "id": "sanitize-slash",
+      "input": {
+        "kind": "string",
+        "value": "a/b"
+      },
+      "expected": null
+    },
+    {
+      "id": "sanitize-backslash",
+      "input": {
+        "kind": "string",
+        "value": "a\\b"
+      },
+      "expected": null
+    },
+    {
+      "id": "sanitize-parent",
+      "input": {
+        "kind": "string",
+        "value": ".."
+      },
+      "expected": null
+    },
+    {
+      "id": "sanitize-parent-inside-word",
+      "input": {
+        "kind": "string",
+        "value": "a..b"
+      },
+      "expected": null
+    },
+    {
+      "id": "sanitize-parent-prefix",
+      "input": {
+        "kind": "string",
+        "value": "..a"
+      },
+      "expected": null
+    },
+    {
+      "id": "sanitize-three-dots",
+      "input": {
+        "kind": "string",
+        "value": "..."
+      },
+      "expected": null
+    },
+    {
+      "id": "sanitize-single-dot",
+      "input": {
+        "kind": "string",
+        "value": "."
+      },
+      "expected": "."
+    },
+    {
+      "id": "sanitize-dot-padded",
+      "input": {
+        "kind": "string",
+        "value": " . "
+      },
+      "expected": "."
+    },
+    {
+      "id": "sanitize-single-dot-inside",
+      "input": {
+        "kind": "string",
+        "value": "a.b"
+      },
+      "expected": "a.b"
+    },
+    {
+      "id": "sanitize-nul-inside",
+      "input": {
+        "kind": "string",
+        "value": "a\u0000b"
+      },
+      "expected": null
+    },
+    {
+      "id": "sanitize-nul-only",
+      "input": {
+        "kind": "string",
+        "value": "\u0000"
+      },
+      "expected": null
+    },
+    {
+      "id": "sanitize-empty",
+      "input": {
+        "kind": "string",
+        "value": ""
+      },
+      "expected": null
+    },
+    {
+      "id": "sanitize-spaces-only",
+      "input": {
+        "kind": "string",
+        "value": "   "
+      },
+      "expected": null
+    },
+    {
+      "id": "sanitize-nbsp-only",
+      "input": {
+        "kind": "string",
+        "value": " "
+      },
+      "expected": null
+    },
+    {
+      "id": "sanitize-line-separator-padded",
+      "input": {
+        "kind": "string",
+        "value": " x "
+      },
+      "expected": "x"
+    },
+    {
+      "id": "sanitize-zero-width-space-kept",
+      "input": {
+        "kind": "string",
+        "value": "x​"
+      },
+      "expected": "x​"
+    },
+    {
+      "id": "sanitize-non-ascii",
+      "input": {
+        "kind": "string",
+        "value": "ゲーム-Ünï-ñ"
+      },
+      "expected": "ゲーム-Ünï-ñ"
+    },
+    {
+      "id": "sanitize-emoji",
+      "input": {
+        "kind": "string",
+        "value": "bottle-🎮"
+      },
+      "expected": "bottle-🎮"
+    },
+    {
+      "id": "sanitize-255-chars",
+      "input": {
+        "kind": "string",
+        "value": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        }
+      },
+      "expected": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "id": "sanitize-256-chars",
+      "input": {
+        "kind": "string",
+        "value": {
+          "repeat": {
+            "char": "b",
+            "count": 256
+          }
+        }
+      },
+      "expected": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    {
+      "id": "sanitize-299-chars",
+      "input": {
+        "kind": "string",
+        "value": {
+          "repeat": {
+            "char": "c",
+            "count": 299
+          }
+        }
+      },
+      "expected": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    {
+      "id": "sanitize-reserved-device-name",
+      "input": {
+        "kind": "string",
+        "value": "CON"
+      },
+      "expected": "CON"
+    },
+    {
+      "id": "sanitize-dash-leading",
+      "input": {
+        "kind": "string",
+        "value": "-rf"
+      },
+      "expected": "-rf"
+    },
+    {
+      "id": "sanitize-null",
+      "input": {
+        "kind": "null"
+      },
+      "expected": null
+    },
+    {
+      "id": "sanitize-undefined",
+      "input": {
+        "kind": "undefined"
+      },
+      "expected": null
+    },
+    {
+      "id": "sanitize-number",
+      "input": {
+        "kind": "number",
+        "value": 5
+      },
+      "expected": null
+    },
+    {
+      "id": "sanitize-object",
+      "input": {
+        "kind": "object"
+      },
+      "expected": null
+    }
+  ],
+  "isBottleProvisioned": [
+    {
+      "id": "provisioned-fx-crossover-marker",
+      "input": {
+        "fixtures": [
+          "fx-crossover-marker"
+        ],
+        "bottle": "fx-crossover-marker"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-pinned-current",
+      "input": {
+        "fixtures": [
+          "fx-pinned-current"
+        ],
+        "bottle": "fx-pinned-current"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-pinned-retired",
+      "input": {
+        "fixtures": [
+          "fx-pinned-retired"
+        ],
+        "bottle": "fx-pinned-retired"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-wine-manager",
+      "input": {
+        "fixtures": [
+          "fx-wine-manager"
+        ],
+        "bottle": "fx-wine-manager"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-pinned-no-dxvk-field",
+      "input": {
+        "fixtures": [
+          "fx-pinned-no-dxvk-field"
+        ],
+        "bottle": "fx-pinned-no-dxvk-field"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-dxvk-failed",
+      "input": {
+        "fixtures": [
+          "fx-dxvk-failed"
+        ],
+        "bottle": "fx-dxvk-failed"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-marker-newer",
+      "input": {
+        "fixtures": [
+          "fx-marker-newer"
+        ],
+        "bottle": "fx-marker-newer"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-marker-unreadable",
+      "input": {
+        "fixtures": [
+          "fx-marker-unreadable"
+        ],
+        "bottle": "fx-marker-unreadable"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-crossover-contradicted",
+      "input": {
+        "fixtures": [
+          "fx-crossover-contradicted"
+        ],
+        "bottle": "fx-crossover-contradicted"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-nomarker-dxvk-ts",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-dxvk-ts"
+        ],
+        "bottle": "fx-nomarker-dxvk-ts"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-nomarker-dxvk-nots",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-dxvk-nots"
+        ],
+        "bottle": "fx-nomarker-dxvk-nots"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-nomarker-nodxvk-ts",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-nodxvk-ts"
+        ],
+        "bottle": "fx-nomarker-nodxvk-ts"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-nomarker-nodxvk-nots",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-nodxvk-nots"
+        ],
+        "bottle": "fx-nomarker-nodxvk-nots"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-nomarker-noconf",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-noconf"
+        ],
+        "bottle": "fx-nomarker-noconf"
+      },
+      "expected": false
+    },
+    {
+      "id": "provisioned-fx-no-system-reg",
+      "input": {
+        "fixtures": [
+          "fx-no-system-reg"
+        ],
+        "bottle": "fx-no-system-reg"
+      },
+      "expected": false
+    },
+    {
+      "id": "provisioned-fx-pinned-wineserver-outside",
+      "input": {
+        "fixtures": [
+          "fx-pinned-wineserver-outside"
+        ],
+        "bottle": "fx-pinned-wineserver-outside"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-pinned-wineserver-misnamed",
+      "input": {
+        "fixtures": [
+          "fx-pinned-wineserver-misnamed"
+        ],
+        "bottle": "fx-pinned-wineserver-misnamed"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-marker-bad-id",
+      "input": {
+        "fixtures": [
+          "fx-marker-bad-id"
+        ],
+        "bottle": "fx-marker-bad-id"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-pinned-dxvk-outside-root",
+      "input": {
+        "fixtures": [
+          "fx-pinned-dxvk-outside-root"
+        ],
+        "bottle": "fx-pinned-dxvk-outside-root"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-marker-wrong-kind",
+      "input": {
+        "fixtures": [
+          "fx-marker-wrong-kind"
+        ],
+        "bottle": "fx-marker-wrong-kind"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-fx-marker-legacy-noversion",
+      "input": {
+        "fixtures": [
+          "fx-marker-legacy-noversion"
+        ],
+        "bottle": "fx-marker-legacy-noversion"
+      },
+      "expected": true
+    },
+    {
+      "id": "provisioned-absent",
+      "input": {
+        "fixtures": [],
+        "bottle": "no-such-bottle"
+      },
+      "expected": false
+    },
+    {
+      "id": "provisioned-separator",
+      "input": {
+        "fixtures": [],
+        "bottle": "a/b"
+      },
+      "expected": false
+    },
+    {
+      "id": "provisioned-empty-name",
+      "input": {
+        "fixtures": [],
+        "bottle": ""
+      },
+      "expected": false
+    },
+    {
+      "id": "provisioned-parent-with-conf-in-crossover-dir",
+      "input": {
+        "fixtures": [],
+        "seed": [
+          {
+            "path": "<HOME>/Library/Application Support/CrossOver/cxbottle.conf",
+            "text": "[Bottle]\n"
+          }
+        ],
+        "bottle": ".."
+      },
+      "expected": true
+    }
+  ],
+  "buildFallbackGameSettings": [
+    {
+      "id": "fallback-settings-no-env",
+      "input": {
+        "bottle": "GameLib-gog-1",
+        "engine": "with-dxvk",
+        "base": {
+          "autoInstallDxvk": true,
+          "autoInstallDxvkNvapi": true,
+          "autoInstallVkd3d": true,
+          "launcherArgs": "-windowed",
+          "winePrefix": "<HOME>/plain-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "/x/wine"
+          }
+        }
+      },
+      "expected": {
+        "autoInstallDxvk": false,
+        "autoInstallDxvkNvapi": false,
+        "autoInstallVkd3d": false,
+        "launcherArgs": "-windowed",
+        "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1",
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+        },
+        "wineCrossoverBottle": "GameLib-gog-1",
+        "enviromentOptions": [
+          {
+            "key": "USER",
+            "value": "crossover"
+          },
+          {
+            "key": "WINEDEBUG",
+            "value": "-all"
+          },
+          {
+            "key": "MVK_CONFIG_LOG_LEVEL",
+            "value": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "fallback-settings-empty-env",
+      "input": {
+        "bottle": "GameLib-gog-1",
+        "engine": "with-dxvk",
+        "base": {
+          "autoInstallDxvk": true,
+          "autoInstallDxvkNvapi": true,
+          "autoInstallVkd3d": true,
+          "launcherArgs": "-windowed",
+          "winePrefix": "<HOME>/plain-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "/x/wine"
+          },
+          "enviromentOptions": []
+        }
+      },
+      "expected": {
+        "autoInstallDxvk": false,
+        "autoInstallDxvkNvapi": false,
+        "autoInstallVkd3d": false,
+        "launcherArgs": "-windowed",
+        "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1",
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+        },
+        "enviromentOptions": [
+          {
+            "key": "USER",
+            "value": "crossover"
+          },
+          {
+            "key": "WINEDEBUG",
+            "value": "-all"
+          },
+          {
+            "key": "MVK_CONFIG_LOG_LEVEL",
+            "value": "0"
+          }
+        ],
+        "wineCrossoverBottle": "GameLib-gog-1"
+      }
+    },
+    {
+      "id": "fallback-settings-keeps-unrelated-env",
+      "input": {
+        "bottle": "GameLib-gog-1",
+        "engine": "with-dxvk",
+        "base": {
+          "autoInstallDxvk": true,
+          "autoInstallDxvkNvapi": true,
+          "autoInstallVkd3d": true,
+          "launcherArgs": "-windowed",
+          "winePrefix": "<HOME>/plain-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "/x/wine"
+          },
+          "enviromentOptions": [
+            {
+              "key": "FOO",
+              "value": "bar"
+            },
+            {
+              "key": "DXVK_HUD",
+              "value": "fps"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "autoInstallDxvk": false,
+        "autoInstallDxvkNvapi": false,
+        "autoInstallVkd3d": false,
+        "launcherArgs": "-windowed",
+        "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1",
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+        },
+        "enviromentOptions": [
+          {
+            "key": "FOO",
+            "value": "bar"
+          },
+          {
+            "key": "DXVK_HUD",
+            "value": "fps"
+          },
+          {
+            "key": "USER",
+            "value": "crossover"
+          },
+          {
+            "key": "WINEDEBUG",
+            "value": "-all"
+          },
+          {
+            "key": "MVK_CONFIG_LOG_LEVEL",
+            "value": "0"
+          }
+        ],
+        "wineCrossoverBottle": "GameLib-gog-1"
+      }
+    },
+    {
+      "id": "fallback-settings-strips-every-reserved-key",
+      "input": {
+        "bottle": "GameLib-gog-1",
+        "engine": "with-dxvk",
+        "base": {
+          "autoInstallDxvk": true,
+          "autoInstallDxvkNvapi": true,
+          "autoInstallVkd3d": true,
+          "launcherArgs": "-windowed",
+          "winePrefix": "<HOME>/plain-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "/x/wine"
+          },
+          "enviromentOptions": [
+            {
+              "key": "USER",
+              "value": "someone"
+            },
+            {
+              "key": "WINEPREFIX",
+              "value": "/elsewhere"
+            },
+            {
+              "key": "CX_BOTTLE",
+              "value": "Other"
+            },
+            {
+              "key": "CX_ROOT",
+              "value": "/cx"
+            },
+            {
+              "key": "WINELOADER",
+              "value": "/wl"
+            },
+            {
+              "key": "WINESERVER",
+              "value": "/ws"
+            },
+            {
+              "key": "WINEDEBUG",
+              "value": "+all"
+            },
+            {
+              "key": "MVK_CONFIG_LOG_LEVEL",
+              "value": "9"
+            },
+            {
+              "key": "KEEP",
+              "value": "1"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "autoInstallDxvk": false,
+        "autoInstallDxvkNvapi": false,
+        "autoInstallVkd3d": false,
+        "launcherArgs": "-windowed",
+        "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1",
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+        },
+        "enviromentOptions": [
+          {
+            "key": "KEEP",
+            "value": "1"
+          },
+          {
+            "key": "USER",
+            "value": "crossover"
+          },
+          {
+            "key": "WINEDEBUG",
+            "value": "-all"
+          },
+          {
+            "key": "MVK_CONFIG_LOG_LEVEL",
+            "value": "0"
+          }
+        ],
+        "wineCrossoverBottle": "GameLib-gog-1"
+      }
+    },
+    {
+      "id": "fallback-settings-strips-keys-case-insensitively",
+      "input": {
+        "bottle": "GameLib-gog-1",
+        "engine": "with-dxvk",
+        "base": {
+          "autoInstallDxvk": true,
+          "autoInstallDxvkNvapi": true,
+          "autoInstallVkd3d": true,
+          "launcherArgs": "-windowed",
+          "winePrefix": "<HOME>/plain-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "/x/wine"
+          },
+          "enviromentOptions": [
+            {
+              "key": "user",
+              "value": "x"
+            },
+            {
+              "key": "Wineprefix",
+              "value": "y"
+            },
+            {
+              "key": "cx_root",
+              "value": "z"
+            },
+            {
+              "key": "mvk_config_log_level",
+              "value": "2"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "autoInstallDxvk": false,
+        "autoInstallDxvkNvapi": false,
+        "autoInstallVkd3d": false,
+        "launcherArgs": "-windowed",
+        "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1",
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+        },
+        "enviromentOptions": [
+          {
+            "key": "USER",
+            "value": "crossover"
+          },
+          {
+            "key": "WINEDEBUG",
+            "value": "-all"
+          },
+          {
+            "key": "MVK_CONFIG_LOG_LEVEL",
+            "value": "0"
+          }
+        ],
+        "wineCrossoverBottle": "GameLib-gog-1"
+      }
+    },
+    {
+      "id": "fallback-settings-non-string-key-is-stringified",
+      "input": {
+        "bottle": "GameLib-gog-1",
+        "engine": "with-dxvk",
+        "base": {
+          "autoInstallDxvk": true,
+          "autoInstallDxvkNvapi": true,
+          "autoInstallVkd3d": true,
+          "launcherArgs": "-windowed",
+          "winePrefix": "<HOME>/plain-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "/x/wine"
+          },
+          "enviromentOptions": [
+            {
+              "key": 5,
+              "value": "five"
+            },
+            {
+              "key": null,
+              "value": "null-key"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "autoInstallDxvk": false,
+        "autoInstallDxvkNvapi": false,
+        "autoInstallVkd3d": false,
+        "launcherArgs": "-windowed",
+        "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1",
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+        },
+        "enviromentOptions": [
+          {
+            "key": 5,
+            "value": "five"
+          },
+          {
+            "key": null,
+            "value": "null-key"
+          },
+          {
+            "key": "USER",
+            "value": "crossover"
+          },
+          {
+            "key": "WINEDEBUG",
+            "value": "-all"
+          },
+          {
+            "key": "MVK_CONFIG_LOG_LEVEL",
+            "value": "0"
+          }
+        ],
+        "wineCrossoverBottle": "GameLib-gog-1"
+      }
+    },
+    {
+      "id": "fallback-settings-engine-without-dxvk",
+      "input": {
+        "bottle": "GameLib-gog-1",
+        "engine": "no-dxvk",
+        "base": {
+          "autoInstallDxvk": true,
+          "autoInstallDxvkNvapi": true,
+          "autoInstallVkd3d": true,
+          "launcherArgs": "-windowed",
+          "winePrefix": "<HOME>/plain-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "/x/wine"
+          },
+          "enviromentOptions": [
+            {
+              "key": "FOO",
+              "value": "bar"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "autoInstallDxvk": false,
+        "autoInstallDxvkNvapi": false,
+        "autoInstallVkd3d": false,
+        "launcherArgs": "-windowed",
+        "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1",
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+        },
+        "enviromentOptions": [
+          {
+            "key": "FOO",
+            "value": "bar"
+          },
+          {
+            "key": "USER",
+            "value": "crossover"
+          },
+          {
+            "key": "WINEDEBUG",
+            "value": "-all"
+          },
+          {
+            "key": "MVK_CONFIG_LOG_LEVEL",
+            "value": "0"
+          }
+        ],
+        "wineCrossoverBottle": "GameLib-gog-1"
+      }
+    },
+    {
+      "id": "fallback-settings-replaces-the-stored-wine",
+      "input": {
+        "bottle": "GameLib-steam-620",
+        "engine": "with-dxvk",
+        "base": {
+          "autoInstallDxvk": true,
+          "autoInstallDxvkNvapi": true,
+          "autoInstallVkd3d": true,
+          "launcherArgs": "-windowed",
+          "winePrefix": "<HOME>/plain-prefix",
+          "wineVersion": {
+            "type": "proton",
+            "name": "GE",
+            "bin": "/p"
+          },
+          "wineCrossoverBottle": "Old"
+        }
+      },
+      "expected": {
+        "autoInstallDxvk": false,
+        "autoInstallDxvkNvapi": false,
+        "autoInstallVkd3d": false,
+        "launcherArgs": "-windowed",
+        "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-steam-620",
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+        },
+        "wineCrossoverBottle": "GameLib-steam-620",
+        "enviromentOptions": [
+          {
+            "key": "USER",
+            "value": "crossover"
+          },
+          {
+            "key": "WINEDEBUG",
+            "value": "-all"
+          },
+          {
+            "key": "MVK_CONFIG_LOG_LEVEL",
+            "value": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "fallback-settings-non-ascii-bottle-name",
+      "input": {
+        "bottle": "ゲーム-Ünï",
+        "engine": "with-dxvk",
+        "base": {
+          "autoInstallDxvk": true,
+          "autoInstallDxvkNvapi": true,
+          "autoInstallVkd3d": true,
+          "launcherArgs": "-windowed",
+          "winePrefix": "<HOME>/plain-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "/x/wine"
+          }
+        }
+      },
+      "expected": {
+        "autoInstallDxvk": false,
+        "autoInstallDxvkNvapi": false,
+        "autoInstallVkd3d": false,
+        "launcherArgs": "-windowed",
+        "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/ゲーム-Ünï",
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+        },
+        "wineCrossoverBottle": "ゲーム-Ünï",
+        "enviromentOptions": [
+          {
+            "key": "USER",
+            "value": "crossover"
+          },
+          {
+            "key": "WINEDEBUG",
+            "value": "-all"
+          },
+          {
+            "key": "MVK_CONFIG_LOG_LEVEL",
+            "value": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "fallback-settings-unsafe-name-is-not-checked-here",
+      "input": {
+        "bottle": "a/../b",
+        "engine": "with-dxvk",
+        "base": {
+          "autoInstallDxvk": true,
+          "autoInstallDxvkNvapi": true,
+          "autoInstallVkd3d": true,
+          "launcherArgs": "-windowed",
+          "winePrefix": "<HOME>/plain-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "/x/wine"
+          }
+        }
+      },
+      "expected": {
+        "autoInstallDxvk": false,
+        "autoInstallDxvkNvapi": false,
+        "autoInstallVkd3d": false,
+        "launcherArgs": "-windowed",
+        "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/b",
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+        },
+        "wineCrossoverBottle": "a/../b",
+        "enviromentOptions": [
+          {
+            "key": "USER",
+            "value": "crossover"
+          },
+          {
+            "key": "WINEDEBUG",
+            "value": "-all"
+          },
+          {
+            "key": "MVK_CONFIG_LOG_LEVEL",
+            "value": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "fallback-settings-empty-settings",
+      "input": {
+        "bottle": "GameLib-gog-1",
+        "engine": "with-dxvk",
+        "base": {}
+      },
+      "expected": {
+        "wineCrossoverBottle": "GameLib-gog-1",
+        "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1",
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+        },
+        "autoInstallDxvk": false,
+        "autoInstallDxvkNvapi": false,
+        "autoInstallVkd3d": false,
+        "enviromentOptions": [
+          {
+            "key": "USER",
+            "value": "crossover"
+          },
+          {
+            "key": "WINEDEBUG",
+            "value": "-all"
+          },
+          {
+            "key": "MVK_CONFIG_LOG_LEVEL",
+            "value": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "fallback-settings-keeps-extra-settings",
+      "input": {
+        "bottle": "GameLib-gog-1",
+        "engine": "no-dxvk",
+        "base": {
+          "autoInstallDxvk": true,
+          "autoInstallDxvkNvapi": true,
+          "autoInstallVkd3d": true,
+          "launcherArgs": "-windowed",
+          "winePrefix": "<HOME>/plain-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "/x/wine"
+          },
+          "targetExe": "game.exe",
+          "showFps": true,
+          "enviromentOptions": [
+            {
+              "key": "A",
+              "value": "b"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "autoInstallDxvk": false,
+        "autoInstallDxvkNvapi": false,
+        "autoInstallVkd3d": false,
+        "launcherArgs": "-windowed",
+        "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1",
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+        },
+        "targetExe": "game.exe",
+        "showFps": true,
+        "enviromentOptions": [
+          {
+            "key": "A",
+            "value": "b"
+          },
+          {
+            "key": "USER",
+            "value": "crossover"
+          },
+          {
+            "key": "WINEDEBUG",
+            "value": "-all"
+          },
+          {
+            "key": "MVK_CONFIG_LOG_LEVEL",
+            "value": "0"
+          }
+        ],
+        "wineCrossoverBottle": "GameLib-gog-1"
+      }
+    }
+  ],
+  "readBottleEngineMarkerKind": [
+    {
+      "id": "kind-fx-crossover-marker",
+      "input": {
+        "fixtures": [
+          "fx-crossover-marker"
+        ],
+        "engines": "installed",
+        "bottle": "fx-crossover-marker"
+      },
+      "expected": "crossover"
+    },
+    {
+      "id": "kind-fx-pinned-current",
+      "input": {
+        "fixtures": [
+          "fx-pinned-current"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-current"
+      },
+      "expected": "non-crossover"
+    },
+    {
+      "id": "kind-fx-pinned-retired",
+      "input": {
+        "fixtures": [
+          "fx-pinned-retired"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-retired"
+      },
+      "expected": "non-crossover"
+    },
+    {
+      "id": "kind-fx-wine-manager",
+      "input": {
+        "fixtures": [
+          "fx-wine-manager"
+        ],
+        "engines": "installed",
+        "bottle": "fx-wine-manager"
+      },
+      "expected": "non-crossover"
+    },
+    {
+      "id": "kind-fx-pinned-no-dxvk-field",
+      "input": {
+        "fixtures": [
+          "fx-pinned-no-dxvk-field"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-no-dxvk-field"
+      },
+      "expected": "non-crossover"
+    },
+    {
+      "id": "kind-fx-dxvk-failed",
+      "input": {
+        "fixtures": [
+          "fx-dxvk-failed"
+        ],
+        "engines": "installed",
+        "bottle": "fx-dxvk-failed"
+      },
+      "expected": "non-crossover"
+    },
+    {
+      "id": "kind-fx-marker-newer",
+      "input": {
+        "fixtures": [
+          "fx-marker-newer"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-newer"
+      },
+      "expected": "non-crossover"
+    },
+    {
+      "id": "kind-fx-marker-unreadable",
+      "input": {
+        "fixtures": [
+          "fx-marker-unreadable"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-unreadable"
+      },
+      "expected": null
+    },
+    {
+      "id": "kind-fx-crossover-contradicted",
+      "input": {
+        "fixtures": [
+          "fx-crossover-contradicted"
+        ],
+        "engines": "installed",
+        "bottle": "fx-crossover-contradicted"
+      },
+      "expected": "non-crossover"
+    },
+    {
+      "id": "kind-fx-nomarker-dxvk-ts",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-dxvk-ts"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-dxvk-ts"
+      },
+      "expected": null
+    },
+    {
+      "id": "kind-fx-nomarker-dxvk-nots",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-dxvk-nots"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-dxvk-nots"
+      },
+      "expected": null
+    },
+    {
+      "id": "kind-fx-nomarker-nodxvk-ts",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-nodxvk-ts"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-nodxvk-ts"
+      },
+      "expected": null
+    },
+    {
+      "id": "kind-fx-nomarker-nodxvk-nots",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-nodxvk-nots"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-nodxvk-nots"
+      },
+      "expected": null
+    },
+    {
+      "id": "kind-fx-nomarker-noconf",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-noconf"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-noconf"
+      },
+      "expected": null
+    },
+    {
+      "id": "kind-fx-no-system-reg",
+      "input": {
+        "fixtures": [
+          "fx-no-system-reg"
+        ],
+        "engines": "installed",
+        "bottle": "fx-no-system-reg"
+      },
+      "expected": null
+    },
+    {
+      "id": "kind-fx-pinned-wineserver-outside",
+      "input": {
+        "fixtures": [
+          "fx-pinned-wineserver-outside"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-wineserver-outside"
+      },
+      "expected": "non-crossover"
+    },
+    {
+      "id": "kind-fx-pinned-wineserver-misnamed",
+      "input": {
+        "fixtures": [
+          "fx-pinned-wineserver-misnamed"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-wineserver-misnamed"
+      },
+      "expected": "non-crossover"
+    },
+    {
+      "id": "kind-fx-marker-bad-id",
+      "input": {
+        "fixtures": [
+          "fx-marker-bad-id"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-bad-id"
+      },
+      "expected": null
+    },
+    {
+      "id": "kind-fx-pinned-dxvk-outside-root",
+      "input": {
+        "fixtures": [
+          "fx-pinned-dxvk-outside-root"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-dxvk-outside-root"
+      },
+      "expected": "non-crossover"
+    },
+    {
+      "id": "kind-fx-marker-wrong-kind",
+      "input": {
+        "fixtures": [
+          "fx-marker-wrong-kind"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-wrong-kind"
+      },
+      "expected": null
+    },
+    {
+      "id": "kind-fx-marker-legacy-noversion",
+      "input": {
+        "fixtures": [
+          "fx-marker-legacy-noversion"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-legacy-noversion"
+      },
+      "expected": "non-crossover"
+    },
+    {
+      "id": "kind-name-a-b",
+      "input": {
+        "fixtures": [],
+        "bottle": "a/b"
+      },
+      "expected": null
+    },
+    {
+      "id": "kind-name-..",
+      "input": {
+        "fixtures": [],
+        "bottle": ".."
+      },
+      "expected": null
+    },
+    {
+      "id": "kind-name-empty",
+      "input": {
+        "fixtures": [],
+        "bottle": ""
+      },
+      "expected": null
+    },
+    {
+      "id": "kind-name-no-such-bottle",
+      "input": {
+        "fixtures": [],
+        "bottle": "no-such-bottle"
+      },
+      "expected": null
+    }
+  ],
+  "readBottleEngineMarkerSummary": [
+    {
+      "id": "summary-fx-crossover-marker",
+      "input": {
+        "fixtures": [
+          "fx-crossover-marker"
+        ],
+        "engines": "installed",
+        "bottle": "fx-crossover-marker"
+      },
+      "expected": {
+        "kind": "crossover",
+        "pinId": null,
+        "wineManagerVersion": null,
+        "pinWineserverBin": null
+      }
+    },
+    {
+      "id": "summary-fx-pinned-current",
+      "input": {
+        "fixtures": [
+          "fx-pinned-current"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-current"
+      },
+      "expected": {
+        "kind": "non-crossover",
+        "pinId": "wine-staging-11.20",
+        "wineManagerVersion": null,
+        "pinWineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+      }
+    },
+    {
+      "id": "summary-fx-pinned-retired",
+      "input": {
+        "fixtures": [
+          "fx-pinned-retired"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-retired"
+      },
+      "expected": {
+        "kind": "non-crossover",
+        "pinId": "wine-staging-11.1",
+        "wineManagerVersion": null,
+        "pinWineserverBin": "<TOOLS>/steam-engines/wine-staging-11.1/Contents/Resources/wine/bin/wineserver"
+      }
+    },
+    {
+      "id": "summary-fx-wine-manager",
+      "input": {
+        "fixtures": [
+          "fx-wine-manager"
+        ],
+        "engines": "installed",
+        "bottle": "fx-wine-manager"
+      },
+      "expected": {
+        "kind": "non-crossover",
+        "pinId": null,
+        "wineManagerVersion": "Wine-Staging-10.5",
+        "pinWineserverBin": null
+      }
+    },
+    {
+      "id": "summary-fx-pinned-no-dxvk-field",
+      "input": {
+        "fixtures": [
+          "fx-pinned-no-dxvk-field"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-no-dxvk-field"
+      },
+      "expected": {
+        "kind": "non-crossover",
+        "pinId": "wine-staging-11.20",
+        "wineManagerVersion": null,
+        "pinWineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+      }
+    },
+    {
+      "id": "summary-fx-dxvk-failed",
+      "input": {
+        "fixtures": [
+          "fx-dxvk-failed"
+        ],
+        "engines": "installed",
+        "bottle": "fx-dxvk-failed"
+      },
+      "expected": {
+        "kind": "non-crossover",
+        "pinId": "wine-staging-11.20",
+        "wineManagerVersion": null,
+        "pinWineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+      }
+    },
+    {
+      "id": "summary-fx-marker-newer",
+      "input": {
+        "fixtures": [
+          "fx-marker-newer"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-newer"
+      },
+      "expected": {
+        "kind": "non-crossover",
+        "pinId": "wine-staging-11.20",
+        "wineManagerVersion": null,
+        "pinWineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+      }
+    },
+    {
+      "id": "summary-fx-marker-unreadable",
+      "input": {
+        "fixtures": [
+          "fx-marker-unreadable"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-unreadable"
+      },
+      "expected": null
+    },
+    {
+      "id": "summary-fx-crossover-contradicted",
+      "input": {
+        "fixtures": [
+          "fx-crossover-contradicted"
+        ],
+        "engines": "installed",
+        "bottle": "fx-crossover-contradicted"
+      },
+      "expected": {
+        "kind": "non-crossover",
+        "pinId": "wine-staging-11.20",
+        "wineManagerVersion": null,
+        "pinWineserverBin": null
+      }
+    },
+    {
+      "id": "summary-fx-nomarker-dxvk-ts",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-dxvk-ts"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-dxvk-ts"
+      },
+      "expected": null
+    },
+    {
+      "id": "summary-fx-nomarker-dxvk-nots",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-dxvk-nots"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-dxvk-nots"
+      },
+      "expected": null
+    },
+    {
+      "id": "summary-fx-nomarker-nodxvk-ts",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-nodxvk-ts"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-nodxvk-ts"
+      },
+      "expected": null
+    },
+    {
+      "id": "summary-fx-nomarker-nodxvk-nots",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-nodxvk-nots"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-nodxvk-nots"
+      },
+      "expected": null
+    },
+    {
+      "id": "summary-fx-nomarker-noconf",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-noconf"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-noconf"
+      },
+      "expected": null
+    },
+    {
+      "id": "summary-fx-no-system-reg",
+      "input": {
+        "fixtures": [
+          "fx-no-system-reg"
+        ],
+        "engines": "installed",
+        "bottle": "fx-no-system-reg"
+      },
+      "expected": null
+    },
+    {
+      "id": "summary-fx-pinned-wineserver-outside",
+      "input": {
+        "fixtures": [
+          "fx-pinned-wineserver-outside"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-wineserver-outside"
+      },
+      "expected": {
+        "kind": "non-crossover",
+        "pinId": "wine-staging-11.20",
+        "wineManagerVersion": null,
+        "pinWineserverBin": null
+      }
+    },
+    {
+      "id": "summary-fx-pinned-wineserver-misnamed",
+      "input": {
+        "fixtures": [
+          "fx-pinned-wineserver-misnamed"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-wineserver-misnamed"
+      },
+      "expected": {
+        "kind": "non-crossover",
+        "pinId": "wine-staging-11.20",
+        "wineManagerVersion": null,
+        "pinWineserverBin": null
+      }
+    },
+    {
+      "id": "summary-fx-marker-bad-id",
+      "input": {
+        "fixtures": [
+          "fx-marker-bad-id"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-bad-id"
+      },
+      "expected": null
+    },
+    {
+      "id": "summary-fx-pinned-dxvk-outside-root",
+      "input": {
+        "fixtures": [
+          "fx-pinned-dxvk-outside-root"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-dxvk-outside-root"
+      },
+      "expected": {
+        "kind": "non-crossover",
+        "pinId": "wine-staging-11.20",
+        "wineManagerVersion": null,
+        "pinWineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+      }
+    },
+    {
+      "id": "summary-fx-marker-wrong-kind",
+      "input": {
+        "fixtures": [
+          "fx-marker-wrong-kind"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-wrong-kind"
+      },
+      "expected": null
+    },
+    {
+      "id": "summary-fx-marker-legacy-noversion",
+      "input": {
+        "fixtures": [
+          "fx-marker-legacy-noversion"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-legacy-noversion"
+      },
+      "expected": {
+        "kind": "non-crossover",
+        "pinId": "wine-staging-11.20",
+        "wineManagerVersion": null,
+        "pinWineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+      }
+    },
+    {
+      "id": "summary-name-a-b",
+      "input": {
+        "fixtures": [],
+        "bottle": "a/b"
+      },
+      "expected": null
+    },
+    {
+      "id": "summary-name-..",
+      "input": {
+        "fixtures": [],
+        "bottle": ".."
+      },
+      "expected": null
+    },
+    {
+      "id": "summary-name-empty",
+      "input": {
+        "fixtures": [],
+        "bottle": ""
+      },
+      "expected": null
+    },
+    {
+      "id": "summary-name-no-such-bottle",
+      "input": {
+        "fixtures": [],
+        "bottle": "no-such-bottle"
+      },
+      "expected": null
+    }
+  ],
+  "restoreNeedsAbsentPin": [
+    {
+      "id": "restore-fx-crossover-marker-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-crossover-marker"
+        ],
+        "engines": "installed",
+        "bottle": "fx-crossover-marker"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-crossover-marker-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-crossover-marker"
+        ],
+        "engines": "none",
+        "bottle": "fx-crossover-marker"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-pinned-current-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-pinned-current"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-current"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-pinned-current-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-pinned-current"
+        ],
+        "engines": "none",
+        "bottle": "fx-pinned-current"
+      },
+      "expected": true
+    },
+    {
+      "id": "restore-fx-pinned-retired-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-pinned-retired"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-retired"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-pinned-retired-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-pinned-retired"
+        ],
+        "engines": "none",
+        "bottle": "fx-pinned-retired"
+      },
+      "expected": true
+    },
+    {
+      "id": "restore-fx-wine-manager-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-wine-manager"
+        ],
+        "engines": "installed",
+        "bottle": "fx-wine-manager"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-wine-manager-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-wine-manager"
+        ],
+        "engines": "none",
+        "bottle": "fx-wine-manager"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-pinned-no-dxvk-field-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-pinned-no-dxvk-field"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-no-dxvk-field"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-pinned-no-dxvk-field-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-pinned-no-dxvk-field"
+        ],
+        "engines": "none",
+        "bottle": "fx-pinned-no-dxvk-field"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-dxvk-failed-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-dxvk-failed"
+        ],
+        "engines": "installed",
+        "bottle": "fx-dxvk-failed"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-dxvk-failed-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-dxvk-failed"
+        ],
+        "engines": "none",
+        "bottle": "fx-dxvk-failed"
+      },
+      "expected": true
+    },
+    {
+      "id": "restore-fx-marker-newer-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-marker-newer"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-newer"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-marker-newer-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-marker-newer"
+        ],
+        "engines": "none",
+        "bottle": "fx-marker-newer"
+      },
+      "expected": true
+    },
+    {
+      "id": "restore-fx-marker-unreadable-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-marker-unreadable"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-unreadable"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-marker-unreadable-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-marker-unreadable"
+        ],
+        "engines": "none",
+        "bottle": "fx-marker-unreadable"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-crossover-contradicted-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-crossover-contradicted"
+        ],
+        "engines": "installed",
+        "bottle": "fx-crossover-contradicted"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-crossover-contradicted-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-crossover-contradicted"
+        ],
+        "engines": "none",
+        "bottle": "fx-crossover-contradicted"
+      },
+      "expected": true
+    },
+    {
+      "id": "restore-fx-nomarker-dxvk-ts-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-dxvk-ts"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-dxvk-ts"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-nomarker-dxvk-ts-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-dxvk-ts"
+        ],
+        "engines": "none",
+        "bottle": "fx-nomarker-dxvk-ts"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-nomarker-dxvk-nots-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-dxvk-nots"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-dxvk-nots"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-nomarker-dxvk-nots-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-dxvk-nots"
+        ],
+        "engines": "none",
+        "bottle": "fx-nomarker-dxvk-nots"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-nomarker-nodxvk-ts-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-nodxvk-ts"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-nodxvk-ts"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-nomarker-nodxvk-ts-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-nodxvk-ts"
+        ],
+        "engines": "none",
+        "bottle": "fx-nomarker-nodxvk-ts"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-nomarker-nodxvk-nots-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-nodxvk-nots"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-nodxvk-nots"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-nomarker-nodxvk-nots-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-nodxvk-nots"
+        ],
+        "engines": "none",
+        "bottle": "fx-nomarker-nodxvk-nots"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-nomarker-noconf-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-noconf"
+        ],
+        "engines": "installed",
+        "bottle": "fx-nomarker-noconf"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-nomarker-noconf-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-nomarker-noconf"
+        ],
+        "engines": "none",
+        "bottle": "fx-nomarker-noconf"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-no-system-reg-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-no-system-reg"
+        ],
+        "engines": "installed",
+        "bottle": "fx-no-system-reg"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-no-system-reg-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-no-system-reg"
+        ],
+        "engines": "none",
+        "bottle": "fx-no-system-reg"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-pinned-wineserver-outside-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-pinned-wineserver-outside"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-wineserver-outside"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-pinned-wineserver-outside-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-pinned-wineserver-outside"
+        ],
+        "engines": "none",
+        "bottle": "fx-pinned-wineserver-outside"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-pinned-wineserver-misnamed-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-pinned-wineserver-misnamed"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-wineserver-misnamed"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-pinned-wineserver-misnamed-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-pinned-wineserver-misnamed"
+        ],
+        "engines": "none",
+        "bottle": "fx-pinned-wineserver-misnamed"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-marker-bad-id-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-marker-bad-id"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-bad-id"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-marker-bad-id-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-marker-bad-id"
+        ],
+        "engines": "none",
+        "bottle": "fx-marker-bad-id"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-pinned-dxvk-outside-root-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-pinned-dxvk-outside-root"
+        ],
+        "engines": "installed",
+        "bottle": "fx-pinned-dxvk-outside-root"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-pinned-dxvk-outside-root-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-pinned-dxvk-outside-root"
+        ],
+        "engines": "none",
+        "bottle": "fx-pinned-dxvk-outside-root"
+      },
+      "expected": true
+    },
+    {
+      "id": "restore-fx-marker-wrong-kind-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-marker-wrong-kind"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-wrong-kind"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-marker-wrong-kind-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-marker-wrong-kind"
+        ],
+        "engines": "none",
+        "bottle": "fx-marker-wrong-kind"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-marker-legacy-noversion-engine-installed",
+      "input": {
+        "fixtures": [
+          "fx-marker-legacy-noversion"
+        ],
+        "engines": "installed",
+        "bottle": "fx-marker-legacy-noversion"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-fx-marker-legacy-noversion-engine-none",
+      "input": {
+        "fixtures": [
+          "fx-marker-legacy-noversion"
+        ],
+        "engines": "none",
+        "bottle": "fx-marker-legacy-noversion"
+      },
+      "expected": true
+    },
+    {
+      "id": "restore-name-a-b",
+      "input": {
+        "fixtures": [],
+        "bottle": "a/b"
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-name-..",
+      "input": {
+        "fixtures": [],
+        "bottle": ".."
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-name-empty",
+      "input": {
+        "fixtures": [],
+        "bottle": ""
+      },
+      "expected": false
+    },
+    {
+      "id": "restore-name-no-such-bottle",
+      "input": {
+        "fixtures": [],
+        "bottle": "no-such-bottle"
+      },
+      "expected": false
+    }
+  ],
+  "isPinnedEngineInstalled": [
+    {
+      "id": "pin-current-engine-none",
+      "input": {
+        "engines": "none",
+        "pin": "current"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-wine-sha-differs-engine-none",
+      "input": {
+        "engines": "none",
+        "pin": "wine-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-dxvk-sha-differs-engine-none",
+      "input": {
+        "engines": "none",
+        "pin": "dxvk-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-other-id-engine-none",
+      "input": {
+        "engines": "none",
+        "pin": "other-id"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-current-engine-installed",
+      "input": {
+        "engines": "installed",
+        "pin": "current"
+      },
+      "expected": true
+    },
+    {
+      "id": "pin-wine-sha-differs-engine-installed",
+      "input": {
+        "engines": "installed",
+        "pin": "wine-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-dxvk-sha-differs-engine-installed",
+      "input": {
+        "engines": "installed",
+        "pin": "dxvk-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-other-id-engine-installed",
+      "input": {
+        "engines": "installed",
+        "pin": "other-id"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-current-engine-wine-only",
+      "input": {
+        "engines": "wine-only",
+        "pin": "current"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-wine-sha-differs-engine-wine-only",
+      "input": {
+        "engines": "wine-only",
+        "pin": "wine-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-dxvk-sha-differs-engine-wine-only",
+      "input": {
+        "engines": "wine-only",
+        "pin": "dxvk-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-other-id-engine-wine-only",
+      "input": {
+        "engines": "wine-only",
+        "pin": "other-id"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-current-engine-dxvk-only",
+      "input": {
+        "engines": "dxvk-only",
+        "pin": "current"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-wine-sha-differs-engine-dxvk-only",
+      "input": {
+        "engines": "dxvk-only",
+        "pin": "wine-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-dxvk-sha-differs-engine-dxvk-only",
+      "input": {
+        "engines": "dxvk-only",
+        "pin": "dxvk-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-other-id-engine-dxvk-only",
+      "input": {
+        "engines": "dxvk-only",
+        "pin": "other-id"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-current-engine-wine-wrong-sha",
+      "input": {
+        "engines": "wine-wrong-sha",
+        "pin": "current"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-wine-sha-differs-engine-wine-wrong-sha",
+      "input": {
+        "engines": "wine-wrong-sha",
+        "pin": "wine-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-dxvk-sha-differs-engine-wine-wrong-sha",
+      "input": {
+        "engines": "wine-wrong-sha",
+        "pin": "dxvk-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-other-id-engine-wine-wrong-sha",
+      "input": {
+        "engines": "wine-wrong-sha",
+        "pin": "other-id"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-current-engine-dxvk-wrong-sha",
+      "input": {
+        "engines": "dxvk-wrong-sha",
+        "pin": "current"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-wine-sha-differs-engine-dxvk-wrong-sha",
+      "input": {
+        "engines": "dxvk-wrong-sha",
+        "pin": "wine-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-dxvk-sha-differs-engine-dxvk-wrong-sha",
+      "input": {
+        "engines": "dxvk-wrong-sha",
+        "pin": "dxvk-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-other-id-engine-dxvk-wrong-sha",
+      "input": {
+        "engines": "dxvk-wrong-sha",
+        "pin": "other-id"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-current-engine-wineserver-missing",
+      "input": {
+        "engines": "wineserver-missing",
+        "pin": "current"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-wine-sha-differs-engine-wineserver-missing",
+      "input": {
+        "engines": "wineserver-missing",
+        "pin": "wine-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-dxvk-sha-differs-engine-wineserver-missing",
+      "input": {
+        "engines": "wineserver-missing",
+        "pin": "dxvk-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-other-id-engine-wineserver-missing",
+      "input": {
+        "engines": "wineserver-missing",
+        "pin": "other-id"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-current-engine-pin-marker-malformed",
+      "input": {
+        "engines": "pin-marker-malformed",
+        "pin": "current"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-wine-sha-differs-engine-pin-marker-malformed",
+      "input": {
+        "engines": "pin-marker-malformed",
+        "pin": "wine-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-dxvk-sha-differs-engine-pin-marker-malformed",
+      "input": {
+        "engines": "pin-marker-malformed",
+        "pin": "dxvk-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-other-id-engine-pin-marker-malformed",
+      "input": {
+        "engines": "pin-marker-malformed",
+        "pin": "other-id"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-current-engine-pin-marker-no-sha",
+      "input": {
+        "engines": "pin-marker-no-sha",
+        "pin": "current"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-wine-sha-differs-engine-pin-marker-no-sha",
+      "input": {
+        "engines": "pin-marker-no-sha",
+        "pin": "wine-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-dxvk-sha-differs-engine-pin-marker-no-sha",
+      "input": {
+        "engines": "pin-marker-no-sha",
+        "pin": "dxvk-sha-differs"
+      },
+      "expected": false
+    },
+    {
+      "id": "pin-other-id-engine-pin-marker-no-sha",
+      "input": {
+        "engines": "pin-marker-no-sha",
+        "pin": "other-id"
+      },
+      "expected": false
+    }
+  ]
+}

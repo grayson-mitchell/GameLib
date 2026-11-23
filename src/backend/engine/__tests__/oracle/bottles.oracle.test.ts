@@ -28,8 +28,16 @@
  * only what the call set.
  */
 import { createHash } from 'crypto'
-import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'fs'
-import { join } from 'path'
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync
+} from 'fs'
+import { dirname, join } from 'path'
 import { describeSkipOnWindows } from 'backend/__tests__/skip'
 import {
   assertManifest,
@@ -60,6 +68,7 @@ import {
   type LogLine
 } from 'backend/testUtils/engineWineOracle/toolsOracleSupport'
 import { createFakeBottleGateRust } from 'backend/testUtils/fakeBottleGateRust'
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import { createSpawnAsync } from 'backend/spawnAsync'
 import { createBottleVersionGate } from 'backend/stores/bottleVersionGate'
 import type { GateState } from 'backend/stores/bottleVersionGate'
@@ -67,11 +76,13 @@ import * as logger from 'backend/logger'
 import type { GameSettings } from 'common/types'
 import { buildCxbottleConf, writeCxbottleConf } from '../../adoptBottle'
 import {
+  buildFallbackGameSettings,
   createFallbackBottle,
   getBottleDir,
   isBottleProvisioned,
   killBottleWineServerWith,
-  removeCreatedBottleDir
+  removeCreatedBottleDir,
+  sanitizeBottleName
 } from '../../bottlePrimitives'
 import { createBottleLedger } from '../../bottleLedger'
 import { createEngineRegistry } from '../../engineRegistry'
@@ -84,7 +95,7 @@ import {
   restoreNeedsAbsentPin
 } from '../../engineSwitch'
 import { createFallbackEngine } from '../../fallbackEngine'
-import { ENGINE_PINS } from '../../enginePins'
+import { ENGINE_PINS, type EnginePin } from '../../enginePins'
 import type { NonCrossoverEngine } from '../../engineTypes'
 import { resolveGamePrefix } from '../../gamePrefix'
 import {
@@ -339,19 +350,7 @@ describeSkipOnWindows('bottles and markers oracle (87-11)', () => {
           answer: c.gate?.answer,
           rejectGate: c.gate?.reject
         })
-        const fallback = createFallbackEngine({
-          paths: { toolsPath: profile.toolsPath },
-          aborts: {
-            create: () => ({}) as never,
-            delete: () => undefined
-          } as never
-        })
-        const markerCtx: MarkerCtx = {
-          paths: { userHome: profile.home, toolsPath: profile.toolsPath },
-          fallback,
-          requestRustInvoke: gate.requestRustInvoke,
-          bottleGate: createBottleVersionGate()
-        }
+        const markerCtx = markerCtxFor(profile, gate)
         const engine = (
           variant?: 'with-dxvk' | 'no-dxvk'
         ): NonCrossoverEngine => ({
@@ -560,33 +559,8 @@ describeSkipOnWindows('bottles and markers oracle (87-11)', () => {
                   return { ...step, returned }
                 })
               }
-              case 'registry': {
-                const registry = createEngineRegistry()
-                return (args.steps ?? []).map((step) => {
-                  const call = String(step.call)
-                  const key = step.key as string
-                  const selection = step.selection as
-                    | (Record<string, unknown> & { dxvk?: { version: string } })
-                    | undefined
-                  let returned: unknown
-                  if (call === 'set') {
-                    returned = registry.setEngineSelection(
-                      key,
-                      selection as never
-                    )
-                    if (step.mutateInput && selection) {
-                      selection.label = 'MUTATED'
-                      if (selection.dxvk) selection.dxvk.version = 'MUTATED'
-                    }
-                  } else if (call === 'get') {
-                    returned = registry.getEngineSelection(key) ?? null
-                  } else {
-                    registry.clearEngineSelection(key)
-                    returned = null
-                  }
-                  return { call, key, returned }
-                })
-              }
+              case 'registry':
+                return runRegistrySteps(args.steps ?? [])
               case 'resolve-prefix':
                 return (args.inputs ?? []).map((input) => ({
                   input,
@@ -770,6 +744,56 @@ describeSkipOnWindows('bottles and markers oracle (87-11)', () => {
     })
   })
 })
+
+type RegistrySelection = Record<string, unknown> & {
+  dxvk?: { version: string }
+}
+
+/** The registry calls of a sequence, in order: each step's own result (`get` reads null for none). */
+function runRegistrySteps(
+  steps: readonly Record<string, unknown>[]
+): { call: string; key: string; returned: unknown }[] {
+  const registry = createEngineRegistry()
+  return steps.map((step) => {
+    const call = String(step.call)
+    const key = step.key as string
+    const selection = step.selection as RegistrySelection | undefined
+    let returned: unknown
+    if (call === 'set') {
+      returned = registry.setEngineSelection(key, selection as never)
+      if (step.mutateInput && selection) {
+        selection.label = 'MUTATED'
+        if (selection.dxvk) selection.dxvk.version = 'MUTATED'
+      }
+    } else if (call === 'get') {
+      returned = registry.getEngineSelection(key) ?? null
+    } else {
+      registry.clearEngineSelection(key)
+      returned = null
+    }
+    return { call, key, returned }
+  })
+}
+
+/** What a marker reader or writer needs over a profile: the real pin owner, the fake Rust gate. */
+function markerCtxFor(
+  profile: EngineOracleProfile,
+  gate: ReturnType<typeof createFakeBottleGateRust>
+): MarkerCtx {
+  const fallback = createFallbackEngine({
+    paths: { toolsPath: profile.toolsPath },
+    aborts: {
+      create: () => ({}) as never,
+      delete: () => undefined
+    } as never
+  })
+  return {
+    paths: { userHome: profile.home, toolsPath: profile.toolsPath },
+    fallback,
+    requestRustInvoke: gate.requestRustInvoke,
+    bottleGate: createBottleVersionGate()
+  }
+}
 
 function markerSha(
   profile: EngineOracleProfile,
@@ -977,3 +1001,694 @@ async function runEnsure(args: Args, env: EnsureEnv): Promise<unknown> {
   }
   return call()
 }
+
+/** The vector floors this plan commits; a later edit may raise them, never lower them. */
+const TWIN_VECTOR_FLOOR = 60
+const REGISTRY_SEQUENCE_FLOOR = 5
+
+interface Rep {
+  repeat: { char: string; count: number }
+}
+/** A long input is stored as a generator so the vector file stays small. */
+const rep = (char: string, count: number): Rep => ({ repeat: { char, count } })
+const unrep = (value: string | Rep): string =>
+  typeof value === 'string'
+    ? value
+    : value.repeat.char.repeat(value.repeat.count)
+
+/** A `sanitizeBottleName` argument: the function takes `string | null` but must survive anything. */
+type NameInput =
+  | { kind: 'string'; value: string | Rep }
+  | { kind: 'null' }
+  | { kind: 'undefined' }
+  | { kind: 'number'; value: number }
+  | { kind: 'object' }
+
+const materialise = (input: NameInput): unknown => {
+  switch (input.kind) {
+    case 'string':
+      return unrep(input.value)
+    case 'null':
+      return null
+    case 'undefined':
+      return undefined
+    case 'number':
+      return input.value
+    case 'object':
+      return {}
+  }
+}
+
+interface Vector {
+  id: string
+  input: unknown
+  expected: unknown
+}
+
+interface FsInput {
+  /** Fixture bottles built before the call. */
+  fixtures?: string[]
+  engines?: EngineVariant | 'none'
+  seed?: SeedEntry[]
+}
+
+/** Runs `fn` over a fresh profile built from `input`; the result is normalised to placeholders. */
+async function overProfile<T>(
+  input: FsInput,
+  fn: (profile: EngineOracleProfile, ctx: MarkerCtx) => T
+): Promise<T> {
+  return withEngineOracleProfile(
+    (profile) => {
+      const P = (text: string): string => expandPlaceholders(text, profile)
+      if (input.engines && input.engines !== 'none') {
+        buildEngines(profile.toolsPath, input.engines, P)
+      }
+      for (const name of input.fixtures ?? []) {
+        buildBottle(profile.home, fixtureByName(name), P)
+      }
+      const ctx = markerCtxFor(profile, createFakeBottleGateRust())
+      return normalisePaths(fn(profile, ctx), profile)
+    },
+    { seed: input.seed }
+  )
+}
+
+const FIXTURE_NAMES = BOTTLE_FIXTURES.map((b) => b.name)
+
+const sanitizeInputs: [string, NameInput][] = [
+  ['clean', { kind: 'string', value: 'GameLib-gog-1207658924' }],
+  ['padded-spaces', { kind: 'string', value: '  Good-Bottle  ' }],
+  ['padded-tab-newline', { kind: 'string', value: '\tGood\n' }],
+  ['inner-space', { kind: 'string', value: 'My Bottle' }],
+  ['slash', { kind: 'string', value: 'a/b' }],
+  ['backslash', { kind: 'string', value: 'a\\b' }],
+  ['parent', { kind: 'string', value: '..' }],
+  ['parent-inside-word', { kind: 'string', value: 'a..b' }],
+  ['parent-prefix', { kind: 'string', value: '..a' }],
+  ['three-dots', { kind: 'string', value: '...' }],
+  ['single-dot', { kind: 'string', value: '.' }],
+  ['dot-padded', { kind: 'string', value: ' . ' }],
+  ['single-dot-inside', { kind: 'string', value: 'a.b' }],
+  ['nul-inside', { kind: 'string', value: 'a\u0000b' }],
+  ['nul-only', { kind: 'string', value: '\u0000' }],
+  ['empty', { kind: 'string', value: '' }],
+  ['spaces-only', { kind: 'string', value: '   ' }],
+  ['nbsp-only', { kind: 'string', value: '\u00a0' }],
+  ['line-separator-padded', { kind: 'string', value: '\u2028x\u2029' }],
+  ['zero-width-space-kept', { kind: 'string', value: 'x\u200b' }],
+  ['non-ascii', { kind: 'string', value: 'ゲーム-Ünï-ñ' }],
+  ['emoji', { kind: 'string', value: 'bottle-\u{1F3AE}' }],
+  ['255-chars', { kind: 'string', value: rep('a', 255) }],
+  ['256-chars', { kind: 'string', value: rep('b', 256) }],
+  ['299-chars', { kind: 'string', value: rep('c', 299) }],
+  ['reserved-device-name', { kind: 'string', value: 'CON' }],
+  ['dash-leading', { kind: 'string', value: '-rf' }],
+  ['null', { kind: 'null' }],
+  ['undefined', { kind: 'undefined' }],
+  ['number', { kind: 'number', value: 5 }],
+  ['object', { kind: 'object' }]
+]
+
+const nameForDir: [string, string | Rep][] = [
+  ['clean', 'GameLib-gog-1207658924'],
+  ['inner-space', 'My Bottle'],
+  ['slash', 'a/b'],
+  ['backslash', 'a\\b'],
+  ['parent', '..'],
+  ['parent-then-name', '../x'],
+  ['climb-out-of-home', '../../../..'],
+  ['dot', '.'],
+  ['empty', ''],
+  ['space', ' '],
+  ['non-ascii', 'ゲーム-Ünï'],
+  ['nul-inside', 'x\u0000y'],
+  ['255-chars', rep('d', 255)],
+  ['trailing-slash', 'a/'],
+  ['absolute-looking', '/etc']
+]
+
+const baseSettings = (extra: Record<string, unknown> = {}): unknown => ({
+  autoInstallDxvk: true,
+  autoInstallDxvkNvapi: true,
+  autoInstallVkd3d: true,
+  launcherArgs: '-windowed',
+  winePrefix: '<HOME>/plain-prefix',
+  wineVersion: { type: 'crossover', name: 'CrossOver', bin: '/x/wine' },
+  ...extra
+})
+
+const envOf = (...pairs: [unknown, unknown][]): Record<string, unknown> => ({
+  enviromentOptions: pairs.map(([key, value]) => ({ key, value }))
+})
+
+const fallbackInputs: [string, string, 'with-dxvk' | 'no-dxvk', unknown][] = [
+  ['no-env', 'GameLib-gog-1', 'with-dxvk', baseSettings()],
+  ['empty-env', 'GameLib-gog-1', 'with-dxvk', baseSettings(envOf())],
+  [
+    'keeps-unrelated-env',
+    'GameLib-gog-1',
+    'with-dxvk',
+    baseSettings(envOf(['FOO', 'bar'], ['DXVK_HUD', 'fps']))
+  ],
+  [
+    'strips-every-reserved-key',
+    'GameLib-gog-1',
+    'with-dxvk',
+    baseSettings(
+      envOf(
+        ['USER', 'someone'],
+        ['WINEPREFIX', '/elsewhere'],
+        ['CX_BOTTLE', 'Other'],
+        ['CX_ROOT', '/cx'],
+        ['WINELOADER', '/wl'],
+        ['WINESERVER', '/ws'],
+        ['WINEDEBUG', '+all'],
+        ['MVK_CONFIG_LOG_LEVEL', '9'],
+        ['KEEP', '1']
+      )
+    )
+  ],
+  [
+    'strips-keys-case-insensitively',
+    'GameLib-gog-1',
+    'with-dxvk',
+    baseSettings(
+      envOf(
+        ['user', 'x'],
+        ['Wineprefix', 'y'],
+        ['cx_root', 'z'],
+        ['mvk_config_log_level', '2']
+      )
+    )
+  ],
+  [
+    'non-string-key-is-stringified',
+    'GameLib-gog-1',
+    'with-dxvk',
+    baseSettings(envOf([5, 'five'], [null, 'null-key']))
+  ],
+  [
+    'engine-without-dxvk',
+    'GameLib-gog-1',
+    'no-dxvk',
+    baseSettings(envOf(['FOO', 'bar']))
+  ],
+  [
+    'replaces-the-stored-wine',
+    'GameLib-steam-620',
+    'with-dxvk',
+    baseSettings({
+      wineCrossoverBottle: 'Old',
+      wineVersion: { type: 'proton', name: 'GE', bin: '/p' }
+    })
+  ],
+  ['non-ascii-bottle-name', 'ゲーム-Ünï', 'with-dxvk', baseSettings()],
+  ['unsafe-name-is-not-checked-here', 'a/../b', 'with-dxvk', baseSettings()],
+  ['empty-settings', 'GameLib-gog-1', 'with-dxvk', {}],
+  [
+    'keeps-extra-settings',
+    'GameLib-gog-1',
+    'no-dxvk',
+    baseSettings({
+      targetExe: 'game.exe',
+      showFps: true,
+      enviromentOptions: [{ key: 'A', value: 'b' }]
+    })
+  ]
+]
+
+const otherPins: [string, (pin: EnginePin) => EnginePin][] = [
+  ['current', (pin) => pin],
+  [
+    'wine-sha-differs',
+    (pin) => ({ ...pin, wine: { ...pin.wine, sha256: 'f'.repeat(64) } })
+  ],
+  [
+    'dxvk-sha-differs',
+    (pin) => ({ ...pin, dxvk: { ...pin.dxvk, sha256: 'f'.repeat(64) } })
+  ],
+  ['other-id', (pin) => ({ ...pin, id: 'wine-staging-0.0' })]
+]
+
+async function buildTwinVectors(): Promise<Record<string, Vector[]>> {
+  const out: Record<string, Vector[]> = {
+    getBottleDir: [],
+    sanitizeBottleName: [],
+    isBottleProvisioned: [],
+    buildFallbackGameSettings: [],
+    readBottleEngineMarkerKind: [],
+    readBottleEngineMarkerSummary: [],
+    restoreNeedsAbsentPin: [],
+    isPinnedEngineInstalled: []
+  }
+  const list = (name: string): Vector[] => out[name] as Vector[]
+
+  for (const [label, name] of nameForDir) {
+    list('getBottleDir').push({
+      id: `dir-${label}`,
+      input: { userHome: '<HOME>', name },
+      expected: getBottleDir({ userHome: '<HOME>' }, unrep(name))
+    })
+  }
+  list('getBottleDir').push({
+    id: 'dir-home-with-trailing-slash',
+    input: { userHome: '<HOME>/', name: 'GameLib-gog-1' },
+    expected: getBottleDir({ userHome: '<HOME>/' }, 'GameLib-gog-1')
+  })
+
+  for (const [label, input] of sanitizeInputs) {
+    list('sanitizeBottleName').push({
+      id: `sanitize-${label}`,
+      input,
+      expected: sanitizeBottleName(materialise(input) as string | null)
+    })
+  }
+
+  for (const name of FIXTURE_NAMES) {
+    const fs: FsInput = { fixtures: [name] }
+    list('isBottleProvisioned').push({
+      id: `provisioned-${name}`,
+      input: { ...fs, bottle: name },
+      expected: await overProfile(fs, (profile) =>
+        isBottleProvisioned({ userHome: profile.home }, name)
+      )
+    })
+  }
+  for (const [label, bottle, seed] of [
+    ['absent', 'no-such-bottle', undefined],
+    ['separator', 'a/b', undefined],
+    ['empty-name', '', undefined],
+    [
+      'parent-with-conf-in-crossover-dir',
+      '..',
+      [
+        {
+          path: '<HOME>/Library/Application Support/CrossOver/cxbottle.conf',
+          text: '[Bottle]\n'
+        }
+      ]
+    ]
+  ] as [string, string, SeedEntry[] | undefined][]) {
+    const fs: FsInput = { fixtures: [], ...(seed && { seed }) }
+    list('isBottleProvisioned').push({
+      id: `provisioned-${label}`,
+      input: { ...fs, bottle },
+      expected: await overProfile(fs, (profile) =>
+        isBottleProvisioned({ userHome: profile.home }, bottle)
+      )
+    })
+  }
+
+  for (const [label, bottle, dxvk, base] of fallbackInputs) {
+    list('buildFallbackGameSettings').push({
+      id: `fallback-settings-${label}`,
+      input: { bottle, engine: dxvk, base },
+      expected: await overProfile({}, (profile, ctx) => {
+        const engine: NonCrossoverEngine = {
+          wineBin:
+            '<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine',
+          wineserverBin:
+            '<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver',
+          label: SYNTHETIC_PIN_LABEL,
+          version: CURRENT_PIN.wineVersion,
+          dxvk:
+            dxvk === 'no-dxvk'
+              ? null
+              : { dir: '<TOOLS>/steam-engines/dxvk', version: 'v1' }
+        }
+        return buildFallbackGameSettings(
+          { userHome: ctx.paths.userHome },
+          bottle,
+          engine,
+          JSON.parse(
+            expandPlaceholders(JSON.stringify(base), profile)
+          ) as GameSettings
+        )
+      })
+    })
+  }
+
+  for (const name of FIXTURE_NAMES) {
+    const fs: FsInput = { fixtures: [name], engines: 'installed' }
+    list('readBottleEngineMarkerKind').push({
+      id: `kind-${name}`,
+      input: { ...fs, bottle: name },
+      expected: await overProfile(fs, (_p, ctx) =>
+        readBottleEngineMarkerKind(ctx, name)
+      )
+    })
+    list('readBottleEngineMarkerSummary').push({
+      id: `summary-${name}`,
+      input: { ...fs, bottle: name },
+      expected: await overProfile(fs, (_p, ctx) =>
+        readBottleEngineMarkerSummary(ctx, name)
+      )
+    })
+    for (const engines of ['installed', 'none'] as const) {
+      const rfs: FsInput = { fixtures: [name], engines }
+      list('restoreNeedsAbsentPin').push({
+        id: `restore-${name}-engine-${engines}`,
+        input: { ...rfs, bottle: name },
+        expected: await overProfile(rfs, (_p, ctx) =>
+          restoreNeedsAbsentPin(ctx, name)
+        )
+      })
+    }
+  }
+  for (const bottle of ['a/b', '..', '', 'no-such-bottle']) {
+    const fs: FsInput = { fixtures: [] }
+    list('readBottleEngineMarkerKind').push({
+      id: `kind-name-${bottle || 'empty'}`.replace('/', '-'),
+      input: { ...fs, bottle },
+      expected: await overProfile(fs, (_p, ctx) =>
+        readBottleEngineMarkerKind(ctx, bottle)
+      )
+    })
+    list('readBottleEngineMarkerSummary').push({
+      id: `summary-name-${bottle || 'empty'}`.replace('/', '-'),
+      input: { ...fs, bottle },
+      expected: await overProfile(fs, (_p, ctx) =>
+        readBottleEngineMarkerSummary(ctx, bottle)
+      )
+    })
+    list('restoreNeedsAbsentPin').push({
+      id: `restore-name-${bottle || 'empty'}`.replace('/', '-'),
+      input: { ...fs, bottle },
+      expected: await overProfile(fs, (_p, ctx) =>
+        restoreNeedsAbsentPin(ctx, bottle)
+      )
+    })
+  }
+
+  for (const engines of ['none', ...ENGINE_VARIANT_NAMES] as const) {
+    for (const [pinLabel, derive] of otherPins) {
+      const fs: FsInput = { engines }
+      list('isPinnedEngineInstalled').push({
+        id: `pin-${pinLabel}-engine-${engines}`,
+        input: { ...fs, pin: pinLabel },
+        expected: await overProfile(fs, (_p, ctx) =>
+          ctx.fallback.isPinnedEngineInstalled(derive(ENGINE_PINS.current))
+        )
+      })
+    }
+  }
+  return out
+}
+
+const PINNED = {
+  kind: 'pinned',
+  pinId: CURRENT_PIN.id,
+  reason: 'cx-missing',
+  wineBin: WINE_BIN,
+  wineserverBin: WINESERVER_BIN,
+  label: 'Pinned',
+  version: CURRENT_PIN.wineVersion,
+  dxvk: { dir: DXVK_DIR, version: CURRENT_PIN.dxvkVersion }
+}
+const MANAGER = {
+  kind: 'wine-manager',
+  managerVersion: 'Wine-Staging-10.5',
+  reason: 'override',
+  wineBin: WINE_BIN,
+  wineserverBin: WINESERVER_BIN,
+  label: 'Manager',
+  version: '10.5',
+  dxvk: null
+}
+const CROSSOVER = {
+  kind: 'crossover',
+  reason: 'cx-healthy',
+  crossoverBuild: '26.3',
+  binDir: CX_BIN_DIR
+}
+
+interface RegistrySequence {
+  id: string
+  note: string
+  engines: EngineVariant | 'none'
+  steps: Record<string, unknown>[]
+  expected: unknown
+}
+
+const sequence = (
+  id: string,
+  note: string,
+  engines: EngineVariant | 'none',
+  steps: Record<string, unknown>[]
+): Omit<RegistrySequence, 'expected'> => ({ id, note, engines, steps })
+
+const REGISTRY_SEQUENCES = [
+  sequence(
+    'crossover-set-get-clear',
+    'a CrossOver selection needs no binaries: set stores it, get returns it, clear removes it',
+    'none',
+    [
+      { call: 'get', key: '620' },
+      { call: 'set', key: '620', selection: CROSSOVER },
+      { call: 'get', key: '620' },
+      { call: 'clear', key: '620' },
+      { call: 'get', key: '620' }
+    ]
+  ),
+  sequence(
+    'pinned-with-binaries-on-disk',
+    'a pinned selection is stored when wine and wineserver exist; dxvk is copied',
+    'installed',
+    [
+      { call: 'set', key: 'gog:1207658924', selection: PINNED },
+      { call: 'get', key: 'gog:1207658924' }
+    ]
+  ),
+  sequence(
+    'pinned-missing-binaries-refused',
+    'no engine on disk: a non-CrossOver selection is refused and never stored, a later CrossOver one is',
+    'none',
+    [
+      { call: 'set', key: 'gog:1', selection: PINNED },
+      { call: 'get', key: 'gog:1' },
+      { call: 'set', key: 'gog:1', selection: MANAGER },
+      { call: 'get', key: 'gog:1' },
+      { call: 'set', key: 'gog:1', selection: CROSSOVER },
+      { call: 'get', key: 'gog:1' }
+    ]
+  ),
+  sequence(
+    'pinned-missing-wineserver-refused',
+    'wine exists but wineserver does not: refused',
+    'wineserver-missing',
+    [
+      { call: 'set', key: 'gog:1', selection: PINNED },
+      { call: 'get', key: 'gog:1' }
+    ]
+  ),
+  sequence(
+    'wine-manager-without-dxvk',
+    'a Wine Manager selection with no DXVK stores dxvk as null',
+    'installed',
+    [
+      { call: 'set', key: 'legendary:Sugar', selection: MANAGER },
+      { call: 'get', key: 'legendary:Sugar' }
+    ]
+  ),
+  sequence(
+    'overwrite-replaces',
+    'a later set for the same key replaces the stored selection',
+    'installed',
+    [
+      { call: 'set', key: '620', selection: PINNED },
+      { call: 'set', key: '620', selection: CROSSOVER },
+      { call: 'get', key: '620' },
+      { call: 'set', key: '620', selection: MANAGER },
+      { call: 'get', key: '620' }
+    ]
+  ),
+  sequence(
+    'refused-set-keeps-the-previous-selection',
+    'a refused set (missing binaries is simulated by a bad key) leaves what was stored',
+    'installed',
+    [
+      { call: 'set', key: '620', selection: CROSSOVER },
+      { call: 'set', key: 'not a key', selection: PINNED },
+      { call: 'get', key: '620' },
+      { call: 'get', key: 'not a key' }
+    ]
+  ),
+  sequence(
+    'keys-are-independent',
+    'selections for different stores and ids do not interact; a Steam id and a same-numbered GOG id are different keys',
+    'installed',
+    [
+      { call: 'set', key: '620', selection: CROSSOVER },
+      { call: 'set', key: 'gog:620', selection: PINNED },
+      { call: 'set', key: 'nile:amzn1.adg.product.x', selection: MANAGER },
+      { call: 'get', key: '620' },
+      { call: 'get', key: 'gog:620' },
+      { call: 'get', key: 'nile:amzn1.adg.product.x' },
+      { call: 'clear', key: 'gog:620' },
+      { call: 'get', key: 'gog:620' },
+      { call: 'get', key: '620' }
+    ]
+  ),
+  sequence(
+    'invalid-keys-refused',
+    'a key that is not an engine key is refused for every selection kind',
+    'installed',
+    [
+      { call: 'set', key: 'abc', selection: CROSSOVER },
+      { call: 'set', key: 'steam:620', selection: CROSSOVER },
+      { call: 'set', key: 'unknown:1', selection: CROSSOVER },
+      { call: 'set', key: 'gog:', selection: CROSSOVER },
+      { call: 'set', key: 'gog:../x', selection: CROSSOVER },
+      { call: 'set', key: '12345678901', selection: CROSSOVER },
+      { call: 'set', key: '', selection: CROSSOVER },
+      { call: 'get', key: 'abc' }
+    ]
+  ),
+  sequence(
+    'clear-unknown-key-is-harmless',
+    'clearing a key that was never set, twice, does nothing',
+    'none',
+    [
+      { call: 'clear', key: '620' },
+      { call: 'clear', key: '620' },
+      { call: 'get', key: '620' }
+    ]
+  ),
+  sequence(
+    'input-copy-isolation',
+    'the stored selection is a copy: changing the input (and its dxvk) after set does not change get',
+    'installed',
+    [
+      { call: 'set', key: 'gog:1', selection: PINNED, mutateInput: true },
+      { call: 'get', key: 'gog:1' }
+    ]
+  )
+]
+
+async function buildRegistrySequences(): Promise<RegistrySequence[]> {
+  const out: RegistrySequence[] = []
+  for (const seq of REGISTRY_SEQUENCES) {
+    const expected = await overProfile({ engines: seq.engines }, (profile) =>
+      runRegistrySteps(
+        JSON.parse(
+          expandPlaceholders(JSON.stringify(seq.steps), profile)
+        ) as Record<string, unknown>[]
+      )
+    )
+    out.push({ ...seq, expected })
+  }
+  return out
+}
+
+describeSkipOnWindows(
+  'the D-24 twin and selection-registry vectors (87-11)',
+  () => {
+    const vectorFile = (name: string): string =>
+      join(fixturesRoot(CRATE), 'vectors', name)
+    const json = (value: unknown): string =>
+      `${JSON.stringify(value, null, 2)}\n`
+
+    /** Writes in write mode; in compare mode the committed bytes must be what the TS produces now. */
+    function writeOrCompare(name: string, text: string): void {
+      const mode = oracleMode()
+      if (mode === 'record') return
+      if (mode === 'write') {
+        mkdirSync(dirname(vectorFile(name)), { recursive: true })
+        writeFileSync(vectorFile(name), text)
+        return
+      }
+      expect(text).toBe(readFileSync(vectorFile(name), 'utf8'))
+    }
+
+    it('bottle_twin.json pins the sync helpers that stay as a TS twin', async () => {
+      const vectors = await buildTwinVectors()
+      const total = Object.values(vectors).flat().length
+      assertAtOrAboveFloor('bottle twin vectors', total, TWIN_VECTOR_FLOOR)
+      for (const [name, list] of Object.entries(vectors)) {
+        const ids = list.map((v) => v.id)
+        expect(new Set(ids).size).toBe(ids.length)
+        assertAtOrAboveFloor(`bottle twin ${name} vectors`, list.length, 1)
+      }
+      writeOrCompare('bottle_twin.json', json(vectors))
+      const committed = JSON.parse(
+        readFileSync(vectorFile('bottle_twin.json'), 'utf8')
+      ) as Record<string, unknown[]>
+      assertAtOrAboveFloor(
+        'bottle twin committed vectors',
+        Object.values(committed).flat().length,
+        TWIN_VECTOR_FLOOR
+      )
+    })
+
+    it('selection_registry.json pins the set, get and clear semantics the view must mirror', async () => {
+      const sequences = await buildRegistrySequences()
+      assertAtOrAboveFloor(
+        'selection registry sequences',
+        sequences.length,
+        REGISTRY_SEQUENCE_FLOOR
+      )
+      const ids = sequences.map((s) => s.id)
+      expect(new Set(ids).size).toBe(ids.length)
+      writeOrCompare('selection_registry.json', json(sequences))
+      const committed = JSON.parse(
+        readFileSync(vectorFile('selection_registry.json'), 'utf8')
+      ) as unknown[]
+      assertAtOrAboveFloor(
+        'selection registry committed sequences',
+        committed.length,
+        REGISTRY_SEQUENCE_FLOOR
+      )
+    })
+
+    it('an empty vector list fails the floor', () => {
+      expect(() =>
+        assertAtOrAboveFloor('bottle twin vectors', 0, TWIN_VECTOR_FLOOR)
+      ).toThrow(/below the floor/)
+      expect(() =>
+        assertAtOrAboveFloor(
+          'selection registry sequences',
+          0,
+          REGISTRY_SEQUENCE_FLOOR
+        )
+      ).toThrow(/below the floor/)
+    })
+
+    it('the twin covers every helper D-24 names and the readers see every fixture', async () => {
+      const vectors = await buildTwinVectors()
+      expect(Object.keys(vectors).sort()).toEqual(
+        [
+          'buildFallbackGameSettings',
+          'getBottleDir',
+          'isBottleProvisioned',
+          'isPinnedEngineInstalled',
+          'readBottleEngineMarkerKind',
+          'readBottleEngineMarkerSummary',
+          'restoreNeedsAbsentPin',
+          'sanitizeBottleName'
+        ].sort()
+      )
+      for (const name of FIXTURE_NAMES) {
+        const ids = (vectors.readBottleEngineMarkerSummary ?? []).map(
+          (v) => v.id
+        )
+        expect(ids).toContain(`summary-${name}`)
+      }
+      // a name that traverses is recorded, not refused, by the path helpers: four parents leave the Bottles root for HOME
+      const dir = (vectors.getBottleDir ?? []).find(
+        (v) => v.id === 'dir-climb-out-of-home'
+      )
+      expect(dir?.expected).toBe('<HOME>')
+    })
+
+    it('a vector that disagrees with the TS fails: the committed file is compared byte for byte', async () => {
+      const vectors = await buildTwinVectors()
+      const text = json(vectors)
+      const mutated = text.replace('"expected": null', '"expected": "x"')
+      if (oracleMode() === 'compare') {
+        expect(mutated).not.toBe(
+          readFileSync(vectorFile('bottle_twin.json'), 'utf8')
+        )
+      }
+    })
+  }
+)
