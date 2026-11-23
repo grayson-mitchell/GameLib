@@ -1,0 +1,60 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/1234.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "710ad377fc84fe64271842a2d2e8ba3e31981cf6944437a348f17c37332485e7"
+  },
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/GameLib-gog-1234",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "35331106fa5cb650c7bf9ce4e67996b742bcd906de98aca48fe77e15cf802652"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "55465b6e8e663b1b95e4a6890dac437aa2986efbf64744ccea7bf1eba085db64"
+  }
+]

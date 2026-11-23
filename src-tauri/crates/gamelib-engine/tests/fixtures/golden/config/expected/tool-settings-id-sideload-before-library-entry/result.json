@@ -1,0 +1,80 @@
+{
+  "op": "tool-settings",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "present",
+  "args": {
+    "items": [
+      {
+        "via": "id",
+        "game": {
+          "runner": "sideload",
+          "appName": "Setup",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "GameLib-sideload-Setup",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": true,
+        "ensure": "done"
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "via": "id",
+        "game": {
+          "runner": "sideload",
+          "appName": "Setup",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "GameLib-sideload-Setup",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": true,
+        "ensure": "done"
+      },
+      "liveSet": null,
+      "result": {
+        "kind": "engine",
+        "key": "sideload:Setup",
+        "settings": {
+          "wineCrossoverBottle": "GameLib-sideload-Setup",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "name": "CrossOver",
+            "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+          },
+          "enviromentOptions": []
+        }
+      },
+      "ensureCalls": [
+        {
+          "key": "sideload:Setup",
+          "bottleName": "GameLib-sideload-Setup",
+          "appName": "Setup",
+          "runner": "sideload"
+        }
+      ]
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

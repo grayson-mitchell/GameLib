@@ -1,0 +1,2039 @@
+{
+  "op": "offline",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": true,
+        "arm": "restore-needs-pin"
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": true,
+        "arm": "crossover-missing"
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": true,
+        "arm": "crossover-missing"
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": true,
+        "arm": "crossover-missing"
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": true,
+        "arm": "crossover-missing"
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": true,
+        "arm": "crossover-missing"
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": true,
+        "arm": "crossover-missing"
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": true,
+        "arm": "restore-needs-pin"
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": true,
+        "arm": "restore-needs-pin"
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "pinned:wine-staging-11.20",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "crossoverMissing": true,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

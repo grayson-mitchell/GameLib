@@ -1,0 +1,87 @@
+{
+  "op": "tool-settings",
+  "platform": "mac",
+  "engines": "installed",
+  "crossover": "present",
+  "args": {
+    "items": [
+      {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "GameLib-gog-1234",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "GameLib-gog-1234",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      },
+      "liveSet": null,
+      "result": {
+        "kind": "engine",
+        "key": "gog:1234",
+        "settings": {
+          "wineCrossoverBottle": "GameLib-gog-1234",
+          "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234",
+          "wineVersion": {
+            "type": "wine",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+            "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+            "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+          },
+          "enviromentOptions": [
+            {
+              "key": "USER",
+              "value": "crossover"
+            },
+            {
+              "key": "WINEDEBUG",
+              "value": "-all"
+            },
+            {
+              "key": "MVK_CONFIG_LOG_LEVEL",
+              "value": "0"
+            }
+          ],
+          "autoInstallDxvk": false,
+          "autoInstallDxvkNvapi": false,
+          "autoInstallVkd3d": false
+        }
+      },
+      "ensureCalls": []
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

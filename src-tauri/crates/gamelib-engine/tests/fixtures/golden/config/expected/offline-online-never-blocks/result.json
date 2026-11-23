@@ -1,0 +1,56 @@
+{
+  "op": "offline",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "offline": false,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": false,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "offline": false,
+        "override": "automatic",
+        "crossoverMissing": true,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": false,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

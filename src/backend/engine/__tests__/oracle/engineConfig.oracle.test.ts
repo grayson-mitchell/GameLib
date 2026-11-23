@@ -60,10 +60,14 @@ import { createFakeBottleGateRust } from 'backend/testUtils/fakeBottleGateRust'
 import { createSpawnAsync } from 'backend/spawnAsync'
 import * as logger from 'backend/logger'
 import { hasCapability } from 'common/storeCapabilities'
+import type { GameSettings, Runner } from 'common/types'
+import type { Game } from 'common/types/game_manager'
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import {
   configPathDepsFrom,
   deriveEngineFromWine,
   engineIdOf,
+  isWritableEngineOverride,
   readEngineForGame,
   readStoredGameConfig,
   resolveEffectiveEngine,
@@ -72,6 +76,14 @@ import {
   type EngineConfigDeps
 } from '../../engineConfig'
 import { createEngineRuntime } from '../../engineRuntime'
+import { engineKeyIfEligible } from '../../engineEligibility'
+import { importEngineSettings } from '../../importEngineSettings'
+import { offlineLaunchCertainlyBlocked } from '../../offlineRefusal'
+import {
+  resolveToolSettings,
+  resolveToolSettingsForId,
+  type ToolSettingsDeps
+} from '../../toolSettings'
 import type { EngineServices } from '../../engineServices'
 import {
   getDefaultEngine,
@@ -79,7 +91,7 @@ import {
   listGameEngineOptions
 } from '../../gameEngineState'
 import { parseEngineOverride } from '../../engineIds'
-import { appNameOf, isEngineKey } from '../../gameKey'
+import { appNameOf, engineKeyFor, isEngineKey } from '../../gameKey'
 import { wineManagerReleasesFrom } from '../../wineManagerReleases'
 import { buildEngines, type EngineVariant } from './fixtureBottles'
 
@@ -100,6 +112,9 @@ type Op =
   | 'bottle-name'
   | 'ids'
   | 'keys'
+  | 'eligibility'
+  | 'tool-settings'
+  | 'offline'
 
 interface ConfigCase {
   id: string
@@ -271,6 +286,20 @@ async function attempt(fn: () => unknown): Promise<unknown> {
   }
 }
 
+/** The slice of `Game` the eligibility and tool-settings readers use. */
+function gameDouble(spec: Item): Game {
+  const platform = spec.platform as string | undefined
+  return {
+    isNative: () => spec.native === true,
+    getGameInfo: () => ({
+      runner: spec.runner,
+      app_name: spec.appName,
+      title: 'T',
+      install: platform === undefined ? undefined : { platform }
+    })
+  } as unknown as Game
+}
+
 describeSkipOnWindows('engine configuration oracle (87-12)', () => {
   const cases = loadCases<ConfigCase>(CRATE, SLICE)
   const spies: jest.SpyInstance[] = []
@@ -424,6 +453,108 @@ describeSkipOnWindows('engine configuration oracle (87-12)', () => {
                 }))
               )
             )
+          case 'eligibility':
+            return Promise.all(
+              items.map((item) =>
+                attempt(() => ({
+                  input: item,
+                  key: engineKeyIfEligible(
+                    gameDouble(item.game as Item),
+                    item.mac as boolean
+                  )
+                }))
+              )
+            )
+          case 'tool-settings': {
+            // Sequential: a live selection is registry state the next item must not see.
+            const out: unknown[] = []
+            for (const item of items) {
+              out.push(
+                await attempt(async () => {
+                  const spec = item.game as Item
+                  const ensureCalls: unknown[] = []
+                  const overrides: Partial<ToolSettingsDeps> = {
+                    crossoverBinDir: () => Promise.resolve(built.binDir),
+                    ensureGameBottle: (a) => {
+                      ensureCalls.push(a)
+                      return Promise.resolve(
+                        item.ensure === 'error'
+                          ? {
+                              status: 'error' as const,
+                              error: 'scripted failure',
+                              errorCode: 'crossover-create-failed'
+                            }
+                          : {
+                              status: 'done' as const,
+                              createdHere: true,
+                              engine: 'crossover' as const
+                            }
+                      )
+                    }
+                  }
+                  const key = engineKeyFor(
+                    spec.runner as string,
+                    spec.appName as string
+                  )
+                  const live = item.live as Item | undefined
+                  const { registry, launchSettings } = services.engineRuntime
+                  let liveSet: boolean | null = null
+                  if (live && key !== null) {
+                    liveSet = registry.setEngineSelection(
+                      key,
+                      live.selection as never
+                    )
+                    if (live.context) {
+                      launchSettings.setLaunchOverlayContext(
+                        key,
+                        live.context as never
+                      )
+                    }
+                  }
+                  try {
+                    const stored = item.stored as GameSettings
+                    const opts = { ensureBottle: item.ensureBottle as boolean }
+                    const result =
+                      item.via === 'id'
+                        ? await resolveToolSettingsForId(
+                            services,
+                            {
+                              runner: spec.runner as Runner,
+                              appName: spec.appName as string,
+                              platform: spec.platform as never
+                            },
+                            stored,
+                            opts,
+                            overrides
+                          )
+                        : await resolveToolSettings(
+                            services,
+                            gameDouble(spec),
+                            stored,
+                            opts,
+                            overrides
+                          )
+                    return { input: item, liveSet, result, ensureCalls }
+                  } finally {
+                    if (key !== null) {
+                      registry.clearEngineSelection(key)
+                      launchSettings.clearLaunchOverlayContext(key)
+                    }
+                  }
+                })
+              )
+            }
+            return out
+          }
+          case 'offline':
+            return Promise.all(
+              items.map((item) =>
+                attempt(() => ({
+                  input: item,
+                  verdict: offlineLaunchCertainlyBlocked(item as never)
+                }))
+              )
+            )
           case 'keys':
             return Promise.all(
               ((args.keys ?? []) as unknown[]).map((key) =>
@@ -485,6 +616,349 @@ describeSkipOnWindows('engine configuration oracle (87-12)', () => {
       expect(c.note.length).toBeGreaterThan(10)
     }
     const ops = new Set(cases.map((c) => c.op))
-    expect(ops.size).toBeGreaterThanOrEqual(11)
+    expect(ops.size).toBeGreaterThanOrEqual(14)
+  })
+})
+
+/** The twin helpers' vectors: input and the TS answer. A long string is stored as a generator. */
+interface Vector {
+  id: string
+  input: unknown
+  expected: unknown
+}
+
+const TWIN_VECTOR_FLOOR = 100
+const rep = (char: string, count: number): Rep => ({ repeat: { char, count } })
+
+const RUNNERS = ['legendary', 'gog', 'nile', 'sideload', 'steam']
+const KEY_APP_NAMES: [string, unknown][] = [
+  ['steam-id', '620'],
+  ['gog-id', '1207658924'],
+  ['name', 'Sugar'],
+  ['spaced', 'My Game'],
+  ['dotted', 'a.b'],
+  ['unicode', 'ゲーム'],
+  ['zero', '0'],
+  ['ten-digits', '1234567890'],
+  ['eleven-digits', '12345678901'],
+  ['leading-zeros', '000620'],
+  ['exponent', '1e3'],
+  ['negative', '-1'],
+  ['fullwidth-digits', '６２０'],
+  ['padded', ' padded'],
+  ['trailing-pad', 'padded '],
+  ['slash', 'a/b'],
+  ['backslash', 'a\\b'],
+  ['nul', 'a\u0000b'],
+  ['parent', '..'],
+  ['parent-inside', 'a..b'],
+  ['single-dot', '.'],
+  ['empty', ''],
+  ['255-chars', rep('a', 255)],
+  ['256-chars', rep('a', 256)],
+  ['colon', 'a:b']
+]
+const NON_STRING_APP_NAMES: [string, unknown][] = [
+  ['number', 620],
+  ['null', null],
+  ['true', true],
+  ['array', ['620']],
+  ['object', {}]
+]
+
+const OVERRIDE_VALUES: [string, unknown][] = [
+  ['automatic', 'automatic'],
+  ['crossover', 'crossover'],
+  ['pinned-current', 'pinned:wine-staging-11.20'],
+  ['pinned-retired', 'pinned:wine-staging-11.1'],
+  ['pinned-empty', 'pinned:'],
+  ['pinned-unknown', 'pinned:x'],
+  ['pinned-trailing-space', 'pinned:wine-staging-11.20 '],
+  ['manager', 'wine-manager:Wine-Staging-10.5'],
+  ['manager-numeric', 'wine-manager:10.5'],
+  ['manager-empty', 'wine-manager:'],
+  ['manager-dotdot', 'wine-manager:a..b'],
+  ['manager-dxmt', 'wine-manager:Wine-Staging-10.5-DXMT'],
+  ['manager-gptk', 'wine-manager:GPTK-2'],
+  ['manager-toolkit', 'wine-manager:Game-Porting-Toolkit'],
+  ['manager-porting', 'wine-manager:Porting-1'],
+  ['manager-space', 'wine-manager:has space'],
+  ['manager-64-chars', `wine-manager:${'a'.repeat(64)}`],
+  ['manager-65-chars', `wine-manager:${'a'.repeat(65)}`],
+  ['manager-punctuation', 'wine-manager:ok.1_2-3'],
+  ['legacy-label', 'legacy:Odd Wine'],
+  ['legacy-word', 'Legacy'],
+  ['capitalised', 'Automatic'],
+  ['leading-space', ' automatic'],
+  ['trailing-space', 'automatic '],
+  ['empty', ''],
+  ['path', '/usr/bin/wine'],
+  ['relative-path', '../wine'],
+  ['null', null],
+  ['number', 5],
+  ['true', true],
+  ['array', ['automatic']],
+  ['empty-object', {}],
+  ['object', { id: 'automatic' }]
+]
+
+const matGen = (value: unknown): unknown => materialise(value)
+
+function buildTwinVectors(): Record<string, Vector[]> {
+  const out: Record<string, Vector[]> = {
+    engineKeyFor: [],
+    isWritableEngineOverride: [],
+    importEngineSettings: [],
+    getPerGameBottleNameFor: []
+  }
+  const list = (name: string): Vector[] => out[name] as Vector[]
+
+  const keyInput = (runner: unknown, appName: unknown): Item =>
+    appName === undefined ? { runner } : { runner, appName }
+  const keyVector = (id: string, input: Item): void => {
+    const m = matGen(input) as Item
+    list('engineKeyFor').push({
+      id,
+      input,
+      expected: engineKeyFor(m.runner as string, m.appName)
+    })
+  }
+  for (const runner of RUNNERS) {
+    for (const [label, appName] of KEY_APP_NAMES) {
+      keyVector(`key-${runner}-${label}`, keyInput(runner, appName))
+    }
+  }
+  for (const runner of [
+    'unknown',
+    '',
+    'GOG',
+    ' gog',
+    'humble',
+    '__proto__',
+    'toString',
+    'constructor'
+  ]) {
+    for (const [label, appName] of [
+      ['id', '1'],
+      ['name', 'abc']
+    ] as const) {
+      keyVector(
+        `key-runner-${runner || 'empty'}-${label}`,
+        keyInput(runner, appName)
+      )
+    }
+  }
+  for (const runner of [5, null, true, ['gog'], {}]) {
+    keyVector(
+      `key-runner-nonstring-${JSON.stringify(runner)}`,
+      keyInput(runner, '1')
+    )
+  }
+  for (const runner of ['gog', 'steam']) {
+    keyVector(`key-${runner}-appname-missing`, keyInput(runner, undefined))
+    for (const [label, appName] of NON_STRING_APP_NAMES) {
+      keyVector(`key-${runner}-appname-${label}`, keyInput(runner, appName))
+    }
+  }
+
+  for (const [label, value] of OVERRIDE_VALUES) {
+    list('isWritableEngineOverride').push({
+      id: `writable-${label}`,
+      input: { value },
+      expected: isWritableEngineOverride(value)
+    })
+  }
+  list('isWritableEngineOverride').push({
+    id: 'writable-missing',
+    input: {},
+    expected: isWritableEngineOverride(undefined)
+  })
+
+  const importVector = (id: string, input: Item): void => {
+    list('importEngineSettings').push({
+      id,
+      input,
+      expected: importEngineSettings(matGen(input) as never)
+    })
+  }
+  for (const runner of RUNNERS) {
+    for (const [label, value] of [
+      ['automatic', 'automatic'],
+      ['crossover', 'crossover'],
+      ['pinned', 'pinned:wine-staging-11.20'],
+      ['manager', 'wine-manager:Wine-Staging-10.5'],
+      ['retired-pin', 'pinned:wine-staging-11.1'],
+      ['legacy-label', 'legacy:Odd Wine'],
+      ['path', '/usr/bin/wine'],
+      ['number', 5],
+      ['null', null]
+    ] as [string, unknown][]) {
+      importVector(`import-${runner}-${label}`, {
+        runner,
+        appName: '1234',
+        engineOverride: value
+      })
+    }
+  }
+  importVector('import-engine-override-missing', {
+    runner: 'gog',
+    appName: '1234'
+  })
+  importVector('import-bad-app-name', {
+    runner: 'gog',
+    appName: '../x',
+    engineOverride: 'crossover'
+  })
+  importVector('import-unknown-runner', {
+    runner: 'unknown',
+    appName: '1',
+    engineOverride: 'crossover'
+  })
+  importVector('import-long-app-name-hashes-the-bottle', {
+    runner: 'gog',
+    appName: rep('a', 100),
+    engineOverride: 'pinned:wine-staging-11.20'
+  })
+  importVector('import-renderer-bottle-name-is-ignored', {
+    runner: 'gog',
+    appName: '1234',
+    engineOverride: 'crossover',
+    wineCrossoverBottle: 'Evil'
+  })
+  importVector('import-steam-app-has-no-bottle', {
+    runner: 'steam',
+    appName: '620',
+    engineOverride: 'crossover'
+  })
+
+  const bottleVector = (id: string, input: unknown): void => {
+    const m = matGen(input)
+    list('getPerGameBottleNameFor').push({
+      id,
+      input,
+      expected: getPerGameBottleNameFor(m)
+    })
+  }
+  for (const runner of ['gog', 'legendary', 'nile', 'sideload']) {
+    for (const [label, appName] of KEY_APP_NAMES) {
+      bottleVector(`bottle-${runner}-${label}`, { runner, appName })
+    }
+  }
+  for (const [label, appName] of KEY_APP_NAMES) {
+    bottleVector(`bottle-steam-${label}`, { runner: 'steam', appName })
+  }
+  for (const [label, appName] of [
+    ['40-chars', rep('a', 40)],
+    ['52-chars', rep('a', 52)],
+    ['53-chars', rep('a', 53)],
+    ['100-chars', rep('b', 100)],
+    ['percent', 'a%b'],
+    ['tilde', 'a~b'],
+    ['leading-dot', '.hidden'],
+    ['trailing-dot', 'trail.'],
+    ['accented', 'Ünï-ñ']
+  ] as [string, unknown][]) {
+    bottleVector(`bottle-gog-${label}`, { runner: 'gog', appName })
+  }
+  for (const [label, input] of [
+    ['null', null],
+    ['string', 'x'],
+    ['number', 5],
+    ['array', []],
+    ['empty-object', {}],
+    ['no-app-name', { runner: 'gog' }],
+    ['no-runner', { appName: '1' }],
+    ['runner-number', { runner: 5, appName: '1' }],
+    ['unknown-runner', { runner: 'unknown', appName: '1' }]
+  ] as [string, unknown][]) {
+    bottleVector(`bottle-args-${label}`, input)
+  }
+  return out
+}
+
+describeSkipOnWindows('the D-24 engine twin vectors (87-12)', () => {
+  const vectorFile = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    '..',
+    '..',
+    'src-tauri',
+    'crates',
+    CRATE,
+    'tests',
+    'fixtures',
+    'vectors',
+    'engine_twin.json'
+  )
+  const json = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`
+
+  it('engine_twin.json pins the sync pure helpers non-bridge TS keeps until their owners delete them', () => {
+    const vectors = buildTwinVectors()
+    const total = Object.values(vectors).flat().length
+    assertAtOrAboveFloor('engine twin vectors', total, TWIN_VECTOR_FLOOR)
+    for (const [name, list] of Object.entries(vectors)) {
+      const ids = list.map((v) => v.id)
+      expect(new Set(ids).size).toBe(ids.length)
+      assertAtOrAboveFloor(`engine twin ${name} vectors`, list.length, 20)
+    }
+    const text = json(vectors)
+    const mode = oracleMode()
+    if (mode === 'write') {
+      mkdirSync(dirname(vectorFile), { recursive: true })
+      writeFileSync(vectorFile, text)
+    } else if (mode === 'compare') {
+      expect(text).toBe(readFileSync(vectorFile, 'utf8'))
+    }
+    if (mode !== 'record') {
+      const committed = JSON.parse(readFileSync(vectorFile, 'utf8')) as Record<
+        string,
+        unknown[]
+      >
+      assertAtOrAboveFloor(
+        'engine twin committed vectors',
+        Object.values(committed).flat().length,
+        TWIN_VECTOR_FLOOR
+      )
+    }
+  })
+
+  it('an empty vector list fails the floor', () => {
+    expect(() =>
+      assertAtOrAboveFloor('engine twin vectors', 0, TWIN_VECTOR_FLOOR)
+    ).toThrow(/below the floor/)
+  })
+
+  it('the twin covers the four helpers D-24 names', () => {
+    expect(Object.keys(buildTwinVectors()).sort()).toEqual([
+      'engineKeyFor',
+      'getPerGameBottleNameFor',
+      'importEngineSettings',
+      'isWritableEngineOverride'
+    ])
+  })
+
+  it('the answers are the TS answers: a key, a refusal, a writable id and a hashed bottle name are present', () => {
+    const vectors = buildTwinVectors()
+    const find = (group: string, id: string): Vector =>
+      (vectors[group] ?? []).find((v) => v.id === id) as Vector
+    expect(find('engineKeyFor', 'key-gog-gog-id').expected).toBe(
+      'gog:1207658924'
+    )
+    expect(find('engineKeyFor', 'key-steam-gog-id').expected).toBe('1207658924')
+    expect(find('engineKeyFor', 'key-gog-parent').expected).toBeNull()
+    expect(
+      find('isWritableEngineOverride', 'writable-pinned-current').expected
+    ).toBe(true)
+    expect(
+      find('isWritableEngineOverride', 'writable-legacy-label').expected
+    ).toBe(false)
+    expect(
+      find('importEngineSettings', 'import-gog-pinned').expected
+    ).toMatchObject({ engineOverride: 'pinned:wine-staging-11.20' })
+    expect(
+      String(find('getPerGameBottleNameFor', 'bottle-gog-100-chars').expected)
+    ).toHaveLength(64)
   })
 })

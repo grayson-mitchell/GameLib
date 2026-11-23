@@ -1,0 +1,182 @@
+{
+  "op": "tool-settings",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false,
+        "live": {
+          "selection": {
+            "kind": "crossover",
+            "reason": "cx-healthy",
+            "crossoverBuild": "26.3",
+            "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+          }
+        }
+      },
+      {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false,
+        "live": {
+          "selection": {
+            "kind": "crossover",
+            "reason": "cx-healthy",
+            "crossoverBuild": "26.3",
+            "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+          },
+          "context": {
+            "prefix": {
+              "kind": "bottle",
+              "bottleName": "GameLib-gog-1234"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false,
+        "live": {
+          "selection": {
+            "kind": "crossover",
+            "reason": "cx-healthy",
+            "crossoverBuild": "26.3",
+            "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+          }
+        }
+      },
+      "liveSet": true,
+      "result": {
+        "kind": "engine",
+        "key": "gog:1234",
+        "settings": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        }
+      },
+      "ensureCalls": []
+    },
+    {
+      "input": {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false,
+        "live": {
+          "selection": {
+            "kind": "crossover",
+            "reason": "cx-healthy",
+            "crossoverBuild": "26.3",
+            "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+          },
+          "context": {
+            "prefix": {
+              "kind": "bottle",
+              "bottleName": "GameLib-gog-1234"
+            }
+          }
+        }
+      },
+      "liveSet": true,
+      "result": {
+        "kind": "engine",
+        "key": "gog:1234",
+        "settings": {
+          "wineCrossoverBottle": "GameLib-gog-1234",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "name": "CrossOver 26.3",
+            "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+          },
+          "enviromentOptions": []
+        }
+      },
+      "ensureCalls": []
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: gog:1234 uses engine=crossover build=26.3 reason=cx-healthy"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: gog:1234 uses engine=crossover build=26.3 reason=cx-healthy"
+    }
+  ]
+}

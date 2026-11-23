@@ -1,0 +1,142 @@
+{
+  "op": "offline",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": true,
+        "arm": "restore-needs-pin"
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "crossover",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": true,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": true,
+        "arm": "restore-needs-pin"
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "non-crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": false
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": "crossover",
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    },
+    {
+      "input": {
+        "offline": true,
+        "override": "automatic",
+        "crossoverMissing": false,
+        "markerKind": null,
+        "currentPinInstalled": false,
+        "restoreNeedsAbsentPin": true
+      },
+      "verdict": {
+        "blocked": false
+      }
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

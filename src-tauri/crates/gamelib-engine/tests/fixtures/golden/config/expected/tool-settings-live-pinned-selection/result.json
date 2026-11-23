@@ -1,0 +1,225 @@
+{
+  "op": "tool-settings",
+  "platform": "mac",
+  "engines": "installed",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false,
+        "live": {
+          "selection": {
+            "kind": "pinned",
+            "pinId": "wine-staging-11.20",
+            "reason": "cx-missing",
+            "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+            "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+            "label": "Pinned",
+            "version": "11.20",
+            "dxvk": null
+          },
+          "context": {
+            "prefix": {
+              "kind": "bottle",
+              "bottleName": "GameLib-gog-1234"
+            }
+          }
+        }
+      },
+      {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false,
+        "live": {
+          "selection": {
+            "kind": "pinned",
+            "pinId": "wine-staging-11.20",
+            "reason": "cx-missing",
+            "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+            "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+            "label": "Pinned",
+            "version": "11.20",
+            "dxvk": null
+          },
+          "context": {
+            "prefix": {
+              "kind": "plain"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false,
+        "live": {
+          "selection": {
+            "kind": "pinned",
+            "pinId": "wine-staging-11.20",
+            "reason": "cx-missing",
+            "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+            "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+            "label": "Pinned",
+            "version": "11.20",
+            "dxvk": null
+          },
+          "context": {
+            "prefix": {
+              "kind": "bottle",
+              "bottleName": "GameLib-gog-1234"
+            }
+          }
+        }
+      },
+      "liveSet": true,
+      "result": {
+        "kind": "engine",
+        "key": "gog:1234",
+        "settings": {
+          "wineCrossoverBottle": "GameLib-gog-1234",
+          "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234",
+          "wineVersion": {
+            "type": "wine",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+            "name": "Pinned",
+            "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+          },
+          "enviromentOptions": [
+            {
+              "key": "USER",
+              "value": "crossover"
+            },
+            {
+              "key": "WINEDEBUG",
+              "value": "-all"
+            },
+            {
+              "key": "MVK_CONFIG_LOG_LEVEL",
+              "value": "0"
+            }
+          ],
+          "autoInstallDxvk": false,
+          "autoInstallDxvkNvapi": false,
+          "autoInstallVkd3d": false
+        }
+      },
+      "ensureCalls": []
+    },
+    {
+      "input": {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false,
+        "live": {
+          "selection": {
+            "kind": "pinned",
+            "pinId": "wine-staging-11.20",
+            "reason": "cx-missing",
+            "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+            "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+            "label": "Pinned",
+            "version": "11.20",
+            "dxvk": null
+          },
+          "context": {
+            "prefix": {
+              "kind": "plain"
+            }
+          }
+        }
+      },
+      "liveSet": true,
+      "result": {
+        "kind": "engine",
+        "key": "gog:1234",
+        "settings": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+            "name": "Pinned",
+            "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+          },
+          "enviromentOptions": []
+        }
+      },
+      "ensureCalls": []
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: gog:1234 uses engine=pinned name=\"Pinned\" version=11.20 reason=cx-missing"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: gog:1234 uses engine=pinned name=\"Pinned\" version=11.20 reason=cx-missing"
+    }
+  ]
+}

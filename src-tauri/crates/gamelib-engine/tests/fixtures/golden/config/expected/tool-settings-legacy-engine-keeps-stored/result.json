@@ -1,0 +1,69 @@
+{
+  "op": "tool-settings",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "toolkit",
+            "name": "Game-Porting-Toolkit-2",
+            "bin": "<HOME>/gptk/wine64"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "toolkit",
+            "name": "Game-Porting-Toolkit-2",
+            "bin": "<HOME>/gptk/wine64"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      },
+      "liveSet": null,
+      "result": {
+        "kind": "stored",
+        "settings": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "toolkit",
+            "name": "Game-Porting-Toolkit-2",
+            "bin": "<HOME>/gptk/wine64"
+          },
+          "enviromentOptions": []
+        }
+      },
+      "ensureCalls": []
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

@@ -1,0 +1,151 @@
+{
+  "op": "eligibility",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "game": {
+          "runner": "gog",
+          "appName": "1",
+          "native": true,
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      {
+        "game": {
+          "runner": "gog",
+          "appName": "1",
+          "platform": "Browser"
+        },
+        "mac": true
+      },
+      {
+        "game": {
+          "runner": "gog",
+          "appName": "1",
+          "platform": "windows"
+        },
+        "mac": false
+      },
+      {
+        "game": {
+          "runner": "gog",
+          "appName": "../x",
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      {
+        "game": {
+          "runner": "gog",
+          "appName": "",
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      {
+        "game": {
+          "runner": "unknown",
+          "appName": "1",
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      {
+        "game": {
+          "runner": "gog",
+          "appName": "1",
+          "native": true,
+          "platform": "Browser"
+        },
+        "mac": false
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "game": {
+          "runner": "gog",
+          "appName": "1",
+          "native": true,
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      "key": null
+    },
+    {
+      "input": {
+        "game": {
+          "runner": "gog",
+          "appName": "1",
+          "platform": "Browser"
+        },
+        "mac": true
+      },
+      "key": null
+    },
+    {
+      "input": {
+        "game": {
+          "runner": "gog",
+          "appName": "1",
+          "platform": "windows"
+        },
+        "mac": false
+      },
+      "key": null
+    },
+    {
+      "input": {
+        "game": {
+          "runner": "gog",
+          "appName": "../x",
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      "key": null
+    },
+    {
+      "input": {
+        "game": {
+          "runner": "gog",
+          "appName": "",
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      "key": null
+    },
+    {
+      "input": {
+        "game": {
+          "runner": "unknown",
+          "appName": "1",
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      "key": null
+    },
+    {
+      "input": {
+        "game": {
+          "runner": "gog",
+          "appName": "1",
+          "native": true,
+          "platform": "Browser"
+        },
+        "mac": false
+      },
+      "key": null
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

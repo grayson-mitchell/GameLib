@@ -1,0 +1,123 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/1234.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "671eb55831f572f9184014741fac6989958117b9a679ffd70e8d8af993eeaa73"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-10.5",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-10.5/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-10.5/Contents/Resources",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-10.5/Contents/Resources/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-10.5/Contents/Resources/wine/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "eaabc1f54c8a9cbb4e078da387725138cfb2bf11fb62d324499e9e5be3fab4b4"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "eaabc1f54c8a9cbb4e078da387725138cfb2bf11fb62d324499e9e5be3fab4b4"
+  },
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/GameLib-gog-1234",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "35331106fa5cb650c7bf9ce4e67996b742bcd906de98aca48fe77e15cf802652"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "55465b6e8e663b1b95e4a6890dac437aa2986efbf64744ccea7bf1eba085db64"
+  },
+  {
+    "path": "Library/Application Support/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store/wine-downloader-info.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e316c5f167dfa456d6795a2672a8192581deb138ccd95369f9774733899ec1bc"
+  }
+]

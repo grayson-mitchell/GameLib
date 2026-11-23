@@ -1813,5 +1813,2134 @@
         {}
       ]
     }
+  },
+  {
+    "id": "eligible-each-runner-on-mac",
+    "op": "eligibility",
+    "note": "engineKeyIfEligible on macOS: every non-Steam runner yields runner:appName; Steam (a bottle-runtime store) is never eligible",
+    "args": {
+      "items": [
+        {
+          "game": {
+            "runner": "gog",
+            "appName": "1207658924",
+            "platform": "windows"
+          },
+          "mac": true
+        },
+        {
+          "game": {
+            "runner": "legendary",
+            "appName": "Sugar",
+            "platform": "Windows"
+          },
+          "mac": true
+        },
+        {
+          "game": {
+            "runner": "nile",
+            "appName": "amzn1.x",
+            "platform": "windows"
+          },
+          "mac": true
+        },
+        {
+          "game": {
+            "runner": "sideload",
+            "appName": "My Game",
+            "platform": "windows"
+          },
+          "mac": true
+        },
+        {
+          "game": {
+            "runner": "steam",
+            "appName": "620",
+            "platform": "windows"
+          },
+          "mac": true
+        },
+        {
+          "game": {
+            "runner": "gog",
+            "appName": "1",
+            "platform": "linux"
+          },
+          "mac": true
+        },
+        {
+          "game": {
+            "runner": "gog",
+            "appName": "1",
+            "platform": "Mac"
+          },
+          "mac": true
+        },
+        {
+          "game": {
+            "runner": "gog",
+            "appName": "1"
+          },
+          "mac": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "eligible-exclusions",
+    "op": "eligibility",
+    "note": "a native game, a Browser install, a non-macOS host and an unusable key are not eligible",
+    "args": {
+      "items": [
+        {
+          "game": {
+            "runner": "gog",
+            "appName": "1",
+            "native": true,
+            "platform": "windows"
+          },
+          "mac": true
+        },
+        {
+          "game": {
+            "runner": "gog",
+            "appName": "1",
+            "platform": "Browser"
+          },
+          "mac": true
+        },
+        {
+          "game": {
+            "runner": "gog",
+            "appName": "1",
+            "platform": "windows"
+          },
+          "mac": false
+        },
+        {
+          "game": {
+            "runner": "gog",
+            "appName": "../x",
+            "platform": "windows"
+          },
+          "mac": true
+        },
+        {
+          "game": {
+            "runner": "gog",
+            "appName": "",
+            "platform": "windows"
+          },
+          "mac": true
+        },
+        {
+          "game": {
+            "runner": "unknown",
+            "appName": "1",
+            "platform": "windows"
+          },
+          "mac": true
+        },
+        {
+          "game": {
+            "runner": "gog",
+            "appName": "1",
+            "native": true,
+            "platform": "Browser"
+          },
+          "mac": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-not-engine-controlled",
+    "op": "tool-settings",
+    "note": "resolveToolSettings: a native game, a Browser install and a Steam game keep their stored settings",
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "native": true,
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        },
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "Browser"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        },
+        {
+          "via": "game",
+          "game": {
+            "runner": "steam",
+            "appName": "620",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-non-mac-host",
+    "op": "tool-settings",
+    "note": "on a non-macOS host every game keeps its stored settings",
+    "platform": "linux",
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        },
+        {
+          "via": "id",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-id-not-eligible",
+    "op": "tool-settings",
+    "note": "the Game-free resolver: a Browser install, a bottle-runtime store and an unusable key keep the stored settings",
+    "args": {
+      "items": [
+        {
+          "via": "id",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "Browser"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        },
+        {
+          "via": "id",
+          "game": {
+            "runner": "steam",
+            "appName": "620",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        },
+        {
+          "via": "id",
+          "game": {
+            "runner": "gog",
+            "appName": "../x",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        },
+        {
+          "via": "id",
+          "game": {
+            "runner": "unknown",
+            "appName": "1",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-live-crossover-selection",
+    "op": "tool-settings",
+    "note": "a game running on CrossOver: the tool targets that engine; the overlay applies once a launch context is set and returns the stored settings before",
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false,
+          "live": {
+            "selection": {
+              "kind": "crossover",
+              "reason": "cx-healthy",
+              "crossoverBuild": "26.3",
+              "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+            }
+          }
+        },
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false,
+          "live": {
+            "selection": {
+              "kind": "crossover",
+              "reason": "cx-healthy",
+              "crossoverBuild": "26.3",
+              "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+            },
+            "context": {
+              "prefix": {
+                "kind": "bottle",
+                "bottleName": "GameLib-gog-1234"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-live-pinned-selection",
+    "op": "tool-settings",
+    "note": "a game running on the pinned engine: the overlay is the fallback settings for its bottle, or the plain-prefix settings",
+    "engines": "installed",
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false,
+          "live": {
+            "selection": {
+              "kind": "pinned",
+              "pinId": "wine-staging-11.20",
+              "reason": "cx-missing",
+              "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+              "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+              "label": "Pinned",
+              "version": "11.20",
+              "dxvk": null
+            },
+            "context": {
+              "prefix": {
+                "kind": "bottle",
+                "bottleName": "GameLib-gog-1234"
+              }
+            }
+          }
+        },
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false,
+          "live": {
+            "selection": {
+              "kind": "pinned",
+              "pinId": "wine-staging-11.20",
+              "reason": "cx-missing",
+              "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+              "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+              "label": "Pinned",
+              "version": "11.20",
+              "dxvk": null
+            },
+            "context": {
+              "prefix": {
+                "kind": "plain"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-legacy-engine-keeps-stored",
+    "op": "tool-settings",
+    "note": "a game on Legacy (an engine outside the option list) keeps its stored settings",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/1234.json",
+        "text": "{\n  \"1234\": {\n    \"wineVersion\": {\n      \"type\": \"toolkit\",\n      \"name\": \"Game-Porting-Toolkit-2\",\n      \"bin\": \"<HOME>/gptk/wine64\"\n    }\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "toolkit",
+              "name": "Game-Porting-Toolkit-2",
+              "bin": "<HOME>/gptk/wine64"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-plain-prefix-pinned",
+    "op": "tool-settings",
+    "note": "a plain-prefix game on a pinned override keeps its prefix; only the Wine becomes the pin",
+    "engines": "installed",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/1234.json",
+        "text": "{\n  \"1234\": {\n    \"engineOverride\": \"pinned:wine-staging-11.20\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-plain-prefix-engine-missing",
+    "op": "tool-settings",
+    "note": "the same game with the pinned engine absent (and a Wine Manager override that is not installed) is unavailable: no-engine",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/1234.json",
+        "text": "{\n  \"1234\": {\n    \"engineOverride\": \"pinned:wine-staging-11.20\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/5678.json",
+        "text": "{\n  \"5678\": {\n    \"engineOverride\": \"wine-manager:Wine-Staging-10.5\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        },
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "5678",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-plain-prefix-wine-manager",
+    "op": "tool-settings",
+    "note": "a plain-prefix game on an installed Wine Manager override runs that Wine in its own prefix",
+    "seed": [
+      {
+        "path": "<USERDATA>/store/wine-downloader-info.json",
+        "text": "{\n  \"wine-releases\": [\n    {\n      \"version\": \"Wine-Staging-10.5\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5\"\n    }\n  ]\n}\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+        "text": "#!/bin/sh\n# synthetic oracle fixture\n",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver",
+        "text": "#!/bin/sh\n# synthetic oracle fixture\n",
+        "mode": "0755"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/1234.json",
+        "text": "{\n  \"1234\": {\n    \"engineOverride\": \"wine-manager:Wine-Staging-10.5\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "wine",
+              "name": "Odd Wine",
+              "bin": "<HOME>/odd/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-bottle-not-created",
+    "op": "tool-settings",
+    "note": "a per-game bottle that does not exist: a read is bottle-not-created; a need that creates it asks the flight once, and a failed flight is bottle-not-created",
+    "crossover": "present",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/1234.json",
+        "text": "{\n  \"1234\": {\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    },\n    \"wineCrossoverBottle\": \"GameLib-gog-1234\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "GameLib-gog-1234",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        },
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "GameLib-gog-1234",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": true,
+          "ensure": "error"
+        },
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "GameLib-gog-1234",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": true,
+          "ensure": "done"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-legacy-shared-bottle-never-created",
+    "op": "tool-settings",
+    "note": "a CrossOver game on a shared bottle that is absent is never created by the engine layer, even when the tool asks for it",
+    "crossover": "present",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/1234.json",
+        "text": "{\n  \"1234\": {\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    },\n    \"wineCrossoverBottle\": \"GameLib\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "GameLib",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": true,
+          "ensure": "done"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-bottle-crossover-marker",
+    "op": "tool-settings",
+    "note": "a provisioned bottle whose marker says CrossOver, with CrossOver present: CrossOver settings for that bottle",
+    "crossover": "present",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/1234.json",
+        "text": "{\n  \"1234\": {\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    },\n    \"wineCrossoverBottle\": \"GameLib-gog-1234\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/cxbottle.conf",
+        "text": "[Bottle]\n\"BottleID\" = \"AAAAAAAA-0000-4000-8000-000000000001\"\n\"Encoding\" = \"UTF-8\"\n\"Template\" = \"win10_64\"\n\"MenuMode\" = \"ignore\"\n\"AssocMode\" = \"ignore\"\n\"WineArch\" = \"win64\"\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/system.reg",
+        "text": "WINE REGISTRY Version 2\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/.gamelib-engine.json",
+        "text": "{\"kind\":\"crossover\",\"id\":\"crossover\",\"wineserverBin\":\"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver\",\"version\":1}"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "GameLib-gog-1234",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-bottle-no-marker-crossover-present",
+    "op": "tool-settings",
+    "note": "a provisioned bottle with no marker on Automatic, CrossOver present: CrossOver settings",
+    "crossover": "present",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/1234.json",
+        "text": "{\n  \"1234\": {\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    },\n    \"wineCrossoverBottle\": \"GameLib-gog-1234\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/cxbottle.conf",
+        "text": "[Bottle]\n\"BottleID\" = \"AAAAAAAA-0000-4000-8000-000000000001\"\n\"Encoding\" = \"UTF-8\"\n\"Template\" = \"win10_64\"\n\"MenuMode\" = \"ignore\"\n\"AssocMode\" = \"ignore\"\n\"WineArch\" = \"win64\"\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/system.reg",
+        "text": "WINE REGISTRY Version 2\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "GameLib-gog-1234",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-bottle-crossover-missing-uses-pin",
+    "op": "tool-settings",
+    "note": "Automatic with CrossOver missing falls to the current pin on the bottle: the fallback settings, the bottle named, no DXVK recorded",
+    "crossover": "absent",
+    "engines": "installed",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/1234.json",
+        "text": "{\n  \"1234\": {\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    },\n    \"wineCrossoverBottle\": \"GameLib-gog-1234\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/cxbottle.conf",
+        "text": "[Bottle]\n\"BottleID\" = \"AAAAAAAA-0000-4000-8000-000000000001\"\n\"Encoding\" = \"UTF-8\"\n\"Template\" = \"win10_64\"\n\"MenuMode\" = \"ignore\"\n\"AssocMode\" = \"ignore\"\n\"WineArch\" = \"win64\"\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/system.reg",
+        "text": "WINE REGISTRY Version 2\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "GameLib-gog-1234",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-bottle-pin-not-installed",
+    "op": "tool-settings",
+    "note": "the same bottles with the pinned engine absent are unavailable: no-engine, for Automatic with CrossOver missing and for a bottle whose marker says pinned",
+    "crossover": "absent",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/1234.json",
+        "text": "{\n  \"1234\": {\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    },\n    \"wineCrossoverBottle\": \"GameLib-gog-1234\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/cxbottle.conf",
+        "text": "[Bottle]\n\"BottleID\" = \"AAAAAAAA-0000-4000-8000-000000000001\"\n\"Encoding\" = \"UTF-8\"\n\"Template\" = \"win10_64\"\n\"MenuMode\" = \"ignore\"\n\"AssocMode\" = \"ignore\"\n\"WineArch\" = \"win64\"\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/system.reg",
+        "text": "WINE REGISTRY Version 2\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/5678.json",
+        "text": "{\n  \"5678\": {\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    },\n    \"wineCrossoverBottle\": \"GameLib-gog-5678\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-5678/cxbottle.conf",
+        "text": "[Bottle]\n\"BottleID\" = \"AAAAAAAA-0000-4000-8000-000000000001\"\n\"Encoding\" = \"UTF-8\"\n\"Template\" = \"win10_64\"\n\"MenuMode\" = \"ignore\"\n\"AssocMode\" = \"ignore\"\n\"WineArch\" = \"win64\"\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-5678/system.reg",
+        "text": "WINE REGISTRY Version 2\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-5678/.gamelib-engine.json",
+        "text": "{\"kind\":\"pinned\",\"id\":\"wine-staging-11.20\",\"wineserverBin\":\"<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver\",\"version\":1}"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "GameLib-gog-1234",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        },
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "5678",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "GameLib-gog-5678",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-bottle-pinned-marker-stays-on-pin",
+    "op": "tool-settings",
+    "note": "a bottle whose marker says pinned stays on the pin on Automatic with CrossOver present: a tool must not flip it",
+    "crossover": "present",
+    "engines": "installed",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/1234.json",
+        "text": "{\n  \"1234\": {\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    },\n    \"wineCrossoverBottle\": \"GameLib-gog-1234\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/cxbottle.conf",
+        "text": "[Bottle]\n\"BottleID\" = \"AAAAAAAA-0000-4000-8000-000000000001\"\n\"Encoding\" = \"UTF-8\"\n\"Template\" = \"win10_64\"\n\"MenuMode\" = \"ignore\"\n\"AssocMode\" = \"ignore\"\n\"WineArch\" = \"win64\"\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/system.reg",
+        "text": "WINE REGISTRY Version 2\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/.gamelib-engine.json",
+        "text": "{\"kind\":\"pinned\",\"id\":\"wine-staging-11.20\",\"wineserverBin\":\"<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver\",\"version\":1}"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "GameLib-gog-1234",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-bottle-pinned-override-no-marker",
+    "op": "tool-settings",
+    "note": "a pinned override on a bottle with no marker runs the pin even with CrossOver present; a retired pin id parses to Automatic, so that bottle stays on CrossOver",
+    "crossover": "present",
+    "engines": "installed",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/1234.json",
+        "text": "{\n  \"1234\": {\n    \"engineOverride\": \"pinned:wine-staging-11.20\",\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    },\n    \"wineCrossoverBottle\": \"GameLib-gog-1234\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/cxbottle.conf",
+        "text": "[Bottle]\n\"BottleID\" = \"AAAAAAAA-0000-4000-8000-000000000001\"\n\"Encoding\" = \"UTF-8\"\n\"Template\" = \"win10_64\"\n\"MenuMode\" = \"ignore\"\n\"AssocMode\" = \"ignore\"\n\"WineArch\" = \"win64\"\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/system.reg",
+        "text": "WINE REGISTRY Version 2\n"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/5678.json",
+        "text": "{\n  \"5678\": {\n    \"engineOverride\": \"pinned:wine-staging-11.1\",\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    },\n    \"wineCrossoverBottle\": \"GameLib-gog-5678\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-5678/cxbottle.conf",
+        "text": "[Bottle]\n\"BottleID\" = \"AAAAAAAA-0000-4000-8000-000000000001\"\n\"Encoding\" = \"UTF-8\"\n\"Template\" = \"win10_64\"\n\"MenuMode\" = \"ignore\"\n\"AssocMode\" = \"ignore\"\n\"WineArch\" = \"win64\"\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-5678/system.reg",
+        "text": "WINE REGISTRY Version 2\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "GameLib-gog-1234",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        },
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "5678",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "GameLib-gog-5678",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-bottle-wine-manager-override",
+    "op": "tool-settings",
+    "note": "a Wine Manager override on a provisioned bottle runs that Wine on the bottle, with no DXVK copy recorded",
+    "crossover": "present",
+    "seed": [
+      {
+        "path": "<USERDATA>/store/wine-downloader-info.json",
+        "text": "{\n  \"wine-releases\": [\n    {\n      \"version\": \"Wine-Staging-10.5\",\n      \"type\": \"Wine-Staging-macOS\",\n      \"isInstalled\": true,\n      \"installDir\": \"<TOOLS>/wine/Wine-Staging-10.5\"\n    }\n  ]\n}\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+        "text": "#!/bin/sh\n# synthetic oracle fixture\n",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver",
+        "text": "#!/bin/sh\n# synthetic oracle fixture\n",
+        "mode": "0755"
+      },
+      {
+        "path": "<APPFOLDER>/GamesConfig/1234.json",
+        "text": "{\n  \"1234\": {\n    \"engineOverride\": \"wine-manager:Wine-Staging-10.5\",\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    },\n    \"wineCrossoverBottle\": \"GameLib-gog-1234\"\n  },\n  \"version\": \"v0\",\n  \"explicit\": true\n}\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/cxbottle.conf",
+        "text": "[Bottle]\n\"BottleID\" = \"AAAAAAAA-0000-4000-8000-000000000001\"\n\"Encoding\" = \"UTF-8\"\n\"Template\" = \"win10_64\"\n\"MenuMode\" = \"ignore\"\n\"AssocMode\" = \"ignore\"\n\"WineArch\" = \"win64\"\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1234/system.reg",
+        "text": "WINE REGISTRY Version 2\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "via": "game",
+          "game": {
+            "runner": "gog",
+            "appName": "1234",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "GameLib-gog-1234",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "tool-settings-id-sideload-before-library-entry",
+    "op": "tool-settings",
+    "note": "the Game-free resolver for a sideload game whose installer is about to run: its own bottle, created on demand",
+    "crossover": "present",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/GamesConfig/Setup.json",
+        "text": "{\n  \"version\": \"v0\",\n  \"explicit\": true,\n  \"Setup\": {\n    \"wineVersion\": {\n      \"type\": \"crossover\",\n      \"name\": \"CrossOver\",\n      \"bin\": \"<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine\"\n    },\n    \"wineCrossoverBottle\": \"GameLib-sideload-Setup\"\n  }\n}\n"
+      }
+    ],
+    "args": {
+      "items": [
+        {
+          "via": "id",
+          "game": {
+            "runner": "sideload",
+            "appName": "Setup",
+            "platform": "windows"
+          },
+          "stored": {
+            "wineCrossoverBottle": "GameLib-sideload-Setup",
+            "winePrefix": "<HOME>/Games/old-prefix",
+            "wineVersion": {
+              "type": "crossover",
+              "name": "CrossOver",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+            },
+            "enviromentOptions": []
+          },
+          "ensureBottle": true,
+          "ensure": "done"
+        }
+      ]
+    }
+  },
+  {
+    "id": "offline-online-never-blocks",
+    "op": "offline",
+    "note": "online: never blocked, whatever else holds",
+    "args": {
+      "items": [
+        {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "offline-crossover-missing-arm",
+    "op": "offline",
+    "note": "crossover-missing: Automatic, CrossOver missing and the pin absent is blocked; with the pin installed or under crossover it is not",
+    "args": {
+      "items": [
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "offline-restore-needs-pin-arm",
+    "op": "offline",
+    "note": "restore-needs-pin: a non-crossover marker whose restore needs the absent pin is blocked, except on Automatic with the current pin installed",
+    "args": {
+      "items": [
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "offline-explicit-engine-never-blocks",
+    "op": "offline",
+    "note": "a pinned or Wine Manager override is never refused here",
+    "args": {
+      "items": [
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "offline-grid",
+    "op": "offline",
+    "note": "every combination of override, crossoverMissing, marker kind, pin installed and restore-needs-pin while offline",
+    "args": {
+      "items": [
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": true
+        }
+      ]
+    }
   }
 ]

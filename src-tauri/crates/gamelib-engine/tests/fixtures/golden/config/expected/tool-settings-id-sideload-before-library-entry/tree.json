@@ -1,0 +1,23 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/GamesConfig/Setup.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "a220a4b79e72cacc235430a83faff90b6f7bf85bd85beee9aa63dd46c2d2d754"
+  }
+]

@@ -1,0 +1,3297 @@
+{
+  "engineKeyFor": [
+    {
+      "id": "key-legendary-steam-id",
+      "input": {
+        "runner": "legendary",
+        "appName": "620"
+      },
+      "expected": "legendary:620"
+    },
+    {
+      "id": "key-legendary-gog-id",
+      "input": {
+        "runner": "legendary",
+        "appName": "1207658924"
+      },
+      "expected": "legendary:1207658924"
+    },
+    {
+      "id": "key-legendary-name",
+      "input": {
+        "runner": "legendary",
+        "appName": "Sugar"
+      },
+      "expected": "legendary:Sugar"
+    },
+    {
+      "id": "key-legendary-spaced",
+      "input": {
+        "runner": "legendary",
+        "appName": "My Game"
+      },
+      "expected": "legendary:My Game"
+    },
+    {
+      "id": "key-legendary-dotted",
+      "input": {
+        "runner": "legendary",
+        "appName": "a.b"
+      },
+      "expected": "legendary:a.b"
+    },
+    {
+      "id": "key-legendary-unicode",
+      "input": {
+        "runner": "legendary",
+        "appName": "ゲーム"
+      },
+      "expected": "legendary:ゲーム"
+    },
+    {
+      "id": "key-legendary-zero",
+      "input": {
+        "runner": "legendary",
+        "appName": "0"
+      },
+      "expected": "legendary:0"
+    },
+    {
+      "id": "key-legendary-ten-digits",
+      "input": {
+        "runner": "legendary",
+        "appName": "1234567890"
+      },
+      "expected": "legendary:1234567890"
+    },
+    {
+      "id": "key-legendary-eleven-digits",
+      "input": {
+        "runner": "legendary",
+        "appName": "12345678901"
+      },
+      "expected": "legendary:12345678901"
+    },
+    {
+      "id": "key-legendary-leading-zeros",
+      "input": {
+        "runner": "legendary",
+        "appName": "000620"
+      },
+      "expected": "legendary:000620"
+    },
+    {
+      "id": "key-legendary-exponent",
+      "input": {
+        "runner": "legendary",
+        "appName": "1e3"
+      },
+      "expected": "legendary:1e3"
+    },
+    {
+      "id": "key-legendary-negative",
+      "input": {
+        "runner": "legendary",
+        "appName": "-1"
+      },
+      "expected": "legendary:-1"
+    },
+    {
+      "id": "key-legendary-fullwidth-digits",
+      "input": {
+        "runner": "legendary",
+        "appName": "６２０"
+      },
+      "expected": "legendary:６２０"
+    },
+    {
+      "id": "key-legendary-padded",
+      "input": {
+        "runner": "legendary",
+        "appName": " padded"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-legendary-trailing-pad",
+      "input": {
+        "runner": "legendary",
+        "appName": "padded "
+      },
+      "expected": null
+    },
+    {
+      "id": "key-legendary-slash",
+      "input": {
+        "runner": "legendary",
+        "appName": "a/b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-legendary-backslash",
+      "input": {
+        "runner": "legendary",
+        "appName": "a\\b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-legendary-nul",
+      "input": {
+        "runner": "legendary",
+        "appName": "a\u0000b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-legendary-parent",
+      "input": {
+        "runner": "legendary",
+        "appName": ".."
+      },
+      "expected": null
+    },
+    {
+      "id": "key-legendary-parent-inside",
+      "input": {
+        "runner": "legendary",
+        "appName": "a..b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-legendary-single-dot",
+      "input": {
+        "runner": "legendary",
+        "appName": "."
+      },
+      "expected": "legendary:."
+    },
+    {
+      "id": "key-legendary-empty",
+      "input": {
+        "runner": "legendary",
+        "appName": ""
+      },
+      "expected": null
+    },
+    {
+      "id": "key-legendary-255-chars",
+      "input": {
+        "runner": "legendary",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        }
+      },
+      "expected": "legendary:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "id": "key-legendary-256-chars",
+      "input": {
+        "runner": "legendary",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 256
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "key-legendary-colon",
+      "input": {
+        "runner": "legendary",
+        "appName": "a:b"
+      },
+      "expected": "legendary:a:b"
+    },
+    {
+      "id": "key-gog-steam-id",
+      "input": {
+        "runner": "gog",
+        "appName": "620"
+      },
+      "expected": "gog:620"
+    },
+    {
+      "id": "key-gog-gog-id",
+      "input": {
+        "runner": "gog",
+        "appName": "1207658924"
+      },
+      "expected": "gog:1207658924"
+    },
+    {
+      "id": "key-gog-name",
+      "input": {
+        "runner": "gog",
+        "appName": "Sugar"
+      },
+      "expected": "gog:Sugar"
+    },
+    {
+      "id": "key-gog-spaced",
+      "input": {
+        "runner": "gog",
+        "appName": "My Game"
+      },
+      "expected": "gog:My Game"
+    },
+    {
+      "id": "key-gog-dotted",
+      "input": {
+        "runner": "gog",
+        "appName": "a.b"
+      },
+      "expected": "gog:a.b"
+    },
+    {
+      "id": "key-gog-unicode",
+      "input": {
+        "runner": "gog",
+        "appName": "ゲーム"
+      },
+      "expected": "gog:ゲーム"
+    },
+    {
+      "id": "key-gog-zero",
+      "input": {
+        "runner": "gog",
+        "appName": "0"
+      },
+      "expected": "gog:0"
+    },
+    {
+      "id": "key-gog-ten-digits",
+      "input": {
+        "runner": "gog",
+        "appName": "1234567890"
+      },
+      "expected": "gog:1234567890"
+    },
+    {
+      "id": "key-gog-eleven-digits",
+      "input": {
+        "runner": "gog",
+        "appName": "12345678901"
+      },
+      "expected": "gog:12345678901"
+    },
+    {
+      "id": "key-gog-leading-zeros",
+      "input": {
+        "runner": "gog",
+        "appName": "000620"
+      },
+      "expected": "gog:000620"
+    },
+    {
+      "id": "key-gog-exponent",
+      "input": {
+        "runner": "gog",
+        "appName": "1e3"
+      },
+      "expected": "gog:1e3"
+    },
+    {
+      "id": "key-gog-negative",
+      "input": {
+        "runner": "gog",
+        "appName": "-1"
+      },
+      "expected": "gog:-1"
+    },
+    {
+      "id": "key-gog-fullwidth-digits",
+      "input": {
+        "runner": "gog",
+        "appName": "６２０"
+      },
+      "expected": "gog:６２０"
+    },
+    {
+      "id": "key-gog-padded",
+      "input": {
+        "runner": "gog",
+        "appName": " padded"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-trailing-pad",
+      "input": {
+        "runner": "gog",
+        "appName": "padded "
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-slash",
+      "input": {
+        "runner": "gog",
+        "appName": "a/b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-backslash",
+      "input": {
+        "runner": "gog",
+        "appName": "a\\b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-nul",
+      "input": {
+        "runner": "gog",
+        "appName": "a\u0000b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-parent",
+      "input": {
+        "runner": "gog",
+        "appName": ".."
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-parent-inside",
+      "input": {
+        "runner": "gog",
+        "appName": "a..b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-single-dot",
+      "input": {
+        "runner": "gog",
+        "appName": "."
+      },
+      "expected": "gog:."
+    },
+    {
+      "id": "key-gog-empty",
+      "input": {
+        "runner": "gog",
+        "appName": ""
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-255-chars",
+      "input": {
+        "runner": "gog",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        }
+      },
+      "expected": "gog:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "id": "key-gog-256-chars",
+      "input": {
+        "runner": "gog",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 256
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-colon",
+      "input": {
+        "runner": "gog",
+        "appName": "a:b"
+      },
+      "expected": "gog:a:b"
+    },
+    {
+      "id": "key-nile-steam-id",
+      "input": {
+        "runner": "nile",
+        "appName": "620"
+      },
+      "expected": "nile:620"
+    },
+    {
+      "id": "key-nile-gog-id",
+      "input": {
+        "runner": "nile",
+        "appName": "1207658924"
+      },
+      "expected": "nile:1207658924"
+    },
+    {
+      "id": "key-nile-name",
+      "input": {
+        "runner": "nile",
+        "appName": "Sugar"
+      },
+      "expected": "nile:Sugar"
+    },
+    {
+      "id": "key-nile-spaced",
+      "input": {
+        "runner": "nile",
+        "appName": "My Game"
+      },
+      "expected": "nile:My Game"
+    },
+    {
+      "id": "key-nile-dotted",
+      "input": {
+        "runner": "nile",
+        "appName": "a.b"
+      },
+      "expected": "nile:a.b"
+    },
+    {
+      "id": "key-nile-unicode",
+      "input": {
+        "runner": "nile",
+        "appName": "ゲーム"
+      },
+      "expected": "nile:ゲーム"
+    },
+    {
+      "id": "key-nile-zero",
+      "input": {
+        "runner": "nile",
+        "appName": "0"
+      },
+      "expected": "nile:0"
+    },
+    {
+      "id": "key-nile-ten-digits",
+      "input": {
+        "runner": "nile",
+        "appName": "1234567890"
+      },
+      "expected": "nile:1234567890"
+    },
+    {
+      "id": "key-nile-eleven-digits",
+      "input": {
+        "runner": "nile",
+        "appName": "12345678901"
+      },
+      "expected": "nile:12345678901"
+    },
+    {
+      "id": "key-nile-leading-zeros",
+      "input": {
+        "runner": "nile",
+        "appName": "000620"
+      },
+      "expected": "nile:000620"
+    },
+    {
+      "id": "key-nile-exponent",
+      "input": {
+        "runner": "nile",
+        "appName": "1e3"
+      },
+      "expected": "nile:1e3"
+    },
+    {
+      "id": "key-nile-negative",
+      "input": {
+        "runner": "nile",
+        "appName": "-1"
+      },
+      "expected": "nile:-1"
+    },
+    {
+      "id": "key-nile-fullwidth-digits",
+      "input": {
+        "runner": "nile",
+        "appName": "６２０"
+      },
+      "expected": "nile:６２０"
+    },
+    {
+      "id": "key-nile-padded",
+      "input": {
+        "runner": "nile",
+        "appName": " padded"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-nile-trailing-pad",
+      "input": {
+        "runner": "nile",
+        "appName": "padded "
+      },
+      "expected": null
+    },
+    {
+      "id": "key-nile-slash",
+      "input": {
+        "runner": "nile",
+        "appName": "a/b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-nile-backslash",
+      "input": {
+        "runner": "nile",
+        "appName": "a\\b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-nile-nul",
+      "input": {
+        "runner": "nile",
+        "appName": "a\u0000b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-nile-parent",
+      "input": {
+        "runner": "nile",
+        "appName": ".."
+      },
+      "expected": null
+    },
+    {
+      "id": "key-nile-parent-inside",
+      "input": {
+        "runner": "nile",
+        "appName": "a..b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-nile-single-dot",
+      "input": {
+        "runner": "nile",
+        "appName": "."
+      },
+      "expected": "nile:."
+    },
+    {
+      "id": "key-nile-empty",
+      "input": {
+        "runner": "nile",
+        "appName": ""
+      },
+      "expected": null
+    },
+    {
+      "id": "key-nile-255-chars",
+      "input": {
+        "runner": "nile",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        }
+      },
+      "expected": "nile:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "id": "key-nile-256-chars",
+      "input": {
+        "runner": "nile",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 256
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "key-nile-colon",
+      "input": {
+        "runner": "nile",
+        "appName": "a:b"
+      },
+      "expected": "nile:a:b"
+    },
+    {
+      "id": "key-sideload-steam-id",
+      "input": {
+        "runner": "sideload",
+        "appName": "620"
+      },
+      "expected": "sideload:620"
+    },
+    {
+      "id": "key-sideload-gog-id",
+      "input": {
+        "runner": "sideload",
+        "appName": "1207658924"
+      },
+      "expected": "sideload:1207658924"
+    },
+    {
+      "id": "key-sideload-name",
+      "input": {
+        "runner": "sideload",
+        "appName": "Sugar"
+      },
+      "expected": "sideload:Sugar"
+    },
+    {
+      "id": "key-sideload-spaced",
+      "input": {
+        "runner": "sideload",
+        "appName": "My Game"
+      },
+      "expected": "sideload:My Game"
+    },
+    {
+      "id": "key-sideload-dotted",
+      "input": {
+        "runner": "sideload",
+        "appName": "a.b"
+      },
+      "expected": "sideload:a.b"
+    },
+    {
+      "id": "key-sideload-unicode",
+      "input": {
+        "runner": "sideload",
+        "appName": "ゲーム"
+      },
+      "expected": "sideload:ゲーム"
+    },
+    {
+      "id": "key-sideload-zero",
+      "input": {
+        "runner": "sideload",
+        "appName": "0"
+      },
+      "expected": "sideload:0"
+    },
+    {
+      "id": "key-sideload-ten-digits",
+      "input": {
+        "runner": "sideload",
+        "appName": "1234567890"
+      },
+      "expected": "sideload:1234567890"
+    },
+    {
+      "id": "key-sideload-eleven-digits",
+      "input": {
+        "runner": "sideload",
+        "appName": "12345678901"
+      },
+      "expected": "sideload:12345678901"
+    },
+    {
+      "id": "key-sideload-leading-zeros",
+      "input": {
+        "runner": "sideload",
+        "appName": "000620"
+      },
+      "expected": "sideload:000620"
+    },
+    {
+      "id": "key-sideload-exponent",
+      "input": {
+        "runner": "sideload",
+        "appName": "1e3"
+      },
+      "expected": "sideload:1e3"
+    },
+    {
+      "id": "key-sideload-negative",
+      "input": {
+        "runner": "sideload",
+        "appName": "-1"
+      },
+      "expected": "sideload:-1"
+    },
+    {
+      "id": "key-sideload-fullwidth-digits",
+      "input": {
+        "runner": "sideload",
+        "appName": "６２０"
+      },
+      "expected": "sideload:６２０"
+    },
+    {
+      "id": "key-sideload-padded",
+      "input": {
+        "runner": "sideload",
+        "appName": " padded"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-sideload-trailing-pad",
+      "input": {
+        "runner": "sideload",
+        "appName": "padded "
+      },
+      "expected": null
+    },
+    {
+      "id": "key-sideload-slash",
+      "input": {
+        "runner": "sideload",
+        "appName": "a/b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-sideload-backslash",
+      "input": {
+        "runner": "sideload",
+        "appName": "a\\b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-sideload-nul",
+      "input": {
+        "runner": "sideload",
+        "appName": "a\u0000b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-sideload-parent",
+      "input": {
+        "runner": "sideload",
+        "appName": ".."
+      },
+      "expected": null
+    },
+    {
+      "id": "key-sideload-parent-inside",
+      "input": {
+        "runner": "sideload",
+        "appName": "a..b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-sideload-single-dot",
+      "input": {
+        "runner": "sideload",
+        "appName": "."
+      },
+      "expected": "sideload:."
+    },
+    {
+      "id": "key-sideload-empty",
+      "input": {
+        "runner": "sideload",
+        "appName": ""
+      },
+      "expected": null
+    },
+    {
+      "id": "key-sideload-255-chars",
+      "input": {
+        "runner": "sideload",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        }
+      },
+      "expected": "sideload:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "id": "key-sideload-256-chars",
+      "input": {
+        "runner": "sideload",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 256
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "key-sideload-colon",
+      "input": {
+        "runner": "sideload",
+        "appName": "a:b"
+      },
+      "expected": "sideload:a:b"
+    },
+    {
+      "id": "key-steam-steam-id",
+      "input": {
+        "runner": "steam",
+        "appName": "620"
+      },
+      "expected": "620"
+    },
+    {
+      "id": "key-steam-gog-id",
+      "input": {
+        "runner": "steam",
+        "appName": "1207658924"
+      },
+      "expected": "1207658924"
+    },
+    {
+      "id": "key-steam-name",
+      "input": {
+        "runner": "steam",
+        "appName": "Sugar"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-spaced",
+      "input": {
+        "runner": "steam",
+        "appName": "My Game"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-dotted",
+      "input": {
+        "runner": "steam",
+        "appName": "a.b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-unicode",
+      "input": {
+        "runner": "steam",
+        "appName": "ゲーム"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-zero",
+      "input": {
+        "runner": "steam",
+        "appName": "0"
+      },
+      "expected": "0"
+    },
+    {
+      "id": "key-steam-ten-digits",
+      "input": {
+        "runner": "steam",
+        "appName": "1234567890"
+      },
+      "expected": "1234567890"
+    },
+    {
+      "id": "key-steam-eleven-digits",
+      "input": {
+        "runner": "steam",
+        "appName": "12345678901"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-leading-zeros",
+      "input": {
+        "runner": "steam",
+        "appName": "000620"
+      },
+      "expected": "000620"
+    },
+    {
+      "id": "key-steam-exponent",
+      "input": {
+        "runner": "steam",
+        "appName": "1e3"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-negative",
+      "input": {
+        "runner": "steam",
+        "appName": "-1"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-fullwidth-digits",
+      "input": {
+        "runner": "steam",
+        "appName": "６２０"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-padded",
+      "input": {
+        "runner": "steam",
+        "appName": " padded"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-trailing-pad",
+      "input": {
+        "runner": "steam",
+        "appName": "padded "
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-slash",
+      "input": {
+        "runner": "steam",
+        "appName": "a/b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-backslash",
+      "input": {
+        "runner": "steam",
+        "appName": "a\\b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-nul",
+      "input": {
+        "runner": "steam",
+        "appName": "a\u0000b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-parent",
+      "input": {
+        "runner": "steam",
+        "appName": ".."
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-parent-inside",
+      "input": {
+        "runner": "steam",
+        "appName": "a..b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-single-dot",
+      "input": {
+        "runner": "steam",
+        "appName": "."
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-empty",
+      "input": {
+        "runner": "steam",
+        "appName": ""
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-255-chars",
+      "input": {
+        "runner": "steam",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-256-chars",
+      "input": {
+        "runner": "steam",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 256
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-colon",
+      "input": {
+        "runner": "steam",
+        "appName": "a:b"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-unknown-id",
+      "input": {
+        "runner": "unknown",
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-unknown-name",
+      "input": {
+        "runner": "unknown",
+        "appName": "abc"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-empty-id",
+      "input": {
+        "runner": "",
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-empty-name",
+      "input": {
+        "runner": "",
+        "appName": "abc"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-GOG-id",
+      "input": {
+        "runner": "GOG",
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-GOG-name",
+      "input": {
+        "runner": "GOG",
+        "appName": "abc"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner- gog-id",
+      "input": {
+        "runner": " gog",
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner- gog-name",
+      "input": {
+        "runner": " gog",
+        "appName": "abc"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-humble-id",
+      "input": {
+        "runner": "humble",
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-humble-name",
+      "input": {
+        "runner": "humble",
+        "appName": "abc"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-__proto__-id",
+      "input": {
+        "runner": "__proto__",
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-__proto__-name",
+      "input": {
+        "runner": "__proto__",
+        "appName": "abc"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-toString-id",
+      "input": {
+        "runner": "toString",
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-toString-name",
+      "input": {
+        "runner": "toString",
+        "appName": "abc"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-constructor-id",
+      "input": {
+        "runner": "constructor",
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-constructor-name",
+      "input": {
+        "runner": "constructor",
+        "appName": "abc"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-nonstring-5",
+      "input": {
+        "runner": 5,
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-nonstring-null",
+      "input": {
+        "runner": null,
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-nonstring-true",
+      "input": {
+        "runner": true,
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-nonstring-[\"gog\"]",
+      "input": {
+        "runner": [
+          "gog"
+        ],
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-runner-nonstring-{}",
+      "input": {
+        "runner": {},
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-appname-missing",
+      "input": {
+        "runner": "gog"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-appname-number",
+      "input": {
+        "runner": "gog",
+        "appName": 620
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-appname-null",
+      "input": {
+        "runner": "gog",
+        "appName": null
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-appname-true",
+      "input": {
+        "runner": "gog",
+        "appName": true
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-appname-array",
+      "input": {
+        "runner": "gog",
+        "appName": [
+          "620"
+        ]
+      },
+      "expected": null
+    },
+    {
+      "id": "key-gog-appname-object",
+      "input": {
+        "runner": "gog",
+        "appName": {}
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-appname-missing",
+      "input": {
+        "runner": "steam"
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-appname-number",
+      "input": {
+        "runner": "steam",
+        "appName": 620
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-appname-null",
+      "input": {
+        "runner": "steam",
+        "appName": null
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-appname-true",
+      "input": {
+        "runner": "steam",
+        "appName": true
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-appname-array",
+      "input": {
+        "runner": "steam",
+        "appName": [
+          "620"
+        ]
+      },
+      "expected": null
+    },
+    {
+      "id": "key-steam-appname-object",
+      "input": {
+        "runner": "steam",
+        "appName": {}
+      },
+      "expected": null
+    }
+  ],
+  "isWritableEngineOverride": [
+    {
+      "id": "writable-automatic",
+      "input": {
+        "value": "automatic"
+      },
+      "expected": true
+    },
+    {
+      "id": "writable-crossover",
+      "input": {
+        "value": "crossover"
+      },
+      "expected": true
+    },
+    {
+      "id": "writable-pinned-current",
+      "input": {
+        "value": "pinned:wine-staging-11.20"
+      },
+      "expected": true
+    },
+    {
+      "id": "writable-pinned-retired",
+      "input": {
+        "value": "pinned:wine-staging-11.1"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-pinned-empty",
+      "input": {
+        "value": "pinned:"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-pinned-unknown",
+      "input": {
+        "value": "pinned:x"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-pinned-trailing-space",
+      "input": {
+        "value": "pinned:wine-staging-11.20 "
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-manager",
+      "input": {
+        "value": "wine-manager:Wine-Staging-10.5"
+      },
+      "expected": true
+    },
+    {
+      "id": "writable-manager-numeric",
+      "input": {
+        "value": "wine-manager:10.5"
+      },
+      "expected": true
+    },
+    {
+      "id": "writable-manager-empty",
+      "input": {
+        "value": "wine-manager:"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-manager-dotdot",
+      "input": {
+        "value": "wine-manager:a..b"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-manager-dxmt",
+      "input": {
+        "value": "wine-manager:Wine-Staging-10.5-DXMT"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-manager-gptk",
+      "input": {
+        "value": "wine-manager:GPTK-2"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-manager-toolkit",
+      "input": {
+        "value": "wine-manager:Game-Porting-Toolkit"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-manager-porting",
+      "input": {
+        "value": "wine-manager:Porting-1"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-manager-space",
+      "input": {
+        "value": "wine-manager:has space"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-manager-64-chars",
+      "input": {
+        "value": "wine-manager:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expected": true
+    },
+    {
+      "id": "writable-manager-65-chars",
+      "input": {
+        "value": "wine-manager:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-manager-punctuation",
+      "input": {
+        "value": "wine-manager:ok.1_2-3"
+      },
+      "expected": true
+    },
+    {
+      "id": "writable-legacy-label",
+      "input": {
+        "value": "legacy:Odd Wine"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-legacy-word",
+      "input": {
+        "value": "Legacy"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-capitalised",
+      "input": {
+        "value": "Automatic"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-leading-space",
+      "input": {
+        "value": " automatic"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-trailing-space",
+      "input": {
+        "value": "automatic "
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-empty",
+      "input": {
+        "value": ""
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-path",
+      "input": {
+        "value": "/usr/bin/wine"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-relative-path",
+      "input": {
+        "value": "../wine"
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-null",
+      "input": {
+        "value": null
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-number",
+      "input": {
+        "value": 5
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-true",
+      "input": {
+        "value": true
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-array",
+      "input": {
+        "value": [
+          "automatic"
+        ]
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-empty-object",
+      "input": {
+        "value": {}
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-object",
+      "input": {
+        "value": {
+          "id": "automatic"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "writable-missing",
+      "input": {},
+      "expected": false
+    }
+  ],
+  "importEngineSettings": [
+    {
+      "id": "import-legendary-automatic",
+      "input": {
+        "runner": "legendary",
+        "appName": "1234",
+        "engineOverride": "automatic"
+      },
+      "expected": {
+        "engineOverride": "automatic",
+        "wineCrossoverBottle": "GameLib-legendary-1234"
+      }
+    },
+    {
+      "id": "import-legendary-crossover",
+      "input": {
+        "runner": "legendary",
+        "appName": "1234",
+        "engineOverride": "crossover"
+      },
+      "expected": {
+        "engineOverride": "crossover",
+        "wineCrossoverBottle": "GameLib-legendary-1234"
+      }
+    },
+    {
+      "id": "import-legendary-pinned",
+      "input": {
+        "runner": "legendary",
+        "appName": "1234",
+        "engineOverride": "pinned:wine-staging-11.20"
+      },
+      "expected": {
+        "engineOverride": "pinned:wine-staging-11.20",
+        "wineCrossoverBottle": "GameLib-legendary-1234"
+      }
+    },
+    {
+      "id": "import-legendary-manager",
+      "input": {
+        "runner": "legendary",
+        "appName": "1234",
+        "engineOverride": "wine-manager:Wine-Staging-10.5"
+      },
+      "expected": {
+        "engineOverride": "wine-manager:Wine-Staging-10.5",
+        "wineCrossoverBottle": "GameLib-legendary-1234"
+      }
+    },
+    {
+      "id": "import-legendary-retired-pin",
+      "input": {
+        "runner": "legendary",
+        "appName": "1234",
+        "engineOverride": "pinned:wine-staging-11.1"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-legendary-legacy-label",
+      "input": {
+        "runner": "legendary",
+        "appName": "1234",
+        "engineOverride": "legacy:Odd Wine"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-legendary-path",
+      "input": {
+        "runner": "legendary",
+        "appName": "1234",
+        "engineOverride": "/usr/bin/wine"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-legendary-number",
+      "input": {
+        "runner": "legendary",
+        "appName": "1234",
+        "engineOverride": 5
+      },
+      "expected": null
+    },
+    {
+      "id": "import-legendary-null",
+      "input": {
+        "runner": "legendary",
+        "appName": "1234",
+        "engineOverride": null
+      },
+      "expected": null
+    },
+    {
+      "id": "import-gog-automatic",
+      "input": {
+        "runner": "gog",
+        "appName": "1234",
+        "engineOverride": "automatic"
+      },
+      "expected": {
+        "engineOverride": "automatic",
+        "wineCrossoverBottle": "GameLib-gog-1234"
+      }
+    },
+    {
+      "id": "import-gog-crossover",
+      "input": {
+        "runner": "gog",
+        "appName": "1234",
+        "engineOverride": "crossover"
+      },
+      "expected": {
+        "engineOverride": "crossover",
+        "wineCrossoverBottle": "GameLib-gog-1234"
+      }
+    },
+    {
+      "id": "import-gog-pinned",
+      "input": {
+        "runner": "gog",
+        "appName": "1234",
+        "engineOverride": "pinned:wine-staging-11.20"
+      },
+      "expected": {
+        "engineOverride": "pinned:wine-staging-11.20",
+        "wineCrossoverBottle": "GameLib-gog-1234"
+      }
+    },
+    {
+      "id": "import-gog-manager",
+      "input": {
+        "runner": "gog",
+        "appName": "1234",
+        "engineOverride": "wine-manager:Wine-Staging-10.5"
+      },
+      "expected": {
+        "engineOverride": "wine-manager:Wine-Staging-10.5",
+        "wineCrossoverBottle": "GameLib-gog-1234"
+      }
+    },
+    {
+      "id": "import-gog-retired-pin",
+      "input": {
+        "runner": "gog",
+        "appName": "1234",
+        "engineOverride": "pinned:wine-staging-11.1"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-gog-legacy-label",
+      "input": {
+        "runner": "gog",
+        "appName": "1234",
+        "engineOverride": "legacy:Odd Wine"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-gog-path",
+      "input": {
+        "runner": "gog",
+        "appName": "1234",
+        "engineOverride": "/usr/bin/wine"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-gog-number",
+      "input": {
+        "runner": "gog",
+        "appName": "1234",
+        "engineOverride": 5
+      },
+      "expected": null
+    },
+    {
+      "id": "import-gog-null",
+      "input": {
+        "runner": "gog",
+        "appName": "1234",
+        "engineOverride": null
+      },
+      "expected": null
+    },
+    {
+      "id": "import-nile-automatic",
+      "input": {
+        "runner": "nile",
+        "appName": "1234",
+        "engineOverride": "automatic"
+      },
+      "expected": {
+        "engineOverride": "automatic",
+        "wineCrossoverBottle": "GameLib-nile-1234"
+      }
+    },
+    {
+      "id": "import-nile-crossover",
+      "input": {
+        "runner": "nile",
+        "appName": "1234",
+        "engineOverride": "crossover"
+      },
+      "expected": {
+        "engineOverride": "crossover",
+        "wineCrossoverBottle": "GameLib-nile-1234"
+      }
+    },
+    {
+      "id": "import-nile-pinned",
+      "input": {
+        "runner": "nile",
+        "appName": "1234",
+        "engineOverride": "pinned:wine-staging-11.20"
+      },
+      "expected": {
+        "engineOverride": "pinned:wine-staging-11.20",
+        "wineCrossoverBottle": "GameLib-nile-1234"
+      }
+    },
+    {
+      "id": "import-nile-manager",
+      "input": {
+        "runner": "nile",
+        "appName": "1234",
+        "engineOverride": "wine-manager:Wine-Staging-10.5"
+      },
+      "expected": {
+        "engineOverride": "wine-manager:Wine-Staging-10.5",
+        "wineCrossoverBottle": "GameLib-nile-1234"
+      }
+    },
+    {
+      "id": "import-nile-retired-pin",
+      "input": {
+        "runner": "nile",
+        "appName": "1234",
+        "engineOverride": "pinned:wine-staging-11.1"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-nile-legacy-label",
+      "input": {
+        "runner": "nile",
+        "appName": "1234",
+        "engineOverride": "legacy:Odd Wine"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-nile-path",
+      "input": {
+        "runner": "nile",
+        "appName": "1234",
+        "engineOverride": "/usr/bin/wine"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-nile-number",
+      "input": {
+        "runner": "nile",
+        "appName": "1234",
+        "engineOverride": 5
+      },
+      "expected": null
+    },
+    {
+      "id": "import-nile-null",
+      "input": {
+        "runner": "nile",
+        "appName": "1234",
+        "engineOverride": null
+      },
+      "expected": null
+    },
+    {
+      "id": "import-sideload-automatic",
+      "input": {
+        "runner": "sideload",
+        "appName": "1234",
+        "engineOverride": "automatic"
+      },
+      "expected": {
+        "engineOverride": "automatic",
+        "wineCrossoverBottle": "GameLib-sideload-1234"
+      }
+    },
+    {
+      "id": "import-sideload-crossover",
+      "input": {
+        "runner": "sideload",
+        "appName": "1234",
+        "engineOverride": "crossover"
+      },
+      "expected": {
+        "engineOverride": "crossover",
+        "wineCrossoverBottle": "GameLib-sideload-1234"
+      }
+    },
+    {
+      "id": "import-sideload-pinned",
+      "input": {
+        "runner": "sideload",
+        "appName": "1234",
+        "engineOverride": "pinned:wine-staging-11.20"
+      },
+      "expected": {
+        "engineOverride": "pinned:wine-staging-11.20",
+        "wineCrossoverBottle": "GameLib-sideload-1234"
+      }
+    },
+    {
+      "id": "import-sideload-manager",
+      "input": {
+        "runner": "sideload",
+        "appName": "1234",
+        "engineOverride": "wine-manager:Wine-Staging-10.5"
+      },
+      "expected": {
+        "engineOverride": "wine-manager:Wine-Staging-10.5",
+        "wineCrossoverBottle": "GameLib-sideload-1234"
+      }
+    },
+    {
+      "id": "import-sideload-retired-pin",
+      "input": {
+        "runner": "sideload",
+        "appName": "1234",
+        "engineOverride": "pinned:wine-staging-11.1"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-sideload-legacy-label",
+      "input": {
+        "runner": "sideload",
+        "appName": "1234",
+        "engineOverride": "legacy:Odd Wine"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-sideload-path",
+      "input": {
+        "runner": "sideload",
+        "appName": "1234",
+        "engineOverride": "/usr/bin/wine"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-sideload-number",
+      "input": {
+        "runner": "sideload",
+        "appName": "1234",
+        "engineOverride": 5
+      },
+      "expected": null
+    },
+    {
+      "id": "import-sideload-null",
+      "input": {
+        "runner": "sideload",
+        "appName": "1234",
+        "engineOverride": null
+      },
+      "expected": null
+    },
+    {
+      "id": "import-steam-automatic",
+      "input": {
+        "runner": "steam",
+        "appName": "1234",
+        "engineOverride": "automatic"
+      },
+      "expected": {
+        "engineOverride": "automatic"
+      }
+    },
+    {
+      "id": "import-steam-crossover",
+      "input": {
+        "runner": "steam",
+        "appName": "1234",
+        "engineOverride": "crossover"
+      },
+      "expected": {
+        "engineOverride": "crossover"
+      }
+    },
+    {
+      "id": "import-steam-pinned",
+      "input": {
+        "runner": "steam",
+        "appName": "1234",
+        "engineOverride": "pinned:wine-staging-11.20"
+      },
+      "expected": {
+        "engineOverride": "pinned:wine-staging-11.20"
+      }
+    },
+    {
+      "id": "import-steam-manager",
+      "input": {
+        "runner": "steam",
+        "appName": "1234",
+        "engineOverride": "wine-manager:Wine-Staging-10.5"
+      },
+      "expected": {
+        "engineOverride": "wine-manager:Wine-Staging-10.5"
+      }
+    },
+    {
+      "id": "import-steam-retired-pin",
+      "input": {
+        "runner": "steam",
+        "appName": "1234",
+        "engineOverride": "pinned:wine-staging-11.1"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-steam-legacy-label",
+      "input": {
+        "runner": "steam",
+        "appName": "1234",
+        "engineOverride": "legacy:Odd Wine"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-steam-path",
+      "input": {
+        "runner": "steam",
+        "appName": "1234",
+        "engineOverride": "/usr/bin/wine"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-steam-number",
+      "input": {
+        "runner": "steam",
+        "appName": "1234",
+        "engineOverride": 5
+      },
+      "expected": null
+    },
+    {
+      "id": "import-steam-null",
+      "input": {
+        "runner": "steam",
+        "appName": "1234",
+        "engineOverride": null
+      },
+      "expected": null
+    },
+    {
+      "id": "import-engine-override-missing",
+      "input": {
+        "runner": "gog",
+        "appName": "1234"
+      },
+      "expected": null
+    },
+    {
+      "id": "import-bad-app-name",
+      "input": {
+        "runner": "gog",
+        "appName": "../x",
+        "engineOverride": "crossover"
+      },
+      "expected": {
+        "engineOverride": "crossover"
+      }
+    },
+    {
+      "id": "import-unknown-runner",
+      "input": {
+        "runner": "unknown",
+        "appName": "1",
+        "engineOverride": "crossover"
+      },
+      "expected": {
+        "engineOverride": "crossover"
+      }
+    },
+    {
+      "id": "import-long-app-name-hashes-the-bottle",
+      "input": {
+        "runner": "gog",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 100
+          }
+        },
+        "engineOverride": "pinned:wine-staging-11.20"
+      },
+      "expected": {
+        "engineOverride": "pinned:wine-staging-11.20",
+        "wineCrossoverBottle": "GameLib-gog-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-060aace831"
+      }
+    },
+    {
+      "id": "import-renderer-bottle-name-is-ignored",
+      "input": {
+        "runner": "gog",
+        "appName": "1234",
+        "engineOverride": "crossover",
+        "wineCrossoverBottle": "Evil"
+      },
+      "expected": {
+        "engineOverride": "crossover",
+        "wineCrossoverBottle": "GameLib-gog-1234"
+      }
+    },
+    {
+      "id": "import-steam-app-has-no-bottle",
+      "input": {
+        "runner": "steam",
+        "appName": "620",
+        "engineOverride": "crossover"
+      },
+      "expected": {
+        "engineOverride": "crossover"
+      }
+    }
+  ],
+  "getPerGameBottleNameFor": [
+    {
+      "id": "bottle-gog-steam-id",
+      "input": {
+        "runner": "gog",
+        "appName": "620"
+      },
+      "expected": "GameLib-gog-620"
+    },
+    {
+      "id": "bottle-gog-gog-id",
+      "input": {
+        "runner": "gog",
+        "appName": "1207658924"
+      },
+      "expected": "GameLib-gog-1207658924"
+    },
+    {
+      "id": "bottle-gog-name",
+      "input": {
+        "runner": "gog",
+        "appName": "Sugar"
+      },
+      "expected": "GameLib-gog-Sugar"
+    },
+    {
+      "id": "bottle-gog-spaced",
+      "input": {
+        "runner": "gog",
+        "appName": "My Game"
+      },
+      "expected": "GameLib-gog-My_20Game"
+    },
+    {
+      "id": "bottle-gog-dotted",
+      "input": {
+        "runner": "gog",
+        "appName": "a.b"
+      },
+      "expected": "GameLib-gog-a.b"
+    },
+    {
+      "id": "bottle-gog-unicode",
+      "input": {
+        "runner": "gog",
+        "appName": "ゲーム"
+      },
+      "expected": "GameLib-gog-_e3_82_b2_e3_83_bc_e3_83_a0"
+    },
+    {
+      "id": "bottle-gog-zero",
+      "input": {
+        "runner": "gog",
+        "appName": "0"
+      },
+      "expected": "GameLib-gog-0"
+    },
+    {
+      "id": "bottle-gog-ten-digits",
+      "input": {
+        "runner": "gog",
+        "appName": "1234567890"
+      },
+      "expected": "GameLib-gog-1234567890"
+    },
+    {
+      "id": "bottle-gog-eleven-digits",
+      "input": {
+        "runner": "gog",
+        "appName": "12345678901"
+      },
+      "expected": "GameLib-gog-12345678901"
+    },
+    {
+      "id": "bottle-gog-leading-zeros",
+      "input": {
+        "runner": "gog",
+        "appName": "000620"
+      },
+      "expected": "GameLib-gog-000620"
+    },
+    {
+      "id": "bottle-gog-exponent",
+      "input": {
+        "runner": "gog",
+        "appName": "1e3"
+      },
+      "expected": "GameLib-gog-1e3"
+    },
+    {
+      "id": "bottle-gog-negative",
+      "input": {
+        "runner": "gog",
+        "appName": "-1"
+      },
+      "expected": "GameLib-gog--1"
+    },
+    {
+      "id": "bottle-gog-fullwidth-digits",
+      "input": {
+        "runner": "gog",
+        "appName": "６２０"
+      },
+      "expected": "GameLib-gog-_ef_bc_96_ef_bc_92_ef_bc_90"
+    },
+    {
+      "id": "bottle-gog-padded",
+      "input": {
+        "runner": "gog",
+        "appName": " padded"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-gog-trailing-pad",
+      "input": {
+        "runner": "gog",
+        "appName": "padded "
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-gog-slash",
+      "input": {
+        "runner": "gog",
+        "appName": "a/b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-gog-backslash",
+      "input": {
+        "runner": "gog",
+        "appName": "a\\b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-gog-nul",
+      "input": {
+        "runner": "gog",
+        "appName": "a\u0000b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-gog-parent",
+      "input": {
+        "runner": "gog",
+        "appName": ".."
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-gog-parent-inside",
+      "input": {
+        "runner": "gog",
+        "appName": "a..b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-gog-single-dot",
+      "input": {
+        "runner": "gog",
+        "appName": "."
+      },
+      "expected": "GameLib-gog-."
+    },
+    {
+      "id": "bottle-gog-empty",
+      "input": {
+        "runner": "gog",
+        "appName": ""
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-gog-255-chars",
+      "input": {
+        "runner": "gog",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        }
+      },
+      "expected": "GameLib-gog-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-96f4e57072"
+    },
+    {
+      "id": "bottle-gog-256-chars",
+      "input": {
+        "runner": "gog",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 256
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-gog-colon",
+      "input": {
+        "runner": "gog",
+        "appName": "a:b"
+      },
+      "expected": "GameLib-gog-a_3ab"
+    },
+    {
+      "id": "bottle-legendary-steam-id",
+      "input": {
+        "runner": "legendary",
+        "appName": "620"
+      },
+      "expected": "GameLib-legendary-620"
+    },
+    {
+      "id": "bottle-legendary-gog-id",
+      "input": {
+        "runner": "legendary",
+        "appName": "1207658924"
+      },
+      "expected": "GameLib-legendary-1207658924"
+    },
+    {
+      "id": "bottle-legendary-name",
+      "input": {
+        "runner": "legendary",
+        "appName": "Sugar"
+      },
+      "expected": "GameLib-legendary-Sugar"
+    },
+    {
+      "id": "bottle-legendary-spaced",
+      "input": {
+        "runner": "legendary",
+        "appName": "My Game"
+      },
+      "expected": "GameLib-legendary-My_20Game"
+    },
+    {
+      "id": "bottle-legendary-dotted",
+      "input": {
+        "runner": "legendary",
+        "appName": "a.b"
+      },
+      "expected": "GameLib-legendary-a.b"
+    },
+    {
+      "id": "bottle-legendary-unicode",
+      "input": {
+        "runner": "legendary",
+        "appName": "ゲーム"
+      },
+      "expected": "GameLib-legendary-_e3_82_b2_e3_83_bc_e3_83_a0"
+    },
+    {
+      "id": "bottle-legendary-zero",
+      "input": {
+        "runner": "legendary",
+        "appName": "0"
+      },
+      "expected": "GameLib-legendary-0"
+    },
+    {
+      "id": "bottle-legendary-ten-digits",
+      "input": {
+        "runner": "legendary",
+        "appName": "1234567890"
+      },
+      "expected": "GameLib-legendary-1234567890"
+    },
+    {
+      "id": "bottle-legendary-eleven-digits",
+      "input": {
+        "runner": "legendary",
+        "appName": "12345678901"
+      },
+      "expected": "GameLib-legendary-12345678901"
+    },
+    {
+      "id": "bottle-legendary-leading-zeros",
+      "input": {
+        "runner": "legendary",
+        "appName": "000620"
+      },
+      "expected": "GameLib-legendary-000620"
+    },
+    {
+      "id": "bottle-legendary-exponent",
+      "input": {
+        "runner": "legendary",
+        "appName": "1e3"
+      },
+      "expected": "GameLib-legendary-1e3"
+    },
+    {
+      "id": "bottle-legendary-negative",
+      "input": {
+        "runner": "legendary",
+        "appName": "-1"
+      },
+      "expected": "GameLib-legendary--1"
+    },
+    {
+      "id": "bottle-legendary-fullwidth-digits",
+      "input": {
+        "runner": "legendary",
+        "appName": "６２０"
+      },
+      "expected": "GameLib-legendary-_ef_bc_96_ef_bc_92_ef_bc_90"
+    },
+    {
+      "id": "bottle-legendary-padded",
+      "input": {
+        "runner": "legendary",
+        "appName": " padded"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-legendary-trailing-pad",
+      "input": {
+        "runner": "legendary",
+        "appName": "padded "
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-legendary-slash",
+      "input": {
+        "runner": "legendary",
+        "appName": "a/b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-legendary-backslash",
+      "input": {
+        "runner": "legendary",
+        "appName": "a\\b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-legendary-nul",
+      "input": {
+        "runner": "legendary",
+        "appName": "a\u0000b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-legendary-parent",
+      "input": {
+        "runner": "legendary",
+        "appName": ".."
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-legendary-parent-inside",
+      "input": {
+        "runner": "legendary",
+        "appName": "a..b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-legendary-single-dot",
+      "input": {
+        "runner": "legendary",
+        "appName": "."
+      },
+      "expected": "GameLib-legendary-."
+    },
+    {
+      "id": "bottle-legendary-empty",
+      "input": {
+        "runner": "legendary",
+        "appName": ""
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-legendary-255-chars",
+      "input": {
+        "runner": "legendary",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        }
+      },
+      "expected": "GameLib-legendary-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-0904c3c7d7"
+    },
+    {
+      "id": "bottle-legendary-256-chars",
+      "input": {
+        "runner": "legendary",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 256
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-legendary-colon",
+      "input": {
+        "runner": "legendary",
+        "appName": "a:b"
+      },
+      "expected": "GameLib-legendary-a_3ab"
+    },
+    {
+      "id": "bottle-nile-steam-id",
+      "input": {
+        "runner": "nile",
+        "appName": "620"
+      },
+      "expected": "GameLib-nile-620"
+    },
+    {
+      "id": "bottle-nile-gog-id",
+      "input": {
+        "runner": "nile",
+        "appName": "1207658924"
+      },
+      "expected": "GameLib-nile-1207658924"
+    },
+    {
+      "id": "bottle-nile-name",
+      "input": {
+        "runner": "nile",
+        "appName": "Sugar"
+      },
+      "expected": "GameLib-nile-Sugar"
+    },
+    {
+      "id": "bottle-nile-spaced",
+      "input": {
+        "runner": "nile",
+        "appName": "My Game"
+      },
+      "expected": "GameLib-nile-My_20Game"
+    },
+    {
+      "id": "bottle-nile-dotted",
+      "input": {
+        "runner": "nile",
+        "appName": "a.b"
+      },
+      "expected": "GameLib-nile-a.b"
+    },
+    {
+      "id": "bottle-nile-unicode",
+      "input": {
+        "runner": "nile",
+        "appName": "ゲーム"
+      },
+      "expected": "GameLib-nile-_e3_82_b2_e3_83_bc_e3_83_a0"
+    },
+    {
+      "id": "bottle-nile-zero",
+      "input": {
+        "runner": "nile",
+        "appName": "0"
+      },
+      "expected": "GameLib-nile-0"
+    },
+    {
+      "id": "bottle-nile-ten-digits",
+      "input": {
+        "runner": "nile",
+        "appName": "1234567890"
+      },
+      "expected": "GameLib-nile-1234567890"
+    },
+    {
+      "id": "bottle-nile-eleven-digits",
+      "input": {
+        "runner": "nile",
+        "appName": "12345678901"
+      },
+      "expected": "GameLib-nile-12345678901"
+    },
+    {
+      "id": "bottle-nile-leading-zeros",
+      "input": {
+        "runner": "nile",
+        "appName": "000620"
+      },
+      "expected": "GameLib-nile-000620"
+    },
+    {
+      "id": "bottle-nile-exponent",
+      "input": {
+        "runner": "nile",
+        "appName": "1e3"
+      },
+      "expected": "GameLib-nile-1e3"
+    },
+    {
+      "id": "bottle-nile-negative",
+      "input": {
+        "runner": "nile",
+        "appName": "-1"
+      },
+      "expected": "GameLib-nile--1"
+    },
+    {
+      "id": "bottle-nile-fullwidth-digits",
+      "input": {
+        "runner": "nile",
+        "appName": "６２０"
+      },
+      "expected": "GameLib-nile-_ef_bc_96_ef_bc_92_ef_bc_90"
+    },
+    {
+      "id": "bottle-nile-padded",
+      "input": {
+        "runner": "nile",
+        "appName": " padded"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-nile-trailing-pad",
+      "input": {
+        "runner": "nile",
+        "appName": "padded "
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-nile-slash",
+      "input": {
+        "runner": "nile",
+        "appName": "a/b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-nile-backslash",
+      "input": {
+        "runner": "nile",
+        "appName": "a\\b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-nile-nul",
+      "input": {
+        "runner": "nile",
+        "appName": "a\u0000b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-nile-parent",
+      "input": {
+        "runner": "nile",
+        "appName": ".."
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-nile-parent-inside",
+      "input": {
+        "runner": "nile",
+        "appName": "a..b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-nile-single-dot",
+      "input": {
+        "runner": "nile",
+        "appName": "."
+      },
+      "expected": "GameLib-nile-."
+    },
+    {
+      "id": "bottle-nile-empty",
+      "input": {
+        "runner": "nile",
+        "appName": ""
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-nile-255-chars",
+      "input": {
+        "runner": "nile",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        }
+      },
+      "expected": "GameLib-nile-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-66acaed1ad"
+    },
+    {
+      "id": "bottle-nile-256-chars",
+      "input": {
+        "runner": "nile",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 256
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-nile-colon",
+      "input": {
+        "runner": "nile",
+        "appName": "a:b"
+      },
+      "expected": "GameLib-nile-a_3ab"
+    },
+    {
+      "id": "bottle-sideload-steam-id",
+      "input": {
+        "runner": "sideload",
+        "appName": "620"
+      },
+      "expected": "GameLib-sideload-620"
+    },
+    {
+      "id": "bottle-sideload-gog-id",
+      "input": {
+        "runner": "sideload",
+        "appName": "1207658924"
+      },
+      "expected": "GameLib-sideload-1207658924"
+    },
+    {
+      "id": "bottle-sideload-name",
+      "input": {
+        "runner": "sideload",
+        "appName": "Sugar"
+      },
+      "expected": "GameLib-sideload-Sugar"
+    },
+    {
+      "id": "bottle-sideload-spaced",
+      "input": {
+        "runner": "sideload",
+        "appName": "My Game"
+      },
+      "expected": "GameLib-sideload-My_20Game"
+    },
+    {
+      "id": "bottle-sideload-dotted",
+      "input": {
+        "runner": "sideload",
+        "appName": "a.b"
+      },
+      "expected": "GameLib-sideload-a.b"
+    },
+    {
+      "id": "bottle-sideload-unicode",
+      "input": {
+        "runner": "sideload",
+        "appName": "ゲーム"
+      },
+      "expected": "GameLib-sideload-_e3_82_b2_e3_83_bc_e3_83_a0"
+    },
+    {
+      "id": "bottle-sideload-zero",
+      "input": {
+        "runner": "sideload",
+        "appName": "0"
+      },
+      "expected": "GameLib-sideload-0"
+    },
+    {
+      "id": "bottle-sideload-ten-digits",
+      "input": {
+        "runner": "sideload",
+        "appName": "1234567890"
+      },
+      "expected": "GameLib-sideload-1234567890"
+    },
+    {
+      "id": "bottle-sideload-eleven-digits",
+      "input": {
+        "runner": "sideload",
+        "appName": "12345678901"
+      },
+      "expected": "GameLib-sideload-12345678901"
+    },
+    {
+      "id": "bottle-sideload-leading-zeros",
+      "input": {
+        "runner": "sideload",
+        "appName": "000620"
+      },
+      "expected": "GameLib-sideload-000620"
+    },
+    {
+      "id": "bottle-sideload-exponent",
+      "input": {
+        "runner": "sideload",
+        "appName": "1e3"
+      },
+      "expected": "GameLib-sideload-1e3"
+    },
+    {
+      "id": "bottle-sideload-negative",
+      "input": {
+        "runner": "sideload",
+        "appName": "-1"
+      },
+      "expected": "GameLib-sideload--1"
+    },
+    {
+      "id": "bottle-sideload-fullwidth-digits",
+      "input": {
+        "runner": "sideload",
+        "appName": "６２０"
+      },
+      "expected": "GameLib-sideload-_ef_bc_96_ef_bc_92_ef_bc_90"
+    },
+    {
+      "id": "bottle-sideload-padded",
+      "input": {
+        "runner": "sideload",
+        "appName": " padded"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-sideload-trailing-pad",
+      "input": {
+        "runner": "sideload",
+        "appName": "padded "
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-sideload-slash",
+      "input": {
+        "runner": "sideload",
+        "appName": "a/b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-sideload-backslash",
+      "input": {
+        "runner": "sideload",
+        "appName": "a\\b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-sideload-nul",
+      "input": {
+        "runner": "sideload",
+        "appName": "a\u0000b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-sideload-parent",
+      "input": {
+        "runner": "sideload",
+        "appName": ".."
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-sideload-parent-inside",
+      "input": {
+        "runner": "sideload",
+        "appName": "a..b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-sideload-single-dot",
+      "input": {
+        "runner": "sideload",
+        "appName": "."
+      },
+      "expected": "GameLib-sideload-."
+    },
+    {
+      "id": "bottle-sideload-empty",
+      "input": {
+        "runner": "sideload",
+        "appName": ""
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-sideload-255-chars",
+      "input": {
+        "runner": "sideload",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        }
+      },
+      "expected": "GameLib-sideload-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-d4bebc85a9"
+    },
+    {
+      "id": "bottle-sideload-256-chars",
+      "input": {
+        "runner": "sideload",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 256
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-sideload-colon",
+      "input": {
+        "runner": "sideload",
+        "appName": "a:b"
+      },
+      "expected": "GameLib-sideload-a_3ab"
+    },
+    {
+      "id": "bottle-steam-steam-id",
+      "input": {
+        "runner": "steam",
+        "appName": "620"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-gog-id",
+      "input": {
+        "runner": "steam",
+        "appName": "1207658924"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-name",
+      "input": {
+        "runner": "steam",
+        "appName": "Sugar"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-spaced",
+      "input": {
+        "runner": "steam",
+        "appName": "My Game"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-dotted",
+      "input": {
+        "runner": "steam",
+        "appName": "a.b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-unicode",
+      "input": {
+        "runner": "steam",
+        "appName": "ゲーム"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-zero",
+      "input": {
+        "runner": "steam",
+        "appName": "0"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-ten-digits",
+      "input": {
+        "runner": "steam",
+        "appName": "1234567890"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-eleven-digits",
+      "input": {
+        "runner": "steam",
+        "appName": "12345678901"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-leading-zeros",
+      "input": {
+        "runner": "steam",
+        "appName": "000620"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-exponent",
+      "input": {
+        "runner": "steam",
+        "appName": "1e3"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-negative",
+      "input": {
+        "runner": "steam",
+        "appName": "-1"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-fullwidth-digits",
+      "input": {
+        "runner": "steam",
+        "appName": "６２０"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-padded",
+      "input": {
+        "runner": "steam",
+        "appName": " padded"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-trailing-pad",
+      "input": {
+        "runner": "steam",
+        "appName": "padded "
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-slash",
+      "input": {
+        "runner": "steam",
+        "appName": "a/b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-backslash",
+      "input": {
+        "runner": "steam",
+        "appName": "a\\b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-nul",
+      "input": {
+        "runner": "steam",
+        "appName": "a\u0000b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-parent",
+      "input": {
+        "runner": "steam",
+        "appName": ".."
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-parent-inside",
+      "input": {
+        "runner": "steam",
+        "appName": "a..b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-single-dot",
+      "input": {
+        "runner": "steam",
+        "appName": "."
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-empty",
+      "input": {
+        "runner": "steam",
+        "appName": ""
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-255-chars",
+      "input": {
+        "runner": "steam",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-256-chars",
+      "input": {
+        "runner": "steam",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 256
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-steam-colon",
+      "input": {
+        "runner": "steam",
+        "appName": "a:b"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-gog-40-chars",
+      "input": {
+        "runner": "gog",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 40
+          }
+        }
+      },
+      "expected": "GameLib-gog-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "id": "bottle-gog-52-chars",
+      "input": {
+        "runner": "gog",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 52
+          }
+        }
+      },
+      "expected": "GameLib-gog-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "id": "bottle-gog-53-chars",
+      "input": {
+        "runner": "gog",
+        "appName": {
+          "repeat": {
+            "char": "a",
+            "count": 53
+          }
+        }
+      },
+      "expected": "GameLib-gog-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-0c831cc5c8"
+    },
+    {
+      "id": "bottle-gog-100-chars",
+      "input": {
+        "runner": "gog",
+        "appName": {
+          "repeat": {
+            "char": "b",
+            "count": 100
+          }
+        }
+      },
+      "expected": "GameLib-gog-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-b785d00589"
+    },
+    {
+      "id": "bottle-gog-percent",
+      "input": {
+        "runner": "gog",
+        "appName": "a%b"
+      },
+      "expected": "GameLib-gog-a_25b"
+    },
+    {
+      "id": "bottle-gog-tilde",
+      "input": {
+        "runner": "gog",
+        "appName": "a~b"
+      },
+      "expected": "GameLib-gog-a_7eb"
+    },
+    {
+      "id": "bottle-gog-leading-dot",
+      "input": {
+        "runner": "gog",
+        "appName": ".hidden"
+      },
+      "expected": "GameLib-gog-.hidden"
+    },
+    {
+      "id": "bottle-gog-trailing-dot",
+      "input": {
+        "runner": "gog",
+        "appName": "trail."
+      },
+      "expected": "GameLib-gog-trail."
+    },
+    {
+      "id": "bottle-gog-accented",
+      "input": {
+        "runner": "gog",
+        "appName": "Ünï-ñ"
+      },
+      "expected": "GameLib-gog-_c3_9cn_c3_af-_c3_b1"
+    },
+    {
+      "id": "bottle-args-null",
+      "input": null,
+      "expected": null
+    },
+    {
+      "id": "bottle-args-string",
+      "input": "x",
+      "expected": null
+    },
+    {
+      "id": "bottle-args-number",
+      "input": 5,
+      "expected": null
+    },
+    {
+      "id": "bottle-args-array",
+      "input": [],
+      "expected": null
+    },
+    {
+      "id": "bottle-args-empty-object",
+      "input": {},
+      "expected": null
+    },
+    {
+      "id": "bottle-args-no-app-name",
+      "input": {
+        "runner": "gog"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-args-no-runner",
+      "input": {
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-args-runner-number",
+      "input": {
+        "runner": 5,
+        "appName": "1"
+      },
+      "expected": null
+    },
+    {
+      "id": "bottle-args-unknown-runner",
+      "input": {
+        "runner": "unknown",
+        "appName": "1"
+      },
+      "expected": null
+    }
+  ]
+}

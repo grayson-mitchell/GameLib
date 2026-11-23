@@ -1,0 +1,164 @@
+{
+  "op": "eligibility",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "game": {
+          "runner": "gog",
+          "appName": "1207658924",
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      {
+        "game": {
+          "runner": "legendary",
+          "appName": "Sugar",
+          "platform": "Windows"
+        },
+        "mac": true
+      },
+      {
+        "game": {
+          "runner": "nile",
+          "appName": "amzn1.x",
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      {
+        "game": {
+          "runner": "sideload",
+          "appName": "My Game",
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      {
+        "game": {
+          "runner": "steam",
+          "appName": "620",
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      {
+        "game": {
+          "runner": "gog",
+          "appName": "1",
+          "platform": "linux"
+        },
+        "mac": true
+      },
+      {
+        "game": {
+          "runner": "gog",
+          "appName": "1",
+          "platform": "Mac"
+        },
+        "mac": true
+      },
+      {
+        "game": {
+          "runner": "gog",
+          "appName": "1"
+        },
+        "mac": true
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "game": {
+          "runner": "gog",
+          "appName": "1207658924",
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      "key": "gog:1207658924"
+    },
+    {
+      "input": {
+        "game": {
+          "runner": "legendary",
+          "appName": "Sugar",
+          "platform": "Windows"
+        },
+        "mac": true
+      },
+      "key": "legendary:Sugar"
+    },
+    {
+      "input": {
+        "game": {
+          "runner": "nile",
+          "appName": "amzn1.x",
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      "key": "nile:amzn1.x"
+    },
+    {
+      "input": {
+        "game": {
+          "runner": "sideload",
+          "appName": "My Game",
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      "key": "sideload:My Game"
+    },
+    {
+      "input": {
+        "game": {
+          "runner": "steam",
+          "appName": "620",
+          "platform": "windows"
+        },
+        "mac": true
+      },
+      "key": null
+    },
+    {
+      "input": {
+        "game": {
+          "runner": "gog",
+          "appName": "1",
+          "platform": "linux"
+        },
+        "mac": true
+      },
+      "key": "gog:1"
+    },
+    {
+      "input": {
+        "game": {
+          "runner": "gog",
+          "appName": "1",
+          "platform": "Mac"
+        },
+        "mac": true
+      },
+      "key": "gog:1"
+    },
+    {
+      "input": {
+        "game": {
+          "runner": "gog",
+          "appName": "1"
+        },
+        "mac": true
+      },
+      "key": "gog:1"
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

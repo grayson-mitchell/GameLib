@@ -1,0 +1,71 @@
+{
+  "op": "tool-settings",
+  "platform": "mac",
+  "engines": "installed",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      },
+      "liveSet": null,
+      "result": {
+        "kind": "engine",
+        "key": "gog:1234",
+        "settings": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+            "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+            "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+          },
+          "enviromentOptions": []
+        }
+      },
+      "ensureCalls": []
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

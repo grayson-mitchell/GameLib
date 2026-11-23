@@ -1,0 +1,181 @@
+{
+  "op": "tool-settings",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "present",
+  "args": {
+    "items": [
+      {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "GameLib-gog-1234",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      },
+      {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "GameLib-gog-1234",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": true,
+        "ensure": "error"
+      },
+      {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "GameLib-gog-1234",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": true,
+        "ensure": "done"
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "GameLib-gog-1234",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      },
+      "liveSet": null,
+      "result": {
+        "kind": "unavailable",
+        "reason": "bottle-not-created"
+      },
+      "ensureCalls": []
+    },
+    {
+      "input": {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "GameLib-gog-1234",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": true,
+        "ensure": "error"
+      },
+      "liveSet": null,
+      "result": {
+        "kind": "unavailable",
+        "reason": "bottle-not-created"
+      },
+      "ensureCalls": [
+        {
+          "key": "gog:1234",
+          "bottleName": "GameLib-gog-1234",
+          "appName": "1234",
+          "runner": "gog"
+        }
+      ]
+    },
+    {
+      "input": {
+        "via": "game",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "GameLib-gog-1234",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": true,
+        "ensure": "done"
+      },
+      "liveSet": null,
+      "result": {
+        "kind": "engine",
+        "key": "gog:1234",
+        "settings": {
+          "wineCrossoverBottle": "GameLib-gog-1234",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "name": "CrossOver",
+            "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+          },
+          "enviromentOptions": []
+        }
+      },
+      "ensureCalls": [
+        {
+          "key": "gog:1234",
+          "bottleName": "GameLib-gog-1234",
+          "appName": "1234",
+          "runner": "gog"
+        }
+      ]
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}

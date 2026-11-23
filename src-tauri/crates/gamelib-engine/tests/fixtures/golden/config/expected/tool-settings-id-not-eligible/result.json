@@ -1,0 +1,234 @@
+{
+  "op": "tool-settings",
+  "platform": "mac",
+  "engines": "none",
+  "crossover": "absent",
+  "args": {
+    "items": [
+      {
+        "via": "id",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "Browser"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      },
+      {
+        "via": "id",
+        "game": {
+          "runner": "steam",
+          "appName": "620",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      },
+      {
+        "via": "id",
+        "game": {
+          "runner": "gog",
+          "appName": "../x",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      },
+      {
+        "via": "id",
+        "game": {
+          "runner": "unknown",
+          "appName": "1",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      }
+    ]
+  },
+  "outcome": [
+    {
+      "input": {
+        "via": "id",
+        "game": {
+          "runner": "gog",
+          "appName": "1234",
+          "platform": "Browser"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      },
+      "liveSet": null,
+      "result": {
+        "kind": "stored",
+        "settings": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        }
+      },
+      "ensureCalls": []
+    },
+    {
+      "input": {
+        "via": "id",
+        "game": {
+          "runner": "steam",
+          "appName": "620",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      },
+      "liveSet": null,
+      "result": {
+        "kind": "stored",
+        "settings": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        }
+      },
+      "ensureCalls": []
+    },
+    {
+      "input": {
+        "via": "id",
+        "game": {
+          "runner": "gog",
+          "appName": "../x",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      },
+      "liveSet": null,
+      "result": {
+        "kind": "stored",
+        "settings": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        }
+      },
+      "ensureCalls": []
+    },
+    {
+      "input": {
+        "via": "id",
+        "game": {
+          "runner": "unknown",
+          "appName": "1",
+          "platform": "windows"
+        },
+        "stored": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        },
+        "ensureBottle": false
+      },
+      "liveSet": null,
+      "result": {
+        "kind": "stored",
+        "settings": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "<HOME>/Games/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "name": "Odd Wine",
+            "bin": "<HOME>/odd/bin/wine"
+          },
+          "enviromentOptions": []
+        }
+      },
+      "ensureCalls": []
+    }
+  ],
+  "treeUnchanged": true,
+  "logs": []
+}
