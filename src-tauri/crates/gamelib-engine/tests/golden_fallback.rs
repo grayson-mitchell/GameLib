@@ -31,11 +31,13 @@ use std::time::Duration;
 use gamelib_core::process::{BoxFuture, LineSink, ProcSpec, SpecOutput, SpecRunner};
 use gamelib_engine::engines::{pinned_engine_paths, pinned_engine_root};
 use gamelib_engine::fallback::ensure::{
-    ensure_pinned_engine, ensure_pinned_engine_detailed, is_pinned_engine_installed, Caller,
-    EnsureArgs, EnsureReason, EnsureResult, PinnedEngineResult, Tap,
+    ensure_pinned_engine, ensure_pinned_engine_detailed, ensure_raw, is_pinned_engine_installed,
+    Caller, EnsureArgs, EnsureReason, EnsureResult, PinnedEngineResult, Tap,
 };
 use gamelib_engine::fallback::progress::{FallbackProgress, Phase};
-use gamelib_engine::fallback::prune::{prune_unpinned_engines, remove_guarded, Removal};
+use gamelib_engine::fallback::prune::{
+    prune_unpinned_engines, remove_guarded, sweep_stale_engine_temps, Removal, Sweep,
+};
 use gamelib_engine::fallback::Env;
 use gamelib_engine::fetch::{
     DownloadOutcome, Fetch, FetchError, FetchFuture, FetchRequest, FetchResponse, Progress,
@@ -51,7 +53,8 @@ use common::{check_floor, first_difference, read_json, Profile};
 /// `golden/fallback` holds 39 cases; a later edit may raise this, never lower it.
 const CASE_FLOOR: usize = 30;
 
-/// The cases that belong to the boot sweep (87-48).
+/// The cases that belong to the boot sweep (87-48): all of them replay; the list is what the test
+/// checks exists and the count floor for the sweep itself.
 const SWEEP_CASES: [&str; 3] = [
     "sweep-removes-temp-dirs",
     "sweep-no-root",
@@ -754,6 +757,37 @@ async fn run_case(case: &Value, archives: &Archives) {
             result.insert("before".into(), before);
             result.insert("after".into(), list_root(&profile));
         }
+        "sweep" => {
+            let before = list_root(&profile);
+            sweep_stale_engine_temps(&ctx);
+            result.insert("before".into(), before);
+            result.insert("after".into(), list_root(&profile));
+        }
+        "sweep-inflight" => {
+            // The download is started (it has joined its flight), then the sweep is called before
+            // anything else runs, as the oracle did; the install then finishes.
+            let mut flight = Box::pin(ensure_raw(
+                Env::from_ctx(&ctx),
+                &table,
+                &pin,
+                None,
+                Arc::new(|_p: &FallbackProgress| {}),
+            ));
+            assert!(futures_util::future::poll_immediate(&mut flight)
+                .await
+                .is_none());
+            let at_sweep = list_root(&profile);
+            let swept = sweep_stale_engine_temps(&ctx);
+            assert_eq!(swept, Sweep::Skipped);
+            let after_sweep = list_root(&profile);
+            let finished = flight.await;
+            result.insert("atSweep".into(), at_sweep);
+            result.insert("afterSweep".into(), after_sweep);
+            result.insert(
+                "finished".into(),
+                raw_value(&finished, &profile, &ctx, &pin),
+            );
+        }
         "installed" => {
             result.insert(
                 "installed".into(),
@@ -945,19 +979,14 @@ async fn run_case(case: &Value, archives: &Archives) {
 async fn every_fallback_golden_replays() {
     let archives = archives();
     let all = cases();
-    let replayed: Vec<&Value> = all
-        .iter()
-        .filter(|c| !SWEEP_CASES.contains(&id_of(c)))
-        .collect();
-    for case in &replayed {
+    for case in &all {
         run_case(case, &archives).await;
     }
-    // Every sweep case is named above and exists; the rest replay.
+    // Every sweep case exists, so none was dropped from the recording to make the replay pass.
     for id in SWEEP_CASES {
         assert!(all.iter().any(|c| id_of(c) == id), "{id}");
     }
-    assert_eq!(replayed.len() + SWEEP_CASES.len(), all.len());
-    check_floor("fallback goldens replayed", replayed.len(), 36).unwrap();
+    check_floor("fallback goldens replayed", all.len(), 39).unwrap();
 }
 
 #[test]

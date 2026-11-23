@@ -942,7 +942,7 @@ impl<F: Future> Future for CatchUnwind<'_, F> {
 
 /// The crate-owned runtime the synchronous entry point blocks on. Two workers, like
 /// `gamelib-steamcm`'s: the shell's `rustInvoke` workers may call in concurrently.
-fn runtime() -> Result<&'static Runtime, String> {
+pub(crate) fn runtime() -> Result<&'static Runtime, String> {
     static RUNTIME: OnceLock<Result<Runtime, String>> = OnceLock::new();
     RUNTIME
         .get_or_init(|| {
