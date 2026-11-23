@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-36-PLAN.md
-last_updated: "2026-11-23T11:27:32.657Z"
+stopped_at: Completed 87-37-PLAN.md
+last_updated: "2026-11-23T11:50:33.464Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 40023b902b7ffc108c193c6061f78c534191c29f
+state_head: 97a78977732aaa8cd13769f29d565228155c2cdb
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 37 of 59
+Plan: 38 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -446,6 +446,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P34 | 11 min | 2 tasks | 22 files |
 | Phase 87 P35 | 12 min | 2 tasks | 20 files |
 | Phase 87 P36 | 19min | 2 tasks | 33 files |
+| Phase 87 P37 | 23min | 2 tasks | 87 files |
 
 ## Accumulated Context
 
@@ -935,6 +936,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: Wine-command family flips through D-23 resolvers: runWineCommandForGame, runWineCommand and callTool are resolvers in engineWineResolvers.ts (deletedBy 98) over the wine_run_command_for_game, wine_run_command and wine_tool_call ops; wineToolsFlowRegistration.ts is deleted and registerEngineWineResolvers holds the releasesInfoReady listener
 - [Phase 87]: services/gameCommandFacts.ts is the one place TypeScript gathers a game's wine-command facts, keeping the TS order (never resolve the bottle-creating tool settings for a command a guard will refuse); the guards stay Rust's; callTool on Windows reads the game as before so Rust refuses it as native
 - [Phase 87]: The launcher's known-fix runInPrefix step calls the shared runWineCommandForGame resolver; launcher.ts names no toolsFrom and services/toolsFrom.ts and createTools have no live caller, so 87-37 deletes them with tools/
+- [Phase 87]: 87-37: the engine's synchronous wineManagerReleases() opens the Rust-written wine-downloader-info.json (engine/wineManagerReleases.ts, EngineServices paths gain userData) instead of keeping the TS mirror; deleted with the engine TS in 87-56
+- [Phase 87]: 87-37: ToolsDeps survives as EngineSourceSlices and Tools['DXVK']['installRemove'] as InstallRemove; toolsState and winetricksQueue left BootServices and ManagerDeps
 
 ### Pending Todos
 
@@ -1215,8 +1218,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T11:27:30.193Z
-Stopped at: Completed 87-36-PLAN.md
+Last session: 2026-11-23T11:50:31.051Z
+Stopped at: Completed 87-37-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
