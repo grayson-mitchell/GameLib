@@ -741,6 +741,7 @@ engine_op_arms! {
     rpc_run_tool => "engine_run_tool",
     rpc_cancel => "engine_cancel",
     rpc_resolve_tool_settings => "engine_resolve_tool_settings",
+    rpc_non_crossover_engine => "engine_non_crossover_engine",
 }
 
 #[cfg(test)]
@@ -1238,6 +1239,7 @@ mod tests {
             (rpc_run_tool, "engine_run_tool"),
             (rpc_cancel, "engine_cancel"),
             (rpc_resolve_tool_settings, "engine_resolve_tool_settings"),
+            (rpc_non_crossover_engine, "engine_non_crossover_engine"),
         ] {
             for bad in [
                 vec![],

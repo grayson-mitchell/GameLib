@@ -7,10 +7,8 @@
  * engine state (`steamEngineStateFacts`). Nothing here is a callback and no Rust code calls back into it.
  */
 import type { AppPaths } from 'backend/process/context'
-import type { EngineServices } from 'backend/engine/engineServices'
 import type { PrepareBottleCall } from 'backend/engine/prepareBottle'
-import { readStoredGameConfig } from 'backend/engine/engineConfig'
-import type { EngineConfigDeps } from 'backend/engine/engineConfig'
+import type { GameSettings } from 'common/types'
 import type { EngineSelection, EngineState } from 'common/types/engine'
 import type { MonitorPhase } from 'backend/enginewine/decision'
 import type { SteamEngineBottle } from '../bottle'
@@ -19,6 +17,7 @@ import {
   findBridgeInstallBottle,
   getBridgeBottleSettings
 } from '../bridgeBottle'
+import type { BridgeBottleDeps } from '../bridgeBottle'
 import { steamWineToolsBottle } from '../bridgeWineTools'
 import { readBridgeVerdict } from '../bridge/bridgeVerdict'
 import type { SteamStoresDeps } from '../library/installRoot'
@@ -28,21 +27,16 @@ import { readStoredTitleConfig } from '../titleSettings'
  * 59-UAT G11 / D-08: the title's stored override, read straight from its GameConfig file.
  * `engineOverride` (written by the generic Engine control) wins; the older
  * `steamEngineOverride` is the fallback so existing Steam choices keep working. Unvalidated:
- * callers pass the value through parseEngineOverride.
+ * callers pass the value through parseEngineOverride. One read of the title's entry serves both keys (87-56a).
  */
 export function readSteamEngineOverride(
-  deps: { paths: Pick<AppPaths, 'gamesConfigPath'> } & Pick<
-    EngineConfigDeps,
-    'storeRoot'
-  >,
+  deps: Parameters<typeof readStoredTitleConfig>[1],
   appId: string
 ): unknown {
-  const generic = readStoredGameConfig(appId, {
-    gamesConfigPath: deps.paths.gamesConfigPath,
-    storeRoot: deps.storeRoot
-  })?.engineOverride
+  const entry = readStoredTitleConfig(appId, deps)
+  const generic = entry?.engineOverride
   if (typeof generic === 'string') return generic
-  return readStoredTitleConfig(appId, deps)?.steamEngineOverride
+  return entry?.steamEngineOverride
 }
 
 /**
@@ -58,10 +52,7 @@ export interface SteamEngineFacts {
 }
 
 export function steamEngineFacts(
-  services: {
-    paths: Pick<AppPaths, 'gamesConfigPath'>
-    storeRoot?: EngineConfigDeps['storeRoot']
-  } & SteamEngineBottle,
+  services: Parameters<typeof readStoredTitleConfig>[1] & SteamEngineBottle,
   key: string
 ): SteamEngineFacts {
   return {
@@ -89,7 +80,11 @@ export function steamWineBinHints(services: {
  * `fallbackSettings` is the global game settings the DXVK step builds over.
  */
 export function steamPrepareFacts(
-  services: EngineServices & SteamEngineBottle,
+  services: SteamEngineBottle & {
+    paths: BridgeBottleDeps['paths']
+    engineRuntime: BridgeBottleDeps['engineRuntime']
+    globalGameSettings: () => GameSettings
+  },
   appId: string,
   next: EngineSelection
 ): Pick<

@@ -1,7 +1,7 @@
 {
   "jestMock": {
     "src/backend/dialog/__tests__/showDialogBoxModalAutoPushFailure.test.ts": 2,
-    "src/backend/services/__tests__/gameCommandFacts.test.ts": 5,
+    "src/backend/services/__tests__/gameCommandFacts.test.ts": 4,
     "src/backend/sidecar/__tests__/runnerMiscFlows.test.ts": 4
   }
 }

@@ -7,23 +7,23 @@ import { gatherGameCommandFacts } from '../gameCommandFacts'
 import type { GameCommandSource } from '../gameCommandFacts'
 
 const resolveToolTarget = jest.fn()
-const resolveToolSettingsForId = jest.fn()
+const resolveEngineToolSettings = jest.fn()
 const isSteamWineToolsEligible = jest.fn()
 
 jest.mock('../winetricksTarget', () => ({
+  ...jest.requireActual<object>('../winetricksTarget'),
   resolveToolTarget: (...a: unknown[]) => resolveToolTarget(...a)
 }))
-jest.mock('backend/engine/toolSettings', () => ({
-  resolveToolSettingsForId: (...a: unknown[]) => resolveToolSettingsForId(...a)
+jest.mock('backend/enginewine/toolSettings', () => ({
+  resolveEngineToolSettings: (...a: unknown[]) =>
+    resolveEngineToolSettings(...a)
 }))
 jest.mock('backend/storeManagers/steam/bridgeWineTools', () => ({
   isSteamWineToolsEligible: (...a: unknown[]) => isSteamWineToolsEligible(...a)
 }))
-jest.mock('../engineServices', () => ({
-  steamEngineServicesFrom: (source: unknown) => ({ services: source })
-}))
 
 const SETTINGS = { winePrefix: '/bottle' }
+const requestRustInvoke = jest.fn()
 
 function makeSource(
   game: {
@@ -34,6 +34,7 @@ function makeSource(
 ): GameCommandSource {
   const source = {
     paths: { userHome: '/home/u' },
+    engineRuntime: { requestRustInvoke },
     gameConfigs: {
       get: () => ({ getSettings: () => Promise.resolve({ stored: true }) })
     },
@@ -61,13 +62,13 @@ function makeSource(
 
 beforeEach(() => {
   resolveToolTarget.mockReset()
-  resolveToolSettingsForId.mockReset()
+  resolveEngineToolSettings.mockReset()
   isSteamWineToolsEligible.mockReset()
   resolveToolTarget.mockImplementation(
     (_source: unknown, runner: string, appName: string) =>
       Promise.resolve({ runner, appName, settings: SETTINGS })
   )
-  resolveToolSettingsForId.mockResolvedValue({
+  resolveEngineToolSettings.mockResolvedValue({
     kind: 'stored',
     settings: SETTINGS
   })
@@ -198,18 +199,22 @@ describe('gatherGameCommandFacts for a pending install (CR-04)', () => {
       steamEligible: true,
       isNative: false
     })
-    expect(resolveToolSettingsForId).toHaveBeenCalledWith(
-      { services: source },
-      { runner: 'sideload', appName: 'a-9', platform: 'Windows' },
-      { stored: true },
-      { ensureBottle: true }
+    expect(resolveEngineToolSettings).toHaveBeenCalledWith(
+      { requestRustInvoke },
+      {
+        runner: 'sideload',
+        appName: 'a-9',
+        platform: 'Windows',
+        stored: { stored: true },
+        ensureBottle: true
+      }
     )
     expect(getGameCalls).toEqual([])
     expect(resolveToolTarget).not.toHaveBeenCalled()
   })
 
   it('answers the reason when the resolver finds no usable environment', async () => {
-    resolveToolSettingsForId.mockResolvedValue({
+    resolveEngineToolSettings.mockResolvedValue({
       kind: 'unavailable',
       reason: 'invalid-prefix'
     })
@@ -228,7 +233,7 @@ describe('gatherGameCommandFacts for a pending install (CR-04)', () => {
       pendingInstall: true
     })
     expect(facts).toHaveProperty('unavailable')
-    expect(resolveToolSettingsForId).not.toHaveBeenCalled()
+    expect(resolveEngineToolSettings).not.toHaveBeenCalled()
     expect(resolveToolTarget).not.toHaveBeenCalled()
   })
 })

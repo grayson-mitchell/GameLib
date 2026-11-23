@@ -2,9 +2,15 @@
  * The tool-settings shim (Phase 87, 87-56a, D-03, D-23): one typed call carrying exactly what the caller resolved. The
  * shape is pinned by `engineWineShimSchedule.test.ts`; this file pins what crosses and what comes back untouched.
  */
-import { RUST_ENGINE_RESOLVE_TOOL_SETTINGS } from 'common/types/sidecarTransport'
+import {
+  RUST_ENGINE_NON_CROSSOVER_ENGINE,
+  RUST_ENGINE_RESOLVE_TOOL_SETTINGS
+} from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import { resolveEngineToolSettings } from '../toolSettings'
+import {
+  resolveEngineToolSettings,
+  resolveNonCrossoverEngine
+} from '../toolSettings'
 
 function fakeTransport(answer: unknown): RustInvokeDeps & {
   calls: Array<[string, unknown[]]>
@@ -53,5 +59,36 @@ describe('resolveEngineToolSettings', () => {
         ensureBottle: false
       })
     ).rejects.toThrow('engine_resolve_tool_settings:bad-args')
+  })
+})
+
+describe('resolveNonCrossoverEngine', () => {
+  it('sends the engine id as one object and resolves the engine, or null, untouched', async () => {
+    const engine = { wineBin: '/w/wine', wineserverBin: '/w/wineserver' }
+    const deps = fakeTransport(engine)
+    await expect(
+      resolveNonCrossoverEngine(deps, { engineId: 'pinned:wine-staging-11.20' })
+    ).resolves.toBe(engine)
+    expect(deps.calls).toEqual([
+      [
+        RUST_ENGINE_NON_CROSSOVER_ENGINE,
+        [{ engineId: 'pinned:wine-staging-11.20' }]
+      ]
+    ])
+    await expect(
+      resolveNonCrossoverEngine(fakeTransport(null), { engineId: 'automatic' })
+    ).resolves.toBeNull()
+  })
+
+  it('rejects with the transport failure', async () => {
+    const deps: RustInvokeDeps = {
+      requestRustInvoke: (() =>
+        Promise.reject(
+          new Error('engine_non_crossover_engine:bad-args')
+        )) as unknown as RustInvokeDeps['requestRustInvoke']
+    }
+    await expect(
+      resolveNonCrossoverEngine(deps, { engineId: '' })
+    ).rejects.toThrow('engine_non_crossover_engine:bad-args')
   })
 })

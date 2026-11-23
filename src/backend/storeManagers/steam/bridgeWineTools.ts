@@ -15,6 +15,7 @@
  * Sidecar exit contract: nothing runs at import, no timers.
  */
 import { engineSelectionView } from 'backend/enginewine/selectionView'
+import { resolveNonCrossoverEngine } from 'backend/enginewine/toolSettings'
 import type { AppPaths } from 'backend/process/context'
 import type { GameSettings } from 'common/types'
 import { logError, LogPrefix } from 'backend/logger'
@@ -24,17 +25,35 @@ import {
   readBottleEngineMarkerKind
 } from 'backend/enginewine/twin'
 import { parseEngineOverride } from 'backend/engine/engineIds'
-import type { NonCrossoverEngine } from 'common/types/engine'
-import type { EngineServices } from 'backend/engine/engineServices'
-import { nonCrossoverEngineFor } from 'backend/engine/toolSettings'
-import type { ToolSettingsResult } from 'backend/engine/toolSettings'
+import type {
+  NonCrossoverEngine,
+  ToolSettingsResult
+} from 'common/types/engine'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import type { SteamEngineBottle } from './bottle'
 import { readSteamEngineOverride } from './engine/steamEngineDeps'
+import { pinnedEngineReader } from './engine/pinnedEngine'
 import {
   bridgeBottleNameFor,
   findBridgeInstallBottle,
   getBridgeBottleSettings
 } from './bridgeBottle'
+import type { BridgeBottleDeps } from './bridgeBottle'
+
+/**
+ * What the Steam Wine-tool path reads (87-56a): the path roots, the Steam bottle and launch slices, the global settings
+ * and the engine runtime's selection registry and Rust transport. A slice of the engine services' source, so the caller
+ * hands its own source straight through.
+ */
+export type SteamWineToolsSource = SteamEngineBottle & {
+  paths: BridgeBottleDeps['paths'] &
+    Pick<AppPaths, 'toolsPath' | 'gamesConfigPath'>
+  config: { getSettings(): GameSettings }
+  engineRuntime: BridgeBottleDeps['engineRuntime'] & {
+    requestRustInvoke: RustInvokeDeps['requestRustInvoke']
+  }
+  storeRoot?: Parameters<typeof readSteamEngineOverride>[0]['storeRoot']
+}
 
 export interface SteamWineToolsDeps {
   isMac: boolean
@@ -44,13 +63,29 @@ export interface SteamWineToolsDeps {
   bridgeSettings(appId: string): GameSettings
   markerKind(bottle: string): 'crossover' | 'non-crossover' | null
   engineId(appId: string): string
-  nonCrossoverEngine(engineId: string): NonCrossoverEngine | null
+  nonCrossoverEngine(engineId: string): Promise<NonCrossoverEngine | null>
   fallbackSettings(bottle: string, engine: NonCrossoverEngine): GameSettings
   logError(message: string): void
 }
 
+/** Narrows `engine_non_crossover_engine`'s reply: an engine, `null` for "not installed"; anything else rejects. */
+function nonCrossoverEngineFrom(reply: unknown): NonCrossoverEngine | null {
+  if (reply === null) return null
+  const engine = reply as Partial<NonCrossoverEngine> | undefined
+  if (
+    typeof engine === 'object' &&
+    typeof engine.wineBin === 'string' &&
+    typeof engine.wineserverBin === 'string' &&
+    typeof engine.label === 'string' &&
+    typeof engine.version === 'string'
+  ) {
+    return reply as NonCrossoverEngine
+  }
+  throw new Error('engine_non_crossover_engine:unexpected-reply')
+}
+
 function defaultSteamWineToolsDeps(
-  services: EngineServices & SteamEngineBottle
+  services: SteamWineToolsSource
 ): SteamWineToolsDeps {
   return {
     isMac,
@@ -64,7 +99,7 @@ function defaultSteamWineToolsDeps(
     bridgeSettings: (appId) =>
       getBridgeBottleSettings(
         {
-          config: { getSettings: () => services.globalGameSettings() },
+          config: services.config,
           steamBottle: services.steamBottle,
           paths: services.paths,
           engineRuntime: services.engineRuntime,
@@ -74,20 +109,26 @@ function defaultSteamWineToolsDeps(
       ),
     markerKind: (bottle) =>
       readBottleEngineMarkerKind(
-        { paths: services.paths, fallback: services.engineRuntime.fallback },
+        { paths: services.paths, fallback: pinnedEngineReader(services.paths) },
         bottle
       ),
     // A cycle with steamEngineDeps (which imports this module); only used at call time.
     engineId: (appId) =>
       parseEngineOverride(readSteamEngineOverride(services, appId)),
     logError: (message) => logError(message, LogPrefix.Steam),
-    nonCrossoverEngine: (id) => nonCrossoverEngineFor(services, id),
+    nonCrossoverEngine: async (id) =>
+      nonCrossoverEngineFrom(
+        await resolveNonCrossoverEngine(
+          { requestRustInvoke: services.engineRuntime.requestRustInvoke },
+          { engineId: id }
+        )
+      ),
     fallbackSettings: (bottle, engine) =>
       buildFallbackGameSettings(
         services.paths,
         bottle,
         engine,
-        services.globalGameSettings()
+        services.config.getSettings()
       )
   }
 }
@@ -119,9 +160,8 @@ export function isSteamWineToolsEligible(
   )
 }
 
-// eslint-disable-next-line @typescript-eslint/require-await -- Promise-returning to match ToolSettingsResult callers
 export async function resolveSteamWineToolSettings(
-  services: EngineServices & SteamEngineBottle,
+  services: SteamWineToolsSource,
   appId: string,
   overrides: Partial<SteamWineToolsDeps> = {}
 ): Promise<ToolSettingsResult> {
@@ -139,7 +179,7 @@ export async function resolveSteamWineToolSettings(
       id.startsWith('pinned:') ||
       id.startsWith('wine-manager:')
     if (wantsNonCrossover) {
-      const engine = d.nonCrossoverEngine(id)
+      const engine = await d.nonCrossoverEngine(id)
       if (!engine) return { kind: 'unavailable', reason: 'no-engine' }
       settings = d.fallbackSettings(bottle, engine)
     } else {

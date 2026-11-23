@@ -209,6 +209,7 @@ pub(crate) enum RustInvokeChannel {
     EngineRunTool,
     EngineCancel,
     EngineResolveToolSettings,
+    EngineNonCrossoverEngine,
 }
 
 impl RustInvokeChannel {
@@ -399,6 +400,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineRunTool,
         RustInvokeChannel::EngineCancel,
         RustInvokeChannel::EngineResolveToolSettings,
+        RustInvokeChannel::EngineNonCrossoverEngine,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -589,6 +591,7 @@ impl RustInvokeChannel {
             "engine_run_tool" => Some(RustInvokeChannel::EngineRunTool),
             "engine_cancel" => Some(RustInvokeChannel::EngineCancel),
             "engine_resolve_tool_settings" => Some(RustInvokeChannel::EngineResolveToolSettings),
+            "engine_non_crossover_engine" => Some(RustInvokeChannel::EngineNonCrossoverEngine),
             _ => None,
         }
     }
@@ -781,6 +784,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineRunTool => "engine_run_tool",
             RustInvokeChannel::EngineCancel => "engine_cancel",
             RustInvokeChannel::EngineResolveToolSettings => "engine_resolve_tool_settings",
+            RustInvokeChannel::EngineNonCrossoverEngine => "engine_non_crossover_engine",
         }
     }
 }
@@ -3900,6 +3904,18 @@ pub(crate) struct EngineResolveToolSettingsArgs {
 impl EngineResolveToolSettingsArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let request = serde_json::from_value(args.first().ok_or_else(|| "engine_resolve_tool_settings:bad-args".to_string())?.clone()).map_err(|_| "engine_resolve_tool_settings:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineNonCrossoverEngineArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineNonCrossoverEngineArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_non_crossover_engine:bad-args".to_string())?.clone()).map_err(|_| "engine_non_crossover_engine:bad-args".to_string())?;
         Ok(Self { request })
     }
 }

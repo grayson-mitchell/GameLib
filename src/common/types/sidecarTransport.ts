@@ -1403,6 +1403,8 @@ export const RUST_ENGINE_CANCEL = 'engine_cancel' as const
  */
 export const RUST_ENGINE_RESOLVE_TOOL_SETTINGS =
   'engine_resolve_tool_settings' as const
+export const RUST_ENGINE_NON_CROSSOVER_ENGINE =
+  'engine_non_crossover_engine' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -1793,7 +1795,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_DEADLINE_CANCEL,
   RUST_ENGINE_RUN_TOOL,
   RUST_ENGINE_CANCEL,
-  RUST_ENGINE_RESOLVE_TOOL_SETTINGS
+  RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
+  RUST_ENGINE_NON_CROSSOVER_ENGINE
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

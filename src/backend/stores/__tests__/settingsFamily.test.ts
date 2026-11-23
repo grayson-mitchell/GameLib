@@ -23,7 +23,6 @@ import { join } from 'path'
 import tableFile from 'common/types/ipc/storeTable.json'
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { createGlobalConfig } from '../../config'
-import { readStoredGameConfig } from '../../engine/engineConfig'
 import { resyncSettingsMirror } from '../../settingsMirrorResync'
 import { readStoredTitleConfig } from '../../storeManagers/steam/titleSettings'
 import { createStores } from '../createStores'
@@ -234,7 +233,7 @@ describe('the direct per-game readers see a document written a moment earlier', 
     explicit: true
   })
 
-  it('engineConfig.readStoredGameConfig and steam readStoredTitleConfig read through the cell before any ack', () => {
+  it('steam readStoredTitleConfig reads (the generic engineOverride key and the Steam keys alike) through the cell before any ack', () => {
     const { root, frames } = build({ silent: true })
     const path = join(gamesConfig(), `${APP}.json`)
     writeSettingsDoc(root, path, gameDoc('automatic'))
@@ -243,26 +242,16 @@ describe('the direct per-game readers see a document written a moment earlier', 
     ])
     expect(existsSync(path)).toBe(false)
 
-    expect(
-      readStoredGameConfig(APP, {
-        gamesConfigPath: gamesConfig(),
-        storeRoot: root
-      })?.engineOverride
-    ).toBe('automatic')
-    expect(
+    const read = () =>
       readStoredTitleConfig(APP, {
         paths: { gamesConfigPath: gamesConfig() },
         storeRoot: root
-      })?.steamOverlayOverride
-    ).toBe('off')
+      })
+    expect(read()?.engineOverride).toBe('automatic')
+    expect(read()?.steamOverlayOverride).toBe('off')
 
     writeSettingsDoc(root, path, gameDoc('crossover'))
-    expect(
-      readStoredGameConfig(APP, {
-        gamesConfigPath: gamesConfig(),
-        storeRoot: root
-      })?.engineOverride
-    ).toBe('crossover')
+    expect(read()?.engineOverride).toBe('crossover')
   })
 
   it('without the root (a test caller) they read the file, as before', () => {
@@ -271,13 +260,10 @@ describe('the direct per-game readers see a document written a moment earlier', 
       join(gamesConfig(), `${APP}.json`),
       JSON.stringify(gameDoc('automatic'), null, 2)
     )
-    expect(
-      readStoredGameConfig(APP, { gamesConfigPath: gamesConfig() })
-        ?.engineOverride
-    ).toBe('automatic')
-    expect(
-      readStoredTitleConfig(APP, { paths: { gamesConfigPath: gamesConfig() } })
-        ?.steamOverlayOverride
-    ).toBe('off')
+    const read = readStoredTitleConfig(APP, {
+      paths: { gamesConfigPath: gamesConfig() }
+    })
+    expect(read?.engineOverride).toBe('automatic')
+    expect(read?.steamOverlayOverride).toBe('off')
   })
 })

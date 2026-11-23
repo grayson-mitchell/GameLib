@@ -19,10 +19,7 @@ import { hasCapability } from 'common/storeCapabilities'
 import type { ToolSettingsResult } from 'common/types/engine'
 import { resolveEngineToolSettings } from 'backend/enginewine/toolSettings'
 import { logError, LogPrefix } from 'backend/logger'
-import {
-  steamEngineServicesFrom,
-  type EngineServicesSource
-} from './engineServices'
+import type { EngineServicesSource } from './engineServices'
 
 /** What Rust's `TargetArg` takes: the game and exactly one of the tool settings or the reason there are none. */
 export type WinetricksTarget =
@@ -95,10 +92,7 @@ export async function resolveToolTarget(
   if (hasCapability(runner, 'usesBottleRuntime')) {
     const { resolveSteamWineToolSettings } =
       await import('backend/storeManagers/steam/bridgeWineTools')
-    const resolved = await resolveSteamWineToolSettings(
-      steamEngineServicesFrom(source),
-      appName
-    )
+    const resolved = await resolveSteamWineToolSettings(source, appName)
     return resolved.kind === 'unavailable'
       ? { runner, appName, unavailable: resolved.reason }
       : { runner, appName, settings: resolved.settings }

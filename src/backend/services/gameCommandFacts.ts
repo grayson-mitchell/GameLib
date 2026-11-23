@@ -19,13 +19,14 @@
 import type { Runner } from 'common/types'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import { isWindows } from 'backend/constants/environment'
-import { resolveToolSettingsForId } from 'backend/engine/toolSettings'
+import { resolveEngineToolSettings } from 'backend/enginewine/toolSettings'
 import type { AppPaths } from 'backend/process/context'
-import { resolveToolTarget, type WinetricksTarget } from './winetricksTarget'
 import {
-  steamEngineServicesFrom,
-  type EngineServicesSource
-} from './engineServices'
+  resolveToolTarget,
+  toolSettingsResultFrom,
+  type WinetricksTarget
+} from './winetricksTarget'
+import type { EngineServicesSource } from './engineServices'
 
 /**
  * What Rust's `ForGameArgs` takes beyond the command: the game, exactly one of the tool settings or the reason there
@@ -95,11 +96,18 @@ export async function gatherGameCommandFacts(
       return unresolved(runner, appName, 'not-sideload')
     }
     const stored = await source.gameConfigs.get(appName).getSettings()
-    const resolved = await resolveToolSettingsForId(
-      steamEngineServicesFrom(source),
-      { runner: 'sideload', appName, platform: 'Windows' },
-      stored,
-      { ensureBottle: true }
+    // Rust decides, creating the bottle the installer is about to run in (87-56a, D-23).
+    const resolved = toolSettingsResultFrom(
+      await resolveEngineToolSettings(
+        { requestRustInvoke: source.engineRuntime.requestRustInvoke },
+        {
+          runner: 'sideload',
+          appName,
+          platform: 'Windows',
+          stored,
+          ensureBottle: true
+        }
+      )
     )
     return resolved.kind === 'unavailable'
       ? unresolved(runner, appName, resolved.reason)

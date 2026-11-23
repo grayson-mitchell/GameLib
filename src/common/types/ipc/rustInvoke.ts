@@ -143,6 +143,7 @@ import {
   RUST_ENGINE_RUN_TOOL,
   RUST_ENGINE_CANCEL,
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
+  RUST_ENGINE_NON_CROSSOVER_ENGINE,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -990,7 +991,9 @@ export const rustInvokeArgs = {
   // Phase 87 (87-56a, D-23): the settings a Wine tool acts on for a game. One object, decoded strictly by the crate
   // (`deny_unknown_fields`); the crate derives the engine key and the bottle name itself and creates a bottle only
   // through the per-game flight.
-  [RUST_ENGINE_RESOLVE_TOOL_SETTINGS]: engineOpRequest
+  [RUST_ENGINE_RESOLVE_TOOL_SETTINGS]: engineOpRequest,
+  // Phase 87 (87-56a): the engine an id runs on, one `{engineId}` object the crate decodes strictly; a read.
+  [RUST_ENGINE_NON_CROSSOVER_ENGINE]: engineOpRequest
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

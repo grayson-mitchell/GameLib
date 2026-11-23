@@ -139,6 +139,7 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/bridgeKnownFixes.ts',
   'src/backend/storeManagers/steam/bridgeWineTools.ts',
   'src/backend/storeManagers/steam/directLaunch/directLaunchProbes.ts',
+  'src/backend/storeManagers/steam/engine/pinnedEngine.ts',
   'src/backend/storeManagers/steam/gameBridgeLaunch.ts',
   'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts',
   'src/backend/storeManagers/steam/gameEngineDialogs.ts',
@@ -200,10 +201,13 @@ const RUN_TOOL_SHIM_IMPORTERS: readonly string[] = [
 ]
 /**
  * Every non-test importer of `enginewine/toolSettings.ts` (the check is per file, so every row of that file lists them
- * all): the Winetricks and Run EXE target (87-56a).
+ * all): the Winetricks and Run EXE target, the sideload Run installer's pending install and the Steam Wine-tool engine
+ * (87-56a).
  */
 const TOOL_SETTINGS_SHIM_IMPORTERS: readonly string[] = [
-  'src/backend/services/winetricksTarget.ts'
+  'src/backend/services/gameCommandFacts.ts',
+  'src/backend/services/winetricksTarget.ts',
+  'src/backend/storeManagers/steam/bridgeWineTools.ts'
 ]
 /**
  * Every non-test importer of `enginewine/state.ts` (the check is per file, so every row of that file lists them all): the
@@ -612,6 +616,15 @@ const SCHEDULE: readonly ScheduleRow[] = [
     file: 'src/backend/enginewine/toolSettings.ts',
     shape: 'shim',
     channel: 'RUST_ENGINE_RESOLVE_TOOL_SETTINGS',
+    callers: TOOL_SETTINGS_SHIM_IMPORTERS,
+    deletedBy: 98
+  },
+  // 87-56a: the engine an id runs on, for the Steam Wine-tool path (`steam/bridgeWineTools.ts`).
+  {
+    name: 'resolveNonCrossoverEngine',
+    file: 'src/backend/enginewine/toolSettings.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_NON_CROSSOVER_ENGINE',
     callers: TOOL_SETTINGS_SHIM_IMPORTERS,
     deletedBy: 98
   },

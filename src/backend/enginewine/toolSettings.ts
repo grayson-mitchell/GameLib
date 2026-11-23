@@ -1,5 +1,8 @@
 import type { GameSettings, InstallPlatform, Runner } from 'common/types'
-import { RUST_ENGINE_RESOLVE_TOOL_SETTINGS } from 'common/types/sidecarTransport'
+import {
+  RUST_ENGINE_NON_CROSSOVER_ENGINE,
+  RUST_ENGINE_RESOLVE_TOOL_SETTINGS
+} from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
 /**
@@ -31,4 +34,15 @@ export async function resolveEngineToolSettings(
   request: EngineToolSettingsRequest
 ): Promise<unknown> {
   return deps.requestRustInvoke(RUST_ENGINE_RESOLVE_TOOL_SETTINGS, [request])
+}
+
+/**
+ * The built-in or Wine Manager engine an engine id runs on. Resolves the `NonCrossoverEngine` JSON, or `null` when it is
+ * not installed, as an unknown (the caller narrows it). Rejects with Rust's category word for an argument it refused.
+ */
+export async function resolveNonCrossoverEngine(
+  deps: RustInvokeDeps,
+  request: { engineId: string }
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_ENGINE_NON_CROSSOVER_ENGINE, [request])
 }

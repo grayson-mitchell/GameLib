@@ -299,5 +299,8 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::EngineResolveToolSettings => {
             engine_dispatch::rpc_resolve_tool_settings(args)
         }
+        RustInvokeChannel::EngineNonCrossoverEngine => {
+            engine_dispatch::rpc_non_crossover_engine(args)
+        }
     }
 }

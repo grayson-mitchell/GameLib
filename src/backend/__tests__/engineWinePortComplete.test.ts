@@ -463,7 +463,7 @@ const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
   bottleLedger: [],
   crossoverLocation: [],
   demoStatus: [],
-  engineConfig: ['src/backend/storeManagers/steam/engine/steamEngineDeps.ts'],
+  engineConfig: [],
   engineDecision: [],
   engineEligibility: [],
   engineIds: [
@@ -487,11 +487,7 @@ const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
     'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
     'src/backend/storeManagers/steam/provisionBottle.ts'
   ],
-  engineServices: [
-    'src/backend/services/engineServices.ts',
-    'src/backend/storeManagers/steam/bridgeWineTools.ts',
-    'src/backend/storeManagers/steam/engine/steamEngineDeps.ts'
-  ],
+  engineServices: ['src/backend/services/engineServices.ts'],
   engineState: [
     'src/backend/launcher.ts',
     'src/backend/services/types.ts',
@@ -525,10 +521,7 @@ const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
   ],
   runTool: [],
   testedCrossoverVersions: [],
-  toolSettings: [
-    'src/backend/services/gameCommandFacts.ts',
-    'src/backend/storeManagers/steam/bridgeWineTools.ts'
-  ],
+  toolSettings: [],
   wineManagerReleases: ['src/backend/services/engineServices.ts']
 }
 
@@ -539,7 +532,6 @@ const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
  */
 const ENGINE_RUNTIME_MEMBER_READS: Record<string, readonly string[]> = {
   'src/backend/sidecar/bootstrap.ts': ['crossover'],
-  'src/backend/storeManagers/steam/bridgeWineTools.ts': ['fallback'],
   'src/backend/storeManagers/steam/gameEngineDialogs.ts': ['fallback'],
   'src/backend/storeManagers/steam/gameInstall.ts': ['fallback'],
   'src/backend/storeManagers/steam/gameLaunch.ts': ['fallback', 'registry']

@@ -75,6 +75,7 @@ pub const OPS: &[&str] = &[
     "engine_ledger_mark_stopped",
     "engine_list_options",
     "engine_list_override_options",
+    "engine_non_crossover_engine",
     "engine_notice_dismiss",
     "engine_per_game_bottle_name",
     "engine_pins",
@@ -323,6 +324,15 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
             )
             .await;
             Ok(result.to_value())
+        }
+        // The built-in or Wine Manager engine an engine id runs on (`nonCrossoverEngineFor`): `null` when it is not
+        // installed. A read: the Steam Wine-tool path asks it for a pinned or Wine Manager override.
+        "engine_non_crossover_engine" => {
+            let request: NonCrossoverEngineRequest = decode(op, args)?;
+            let engine = tool_settings::non_crossover_engine_for(ctx, &request.engine_id);
+            engine
+                .map(|engine| serde_json::to_value(engine).map_err(|_| format!("{op}:encode")))
+                .unwrap_or(Ok(Value::Null))
         }
         // Where CrossOver's `bin` directory is (D-04): the hinted wine binaries, the memo, the two default
         // install locations, then the shell's Spotlight search. `null` is "not installed".
@@ -1317,6 +1327,13 @@ struct ToolSettingsRequest {
     ensure_bottle: bool,
 }
 
+/// The argument of `engine_non_crossover_engine`: the engine id.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct NonCrossoverEngineRequest {
+    engine_id: String,
+}
+
 /// The one object argument of an op, decoded strictly (the arg structs deny unknown fields). The
 /// error is a fixed `<op>:bad-args`: a renderer or sidecar string never reaches it.
 fn decode<T: serde::de::DeserializeOwned>(op: &str, args: &[Value]) -> Result<T, String> {
@@ -1463,6 +1480,7 @@ mod tests {
             "engine_ledger_mark_stopped",
             "engine_list_options",
             "engine_list_override_options",
+            "engine_non_crossover_engine",
             "engine_per_game_bottle_name",
             "engine_preflight_crossover",
             "engine_resolve_tool_settings",
@@ -2542,6 +2560,42 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(err, "engine_resolve_tool_settings:bad-args");
+    }
+
+    #[tokio::test]
+    async fn the_non_crossover_engine_op_answers_null_for_an_engine_that_is_not_installed() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        for engine_id in ["automatic", "pinned:wine-staging-11.20", "wine-manager:9.9"] {
+            let reply = dispatch(
+                "engine_non_crossover_engine",
+                &[json!({ "engineId": engine_id })],
+                &ctx,
+            )
+            .await
+            .unwrap();
+            assert_eq!(reply, Value::Null, "{engine_id}");
+        }
+    }
+
+    #[tokio::test]
+    async fn the_non_crossover_engine_op_is_strict_about_its_argument() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        for bad in [
+            vec![],
+            vec![json!("pinned:x")],
+            vec![json!({})],
+            vec![json!({"engineId": 1})],
+            vec![json!({"engineId": "a", "extra": 1})],
+            vec![json!({"engineId": "a"}), json!({"engineId": "b"})],
+        ] {
+            assert_eq!(
+                dispatch("engine_non_crossover_engine", &bad, &ctx).await,
+                Err("engine_non_crossover_engine:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
     }
 
     #[tokio::test]
