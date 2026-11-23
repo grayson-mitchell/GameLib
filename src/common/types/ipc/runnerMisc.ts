@@ -27,6 +27,8 @@ const gogSaveLocation = z.strictObject({
 const gogSaveLocations = z.array(gogSaveLocation).max(1024)
 
 export const runnerMiscAsyncArgs = {
+  // Phase 87 (87-36, D-23): `callTool` is a scheduled resolver (`sidecar/engineWineResolvers.ts`) over the Rust
+  // `wine_tool_call` op; the sidecar still receives it as a renderer invoke, so this strict decode stays.
   callTool: z.tuple([
     z.strictObject({
       tool: toolName,

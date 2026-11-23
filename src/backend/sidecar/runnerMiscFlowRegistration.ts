@@ -90,22 +90,20 @@ import {
 import type { Runner } from 'common/types'
 import type { GOGCloudSavesLocation } from 'common/types/gog'
 import type { Game } from 'common/types/game_manager'
-import path from 'path'
-import { createTools } from '../tools'
 import type { ToolsDeps } from '../tools'
-import { isEpicServiceOffline, sendGameStatusUpdate } from '../utils'
+import { isEpicServiceOffline } from '../utils'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 import { getDefaultSavePath } from '../save_sync'
 import type { SaveSyncDeps } from '../save_sync'
 
 /**
- * Registers this cluster's 12 invoke-kind channels. Called once from `handlers.ts` — this module
+ * Registers this cluster's 11 invoke-kind channels. Called once from `handlers.ts` — this module
  * owns no side effects at import time; the caller decides when registration onto the handler
  * registry happens.
  *
- * The module is complete at 12 (14 before Phase 87 Plans 17 and 18 moved `isRuntimeInstalled` and
- * `downloadRuntime` to the native `wine` slice): the four runner-CLI-version probes
- * (plan 34.5-07), the three "other" channels and two saves-sync channels
+ * The module is complete at 11 (14 before Phase 87 Plans 17 and 18 moved `isRuntimeInstalled` and
+ * `downloadRuntime` to the native `wine` slice, 12 before Plan 36 made `callTool` a scheduled resolver):
+ * the four runner-CLI-version probes (plan 34.5-07), the two remaining "other" channels and two saves-sync channels
  * (plan 34.5-12), plus the three late-discovered channels `getAchievements`,
  * `getDefaultSavePath` and `getPlaytimeFromRunner` (Phase 34.6 Plan 10, D-14).
  */
@@ -115,7 +113,6 @@ export function registerRunnerMiscFlows(
       ipc: Pick<IpcRegistry, 'handle'>
     }
 ): void {
-  const { runWineCommandOnGame } = createTools(deps)
   // ── Runner CLI version probes (main.ts / utils/ipc_handler.ts:18-21) ──────
   // Pure pass-through reads, exactly as the Electron source registers them — no caching, no
   // timeouts, no error wrapping the Electron path does not already have.
@@ -146,52 +143,9 @@ export function registerRunnerMiscFlows(
   // Wine tooling (winecfg/runExe dispatch — the winetricks GUI branch was removed by Phase 45
   // D-17), not "misc" in domain, and only sat in slice 4's original inventory because that
   // inventory grouped channels by Electron file.
-  deps.ipc.handle('callTool', async (_event: unknown, ...args: unknown[]) => {
-    const { tool, exe, appName, runner } = args[0] as {
-      tool: 'winecfg' | 'runExe'
-      exe?: string
-      appName: string
-      runner: Runner
-    }
-
-    const gameSettings = await deps.managers.library[runner]
-      .getGame(appName)
-      .getSettings()
-
-    switch (tool) {
-      case 'winecfg':
-        await runWineCommandOnGame(runner, appName, {
-          gameSettings,
-          commandParts: ['winecfg'],
-          wait: false
-        })
-        break
-      case 'runExe':
-        if (exe) {
-          const workingDir = path.parse(exe).dir
-          await runWineCommandOnGame(runner, appName, {
-            gameSettings,
-            commandParts: [exe],
-            wait: false,
-            startFolder: workingDir
-          })
-        }
-        break
-    }
-
-    if (isStore(runner, 'gog')) {
-      // Check if game was modified by offline installer / wine uninstaller
-      await deps.managers.library['gog'].checkForOfflineInstallerChanges(
-        appName
-      )
-      const maybeNewGameInfo = deps.managers.library['gog'].getGameInfo(appName)
-      if (maybeNewGameInfo) {
-        deps.sendFrontendMessage('pushGameToLibrary', maybeNewGameInfo)
-      }
-    }
-
-    sendGameStatusUpdate(deps, { appName, runner, status: 'done' })
-  })
+  // Phase 87 (87-36, D-23): `callTool` (winecfg, Run EXE) is a scheduled resolver (`sidecar/engineWineResolvers.ts`)
+  // over the Rust `wine_tool_call` op, with the GOG offline-installer check, the library push and the final `done`
+  // status run after it, in the TS order; this module registers no handle for it (one owner, D-06).
 
   deps.ipc.handle('egsSync', async (_event: unknown, ...args: unknown[]) => {
     return deps.managers.library['legendary'].toggleGamesSync(args[0] as string)

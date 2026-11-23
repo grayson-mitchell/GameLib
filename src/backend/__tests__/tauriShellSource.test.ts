@@ -481,7 +481,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 155 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 156 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
     // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
@@ -498,8 +498,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 87 plan 31: 147 -> 148, engine_set_online.
     // Phase 87 plan 34: 148 -> 149, wine_dxvk_install_remove.
     // Phase 87 plan 35: 149 -> 154, wine_winetricks_apply, _available, _installed, _install and _list_installed.
-    // Phase 87 plan 36: 154 -> 155, wine_run_command_for_game.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(155)
+    // Phase 87 plan 36: 154 -> 156, wine_run_command_for_game and wine_tool_call.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(156)
     expect(router).not.toContain('_ =>')
   })
 
@@ -970,7 +970,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // decode (a fixed bad-args literal, one object, not-ready before install) and the shell's own wine host facts;
       // `gamelib-wine`'s `run_for_game_guard` drives the guards and the spawn. The callers are the
       // `runWineCommandForGame` resolver (`engineWineResolvers.ts`), for the renderer and the launcher.
-      'wine_run_command_for_game'
+      'wine_run_command_for_game',
+      // ... and its tool-button twin: the `callTool` registration (`engineWineResolvers.ts`) is its one caller.
+      'wine_tool_call'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

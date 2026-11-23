@@ -233,6 +233,7 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::WineRunCommandForGame => {
             wine_dispatch::rpc_wine_run_command_for_game(args)
         }
+        RustInvokeChannel::WineToolCall => wine_dispatch::rpc_wine_tool_call(args),
         RustInvokeChannel::EngineSetOnline => engine_dispatch::rpc_engine_set_online(args),
     }
 }

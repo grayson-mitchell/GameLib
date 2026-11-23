@@ -1033,8 +1033,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'storeLayer.test.ts',
   'structuralContainment.test.ts',
   'testContainment.test.ts',
-  'wakeLock.test.ts',
-  'wineToolsFlows.test.ts'
+  'wakeLock.test.ts'
 ]
 
 describe('Block B: declared-list source gate over the in-scope suites (34.2 gap cycle 2, plan 34.2-18; three since 84-06)', () => {

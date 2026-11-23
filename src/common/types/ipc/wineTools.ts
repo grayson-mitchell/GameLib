@@ -3,7 +3,6 @@ import { z } from 'zod'
 import type {
   ExecResult,
   GameSettings,
-  WineInstallation,
   WinetricksApplyResult,
   WinetricksComponent,
   WinetricksLogLine,
@@ -49,7 +48,9 @@ const toolArgs = z.strictObject({
 
 export const wineToolsAsyncArgs = {
   // WineCommandArgs minus `options` and `onSpawn`, which are backend-internal (a function and a
-  // runner-options bag a renderer never sends).
+  // runner-options bag a renderer never sends). Phase 87 (87-36, D-23): `runWineCommand` and
+  // `runWineCommandForGame` are scheduled resolvers (`sidecar/engineWineResolvers.ts`) over the Rust ops; the
+  // sidecar still receives both as renderer invokes, so these strict decodes stay.
   runWineCommand: z.tuple([
     z.strictObject({
       commandParts,

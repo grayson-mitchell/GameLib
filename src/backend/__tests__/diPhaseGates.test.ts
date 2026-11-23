@@ -263,7 +263,8 @@ describe('66.1 end state: no direct child_process', () => {
   )
 
   it('finds the flow registrations', () => {
-    assertAtOrAboveFloor('66.1 flow registrations', registrations.length, 24)
+    // 24 -> 23 (Phase 87 Plan 36): `wineToolsFlowRegistration.ts` is deleted.
+    assertAtOrAboveFloor('66.1 flow registrations', registrations.length, 23)
   })
 
   it('launcher, runner front doors and every registration import no child_process', () => {
@@ -461,7 +462,6 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     'src/backend/sidecar/devEpicCookieSweepRegistration.ts',
     'src/backend/sidecar/runnerAuthFlowRegistration.ts',
     'src/backend/sidecar/shortcutsFlowRegistration.ts',
-    'src/backend/sidecar/wineToolsFlowRegistration.ts',
     'src/backend/sidecar/storeWriteHandlers.ts'
   ])('%s has no module state', (file) => {
     expect(moduleStateOf()[file]).toBeUndefined()
@@ -671,7 +671,6 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     'src/backend/sidecar/shortcutsFlowRegistration.ts',
     'src/backend/sidecar/sidecarRpc.ts',
     'src/backend/sidecar/storeWriteHandlers.ts',
-    'src/backend/sidecar/wineToolsFlowRegistration.ts',
     'src/backend/store/storeEmbedSeam.ts',
     'src/backend/storeManagers/gog/library.ts',
     'src/backend/storeManagers/gog/presence.ts',
@@ -761,7 +760,8 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     // Phase 86 Plan 17 deleted storeSearch/itad.ts with the TS store-search slice (D-13): 72 -> 71.
     // Phase 86 Plan 24 deleted crossover_index/fetcher.ts, crossover_index/index.ts and
     // wiki_game_info/howlongtobeat/utils.ts with the TS wiki and CrossOver slices (D-13): 71 -> 68.
-    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 68)
+    // Phase 87 Plan 36 deleted sidecar/wineToolsFlowRegistration.ts with the wine tools cluster (D-06, D-23): 68 -> 67.
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 67)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {

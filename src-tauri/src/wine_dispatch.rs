@@ -1163,6 +1163,22 @@ pub(crate) fn rpc_wine_run_command_for_game(args: &[Value]) -> Result<Value, Str
     )
 }
 
+/// The `wine_tool_call` `rustInvoke` arm (the `callTool` resolver, 87-36): one object, the tool (`winecfg` or
+/// `runExe`), the exe a `runExe` runs and the same game facts `wine_run_command_for_game` takes, to which the shell
+/// adds [`wine_run_host`]. The crate decodes it strictly (`wine_tool_call:bad-args`) and runs the tool's wine
+/// command through the same guards; it answers null (a refused tool is one log line). Unbounded in the sidecar.
+pub(crate) fn rpc_wine_tool_call(args: &[Value]) -> Result<Value, String> {
+    WineToolCallArgs::from_args(args)?;
+    let [request @ Value::Object(_)] = args else {
+        return Err("wine_tool_call:bad-args".to_string());
+    };
+    rpc_wine_op(
+        wine_ctx(),
+        "wine_tool_call",
+        &[request.clone(), wine_run_host()],
+    )
+}
+
 /// The `wine_discover_alternatives` `rustInvoke` arm (the `discoverAlternativeWine` shim, 87-26): exactly one
 /// boolean, `scanCustom`, and nothing else from the sidecar. The shell builds the crate's whole
 /// `DiscoveryHost` itself ([`discovery_host`]: its roots, `PATH`, settings and the Steam libraries), so no
@@ -2442,6 +2458,36 @@ mod tests {
             assert_eq!(
                 rpc_wine_run_command_for_game(&bad),
                 Err("wine_run_command_for_game:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_tool_call_arm_takes_one_object_and_answers_not_ready_before_install() {
+        assert!(wine_ctx().is_none());
+        for tool in ["winecfg", "runExe", "anything"] {
+            let request = json!({
+                "tool": tool,
+                "runner": "gog",
+                "appName": "1",
+                "unavailable": "no-engine"
+            });
+            assert_eq!(
+                rpc_wine_tool_call(&[request]),
+                Err("wine_tool_call:not-ready".to_string()),
+                "{tool}"
+            );
+        }
+        for bad in [
+            vec![],
+            vec![json!("winecfg")],
+            vec![json!(null)],
+            vec![json!({}), json!({})],
+        ] {
+            assert_eq!(
+                rpc_wine_tool_call(&bad),
+                Err("wine_tool_call:bad-args".to_string()),
                 "{bad:?}"
             );
         }

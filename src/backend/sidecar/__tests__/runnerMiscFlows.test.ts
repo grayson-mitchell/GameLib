@@ -130,30 +130,14 @@ jest.mock('backend/logger', () => ({
 // ── ../../online_monitor — `isOnline` is the only export `syncSaves` needs; factory-mocked so
 // this suite never constructs the real module's EventEmitter/axios-ping machinery ─────────────
 
-// ── ../../ipc — `sendFrontendMessage` is the only export `callTool`'s gog post-step needs;
+// ── ../../ipc — `sendFrontendMessage` is only handed to the registration;
 // factory-mocked so this suite never touches the real `electron`/`getMainWindow` chain ─────────
 const mockSendFrontendMessage = jest.fn()
-
-// ── ../../tools — `runWineCommandOnGame` is the curated import target for `callTool`'s two
-// remaining tool branches (`winecfg`/`runExe`); factory-mocked (mirrors `wineToolsFlows.test.ts`'s
-// own `../../tools` mock) so this suite proves callTool's OWN dispatch, not the Wine command
-// runner's internal logic. No `Winetricks` export is mocked here — Phase 45 D-17 removed the
-// GUI branch's `Winetricks.run()` call, and `runnerMiscFlowRegistration.ts` no longer imports
-// `Winetricks` at all ───────────────────────────────────────────────────────────────────────────
-const mockRunWineCommandOnGame = jest.fn()
-jest.mock('../../tools', () => ({
-  createTools: () => ({
-    runWineCommandOnGame: (...args: unknown[]) =>
-      mockRunWineCommandOnGame(...args)
-  })
-}))
 
 // ── ../../storeManagers — `libraryManagerMap` is the curated import target for `callTool`/
 // `egsSync`/`getGOGLinuxInstallersLangs`/`syncSaves`/`syncGOGSaves`. Factory-mocked (not the real
 // eager `GOGLibraryManager`/`LegendaryLibraryManager` construction) so each handler's dispatch can
 // be proven directly, without real config-file I/O or download-queue construction. ─────────────
-const mockGogGetSettings = jest.fn()
-const mockGogSyncSaves = jest.fn()
 // Declared as a bare `jest.fn()` (no inline implementation) rather than `jest.fn(() => ({...}))`
 // -- TS would otherwise infer a zero-parameter signature from that implementation, which then
 // rejects `mockGogGetGame(...args)`'s spread below (TS2556). The return value is (re)configured
@@ -163,8 +147,6 @@ const mockCheckForOfflineInstallerChanges = jest.fn()
 const mockGetGameInfo = jest.fn()
 const mockGetLinuxInstallersLanguages = jest.fn()
 
-const mockLegendaryGetSettings = jest.fn()
-const mockLegendarySyncSaves = jest.fn()
 const mockLegendaryGetGame = jest.fn()
 const mockToggleGamesSync = jest.fn()
 
@@ -225,7 +207,7 @@ registerRunnerMiscFlows({
 
 // ── Describe 1: Registration kind ──────────────────────────────────────────────────────────────
 
-describe('registration kind — all 11 channels are registered with the correct kind, both directions', () => {
+describe('registration kind — all 10 channels are registered with the correct kind, both directions', () => {
   const VERSION_CHANNELS = [
     'getLegendaryVersion',
     'getGogdlVersion',
@@ -234,7 +216,8 @@ describe('registration kind — all 11 channels are registered with the correct 
   ]
   // Phase 87 Plans 17 and 18 (D-14): `isRuntimeInstalled` and `downloadRuntime` are native `wine`
   // channels, so this module registers neither.
-  const OTHER_CHANNELS = ['callTool', 'egsSync', 'getGOGLinuxInstallersLangs']
+  // Phase 87 Plan 36 (D-23): `callTool` is a scheduled resolver, so this module registers it no more.
+  const OTHER_CHANNELS = ['egsSync', 'getGOGLinuxInstallersLangs']
   const SAVES_SYNC_CHANNELS = ['syncGOGSaves', 'syncSaves']
   // Phase 34.6 Plan 10 (REQ-34.6-04/08/09): the last 3 of the phase's 24 late-discovered/deferred
   // channels.
@@ -284,15 +267,15 @@ describe('registration kind — all 11 channels are registered with the correct 
     }
   )
 
-  it('the module is complete: exactly these 12 channels are handle-kind, and no channel from this module is send-kind', () => {
-    const allTwelve = [
+  it('the module is complete: exactly these 11 channels are handle-kind, and no channel from this module is send-kind', () => {
+    const allEleven = [
       ...VERSION_CHANNELS,
       ...OTHER_CHANNELS,
       ...SAVES_SYNC_CHANNELS,
       ...LATE_DISCOVERED_CHANNELS
     ]
-    expect(allTwelve).toHaveLength(12)
-    for (const channel of allTwelve) {
+    expect(allEleven).toHaveLength(11)
+    for (const channel of allEleven) {
       expect(handlerRegistry.has(channel)).toBe(true)
       expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
     }
@@ -348,160 +331,14 @@ describe('documents-path pin — the boot paths resolve the name this cluster de
   })
 })
 
-// ── Describe 4: callTool branch dispatch (Pitfall 4 + gog post-step + sendGameStatusUpdate) ────
-describe('callTool branch dispatch — winetricks/winecfg/runExe, the gog post-step, and sendGameStatusUpdate', () => {
-  const callToolHandler = () => handlerRegistry.get('callTool')!
-  const FAKE_SETTINGS = { fakeSetting: true }
-
-  beforeEach(() => {
-    mockGogGetSettings.mockResolvedValue(FAKE_SETTINGS)
-    mockLegendaryGetSettings.mockResolvedValue(FAKE_SETTINGS)
-    // `resetMocks: true` (project jest config) clears the return value `mockGogGetGame`/
-    // `mockLegendaryGetGame` were declared with too — reconfigure both every test, not just
-    // the leaf getSettings/syncSaves mocks they close over.
-    mockGogGetGame.mockReturnValue({
-      getSettings: mockGogGetSettings,
-      syncSaves: mockGogSyncSaves
-    })
-    mockLegendaryGetGame.mockReturnValue({
-      getSettings: mockLegendaryGetSettings,
-      syncSaves: mockLegendarySyncSaves
-    })
-    mockCheckForOfflineInstallerChanges.mockResolvedValue(undefined)
-    mockGetGameInfo.mockReturnValue(undefined)
-    mockRunWineCommandOnGame.mockResolvedValue({ stdout: '', stderr: '' })
-  })
-
-  it('Phase 45 D-17: an unrecognised tool value (e.g. the retired "winetricks" GUI branch) is a no-op dispatch — it reaches neither runWineCommandOnGame nor any winetricks mock, and sendGameStatusUpdate still fires with status "done"', async () => {
-    await callToolHandler()(undefined, {
-      tool: 'winetricks',
-      appName: 'fake-app',
-      runner: 'legendary'
-    })
-
-    expect(mockRunWineCommandOnGame).not.toHaveBeenCalled()
-    const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
-      jest.requireMock('backend/utils')
-    expect(sendGameStatusUpdate).toHaveBeenCalledWith(expect.anything(), {
-      appName: 'fake-app',
-      runner: 'legendary',
-      status: 'done'
-    })
-  })
-
-  it('REQ-34.5-07 the winecfg branch calls runWineCommandOnGame with the winecfg commandParts, and sendGameStatusUpdate fires with status "done"', async () => {
-    await callToolHandler()(undefined, {
-      tool: 'winecfg',
-      appName: 'fake-app',
-      runner: 'legendary'
-    })
-
-    expect(mockRunWineCommandOnGame).toHaveBeenCalledWith(
-      'legendary',
-      'fake-app',
-      {
-        gameSettings: FAKE_SETTINGS,
-        commandParts: ['winecfg'],
-        wait: false
-      }
-    )
-    const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
-      jest.requireMock('backend/utils')
-    expect(sendGameStatusUpdate).toHaveBeenCalledWith(expect.anything(), {
-      appName: 'fake-app',
-      runner: 'legendary',
-      status: 'done'
-    })
-  })
-
-  it('REQ-34.5-07 the runExe branch calls runWineCommandOnGame with the exe as commandParts and its parsed directory as startFolder, and sendGameStatusUpdate fires with status "done"', async () => {
-    await callToolHandler()(undefined, {
-      tool: 'runExe',
-      exe: '/games/fake-game/bin/game.exe',
-      appName: 'fake-app',
-      runner: 'legendary'
-    })
-
-    expect(mockRunWineCommandOnGame).toHaveBeenCalledWith(
-      'legendary',
-      'fake-app',
-      {
-        gameSettings: FAKE_SETTINGS,
-        commandParts: ['/games/fake-game/bin/game.exe'],
-        wait: false,
-        startFolder: '/games/fake-game/bin'
-      }
-    )
-    const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
-      jest.requireMock('backend/utils')
-    expect(sendGameStatusUpdate).toHaveBeenCalledWith(expect.anything(), {
-      appName: 'fake-app',
-      runner: 'legendary',
-      status: 'done'
-    })
-  })
-
-  it('REQ-34.5-07 the runExe branch is a no-op (neither Winetricks nor runWineCommandOnGame called) when exe is falsy, but still reaches sendGameStatusUpdate', async () => {
-    await callToolHandler()(undefined, {
-      tool: 'runExe',
-      appName: 'fake-app',
-      runner: 'legendary'
-    })
-
-    expect(mockRunWineCommandOnGame).not.toHaveBeenCalled()
-    const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
-      jest.requireMock('backend/utils')
-    expect(sendGameStatusUpdate).toHaveBeenCalledWith(expect.anything(), {
-      appName: 'fake-app',
-      runner: 'legendary',
-      status: 'done'
-    })
-  })
-
-  it('REQ-34.5-07 the gog post-step checks for offline-installer changes and pushes the refreshed game info to the frontend when one exists', async () => {
-    const fakeGameInfo = { app_name: 'fake-gog-app', title: 'Fake GOG Game' }
-    mockGetGameInfo.mockReturnValue(fakeGameInfo)
-
-    await callToolHandler()(undefined, {
-      tool: 'winecfg',
-      appName: 'fake-gog-app',
-      runner: 'gog'
-    })
-
-    expect(mockCheckForOfflineInstallerChanges).toHaveBeenCalledWith(
-      'fake-gog-app'
-    )
-    expect(mockGetGameInfo).toHaveBeenCalledWith('fake-gog-app')
-    expect(mockSendFrontendMessage).toHaveBeenCalledWith(
-      'pushGameToLibrary',
-      fakeGameInfo
-    )
-  })
-
-  it('REQ-34.5-07 the gog post-step does not push to the frontend when getGameInfo returns nothing', async () => {
-    mockGetGameInfo.mockReturnValue(undefined)
-
-    await callToolHandler()(undefined, {
-      tool: 'winecfg',
-      appName: 'fake-gog-app',
-      runner: 'gog'
-    })
-
-    expect(mockCheckForOfflineInstallerChanges).toHaveBeenCalledWith(
-      'fake-gog-app'
-    )
-    expect(mockSendFrontendMessage).not.toHaveBeenCalled()
-  })
-
-  it('REQ-34.5-07 a legendary callTool does not trigger the gog-only post-step', async () => {
-    await callToolHandler()(undefined, {
-      tool: 'winecfg',
-      appName: 'fake-app',
-      runner: 'legendary'
-    })
-
-    expect(mockCheckForOfflineInstallerChanges).not.toHaveBeenCalled()
-    expect(mockSendFrontendMessage).not.toHaveBeenCalled()
+// ── Describe 4: callTool is registered elsewhere (Phase 87 Plan 36, D-23) ───────────────────────
+// `callTool` is a scheduled resolver (`engineWineResolvers.ts`) over the Rust `wine_tool_call` op, with the gog post-step
+// and the `done` status run after it; `engineWineResolvers.test.ts` proves the dispatch, the order and the refusal. This
+// module registers no handle for it.
+describe('callTool is registered elsewhere, never here (Phase 87 Plan 36)', () => {
+  it('has no handle and no listener in this module', () => {
+    expect(handlerRegistry.has('callTool')).toBe(false)
+    expect((listenerRegistry.get('callTool') ?? []).length).toBe(0)
   })
 })
 

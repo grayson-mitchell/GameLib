@@ -72,6 +72,9 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   'Async:winetricksInstalled': 'wineTools',
   // Phase 87 Plan 36 (D-23): the wine command on a game is a scheduled resolver.
   'Async:runWineCommandForGame': 'wineTools',
+  // Phase 87 Plan 36 (D-23): `runWineCommand` and `callTool` are scheduled resolvers too.
+  'Async:runWineCommand': 'wineTools',
+  'Async:callTool': 'runnerMisc',
   'Async:gamepadAction': 'testStubs',
   'Async:get-connectivity-status': 'mainProcess',
   'Async:getSignInProbeOutcomes': 'mainProcess',
@@ -207,8 +210,13 @@ function ownerlessChannels(
  * `*FlowRegistration.ts` files, the same count as the on-disk listing, so the parse-miss margin is
  * unchanged. The declaration total stays 289 (the two channels moved from `logger.ts` into
  * `native.ts`).
+ *
+ * Phase 87 Plan 36 (2026-11-24): FILES_FLOOR 21 -> 20. The drop is the deliberate deletion of
+ * `wineToolsFlowRegistration.ts` (a measured file, not a parse miss): its last channel moved to the
+ * scheduled resolvers of `engineWineResolvers.ts`. The scan reads 20 `*FlowRegistration.ts` files,
+ * the same count as the on-disk listing. The declaration total is unchanged.
  */
-const FILES_FLOOR = 21
+const FILES_FLOOR = 20
 const DECLARATIONS_FLOOR = 284
 
 /** Declared channels across every domain part, all kinds. */
@@ -238,7 +246,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
   it('(a) every channel a FlowRegistration registers is declared in its paired ipc/<domain>.ts', () => {
     const files = registrationFiles()
     assertAtOrAboveFloor('ipcDomainCensus files', files.length, FILES_FLOOR)
-    expect(files.length).toBe(21) // 22 before 84-06 deleted loggerFlowRegistration.ts
+    expect(files.length).toBe(20) // 22 before 84-06 deleted loggerFlowRegistration.ts, 21 before 87-36 deleted wineToolsFlowRegistration.ts
     for (const f of files) {
       const domain = f.replace('FlowRegistration.ts', '')
       expect(Object.keys(domains)).toContain(domain)
@@ -354,8 +362,8 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     expect(computed).toEqual(NO_REGISTRATION_OWNER)
     // Phase 87 Plan 35 (D-23): +3 Async (winetricksApply, winetricksAvailable, winetricksInstalled, now scheduled
     // resolvers); owner-less allowlist 64 -> 67. winetricksQueueState and winetricksCancelRemaining became native channels.
-    // Phase 87 Plan 36 (D-23): +1 Async (runWineCommandForGame, now a scheduled resolver); 67 -> 68.
-    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(68)
+    // Phase 87 Plan 36 (D-23): +3 Async (runWineCommandForGame, runWineCommand, callTool, now scheduled resolvers); 67 -> 70.
+    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(70)
   })
 
   it('(d) near-miss: a manifest-owned channel leaves the computed owner-less set', () => {

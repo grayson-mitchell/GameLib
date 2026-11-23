@@ -129,7 +129,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // getPlaytimeFromRunner ported byte-equivalently from main.ts (D-14); send count unchanged.
   // Phase 87 Plan 17 (D-14): invoke 14 -> 13 -- `isRuntimeInstalled` is a native `wine` channel.
   // Phase 87 Plan 18 (D-14): invoke 13 -> 12 -- `downloadRuntime` is a native `wine` channel too.
-  'runnerMiscFlowRegistration.ts': { invoke: 12, send: 0 },
+  // Phase 87 Plan 36 (D-23): invoke 12 -> 11 -- `callTool` is a scheduled resolver.
+  'runnerMiscFlowRegistration.ts': { invoke: 11, send: 0 },
   // Phase 84 Plan 05 / 84-05 (2026-11-21): invoke 11 -> 10 -- `getLogContent` is served by the Rust
   // native router (`nativeChannels.json`, slice `logger`); its registration is deleted here.
   'settingsFlowRegistration.ts': { invoke: 10, send: 1 },
@@ -168,23 +169,11 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // (9 lifecycle/navigation invoke arms, including the takeNavEvents drain implemented by quick
   // task `260905-e61` for GAP-D; 1 send arm for the fire-and-forget bounds courier, D-18/D-29).
   // Counts unchanged by that fix: implementing an arm behind an existing channel adds none.
-  'storeEmbedFlowRegistration.ts': { invoke: 9, send: 1 },
-  // Phase 34.6 Plan 07 (2026-08-24): invoke 9 -> 12, send 0 -> 1 -- winetricksAvailable/
-  // winetricksInstalled/runWineCommandForGame (invoke) and winetricksInstall (send, D-11)
-  // ported byte-equivalently from tools/ipc_handler.ts (A-01/D-02).
-  // Phase 45 Plan 01 (2026-10-10): winetricksApply / winetricksQueueState /
-  // winetricksCancelRemaining (invoke)
-  // Phase 45 Plan 02 (2026-10-10, D-11 promote): send 1 -> 0 -- winetricksInstall retired outright.
-  // Phase 87 Plan 20 (D-14): invoke 15 -> 12 -- `installWineVersion`, `refreshWineVersionInfo` and
-  // `removeWineVersion` are native `wine` channels.
-  // Phase 87 Plan 24 (D-14): invoke 12 -> 11 -- `wine.isValidVersion` is a native `wine` channel.
-  // Phase 87 Plan 26 (D-14): invoke 11 -> 10 -- `getAlternativeWine` is a native `wine` channel.
-  // Phase 87 Plan 34 (D-23): invoke 10 -> 7 -- the three DXVK toggles are scheduled resolvers
-  // (`engineWineResolvers.ts`).
-  // Phase 87 Plan 35 (D-23, D-14): invoke 7 -> 2 -- winetricksApply/Available/Installed are scheduled resolvers and
-  // winetricksQueueState/winetricksCancelRemaining are native `wine` channels.
-  // Phase 87 Plan 36 (D-23): invoke 2 -> 1 -- runWineCommandForGame is a scheduled resolver.
-  'wineToolsFlowRegistration.ts': { invoke: 1, send: 0 }
+  'storeEmbedFlowRegistration.ts': { invoke: 9, send: 1 }
+  // Phase 87 Plan 36 (D-23): the `wineToolsFlowRegistration.ts` row is gone -- its last channel (`runWineCommand`)
+  // is a scheduled resolver (`engineWineResolvers.ts`), like the rest of the cluster (87-20 to 87-36), so the module
+  // registered nothing and was deleted. Its history: 7 invokes at 87-34 (the DXVK toggles resolved), 2 at 87-35
+  // (the Winetricks family resolved or native), 1 at the start of 87-36 (`runWineCommandForGame` resolved).
 }
 
 /**

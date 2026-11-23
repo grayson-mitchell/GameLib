@@ -1246,6 +1246,18 @@ export const RUST_WINE_RUN_COMMAND_FOR_GAME =
   'wine_run_command_for_game' as const
 
 /**
+ * Phase 87 (SVC-02, 87-36): `wine_tool_call` is `callTool`'s wine command: `winecfg` or `runExe` on a game, each one
+ * `wine_run_command_for_game` with the TS's fixed arguments (`wait` false, the exe's directory as the start
+ * folder; a `runExe` with no exe runs nothing). Args: one object, the tool (`winecfg` | `runExe`), the exe a
+ * `runExe` runs and the same game facts `wine_run_command_for_game` takes (`gameCommandFacts`), through the same
+ * guards; the shell adds the wine host facts. Resolves null. What the TS handler did after the command (the GOG
+ * offline-installer check, `pushGameToLibrary`, the final `gameStatusUpdate done`) reads the library and sends the
+ * renderer's messages, so it stays in the `callTool` registration of `engineWineResolvers.ts`, which is the
+ * op's one caller. A tool runs until the program ends: listed in the sidecar's `UNBOUNDED_RUST_CHANNELS`.
+ */
+export const RUST_WINE_TOOL_CALL = 'wine_tool_call' as const
+
+/**
  * Phase 87 (SVC-02, 87-31): `engine_set_online` tells the Rust engine whether the machine is online. The
  * sidecar's online monitor is still the one that probes (until Phase 98), so it writes its status through
  * to `EngineCtx.online` at boot and on every change; Rust-initiated network work (the DXMT boot update, the
@@ -1607,6 +1619,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_WINE_WINETRICKS_INSTALL,
   RUST_WINE_WINETRICKS_LIST_INSTALLED,
   RUST_WINE_RUN_COMMAND_FOR_GAME,
+  RUST_WINE_TOOL_CALL,
   RUST_ENGINE_SET_ONLINE
 ] as const
 

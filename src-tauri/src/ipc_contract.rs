@@ -177,6 +177,7 @@ pub(crate) enum RustInvokeChannel {
     WineWinetricksInstall,
     WineWinetricksListInstalled,
     WineRunCommandForGame,
+    WineToolCall,
     EngineSetOnline,
 }
 
@@ -336,6 +337,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::WineWinetricksInstall,
         RustInvokeChannel::WineWinetricksListInstalled,
         RustInvokeChannel::WineRunCommandForGame,
+        RustInvokeChannel::WineToolCall,
         RustInvokeChannel::EngineSetOnline,
     ];
 
@@ -495,6 +497,7 @@ impl RustInvokeChannel {
             "wine_winetricks_install" => Some(RustInvokeChannel::WineWinetricksInstall),
             "wine_winetricks_list_installed" => Some(RustInvokeChannel::WineWinetricksListInstalled),
             "wine_run_command_for_game" => Some(RustInvokeChannel::WineRunCommandForGame),
+            "wine_tool_call" => Some(RustInvokeChannel::WineToolCall),
             "engine_set_online" => Some(RustInvokeChannel::EngineSetOnline),
             _ => None,
         }
@@ -656,6 +659,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::WineWinetricksInstall => "wine_winetricks_install",
             RustInvokeChannel::WineWinetricksListInstalled => "wine_winetricks_list_installed",
             RustInvokeChannel::WineRunCommandForGame => "wine_run_command_for_game",
+            RustInvokeChannel::WineToolCall => "wine_tool_call",
             RustInvokeChannel::EngineSetOnline => "engine_set_online",
         }
     }
@@ -3391,6 +3395,18 @@ pub(crate) struct WineRunCommandForGameArgs {
 impl WineRunCommandForGameArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let request = serde_json::from_value(args.first().ok_or_else(|| "wine_run_command_for_game:bad-args".to_string())?.clone()).map_err(|_| "wine_run_command_for_game:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineToolCallArgs {
+    pub(crate) request: Value,
+}
+
+impl WineToolCallArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "wine_tool_call:bad-args".to_string())?.clone()).map_err(|_| "wine_tool_call:bad-args".to_string())?;
         Ok(Self { request })
     }
 }

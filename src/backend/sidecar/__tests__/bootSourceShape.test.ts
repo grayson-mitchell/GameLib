@@ -206,7 +206,8 @@ describe('66.1 MH-3: registrations take slices', () => {
   }
 
   it('no registration value-imports a singleton, a stores module or a legacy accessor', () => {
-    expect(allFiles.length).toBeGreaterThanOrEqual(25)
+    // 25 -> 24 (Phase 87 Plan 36): `wineToolsFlowRegistration.ts` is deleted.
+    expect(allFiles.length).toBeGreaterThanOrEqual(24)
     const offenders: string[] = []
     for (const { name, source } of sources) {
       for (const { clause, path } of valueImports(source)) {

@@ -11,7 +11,6 @@ import { stripSourceComments } from '../../testUtils/stripSourceComments'
 const REGISTRATIONS = [
   'registerDevEpicCookieSweepFlow',
   'registerRunnerAuthFlows',
-  'registerWineToolsFlows',
   'registerEngineWineResolvers',
   'registerShortcutsFlows',
   'registerStoreWriteHandlers'

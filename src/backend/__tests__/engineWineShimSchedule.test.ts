@@ -166,7 +166,7 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_WINE_MANAGER_REFRESH',
     callers: [
-      'src/backend/sidecar/wineToolsFlowRegistration.ts',
+      'src/backend/sidecar/engineWineResolvers.ts',
       'src/backend/utils.ts'
     ],
     deletedBy: 98
@@ -177,7 +177,7 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_WINE_MANAGER_INSTALL',
     callers: [
-      'src/backend/sidecar/wineToolsFlowRegistration.ts',
+      'src/backend/sidecar/engineWineResolvers.ts',
       'src/backend/utils.ts'
     ],
     deletedBy: 88
@@ -188,7 +188,7 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_WINE_MANAGER_LIST',
     callers: [
-      'src/backend/sidecar/wineToolsFlowRegistration.ts',
+      'src/backend/sidecar/engineWineResolvers.ts',
       'src/backend/utils.ts'
     ],
     deletedBy: 88
@@ -199,7 +199,7 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_WINE_RELEASES_INFO_READY',
     callers: [
-      'src/backend/sidecar/wineToolsFlowRegistration.ts',
+      'src/backend/sidecar/engineWineResolvers.ts',
       'src/backend/utils.ts'
     ],
     deletedBy: 88
@@ -353,6 +353,28 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['facts'],
     channel: 'RUST_WINE_RUN_COMMAND_FOR_GAME',
+    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
+    deletedBy: 98
+  },
+  // 87-36 (D-23): the renderer's `runWineCommand` (`command` is the payload with the global settings spread under its
+  // `gameSettings`) and the Wine tool buttons' `callTool` (`facts` as above; the GOG offline-installer check, the
+  // library push and the `done` status run in the registration after it, in the TS order). Phase 98 deletes both with
+  // the config and the library they read; the sync-callback `runWineCommand` of `commandRunner.ts` stays a twin.
+  {
+    name: 'runWineCommand',
+    file: 'src/backend/sidecar/engineWineResolvers.ts',
+    shape: 'resolver',
+    inputs: ['command'],
+    channel: 'RUST_WINE_RUN_COMMAND',
+    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
+    deletedBy: 98
+  },
+  {
+    name: 'callTool',
+    file: 'src/backend/sidecar/engineWineResolvers.ts',
+    shape: 'resolver',
+    inputs: ['facts'],
+    channel: 'RUST_WINE_TOOL_CALL',
     callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },

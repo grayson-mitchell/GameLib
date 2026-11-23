@@ -13,7 +13,8 @@
  * must not resolve them. Where it can see a guard would refuse it answers `unavailable` without resolving, and
  * Rust refuses on its own guard first, with the TS's log line. The guards stay Rust's (D-08).
  *
- * Windows has no wine: the crate spawns the program itself, so nothing here reads a game.
+ * Windows has no wine: for a command the renderer sends, the crate spawns the program itself, so nothing here reads a
+ * game. A Wine tool button (`callTool`) never had that branch and still reads the game, which is native there.
  */
 import type { Runner } from 'common/types'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
@@ -75,16 +76,18 @@ function unresolved(
 /**
  * Gathers the facts for a wine command on `runner`/`appName`. `pendingInstall` is the sideload "Run installer" that
  * runs before the game is in the library (CR-04): it has no library entry, so its tool settings come from the game
- * config the dialog just wrote. Rejects when the library, the game config or a resolver fails (the TS handler's
+ * config the dialog just wrote. `tool` is a Wine tool button (`callTool`: winecfg, Run EXE). Rejects when the library, the game config or a resolver fails (the TS handler's
  * errors reached the renderer too).
  */
 export async function gatherGameCommandFacts(
   source: GameCommandSource,
   runner: Runner,
   appName: string,
-  { pendingInstall }: { pendingInstall: boolean }
+  { pendingInstall, tool = false }: { pendingInstall: boolean; tool?: boolean }
 ): Promise<GameCommandFacts> {
-  if (isWindows) return unresolved(runner, appName, 'windows')
+  // Windows has no wine: the crate spawns a renderer command's program itself. A Wine tool button (`tool`) has
+  // no such branch: it reads the game as on every platform, and a Windows game is native, so Rust refuses it.
+  if (isWindows && !tool) return unresolved(runner, appName, 'windows')
 
   if (pendingInstall) {
     // Rust refuses a pending install of any other runner (sideload only) before it reads the settings.

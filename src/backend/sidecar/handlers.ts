@@ -88,7 +88,6 @@ import { registerHumbleLoginFlows } from './humbleLoginFlowRegistration'
 import { registerOAuthLoginFlows } from './oauthLoginFlowRegistration'
 import { registerRunnerAuthFlows } from './runnerAuthFlowRegistration'
 import { registerEngineWineResolvers } from './engineWineResolvers'
-import { registerWineToolsFlows } from './wineToolsFlowRegistration'
 import { registerShortcutsFlows } from './shortcutsFlowRegistration'
 import { registerRunnerMiscFlows } from './runnerMiscFlowRegistration'
 import { registerEosOverlayFlows } from './eosOverlayFlowRegistration'
@@ -389,25 +388,19 @@ export function registerHandlers(deps: {
     sendFrontendMessage: deps.services.host.sendFrontendMessage,
     requestRustInvoke: deps.services.host.requestRustInvoke
   })
-  registerWineToolsFlows({
-    ipc,
-    managers: deps.services.managers,
-    commandRunner: deps.services.commandRunner,
-    launcher: deps.services.launcher,
-    spawnAsync: deps.services.spawnAsync,
-    stores: deps.services.stores,
-    runner: deps.services.runner,
-    requestRustInvoke: deps.services.host.requestRustInvoke,
-    ...toolSlices(deps.services)
-  })
   // Phase 87 (D-23): the scheduled resolvers of the engine and wine services (the DXVK toggles as of 87-34, the
-  // Winetricks apply and catalog reads as of 87-35). A channel is registered here or in the wine tools cluster,
-  // never both. `winetricksTarget` is the one decision TypeScript keeps for Winetricks: which Wine environment
-  // a game's tools act on.
+  // Winetricks apply and catalog reads as of 87-35, the wine commands, the tool buttons and the wine releases
+  // listener as of 87-36, which deleted the wine tools cluster's own registration). `winetricksTarget` and
+  // `gameCommandFacts` are the decisions TypeScript keeps: which Wine environment a game's tools act on, and the
+  // facts about a game only the library holds.
   const engineSource = engineSourceFrom(deps.services)
   registerEngineWineResolvers({
     ipc,
     gameConfigs: deps.services.gameConfigs,
+    config: deps.services.config,
+    managers: deps.services.managers,
+    sendFrontendMessage: deps.services.host.sendFrontendMessage,
+    appRuntime: deps.services.appRuntime,
     requestRustInvoke: deps.services.host.requestRustInvoke,
     winetricksTarget: (runner, appName, opts) =>
       resolveWinetricksTarget(engineSource, runner, appName, opts),

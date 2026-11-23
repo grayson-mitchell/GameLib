@@ -1,13 +1,13 @@
 /**
  * Anti-rot gate for the F-34.5-G6-08 / U-34.5-15 invoke-return-value sweep (Phase 34.5 gap cycle
  * 6, plan 34.5-45, Task 3). Reads the four `*FlowRegistration.ts` modules this slice owns
- * (`runnerAuthFlowRegistration.ts`, `wineToolsFlowRegistration.ts`,
+ * (`runnerAuthFlowRegistration.ts`, `wineToolsFlowRegistration.ts` until Phase 87 Plan 36,
  * `shortcutsFlowRegistration.ts`, `runnerMiscFlowRegistration.ts`) OFF DISK, extracts every
  * `ipcMain.handle` channel with a pattern that tolerates the multi-line registration form (14 of
  * the 40 put the channel name on the following line — a single-line-only regex finds fewer),
  * and asserts:
  *
- *   1. The extracted channel count is exactly 30, with the exact per-module tally 10/2/6/12.
+ *   1. The extracted channel count is exactly 27, with the exact per-module tally 10/6/11.
  *   2. Every channel classified RETURNS (declared non-void in `AsyncIPCFunctions`, NOT on the
  *      explicit VOID-PARITY allow-list below) has a `return` statement inside its own handler
  *      body -- so a future edit that silently drops a `return` is caught here, not live.
@@ -34,28 +34,8 @@ const MODULES: ModuleSpec[] = [
     path: join(__dirname, '../runnerAuthFlowRegistration.ts'),
     expectedCount: 10
   },
-  {
-    name: 'wineTools',
-    // Phase 34.6 Plan 07 (2026-08-24): 9 -> 12. Three INVOKE-kind channels were added to
-    // wineToolsFlowRegistration.ts -- `winetricksAvailable`, `winetricksInstalled` and
-    // `runWineCommandForGame`. The delta is 3 and NOT 4: the fourth channel that plan
-    // registered, `winetricksInstall`, is SEND-kind (`ipcMain.on`), and this sweep extracts
-    // `ipcMain.handle(...)` only. If `winetricksInstall` ever appears in this module's
-    // extracted array, that is a real defect -- a send channel registered as invoke -- and
-    // must NOT be absorbed by raising this number.
-    // Phase 45 Plan 01 (2026-10-10): 12 -> 15. winetricksApply / winetricksQueueState /
-    // winetricksCancelRemaining (invoke)
-    // Phase 87 Plan 20 (D-14): 15 -> 12. `installWineVersion`, `refreshWineVersionInfo` and
-    // `removeWineVersion` are native `wine` channels.
-    // Phase 87 Plan 24 (D-14): 12 -> 11. `wine.isValidVersion` is a native `wine` channel.
-    // Phase 87 Plan 26 (D-14): 11 -> 10. `getAlternativeWine` is a native `wine` channel.
-    // Phase 87 Plan 34 (D-23): 10 -> 7. The three DXVK toggles are scheduled resolvers (`engineWineResolvers.ts`).
-    // Phase 87 Plan 35 (D-23, D-14): 7 -> 2. winetricksApply/Available/Installed are scheduled resolvers and
-    // winetricksQueueState/winetricksCancelRemaining are native `wine` channels.
-    // Phase 87 Plan 36 (D-23): 2 -> 1. `runWineCommandForGame` is a scheduled resolver.
-    path: join(__dirname, '../wineToolsFlowRegistration.ts'),
-    expectedCount: 1
-  },
+  // Phase 87 Plan 36 (D-23): the `wineTools` module (`wineToolsFlowRegistration.ts`) is deleted: its last channel,
+  // `runWineCommand`, is a scheduled resolver (`engineWineResolvers.ts`), like every channel of the wine tools cluster.
   {
     name: 'shortcuts',
     // Quick 261012-ca6 (2026-10-12): 4 -> 6. `addShortcut` and `removeShortcut` moved from
@@ -70,8 +50,9 @@ const MODULES: ModuleSpec[] = [
     // `getDefaultSavePath`, `getPlaytimeFromRunner`.
     // Phase 87 Plan 17 (D-14): 14 -> 13. `isRuntimeInstalled` is a native `wine` channel.
     // Phase 87 Plan 18 (D-14): 13 -> 12. `downloadRuntime` is a native `wine` channel too.
+    // Phase 87 Plan 36 (D-23): 12 -> 11. `callTool` is a scheduled resolver.
     path: join(__dirname, '../runnerMiscFlowRegistration.ts'),
-    expectedCount: 12
+    expectedCount: 11
   }
 ]
 
@@ -86,9 +67,7 @@ const VOID_PARITY_CHANNELS: Record<string, string> = {
   logoutAmazon:
     'declared Promise<void>; delegates to NileUser.logout() (a void-resolving promise)',
   removeFromSteam:
-    'declared Promise<void>; awaits removeNonSteamGame(game) and returns nothing',
-  callTool:
-    'declared Promise<void>; dispatches to winecfg/runExe plus a status push, returns nothing'
+    'declared Promise<void>; awaits removeNonSteamGame(game) and returns nothing'
 }
 
 /** Multi-line-capable: tolerates the channel name landing on the line after `ipcMain.handle(`. */
@@ -195,9 +174,9 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
   // Phase 87 Plan 26 (D-14): 39 -> 38, `getAlternativeWine` is a native `wine` channel.
   // Phase 87 Plan 34 (D-23): 38 -> 35, the three DXVK toggles are scheduled resolvers, not the modules' handles.
   // Phase 87 Plan 35 (D-23, D-14): 35 -> 30, the five Winetricks channels are resolvers or native channels.
-  // Phase 87 Plan 36 (D-23): 30 -> 29, `runWineCommandForGame` is a scheduled resolver.
-  it('extracts exactly 29 channels total', () => {
-    expect(allChannels).toHaveLength(29)
+  // Phase 87 Plan 36 (D-23): 30 -> 27, `runWineCommandForGame`, `runWineCommand` and `callTool` are scheduled resolvers.
+  it('extracts exactly 27 channels total', () => {
+    expect(allChannels).toHaveLength(27)
   })
 
   it.each(MODULES)('$name has exactly $expectedCount channels', (spec) => {
@@ -216,10 +195,10 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
     expect(missing).toEqual([])
   })
 
-  it('the VOID_PARITY_CHANNELS allow-list itself matches exactly the 4 channels the sweep classified VOID-PARITY', () => {
+  it('the VOID_PARITY_CHANNELS allow-list itself matches exactly the 3 channels the sweep classified VOID-PARITY', () => {
     const allowListed = Object.keys(VOID_PARITY_CHANNELS).sort()
     expect(allowListed).toEqual(
-      ['logoutLegendary', 'logoutAmazon', 'removeFromSteam', 'callTool'].sort()
+      ['logoutLegendary', 'logoutAmazon', 'removeFromSteam'].sort()
     )
   })
 })

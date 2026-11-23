@@ -116,7 +116,6 @@ const ENTRY_POINTS = [
   // the `syncGOGSaves` path this note ruled out). See `BASELINE_ELECTRON_REACHING_MODULES`'s
   // `save_sync.ts` entry below for the measured before/after.
   join(REPO_ROOT, 'src/backend/sidecar/runnerAuthFlowRegistration.ts'),
-  join(REPO_ROOT, 'src/backend/sidecar/wineToolsFlowRegistration.ts'),
   join(REPO_ROOT, 'src/backend/sidecar/shortcutsFlowRegistration.ts'),
   join(REPO_ROOT, 'src/backend/sidecar/runnerMiscFlowRegistration.ts'),
   // Phase 34.6 Plan 05 (REQ-34.6-04/07/13, 2026-08-23): this plan's

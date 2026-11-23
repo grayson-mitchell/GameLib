@@ -7,16 +7,22 @@
  */
 import {
   RUST_WINE_DXVK_INSTALL_REMOVE,
+  RUST_WINE_RELEASES_INFO_READY,
+  RUST_WINE_RUN_COMMAND,
   RUST_WINE_RUN_COMMAND_FOR_GAME,
+  RUST_WINE_TOOL_CALL,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALLED
 } from 'common/types/sidecarTransport'
 import { defined } from 'backend/testUtils/indexed'
 
+import { EventEmitter } from 'events'
 import { createIpcRegistry, type IpcRegistry } from '../ipcRegistry'
 import {
+  callTool,
   registerEngineWineResolvers,
+  runWineCommand,
   runWineCommandForGame,
   toggleDXVK,
   toggleDXVKNVAPI,
@@ -27,6 +33,7 @@ import {
   type EngineWineResolverDeps
 } from '../engineWineResolvers'
 
+const GLOBAL_SETTINGS = { winePrefix: '/global/prefix', enableEsync: false }
 const SETTINGS = { winePrefix: '/prefix', marker: 'merged-game-settings' }
 const TOOL_SETTINGS = {
   winePrefix: '/bottle',
@@ -38,14 +45,26 @@ function makeDeps(answer: unknown = true): EngineWineResolverDeps & {
   calls: Array<[string, unknown[]]>
   settingsFor: string[]
   targetFor: Array<[string, string, { ensureBottle: boolean }]>
-  factsFor: Array<[string, string, { pendingInstall: boolean }]>
+  factsFor: Array<[string, string, { pendingInstall: boolean; tool?: boolean }]>
+  /** Every observable effect in order: the Rust calls, the gog library calls and the renderer pushes. */
+  log: string[]
+  sent: Array<[string, unknown]>
+  events: EventEmitter
+  gog: { gameInfo: unknown }
 } {
   const calls: Array<[string, unknown[]]> = []
   const settingsFor: string[] = []
   const targetFor: Array<[string, string, { ensureBottle: boolean }]> = []
-  const factsFor: Array<[string, string, { pendingInstall: boolean }]> = []
+  const factsFor: Array<
+    [string, string, { pendingInstall: boolean; tool?: boolean }]
+  > = []
+  const log: string[] = []
+  const sent: Array<[string, unknown]> = []
+  const events = new EventEmitter()
+  const gog = { gameInfo: undefined as unknown }
   const requestRustInvoke = ((channel: string, args: unknown[]) => {
     calls.push([channel, args])
+    log.push(`rust:${channel}`)
     return answer instanceof Error
       ? Promise.reject(answer)
       : Promise.resolve(answer)
@@ -61,6 +80,26 @@ function makeDeps(answer: unknown = true): EngineWineResolverDeps & {
       }
     } as unknown as EngineWineResolverDeps['gameConfigs'],
     requestRustInvoke,
+    config: { getSettings: () => GLOBAL_SETTINGS as never },
+    sendFrontendMessage: ((channel: string, payload: unknown) => {
+      sent.push([channel, payload])
+      log.push(`push:${channel}`)
+    }) as EngineWineResolverDeps['sendFrontendMessage'],
+    appRuntime: { events } as unknown as EngineWineResolverDeps['appRuntime'],
+    managers: {
+      library: {
+        gog: {
+          checkForOfflineInstallerChanges: (appName: string) => {
+            log.push(`gog:check:${appName}`)
+            return Promise.resolve()
+          },
+          getGameInfo: (appName: string) => {
+            log.push(`gog:info:${appName}`)
+            return gog.gameInfo
+          }
+        }
+      }
+    } as unknown as EngineWineResolverDeps['managers'],
     winetricksTarget: (runner, appName, opts) => {
       targetFor.push([runner, appName, opts])
       return Promise.resolve({
@@ -84,7 +123,11 @@ function makeDeps(answer: unknown = true): EngineWineResolverDeps & {
     calls,
     settingsFor,
     targetFor,
-    factsFor
+    factsFor,
+    log,
+    sent,
+    events,
+    gog
   }
 }
 
@@ -192,7 +235,9 @@ describe('registerEngineWineResolvers', () => {
         'winetricksApply',
         'winetricksAvailable',
         'winetricksInstalled',
-        'runWineCommandForGame'
+        'runWineCommandForGame',
+        'runWineCommand',
+        'callTool'
       ].sort()
     )
   })
@@ -461,5 +506,200 @@ describe('runWineCommandForGame', () => {
         wait: false
       })
     })
+  })
+})
+
+// 87-36 (D-23): `runWineCommand` spreads the global settings under the caller's `gameSettings` and sends the command
+// in one typed call; the Rust op judges the command, so the resolver never re-shapes anything else.
+describe('runWineCommand', () => {
+  it('fills absent gameSettings keys from the global settings, the payload keys winning', async () => {
+    const deps = makeDeps({ stdout: 'out', stderr: '', code: 0 })
+    const result = await runWineCommand(deps, {
+      commandParts: ['winecfg'],
+      wait: true,
+      gameSettings: { winePrefix: '/game/prefix' } as never
+    })
+    expect(result).toEqual({ stdout: 'out', stderr: '', code: 0 })
+    expect(deps.calls).toEqual([
+      [
+        RUST_WINE_RUN_COMMAND,
+        [
+          {
+            commandParts: ['winecfg'],
+            wait: true,
+            gameSettings: { enableEsync: false, winePrefix: '/game/prefix' }
+          }
+        ]
+      ]
+    ])
+  })
+
+  it('sends a command with no gameSettings exactly as it came', async () => {
+    const deps = makeDeps({ stdout: '', stderr: '' })
+    const command = { commandParts: ['wineboot', '-u'], wait: false }
+    await runWineCommand(deps, command)
+    expect(deps.calls[0]?.[0]).toBe(RUST_WINE_RUN_COMMAND)
+    expect(deps.calls[0]?.[1][0]).toBe(command)
+  })
+
+  it("lets Rust's refusal reach the renderer", async () => {
+    const deps = makeDeps(new Error('wine_run_command:bad-args'))
+    await expect(
+      runWineCommand(deps, { commandParts: ['winecfg'] })
+    ).rejects.toThrow('wine_run_command:bad-args')
+  })
+
+  it('is registered once as the runWineCommand handle, carrying the renderer argument', async () => {
+    const deps = makeDeps({ stdout: '', stderr: '' })
+    registerEngineWineResolvers(deps)
+    await deps.registry.getHandler('runWineCommand')?.({} as never, {
+      commandParts: ['winecfg'],
+      gameSettings: {}
+    })
+    expect(deps.calls[0]?.[1][0]).toEqual({
+      commandParts: ['winecfg'],
+      gameSettings: GLOBAL_SETTINGS
+    })
+  })
+})
+
+describe('callTool', () => {
+  it('gathers the facts for a tool (not a pending install) and sends the tool and exe with them in one typed call', async () => {
+    const deps = makeDeps(null)
+    await callTool(deps, {
+      tool: 'runExe',
+      exe: '/games/Game Folder/setup.exe',
+      appName: 'app-1',
+      runner: 'gog'
+    })
+    expect(deps.factsFor).toEqual([
+      ['gog', 'app-1', { pendingInstall: false, tool: true }]
+    ])
+    expect(deps.calls).toEqual([
+      [
+        RUST_WINE_TOOL_CALL,
+        [
+          {
+            runner: 'gog',
+            appName: 'app-1',
+            settings: TOOL_SETTINGS,
+            steamEligible: true,
+            isNative: false,
+            folderName: 'Game Folder',
+            installPath: '/games/Game Folder',
+            tool: 'runExe',
+            exe: '/games/Game Folder/setup.exe'
+          }
+        ]
+      ]
+    ])
+  })
+
+  it("lets Rust's refusal reach the renderer", async () => {
+    const deps = makeDeps(new Error('wine_tool_call:bad-args'))
+    await expect(
+      callTool(deps, { tool: 'winecfg', appName: 'a', runner: 'gog' })
+    ).rejects.toThrow('wine_tool_call:bad-args')
+  })
+
+  describe('the renderer channel (what runs after the resolver, in the TS order)', () => {
+    const invoke = (
+      deps: ReturnType<typeof makeDeps>,
+      payload: Record<string, unknown>
+    ) => {
+      registerEngineWineResolvers(deps)
+      return deps.registry.getHandler('callTool')?.({} as never, payload)
+    }
+
+    it('a GOG game: the Rust call, then the offline-installer check, the library push and the done status', async () => {
+      const deps = makeDeps(null)
+      deps.gog.gameInfo = { app_name: 'g-1', title: 'A game' }
+      const done: unknown[] = []
+      deps.events.on('gameStatusUpdate', (payload) => done.push(payload))
+      await invoke(deps, { tool: 'winecfg', appName: 'g-1', runner: 'gog' })
+      expect(deps.log).toEqual([
+        `rust:${RUST_WINE_TOOL_CALL}`,
+        'gog:check:g-1',
+        'gog:info:g-1',
+        'push:pushGameToLibrary',
+        'push:gameStatusUpdate'
+      ])
+      expect(deps.sent).toEqual([
+        ['pushGameToLibrary', { app_name: 'g-1', title: 'A game' }],
+        ['gameStatusUpdate', { appName: 'g-1', runner: 'gog', status: 'done' }]
+      ])
+      expect(done).toEqual([{ appName: 'g-1', runner: 'gog', status: 'done' }])
+    })
+
+    it('a GOG game with no library entry pushes no game, but still the done status', async () => {
+      const deps = makeDeps(null)
+      deps.gog.gameInfo = undefined
+      await invoke(deps, { tool: 'winecfg', appName: 'g-2', runner: 'gog' })
+      expect(deps.log).toEqual([
+        `rust:${RUST_WINE_TOOL_CALL}`,
+        'gog:check:g-2',
+        'gog:info:g-2',
+        'push:gameStatusUpdate'
+      ])
+    })
+
+    it('any other store skips the GOG work and ends with the done status', async () => {
+      const deps = makeDeps(null)
+      await invoke(deps, {
+        tool: 'runExe',
+        exe: '/x/setup.exe',
+        appName: 'l-1',
+        runner: 'legendary'
+      })
+      expect(deps.log).toEqual([
+        `rust:${RUST_WINE_TOOL_CALL}`,
+        'push:gameStatusUpdate'
+      ])
+      expect(deps.sent).toEqual([
+        [
+          'gameStatusUpdate',
+          { appName: 'l-1', runner: 'legendary', status: 'done' }
+        ]
+      ])
+    })
+
+    it('a rejected Rust call reaches the renderer and runs none of the glue (the TS threw before it too)', async () => {
+      const deps = makeDeps(new Error('wine_tool_call:bad-command-parts'))
+      await expect(
+        invoke(deps, { tool: 'winecfg', appName: 'g-3', runner: 'gog' })
+      ).rejects.toThrow('wine_tool_call:bad-command-parts')
+      expect(deps.log).toEqual([`rust:${RUST_WINE_TOOL_CALL}`])
+      expect(deps.sent).toEqual([])
+    })
+
+    it('answers nothing to the renderer (callTool is void)', async () => {
+      const deps = makeDeps({ unexpected: 'rust-answer' })
+      expect(
+        await invoke(deps, {
+          tool: 'winecfg',
+          appName: 'l-2',
+          runner: 'legendary'
+        })
+      ).toBeUndefined()
+    })
+  })
+})
+
+// The wine releases check used to live beside the wine tools handles; its listener is registered once, here.
+describe('the releasesInfoReady listener', () => {
+  it('sends the releases to the Rust check once per event', () => {
+    const deps = makeDeps(null)
+    registerEngineWineResolvers(deps)
+    const info = { wine: [{ version: 'wine-9' }] }
+    deps.events.emit('releasesInfoReady', info)
+    expect(deps.calls).toEqual([[RUST_WINE_RELEASES_INFO_READY, [info]]])
+    expect(deps.events.listenerCount('releasesInfoReady')).toBe(1)
+  })
+
+  it('logs a rejected check and never raises an unhandled rejection', async () => {
+    const deps = makeDeps(new Error('wine_releases_info_ready:not-ready'))
+    registerEngineWineResolvers(deps)
+    expect(() => deps.events.emit('releasesInfoReady', {})).not.toThrow()
+    await new Promise((resolve) => setImmediate(resolve))
   })
 })

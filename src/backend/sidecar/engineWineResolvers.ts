@@ -1,9 +1,18 @@
 import type { GameConfigs } from '../game_config'
+import type { GlobalConfigSlice } from '../config'
+import type { StatusUpdateDeps } from '../appRuntime'
 import type { RustInvokeDeps } from '../host/rustInvokeDeps'
-import type { Runner } from 'common/types'
+import type { StoreManagers } from 'backend/services/types'
+import type { Runner, WineCommandArgs } from 'common/types'
+import { isStore } from 'common/storeCapabilities'
+import { sendGameStatusUpdate } from '../utils'
+import { logDebug, logError, LogPrefix } from '../logger'
+import { wineReleasesInfoReady } from '../enginewine/wineManager'
 import {
   RUST_WINE_DXVK_INSTALL_REMOVE,
+  RUST_WINE_RUN_COMMAND,
   RUST_WINE_RUN_COMMAND_FOR_GAME,
+  RUST_WINE_TOOL_CALL,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALLED
@@ -24,11 +33,13 @@ import type { IpcRegistry } from './ipcRegistry'
  * 87-34 lands the DXVK family: the renderer's three toggles. Every writer of a prefix's DXVK DLLs now runs
  * the one Rust op (`wine_dxvk_install_remove`): these toggles, the launcher's DXVK step and the still-TS
  * engine's `installRemove`, the last two through the `dxvkInstallRemove` shim (`enginewine/tools.ts`). The
- * Winetricks resolvers (87-35) and the wine-command resolvers (87-36) join this file as their families
- * flip, so a family never has a TS and a Rust writer at once (D-06).
+ * Winetricks resolvers (87-35) and the wine-command resolvers (87-36: `runWineCommand`, `runWineCommandForGame`
+ * and `callTool`) joined this file as their families flipped, so a family never had a TS and a Rust writer at
+ * once (D-06). With 87-36 the wine tools cluster's own registration file is gone: every channel of it is native or
+ * registered here, and `registerEngineWineResolvers` also holds the `releasesInfoReady` listener.
  *
- * The zod entries for `toggleDXVK`, `toggleDXVKNVAPI` and `toggleVKD3D` stay: the sidecar still receives
- * these three as renderer invokes, and `{ appName, action }` is untrusted until the registry validates it.
+ * The zod entries for every channel here stay: the sidecar still receives them as renderer invokes, and the
+ * payloads (`{ appName, action }`, a command, a tool) are untrusted until the registry validates them.
  */
 
 /** What a renderer DXVK toggle sends. */
@@ -47,13 +58,18 @@ export interface WineCommandResolverDeps extends RustInvokeDeps {
   gameCommandFacts: (
     runner: Runner,
     appName: string,
-    opts: { pendingInstall: boolean }
+    opts: { pendingInstall: boolean; tool?: boolean }
   ) => Promise<GameCommandFacts>
 }
 
 /** The slice every resolver of this file reads: the game configs and the one Rust transport. */
-export interface EngineWineResolverDeps extends WineCommandResolverDeps {
+export interface EngineWineResolverDeps
+  extends WineCommandResolverDeps, StatusUpdateDeps {
   ipc: Pick<IpcRegistry, 'handle'>
+  /** The global settings `runWineCommand` fills a payload's absent `gameSettings` keys from. */
+  config: Pick<GlobalConfigSlice, 'getSettings'>
+  /** The GOG manager: the offline-installer check `callTool` runs after a tool. */
+  managers: Pick<StoreManagers, 'library'>
   gameConfigs: Pick<GameConfigs, 'get'>
   /**
    * The Wine environment a game's Winetricks calls act on: the tool settings, or the reason there are none
@@ -203,10 +219,55 @@ export async function runWineCommandForGame(
   ])
 }
 
+/** What the renderer's `runWineCommand` sends: a `WineCommandArgs` minus the backend-internal `options` and `onSpawn`. */
+export type RunWineCommandArgs = Omit<WineCommandArgs, 'options' | 'onSpawn'>
+
+/**
+ * The `runWineCommand` channel: one wine command in the prefix the caller's `gameSettings` name, the global settings
+ * filling every key the payload leaves out (the payload's keys win). The Rust `wine_run_command` op checks the prefix,
+ * builds the environment and spawns as a Helper; a command with no `gameSettings` goes through exactly as it came.
+ */
+export async function runWineCommand(
+  deps: RustInvokeDeps & { config: Pick<GlobalConfigSlice, 'getSettings'> },
+  args: RunWineCommandArgs
+): Promise<unknown> {
+  const command = args.gameSettings
+    ? {
+        ...args,
+        gameSettings: { ...deps.config.getSettings(), ...args.gameSettings }
+      }
+    : args
+  return deps.requestRustInvoke(RUST_WINE_RUN_COMMAND, [command])
+}
+
+/** What the renderer's Wine tool buttons send. */
+export interface CallToolArgs {
+  tool: 'winecfg' | 'runExe'
+  exe?: string
+  appName: string
+  runner: Runner
+}
+
+/**
+ * The `callTool` channel's wine command: `winecfg` or `runExe` on a game, `wait` false, through the same Rust guards as
+ * a wine command on a game. What the TS handler did after it (the GOG offline-installer check, the library push and
+ * the final `done` status) is the registration's, below, in the TS order.
+ */
+export async function callTool(
+  deps: WineCommandResolverDeps,
+  { tool, exe, appName, runner }: CallToolArgs
+): Promise<unknown> {
+  const facts = await deps.gameCommandFacts(runner, appName, {
+    pendingInstall: false,
+    tool: true
+  })
+  return deps.requestRustInvoke(RUST_WINE_TOOL_CALL, [{ ...facts, tool, exe }])
+}
+
 /**
  * Registers every channel this file resolves, once per boot, from `handlers.ts` (pinned by
- * `registrationOncePerBoot.test.ts`). A channel is registered here or in `wineToolsFlowRegistration.ts`,
- * never both: the family moves in one commit.
+ * `registrationOncePerBoot.test.ts`). Every channel of the wine tools cluster is registered
+ * here, or native, and the cluster's own registration file is gone (87-36): a channel has one owner (D-06).
  */
 export function registerEngineWineResolvers(
   deps: EngineWineResolverDeps
@@ -262,4 +323,35 @@ export function registerEngineWineResolvers(
       })
     }
   )
+  deps.ipc.handle('runWineCommand', (_event: unknown, ...args: unknown[]) =>
+    runWineCommand(deps, args[0] as RunWineCommandArgs)
+  )
+  // `callTool` is void: the Rust call, then the GOG offline-installer check (a modified install is pushed to the
+  // library) and the `done` status, which the TS handler ran in this order after its wine command.
+  deps.ipc.handle('callTool', async (_event: unknown, ...args: unknown[]) => {
+    const toolArgs = args[0] as CallToolArgs
+    await callTool(deps, toolArgs)
+    const { appName, runner } = toolArgs
+    if (isStore(runner, 'gog')) {
+      // Check if game was modified by offline installer / wine uninstaller
+      await deps.managers.library['gog'].checkForOfflineInstallerChanges(
+        appName
+      )
+      const maybeNewGameInfo = deps.managers.library['gog'].getGameInfo(appName)
+      if (maybeNewGameInfo) {
+        deps.sendFrontendMessage('pushGameToLibrary', maybeNewGameInfo)
+      }
+    }
+    sendGameStatusUpdate(deps, { appName, runner, status: 'done' })
+  })
+  // A `releasesInfoReady` event (a wine-release refresh finished) checks the stored lists: a backend event, not an
+  // IPC channel, and the sidecar has no other init path that subscribes, so omitting it would silently drop the wine
+  // list refresh with nothing failing (T-34.5-16). The check runs in Rust (`wine_releases_info_ready`, 87-20, D-15); a
+  // rejected call (the shell refused it, or the transport failed) is logged, never an unhandled rejection.
+  deps.appRuntime.events.on('releasesInfoReady', (releasesInfo) => {
+    logDebug('Releases info ready, checking wine releases', LogPrefix.Backend)
+    wineReleasesInfoReady(deps, releasesInfo).catch((error: unknown) =>
+      logError(['Wine releases check failed', error], LogPrefix.WineDownloader)
+    )
+  })
 }
