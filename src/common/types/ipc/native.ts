@@ -11,7 +11,8 @@ import type {
   Runner,
   RuntimeName,
   UploadedLogData,
-  WikiInfo
+  WikiInfo,
+  WineVersionInfo
 } from '../../types'
 import type { StoreSearchDeal, StoreSearchResponse } from '../storeSearch'
 import type { GetLogFileArgs } from './logger'
@@ -144,6 +145,14 @@ export interface NativeAsync {
   // answers `undefined` on success and on every failure (the TypeScript swallowed an error the same
   // way), so only a rejected argument ever rejects.
   refreshWineVersionInfo: (fetch?: boolean) => Promise<void>
+  // Phase 87 (87-20, D-14): install and remove one wine-manager version, answered by the Rust `wine`
+  // slice (`gamelib-wine`'s install and `wine_manager_remove`). Both take one `WineVersionInfo` as the
+  // renderer holds it; the Rust decode is strict (an unknown key rejects with the invalid-args marker).
+  // An install is cancelled by `abort(version)`. Remove acts on the version only: the directory removed
+  // is the one the store holds, never the `installDir` the renderer sent (T-34.5-16). Both answer
+  // `undefined`; progress, notifications and `wineVersionsUpdated` are pushed as before.
+  installWineVersion: (release: WineVersionInfo) => Promise<void>
+  removeWineVersion: (release: WineVersionInfo) => Promise<void>
 }
 
 export interface NativeSync {

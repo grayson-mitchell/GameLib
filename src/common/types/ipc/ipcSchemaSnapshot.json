@@ -4455,82 +4455,15 @@
     {
       "channel": "installWineVersion",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "object",
-            "properties": {
-              "version": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 1024
-              },
-              "type": {
-                "type": "string",
-                "enum": [
-                  "Wine-GE",
-                  "GE-Proton",
-                  "Proton",
-                  "Wine-Lutris",
-                  "Wine-Kron4ek",
-                  "Wine-Crossover",
-                  "Wine-Staging-macOS",
-                  "Game-Porting-Toolkit",
-                  "Proton-CachyOS"
-                ]
-              },
-              "date": {
-                "type": "string",
-                "maxLength": 256
-              },
-              "download": {
-                "type": "string",
-                "maxLength": 8192
-              },
-              "downsize": {
-                "type": "number"
-              },
-              "disksize": {
-                "type": "number"
-              },
-              "checksum": {
-                "type": "string",
-                "maxLength": 1024
-              },
-              "release_notes_link": {
-                "type": "string",
-                "maxLength": 8192
-              },
-              "isInstalled": {
-                "type": "boolean"
-              },
-              "hasUpdate": {
-                "type": "boolean"
-              },
-              "installDir": {
-                "type": "string",
-                "maxLength": 4096
-              }
-            },
-            "required": [
-              "version",
-              "type",
-              "date",
-              "disksize",
-              "release_notes_link",
-              "isInstalled",
-              "hasUpdate",
-              "installDir"
-            ],
-            "additionalProperties": {}
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "release",
+          "type": "{ version, type, date, download?, downsize?, disksize, checksum?, release_notes_link, isInstalled, hasUpdate, installDir }",
+          "strict": true
+        }
+      ],
+      "returns": "void"
     },
     {
       "channel": "isAddedToSteam",
@@ -5720,82 +5653,15 @@
     {
       "channel": "removeWineVersion",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "object",
-            "properties": {
-              "version": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 1024
-              },
-              "type": {
-                "type": "string",
-                "enum": [
-                  "Wine-GE",
-                  "GE-Proton",
-                  "Proton",
-                  "Wine-Lutris",
-                  "Wine-Kron4ek",
-                  "Wine-Crossover",
-                  "Wine-Staging-macOS",
-                  "Game-Porting-Toolkit",
-                  "Proton-CachyOS"
-                ]
-              },
-              "date": {
-                "type": "string",
-                "maxLength": 256
-              },
-              "download": {
-                "type": "string",
-                "maxLength": 8192
-              },
-              "downsize": {
-                "type": "number"
-              },
-              "disksize": {
-                "type": "number"
-              },
-              "checksum": {
-                "type": "string",
-                "maxLength": 1024
-              },
-              "release_notes_link": {
-                "type": "string",
-                "maxLength": 8192
-              },
-              "isInstalled": {
-                "type": "boolean"
-              },
-              "hasUpdate": {
-                "type": "boolean"
-              },
-              "installDir": {
-                "type": "string",
-                "maxLength": 4096
-              }
-            },
-            "required": [
-              "version",
-              "type",
-              "date",
-              "disksize",
-              "release_notes_link",
-              "isInstalled",
-              "hasUpdate",
-              "installDir"
-            ],
-            "additionalProperties": {}
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "release",
+          "type": "{ version, type, date, download?, downsize?, disksize, checksum?, release_notes_link, isInstalled, hasUpdate, installDir }",
+          "strict": true
+        }
+      ],
+      "returns": "void"
     },
     {
       "channel": "repair",

@@ -8,20 +8,6 @@ import {
   type FixtureTable
 } from 'backend/testUtils/ipcSchemaFixtures'
 
-const wineVersionInfo = {
-  version: 'GE-Proton9-1',
-  date: '2024-03-01',
-  downsize: 400000000,
-  disksize: 1200000000,
-  download: 'https://example.com/GE-Proton9-1.tar.gz',
-  checksum: 'abc123',
-  isInstalled: false,
-  hasUpdate: false,
-  installDir: '/home/user/.config/heroic/tools/proton',
-  type: 'GE-Proton',
-  release_notes_link: 'https://example.com/notes'
-}
-
 const wineInstallation = {
   bin: '/usr/bin/wine',
   name: 'Wine - System',
@@ -105,34 +91,8 @@ const asyncTable: FixtureTable<typeof wineToolsAsyncArgs> = {
       [{ appName: 'abc', runner: 'legendary', commandParts: 'winecfg' }]
     ]
   },
-  installWineVersion: {
-    valid: [
-      [wineVersionInfo],
-      // 67 review CR-01: fetchReleases never sets checksum for Wine-Staging-macOS, and sets
-      // download/downsize only when a matching asset exists; JSON drops the undefined keys.
-      [
-        {
-          ...wineVersionInfo,
-          type: 'Wine-Staging-macOS',
-          checksum: undefined,
-          download: undefined,
-          downsize: undefined
-        }
-      ],
-      // The release cache is persisted on disk; older entries may carry extra keys.
-      [{ ...wineVersionInfo, extra: 1 }]
-    ],
-    invalid: [[{ ...wineVersionInfo, type: 'Wine-Mystery' }]]
-  },
-  // Phase 87 (87-20, D-14): `refreshWineVersionInfo` is a native `wine` channel; its vectors are in
-  // `nativeChannels.json`.
-  removeWineVersion: {
-    valid: [
-      [{ ...wineVersionInfo, isInstalled: true }],
-      [{ ...wineVersionInfo, isInstalled: true, checksum: undefined }]
-    ],
-    invalid: [[{ version: 'x' }]]
-  },
+  // Phase 87 (87-20, D-14): `installWineVersion`, `refreshWineVersionInfo` and `removeWineVersion` are
+  // native `wine` channels; their vectors are in `nativeChannels.json`.
   'wine.isValidVersion': {
     valid: [
       [wineInstallation],

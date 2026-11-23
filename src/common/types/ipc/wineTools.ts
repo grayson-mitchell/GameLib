@@ -7,8 +7,7 @@ import type {
   WinetricksApplyResult,
   WinetricksComponent,
   WinetricksLogLine,
-  WinetricksQueueState,
-  WineVersionInfo
+  WinetricksQueueState
 } from '../../types'
 import {
   nonEmptyString,
@@ -43,37 +42,6 @@ const protonVerb = z.enum([
   'getcompatpath',
   'getnativepath'
 ])
-
-// Loose, with download/downsize/checksum optional (67 review CR-01): entries come from the
-// cached GitHub release list, which `fetchReleases` builds from `{} as VersionInfo` — checksum is
-// set only when a sha512sum asset exists (never for Wine-Staging-macOS), download/downsize only
-// when a matching asset exists, and JSON drops the undefined keys. The cache is persisted on disk,
-// so older entries may also carry extra keys. The downloader already handles a missing checksum.
-// Cast to the WineVersionInfo interface (as install.ts does for GameInfo) so handler call sites keep
-// the real type; that interface overstates download/downsize/checksum as always present.
-const wineVersionInfo = z.looseObject({
-  version: nonEmptyString(1024),
-  type: z.enum([
-    'Wine-GE',
-    'GE-Proton',
-    'Proton',
-    'Wine-Lutris',
-    'Wine-Kron4ek',
-    'Wine-Crossover',
-    'Wine-Staging-macOS',
-    'Game-Porting-Toolkit',
-    'Proton-CachyOS'
-  ]),
-  date: z.string().max(256),
-  download: z.string().max(8192).optional(),
-  downsize: z.number().optional(),
-  disksize: z.number(),
-  checksum: z.string().max(1024).optional(),
-  release_notes_link: z.string().max(8192),
-  isInstalled: z.boolean(),
-  hasUpdate: z.boolean(),
-  installDir: z.string().max(4096)
-}) as unknown as z.ZodType<WineVersionInfo, WineVersionInfo>
 
 const toolArgs = z.strictObject({
   appName: nonEmptyString(),
@@ -115,9 +83,9 @@ export const wineToolsAsyncArgs = {
       pendingInstall: z.boolean().optional()
     })
   ]),
-  installWineVersion: z.tuple([wineVersionInfo]),
+  // Phase 87 (87-20, D-14): `installWineVersion` and `removeWineVersion` are native `wine` channels
+  // too (`nativeChannels.json`); the strict eleven-key decode lives in the Rust `parse_wine_version`.
   // Phase 87 (87-20, D-14): `refreshWineVersionInfo` is a native `wine` channel (`nativeChannels.json`).
-  removeWineVersion: z.tuple([wineVersionInfo]),
   'wine.isValidVersion': z.tuple([wineInstallationArg()]),
   toggleDXVK: z.tuple([toolArgs]),
   toggleVKD3D: z.tuple([toolArgs]),
@@ -133,8 +101,6 @@ interface WineToolsAsyncReturns {
   winetricksCancelRemaining: Promise<WinetricksQueueState>
   getAlternativeWine: Promise<WineInstallation[]>
   runWineCommandForGame: Promise<ExecResult>
-  installWineVersion: Promise<void>
-  removeWineVersion: Promise<void>
   'wine.isValidVersion': Promise<boolean>
   toggleDXVK: Promise<boolean>
   toggleVKD3D: Promise<boolean>

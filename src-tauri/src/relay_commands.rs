@@ -156,6 +156,12 @@ pub(crate) fn sidecar_send(
     if let Some(outcome) = router.route_send(&channel, &args) {
         return outcome;
     }
+    // Phase 87 (87-20, D-14): the renderer cancels a wine-manager install with `abort(version)`. An
+    // install now runs in Rust, so Rust is offered the id first; when it owns one the sidecar has
+    // nothing registered under it and is not asked (it would log a failed abort).
+    if channel == "abort" && wine_dispatch::cancel_install_for_abort(&args) {
+        return Ok(());
+    }
     let req = SidecarRpcRequest {
         id: state.next_id(),
         kind: "send",

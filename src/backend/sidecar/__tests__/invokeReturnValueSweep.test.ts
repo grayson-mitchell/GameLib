@@ -7,7 +7,7 @@
  * the 40 put the channel name on the following line — a single-line-only regex finds fewer),
  * and asserts:
  *
- *   1. The extracted channel count is exactly 42, with the exact per-module tally 10/14/6/12.
+ *   1. The extracted channel count is exactly 40, with the exact per-module tally 10/12/6/12.
  *   2. Every channel classified RETURNS (declared non-void in `AsyncIPCFunctions`, NOT on the
  *      explicit VOID-PARITY allow-list below) has a `return` statement inside its own handler
  *      body -- so a future edit that silently drops a `return` is caught here, not live.
@@ -45,9 +45,10 @@ const MODULES: ModuleSpec[] = [
     // must NOT be absorbed by raising this number.
     // Phase 45 Plan 01 (2026-10-10): 12 -> 15. winetricksApply / winetricksQueueState /
     // winetricksCancelRemaining (invoke)
-    // Phase 87 Plan 20 (D-14): 15 -> 14. `refreshWineVersionInfo` is a native `wine` channel.
+    // Phase 87 Plan 20 (D-14): 15 -> 12. `installWineVersion`, `refreshWineVersionInfo` and
+    // `removeWineVersion` are native `wine` channels.
     path: join(__dirname, '../wineToolsFlowRegistration.ts'),
-    expectedCount: 14
+    expectedCount: 12
   },
   {
     name: 'shortcuts',
@@ -78,10 +79,6 @@ const VOID_PARITY_CHANNELS: Record<string, string> = {
     'declared Promise<void>; delegates to LegendaryUser.logout() (a void-resolving promise)',
   logoutAmazon:
     'declared Promise<void>; delegates to NileUser.logout() (a void-resolving promise)',
-  installWineVersion:
-    'declared Promise<void>; ports wine/manager/ipc_handler.ts:14 verbatim, ends on the final onProgress push with no return value',
-  removeWineVersion:
-    'declared Promise<void>; ports wine/manager/ipc_handler.ts:56 verbatim, conditionally notifies and returns nothing',
   removeFromSteam:
     'declared Promise<void>; awaits removeNonSteamGame(game) and returns nothing',
   callTool:
@@ -187,9 +184,9 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
   // This total and the per-module counts must always move together -- if they ever disagree, the
   // extraction is wrong and neither number should be adjusted until that is understood.
   // Phase 87 Plan 18 (D-14): 44 -> 43, `downloadRuntime` is a native `wine` channel too.
-  // Phase 87 Plan 20 (D-14): 43 -> 42, `refreshWineVersionInfo` is a native `wine` channel.
-  it('extracts exactly 42 channels total', () => {
-    expect(allChannels).toHaveLength(42)
+  // Phase 87 Plan 20 (D-14): 43 -> 40, the three wine-manager channels are native `wine` channels.
+  it('extracts exactly 40 channels total', () => {
+    expect(allChannels).toHaveLength(40)
   })
 
   it.each(MODULES)('$name has exactly $expectedCount channels', (spec) => {
@@ -208,17 +205,10 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
     expect(missing).toEqual([])
   })
 
-  it('the VOID_PARITY_CHANNELS allow-list itself matches exactly the 6 channels the sweep classified VOID-PARITY', () => {
+  it('the VOID_PARITY_CHANNELS allow-list itself matches exactly the 4 channels the sweep classified VOID-PARITY', () => {
     const allowListed = Object.keys(VOID_PARITY_CHANNELS).sort()
     expect(allowListed).toEqual(
-      [
-        'logoutLegendary',
-        'logoutAmazon',
-        'installWineVersion',
-        'removeWineVersion',
-        'removeFromSteam',
-        'callTool'
-      ].sort()
+      ['logoutLegendary', 'logoutAmazon', 'removeFromSteam', 'callTool'].sort()
     )
   })
 })

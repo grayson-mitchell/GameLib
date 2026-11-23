@@ -489,6 +489,11 @@ impl NativeRouter {
             "refreshWineVersionInfo",
             wine_dispatch::refresh_wine_version_info,
         );
+        // Phase 87 (87-20, D-14): the renderer's wine-version install and removal. The sidecar no
+        // longer registers either (one owner, D-06); an install's cancel is the renderer's
+        // `abort(version)`, which `sidecar_send` offers to `wine_dispatch` first.
+        invoke.insert("installWineVersion", wine_dispatch::install_wine_version);
+        invoke.insert("removeWineVersion", wine_dispatch::remove_wine_version);
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -884,6 +889,8 @@ mod tests {
         assert!(wine.contains(&"isRuntimeInstalled"), "{wine:?}");
         assert!(wine.contains(&"downloadRuntime"), "{wine:?}");
         assert!(wine.contains(&"refreshWineVersionInfo"), "{wine:?}");
+        assert!(wine.contains(&"installWineVersion"), "{wine:?}");
+        assert!(wine.contains(&"removeWineVersion"), "{wine:?}");
         for name in wine {
             // The wine slice is invoke-only: no send queue exists for it.
             assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");

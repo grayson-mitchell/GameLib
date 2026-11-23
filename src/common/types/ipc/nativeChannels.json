@@ -844,6 +844,836 @@
         [null, null],
         [false, "x"]
       ]
+    },
+    "installWineVersion": {
+      "kind": "invoke",
+      "slice": "wine",
+      "args": [
+        {
+          "name": "release",
+          "type": "{ version, type, date, download?, downsize?, disksize, checksum?, release_notes_link, isInstalled, hasUpdate, installDir }",
+          "strict": true
+        }
+      ],
+      "returns": "void",
+      "valid": [
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "disksize": 1234,
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": true,
+            "hasUpdate": true,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "GE-Proton",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Staging-macOS",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ]
+      ],
+      "invalid": [
+        [],
+        [{}],
+        ["Wine-Lutris-9"],
+        [null],
+        [[]],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          },
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9",
+            "extra": 1
+          }
+        ],
+        [
+          {
+            "version": "",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": 1,
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Mystery",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": 1,
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": "1",
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": "yes",
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": 1,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": null,
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": "1",
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ]
+      ]
+    },
+    "removeWineVersion": {
+      "kind": "invoke",
+      "slice": "wine",
+      "args": [
+        {
+          "name": "release",
+          "type": "{ version, type, date, download?, downsize?, disksize, checksum?, release_notes_link, isInstalled, hasUpdate, installDir }",
+          "strict": true
+        }
+      ],
+      "returns": "void",
+      "valid": [
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "disksize": 1234,
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": true,
+            "hasUpdate": true,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "GE-Proton",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Staging-macOS",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ]
+      ],
+      "invalid": [
+        [],
+        [{}],
+        ["Wine-Lutris-9"],
+        [null],
+        [[]],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          },
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9",
+            "extra": 1
+          }
+        ],
+        [
+          {
+            "version": "",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": 1,
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Mystery",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": 1,
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": "1",
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": "yes",
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": 1,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": null,
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": "1",
+            "disksize": 1234,
+            "checksum": "https://example.com/x.sha512sum",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ],
+        [
+          {
+            "version": "Wine-Lutris-9",
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://example.com/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "release_notes_link": "https://example.com/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/tools/wine/Wine-Lutris-9"
+          }
+        ]
+      ]
     }
   }
 }

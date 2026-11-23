@@ -16,6 +16,9 @@
 
 use super::*;
 
+use std::collections::HashMap;
+use std::sync::Mutex;
+
 use gamelib_wine::ctx::WineCtx;
 use gamelib_wine::manager::install::InstallSettings;
 use gamelib_wine::runtimes::RuntimeName;
@@ -158,67 +161,301 @@ pub(crate) fn refresh_wine_version_info(_ctx: Arc<NativeCtx>, args: Vec<Value>) 
     })
 }
 
-/// The keys a `WineVersionInfo` carries, and which of them may be absent.
-const RELEASE_KEYS: &[&str] = &[
-    "version",
-    "type",
-    "date",
-    "download",
-    "downsize",
-    "disksize",
-    "checksum",
-    "release_notes_link",
-    "isInstalled",
-    "hasUpdate",
-    "installDir",
+/// What a `WineVersionInfo` field must be.
+enum Field {
+    /// A string of one to `max` UTF-16 units (the TS `nonEmptyString(max)`).
+    NonEmpty(usize),
+    /// A string of at most `max` UTF-16 units.
+    Text(usize),
+    Number,
+    Bool,
+    /// One of the nine release types.
+    Type,
+}
+
+/// The release types a feed produces (`VersionInfo.type`).
+const RELEASE_TYPES: &[&str] = &[
+    "Wine-GE",
+    "GE-Proton",
+    "Proton",
+    "Wine-Lutris",
+    "Wine-Kron4ek",
+    "Wine-Crossover",
+    "Wine-Staging-macOS",
+    "Game-Porting-Toolkit",
+    "Proton-CachyOS",
 ];
 
-/// Decodes the one `WineVersionInfo` argument of `installWineVersion` and `removeWineVersion`.
-/// STUB (RED): accepts nothing yet.
-fn parse_wine_version(_args: &[Value]) -> Result<&Map<String, Value>, Rejection> {
-    let _ = RELEASE_KEYS;
-    Err(("0", "invalid_type"))
+/// The eleven keys of a `WineVersionInfo`, each with its shape and whether a feed may leave it out
+/// (a Wine-Staging-macOS release has no checksum and a release with no matching asset has no
+/// download or downsize; JSON drops an undefined key). The same bounds the TS zod carried.
+const RELEASE_FIELDS: &[(&str, Field, bool)] = &[
+    ("version", Field::NonEmpty(1024), false),
+    ("type", Field::Type, false),
+    ("date", Field::Text(256), false),
+    ("download", Field::Text(8192), true),
+    ("downsize", Field::Number, true),
+    ("disksize", Field::Number, false),
+    ("checksum", Field::Text(1024), true),
+    ("release_notes_link", Field::Text(8192), false),
+    ("isInstalled", Field::Bool, false),
+    ("hasUpdate", Field::Bool, false),
+    ("installDir", Field::Text(4096), false),
+];
+
+/// Decodes the one `WineVersionInfo` argument of `installWineVersion` and `removeWineVersion`: a
+/// strict object of exactly the eleven keys (an unknown key is rejected, T-87-67). The object is
+/// handed on as it came; the crate decodes what it reads again. Every rejection is a fixed path and
+/// code, never the renderer's value or key.
+fn parse_wine_version(args: &[Value]) -> Result<&Map<String, Value>, Rejection> {
+    let [arg] = args else {
+        return Err(("(args)", "invalid_type"));
+    };
+    let Value::Object(release) = arg else {
+        return Err(("0", "invalid_type"));
+    };
+    if release
+        .keys()
+        .any(|key| !RELEASE_FIELDS.iter().any(|(name, _, _)| name == key))
+    {
+        return Err(("0", "unrecognized_keys"));
+    }
+    for (name, field, optional) in RELEASE_FIELDS {
+        let path = release_field_path(name);
+        let Some(value) = release.get(*name) else {
+            if *optional {
+                continue;
+            }
+            return Err((path, "invalid_type"));
+        };
+        match (field, value) {
+            (Field::NonEmpty(max) | Field::Text(max), Value::String(text)) => {
+                let units = text.encode_utf16().count();
+                if units > *max {
+                    return Err((path, "too_big"));
+                }
+                if units == 0 && matches!(field, Field::NonEmpty(_)) {
+                    return Err((path, "too_small"));
+                }
+            }
+            (Field::Number, Value::Number(_)) | (Field::Bool, Value::Bool(_)) => {}
+            (Field::Type, Value::String(kind)) => {
+                if !RELEASE_TYPES.contains(&kind.as_str()) {
+                    return Err((path, "invalid_value"));
+                }
+            }
+            _ => return Err((path, "invalid_type")),
+        }
+    }
+    Ok(release)
 }
 
-/// What a running install is cancelled through: the renderer's `abort(version)`.
-/// STUB (RED): registers nothing.
-fn register_install(_id: &str) -> (CancellationToken, InstallGuard) {
-    (CancellationToken::new(), InstallGuard)
+/// The rejection path of one release field. A table, so the path is a `&'static str`.
+fn release_field_path(name: &str) -> &'static str {
+    match name {
+        "version" => "0.version",
+        "type" => "0.type",
+        "date" => "0.date",
+        "download" => "0.download",
+        "downsize" => "0.downsize",
+        "disksize" => "0.disksize",
+        "checksum" => "0.checksum",
+        "release_notes_link" => "0.release_notes_link",
+        "isInstalled" => "0.isInstalled",
+        "hasUpdate" => "0.hasUpdate",
+        _ => "0.installDir",
+    }
 }
 
-struct InstallGuard;
-
-/// Cancels the install registered under `id`. STUB (RED).
-pub(crate) fn cancel_install(_id: &str) -> bool {
-    false
+/// One running install's cancel, under the id the renderer aborts it by.
+struct InstallEntry {
+    /// Tells a later install of the same id from this one when its guard goes away.
+    generation: u64,
+    cancel: CancellationToken,
 }
 
-/// The renderer's `abort(id)`: STUB (RED).
-pub(crate) fn cancel_install_for_abort(_args: &[Value]) -> bool {
-    false
+#[derive(Default)]
+struct InstallCancels {
+    next: u64,
+    running: HashMap<String, InstallEntry>,
 }
 
-/// STUB (RED).
-async fn install_channel(_wine: Option<Arc<WineCtx>>, _args: Vec<Value>) -> Result<Value, String> {
-    Ok(Value::Null)
+/// The installs in flight, by id. The renderer's cancel for a wine-manager install is
+/// `abort(version)` (the same id the TS registered its abort controller under), and that channel is
+/// the sidecar's, so the shell's `sidecar_send` offers the id here first ([`cancel_install_for_abort`]).
+static INSTALLS: OnceLock<Mutex<InstallCancels>> = OnceLock::new();
+
+fn installs() -> std::sync::MutexGuard<'static, InstallCancels> {
+    INSTALLS
+        .get_or_init(|| Mutex::new(InstallCancels::default()))
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
-/// STUB (RED).
-async fn remove_channel(_wine: Option<Arc<WineCtx>>, _args: Vec<Value>) -> Result<Value, String> {
-    Ok(Value::Null)
+/// Registers an install under `id` and hands back its token. A second install under the same id
+/// replaces the first's entry (the TS abort registry did the same), and the first's guard then
+/// leaves the second's entry alone.
+fn register_install(id: &str) -> (CancellationToken, InstallGuard) {
+    let cancel = CancellationToken::new();
+    let mut installs = installs();
+    installs.next += 1;
+    let generation = installs.next;
+    installs.running.insert(
+        id.to_string(),
+        InstallEntry {
+            generation,
+            cancel: cancel.clone(),
+        },
+    );
+    (
+        cancel,
+        InstallGuard {
+            id: id.to_string(),
+            generation,
+        },
+    )
 }
 
-/// The arguments `wine_manager_remove` is given: the version, and nothing else. STUB (RED).
-fn remove_op_args(_release: &Map<String, Value>) -> Vec<Value> {
-    Vec::new()
+/// Unregisters its install when the install ends, however it ends.
+struct InstallGuard {
+    id: String,
+    generation: u64,
 }
 
-/// Reads the two install settings from a parsed `config.json`. STUB (RED).
+impl Drop for InstallGuard {
+    fn drop(&mut self) {
+        let mut installs = installs();
+        if installs
+            .running
+            .get(&self.id)
+            .is_some_and(|entry| entry.generation == self.generation)
+        {
+            installs.running.remove(&self.id);
+        }
+    }
+}
+
+/// Cancels the install registered under `id`; `false` when none is (a finished install, or an id that
+/// belongs to something else).
+pub(crate) fn cancel_install(id: &str) -> bool {
+    match installs().running.get(id) {
+        Some(entry) => {
+            entry.cancel.cancel();
+            true
+        }
+        None => false,
+    }
+}
+
+/// The renderer's `abort(id)` (a sidecar send channel): cancels the wine-manager install of that id.
+/// `true` means Rust owned it and the sidecar need not be asked; anything but one string, or an id
+/// with no install, is `false` and the send goes on to the sidecar as before.
+pub(crate) fn cancel_install_for_abort(args: &[Value]) -> bool {
+    match args {
+        [Value::String(id)] => cancel_install(id),
+        _ => false,
+    }
+}
+
+/// The two install settings out of a parsed `config.json` (`defaultSettings.downloadProtonToSteam`
+/// and `.defaultSteamPath`); the crate reads no settings file. An unreadable or wrong-typed config is
+/// the TS default (off). A stored Steam path wins; without one, `steam_default` (the discovered
+/// Steam root, what the sidecar's config defaults to) stands in, and is asked only when the setting
+/// is on, since it probes the disk.
 fn install_settings_from(
-    _config: Option<&Value>,
-    _steam_default: impl FnOnce() -> String,
+    config: Option<&Value>,
+    steam_default: impl FnOnce() -> String,
 ) -> InstallSettings {
-    InstallSettings::default()
+    let settings = config
+        .and_then(|config| config.get("defaultSettings"))
+        .and_then(Value::as_object);
+    let download_proton_to_steam = settings
+        .and_then(|settings| settings.get("downloadProtonToSteam"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    if !download_proton_to_steam {
+        return InstallSettings::default();
+    }
+    let stored = settings
+        .and_then(|settings| settings.get("defaultSteamPath"))
+        .and_then(Value::as_str)
+        .filter(|path| !path.is_empty());
+    InstallSettings {
+        download_proton_to_steam,
+        default_steam_path: stored.map(str::to_string).unwrap_or_else(steam_default),
+    }
+}
+
+/// The install settings as the global config on disk holds them now (read per install, so a setting
+/// changed a moment ago is the one used). Blocking; call it on the blocking pool.
+fn read_install_settings(wine: &WineCtx) -> InstallSettings {
+    let config = std::fs::read(wine.engine.paths.app_folder.join("config.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok());
+    install_settings_from(config.as_ref(), || {
+        gamelib_steamfiles::discover::discover_default().path
+    })
+}
+
+/// The body of `installWineVersion`: decode first (a bad call is rejected the same way before and
+/// after the install), then run the crate's install under a cancel the renderer's `abort(version)`
+/// reaches. The crate owns the whole handler (notification, progress, the download, the store, the
+/// result notification, the closing idle), so an install that is cancelled ends as the TS aborted
+/// result and this answers `undefined` like the TS handler.
+async fn install_channel(wine: Option<Arc<WineCtx>>, args: Vec<Value>) -> Result<Value, String> {
+    let release = parse_wine_version(&args)
+        .map_err(|(path, code)| invalid_args("installWineVersion", &[path], &[code]))?
+        .clone();
+    let wine = wine.ok_or_else(|| "installWineVersion: not ready".to_string())?;
+    let release = Value::Object(release);
+    let version = release["version"].as_str().unwrap_or_default().to_string();
+    let (cancel, _guard) = register_install(&version);
+    let ended = tauri::async_runtime::spawn_blocking(move || {
+        let settings = read_install_settings(&wine);
+        tauri::async_runtime::block_on(gamelib_wine::manager::install::install(
+            &wine, &release, &settings, &cancel,
+        ))
+    })
+    .await
+    .map_err(|_| "installWineVersion: the install did not finish".to_string())?;
+    // The crate refuses a version or archive name that is not one plain path component before it
+    // does anything; that is the renderer's argument being wrong.
+    ended.map_err(|_| invalid_args("installWineVersion", &["0"], &["invalid_value"]))?;
+    Ok(Value::Null)
+}
+
+/// The arguments `wine_manager_remove` is given: the version, and nothing else. The crate removes the
+/// directory the store holds for that version, never one the renderer names (T-34.5-16, T-87-19).
+fn remove_op_args(release: &Map<String, Value>) -> Vec<Value> {
+    vec![release.get("version").cloned().unwrap_or(Value::Null)]
+}
+
+/// The body of `removeWineVersion`: decode first, then `wine_manager_remove` by version. The crate
+/// notifies (`notify.uninstalled`) when it removed something; the answer is `undefined` like the TS.
+async fn remove_channel(wine: Option<Arc<WineCtx>>, args: Vec<Value>) -> Result<Value, String> {
+    let op_args = remove_op_args(
+        parse_wine_version(&args)
+            .map_err(|(path, code)| invalid_args("removeWineVersion", &[path], &[code]))?,
+    );
+    let wine = wine.ok_or_else(|| "removeWineVersion: not ready".to_string())?;
+    run_wine_op(
+        wine,
+        "wine_manager_remove",
+        op_args,
+        "removeWineVersion: the removal did not finish",
+    )
+    .await?;
+    Ok(Value::Null)
+}
+
+/// The native `installWineVersion` handler (slice `wine`, D-14).
+pub(crate) fn install_wine_version(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(install_channel(wine_ctx().cloned(), args))
+}
+
+/// The native `removeWineVersion` handler (slice `wine`, D-14).
+pub(crate) fn remove_wine_version(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(remove_channel(wine_ctx().cloned(), args))
 }
 
 /// Runs `op` over `args` for a `rustInvoke` arm. These arms run on the dispatcher's worker thread, never
@@ -484,7 +721,7 @@ mod tests {
     #[test]
     fn a_wine_version_info_is_its_eleven_keys_and_nothing_else() {
         let full = release("Wine-Lutris-9");
-        assert!(parse_wine_version(&[full.clone()]).is_ok());
+        assert!(parse_wine_version(std::slice::from_ref(&full)).is_ok());
         // download, downsize and checksum are the keys a feed may not give.
         let mut sparse = full.clone();
         for key in ["download", "downsize", "checksum"] {
