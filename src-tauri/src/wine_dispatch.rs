@@ -22,6 +22,7 @@ use std::sync::Mutex;
 use gamelib_wine::ctx::WineCtx;
 use gamelib_wine::manager::install::InstallSettings;
 use gamelib_wine::runtimes::RuntimeName;
+use gamelib_wine::tools::macho::{MachoScan, WinemacMetalCheck};
 use gamelib_wine::CancellationToken;
 use serde_json::Map;
 
@@ -41,7 +42,31 @@ pub(crate) fn install() {
         return;
     };
     let runtime_path = engine.paths.tools_path.join("runtimes");
-    let _ = WINE_CTX.set(Arc::new(WineCtx::new(Arc::clone(engine), runtime_path)));
+    let _ = WINE_CTX.set(Arc::new(
+        WineCtx::new(Arc::clone(engine), runtime_path).with_macho_scan(Arc::new(ShellMachoScan)),
+    ));
+}
+
+/// The DXMT export gate's scan (87-30, `gamelib_wine::tools::macho::MachoScan`): the same
+/// `scan_winemac_metal_exports` of `gamelib-scan` that [`scan_dispatch`] answers for the sidecar, called
+/// directly, so `gamelib-wine` takes no domain-crate dependency. An answer that is not a check is an
+/// error, which the gate reads as a failed check (never a pass).
+pub(crate) struct ShellMachoScan;
+
+impl MachoScan for ShellMachoScan {
+    fn winemac_metal_exports(
+        &self,
+        wine_bundle: &std::path::Path,
+    ) -> Result<WinemacMetalCheck, String> {
+        let bundle = wine_bundle
+            .to_str()
+            .ok_or_else(|| "bundle path is not text".to_string())?;
+        let answer = gamelib_scan::dispatch(
+            "scan_winemac_metal_exports",
+            &[serde_json::json!({ "wineBundlePath": bundle })],
+        )?;
+        WinemacMetalCheck::from_value(&answer).ok_or_else(|| "unreadable scan answer".to_string())
+    }
 }
 
 /// What a rejected argument looks like: the JSON path and the zod-vocabulary code. Fixed literals
@@ -894,6 +919,36 @@ pub(crate) fn rpc_wine_discover_crossover(args: &[Value]) -> Result<Value, Strin
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn the_shell_scan_answers_through_gamelib_scan_and_fails_a_bundle_with_no_winemac() {
+        let home = gamelib_testutil::FakeHome::new("wine-macho-");
+        let bundle = home.root().join("Wine-Staging-macOS-9");
+        std::fs::create_dir_all(&bundle).unwrap();
+
+        // No winemac.so: the scanner's own failed check, with all four symbols missing.
+        let WinemacMetalCheck::Fail {
+            winemac_path,
+            reason,
+            missing,
+        } = ShellMachoScan.winemac_metal_exports(&bundle).unwrap()
+        else {
+            panic!("a bundle with no winemac.so must not pass");
+        };
+        assert!(
+            winemac_path.ends_with("x86_64-unix/winemac.so"),
+            "{winemac_path}"
+        );
+        assert_eq!(reason, "winemac.so not found");
+        assert_eq!(missing.len(), 4);
+
+        // A file that is not a Mach-O is a failed check too.
+        let so = gamelib_wine::tools::macho::winemac_path_for(&bundle);
+        std::fs::create_dir_all(so.parent().unwrap()).unwrap();
+        std::fs::write(&so, b"not a mach-o").unwrap();
+        let check = ShellMachoScan.winemac_metal_exports(&bundle).unwrap();
+        assert!(matches!(check, WinemacMetalCheck::Fail { .. }), "{check:?}");
+    }
 
     #[test]
     fn the_runtime_name_is_one_of_the_three_and_nothing_else() {

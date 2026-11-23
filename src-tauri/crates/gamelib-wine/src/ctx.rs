@@ -9,6 +9,7 @@ use gamelib_core::process::SpecRunner;
 use gamelib_engine::ctx::EngineCtx;
 use gamelib_engine::fetch::Fetch;
 
+use crate::tools::macho::{MachoScan, UnavailableScan};
 use crate::tools::state::ToolsState;
 
 /// The CPU architecture the app runs on, as the shell reports it. The wine manager picks a release
@@ -53,6 +54,10 @@ pub struct WineCtx {
     /// The tools' in-memory state (the single-flight install slot, the catalog caches): one per
     /// context, so every op of a boot shares it.
     pub tools: ToolsState,
+    /// The winemac export scan the DXMT gate asks (`MachoScan`): the shell implements it over
+    /// `gamelib-scan`, so this crate takes no domain-crate dependency. Until the shell's is
+    /// installed it never answers, which keeps the gate closed.
+    pub macho: Arc<dyn MachoScan>,
 }
 
 impl WineCtx {
@@ -62,6 +67,7 @@ impl WineCtx {
             proc: engine.proc.clone(),
             arch: Arch::host(),
             tools: ToolsState::new(),
+            macho: Arc::new(UnavailableScan),
             engine,
             runtime_path,
         }
@@ -82,6 +88,12 @@ impl WineCtx {
     /// Replaces the spawn seam for this crate's ops only.
     pub fn with_proc(mut self, proc: Arc<dyn SpecRunner>) -> WineCtx {
         self.proc = proc;
+        self
+    }
+
+    /// Replaces the winemac export scan (the shell's `gamelib-scan` one, or a test's scripted one).
+    pub fn with_macho_scan(mut self, scan: Arc<dyn MachoScan>) -> WineCtx {
+        self.macho = scan;
         self
     }
 }

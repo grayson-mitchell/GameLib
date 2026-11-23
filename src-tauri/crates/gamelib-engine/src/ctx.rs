@@ -2,6 +2,7 @@
 //! the shell (or the CLI) builds one `EngineCtx` and every op takes `&EngineCtx`.
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use gamelib_core::clock::Clock;
@@ -104,6 +105,11 @@ pub struct EngineCtx {
     pub default_wine: DefaultWineHook,
     /// The CrossOver bin directory (D-25). Reports none until the shell's is set.
     pub crossover_bin_dir: CrossoverBinDirHook,
+    /// Whether the app is online (the TS `onlineMonitor.isOnline()`): the shell sets it through op
+    /// `engine_set_online` as its monitor changes. It starts `false`, the monitor's own first reading
+    /// (`check-online`, not yet probed, behaves as not online). The DXMT fetch reads it; offline, a
+    /// tool is not looked up.
+    pub online: Arc<AtomicBool>,
 }
 
 impl EngineCtx {
@@ -126,6 +132,7 @@ impl EngineCtx {
             app_version: DEFAULT_APP_VERSION.to_string(),
             default_wine: Arc::new(|| None),
             crossover_bin_dir: Arc::new(|| Box::pin(async { None })),
+            online: Arc::new(AtomicBool::new(false)),
             host,
             clock,
             platform,
@@ -183,6 +190,22 @@ impl EngineCtx {
         self.crossover_bin_dir = crossover_bin_dir;
         self
     }
+
+    /// Sets the online answer this context starts with.
+    pub fn with_online(self, online: bool) -> EngineCtx {
+        self.set_online(online);
+        self
+    }
+
+    /// The online monitor's answer, as the shell last reported it.
+    pub fn is_online(&self) -> bool {
+        self.online.load(Ordering::Acquire)
+    }
+
+    /// Records the online monitor's answer (op `engine_set_online`).
+    pub fn set_online(&self, online: bool) {
+        self.online.store(online, Ordering::Release);
+    }
 }
 
 #[cfg(test)]
@@ -232,6 +255,10 @@ mod tests {
         assert_eq!(ctx.app_version, DEFAULT_APP_VERSION);
         assert!((ctx.default_wine)().is_none());
         assert!((ctx.crossover_bin_dir)().await.is_none());
+        // The monitor's first reading is "not yet probed", which behaves as not online.
+        assert!(!ctx.is_online());
+        ctx.set_online(true);
+        assert!(ctx.is_online());
         // NoDxvk installs nothing; the null emitter swallows a push; the empty catalog answers the
         // inline default.
         assert!(!ctx.dxvk.install_remove(request()).await);
