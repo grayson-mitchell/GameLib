@@ -179,4 +179,21 @@ describe('boot-owned monitor (66.3-11, D-05)', () => {
     expect(services.onlineMonitor).toBe(monitor)
     expect(start).toHaveBeenCalledTimes(1)
   })
+
+  it("writes the monitor's status through to Rust, once per change (87-31)", () => {
+    const monitor = createTestOnlineMonitor({ online: false })
+    const { frames } = bootFresh({ services: { onlineMonitor: monitor } })
+    const sent = () =>
+      frames
+        .filter(
+          (f) => f.kind === 'rustInvoke' && f.channel === 'engine_set_online'
+        )
+        .map((f) => (f.args as Array<{ online: boolean }>)[0]?.online)
+
+    monitor.setOnline(true)
+    monitor.setOnline(false)
+    monitor.setStatus('check-online')
+
+    expect(sent()).toEqual([true, false, false])
+  })
 })

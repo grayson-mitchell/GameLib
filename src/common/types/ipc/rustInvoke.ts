@@ -104,6 +104,7 @@ import {
   RUST_WINE_MANAGER_INSTALL,
   RUST_WINE_DISCOVER_ALTERNATIVES,
   RUST_WINE_DISCOVER_CROSSOVER,
+  RUST_ENGINE_SET_ONLINE,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -854,7 +855,12 @@ export const rustInvokeArgs = {
   [RUST_WINE_DISCOVER_ALTERNATIVES]: z.tuple([
     z.boolean().meta({ title: 'scanCustom' })
   ]),
-  [RUST_WINE_DISCOVER_CROSSOVER]: empty
+  [RUST_WINE_DISCOVER_CROSSOVER]: empty,
+  // Phase 87 (SVC-02, 87-31): the sidecar online monitor's status, written through to the engine context.
+  // One strict object with one boolean; the crate decodes it again (deny_unknown_fields).
+  [RUST_ENGINE_SET_ONLINE]: z.tuple([
+    z.object({ online: z.boolean() }).strict()
+  ])
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

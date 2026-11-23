@@ -252,6 +252,7 @@ import { createSteamUser } from '../storeManagers/steam/user'
 // 23/24/26 move them onto the runner.
 import { setupEnvVars, setupWineEnvVars, verifyWinePrefix } from '../launcher'
 import { validWine } from '../enginewine/wineCore'
+import { setEngineOnline } from '../enginewine/engineOnline'
 import { getUmuPath, isUmuSupported } from '../utils/compatibility_layers'
 import { searchForExecutableOnPath } from '../utils/os/path'
 import {
@@ -2873,7 +2874,18 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // transport to push through, and BEFORE the READY_SENTINEL write below so the frontend's
         // `get-connectivity-status` handler is guaranteed registered before the renderer can possibly
         // ask for it.
-        requireServices(state).onlineMonitor.start()
+        const { onlineMonitor } = requireServices(state)
+        // Phase 87 (D-17, 87-31): Rust keeps the online flag its own network work (the DXMT boot update
+        // and the DXMT fetch behind a wine install) checks. The listener is attached before start(), so
+        // the monitor's first status ('check-online', not yet probed: not online) and every later change
+        // reaches Rust, and no reading is missed. One call per change; it creates no timer or handle
+        // (exit is by event-loop drain at stdin EOF), and a rejected call is swallowed (Rust keeps its
+        // last value, which a later change corrects). Deleted with the monitor in Phase 98.
+        const host = requireHost(state)
+        onlineMonitor.onConnectivityChange((status) => {
+          void setEngineOnline(host, status === 'online').catch(() => undefined)
+        })
+        onlineMonitor.start()
       }
     },
     {

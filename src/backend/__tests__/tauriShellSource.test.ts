@@ -481,7 +481,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 147 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 148 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
     // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
@@ -495,7 +495,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 87 plan 20: 139 -> 143, the four wine-manager ops.
     // Phase 87 plan 24: 143 -> 145, wine_valid and wine_run_command.
     // Phase 87 plan 26: 145 -> 147, wine_discover_alternatives and wine_discover_crossover.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(147)
+    // Phase 87 plan 31: 147 -> 148, engine_set_online.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(148)
     expect(router).not.toContain('_ =>')
   })
 
@@ -936,7 +937,13 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // shell's own DiscoveryHost. The callers are the `discoverAlternativeWine` shim (enginewine/wineDiscovery.ts)
       // and the `discoverCrossover` intra-phase shim (enginewine/intraPhase.ts).
       'wine_discover_alternatives',
-      'wine_discover_crossover'
+      'wine_discover_crossover',
+
+      // Phase 87 plan 31 -- the engine's online flag. PROVEN: `engine_dispatch::tests` drives the arm's strict
+      // decode (one object, one boolean) and its not-ready answer, `gamelib-engine`'s own test drives the op.
+      // The caller is the `setEngineOnline` shim (enginewine/engineOnline.ts), from the boot's online-monitor
+      // step.
+      'engine_set_online'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

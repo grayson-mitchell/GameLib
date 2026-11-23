@@ -560,6 +560,21 @@ pub(crate) fn get_default_engine(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> Nati
     Box::pin(get_default_engine_channel(engine_ctx().cloned(), args))
 }
 
+/// The `engine_set_online` `rustInvoke` arm (87-31, D-17): the sidecar's online monitor reporting its
+/// status. The generated decode (one object, one boolean, nothing else) first, then the crate's op, which
+/// decodes it again. Runs on the dispatcher's worker thread, so the crate's `dispatch_sync` drives it. A
+/// boolean only gates Rust-initiated network work, so a wrong value can only skip or attempt a fetch
+/// (T-87-75). Before [`install`] the answer is `engine_set_online:not-ready`.
+pub(crate) fn rpc_engine_set_online(args: &[Value]) -> Result<Value, String> {
+    EngineSetOnlineArgs::from_args(args)?;
+    // The generated decode ignores a second key; the arm refuses one (the crate does too).
+    if !matches!(args, [Value::Object(map)] if map.len() == 1) {
+        return Err("engine_set_online:bad-args".to_string());
+    }
+    let engine = engine_ctx().ok_or_else(|| "engine_set_online:not-ready".to_string())?;
+    gamelib_engine::dispatch_sync("engine_set_online", args, engine)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -577,6 +592,34 @@ mod tests {
                 .unwrap_or_else(|e| e.into_inner())
                 .push(channel.to_string());
         }
+    }
+
+    #[test]
+    fn the_set_online_arm_takes_one_strict_object_with_one_boolean_and_nothing_else() {
+        for bad in [
+            vec![],
+            vec![serde_json::json!(true)],
+            vec![serde_json::json!({})],
+            vec![serde_json::json!({ "online": "yes" })],
+            vec![serde_json::json!({ "online": true, "extra": 1 })],
+            vec![serde_json::json!({ "online": true }), serde_json::json!(1)],
+        ] {
+            assert_eq!(
+                rpc_engine_set_online(&bad),
+                Err("engine_set_online:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_set_online_arm_is_not_ready_before_the_context_is_installed() {
+        // No test installs the process-wide context, so a well-formed call reaches the not-ready answer.
+        assert!(engine_ctx().is_none());
+        assert_eq!(
+            rpc_engine_set_online(&[serde_json::json!({ "online": true })]),
+            Err("engine_set_online:not-ready".to_string())
+        );
     }
 
     fn built(emitter: Arc<dyn FrontendEmitter>) -> EngineCtx {

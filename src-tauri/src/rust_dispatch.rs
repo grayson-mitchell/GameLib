@@ -214,5 +214,6 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::WineDiscoverCrossover => {
             wine_dispatch::rpc_wine_discover_crossover(args)
         }
+        RustInvokeChannel::EngineSetOnline => engine_dispatch::rpc_engine_set_online(args),
     }
 }

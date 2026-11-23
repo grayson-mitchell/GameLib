@@ -229,6 +229,16 @@ const SCHEDULE: readonly ScheduleRow[] = [
     callers: ['src/backend/engine/crossoverLocation.ts'],
     deletedBy: 87
   },
+  // 87-31 (D-17): the online monitor's status, written through to `EngineCtx.online` at boot and on every
+  // change. The monitor itself (the probing) stays TS until the config and its callers move in Phase 98.
+  {
+    name: 'setEngineOnline',
+    file: 'src/backend/enginewine/engineOnline.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_SET_ONLINE',
+    callers: ['src/backend/sidecar/bootstrap.ts'],
+    deletedBy: 98
+  },
   // 87-26 (D-22 deviation, for the checker and the operator): `getDefaultWineBinary` is read synchronously by
   // `getFactoryDefaults` in config.ts before any rustInvoke transport exists, so it cannot become an async shim over
   // the Rust `default_wine_from_path`; it stays as a twin pinned to the shared `default_wine.json` vectors that

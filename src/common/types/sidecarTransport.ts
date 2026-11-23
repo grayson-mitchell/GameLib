@@ -1167,6 +1167,16 @@ export const RUST_WINE_DISCOVER_ALTERNATIVES =
 export const RUST_WINE_DISCOVER_CROSSOVER = 'wine_discover_crossover' as const
 
 /**
+ * Phase 87 (SVC-02, 87-31): `engine_set_online` tells the Rust engine whether the machine is online. The
+ * sidecar's online monitor is still the one that probes (until Phase 98), so it writes its status through
+ * to `EngineCtx.online` at boot and on every change; Rust-initiated network work (the DXMT boot update, the
+ * DXMT fetch behind a wine install) checks that flag as the TS checked `onlineMonitor.isOnline()`. Args: one
+ * object, `{ online: boolean }`. Resolves `null`. Bounded. The `setEngineOnline` shim in
+ * `enginewine/engineOnline.ts` is its one caller.
+ */
+export const RUST_ENGINE_SET_ONLINE = 'engine_set_online' as const
+
+/**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
  * the macOS bridge helper loads: the GameLib cache, else a snapshot of the Steam client's own copy
  * when it already hashes to the pin, else a fetch from Valve's client-update CDN (sha2vz, VZ decode,
@@ -1510,7 +1520,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_WINE_VALID,
   RUST_WINE_RUN_COMMAND,
   RUST_WINE_DISCOVER_ALTERNATIVES,
-  RUST_WINE_DISCOVER_CROSSOVER
+  RUST_WINE_DISCOVER_CROSSOVER,
+  RUST_ENGINE_SET_ONLINE
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

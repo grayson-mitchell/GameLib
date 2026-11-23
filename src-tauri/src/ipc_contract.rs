@@ -170,6 +170,7 @@ pub(crate) enum RustInvokeChannel {
     WineRunCommand,
     WineDiscoverAlternatives,
     WineDiscoverCrossover,
+    EngineSetOnline,
 }
 
 impl RustInvokeChannel {
@@ -321,6 +322,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::WineRunCommand,
         RustInvokeChannel::WineDiscoverAlternatives,
         RustInvokeChannel::WineDiscoverCrossover,
+        RustInvokeChannel::EngineSetOnline,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -472,6 +474,7 @@ impl RustInvokeChannel {
             "wine_run_command" => Some(RustInvokeChannel::WineRunCommand),
             "wine_discover_alternatives" => Some(RustInvokeChannel::WineDiscoverAlternatives),
             "wine_discover_crossover" => Some(RustInvokeChannel::WineDiscoverCrossover),
+            "engine_set_online" => Some(RustInvokeChannel::EngineSetOnline),
             _ => None,
         }
     }
@@ -625,6 +628,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::WineRunCommand => "wine_run_command",
             RustInvokeChannel::WineDiscoverAlternatives => "wine_discover_alternatives",
             RustInvokeChannel::WineDiscoverCrossover => "wine_discover_crossover",
+            RustInvokeChannel::EngineSetOnline => "engine_set_online",
         }
     }
 }
@@ -3270,5 +3274,17 @@ pub(crate) struct WineDiscoverCrossoverArgs;
 impl WineDiscoverCrossoverArgs {
     pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
         Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct EngineSetOnlineArgs {
+    pub(crate) online: bool,
+}
+
+impl EngineSetOnlineArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "engine_set_online:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "engine_set_online:bad-args".to_string())
     }
 }
