@@ -126,10 +126,7 @@ describe('Nord Light base overrides (OD-2)', () => {
       successLabel: { token: '--text-default' },
       primaryLabel: { token: '--text-default' }
     })
-    expect(Object.keys(BASE_PREVIEW_OVERRIDES)).toEqual([
-      'gamelib-light',
-      'nord-light'
-    ])
+    expect(Object.keys(BASE_PREVIEW_OVERRIDES)).toEqual(['nord-light'])
   })
 
   it('draws the success button #81a1c1 whatever --success-button holds', () => {
@@ -168,44 +165,57 @@ describe('Nord Light base overrides (OD-2)', () => {
   })
 })
 
-describe('GameLib Light base overrides (OD-2)', () => {
-  it('names exactly the three base-owned preview colours', () => {
-    expect(BASE_PREVIEW_OVERRIDES['gamelib-light']).toEqual({
-      success: { literal: '#81a1c1' },
-      successLabel: { token: '--text-default' },
-      primaryLabel: { token: '--text-default' }
+describe('GameLib Light paints through the generic chains (261123-pnl)', () => {
+  it('has no base override and no base-overridden token', () => {
+    expect(BASE_PREVIEW_OVERRIDES['gamelib-light']).toBeUndefined()
+    expect(BASE_OVERRIDDEN_TOKENS['gamelib-light']).toBeUndefined()
+  })
+
+  it('draws the accent buttons with white labels and the light chrome', () => {
+    const palette = thumbnailPalette(gamelibLight, 'gamelib-light')
+    expect({
+      primary: palette.primary,
+      primaryLabel: palette.primaryLabel,
+      secondary: palette.secondary,
+      secondaryLabel: palette.secondaryLabel,
+      success: palette.success,
+      successLabel: palette.successLabel,
+      tabBar: palette.tabBar,
+      sidebar: palette.sidebar,
+      activeRow: palette.activeRow,
+      inactiveLabel: palette.inactiveLabel,
+      activeLabel: palette.activeLabel
+    }).toEqual({
+      primary: '#4c6f99',
+      primaryLabel: '#ffffff',
+      secondary: '#4c6f99',
+      secondaryLabel: '#ffffff',
+      success: '#4c6f99',
+      successLabel: '#ffffff',
+      tabBar: '#e5e9f0',
+      sidebar: '#e5e9f0',
+      activeRow: '#d8dee9',
+      inactiveLabel: '#4c566a',
+      activeLabel: '#2e3440'
     })
   })
 
-  it('draws the success button #81a1c1 whatever --success-button holds', () => {
+  it('draws a copy --success-button of #ff0000 as #ff0000', () => {
     const palette = thumbnailPalette(
       { ...gamelibLight, '--success-button': '#ff0000' },
       'gamelib-light'
     )
-    expect(palette.success).toBe('#81a1c1')
-    expect(palette.successLabel).toBe(gamelibLight['--text-default'])
-    expect(palette.primaryLabel).toBe(gamelibLight['--text-default'])
+    expect(palette.success).toBe('#ff0000')
   })
 
-  it('records --success-button as set by the gamelib-light base', () => {
-    expect(BASE_OVERRIDDEN_TOKENS['gamelib-light']).toEqual([
-      '--success-button'
-    ])
-  })
-
-  it('pins the overrides to the gamelib-light rules in themes.scss', () => {
+  it('owes no override: the themes.scss block has no nested button.is-primary or .button.is-success rule', () => {
     const scss = stripSourceComments(
       fs.readFileSync(path.join(__dirname, '../../themes.scss'), 'utf8')
     )
     const block = cssBlock(scss, 'body.gamelib-light')
     // `button.is-primary` also matches inside `.button.is-primary`, so anchor on a line start.
-    const primaryStart = block.search(/^\s*button\.is-primary \{/m)
-    expect(primaryStart).toBeGreaterThanOrEqual(0)
-    const primary = cssBlock(block.slice(primaryStart), 'button.is-primary')
-    const success = cssBlock(block, '.button.is-success')
-    expect(primary).toMatch(/color:\s*var\(--text-default\)\s*;/)
-    expect(success).toMatch(/background-color:\s*#81a1c1\s*;/)
-    expect(success).toMatch(/(^|[\s;])color:\s*var\(--text-default\)\s*;/)
+    expect(block).not.toMatch(/^\s*button\.is-primary \{/m)
+    expect(block).not.toMatch(/^\s*\.button\.is-success \{/m)
   })
 })
 

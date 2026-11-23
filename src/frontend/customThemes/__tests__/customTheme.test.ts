@@ -217,14 +217,23 @@ describe('parseCustomThemes token handling', () => {
   it('D-09: nested-override colours of gamelib-light are not stored as tokens', () => {
     const seed = BUILTIN_TOKENS['gamelib-light'] ?? {}
     const entries = Object.entries(seed)
-    // `.runnerIcon` #88c0d0 and the log box #dde1e7 are nested rules: no token carries them
-    for (const nested of ['#88c0d0', '#dde1e7']) {
+    // the log box #dde1e7 and the `.gameCardStatus` label #d0ddff are nested-rule literals: no token carries them
+    for (const nested of ['#dde1e7', '#d0ddff']) {
       expect(entries.filter(([, v]) => v === nested)).toEqual([])
     }
-    // `.genre` #2e3440 coincides with one DECLARED token, and only that one
+    // `.genre` text #2e3440 coincides with several DECLARED tokens, and only those
     expect(
-      entries.filter(([, v]) => v === '#2e3440').map(([name]) => name)
-    ).toEqual(['--neutral-06'])
+      entries
+        .filter(([, v]) => v === '#2e3440')
+        .map(([name]) => name)
+        .sort()
+    ).toEqual([
+      '--brand-text-01',
+      '--navbar-accent',
+      '--navbar-active',
+      '--neutral-06',
+      '--status-default-hover'
+    ])
     // a copy stores exactly the declared seed, nothing selector-derived
     const copy = makeCopy({ base: 'gamelib-light', tokens: seed }, id(1), 'c')
     expect(Object.keys(copy.tokens).sort()).toEqual(Object.keys(seed).sort())

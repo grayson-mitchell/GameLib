@@ -65,20 +65,16 @@ type PreviewOverride = { literal: string } | { token: string }
 
 /**
  * Colours the BASE theme's own CSS sets with nested rules that beat the generic chains, so a copy
- * keeps them whatever its stored tokens say (OD-2). Nord Light's and GameLib Light's (the
- * pre-261122-qwk Nord Light, kept verbatim) `.button.is-success` is a literal `#81a1c1` with
- * `--text-default` text, and their `button.is-primary` text is `--text-default` (themes.scss,
- * `body.nord-light` and `body.gamelib-light`); a source-text test pins both rules per theme. NavTabs' Nord Light
+ * keeps them whatever its stored tokens say (OD-2). Nord Light's `.button.is-success` is a literal
+ * `#81a1c1` with `--text-default` text, and its `button.is-primary` text is `--text-default`
+ * (themes.scss, `body.nord-light`); a source-text test pins both rules. NavTabs' Nord Light
  * selected-tab label is deliberately NOT mirrored here (UI-SPEC OD-2 lists only the two button rules).
+ * GameLib Light (261123-pnl) has no such rules: its Play, primary and secondary buttons paint
+ * through the generic chains (accent fill, `--text-tertiary` white label), so it has no entry.
  */
 export const BASE_PREVIEW_OVERRIDES: Readonly<
   Record<string, Partial<Record<keyof ThumbnailPalette, PreviewOverride>>>
 > = {
-  'gamelib-light': {
-    success: { literal: '#81a1c1' },
-    successLabel: { token: '--text-default' },
-    primaryLabel: { token: '--text-default' }
-  },
   'nord-light': {
     success: { literal: '#81a1c1' },
     successLabel: { token: '--text-default' },
@@ -90,7 +86,6 @@ export const BASE_PREVIEW_OVERRIDES: Readonly<
 export const BASE_OVERRIDDEN_TOKENS: Readonly<
   Record<string, readonly string[]>
 > = {
-  'gamelib-light': ['--success-button'],
   'nord-light': ['--success-button']
 }
 

@@ -69,7 +69,7 @@ describe('ThemeThumbnail', () => {
     expect(markup).not.toContain('#ff0000')
   })
 
-  it('draws the GameLib Light success button in the base theme colour', () => {
+  it('honours the copy token for the GameLib Light success button (no base override)', () => {
     const markup = renderToStaticMarkup(
       <ThemeThumbnail
         tokens={{ ...gamelibLight, '--success-button': '#ff0000' }}
@@ -77,8 +77,7 @@ describe('ThemeThumbnail', () => {
       />
     )
     expect(markup).toMatch(
-      /data-part="button-success"><rect[^>]*fill="#81a1c1"/
+      /data-part="button-success"><rect[^>]*fill="#ff0000"/
     )
-    expect(markup).not.toContain('#ff0000')
   })
 })
