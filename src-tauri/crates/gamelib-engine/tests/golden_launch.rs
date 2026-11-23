@@ -78,9 +78,8 @@ const BUILD: &str = "26.3.0.39832";
 /// The steps 87-51 owns: the launch deadline, its process watch and the end of a launch.
 const DEADLINE_OPS: [&str; 5] = ["arm", "advance", "end", "quit", "registry-clear"];
 
-/// Whether the replay compares the host surfaces (notification, window raise, dialog). Off in the
-/// tracer, which replays the selection; on once the dialogs and toasts are ported.
-const COMPARE_UI: bool = false;
+/// Whether the replay compares the host surfaces (notification, window raise, dialog).
+const COMPARE_UI: bool = true;
 
 /// The trace entries that are compared: the scripted collaborators and the host surfaces. The oracle's
 /// other entries (`resolveCrossoverBinDir`, `probe`, `killWineserver`, timers) are the decision's own
