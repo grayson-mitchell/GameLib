@@ -651,7 +651,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 38/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
+**Plans:** 39/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
 
 Plans:
 **Wave 1**
@@ -729,7 +729,7 @@ Plans:
 - [x] 87-38-PLAN.md — Bottle state primitives in the crate (markers with the version gate, conf, pins, ledger, registry)
 
 **Wave 19** *(blocked on Wave 18 completion)*
-- [ ] 87-39-PLAN.md — Bottle lifecycle (create, kill, sibling-safe removal) and the bridge's pure twin
+- [x] 87-39-PLAN.md — Bottle lifecycle (create, kill, sibling-safe removal) and the bridge's pure twin
 
 **Wave 20** *(blocked on Wave 19 completion)*
 - [ ] 87-40-PLAN.md — Engine switch tracer, fallback bottles and per-game bottles in the crate
