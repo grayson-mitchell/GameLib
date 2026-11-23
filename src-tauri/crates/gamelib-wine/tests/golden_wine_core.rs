@@ -17,6 +17,7 @@ use gamelib_core::process::{BoxFuture, LineSink, ProcSpec, SpecOutput, SpecRunne
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
 use gamelib_engine::testing::{RecordingLog, ScriptedSpecRunner};
+#[cfg(unix)]
 use gamelib_proc::spec::SpecProcRunner;
 use gamelib_store::host::StoreHost;
 use gamelib_testutil::FakeHome;
@@ -556,11 +557,17 @@ fn a_wine_with_one_lib_folder_notes_the_fallback_and_a_deprecated_ge_name_its_wo
         [EnvNote::WineLibFoldersMissing]
     );
     for (name, hit) in [
+        // Each expectation is what the TS regex answers (checked in Node), not what reads well.
         ("Proton-Proton8-26", true),
         ("Wine-GE-Proton8-26", true),
-        ("GE-Proton7-55", false),
+        ("GE-Proton7-55", true),
         ("Wine-6.0-GE-1", true),
+        ("Proton-5.9-GE-2-MF", true),
+        ("Wine-GE-4.", true),
         ("GE-Proton9-27", false),
+        ("GE-Proton10-1", false),
+        ("Wine-GE-4", false),
+        ("Proton-8.0", false),
     ] {
         let settings = view(json!({
             "wineVersion": {"type": "proton", "name": name, "bin": "/b/proton"}
@@ -702,7 +709,8 @@ fn case_env(profile: &Profile, case: &Value) -> Vec<(String, String)> {
         .collect();
     dirs.push(profile.expand("<HOME>/scripted-bin"));
     let mut env = profile.base_env();
-    env.push(("PATH".to_string(), dirs.join(":")));
+    let path = std::env::join_paths(dirs).expect("the directories hold no separator");
+    env.push(("PATH".to_string(), path.to_string_lossy().into_owned()));
     env
 }
 
