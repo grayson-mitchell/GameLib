@@ -1,0 +1,64 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-macOS-9.0",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-macOS-9.0/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-macOS-9.0/bin/wine",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "cba06b5736faf67e54b07b561eae94395e774c517a7d910a54369e1263ccfbd4"
+  },
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store/wine-downloader-info.json",
+    "kind": "file",
+    "mode": "0600",
+    "sha256": "6f8d27f02404f6c23223d99ae112cac337ce23a93123eb2a82e2d8d99c6c2abd"
+  }
+]

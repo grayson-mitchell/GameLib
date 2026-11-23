@@ -1,0 +1,53 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/Heroic-Games-Launcher/wine-crossover/releases?per_page=50",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 0,
+      "headers": {}
+    },
+    "synthetic": true,
+    "networkError": true
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/Gcenx/macOS_Wine_builds/releases?per_page=50",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 0,
+      "headers": {}
+    },
+    "synthetic": true,
+    "networkError": true
+  },
+  {
+    "id": "ex-3",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/Gcenx/game-porting-toolkit/releases?per_page=50",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 0,
+      "headers": {}
+    },
+    "synthetic": true,
+    "networkError": true
+  }
+]

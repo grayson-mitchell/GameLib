@@ -1,0 +1,5 @@
+[
+  "GET https://api.github.com/repos/Heroic-Games-Launcher/wine-crossover/releases?per_page=50",
+  "GET https://api.github.com/repos/Gcenx/macOS_Wine_builds/releases?per_page=50",
+  "GET https://api.github.com/repos/Gcenx/game-porting-toolkit/releases?per_page=50"
+]

@@ -1,0 +1,485 @@
+{
+  "op": "refresh",
+  "platform": "mac",
+  "releases": [
+    {
+      "version": "GE-Proton-latest",
+      "type": "GE-Proton",
+      "date": "2026-11-03",
+      "download": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-12/GE-Proton11-12-x86_64.tar.gz",
+      "downsize": 566859228,
+      "disksize": 0,
+      "checksum": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-12/GE-Proton11-12-x86_64.sha512sum",
+      "release_notes_link": "https://github.com/GloriousEggroll/proton-ge-custom/releases/tag/GE-Proton11-12"
+    },
+    {
+      "version": "GE-Proton11-12",
+      "type": "GE-Proton",
+      "date": "2026-11-03",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/GloriousEggroll/proton-ge-custom/releases/tag/GE-Proton11-12",
+      "checksum": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-12/GE-Proton11-12-x86_64.sha512sum",
+      "download": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-12/GE-Proton11-12-x86_64.tar.gz",
+      "downsize": 566859228
+    },
+    {
+      "version": "Wine-Staging-macOS-latest",
+      "type": "Wine-Staging-macOS",
+      "date": "2026-10-31",
+      "download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.21/wine-staging-11.21-osx64.tar.xz",
+      "downsize": 228148688,
+      "disksize": 0,
+      "release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.21"
+    },
+    {
+      "version": "Wine-11.21",
+      "type": "Wine-Staging-macOS",
+      "date": "2026-10-31",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.21",
+      "download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.21/wine-staging-11.21-osx64.tar.xz",
+      "downsize": 228148688
+    },
+    {
+      "version": "Wine-11.20",
+      "type": "Wine-Staging-macOS",
+      "date": "2026-10-29",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.20",
+      "download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+      "downsize": 227975304
+    },
+    {
+      "version": "Proton-CachyOS-latest",
+      "type": "Proton-CachyOS",
+      "date": "2026-10-20",
+      "download": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261015-slr/proton-cachyos-11.0-20261015-slr-x86_64.tar.xz",
+      "downsize": 347335620,
+      "disksize": 0,
+      "checksum": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261015-slr/proton-cachyos-11.0-20261015-slr-x86_64.sha512sum",
+      "release_notes_link": "https://github.com/CachyOS/proton-cachyos/releases/tag/cachyos-11.0-20261015-slr"
+    },
+    {
+      "version": "cachyos-11.0-20261015-slr",
+      "type": "Proton-CachyOS",
+      "date": "2026-10-20",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/CachyOS/proton-cachyos/releases/tag/cachyos-11.0-20261015-slr",
+      "checksum": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261015-slr/proton-cachyos-11.0-20261015-slr-x86_64.sha512sum",
+      "download": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261015-slr/proton-cachyos-11.0-20261015-slr-x86_64.tar.xz",
+      "downsize": 347335620
+    },
+    {
+      "version": "GE-Proton11-11",
+      "type": "GE-Proton",
+      "date": "2026-10-19",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/GloriousEggroll/proton-ge-custom/releases/tag/GE-Proton11-11",
+      "checksum": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-11/GE-Proton11-11-x86_64.sha512sum",
+      "download": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-11/GE-Proton11-11-x86_64.tar.gz",
+      "downsize": 564789552
+    },
+    {
+      "version": "GE-Proton11-10",
+      "type": "GE-Proton",
+      "date": "2026-10-19",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/GloriousEggroll/proton-ge-custom/releases/tag/GE-Proton11-10",
+      "checksum": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-10/GE-Proton11-10-x86_64.sha512sum",
+      "download": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-10/GE-Proton11-10-x86_64.tar.gz",
+      "downsize": 566144788
+    },
+    {
+      "version": "cachyos-11.0-20261014-slr",
+      "type": "Proton-CachyOS",
+      "date": "2026-10-17",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/CachyOS/proton-cachyos/releases/tag/cachyos-11.0-20261014-slr",
+      "checksum": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261014-slr/proton-cachyos-11.0-20261014-slr-x86_64.sha512sum",
+      "download": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261014-slr/proton-cachyos-11.0-20261014-slr-x86_64.tar.xz",
+      "downsize": 347254516
+    },
+    {
+      "version": "proton-11.0-2e",
+      "type": "Proton",
+      "date": "2026-10-09",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/ValveSoftware/Proton/releases/tag/proton-11.0-2e"
+    },
+    {
+      "version": "cachyos-11.0-20261005-slr",
+      "type": "Proton-CachyOS",
+      "date": "2026-10-04",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/CachyOS/proton-cachyos/releases/tag/cachyos-11.0-20261005-slr",
+      "checksum": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261005-slr/proton-cachyos-11.0-20261005-slr-x86_64.sha512sum",
+      "download": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261005-slr/proton-cachyos-11.0-20261005-slr-x86_64.tar.xz",
+      "downsize": 346993320
+    },
+    {
+      "version": "Wine-11.18",
+      "type": "Wine-Staging-macOS",
+      "date": "2026-09-25",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.18",
+      "download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.18/wine-staging-11.18-osx64.tar.xz",
+      "downsize": 193105336
+    },
+    {
+      "version": "Proton-latest",
+      "type": "Proton",
+      "date": "2026-08-21",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/ValveSoftware/Proton/releases/tag/proton-11.0-2"
+    },
+    {
+      "version": "proton-11.0-2",
+      "type": "Proton",
+      "date": "2026-08-21",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/ValveSoftware/Proton/releases/tag/proton-11.0-2"
+    },
+    {
+      "version": "proton-11.0-1b",
+      "type": "Proton",
+      "date": "2026-07-28",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/ValveSoftware/Proton/releases/tag/proton-11.0-1b"
+    },
+    {
+      "version": "Wine-Crossover-latest",
+      "type": "Wine-Crossover",
+      "date": "2026-04-17",
+      "download": "https://github.com/Heroic-Games-Launcher/wine-crossover/releases/download/23.7.1-1/Wine-Crossover-23.7.1-1.tar.xz",
+      "downsize": 200466784,
+      "disksize": 0,
+      "release_notes_link": "https://github.com/Heroic-Games-Launcher/wine-crossover/releases/tag/23.7.1-1"
+    },
+    {
+      "version": "Wine-23.7.1-1",
+      "type": "Wine-Crossover",
+      "date": "2026-04-17",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/Heroic-Games-Launcher/wine-crossover/releases/tag/23.7.1-1",
+      "download": "https://github.com/Heroic-Games-Launcher/wine-crossover/releases/download/23.7.1-1/Wine-Crossover-23.7.1-1.tar.xz",
+      "downsize": 200466784
+    },
+    {
+      "version": "Game-Porting-Toolkit-latest",
+      "type": "Game-Porting-Toolkit",
+      "date": "2026-03-03",
+      "download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-3/game-porting-toolkit-3.0-3.tar.xz",
+      "downsize": 239200808,
+      "disksize": 0,
+      "release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-3"
+    },
+    {
+      "version": "Game-Porting-Toolkit-3.0-3",
+      "type": "Game-Porting-Toolkit",
+      "date": "2026-03-03",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-3",
+      "download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-3/game-porting-toolkit-3.0-3.tar.xz",
+      "downsize": 239200808
+    },
+    {
+      "version": "Game-Porting-Toolkit-3.0-2",
+      "type": "Game-Porting-Toolkit",
+      "date": "2026-02-13",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-2",
+      "download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-2/game-porting-toolkit-3.0-2.tar.xz",
+      "downsize": 260757848
+    },
+    {
+      "version": "Game-Porting-Toolkit-3.0-1",
+      "type": "Game-Porting-Toolkit",
+      "date": "2026-02-13",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-1",
+      "download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-1/game-porting-toolkit-3.0-1.tar.xz",
+      "downsize": 260771456
+    },
+    {
+      "version": "Wine-Lutris-latest",
+      "type": "Wine-Lutris",
+      "date": "2022-07-06",
+      "download": "https://github.com/lutris/wine/releases/download/lutris-wine-7.2-2/wine-lutris-7.2-2-x86_64.tar.xz",
+      "downsize": 288951088,
+      "disksize": 0,
+      "release_notes_link": "https://github.com/lutris/wine/releases/tag/lutris-wine-7.2-2"
+    },
+    {
+      "version": "Wine-lutris-wine-7.2-2",
+      "type": "Wine-Lutris",
+      "date": "2022-07-06",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/lutris/wine/releases/tag/lutris-wine-7.2-2",
+      "download": "https://github.com/lutris/wine/releases/download/lutris-wine-7.2-2/wine-lutris-7.2-2-x86_64.tar.xz",
+      "downsize": 288951088
+    },
+    {
+      "version": "Wine-lutris-wine-7.2",
+      "type": "Wine-Lutris",
+      "date": "2022-03-17",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/lutris/wine/releases/tag/lutris-wine-7.2",
+      "download": "https://github.com/lutris/wine/releases/download/lutris-wine-7.2/wine-lutris-fshack-7.2-x86_64.tar.xz",
+      "downsize": 95066400
+    },
+    {
+      "version": "Wine-lutris-7.1",
+      "type": "Wine-Lutris",
+      "date": "2022-02-14",
+      "disksize": 0,
+      "release_notes_link": "https://github.com/lutris/wine/releases/tag/lutris-7.1",
+      "download": "https://github.com/lutris/wine/releases/download/lutris-7.1/wine-lutris-fshack-7.1-x86_64.tar.xz",
+      "downsize": 293500936
+    }
+  ],
+  "downloads": [],
+  "notifications": [],
+  "store": {
+    "wine-releases": [
+      {
+        "version": "GE-Proton-latest",
+        "type": "GE-Proton",
+        "date": "2026-11-03",
+        "download": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-12/GE-Proton11-12-x86_64.tar.gz",
+        "downsize": 566859228,
+        "disksize": 0,
+        "checksum": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-12/GE-Proton11-12-x86_64.sha512sum",
+        "release_notes_link": "https://github.com/GloriousEggroll/proton-ge-custom/releases/tag/GE-Proton11-12"
+      },
+      {
+        "version": "GE-Proton11-12",
+        "type": "GE-Proton",
+        "date": "2026-11-03",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/GloriousEggroll/proton-ge-custom/releases/tag/GE-Proton11-12",
+        "checksum": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-12/GE-Proton11-12-x86_64.sha512sum",
+        "download": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-12/GE-Proton11-12-x86_64.tar.gz",
+        "downsize": 566859228
+      },
+      {
+        "version": "Wine-Staging-macOS-latest",
+        "type": "Wine-Staging-macOS",
+        "date": "2026-10-31",
+        "download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.21/wine-staging-11.21-osx64.tar.xz",
+        "downsize": 228148688,
+        "disksize": 0,
+        "release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.21"
+      },
+      {
+        "version": "Wine-11.21",
+        "type": "Wine-Staging-macOS",
+        "date": "2026-10-31",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.21",
+        "download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.21/wine-staging-11.21-osx64.tar.xz",
+        "downsize": 228148688
+      },
+      {
+        "version": "Wine-11.20",
+        "type": "Wine-Staging-macOS",
+        "date": "2026-10-29",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.20",
+        "download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+        "downsize": 227975304
+      },
+      {
+        "version": "Proton-CachyOS-latest",
+        "type": "Proton-CachyOS",
+        "date": "2026-10-20",
+        "download": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261015-slr/proton-cachyos-11.0-20261015-slr-x86_64.tar.xz",
+        "downsize": 347335620,
+        "disksize": 0,
+        "checksum": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261015-slr/proton-cachyos-11.0-20261015-slr-x86_64.sha512sum",
+        "release_notes_link": "https://github.com/CachyOS/proton-cachyos/releases/tag/cachyos-11.0-20261015-slr"
+      },
+      {
+        "version": "cachyos-11.0-20261015-slr",
+        "type": "Proton-CachyOS",
+        "date": "2026-10-20",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/CachyOS/proton-cachyos/releases/tag/cachyos-11.0-20261015-slr",
+        "checksum": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261015-slr/proton-cachyos-11.0-20261015-slr-x86_64.sha512sum",
+        "download": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261015-slr/proton-cachyos-11.0-20261015-slr-x86_64.tar.xz",
+        "downsize": 347335620
+      },
+      {
+        "version": "GE-Proton11-11",
+        "type": "GE-Proton",
+        "date": "2026-10-19",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/GloriousEggroll/proton-ge-custom/releases/tag/GE-Proton11-11",
+        "checksum": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-11/GE-Proton11-11-x86_64.sha512sum",
+        "download": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-11/GE-Proton11-11-x86_64.tar.gz",
+        "downsize": 564789552
+      },
+      {
+        "version": "GE-Proton11-10",
+        "type": "GE-Proton",
+        "date": "2026-10-19",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/GloriousEggroll/proton-ge-custom/releases/tag/GE-Proton11-10",
+        "checksum": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-10/GE-Proton11-10-x86_64.sha512sum",
+        "download": "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-10/GE-Proton11-10-x86_64.tar.gz",
+        "downsize": 566144788
+      },
+      {
+        "version": "cachyos-11.0-20261014-slr",
+        "type": "Proton-CachyOS",
+        "date": "2026-10-17",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/CachyOS/proton-cachyos/releases/tag/cachyos-11.0-20261014-slr",
+        "checksum": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261014-slr/proton-cachyos-11.0-20261014-slr-x86_64.sha512sum",
+        "download": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261014-slr/proton-cachyos-11.0-20261014-slr-x86_64.tar.xz",
+        "downsize": 347254516
+      },
+      {
+        "version": "proton-11.0-2e",
+        "type": "Proton",
+        "date": "2026-10-09",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/ValveSoftware/Proton/releases/tag/proton-11.0-2e"
+      },
+      {
+        "version": "cachyos-11.0-20261005-slr",
+        "type": "Proton-CachyOS",
+        "date": "2026-10-04",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/CachyOS/proton-cachyos/releases/tag/cachyos-11.0-20261005-slr",
+        "checksum": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261005-slr/proton-cachyos-11.0-20261005-slr-x86_64.sha512sum",
+        "download": "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-11.0-20261005-slr/proton-cachyos-11.0-20261005-slr-x86_64.tar.xz",
+        "downsize": 346993320
+      },
+      {
+        "version": "Wine-11.18",
+        "type": "Wine-Staging-macOS",
+        "date": "2026-09-25",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.18",
+        "download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.18/wine-staging-11.18-osx64.tar.xz",
+        "downsize": 193105336
+      },
+      {
+        "version": "Proton-latest",
+        "type": "Proton",
+        "date": "2026-08-21",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/ValveSoftware/Proton/releases/tag/proton-11.0-2"
+      },
+      {
+        "version": "proton-11.0-2",
+        "type": "Proton",
+        "date": "2026-08-21",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/ValveSoftware/Proton/releases/tag/proton-11.0-2"
+      },
+      {
+        "version": "proton-11.0-1b",
+        "type": "Proton",
+        "date": "2026-07-28",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/ValveSoftware/Proton/releases/tag/proton-11.0-1b"
+      },
+      {
+        "version": "Wine-Crossover-latest",
+        "type": "Wine-Crossover",
+        "date": "2026-04-17",
+        "download": "https://github.com/Heroic-Games-Launcher/wine-crossover/releases/download/23.7.1-1/Wine-Crossover-23.7.1-1.tar.xz",
+        "downsize": 200466784,
+        "disksize": 0,
+        "release_notes_link": "https://github.com/Heroic-Games-Launcher/wine-crossover/releases/tag/23.7.1-1"
+      },
+      {
+        "version": "Wine-23.7.1-1",
+        "type": "Wine-Crossover",
+        "date": "2026-04-17",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/Heroic-Games-Launcher/wine-crossover/releases/tag/23.7.1-1",
+        "download": "https://github.com/Heroic-Games-Launcher/wine-crossover/releases/download/23.7.1-1/Wine-Crossover-23.7.1-1.tar.xz",
+        "downsize": 200466784
+      },
+      {
+        "version": "Game-Porting-Toolkit-latest",
+        "type": "Game-Porting-Toolkit",
+        "date": "2026-03-03",
+        "download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-3/game-porting-toolkit-3.0-3.tar.xz",
+        "downsize": 239200808,
+        "disksize": 0,
+        "release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-3"
+      },
+      {
+        "version": "Game-Porting-Toolkit-3.0-3",
+        "type": "Game-Porting-Toolkit",
+        "date": "2026-03-03",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-3",
+        "download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-3/game-porting-toolkit-3.0-3.tar.xz",
+        "downsize": 239200808
+      },
+      {
+        "version": "Game-Porting-Toolkit-3.0-2",
+        "type": "Game-Porting-Toolkit",
+        "date": "2026-02-13",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-2",
+        "download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-2/game-porting-toolkit-3.0-2.tar.xz",
+        "downsize": 260757848
+      },
+      {
+        "version": "Game-Porting-Toolkit-3.0-1",
+        "type": "Game-Porting-Toolkit",
+        "date": "2026-02-13",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-1",
+        "download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-1/game-porting-toolkit-3.0-1.tar.xz",
+        "downsize": 260771456
+      },
+      {
+        "version": "Wine-Lutris-latest",
+        "type": "Wine-Lutris",
+        "date": "2022-07-06",
+        "download": "https://github.com/lutris/wine/releases/download/lutris-wine-7.2-2/wine-lutris-7.2-2-x86_64.tar.xz",
+        "downsize": 288951088,
+        "disksize": 0,
+        "release_notes_link": "https://github.com/lutris/wine/releases/tag/lutris-wine-7.2-2"
+      },
+      {
+        "version": "Wine-lutris-wine-7.2-2",
+        "type": "Wine-Lutris",
+        "date": "2022-07-06",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/lutris/wine/releases/tag/lutris-wine-7.2-2",
+        "download": "https://github.com/lutris/wine/releases/download/lutris-wine-7.2-2/wine-lutris-7.2-2-x86_64.tar.xz",
+        "downsize": 288951088
+      },
+      {
+        "version": "Wine-lutris-wine-7.2",
+        "type": "Wine-Lutris",
+        "date": "2022-03-17",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/lutris/wine/releases/tag/lutris-wine-7.2",
+        "download": "https://github.com/lutris/wine/releases/download/lutris-wine-7.2/wine-lutris-fshack-7.2-x86_64.tar.xz",
+        "downsize": 95066400
+      },
+      {
+        "version": "Wine-lutris-7.1",
+        "type": "Wine-Lutris",
+        "date": "2022-02-14",
+        "disksize": 0,
+        "release_notes_link": "https://github.com/lutris/wine/releases/tag/lutris-7.1",
+        "download": "https://github.com/lutris/wine/releases/download/lutris-7.1/wine-lutris-fshack-7.1-x86_64.tar.xz",
+        "downsize": 293500936
+      }
+    ],
+    "__internal__": {
+      "gamelib": {
+        "schemaVersion": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,162 @@
+{
+  "op": "refresh",
+  "platform": "linux",
+  "releases": [
+    {
+      "version": "GE-Proton-latest",
+      "type": "GE-Proton",
+      "date": "2024-06-02",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-2/GE-Proton9-2.tar.gz",
+      "downsize": 300,
+      "disksize": 0,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-2/GE-Proton9-2.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/notes/GE-Proton9-2"
+    },
+    {
+      "version": "GE-Proton9-2",
+      "type": "GE-Proton",
+      "date": "2024-06-02",
+      "disksize": 0,
+      "release_notes_link": "https://downloads.oracle.invalid/notes/GE-Proton9-2",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-2/GE-Proton9-2.tar.gz",
+      "downsize": 300,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-2/GE-Proton9-2.sha512sum"
+    },
+    {
+      "version": "GE-Proton9-1",
+      "type": "GE-Proton",
+      "date": "2024-06-01",
+      "disksize": 1234,
+      "release_notes_link": "https://downloads.oracle.invalid/notes/GE-Proton9-1",
+      "download": "https://downloads.oracle.invalid/GE-Proton9-1/GE-Proton9-1.tar.gz",
+      "downsize": 200,
+      "checksum": "https://downloads.oracle.invalid/GE-Proton9-1/GE-Proton9-1.sha512sum",
+      "installDir": "<TOOLS>/proton/Proton-GE-Proton9-1",
+      "isInstalled": true,
+      "hasUpdate": true
+    },
+    {
+      "version": "Proton-CachyOS-latest",
+      "type": "Proton-CachyOS",
+      "date": "2024-06-01",
+      "download": "https://downloads.oracle.invalid/cachyos-9.0-20240601-slr/proton-cachyos-9.0-20240601-slr-x86_64.tar.xz",
+      "downsize": 400,
+      "disksize": 0,
+      "checksum": "https://downloads.oracle.invalid/cachyos-9.0-20240601-slr/proton-cachyos-9.0-20240601-slr-x86_64.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/notes/cachyos-9.0-20240601-slr"
+    },
+    {
+      "version": "cachyos-9.0-20240601-slr",
+      "type": "Proton-CachyOS",
+      "date": "2024-06-01",
+      "disksize": 0,
+      "release_notes_link": "https://downloads.oracle.invalid/notes/cachyos-9.0-20240601-slr",
+      "checksum": "https://downloads.oracle.invalid/cachyos-9.0-20240601-slr/proton-cachyos-9.0-20240601-slr-x86_64.sha512sum",
+      "download": "https://downloads.oracle.invalid/cachyos-9.0-20240601-slr/proton-cachyos-9.0-20240601-slr-x86_64.tar.xz",
+      "downsize": 400
+    },
+    {
+      "version": "GE-Proton9-0",
+      "type": "GE-Proton",
+      "date": "2024-05-01",
+      "download": "https://downloads.oracle.invalid/old/GE-Proton9-0.tar.gz",
+      "downsize": 100,
+      "disksize": 4321,
+      "checksum": "https://downloads.oracle.invalid/old/GE-Proton9-0.sha512sum",
+      "release_notes_link": "https://downloads.oracle.invalid/old/notes",
+      "isInstalled": true,
+      "hasUpdate": false,
+      "installDir": "<TOOLS>/proton/GE-Proton9-0"
+    }
+  ],
+  "downloads": [],
+  "notifications": [],
+  "store": {
+    "wine-releases": [
+      {
+        "version": "GE-Proton-latest",
+        "type": "GE-Proton",
+        "date": "2024-06-02",
+        "download": "https://downloads.oracle.invalid/GE-Proton9-2/GE-Proton9-2.tar.gz",
+        "downsize": 300,
+        "disksize": 0,
+        "checksum": "https://downloads.oracle.invalid/GE-Proton9-2/GE-Proton9-2.sha512sum",
+        "release_notes_link": "https://downloads.oracle.invalid/notes/GE-Proton9-2"
+      },
+      {
+        "version": "GE-Proton9-2",
+        "type": "GE-Proton",
+        "date": "2024-06-02",
+        "disksize": 0,
+        "release_notes_link": "https://downloads.oracle.invalid/notes/GE-Proton9-2",
+        "download": "https://downloads.oracle.invalid/GE-Proton9-2/GE-Proton9-2.tar.gz",
+        "downsize": 300,
+        "checksum": "https://downloads.oracle.invalid/GE-Proton9-2/GE-Proton9-2.sha512sum"
+      },
+      {
+        "version": "Proton-GE-Proton9-1",
+        "type": "GE-Proton",
+        "date": "2024-06-01",
+        "download": "https://downloads.oracle.invalid/old/GE-Proton9-1.tar.gz",
+        "downsize": 100,
+        "disksize": 1234,
+        "checksum": "https://downloads.oracle.invalid/old/GE-Proton9-1.sha512sum",
+        "release_notes_link": "https://downloads.oracle.invalid/old/notes",
+        "isInstalled": true,
+        "hasUpdate": false,
+        "installDir": "<TOOLS>/proton/Proton-GE-Proton9-1"
+      },
+      {
+        "version": "Proton-CachyOS-latest",
+        "type": "Proton-CachyOS",
+        "date": "2024-06-01",
+        "download": "https://downloads.oracle.invalid/cachyos-9.0-20240601-slr/proton-cachyos-9.0-20240601-slr-x86_64.tar.xz",
+        "downsize": 400,
+        "disksize": 0,
+        "checksum": "https://downloads.oracle.invalid/cachyos-9.0-20240601-slr/proton-cachyos-9.0-20240601-slr-x86_64.sha512sum",
+        "release_notes_link": "https://downloads.oracle.invalid/notes/cachyos-9.0-20240601-slr"
+      },
+      {
+        "version": "cachyos-9.0-20240601-slr",
+        "type": "Proton-CachyOS",
+        "date": "2024-06-01",
+        "disksize": 0,
+        "release_notes_link": "https://downloads.oracle.invalid/notes/cachyos-9.0-20240601-slr",
+        "checksum": "https://downloads.oracle.invalid/cachyos-9.0-20240601-slr/proton-cachyos-9.0-20240601-slr-x86_64.sha512sum",
+        "download": "https://downloads.oracle.invalid/cachyos-9.0-20240601-slr/proton-cachyos-9.0-20240601-slr-x86_64.tar.xz",
+        "downsize": 400
+      },
+      {
+        "version": "GE-Proton9-0",
+        "type": "GE-Proton",
+        "date": "2024-05-01",
+        "download": "https://downloads.oracle.invalid/old/GE-Proton9-0.tar.gz",
+        "downsize": 100,
+        "disksize": 4321,
+        "checksum": "https://downloads.oracle.invalid/old/GE-Proton9-0.sha512sum",
+        "release_notes_link": "https://downloads.oracle.invalid/old/notes",
+        "isInstalled": true,
+        "hasUpdate": false,
+        "installDir": "<TOOLS>/proton/GE-Proton9-0"
+      },
+      {
+        "version": "GE-Proton8-0",
+        "type": "GE-Proton",
+        "date": "2024-01-01",
+        "download": "https://downloads.oracle.invalid/old/GE-Proton8-0.tar.gz",
+        "downsize": 100,
+        "disksize": 0,
+        "checksum": "",
+        "release_notes_link": "",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": ""
+      }
+    ],
+    "__internal__": {
+      "gamelib": {
+        "schemaVersion": 1
+      }
+    }
+  }
+}

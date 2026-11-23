@@ -1,0 +1,43 @@
+{
+  "op": "refresh",
+  "platform": "linux",
+  "releases": [
+    {
+      "version": "GE-Proton-latest",
+      "type": "GE-Proton",
+      "date": "2024-06-02",
+      "download": "https://downloads.oracle.invalid/old/GE-Proton9-2.tar.gz",
+      "downsize": 100,
+      "disksize": 0,
+      "checksum": "",
+      "release_notes_link": "",
+      "isInstalled": false,
+      "hasUpdate": false,
+      "installDir": ""
+    }
+  ],
+  "downloads": [],
+  "notifications": [],
+  "store": {
+    "wine-releases": [
+      {
+        "version": "GE-Proton-latest",
+        "type": "GE-Proton",
+        "date": "2024-06-02",
+        "download": "https://downloads.oracle.invalid/old/GE-Proton9-2.tar.gz",
+        "downsize": 100,
+        "disksize": 0,
+        "checksum": "",
+        "release_notes_link": "",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": ""
+      }
+    ],
+    "__internal__": {
+      "gamelib": {
+        "schemaVersion": 1
+      }
+    }
+  }
+}

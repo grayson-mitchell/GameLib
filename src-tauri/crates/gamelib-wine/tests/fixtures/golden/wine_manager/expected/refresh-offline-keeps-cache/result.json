@@ -1,0 +1,56 @@
+{
+  "op": "refresh",
+  "platform": "mac",
+  "releases": [
+    {
+      "version": "Wine-Staging-macOS-9.0",
+      "type": "Wine-Staging-macOS",
+      "date": "2024-02-01",
+      "download": "https://downloads.oracle.invalid/old/wine-staging.tar.xz",
+      "downsize": 100,
+      "disksize": 5678,
+      "checksum": "",
+      "release_notes_link": "",
+      "isInstalled": true,
+      "hasUpdate": false,
+      "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9.0"
+    }
+  ],
+  "downloads": [],
+  "notifications": [],
+  "store": {
+    "wine-releases": [
+      {
+        "version": "Wine-Crossover-latest",
+        "type": "Wine-Crossover",
+        "date": "2024-03-01",
+        "download": "https://downloads.oracle.invalid/old/wine-crossover.tar.xz",
+        "downsize": 100,
+        "disksize": 0,
+        "checksum": "",
+        "release_notes_link": "",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": ""
+      },
+      {
+        "version": "Wine-Staging-macOS-9.0",
+        "type": "Wine-Staging-macOS",
+        "date": "2024-02-01",
+        "download": "https://downloads.oracle.invalid/old/wine-staging.tar.xz",
+        "downsize": 100,
+        "disksize": 5678,
+        "checksum": "",
+        "release_notes_link": "",
+        "isInstalled": true,
+        "hasUpdate": false,
+        "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9.0"
+      }
+    ],
+    "__internal__": {
+      "gamelib": {
+        "schemaVersion": 1
+      }
+    }
+  }
+}

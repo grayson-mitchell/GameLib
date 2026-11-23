@@ -1,0 +1,127 @@
+[
+  {
+    "id": "refresh-all-seven-feeds",
+    "op": "refresh",
+    "platform": "mac",
+    "live": true,
+    "fetch": true,
+    "repositorys": [0, 1, 2, 3, 4, 5, 6],
+    "count": 3,
+    "note": "all seven GitHub release feeds recorded live once, per_page=3, no stored list: the parsed releases, the -latest entries, the store bytes, wineVersionsUpdated; GE-Proton assets are picked for x64"
+  },
+  {
+    "id": "refresh-merge-existing",
+    "op": "refresh",
+    "platform": "linux",
+    "fetch": true,
+    "repositorys": [0, 6],
+    "count": 2,
+    "store": [
+      {
+        "version": "Proton-GE-Proton9-1",
+        "type": "GE-Proton",
+        "date": "2024-06-01",
+        "download": "https://downloads.oracle.invalid/old/GE-Proton9-1.tar.gz",
+        "downsize": 100,
+        "disksize": 1234,
+        "checksum": "https://downloads.oracle.invalid/old/GE-Proton9-1.sha512sum",
+        "release_notes_link": "https://downloads.oracle.invalid/old/notes",
+        "isInstalled": true,
+        "hasUpdate": false,
+        "installDir": "<TOOLS>/proton/Proton-GE-Proton9-1"
+      },
+      {
+        "version": "GE-Proton9-0",
+        "type": "GE-Proton",
+        "date": "2024-05-01",
+        "download": "https://downloads.oracle.invalid/old/GE-Proton9-0.tar.gz",
+        "downsize": 100,
+        "disksize": 4321,
+        "checksum": "https://downloads.oracle.invalid/old/GE-Proton9-0.sha512sum",
+        "release_notes_link": "https://downloads.oracle.invalid/old/notes",
+        "isInstalled": true,
+        "hasUpdate": false,
+        "installDir": "<TOOLS>/proton/GE-Proton9-0"
+      },
+      {
+        "version": "GE-Proton8-0",
+        "type": "GE-Proton",
+        "date": "2024-01-01",
+        "download": "https://downloads.oracle.invalid/old/GE-Proton8-0.tar.gz",
+        "downsize": 100,
+        "disksize": 0,
+        "checksum": "",
+        "release_notes_link": "",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": ""
+      }
+    ],
+    "seed": [
+      { "path": "<TOOLS>/proton/Proton-GE-Proton9-1/old-file", "text": "old" },
+      { "path": "<TOOLS>/proton/GE-Proton9-0/old-file", "text": "old" }
+    ],
+    "note": "synthetic GE and CachyOS feeds against a stored list: the dropped Proton- prefix still matches (installDir, isInstalled, disksize carried, hasUpdate set by the changed checksum), an installed release the feed no longer lists is kept, an uninstalled one is kept as listed, -latest is added, the list is sorted by date"
+  },
+  {
+    "id": "refresh-offline-keeps-cache",
+    "op": "refresh",
+    "platform": "mac",
+    "fetch": true,
+    "feeds": "offline",
+    "store": [
+      {
+        "version": "Wine-Crossover-latest",
+        "type": "Wine-Crossover",
+        "date": "2024-03-01",
+        "download": "https://downloads.oracle.invalid/old/wine-crossover.tar.xz",
+        "downsize": 100,
+        "disksize": 0,
+        "checksum": "",
+        "release_notes_link": "",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": ""
+      },
+      {
+        "version": "Wine-Staging-macOS-9.0",
+        "type": "Wine-Staging-macOS",
+        "date": "2024-02-01",
+        "download": "https://downloads.oracle.invalid/old/wine-staging.tar.xz",
+        "downsize": 100,
+        "disksize": 5678,
+        "checksum": "",
+        "release_notes_link": "",
+        "isInstalled": true,
+        "hasUpdate": false,
+        "installDir": "<TOOLS>/wine/Wine-Staging-macOS-9.0"
+      }
+    ],
+    "seed": [
+      { "path": "<TOOLS>/wine/Wine-Staging-macOS-9.0/bin/wine", "text": "old" }
+    ],
+    "note": "the default mac feeds (no repositorys) all fail at the transport: each failure is logged and swallowed, the stored list is kept whole and re-saved, wineVersionsUpdated still fires"
+  },
+  {
+    "id": "refresh-local-only",
+    "op": "refresh",
+    "platform": "linux",
+    "fetch": false,
+    "store": [
+      {
+        "version": "GE-Proton-latest",
+        "type": "GE-Proton",
+        "date": "2024-06-02",
+        "download": "https://downloads.oracle.invalid/old/GE-Proton9-2.tar.gz",
+        "downsize": 100,
+        "disksize": 0,
+        "checksum": "",
+        "release_notes_link": "",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": ""
+      }
+    ],
+    "note": "fetch=false reads the stored list and makes no request"
+  }
+]

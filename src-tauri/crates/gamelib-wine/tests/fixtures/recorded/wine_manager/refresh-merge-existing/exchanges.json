@@ -1,0 +1,40 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases?per_page=2",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyFile": "body-1.json"
+    },
+    "synthetic": true
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/CachyOS/proton-cachyos/releases?per_page=2",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyFile": "body-2.json"
+    },
+    "synthetic": true
+  }
+]

@@ -1,0 +1,28 @@
+[
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store/wine-downloader-info.json",
+    "kind": "file",
+    "mode": "0600",
+    "sha256": "a7c751f3ea8e11df84d22cd41211d4bd6fe673309251c55e2c571fef14792cb7"
+  }
+]

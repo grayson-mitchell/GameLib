@@ -1,0 +1,141 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases?per_page=3",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "etag": "W/\"348d00fef63d72578eb97e9acd76726634f29e7e1092fb39f4485ac7bbc7dbd2\"",
+        "link": "<https://api.github.com/repositories/161428437/releases?per_page=3&page=2>; rel=\"next\", <https://api.github.com/repositories/161428437/releases?per_page=3&page=79>; rel=\"last\""
+      },
+      "bodyFile": "body-1.json"
+    }
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/ValveSoftware/Proton/releases?per_page=3",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "etag": "W/\"20891cd904e2ca285a055d277ec55d9e9f319a00c43d2953e14bfa574e75e7fa\"",
+        "link": "<https://api.github.com/repositories/125098880/releases?per_page=3&page=2>; rel=\"next\", <https://api.github.com/repositories/125098880/releases?per_page=3&page=29>; rel=\"last\""
+      },
+      "bodyFile": "body-2.json"
+    }
+  },
+  {
+    "id": "ex-3",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/lutris/wine/releases?per_page=3",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "etag": "W/\"97f4ee7e0a55fd90c0b66d1a9aa2d36da526f65bde7988f5544a96a2f3402f70\"",
+        "link": "<https://api.github.com/repositories/125460454/releases?per_page=3&page=2>; rel=\"next\", <https://api.github.com/repositories/125460454/releases?per_page=3&page=13>; rel=\"last\""
+      },
+      "bodyFile": "body-3.json"
+    }
+  },
+  {
+    "id": "ex-4",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/Heroic-Games-Launcher/wine-crossover/releases?per_page=3",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "etag": "W/\"e6c399b6132a195028226e9ddbb70e91ab1456c2d4662f41833bd779f6d9b0ef\""
+      },
+      "bodyFile": "body-4.json"
+    }
+  },
+  {
+    "id": "ex-5",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/Gcenx/macOS_Wine_builds/releases?per_page=3",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "etag": "W/\"f3fdd83ff8b2afcb05211c541d551911aa42385812d58b64dda576ffaecd2fc6\"",
+        "link": "<https://api.github.com/repositories/266452501/releases?per_page=3&page=2>; rel=\"next\", <https://api.github.com/repositories/266452501/releases?per_page=3&page=5>; rel=\"last\""
+      },
+      "bodyFile": "body-5.json"
+    }
+  },
+  {
+    "id": "ex-6",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/Gcenx/game-porting-toolkit/releases?per_page=3",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "etag": "W/\"60fbb6a2ba0127a41585b7124f2cd5040fd11e4e88c49ec09d263baa1b21e4ee\"",
+        "link": "<https://api.github.com/repositories/740260434/releases?per_page=3&page=2>; rel=\"next\", <https://api.github.com/repositories/740260434/releases?per_page=3&page=5>; rel=\"last\""
+      },
+      "bodyFile": "body-6.json"
+    }
+  },
+  {
+    "id": "ex-7",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/CachyOS/proton-cachyos/releases?per_page=3",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "etag": "W/\"5b4eaf85456b838e7228937f01d6b48bb8e9818c45d46b9fc10cd94d229629e4\"",
+        "link": "<https://api.github.com/repositories/773292220/releases?per_page=3&page=2>; rel=\"next\", <https://api.github.com/repositories/773292220/releases?per_page=3&page=23>; rel=\"last\""
+      },
+      "bodyFile": "body-7.json"
+    }
+  }
+]

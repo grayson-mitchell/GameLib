@@ -1,0 +1,70 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton/GE-Proton9-0",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton/GE-Proton9-0/old-file",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "cba06b5736faf67e54b07b561eae94395e774c517a7d910a54369e1263ccfbd4"
+  },
+  {
+    "path": ".config/GameLib/tools/proton/Proton-GE-Proton9-1",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton/Proton-GE-Proton9-1/old-file",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "cba06b5736faf67e54b07b561eae94395e774c517a7d910a54369e1263ccfbd4"
+  },
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store/wine-downloader-info.json",
+    "kind": "file",
+    "mode": "0600",
+    "sha256": "e95a7f7ae10f5309e09f09ef1a55347824ff0da69847361c72da25a6a426985f"
+  }
+]
