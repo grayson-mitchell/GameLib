@@ -13,7 +13,6 @@ import {
 } from 'backend/logger'
 import type { WineCommandArgs } from 'common/types'
 import type { GOGManagerDeps } from './library'
-import { engineServicesFrom } from 'backend/services/engineServices'
 import { readFile } from 'node:fs/promises'
 import shlex from 'shlex'
 import {
@@ -25,10 +24,11 @@ import { deriveGogPaths } from './constants'
 import { isWindows } from 'backend/constants/environment'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { runElevatedSteps, type ElevatedStep } from './windowsElevation'
+import { endEngineLaunch } from 'backend/enginewine/launch'
 import {
-  endEngineLaunch,
-  selectEngineForLaunch
-} from 'backend/engine/launchEngine'
+  launchSettingsFor,
+  runLaunchEngineStep
+} from 'backend/launchEngineStep'
 
 /** What GOG setup reads: the manager map, the wine launcher helpers and the runners. */
 export type SetupDeps = StatusUpdateDeps &
@@ -112,7 +112,16 @@ async function setup(
   // game's own bottle. An engine-controlled setup skips checkWineBeforeLaunch: its self-heal would
   // persist a derived or fallback engine into wineVersion.
   const game = deps.libraryManagers.gog.getGame(appName)
-  const step = await selectEngineForLaunch(engineServicesFrom(deps), game, {
+  // The engine step is Rust's (87-52, D-01): the game's slice and stored settings go over as values.
+  const info = game.getGameInfo()
+  const step = await runLaunchEngineStep(deps, {
+    runner: 'gog',
+    appName,
+    title: info.title,
+    installPath: info.install?.install_path,
+    platform: info.install?.platform,
+    isNative: game.isNative(),
+    settings: await game.getSettings(),
     offline: !deps.onlineMonitor.isOnline(),
     purpose: 'setup'
   })
@@ -129,11 +138,11 @@ async function setup(
         deps,
         appName,
         gameInfo,
-        deps.engineRuntime.launchSettings.getLaunchSettings(step.key, stored),
+        await launchSettingsFor(deps, step.key, stored),
         installRedist
       )
     } finally {
-      await endEngineLaunch(deps.engineRuntime, step.key)
+      await endEngineLaunch(deps, step.key)
     }
   }
 

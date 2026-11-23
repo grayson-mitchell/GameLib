@@ -9,15 +9,15 @@ import {
 } from 'backend/logger'
 import { checkWineBeforeLaunch, sendGameStatusUpdate } from 'backend/utils'
 import { isWindows } from 'backend/constants/environment'
-import { engineServicesFrom } from 'backend/services/engineServices'
 import type { GameSettings } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import type { FuelSchema } from 'common/types/nile'
+import { endEngineLaunch } from 'backend/enginewine/launch'
 import {
-  endEngineLaunch,
-  selectEngineForLaunch
-} from 'backend/engine/launchEngine'
+  launchSettingsFor,
+  runLaunchEngineStep
+} from 'backend/launchEngineStep'
 
 type NileSetupDeps = StatusUpdateDeps &
   RustInvokeDeps &
@@ -102,7 +102,16 @@ export default async function setup(
   // game's own bottle. An engine-controlled setup skips checkWineBeforeLaunch: its self-heal would
   // persist a derived or fallback engine into wineVersion.
   const game = deps.libraryManagers.nile.getGame(appName)
-  const step = await selectEngineForLaunch(engineServicesFrom(deps), game, {
+  // The engine step is Rust's (87-52, D-01): the game's slice and stored settings go over as values.
+  const info = game.getGameInfo()
+  const step = await runLaunchEngineStep(deps, {
+    runner: 'nile',
+    appName,
+    title: info.title,
+    installPath: info.install?.install_path,
+    platform: info.install?.platform,
+    isNative: game.isNative(),
+    settings: await game.getSettings(),
     offline: !deps.onlineMonitor.isOnline(),
     purpose: 'setup'
   })
@@ -124,10 +133,10 @@ export default async function setup(
         appName,
         basePath,
         fuel.PostInstall,
-        deps.engineRuntime.launchSettings.getLaunchSettings(step.key, stored)
+        await launchSettingsFor(deps, step.key, stored)
       )
     } finally {
-      await endEngineLaunch(deps.engineRuntime, step.key)
+      await endEngineLaunch(deps, step.key)
     }
   }
 

@@ -54,12 +54,9 @@ const tsStore = {
   get: (_key: string, fallback: number) => fallback,
   set: jest.fn()
 }
-// 87-52: the engine step is Rust's; these launches are not engine-controlled, so Rust answers `skip`.
-const requestRustInvoke = (() => Promise.resolve({ kind: 'skip' })) as never
 const buildLauncher = ({ online = false }: { online?: boolean } = {}) =>
   createLauncher({
     ...createTestToolsSlices(),
-    requestRustInvoke,
     onlineMonitor: createTestOnlineMonitor({ online }),
     libraryManagers: {
       legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }

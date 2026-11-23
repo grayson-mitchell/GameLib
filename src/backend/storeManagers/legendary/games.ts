@@ -67,6 +67,7 @@ import { isCLINoGui, isMac, isWindows } from 'backend/constants/environment'
 
 import type LogWriter from 'backend/logger/targetWriter'
 import { engineKeyFor } from 'backend/enginewine/twin'
+import { launchSettingsFor } from 'backend/launchEngineStep'
 
 export default class LegendaryGame implements Game {
   private readonly appName: LegendaryAppName
@@ -962,11 +963,11 @@ export default class LegendaryGame implements Game {
     args: string[] = [],
     skipVersionCheck = false
   ): Promise<boolean> {
-    const gameSettings =
-      this.deps.engineRuntime.launchSettings.getLaunchSettings(
-        engineKeyFor(this.getGameInfo().runner, this.appName),
-        await this.getSettings()
-      )
+    const gameSettings = await launchSettingsFor(
+      this.deps,
+      engineKeyFor(this.getGameInfo().runner, this.appName),
+      await this.getSettings()
+    )
     const gameInfo = this.getGameInfo()
 
     const {
@@ -1219,11 +1220,11 @@ export default class LegendaryGame implements Game {
     this.deps.runner.killTracked({ runner: 'legendary', key: this.appName })
 
     if (stopWine && !this.isNative()) {
-      const gameSettings =
-        this.deps.engineRuntime.launchSettings.getLaunchSettings(
-          engineKeyFor(this.getGameInfo().runner, this.appName),
-          await this.getSettings()
-        )
+      const gameSettings = await launchSettingsFor(
+        this.deps,
+        engineKeyFor(this.getGameInfo().runner, this.appName),
+        await this.getSettings()
+      )
       await shutdownWine(this.deps, gameSettings)
     }
   }

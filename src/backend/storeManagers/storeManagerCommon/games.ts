@@ -15,6 +15,8 @@ import { withKnownFixEnv } from 'backend/knownFixOverlays'
 import type LogWriter from 'backend/logger/targetWriter'
 import { Game } from '../../../common/types/game_manager'
 import { engineKeyFor } from 'backend/enginewine/twin'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { launchSettingsFor } from 'backend/launchEngineStep'
 import { asStoreGame } from 'common/gameInfoNarrowing'
 
 /**
@@ -39,6 +41,7 @@ async function getAppSettings(
 
 /** The collaborators the shared launch helper uses (66.1, R3). */
 export type CommonGameDeps = StatusUpdateDeps &
+  RustInvokeDeps &
   Pick<
     ManagerDeps,
     | 'launcher'
@@ -47,7 +50,6 @@ export type CommonGameDeps = StatusUpdateDeps &
     | 'dialogs'
     | 'appState'
     | 'gameConfigs'
-    | 'engineRuntime'
     | 'windowRaiser'
   >
 
@@ -81,7 +83,8 @@ export async function launchGame(
     return openNewBrowserGameWindow()
   }
 
-  const gameSettings = deps.engineRuntime.launchSettings.getLaunchSettings(
+  const gameSettings = await launchSettingsFor(
+    deps,
     engineKeyFor(runner, appName),
     await getAppSettings(deps.gameConfigs, appName)
   )

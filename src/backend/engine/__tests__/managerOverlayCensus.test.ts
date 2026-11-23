@@ -1,5 +1,5 @@
 /**
- * Phase 61-15 (T-61-45): source census of the settings reads on every store manager's launch and
+ * Phase 61-15 (T-61-45), 87-52: source census of the settings reads on every store manager's launch and
  * stop paths. A read that skips the overlay would launch (or shut down) the wrong Wine, so this
  * fails the build instead.
  */
@@ -25,8 +25,9 @@ function bodyOf(source: string, marker: string): string {
 }
 
 const READ = /(?:this\.getSettings|getAppSettings)\(/g
+// 87-52: the overlay is Rust's registry, read through the async shim `launchSettingsFor(deps, key, stored)`.
 const WRAPPED =
-  /getLaunchSettings\(\s*engineKeyFor\((?:[^()]|\(\))*\),\s*await (?:this\.getSettings|getAppSettings)\(/g
+  /launchSettingsFor\(\s*(?:this\.)?deps,\s*engineKeyFor\((?:[^()]|\(\))*\),\s*await (?:this\.getSettings|getAppSettings)\(/g
 
 function expectAllWrapped(body: string): number {
   const reads = body.match(READ) ?? []
@@ -45,7 +46,7 @@ describe('store manager launch-path overlay census', () => {
   ]
 
   it.each(managers)(
-    '%s reads settings through getLaunchSettings( in each launch-path body',
+    '%s reads settings through launchSettingsFor( in each launch-path body',
     (file, markers) => {
       const source = read(file)
       for (const marker of markers) {

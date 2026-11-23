@@ -167,7 +167,9 @@ const BOTTLES_SHIM_IMPORTERS: readonly string[] = [
 /** Every non-test importer of `enginewine/launch.ts` (the check is per file, so every row of that file lists them all). */
 const LAUNCH_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/launchEngineStep.ts',
-  'src/backend/launcher.ts'
+  'src/backend/launcher.ts',
+  'src/backend/storeManagers/gog/setup.ts',
+  'src/backend/storeManagers/nile/setup.ts'
 ]
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
   'src/backend/services/types.ts',

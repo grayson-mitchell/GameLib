@@ -1,7 +1,8 @@
 /**
- * Phase 61-15 (T-61-46, T-61-47): GOG and Amazon install setup runs on the engine the engine step
+ * Phase 61-15 (T-61-46, T-61-47), 87-52: GOG and Amazon install setup runs on the engine the engine step
  * selected, never runs checkWineBeforeLaunch's self-heal for an engine-controlled game, and always
- * releases the selection.
+ * releases the selection. The step is Rust's: the deps carry a fake `requestRustInvoke` that answers
+ * `engine_launch_select`, `engine_launch_settings_get` and `engine_launch_end`.
  */
 const mockSelect = jest.fn()
 const mockEnd = jest.fn()
@@ -13,10 +14,6 @@ const mockExists = jest.fn()
 const stored = { wineVersion: { name: 'stored', type: 'wine' } }
 const overlay = { wineVersion: { name: 'overlay', type: 'crossover' } }
 
-jest.mock('backend/engine/launchEngine', () => ({
-  selectEngineForLaunch: (...a: unknown[]) => mockSelect(...a),
-  endEngineLaunch: (...a: unknown[]) => mockEnd(...a)
-}))
 jest.mock('backend/constants/environment', () => ({ isWindows: false }))
 jest.mock('graceful-fs', () => ({
   existsSync: (...a: unknown[]) => mockExists(...a)
@@ -63,15 +60,20 @@ const gogInfo = {
   install: { platform: 'windows', install_path: '/g' }
 }
 const nileInfo = { title: 'N', install: { install_path: '/n' } }
+const gameOf = (info: unknown) => ({
+  getGameInfo: () => info,
+  isNative: () => false,
+  getSettings: () => Promise.resolve(stored)
+})
 const fuel = {
   PostInstall: [{ Command: 'redist.exe', Args: ['/s'] }]
 }
 jest.mock('backend/storeManagers', () => ({
   libraryManagerMap: {
-    gog: { getGameInfo: () => gogInfo, getGame: () => ({}) },
+    gog: { getGameInfo: () => gogInfo, getGame: () => gameOf(gogInfo) },
     nile: {
       getGameInfo: () => nileInfo,
-      getGame: () => ({}),
+      getGame: () => gameOf(nileInfo),
       fetchFuelJSON: () => fuel
     }
   }
@@ -79,11 +81,31 @@ jest.mock('backend/storeManagers', () => ({
 
 import gogSetup, { type SetupDeps } from '../setup'
 import nileSetup from '../../nile/setup'
+import {
+  RUST_ENGINE_LAUNCH_END,
+  RUST_ENGINE_LAUNCH_SELECT,
+  RUST_ENGINE_LAUNCH_SETTINGS_GET
+} from 'common/types/sidecarTransport'
+
+/** The Rust transport: the select reply is scripted per test, the settings read overlays the key `k`. */
+const requestRustInvoke = (channel: string, args: unknown[]) => {
+  if (channel === RUST_ENGINE_LAUNCH_SELECT) return mockSelect(args)
+  if (channel === RUST_ENGINE_LAUNCH_END) return Promise.resolve(mockEnd(args))
+  if (channel === RUST_ENGINE_LAUNCH_SETTINGS_GET) {
+    const { key, stored: s } = (args[0] ?? {}) as {
+      key: string | null
+      stored: unknown
+    }
+    return Promise.resolve(key === 'k' ? overlay : s)
+  }
+  return Promise.reject(new Error(`unscripted rust call ${channel}`))
+}
 
 const gogDeps = {
   onlineMonitor: { isOnline: () => true },
+  requestRustInvoke,
   libraryManagers: {
-    gog: { getGameInfo: () => gogInfo, getGame: () => ({}) }
+    gog: { getGameInfo: () => gogInfo, getGame: () => gameOf(gogInfo) }
   },
   launcher: { verifyWinePrefix: (...a: unknown[]) => mockVerifyPrefix(...a) },
   commandRunner: {
@@ -91,13 +113,6 @@ const gogDeps = {
     runWineCommand: (...a: unknown[]) => mockRunWine(...a)
   },
   spawnAsync: jest.fn(),
-  // The overlay read is a recording fake on the boot's launch-settings registry.
-  engineRuntime: {
-    launchSettings: {
-      getLaunchSettings: (key: string, s: unknown) =>
-        key === 'k' ? overlay : s
-    }
-  },
   paths: { userHome: '/home', toolsPath: '/tools', gamesConfigPath: '/games' },
   config: { getSettings: () => ({ disableLogs: true }) },
   gameConfigs: { get: () => ({ config: stored }) }
@@ -108,7 +123,7 @@ const nileDeps = {
   libraryManagers: {
     nile: {
       getGameInfo: () => nileInfo,
-      getGame: () => ({}),
+      getGame: () => gameOf(nileInfo),
       fetchFuelJSON: () => fuel
     }
   }
@@ -129,27 +144,42 @@ describe.each(runners)('%s setup on macOS', (_name, run) => {
   })
 
   it('use: selects with purpose setup, skips the self-heal, uses the overlay, releases', async () => {
-    mockSelect.mockResolvedValue({ kind: 'use', key: 'k' })
+    mockSelect.mockResolvedValue({
+      kind: 'use',
+      key: 'k',
+      logLines: [],
+      launchSettings: overlay
+    })
     await run('app')
-    expect(mockSelect).toHaveBeenCalledWith(
-      expect.objectContaining({ spawnAsync: expect.any(Function) }),
-      expect.anything(),
-      expect.objectContaining({ purpose: 'setup', offline: false })
-    )
+    expect(mockSelect).toHaveBeenCalledWith([
+      expect.objectContaining({
+        runner: _name,
+        appName: 'app',
+        isNative: false,
+        settings: stored,
+        purpose: 'setup',
+        offline: false
+      })
+    ])
     expect(mockCheckWine).not.toHaveBeenCalled()
     expect(mockVerifyPrefix).toHaveBeenCalledWith(overlay)
-    expect(mockEnd).toHaveBeenCalledWith(expect.anything(), 'k')
+    expect(mockEnd).toHaveBeenCalledWith([{ key: 'k' }])
   })
 
   it('use: releases the selection even when the setup throws', async () => {
-    mockSelect.mockResolvedValue({ kind: 'use', key: 'k' })
+    mockSelect.mockResolvedValue({
+      kind: 'use',
+      key: 'k',
+      logLines: [],
+      launchSettings: overlay
+    })
     mockVerifyPrefix.mockRejectedValue(new Error('boom'))
     await expect(run('app')).rejects.toThrow('boom')
-    expect(mockEnd).toHaveBeenCalledWith(expect.anything(), 'k')
+    expect(mockEnd).toHaveBeenCalledWith([{ key: 'k' }])
   })
 
   it('refused: returns without any wine command', async () => {
-    mockSelect.mockResolvedValue({ kind: 'refused', key: 'k' })
+    mockSelect.mockResolvedValue({ kind: 'refused', key: 'k', logLines: [] })
     await run('app')
     expect(mockCheckWine).not.toHaveBeenCalled()
     expect(mockVerifyPrefix).not.toHaveBeenCalled()
@@ -160,7 +190,9 @@ describe.each(runners)('%s setup on macOS', (_name, run) => {
   it.each(['legacy', 'skip'])(
     '%s: keeps today path (checkWineBeforeLaunch, stored settings)',
     async (kind) => {
-      mockSelect.mockResolvedValue({ kind, key: 'k' })
+      mockSelect.mockResolvedValue(
+        kind === 'skip' ? { kind } : { kind, key: 'k', logLines: [] }
+      )
       await run('app')
       expect(mockCheckWine).toHaveBeenCalledTimes(1)
       expect(mockVerifyPrefix).toHaveBeenCalledWith(stored)

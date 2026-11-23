@@ -46,6 +46,7 @@ import { isWindows } from 'backend/constants/environment'
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import type LogWriter from 'backend/logger/targetWriter'
 import { engineKeyFor } from 'backend/enginewine/twin'
+import { launchSettingsFor } from 'backend/launchEngineStep'
 
 export default class NileGameManager implements Game {
   private readonly id: string
@@ -347,11 +348,11 @@ export default class NileGameManager implements Game {
     launchArguments?: LaunchOption,
     args: string[] = []
   ): Promise<boolean> {
-    const gameSettings =
-      this.deps.engineRuntime.launchSettings.getLaunchSettings(
-        engineKeyFor(this.getGameInfo().runner, this.id),
-        await this.getSettings()
-      )
+    const gameSettings = await launchSettingsFor(
+      this.deps,
+      engineKeyFor(this.getGameInfo().runner, this.id),
+      await this.getSettings()
+    )
     const gameInfo = this.getGameInfo()
 
     const {
@@ -669,11 +670,11 @@ export default class NileGameManager implements Game {
     this.deps.runner.killTracked({ runner: 'nile', key: this.id })
 
     if (stopWine && !this.isNative()) {
-      const gameSettings =
-        this.deps.engineRuntime.launchSettings.getLaunchSettings(
-          engineKeyFor(this.getGameInfo().runner, this.id),
-          await this.getSettings()
-        )
+      const gameSettings = await launchSettingsFor(
+        this.deps,
+        engineKeyFor(this.getGameInfo().runner, this.id),
+        await this.getSettings()
+      )
       await shutdownWine(this.deps, gameSettings)
     }
   }

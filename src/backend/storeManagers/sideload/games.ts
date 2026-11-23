@@ -37,6 +37,7 @@ import type { ManagerDeps } from 'backend/services/types'
 
 import type LogWriter from 'backend/logger/targetWriter'
 import { engineKeyFor } from 'backend/enginewine/twin'
+import { launchSettingsFor } from 'backend/launchEngineStep'
 
 export default class SideloadGame implements Game {
   private readonly id: string
@@ -128,11 +129,11 @@ export default class SideloadGame implements Game {
 
       if (!this.isNative()) {
         this.deps.runner.killTracked({ runner: 'wine', key: this.id })
-        const gameSettings =
-          this.deps.engineRuntime.launchSettings.getLaunchSettings(
-            engineKeyFor(this.getGameInfo().runner, this.id),
-            await this.getSettings()
-          )
+        const gameSettings = await launchSettingsFor(
+          this.deps,
+          engineKeyFor(this.getGameInfo().runner, this.id),
+          await this.getSettings()
+        )
         // Awaited: the old blocking spawnSync finished before stop() returned (66.2-11).
         await shutdownWine(this.deps, gameSettings)
       }

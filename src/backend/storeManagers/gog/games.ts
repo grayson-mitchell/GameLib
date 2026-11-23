@@ -88,6 +88,7 @@ import type { LongLivedHandle } from 'backend/process/types'
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import type LogWriter from 'backend/logger/targetWriter'
 import { engineKeyFor } from 'backend/enginewine/twin'
+import { launchSettingsFor } from 'backend/launchEngineStep'
 
 // comet's output is untrusted and may echo tokens; split/join because tokens
 // can contain regex metacharacters.
@@ -612,11 +613,11 @@ export default class GOGGame implements Game {
     launchArguments?: LaunchOption,
     args: string[] = []
   ): Promise<boolean> {
-    const gameSettings =
-      this.deps.engineRuntime.launchSettings.getLaunchSettings(
-        engineKeyFor(this.getGameInfo().runner, this.id),
-        await this.getSettings()
-      )
+    const gameSettings = await launchSettingsFor(
+      this.deps,
+      engineKeyFor(this.getGameInfo().runner, this.id),
+      await this.getSettings()
+    )
     const gameInfo = this.getGameInfo()
 
     if (
@@ -1603,11 +1604,11 @@ export default class GOGGame implements Game {
   // GOGDL now handles the signal, this is no longer needed
   async stop(stopWine = true): Promise<void> {
     if (stopWine && !this.isNative()) {
-      const gameSettings =
-        this.deps.engineRuntime.launchSettings.getLaunchSettings(
-          engineKeyFor(this.getGameInfo().runner, this.id),
-          await this.getSettings()
-        )
+      const gameSettings = await launchSettingsFor(
+        this.deps,
+        engineKeyFor(this.getGameInfo().runner, this.id),
+        await this.getSettings()
+      )
       await shutdownWine(this.deps, gameSettings)
     }
   }
