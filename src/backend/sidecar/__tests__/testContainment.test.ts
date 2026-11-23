@@ -872,11 +872,9 @@ const IN_SCOPE_SUITES = [
  * `applyGameSetting`, so no path module, `homedir()`, filesystem or child process is reached.
  * Its landing commit did not classify it; the T-34.2-83 tripwire caught it (59 gap round 2).
  *
- * `engineTempSweepBootWire.test.ts` (Phase 59 Plan 33, G20) is structurally contained on the same
- * basis as `playtimeLockBootClear.test.ts`, whose preamble it copies: the
- * `axios` mock (no store mock since quick 261121-pwt), with `fallbackEngine` replaced by a `jest.mock` factory so the sweep never reaches
- * the filesystem, and the real `bootstrap.init()` over `PassThrough` streams. Its landing commit did
- * not classify it; the T-34.2-83 tripwire caught it (59 gap round 3 post-wave gate).
+ * `engineTempSweepBootWire.test.ts` (Phase 59 Plan 33, G20; rewritten in 87-48) is structurally
+ * contained: since the sweep moved to Rust it boots nothing and mocks nothing. It reads
+ * `bootstrap.ts` as text and asserts the sidecar no longer carries the engine temp sweep step.
  *
  * `engineOverrideWriteGuard.test.ts` (Phase 61 Plan 06, T-61-13) is structurally contained: it
  * replaces `../../platform`, `../../config`, `../../game_config`, `../../utils`, the store modules

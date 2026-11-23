@@ -4,7 +4,6 @@
     "src/backend/sidecar/__tests__/bootstrapUserReconcile.test.ts": 1,
     "src/backend/sidecar/__tests__/bootstrapWirings.test.ts": 4,
     "src/backend/sidecar/__tests__/depotHostRegistration.rust.test.ts": 1,
-    "src/backend/sidecar/__tests__/engineTempSweepBootWire.test.ts": 2,
     "src/backend/sidecar/__tests__/gogPresenceBootWire.test.ts": 1,
     "src/backend/sidecar/__tests__/onlineMonitorWiring.test.ts": 2,
     "src/backend/sidecar/__tests__/playtimeLockBootClear.test.ts": 1,

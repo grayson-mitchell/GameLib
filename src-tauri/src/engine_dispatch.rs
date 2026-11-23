@@ -31,6 +31,7 @@ use gamelib_engine::ctx::{
     CrossoverBinDirHook, DefaultWineHook, EngineCtx, EnginePaths, Platform, WineInstallationView,
 };
 use gamelib_engine::dxvk::{DxvkInstaller, DxvkRequest};
+use gamelib_engine::fallback::prune::{spawn_engine_sweep, ENGINE_SWEEP_BOUND};
 use gamelib_engine::fetch::ReqwestFetch;
 use gamelib_engine::sinks::EngineUi;
 use gamelib_proc::spec::SpecProcRunner;
@@ -443,7 +444,31 @@ pub(crate) fn install(app: &AppHandle, user_data: &Path) {
         ui,
         gamelib_core::shutdown::global().clone(),
     );
-    let _ = ENGINE_CTX.set(Arc::new(ctx));
+    let ctx = Arc::new(ctx);
+    if ENGINE_CTX.set(Arc::clone(&ctx)).is_ok() {
+        start_engine_sweep(&ctx, shell_log);
+    }
+}
+
+/// The one-line report of the boot sweep: a word and a count, nothing else (a path or a directory name
+/// stays out of `gamelib.log`).
+fn engine_sweep_line(word: &str, removed: usize) -> String {
+    format!("engine temp sweep: {word} (removed {removed})")
+}
+
+/// Starts the removal of stale `steam-engines/.tmp-*` directories (an interrupted engine unpack) as
+/// bounded boot work (D-17): in the background on the engine crate's runtime, holding the
+/// `engine-temp-sweep` shutdown registrant, abandoned after [`ENGINE_SWEEP_BOUND`], logging one line.
+/// It replaces the sidecar's boot step of the same job, removed in the same commit so the two never
+/// race. `log` is the shell's logger, passed in so a test can watch the line.
+fn start_engine_sweep(ctx: &EngineCtx, log: fn(&str)) {
+    let started = spawn_engine_sweep(ctx, ENGINE_SWEEP_BOUND, move |word, removed| {
+        log(&engine_sweep_line(word, removed));
+    });
+    if started.is_err() {
+        // The error names only a runtime that could not be built; the line carries a word.
+        log(&engine_sweep_line("not-started", 0));
+    }
 }
 
 /// What a rejected argument looks like: the JSON path and the zod-vocabulary code. Fixed literals only,
@@ -707,6 +732,52 @@ mod tests {
             Arc::new(ShellEngineUi::silent(emitter)),
             Shutdown::new(),
         )
+    }
+
+    #[test]
+    fn the_boot_sweep_logs_one_line_with_a_word_and_a_count_and_nothing_else() {
+        assert_eq!(
+            engine_sweep_line("done", 2),
+            "engine temp sweep: done (removed 2)"
+        );
+        // Run against a real directory under a throwaway profile: the stale temp goes, the line lands once.
+        let home = gamelib_testutil::FakeHome::new("engine-sweep-boot-");
+        let ctx = build_ctx(
+            Arc::new(StoreHost::new()),
+            &home.root().join("userData"),
+            home.root().to_path_buf(),
+            home.root().join("tmp"),
+            Arc::new(Pushes::default()),
+            Arc::new(ShellEngineUi::silent(Arc::new(Pushes::default()))),
+            Shutdown::new(),
+        );
+        let stale = home
+            .root()
+            .join("userData/tools/steam-engines/.tmp-wine-interrupted/out");
+        std::fs::create_dir_all(&stale).unwrap();
+        static LINES: Mutex<Vec<String>> = Mutex::new(Vec::new());
+        fn keep(line: &str) {
+            LINES
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .push(line.to_string());
+        }
+        start_engine_sweep(&ctx, keep);
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while LINES.lock().unwrap_or_else(|e| e.into_inner()).is_empty()
+            && std::time::Instant::now() < deadline
+        {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert_eq!(
+            *LINES.lock().unwrap_or_else(|e| e.into_inner()),
+            vec!["engine temp sweep: done (removed 1)".to_string()]
+        );
+        assert!(!stale.exists());
+        assert!(ctx
+            .shutdown
+            .drain(std::time::Duration::from_secs(2))
+            .is_empty());
     }
 
     /// What a recording UI saw, in order: a tag and the argument it carried.

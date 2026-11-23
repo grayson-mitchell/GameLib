@@ -145,6 +145,14 @@ pub enum Sweep {
 }
 
 impl Sweep {
+    /// How many stale directories this sweep removed (a count only, safe for a log line).
+    pub fn removed(self) -> usize {
+        match self {
+            Sweep::NoRoot | Sweep::Skipped => 0,
+            Sweep::Stopped { removed } | Sweep::Swept { removed } => removed,
+        }
+    }
+
     /// The one word the boot log line carries (never a path or a name).
     pub fn label(self) -> &'static str {
         match self {
@@ -220,9 +228,10 @@ pub fn sweep_stale_engine_temps(ctx: &EngineCtx) -> Sweep {
     sweep_stale_engine_temps_at(&Env::from_ctx(ctx))
 }
 
-/// Runs `work` once, in the background, as bounded boot work (D-17), and hands `report` exactly one
-/// word: the work's own label, `timeout` when it ran past `bound`, `shutdown` when the application
-/// began to exit first (the work is then not started if it had not begun), or `panic`.
+/// Runs `work` once, in the background, as bounded boot work (D-17), and hands `report` exactly once a
+/// word and a count: the work's own label and its count, or `timeout` when it ran past `bound`,
+/// `shutdown` when the application began to exit first (the work is then not started if it had not
+/// begun), or `panic`, each with a count of 0.
 ///
 /// The work holds a `Shutdown` registrant named `engine-temp-sweep` for as long as it really runs, so an
 /// exit waits for it within the one exit budget instead of cutting a delete short. After `bound` the
@@ -232,13 +241,13 @@ pub fn sweep_stale_engine_temps(ctx: &EngineCtx) -> Sweep {
 fn spawn_bounded(
     shutdown: gamelib_core::shutdown::Shutdown,
     bound: Duration,
-    work: impl FnOnce() -> &'static str + Send + 'static,
-    report: impl FnOnce(&'static str) + Send + 'static,
+    work: impl FnOnce() -> (&'static str, usize) + Send + 'static,
+    report: impl FnOnce(&'static str, usize) + Send + 'static,
 ) -> Result<(), String> {
     let runtime = crate::runtime().map_err(|e| format!("engine_sweep:no-runtime ({e})"))?;
     let token = shutdown.token();
     if token.is_cancelled() {
-        report("shutdown");
+        report("shutdown", 0);
         return Ok(());
     }
     let registrant = shutdown.register("engine-temp-sweep");
@@ -250,31 +259,34 @@ fn spawn_bounded(
         let word = tokio::select! {
             biased;
             done = tokio::time::timeout(bound, job) => match done {
-                Ok(Ok(label)) => label,
-                Ok(Err(_)) => "panic",
-                Err(_) => "timeout",
+                Ok(Ok(done)) => done,
+                Ok(Err(_)) => ("panic", 0),
+                Err(_) => ("timeout", 0),
             },
-            _ = token.cancelled() => "shutdown",
+            _ = token.cancelled() => ("shutdown", 0),
         };
-        report(word);
+        report(word.0, word.1);
     });
     Ok(())
 }
 
 /// Starts [`sweep_stale_engine_temps`] as bounded boot work on the crate's own runtime (callable from
-/// any thread). `report` gets one word (see [`spawn_bounded`] and [`Sweep::label`]). An error is only a
-/// runtime that could not be built.
+/// any thread). `report` gets one word and the count removed (see [`spawn_bounded`] and
+/// [`Sweep::label`]). An error is only a runtime that could not be built.
 pub fn spawn_engine_sweep(
     ctx: &EngineCtx,
     bound: Duration,
-    report: impl FnOnce(&'static str) + Send + 'static,
+    report: impl FnOnce(&'static str, usize) + Send + 'static,
 ) -> Result<(), String> {
     let env = Env::from_ctx(ctx);
     let shutdown = env.shutdown.clone();
     spawn_bounded(
         shutdown,
         bound,
-        move || sweep_stale_engine_temps_at(&env).label(),
+        move || {
+            let swept = sweep_stale_engine_temps_at(&env);
+            (swept.label(), swept.removed())
+        },
         report,
     )
 }
@@ -496,7 +508,7 @@ mod tests {
         assert_eq!(sweep_names(&env), vec![".tmp-wine-a"]);
     }
 
-    fn wait_for(rx: &std::sync::mpsc::Receiver<&'static str>) -> &'static str {
+    fn wait_for(rx: &std::sync::mpsc::Receiver<(&'static str, usize)>) -> (&'static str, usize) {
         rx.recv_timeout(Duration::from_secs(5))
             .expect("the report arrives")
     }
@@ -508,11 +520,11 @@ mod tests {
         let env = Env::from_ctx(&ctx);
         fs::create_dir_all(env.root.join(".tmp-dxvk-a/dl")).unwrap();
         let (tx, rx) = std::sync::mpsc::channel();
-        spawn_engine_sweep(&ctx, ENGINE_SWEEP_BOUND, move |w| {
-            tx.send(w).unwrap();
+        spawn_engine_sweep(&ctx, ENGINE_SWEEP_BOUND, move |w, n| {
+            tx.send((w, n)).unwrap();
         })
         .unwrap();
-        assert_eq!(wait_for(&rx), "done");
+        assert_eq!(wait_for(&rx), ("done", 1));
         assert!(names(&env).is_empty());
         assert!(
             ctx.shutdown.drain(Duration::from_secs(2)).is_empty(),
@@ -531,12 +543,12 @@ mod tests {
             move || {
                 // A disk that stalls: holds the blocking worker until the test lets it go.
                 let _ = go_rx.recv_timeout(Duration::from_secs(5));
-                "done"
+                ("done", 0)
             },
-            move |w| tx.send(w).unwrap(),
+            move |w, n| tx.send((w, n)).unwrap(),
         )
         .unwrap();
-        assert_eq!(wait_for(&rx), "timeout");
+        assert_eq!(wait_for(&rx), ("timeout", 0));
         // The worker is still holding the registrant: an exit would wait for it, within its budget.
         assert_eq!(
             shutdown.drain(Duration::from_millis(30)),
@@ -557,10 +569,10 @@ mod tests {
             shutdown.clone(),
             ENGINE_SWEEP_BOUND,
             || panic!("the work must not start"),
-            move |w| tx.send(w).unwrap(),
+            move |w, n| tx.send((w, n)).unwrap(),
         )
         .unwrap();
-        assert_eq!(wait_for(&rx), "shutdown");
+        assert_eq!(wait_for(&rx), ("shutdown", 0));
         assert!(shutdown.drain(Duration::from_millis(50)).is_empty());
     }
 
@@ -572,10 +584,10 @@ mod tests {
             shutdown.clone(),
             ENGINE_SWEEP_BOUND,
             || panic!("boom"),
-            move |w| tx.send(w).unwrap(),
+            move |w, n| tx.send((w, n)).unwrap(),
         )
         .unwrap();
-        assert_eq!(wait_for(&rx), "panic");
+        assert_eq!(wait_for(&rx), ("panic", 0));
         assert!(shutdown.drain(Duration::from_secs(2)).is_empty());
     }
 }

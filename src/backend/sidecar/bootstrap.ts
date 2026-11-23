@@ -338,7 +338,6 @@ export const BOOT_STEP_NAMES = [
   'installed-json-watcher',
   'playtime-lock-clear',
   'legacy-zoom-cleanup',
-  'engine-temp-sweep',
   'store-user-reconcile',
   'rosetta',
   'playtime-queue-drain',
@@ -2981,19 +2980,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // Fire-and-forget: never awaited before READY, never rejects, creates no handle (see the
         // module header for the sidecar exit-contract reasoning).
         void removeLegacyZoomData(ctx.paths.userData)
-      }
-    },
-    {
-      name: 'engine-temp-sweep',
-      run: (_ctx, _io, state) => {
-        // Stale engine temp sweep (G20): removes steam-engines/.tmp-* left by an interrupted unpack.
-        // Placed after `initLogger()` (it logs) and before READY (no install can hold a temp dir yet).
-        // Exit contract: synchronous, creates no handle, nothing in flight once it returns.
-        try {
-          requireEngineRuntime(state).fallback.sweepStaleEngineTemps()
-        } catch {
-          /* never fails boot */
-        }
       }
     },
     {

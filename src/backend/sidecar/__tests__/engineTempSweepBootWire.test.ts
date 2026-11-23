@@ -1,39 +1,27 @@
 /**
- * Sidecar boot wiring for the stale engine temp sweep (G20, phase 59-33).
+ * The stale engine temp sweep is Rust-owned (87-48, D-17): the Rust shell starts it at boot as a bounded
+ * task holding a shutdown registrant (`gamelib_engine::fallback::prune::spawn_engine_sweep`, started from
+ * `engine_dispatch::install`), and the sidecar's boot no longer carries the step. Boot work has one owner
+ * at every commit, so this file used to assert the sidecar called the sweep exactly once and now asserts
+ * it does not call it at all.
  *
- * Dedicated file for the same reason as playtimeLockBootClear.test.ts: each case boots once via bootFresh()
- * in a fresh module registry (D-08).
+ * It boots nothing and carries no jest.mock: it reads source text, like bootSourceShape.test.ts.
  */
-jest.mock('axios', () => ({
-  __esModule: true,
-  default: {
-    head: jest.fn(() => Promise.resolve({ status: 200 })),
-    get: jest.fn(),
-    create: jest.fn(() => ({ get: jest.fn(), head: jest.fn() }))
-  }
-}))
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
-const mockSweep = jest.fn()
-jest.mock('backend/engine/fallbackEngine', () => ({
-  __esModule: true,
-  createFallbackEngine: () => ({
-    sweepStaleEngineTemps: () => mockSweep(),
-    pinnedEngineRoot: jest.fn(),
-    pinnedEnginePaths: jest.fn(),
-    isPinnedEngineInstalled: jest.fn(),
-    ensurePinnedEngine: jest.fn(),
-    pruneUnpinnedEngines: jest.fn()
+const stripped = stripSourceComments(
+  readFileSync(join(__dirname, '..', 'bootstrap.ts'), 'utf-8')
+)
+
+describe('the engine temp sweep has one owner, Rust (87-48, D-17)', () => {
+  it('the sidecar boot has no engine temp sweep step', () => {
+    const stepName = ['engine', 'temp', 'sweep'].join('-')
+    expect(stripped).not.toContain(`'${stepName}'`)
   })
-}))
 
-import { bootFresh } from './helpers/sidecarHarness'
-
-describe('G20: sidecar boot sweeps stale engine temp dirs', () => {
-  it('one boot calls the sweep exactly once after initLogger and survives a throwing sweep', () => {
-    mockSweep.mockImplementationOnce(() => {
-      throw new Error('boom')
-    })
-    expect(() => bootFresh()).not.toThrow()
-    expect(mockSweep).toHaveBeenCalledTimes(1)
+  it('the sidecar boot never calls sweepStaleEngineTemps', () => {
+    expect(stripped).not.toContain('sweepStaleEngineTemps')
   })
 })
