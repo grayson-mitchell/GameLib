@@ -653,7 +653,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 59/62 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder
+**Plans:** 60/62 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder
 
 Plans:
 **Wave 1**
@@ -792,7 +792,7 @@ Plans:
 - [x] 87-56c-PLAN.md — Engine runtime and state out of boot and deps, notices store registration and services builder deleted, src/backend/engine deleted; enginePortComplete green
 
 **Wave 39** *(blocked on Wave 38 completion)*
-- [ ] 87-57-PLAN.md — Survivor sweep item by item against D-22/D-23/D-24, census and ratchets (SC4)
+- [x] 87-57-PLAN.md — Survivor sweep item by item against D-22/D-23/D-24, census and ratchets (SC4)
 
 **Wave 40** *(blocked on Wave 39 completion)*
 - [ ] 87-58-PLAN.md — Clean-worktree proof with the DXMT gap re-check, push checkpoint, three-OS CI, signed Phase 87 build identity

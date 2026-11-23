@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-56c-PLAN.md
-last_updated: "2026-11-23T21:42:27.848Z"
+stopped_at: Completed 87-57-PLAN.md
+last_updated: "2026-11-23T21:59:46.295Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 4f0e367ea2ae0e0945a3458b64b1d9e2d16af17e
+state_head: f720c6690762cba6dd3a5e3754590021cfc2acdd
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 60 of 62 (87-56c complete 2026-11-24; 87-57 next)
-Status: Ready to execute (87-57 next via /gsd-execute-phase 87)
-Last activity: 2026-11-24 — Completed 87-56c (src/backend/engine deleted, engine runtime and state out of boot and deps, enginePortComplete green, SVC-02 complete)
+Plan: 61 of 62 (87-57 complete 2026-11-24; 87-58 next)
+Status: Ready to execute (87-58 next via /gsd-execute-phase 87)
+Last activity: 2026-11-24 — Completed 87-57 (engineWineSurvivors compares SCHEDULE with a 77-row survivor table in both directions, oracle harness trimmed, census and ratchets agree)
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -468,6 +468,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P56a | one session | 3 tasks | 36 files |
 | Phase 87 P56b | n/a | 3 tasks | 51 files |
 | Phase 87 P56c | not recorded | 3 tasks | 138 files |
+| Phase 87 P57 | not recorded | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -1005,6 +1006,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-56b: parseEngineOverride is pinned by override_twin.json (a function that never answers null or false does not fit engine_twin.json's anti-vacuity rule); crossoverBinDirSync is a bottle_twin.json group
 - [Phase 87]: 87-56b: createRunTool moved to testUtils/realRunTool.ts (test support) so engine/runTool.ts is gone before 87-56c
 - [Phase 87]: 87-56c: every Steam slice takes requestRustInvoke from its own deps in place of the engineRuntime member; the tool-target and game-command sources are local Pick-based types; engineStateWiring.test.ts deleted with its subject; steam_engine_notices keeps its storeTable row via EXTRA_ROWS
+- [Phase 87]: 87-57: EXPECTED_SURVIVORS holds 77 rows (the plan's 70 plus the five 87-56a/b rows, cancelFallbackBottle and bridgeDeadlines); compared with SCHEDULE by (file, name, shape, wiring) in both directions, deletedBy held to 88..98 but outside the key
 
 ### Pending Todos
 
@@ -1286,8 +1288,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T21:42:25.125Z
-Stopped at: Completed 87-56c-PLAN.md
+Last session: 2026-11-23T21:59:43.570Z
+Stopped at: Completed 87-57-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
