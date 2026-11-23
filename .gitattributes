@@ -35,3 +35,4 @@ src-tauri/crates/gamelib-store/tests/fixtures/corpus/** -text
 # Phase 94-05: the shortcut goldens are byte-exact records of what the TS wrote (run.sh, Info.plist and
 # .desktop text carry exact whitespace); never normalise them.
 src-tauri/crates/gamelib-shortcuts/tests/fixtures/** -text
+src-tauri/crates/gamelib-humble/tests/fixtures/** -text
