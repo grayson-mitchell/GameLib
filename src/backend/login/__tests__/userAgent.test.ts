@@ -1,4 +1,8 @@
 /**
+ * Phase 94 Plan 04 (D-03): moved here with `userAgent.ts` from `src/backend/humble/`. These are the
+ * vectors the Rust user agent port (94-17) is pinned to; `standardBrowserUserAgent` is a `twin` row
+ * of `humbleShortcutsShimSchedule.test.ts`, deletedBy 92.
+ *
  * Pins `standardBrowserUserAgent(deps)`'s behavior when running against the REAL sidecar
  * `platform/index.ts` (Phase 34.4.1 Plan 02, Task 4, DEFECT 3).
  *
@@ -8,7 +12,7 @@
  * hook) previously left it `undefined`, so this function threw
  * `Cannot read properties of undefined (reading 'replace')` the first time anything in the
  * sidecar called it -- silently aborting the Assumption-A4 smoke hook
- * (`sidecar/humbleLoginFlowRegistration.ts`) before `WebviewWindowBuilder::build()` was ever
+ * (`sidecar/loginSeamRegistration.ts`) before `WebviewWindowBuilder::build()` was ever
  * reached. `humbleLoginFlows.test.ts` factory-mocks `standardBrowserUserAgent` entirely and so
  * never exercised the real implementation against the real stub -- this file closes that gap
  * directly.

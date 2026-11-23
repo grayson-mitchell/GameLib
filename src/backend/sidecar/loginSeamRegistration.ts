@@ -29,7 +29,7 @@ import {
   RUST_HUMBLE_LOGIN_CLEAR_STORAGE
 } from '../../common/types/sidecarTransport'
 import type { AppInfo } from '../process/context'
-import { standardBrowserUserAgent } from '../humble/userAgent'
+import { standardBrowserUserAgent } from '../login/userAgent'
 import {
   type LoginWindowSeam,
   type LoginWindowSeamSlot,

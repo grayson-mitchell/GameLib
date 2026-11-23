@@ -40,7 +40,7 @@ jest.mock('../../../utils', () => ({
   clearCache: jest.fn(),
   startLegendaryCleanup: jest.fn()
 }))
-jest.mock('../../../humble/userAgent', () => ({
+jest.mock('../../../login/userAgent', () => ({
   standardBrowserUserAgent: () => 'Mozilla/5.0 (Test)'
 }))
 

@@ -23,7 +23,7 @@
  *  - ../../../utils                    -> clearCache, startLegendaryCleanup
  *  - backend/constants/key_value_stores -> configStore
  *  - '..' (storeManagers/index)        -> libraryManagerMap['legendary'].runRunnerCommand
- *  - ../../../humble/userAgent         -> standardBrowserUserAgent (fixed string)
+ *  - ../../../login/userAgent         -> standardBrowserUserAgent (fixed string)
  *
  * `../../../login/loginWindowSeam` is NOT mocked — it is a plain module-scoped holder +
  * pure classifier (no platform imports), so tests drive it directly via
@@ -103,8 +103,8 @@ jest.mock('backend/constants/environment', () => {
   })
 })
 
-// ── ../../../humble/userAgent mock (standardBrowserUserAgent) ────────────────────────────
-jest.mock('../../../humble/userAgent', () => ({
+// ── ../../../login/userAgent mock (standardBrowserUserAgent) ────────────────────────────
+jest.mock('../../../login/userAgent', () => ({
   standardBrowserUserAgent: () =>
     'Mozilla/5.0 (Test) Chrome/100.0 Safari/537.36'
 }))

@@ -139,7 +139,14 @@ const ENTRY_POINTS = [
   // storeManagers/legendary/user.ts -> storeManagers/index.ts eager
   // cross-runner construction. See 34.6-08-SUMMARY.md for the full
   // before/after captured output.
-  join(REPO_ROOT, 'src/backend/sidecar/eosOverlayFlowRegistration.ts')
+  join(REPO_ROOT, 'src/backend/sidecar/eosOverlayFlowRegistration.ts'),
+  // Phase 94 Plan 04 (D-03): the login-window seam install moved out of humbleLoginFlowRegistration.ts
+  // into its own registration module (a new registration module joins the walk, the 34.x convention).
+  // It outlives humbleLoginFlowRegistration.ts, which 94-29 deletes, so the seam install and the
+  // browser user agent it reads stay walked. Its imports (login/userAgent.ts, login/loginWindowSeam.ts)
+  // were already in the visited set through the Humble and OAuth registrations; the measured electron
+  // reach set stays unchanged.
+  join(REPO_ROOT, 'src/backend/sidecar/loginSeamRegistration.ts')
 ]
 
 // Regenerated at plan-execution time (2026-07-26, Phase 34.3 Plan 07), not
@@ -181,7 +188,7 @@ const ENTRY_POINTS = [
 //   - src/backend/humble/user.ts        (predicted)
 //   - src/backend/humble/adapter.ts     (predicted)
 //   - src/backend/humble/expirationAlerts.ts (predicted, two-hop)
-//   - src/backend/humble/userAgent.ts   (NOT predicted by the plan or
+//   - src/backend/humble/userAgent.ts   (moved to src/backend/login/ by 94-04; NOT predicted by the plan or
 //     RESEARCH.md -- imports `app` from 'electron' at userAgent.ts:1, and is
 //     reached two-hop via humbleFlowRegistration.ts -> humble/user.ts:16
 //     (`import { standardBrowserUserAgent } from './userAgent'`), and again
@@ -606,7 +613,9 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
       'src/backend/humble/user.ts',
       'src/backend/humble/adapter.ts',
       'src/backend/humble/expirationAlerts.ts',
-      'src/backend/humble/userAgent.ts',
+      // Phase 94 Plan 04 (D-03): userAgent.ts moved from src/backend/humble to src/backend/login (a
+      // scheduled survivor, deleted by 92); the same edge, so the same anti-vacuity protection.
+      'src/backend/login/userAgent.ts',
       // Phase 34.4.1 Plan 06 (D-08): no new edge was added here -- the
       // measurement confirmed humbleLoginFlowRegistration.ts and
       // oauthLoginFlowRegistration.ts contribute ZERO new electron-importing

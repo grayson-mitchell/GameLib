@@ -11,7 +11,7 @@ import {
 import { getSessionStatus } from './adapter'
 import type { HumbleSyncFence } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
-import { standardBrowserUserAgent } from './userAgent'
+import { standardBrowserUserAgent } from '../login/userAgent'
 import {
   classifyCookieRead,
   type CookieReadVerdict,

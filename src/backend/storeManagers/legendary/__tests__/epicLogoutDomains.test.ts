@@ -121,7 +121,7 @@ jest.mock('backend/constants/environment', () => {
   })
 })
 
-jest.mock('../../../humble/userAgent', () => ({
+jest.mock('../../../login/userAgent', () => ({
   standardBrowserUserAgent: () =>
     'Mozilla/5.0 (Test) Chrome/100.0 Safari/537.36'
 }))

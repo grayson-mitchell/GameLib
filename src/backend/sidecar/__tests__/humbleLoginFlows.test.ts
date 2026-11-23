@@ -27,7 +27,7 @@
  *
  * `../../humble/user` and `../../humble/library` are automocked (their own logic is covered by
  * `src/backend/humble/__tests__/`); this suite proves *registration and transport*, not Humble
- * logic. `../../humble/userAgent` is factory-mocked to a fixed, assertable value.
+ * logic. `../../login/userAgent` is factory-mocked to a fixed, assertable value.
  */
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims
@@ -65,7 +65,7 @@ jest.mock('backend/constants/environment', () => ({
 // implementation reads `app.userAgentFallback`, which platformApi does not populate. ──────────
 const FAKE_USER_AGENT =
   'Mozilla/5.0 (Test) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/999.0.0.0 Safari/537.36'
-jest.mock('../../humble/userAgent', () => ({
+jest.mock('../../login/userAgent', () => ({
   standardBrowserUserAgent: jest.fn(() => FAKE_USER_AGENT)
 }))
 

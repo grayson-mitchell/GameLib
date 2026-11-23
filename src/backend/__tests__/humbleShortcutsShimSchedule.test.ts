@@ -37,7 +37,8 @@
  * `shortcutsResolvers.ts`, so the discovered set equalled it. The tree already held one pre-94 survivor
  * that discovery finds: `createRustLoginWindowSeam`, the Phase 91 login-window seam implementation, whose
  * eight methods call the `RUST_HUMBLE_LOGIN_*` and `RUST_HUMBLE_REVEAL_POST` channels. It is scheduled
- * below as a relocated row at its current file, and 94-04 repoints that row when it moves the factory.
+ * below as a relocated row; 94-04 moved the factory to `sidecar/loginSeamRegistration.ts`, repointed the
+ * row and added the rows for the seam module, its install and the user agent (all deletedBy 92).
  * The planted fixtures keep each detector proven rather than vacuous (82 D-05).
  *
  * Floor: the walk reads the non-test .ts/.tsx files under src/backend; 611 when measured on 2026-11-22
@@ -114,6 +115,24 @@ interface ScheduleRow {
  * Rows are added by the plan that creates the survivor, in the same commit. Each row needs its file,
  * name, shape and callers; shims and resolvers a channel; twins and views a vectors test.
  */
+/** The non-test importers of `src/backend/login/loginWindowSeam.ts` (94-04): Humble, the boot, the OAuth flows and the test services. */
+const LOGIN_SEAM_CALLERS: readonly string[] = [
+  'src/backend/humble/adapter.ts',
+  'src/backend/humble/index.ts',
+  'src/backend/humble/user.ts',
+  'src/backend/services/types.ts',
+  'src/backend/sidecar/bootstrap.ts',
+  'src/backend/sidecar/devEpicCookieSweepRegistration.ts',
+  'src/backend/sidecar/loginSeamRegistration.ts',
+  'src/backend/sidecar/oauthLoginCapture.ts',
+  'src/backend/sidecar/oauthLoginFlowRegistration.ts',
+  'src/backend/storeManagers/gog/user.ts',
+  'src/backend/storeManagers/legendary/user.ts',
+  'src/backend/storeManagers/nile/user.ts',
+  'src/backend/testUtils/testHumble.ts',
+  'src/backend/testUtils/testServices.ts'
+]
+
 export const SCHEDULE: readonly ScheduleRow[] = [
   // The Phase 91 login-window seam implementation (D-03). 94-04 moved the factory verbatim to
   // `src/backend/sidecar/loginSeamRegistration.ts` and repointed this row at the new file, deletedBy 92.
@@ -122,6 +141,47 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     file: 'src/backend/sidecar/loginSeamRegistration.ts',
     shape: 'relocated',
     callers: ['src/backend/sidecar/handlers.ts'],
+    deletedBy: 92
+  },
+  // The install registration (94-04, D-03): installs the seam into the boot slot and carries the
+  // GAMELIB_LOGIN_SEAM_SMOKE hook. Called first in handlers.ts so it outlives registerHumbleLoginFlows
+  // (deleted with the Humble TypeScript in 94). 92 deletes it when the last OAuth flows port.
+  {
+    name: 'registerLoginWindowSeam',
+    file: 'src/backend/sidecar/loginSeamRegistration.ts',
+    shape: 'relocated',
+    callers: ['src/backend/sidecar/handlers.ts'],
+    deletedBy: 92
+  },
+  // The login-window seam module (94-04, D-03), moved unchanged from src/backend/humble/. The GOG,
+  // Epic and Amazon sign-in flows (oauthLoginCapture and the three user.ts) still drive it until the
+  // last OAuth flows port in 92, so the Humble deletion in 94 must not take it.
+  {
+    name: 'createLoginWindowSeamSlot',
+    file: 'src/backend/login/loginWindowSeam.ts',
+    shape: 'relocated',
+    callers: LOGIN_SEAM_CALLERS,
+    deletedBy: 92
+  },
+  {
+    name: 'classifyCookieRead',
+    file: 'src/backend/login/loginWindowSeam.ts',
+    shape: 'relocated',
+    callers: LOGIN_SEAM_CALLERS,
+    deletedBy: 92
+  },
+  // The browser user agent helper (94-04, D-03), moved unchanged. Legendary's sign-in flow reads it
+  // until 92. The Rust user agent port (94-17) is pinned to the vectors in the moved test.
+  {
+    name: 'standardBrowserUserAgent',
+    file: 'src/backend/login/userAgent.ts',
+    shape: 'twin',
+    vectors: 'src/backend/login/__tests__/userAgent.test.ts',
+    callers: [
+      'src/backend/humble/user.ts',
+      'src/backend/sidecar/loginSeamRegistration.ts',
+      'src/backend/storeManagers/legendary/user.ts'
+    ],
     deletedBy: 92
   }
 ]
