@@ -3,6 +3,28 @@
  * `runner` + `appName`; the payload carries labels and ids only, never
  * filesystem paths (T-59-36, T-61-27).
  */
+import type { GameSettings } from 'common/types'
+
+/**
+ * Phase 87 (87-56a): the settings a Wine tool (Winetricks, Run EXE in prefix) acts on for a game, outside any launch.
+ * `stored` is the game's own settings, `engine` the settings that run the tool on the game's engine (`key` is its engine
+ * key) and `unavailable` says why there are none. Rust's `tool_settings::ToolSettingsResult` answers exactly this JSON.
+ */
+export type ToolSettingsResult =
+  | { kind: 'stored'; settings: GameSettings }
+  | { kind: 'engine'; key: string; settings: GameSettings }
+  | {
+      kind: 'unavailable'
+      /**
+       * 'not-own-bottle': a bottle-runtime store title whose tools would act on a bottle shared
+       * with other titles (quick 261110-vi4).
+       */
+      reason:
+        | 'bottle-not-created'
+        | 'no-engine'
+        | 'invalid-prefix'
+        | 'not-own-bottle'
+    }
 
 /** Which engine a title runs on (Phase 59 D-06, D-14). */
 type EngineKind = 'crossover' | 'builtin' | 'unsupported'

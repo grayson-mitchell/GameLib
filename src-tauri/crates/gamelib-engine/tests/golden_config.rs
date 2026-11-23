@@ -29,6 +29,7 @@ use gamelib_engine::ids::parse_engine_override;
 use gamelib_engine::key::{
     app_name_of, engine_key_for, engine_key_if_eligible, is_engine_key, GameIdentity,
 };
+use gamelib_engine::launch::step::Fut;
 use gamelib_engine::offline::{
     offline_launch_certainly_blocked, verdict_value, MarkerKind, OfflineRefusalInput,
 };
@@ -477,7 +478,7 @@ impl ToolSettingsDeps for ScriptedDeps<'_> {
         self.base.is_provisioned(bottle_name)
     }
 
-    fn ensure_game_bottle(&self, request: EnsureBottleRequest) -> BoxFuture<bool> {
+    fn ensure_game_bottle<'a>(&'a self, request: EnsureBottleRequest) -> Fut<'a, bool> {
         self.ensure_calls.lock().unwrap().push(json!({
             "key": request.key,
             "bottleName": request.bottle_name,

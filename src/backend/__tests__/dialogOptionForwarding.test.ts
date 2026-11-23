@@ -256,6 +256,9 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // Phase 87 plan 55: engine_run_tool runs one allowlisted tool with the caller's own timeoutMs (a CrossOver runner clone is a
     // multi-minute cp -R), which can pass the sidecar's 60 s cap. Not a dialog channel.
     'RUST_ENGINE_RUN_TOOL',
+    // Phase 87 plan 56a: engine_resolve_tool_settings with ensureBottle may create the game's bottle (wineboot and the pinned
+    // engine download, which the TS had no cap on); ended by its creation timeout or the shutdown. Not a dialog channel.
+    'RUST_ENGINE_RESOLVE_TOOL_SETTINGS',
     // Phase 87 plan 35: wine_winetricks_apply and wine_winetricks_available read the catalog, whose first read
     // downloads the winetricks script and lists it; wine_winetricks_install runs one winetricks per verb. None
     // has a limit of its own beyond the shutdown. Not a dialog channel either.

@@ -51,7 +51,8 @@ describe('rustInvokeArgs', () => {
     // Phase 87 plan 54: 173 -> 183, engine_decide_launch, _decide_creation, _preflight_crossover, _is_crossover_missing,
     // engine_cx_resolve_bin_dir, the three engine_state_* writes and engine_deadline_arm and _cancel.
     // Phase 87 plan 55: 183 -> 185, engine_run_tool and engine_cancel.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(185)
+    // Phase 87 plan 56a: 185 -> 186, engine_resolve_tool_settings.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(186)
   })
 
   it('parses the store-embed wire fixtures', () => {

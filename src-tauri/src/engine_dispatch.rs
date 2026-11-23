@@ -740,6 +740,7 @@ engine_op_arms! {
     rpc_deadline_cancel => "engine_deadline_cancel",
     rpc_run_tool => "engine_run_tool",
     rpc_cancel => "engine_cancel",
+    rpc_resolve_tool_settings => "engine_resolve_tool_settings",
 }
 
 #[cfg(test)]
@@ -1236,6 +1237,7 @@ mod tests {
             (rpc_deadline_cancel, "engine_deadline_cancel"),
             (rpc_run_tool, "engine_run_tool"),
             (rpc_cancel, "engine_cancel"),
+            (rpc_resolve_tool_settings, "engine_resolve_tool_settings"),
         ] {
             for bad in [
                 vec![],

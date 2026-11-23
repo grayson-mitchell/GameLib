@@ -142,6 +142,7 @@ import {
   RUST_ENGINE_DEADLINE_CANCEL,
   RUST_ENGINE_RUN_TOOL,
   RUST_ENGINE_CANCEL,
+  RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -985,7 +986,11 @@ export const rustInvokeArgs = {
   // Phase 87 (87-55, D-03, Pitfall 10): the bridge's tool runs. One object each, decoded strictly by the crate; the
   // program must be one of its five allowlisted absolute paths and the cancel id is `[A-Za-z0-9_-]{1,64}`.
   [RUST_ENGINE_RUN_TOOL]: engineOpRequest,
-  [RUST_ENGINE_CANCEL]: engineOpRequest
+  [RUST_ENGINE_CANCEL]: engineOpRequest,
+  // Phase 87 (87-56a, D-23): the settings a Wine tool acts on for a game. One object, decoded strictly by the crate
+  // (`deny_unknown_fields`); the crate derives the engine key and the bottle name itself and creates a bottle only
+  // through the per-game flight.
+  [RUST_ENGINE_RESOLVE_TOOL_SETTINGS]: engineOpRequest
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

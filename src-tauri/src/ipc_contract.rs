@@ -208,6 +208,7 @@ pub(crate) enum RustInvokeChannel {
     EngineDeadlineCancel,
     EngineRunTool,
     EngineCancel,
+    EngineResolveToolSettings,
 }
 
 impl RustInvokeChannel {
@@ -397,6 +398,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineDeadlineCancel,
         RustInvokeChannel::EngineRunTool,
         RustInvokeChannel::EngineCancel,
+        RustInvokeChannel::EngineResolveToolSettings,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -586,6 +588,7 @@ impl RustInvokeChannel {
             "engine_deadline_cancel" => Some(RustInvokeChannel::EngineDeadlineCancel),
             "engine_run_tool" => Some(RustInvokeChannel::EngineRunTool),
             "engine_cancel" => Some(RustInvokeChannel::EngineCancel),
+            "engine_resolve_tool_settings" => Some(RustInvokeChannel::EngineResolveToolSettings),
             _ => None,
         }
     }
@@ -777,6 +780,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineDeadlineCancel => "engine_deadline_cancel",
             RustInvokeChannel::EngineRunTool => "engine_run_tool",
             RustInvokeChannel::EngineCancel => "engine_cancel",
+            RustInvokeChannel::EngineResolveToolSettings => "engine_resolve_tool_settings",
         }
     }
 }
@@ -3884,6 +3888,18 @@ pub(crate) struct EngineCancelArgs {
 impl EngineCancelArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let request = serde_json::from_value(args.first().ok_or_else(|| "engine_cancel:bad-args".to_string())?.clone()).map_err(|_| "engine_cancel:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineResolveToolSettingsArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineResolveToolSettingsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_resolve_tool_settings:bad-args".to_string())?.clone()).map_err(|_| "engine_resolve_tool_settings:bad-args".to_string())?;
         Ok(Self { request })
     }
 }

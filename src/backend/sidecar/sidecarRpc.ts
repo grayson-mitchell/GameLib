@@ -71,6 +71,7 @@ import {
   RUST_ENGINE_LAUNCH_SELECT,
   RUST_ENGINE_PREFLIGHT_CROSSOVER,
   RUST_ENGINE_RUN_TOOL,
+  RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,
@@ -213,6 +214,11 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * bridge's runner clone is a `cp -R` of a CrossOver bundle that takes minutes, and the TS runner it replaces had no cap
  * of its own beyond that timeout. Rust bounds every run by it, an `engine_cancel` and the app shutdown, so no entry can
  * outlive the sidecar. `engine_cancel` is a lookup and stays bounded.
+ *
+ * Sixteenth (Phase 87, 87-56a): `engine_resolve_tool_settings` with `ensureBottle` may create the game's bottle (a
+ * `wineboot` and the pinned-engine download); the TS it replaces had no cap. The bottle flight is bounded by its own
+ * creation timeout, an `engine_cancel` is not wired to it, and the app shutdown ends it, so no entry can outlive the
+ * sidecar. `engine_non_crossover_engine` is a disk read and stays bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -252,6 +258,7 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_ENGINE_DECIDE_LAUNCH,
   RUST_ENGINE_PREFLIGHT_CROSSOVER,
   RUST_ENGINE_RUN_TOOL,
+  RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,

@@ -18,6 +18,7 @@
 import type { GameSettings, InstallPlatform, Runner } from 'common/types'
 import { hasCapability } from 'common/storeCapabilities'
 import type { Game } from 'common/types/game_manager'
+import type { ToolSettingsResult } from 'common/types/engine'
 import { isMac } from 'backend/constants/environment'
 import {
   buildFallbackGameSettings,
@@ -40,21 +41,7 @@ import {
 import type { PerGameBottleFlights } from './perGameBottle'
 import type { EngineServices } from './engineServices'
 
-export type ToolSettingsResult =
-  | { kind: 'stored'; settings: GameSettings }
-  | { kind: 'engine'; key: EngineKey; settings: GameSettings }
-  | {
-      kind: 'unavailable'
-      /**
-       * 'not-own-bottle': a bottle-runtime store title whose tools would act on a bottle shared
-       * with other titles (quick 261110-vi4).
-       */
-      reason:
-        | 'bottle-not-created'
-        | 'no-engine'
-        | 'invalid-prefix'
-        | 'not-own-bottle'
-    }
+export type { ToolSettingsResult }
 
 export interface ToolSettingsDeps {
   isMac(): boolean

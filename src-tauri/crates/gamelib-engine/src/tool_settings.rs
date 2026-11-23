@@ -9,14 +9,18 @@
 //! says running the tool is a need that creates the bottle (D-01, D-03); a read passes
 //! `ensure_bottle: false`.
 //!
-//! The in-memory half (a live engine selection and its launch overlay) and the bottle creation are
-//! the bottle slice's (87-38/87-39), so they arrive through [`ToolSettingsDeps`]; the default
-//! [`CtxToolSettingsDeps`] reads the disk and the store and answers "no live selection" and "could
-//! not create the bottle" until those slices land.
+//! The in-memory half (a live engine selection and its launch overlay) and the bottle creation arrive
+//! through [`ToolSettingsDeps`]. The default [`CtxToolSettingsDeps`] reads all of it from the context
+//! (87-56a, D-23): the live selection from `ctx.registry`, the per-launch overlay from
+//! `ctx.launch_settings`, and a missing bottle is created through the same per-game flight a launch
+//! uses (the creation engine is decided first). A Winetricks apply or a Run EXE during a live
+//! non-Steam launch on a fallback engine therefore acts on the launch's engine, not on the stored
+//! override's.
 
 use gamelib_core::process::BoxFuture;
 use serde_json::{json, Map, Value};
 
+use crate::bottles::per_game::{EnsureArgs, EnsureOutcome};
 use crate::config::{read_engine_for_game, EffectiveEngine};
 use crate::ctx::{EngineCtx, Platform};
 use crate::engines::{
@@ -26,6 +30,7 @@ use crate::engines::{
 use crate::game_prefix::{resolve_game_prefix, BottleOrigin, GamePrefix};
 use crate::jsutil::path_join;
 use crate::key::{engine_key_for, engine_key_if_eligible, uses_bottle_runtime, GameIdentity};
+use crate::launch::step::{CtxStepDeps, Fut, StepDeps};
 use crate::offline::MarkerKind;
 use crate::pins::pins;
 
@@ -112,8 +117,9 @@ pub trait ToolSettingsDeps: Send + Sync {
     /// The per-launch overlay of the live selection over the stored settings.
     fn overlay(&self, key: &str, stored: &Value) -> Value;
     fn is_provisioned(&self, bottle_name: &str) -> bool;
-    /// Creates the per-game bottle; `true` when it exists afterwards.
-    fn ensure_game_bottle(&self, request: EnsureBottleRequest) -> BoxFuture<bool>;
+    /// Creates the per-game bottle; `true` when it exists afterwards. The future may borrow the deps
+    /// (the context-backed creation reads the context it was built over).
+    fn ensure_game_bottle<'a>(&'a self, request: EnsureBottleRequest) -> Fut<'a, bool>;
     fn marker_kind(&self, bottle_name: &str) -> Option<MarkerKind>;
     fn crossover_bin_dir(&self) -> BoxFuture<Option<String>>;
     /// The built-in or Wine Manager engine an engine id runs on; `None` when it is not installed.
@@ -148,20 +154,34 @@ pub fn non_crossover_engine_for(ctx: &EngineCtx, engine_id: &str) -> Option<NonC
 }
 
 impl ToolSettingsDeps for CtxToolSettingsDeps<'_> {
-    fn has_live_selection(&self, _key: &str) -> bool {
-        false
+    fn has_live_selection(&self, key: &str) -> bool {
+        self.ctx.registry.get_engine_selection(key).is_some()
     }
 
-    fn overlay(&self, _key: &str, stored: &Value) -> Value {
-        stored.clone()
+    fn overlay(&self, key: &str, stored: &Value) -> Value {
+        self.ctx
+            .launch_settings
+            .get_launch_settings(self.ctx, Some(key), stored)
     }
 
     fn is_provisioned(&self, bottle_name: &str) -> bool {
         is_bottle_provisioned(self.ctx, bottle_name)
     }
 
-    fn ensure_game_bottle(&self, _request: EnsureBottleRequest) -> BoxFuture<bool> {
-        Box::pin(async { false })
+    fn ensure_game_bottle<'a>(&'a self, request: EnsureBottleRequest) -> Fut<'a, bool> {
+        Box::pin(async move {
+            let args = EnsureArgs {
+                key: request.key,
+                bottle_name: request.bottle_name,
+                app_name: request.app_name,
+                runner: request.runner,
+                cancel: None,
+            };
+            matches!(
+                CtxStepDeps.ensure_game_bottle(self.ctx, &args).await,
+                EnsureOutcome::Done { .. }
+            )
+        })
     }
 
     fn marker_kind(&self, bottle_name: &str) -> Option<MarkerKind> {
@@ -408,4 +428,153 @@ pub async fn resolve_tool_settings_for_id(
     };
     let settings = build_fallback_game_settings(ctx, &bottle_name, &engine, stored);
     ToolSettingsResult::Engine { key, settings }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bottles::registry::EngineSelection;
+    use crate::ctx::EnginePaths;
+    use crate::launch::settings::OverlayContext;
+    use gamelib_core::clock::SystemClock;
+    use gamelib_core::shutdown::Shutdown;
+    use gamelib_store::host::StoreHost;
+    use gamelib_testutil::FakeHome;
+    use std::path::Path;
+    use std::sync::Arc;
+
+    fn ctx(home: &FakeHome) -> EngineCtx {
+        let root = home.root().to_path_buf();
+        EngineCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            Platform::Mac,
+            EnginePaths {
+                app_folder: root.clone(),
+                user_data: root.clone(),
+                tools_path: root.join("tools"),
+                user_home: root.join("home"),
+                temp: root.join("temp"),
+            },
+            Shutdown::new(),
+        )
+    }
+
+    /// A selection whose two binaries exist (the registry refuses one that has none).
+    fn fallback_selection(home: &FakeHome, label: &str) -> EngineSelection {
+        let dir = home.root().join("engine").join(label);
+        std::fs::create_dir_all(&dir).unwrap();
+        let wine = dir.join("wine");
+        let wineserver = dir.join("wineserver");
+        std::fs::write(&wine, b"").unwrap();
+        std::fs::write(&wineserver, b"").unwrap();
+        EngineSelection::Pinned {
+            pin_id: "pin-1".to_string(),
+            reason: "cx-missing".to_string(),
+            engine: NonCrossoverEngine {
+                wine_bin: wine.to_string_lossy().into_owned(),
+                wineserver_bin: wineserver.to_string_lossy().into_owned(),
+                label: label.to_string(),
+                version: "1".to_string(),
+                dxvk: None,
+            },
+        }
+    }
+
+    fn gog() -> ToolGameId<'static> {
+        ToolGameId {
+            runner: "gog",
+            app_name: "1",
+            platform: Some("Windows"),
+        }
+    }
+
+    /// 87-52 regression (D-23): the deps answered "no live selection" at 87-56a's HEAD, so a Winetricks
+    /// apply or a Run EXE during a live non-Steam launch on a fallback engine acted on the stored
+    /// override's engine (or the stored settings), not the launch's.
+    #[tokio::test]
+    async fn a_live_selection_wins_over_the_stored_override() {
+        let home = FakeHome::new("engine-tool-settings-live-");
+        let ctx = ctx(&home);
+        let selection = fallback_selection(&home, "Fallback Wine");
+        let wine_bin = selection.engine().unwrap().wine_bin.clone();
+        assert!(ctx
+            .registry
+            .set_engine_selection_quiet(None, "gog:1", selection));
+        ctx.launch_settings
+            .set_launch_overlay_context("gog:1", OverlayContext::bottle("GameLib-gog-1", None));
+        let stored = json!({"winePrefix": "/old", "wineVersion": {"type": "crossover", "bin": "/cx/bin/wine"}});
+        let deps = CtxToolSettingsDeps::new(&ctx);
+        assert!(deps.has_live_selection("gog:1"));
+        let answer = resolve_tool_settings_for_id(&ctx, &deps, &gog(), &stored, false).await;
+        let ToolSettingsResult::Engine { key, settings } = answer else {
+            panic!("a live selection answers engine settings, got {answer:?}");
+        };
+        assert_eq!(key, "gog:1");
+        assert_eq!(settings["wineVersion"]["bin"], json!(wine_bin));
+        assert_eq!(settings["wineVersion"]["name"], "Fallback Wine");
+        assert_eq!(settings["wineCrossoverBottle"], "GameLib-gog-1");
+        assert_eq!(settings["autoInstallDxvk"], false);
+        assert_eq!(
+            stored["wineVersion"]["bin"], "/cx/bin/wine",
+            "the stored settings are never changed"
+        );
+
+        // A plain prefix keeps its prefix; only the Wine is the live engine's.
+        ctx.launch_settings
+            .set_launch_overlay_context("gog:1", OverlayContext::plain());
+        let ToolSettingsResult::Engine { settings, .. } =
+            resolve_tool_settings_for_id(&ctx, &deps, &gog(), &stored, false).await
+        else {
+            panic!("a plain prefix still answers engine settings");
+        };
+        assert_eq!(settings["winePrefix"], "/old");
+        assert_eq!(settings["wineVersion"]["bin"], json!(wine_bin));
+    }
+
+    #[tokio::test]
+    async fn with_no_selection_the_answer_is_what_it_was() {
+        let home = FakeHome::new("engine-tool-settings-none-");
+        let ctx = ctx(&home);
+        let deps = CtxToolSettingsDeps::new(&ctx);
+        assert!(!deps.has_live_selection("gog:1"));
+        let stored = json!({"winePrefix": "/old"});
+        // A selection that was cleared at the end of the launch no longer overlays.
+        let selection = fallback_selection(&home, "Fallback Wine");
+        assert!(ctx
+            .registry
+            .set_engine_selection_quiet(None, "gog:1", selection));
+        ctx.registry.clear_engine_selection("gog:1");
+        assert!(!deps.has_live_selection("gog:1"));
+        assert_eq!(deps.overlay("gog:1", &stored), stored);
+        // Without a selection the stored override decides, as before: a read of a game whose bottle
+        // is not created yet is unavailable, never a created bottle.
+        assert_eq!(
+            resolve_tool_settings_for_id(&ctx, &deps, &gog(), &stored, false).await,
+            ToolSettingsResult::Unavailable {
+                reason: Unavailable::BottleNotCreated
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn ensure_bottle_goes_through_the_per_game_flight() {
+        let home = FakeHome::new("engine-tool-settings-ensure-");
+        let ctx = ctx(&home);
+        let deps = CtxToolSettingsDeps::new(&ctx);
+        let request = |bottle_name: &str| EnsureBottleRequest {
+            key: "gog:1".to_string(),
+            bottle_name: bottle_name.to_string(),
+            app_name: "1".to_string(),
+            runner: "gog".to_string(),
+        };
+        // A bottle that already exists is the flight's idempotent answer: nothing is created.
+        let existing = bottle_dir(&ctx, "GameLib-gog-1");
+        std::fs::create_dir_all(&existing).unwrap();
+        std::fs::write(Path::new(&existing).join("cxbottle.conf"), b"").unwrap();
+        assert!(deps.ensure_game_bottle(request("GameLib-gog-1")).await);
+        // A name the sanitiser would change is refused before any flight starts: the tool is unavailable.
+        assert!(!deps.ensure_game_bottle(request("../escape")).await);
+        assert!(!is_bottle_provisioned(&ctx, "../escape"));
+    }
 }

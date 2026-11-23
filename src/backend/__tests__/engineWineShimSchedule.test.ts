@@ -199,6 +199,13 @@ const RUN_TOOL_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/engine/rustRunTool.ts'
 ]
 /**
+ * Every non-test importer of `enginewine/toolSettings.ts` (the check is per file, so every row of that file lists them
+ * all): the Winetricks and Run EXE target (87-56a).
+ */
+const TOOL_SETTINGS_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/services/winetricksTarget.ts'
+]
+/**
  * Every non-test importer of `enginewine/state.ts` (the check is per file, so every row of that file lists them all): the
  * Steam launch, its overlay policy and the wine launch that publishes the overlay exit notice.
  */
@@ -596,6 +603,17 @@ const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_ENGINE_CANCEL',
     callers: RUN_TOOL_SHIM_IMPORTERS,
     deletedBy: 97
+  },
+  // 87-56a (D-03, D-23): the settings a Wine tool acts on for a game. Rust reads the live selection and the per-launch
+  // overlay from its own registry, so a Winetricks apply or a Run EXE during a live fallback-engine launch acts on the
+  // launch's engine. `services/winetricksTarget.ts` narrows the reply; Phase 98 moves the config reads it gathers into Rust.
+  {
+    name: 'resolveEngineToolSettings',
+    file: 'src/backend/enginewine/toolSettings.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_RESOLVE_TOOL_SETTINGS',
+    callers: TOOL_SETTINGS_SHIM_IMPORTERS,
+    deletedBy: 98
   },
   // 87-42 (D-24): the engine selection view, the write-through mirror of Rust's registry. The sync bridge reads
   // (`getBridgeBottleSettings` and the launch settings) stay sync; `registerEngineSelectionView` installs the one

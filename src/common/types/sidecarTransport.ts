@@ -1391,6 +1391,18 @@ export const RUST_ENGINE_DEADLINE_CANCEL = 'engine_deadline_cancel' as const
  */
 export const RUST_ENGINE_RUN_TOOL = 'engine_run_tool' as const
 export const RUST_ENGINE_CANCEL = 'engine_cancel' as const
+/**
+ * Phase 87 (87-56a, D-03, D-23): the settings a Wine tool (Winetricks apply, its catalog and installed list, Run EXE in
+ * prefix) acts on for a game, outside any launch, reached through `resolveEngineToolSettings` in
+ * `enginewine/toolSettings.ts`. `engine_resolve_tool_settings` takes `{runner, appName, platform?, stored, ensureBottle}` and
+ * answers the `ToolSettingsResult` (`{kind: 'stored' | 'engine' | 'unavailable', ...}`). Rust reads the live selection and
+ * the per-launch overlay from its own registry, so a tool during a live fallback-engine launch acts on the launch's
+ * engine. With `ensureBottle` it may create the game's bottle (and download the pinned engine), so it joins the
+ * sidecar's unbounded list. `engine_non_crossover_engine` takes `{engineId}` and answers the built-in or Wine Manager
+ * engine that id runs on, `null` when it is not installed; a read, so bounded.
+ */
+export const RUST_ENGINE_RESOLVE_TOOL_SETTINGS =
+  'engine_resolve_tool_settings' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -1780,7 +1792,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_DEADLINE_ARM,
   RUST_ENGINE_DEADLINE_CANCEL,
   RUST_ENGINE_RUN_TOOL,
-  RUST_ENGINE_CANCEL
+  RUST_ENGINE_CANCEL,
+  RUST_ENGINE_RESOLVE_TOOL_SETTINGS
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

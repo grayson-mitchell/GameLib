@@ -24,6 +24,7 @@
 import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import {
   findExportedValues,
+  findImporters,
   findRollbackFlag,
   walkStripped
 } from 'backend/testUtils/infoPortGate'
@@ -37,7 +38,7 @@ import {
   SCANNED_FILES_FLOOR,
   tsWalk
 } from 'backend/testUtils/portSliceGate'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -448,6 +449,200 @@ describe('enginePortComplete', () => {
     )
     expect(runtime).toBeDefined()
     expect(runtime?.code).not.toMatch(/deadlines|launchState/)
+  })
+})
+
+/**
+ * 87-56a, the 87-56 lesson: a deletion plan that assumes "every caller already switched" was wrong for six clusters, and
+ * the miss surfaced only at the first delete. This map is the MEASURED set of live non-test importers, outside
+ * `src/backend/engine`, of every non-test module under it (alias and relative specifiers, dynamic imports and requires;
+ * `testUtils` files count as tests), written out and never derived. An unlisted caller fails here instead of at a
+ * deletion; every later switch in 87-56a/b/c removes its row entries in the same commit. Never widen a list to pass.
+ */
+const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
+  bottleLedger: [],
+  crossoverLocation: [],
+  demoStatus: [],
+  engineConfig: ['src/backend/storeManagers/steam/engine/steamEngineDeps.ts'],
+  engineDecision: [],
+  engineEligibility: [],
+  engineIds: [
+    'src/backend/enginewine/decision.ts',
+    'src/backend/enginewine/twin.ts',
+    'src/backend/storeManagers/steam/bridgeWineTools.ts',
+    'src/backend/storeManagers/steam/gameLaunch.ts'
+  ],
+  engineNoticeStore: ['src/backend/stores/createStores.ts'],
+  enginePins: [],
+  engineRegistry: [],
+  engineRuntime: [
+    'src/backend/services/types.ts',
+    'src/backend/sidecar/bootstrap.ts',
+    'src/backend/storeManagers/steam/bottle.ts',
+    'src/backend/storeManagers/steam/bridge/drm/drmLaunchSetup.ts',
+    'src/backend/storeManagers/steam/bridge/drm/runnerCrossover.ts',
+    'src/backend/storeManagers/steam/bridge/overlay/overlayLaunch.ts',
+    'src/backend/storeManagers/steam/bridge/overlay/overlayRunnerClone.ts',
+    'src/backend/storeManagers/steam/bridgeBottle.ts',
+    'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
+    'src/backend/storeManagers/steam/provisionBottle.ts'
+  ],
+  engineServices: [
+    'src/backend/services/engineServices.ts',
+    'src/backend/storeManagers/steam/bridgeWineTools.ts',
+    'src/backend/storeManagers/steam/engine/steamEngineDeps.ts'
+  ],
+  engineState: [
+    'src/backend/launcher.ts',
+    'src/backend/services/types.ts',
+    'src/backend/sidecar/bootstrap.ts'
+  ],
+  engineSync: [
+    'src/backend/storeManagers/steam/gameBridgeLaunchGate.ts',
+    'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts',
+    'src/backend/storeManagers/steam/gameLaunch.ts'
+  ],
+  engineTypes: [],
+  fallbackBottleCall: [
+    'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts'
+  ],
+  fallbackEngine: [],
+  gameEngineState: [],
+  gameKey: ['src/backend/enginewine/twin.ts'],
+  gamePrefix: [],
+  launchSettings: [],
+  offlineRefusal: [
+    'src/backend/storeManagers/steam/gameEngineDialogs.ts',
+    'src/backend/storeManagers/steam/gameLaunch.ts'
+  ],
+  perGameBottle: [],
+  pinnedEngineProgress: ['src/backend/storeManagers/steam/gameInstall.ts'],
+  prepareBottle: [
+    'src/backend/storeManagers/steam/engine/steamEngineDeps.ts',
+    'src/backend/storeManagers/steam/gameEngineDialogs.ts',
+    'src/backend/storeManagers/steam/gameInstallBridge.ts',
+    'src/backend/storeManagers/steam/gameLaunch.ts'
+  ],
+  runTool: [],
+  testedCrossoverVersions: [],
+  toolSettings: [
+    'src/backend/services/gameCommandFacts.ts',
+    'src/backend/storeManagers/steam/bridgeWineTools.ts'
+  ],
+  wineManagerReleases: ['src/backend/services/engineServices.ts']
+}
+
+/**
+ * The files outside the engine directory that read a member of the engine runtime (`ledger`, `registry`, `crossover`,
+ * `fallback`, `launchSettings`, `perGameBottle`), directly or through `requireEngineRuntime(...)`, with the members each
+ * reads. Slimming the runtime (87-56b) and deleting the members' modules (87-56c) edit this in the same commit.
+ */
+const ENGINE_RUNTIME_MEMBER_READS: Record<string, readonly string[]> = {
+  'src/backend/sidecar/bootstrap.ts': ['crossover'],
+  'src/backend/storeManagers/steam/bridgeWineTools.ts': ['fallback'],
+  'src/backend/storeManagers/steam/gameEngineDialogs.ts': ['fallback'],
+  'src/backend/storeManagers/steam/gameInstall.ts': ['fallback'],
+  'src/backend/storeManagers/steam/gameLaunch.ts': ['fallback', 'registry']
+}
+
+const ENGINE_DIR = 'src/backend/engine'
+const RUNTIME_MEMBER_RE =
+  /(?:requireEngineRuntime\([^)]*\)|[eE]ngineRuntime)\??\.(ledger|registry|crossover|fallback|launchSettings|perGameBottle)\b/g
+
+const outsideEngineFiles = (files: readonly StrippedFileLike[]) =>
+  files.filter(
+    (f) =>
+      f.path.startsWith('src/') &&
+      !f.path.startsWith(`${ENGINE_DIR}/`) &&
+      !f.path.startsWith('src/backend/testUtils/') &&
+      !/\.test\./.test(f.path)
+  )
+
+interface StrippedFileLike {
+  path: string
+  code: string
+}
+
+function engineImportersOf(
+  files: readonly StrippedFileLike[]
+): Record<string, string[]> {
+  const outside = outsideEngineFiles(files)
+  const modules = readdirSync(join(REPO_ROOT_FOR_GATE, ENGINE_DIR))
+    .filter((f) => f.endsWith('.ts'))
+    .map((f) => f.replace(/\.ts$/, ''))
+  const out: Record<string, string[]> = {}
+  for (const m of modules) {
+    out[m] = findImporters(
+      outside.map((f) => ({ ...f, raw: f.code })),
+      `${ENGINE_DIR}/${m}.ts`
+    ).sort()
+  }
+  return out
+}
+
+function runtimeMemberReadsOf(
+  files: readonly StrippedFileLike[]
+): Record<string, string[]> {
+  const out: Record<string, string[]> = {}
+  for (const f of outsideEngineFiles(files)) {
+    const members = new Set<string>()
+    for (const m of f.code.matchAll(RUNTIME_MEMBER_RE)) members.add(m[1]!)
+    if (members.size > 0) out[f.path] = [...members].sort()
+  }
+  return out
+}
+
+const REPO_ROOT_FOR_GATE = process.cwd()
+
+describe('engineOutsideImporters', () => {
+  it('the map has one key per non-test module under src/backend/engine', () => {
+    const modules = readdirSync(join(REPO_ROOT_FOR_GATE, ENGINE_DIR))
+      .filter((f) => f.endsWith('.ts'))
+      .map((f) => f.replace(/\.ts$/, ''))
+      .sort()
+    expect(Object.keys(ENGINE_OUTSIDE_IMPORTERS).sort()).toEqual(modules)
+  })
+
+  it('every engine module has exactly its listed live importers outside the engine directory', () => {
+    expect(engineImportersOf(tsWalk.files)).toEqual(
+      Object.fromEntries(
+        Object.entries(ENGINE_OUTSIDE_IMPORTERS).map(([k, v]) => [
+          k,
+          [...v].sort()
+        ])
+      )
+    )
+  })
+
+  it('the engine runtime members are read outside the directory only where listed', () => {
+    expect(runtimeMemberReadsOf(tsWalk.files)).toEqual(
+      ENGINE_RUNTIME_MEMBER_READS
+    )
+  })
+
+  it('self-test: a planted importer and a planted member read are each reported', () => {
+    const planted = [
+      {
+        path: 'src/backend/services/plantedCaller.ts',
+        raw: '',
+        code: "import { x } from 'backend/engine/runTool'\nconst y = engineRuntime.perGameBottle\n"
+      }
+    ]
+    expect(engineImportersOf(planted)['runTool']).toEqual([
+      'src/backend/services/plantedCaller.ts'
+    ])
+    expect(
+      runtimeMemberReadsOf(planted)['src/backend/services/plantedCaller.ts']
+    ).toEqual(['perGameBottle'])
+    // a test file and a testUtils file are not importers
+    const quiet = [
+      {
+        path: 'src/backend/services/plantedCaller.test.ts',
+        raw: '',
+        code: "import { x } from 'backend/engine/runTool'\n"
+      }
+    ]
+    expect(engineImportersOf(quiet)['runTool']).toEqual([])
   })
 })
 
