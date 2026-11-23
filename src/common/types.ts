@@ -346,9 +346,9 @@ export interface GameSettings {
   targetExe: string
   useGameMode: boolean
   wineCrossoverBottle: string
-  // Phase 59 (D-14): per-game Steam bridge engine override id; parsed by backend/engine/engineIds.ts, never a path.
+  // Phase 59 (D-14): per-game Steam bridge engine override id; parsed by the Rust `gamelib-engine` `ids` module (twin: `parseEngineOverride`), never a path.
   steamEngineOverride?: string
-  // Phase 61 (D-08): per-game engine override id for every store; parsed by backend/engine/engineIds.ts, never a path. Absent means derived from wineVersion at read time.
+  // Phase 61 (D-08): per-game engine override id for every store; parsed by the Rust `gamelib-engine` `ids` module (twin: `parseEngineOverride`), never a path. Absent means derived from wineVersion at read time.
   engineOverride?: string
   /**
    * Phase 60 D-02: per-game Steam overlay toggle. Undefined means automatic.

@@ -65,6 +65,9 @@ export function createTestEngineTransport(
 }
 
 /**
+ * @public Reached by `testSteamBottle.ts` through a lazy `require` (a static import would load the Steam bottle at module
+ * load), which knip does not follow.
+ *
  * The CrossOver locator a test Steam bottle starts from, wired as the boot's facade is (87-56b, 87-55): the synchronous
  * read is the twin of Rust's `resolve_bin_dir_sync`, the asynchronous one asks Rust through the transport (which
  * answers "no CrossOver" unless the test says otherwise).

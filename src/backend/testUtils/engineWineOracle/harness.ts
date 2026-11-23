@@ -34,6 +34,11 @@
  * `<USERDATA>` and `<APPFOLDER>` are deliberately different directories (they coincide on a real
  * Mac), so a port that reads the wrong root fails a golden rather than passing by coincidence.
  *
+ * 87-57 trimmed this file to what `wine/__tests__/oracle/wineCore.oracle.test.ts` imports, the one oracle left: it is the
+ * vector test of the D-22 twins (`setupEnvVars`, `setupWineEnvVars`, `createCommandRunner`, `getDefaultWineBinary`) and is
+ * deleted with them in Phase 88, and this harness with it. `pinClock`, `loadDeltas` and `assertLiveRecorded` served the oracles
+ * 87-37 and 87-56c deleted. The Rust replay reads `deltas.json` and the recordings itself.
+ *
  * Two-profile rule: every case runs on a fresh `createFakeHomeProfile()` and never reads the real
  * HOME. The harness spawns nothing itself; a case that must run a real binary takes its runner from
  * `createRealRunner()`, which is isolated by default.
@@ -58,12 +63,7 @@ import {
 } from 'backend/testUtils/fakeHomeProfile'
 import { derivePaths } from 'backend/process/appPaths'
 import type { AppPaths } from 'backend/process/context'
-import {
-  fixturesRoot,
-  engineWineOracleMode,
-  engineWineRecordedCaseDir,
-  type OracleMode
-} from './recorder'
+import { fixturesRoot, engineWineOracleMode, type OracleMode } from './recorder'
 
 export type OraclePlatform = 'mac' | 'linux' | 'windows'
 
@@ -257,41 +257,6 @@ export async function withEngineOracleProfile<T>(
 }
 
 /**
- * @public Consumed by the later 87 golden plans (clock-driven cases: the launch deadline, trial
- * notices); not used by the runtimes slice, which has no clock.
- *
- * Pins `Date` to `ms` and makes sure the process asks for UTC. Only `Date` is faked: a slice's
- * timers, `setImmediate` and streams keep working. Under jest `process.env` is a copy, so a TZ set
- * here does not reach the native date code: run the oracle with `TZ=UTC` for a slice that formats
- * dates.
- */
-export function pinClock(ms: number): () => void {
-  process.env.TZ = 'UTC'
-  jest.useFakeTimers({
-    now: ms,
-    doNotFake: [
-      'hrtime',
-      'nextTick',
-      'performance',
-      'queueMicrotask',
-      'requestAnimationFrame',
-      'cancelAnimationFrame',
-      'requestIdleCallback',
-      'cancelIdleCallback',
-      'setImmediate',
-      'clearImmediate',
-      'setInterval',
-      'clearInterval',
-      'setTimeout',
-      'clearTimeout'
-    ]
-  })
-  return () => {
-    jest.useRealTimers()
-  }
-}
-
-/**
  * Makes `backend/constants/environment` say the host is `platform` (those constants are read at
  * call time by every slice). Returns the restore function. `jest.replaceProperty`, not a module
  * mock: the jestMock ratchet counts `jest.mock`, and the constants are plain properties.
@@ -388,19 +353,6 @@ export function loadCases<T extends { id: string }>(
   return parsed as T[]
 }
 
-/**
- * The documented Rust-side differences of a slice (D-19 hardening: a guard that refuses where the
- * TS deleted). Maps a case id to its explanation. Hand-authored; this module only reads it.
- */
-export function loadDeltas(
-  crate: string,
-  slice: string
-): Record<string, string> {
-  const file = join(goldenDir(crate, slice), 'deltas.json')
-  if (!existsSync(file)) return {}
-  return JSON.parse(readFileSync(file, 'utf8')) as Record<string, string>
-}
-
 interface Manifest {
   count: number
   floor: number
@@ -477,26 +429,4 @@ export function expectEmptyCasesToFail(
   expect(() => assertManifest(crate, slice, [], minFloor, 'compare')).toThrow(
     /below the floor/
   )
-}
-
-/**
- * A case flagged `"live": true` is recorded once by the operator from a real service. In compare
- * and write modes a live case with no recording is a failure, never a skip: a silent skip would
- * let the golden suite go green over cases that were never recorded. Record mode needs no
- * recording (it is making one).
- */
-export function assertLiveRecorded(
-  crate: string,
-  slice: string,
-  c: { id: string; live?: boolean },
-  mode: OracleMode = engineWineOracleMode()
-): void {
-  if (!c.live || mode === 'record') return
-  if (
-    !existsSync(
-      join(engineWineRecordedCaseDir(crate, slice, c.id), 'exchanges.json')
-    )
-  ) {
-    throw new Error(`live case not recorded: ${c.id}`)
-  }
 }

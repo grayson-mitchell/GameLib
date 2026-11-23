@@ -3,8 +3,8 @@
  *
  * The Rust `gamelib-engine` crate reads this one file (`pins.rs`, `include_str!`) for the pinned
  * fallback engine table: which Wine and DXVK archive the downloader trusts, fixed by size and sha256.
- * The TS table `ENGINE_PINS` in `backend/engine/enginePins.ts` stays where it is until its callers
- * move, so this test proves the JSON equals it field for field (current and previous). A bumped pin,
+ * The TS twin `ENGINE_PINS` in `backend/enginewine/twin.ts` (a scheduled twin, deleted in Phase 96) is built from this
+ * file, so this test proves the exported table equals the JSON field for field (current and previous). A bumped pin,
  * a changed hash or a renamed field on either side fails here before the two sides disagree.
  */
 import { ENGINE_PINS } from 'backend/enginewine/twin'

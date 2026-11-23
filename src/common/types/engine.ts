@@ -154,8 +154,7 @@ export const LAUNCH_DEADLINE_MS = 180_000
 
 /**
  * Phase 87 (87-55, D-24): the engine types the Steam bridge and the Rust-backed shims share. They moved here from
- * `backend/engine/engineTypes.ts` (which re-exports them until 87-56 deletes the TS engine) so the bridge no longer imports
- * `src/backend/engine`. The Rust `gamelib-engine` `types` module owns the same shapes.
+ * `backend/engine/engineTypes.ts` so the bridge does not import the TS engine (the directory was deleted in 87-56c). The Rust `gamelib-engine` `types` module owns the same shapes.
  */
 export type FallbackReason = 'cx-missing' | 'cx-expired' | 'cx-broken'
 

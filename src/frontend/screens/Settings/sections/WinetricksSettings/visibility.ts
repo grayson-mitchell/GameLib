@@ -8,7 +8,7 @@
  * quick 261110-v08: the upstream `!isCrossover` gate hid Winecfg / Run EXE /
  * Winetricks for CrossOver. Since Phase 61 a macOS non-Steam engine game's
  * tools resolve the game's own bottle and engine through `resolveToolSettings`
- * (backend/engine/toolSettings.ts) via `runWineCommandOnGame` and the
+ * (`resolveEngineToolSettings`, backend/enginewine/toolSettings.ts) via `runWineCommandOnGame` and the
  * Winetricks runner, so the tools work there. Found in 66.1-HUMAN-UAT item 5.
  *
  * quick 261110-vi4: a Mac Steam title shows the tools only for a per-game bridge

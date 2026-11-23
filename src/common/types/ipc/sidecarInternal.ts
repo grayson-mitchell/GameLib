@@ -186,7 +186,7 @@ const storeMirrorEvent = z.discriminatedUnion('op', [
 
 // Phase 87 (87-42, D-24): Rust's engine registry changed on its own (a launch deadline, a game exit); the sidecar's
 // selection view applies it. `selection` is the registry's value for `key`, `null` when the key was cleared. The
-// engine fields mirror `EngineSelection` in `backend/engine/engineTypes.ts` and the crate's serialisation.
+// engine fields mirror `EngineSelection` in `common/types/engine.ts` and the crate's serialisation.
 const engineDxvk = z
   .strictObject({ dir: z.string().max(4096), version: z.string().max(256) })
   .nullable()

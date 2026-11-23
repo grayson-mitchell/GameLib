@@ -806,6 +806,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
   // synchronously from the launch paths) and the command runner's `runWineCommand` (its `onSpawn` hands callers a live
   // ChildHandle) cannot become same-signature async shims without rewriting Phase 88-92 launch code, so these three
   // TS twins stay, pinned to the Rust `wine_env` and `wine_command` goldens that one oracle test records and both languages replay.
+  // 87-57: the oracle harness (`testUtils/engineWineOracle/`) is trimmed to what that one oracle test imports and is deleted with
+  // these twins' vector test in Phase 88.
   {
     name: 'setupEnvVars',
     file: 'src/backend/launcher.ts',

@@ -17,12 +17,10 @@ import {
 import { join } from 'path'
 import axios from 'axios'
 import {
-  assertLiveRecorded,
   assertManifest,
   expandPlaceholders,
   expectEmptyCasesToFail,
   goldenDir,
-  loadDeltas,
   normalisePaths,
   syncManifest,
   withEngineOracleProfile,
@@ -322,34 +320,14 @@ describe('MANIFEST guard', () => {
     })
   })
 
-  it('reads deltas.json and never writes it', async () => {
-    await withScratchFixtures((root) => {
-      expect(loadDeltas(CRATE, SLICE)).toEqual({})
+  it('never writes deltas.json', async () => {
+    await withScratchFixtures(() => {
       const dir = goldenDir(CRATE, SLICE)
       mkdirSync(dir, { recursive: true })
-      writeFileSync(
-        join(dir, 'deltas.json'),
-        '{"c1":"Rust refuses the delete"}'
-      )
+      const deltas = '{"c1":"Rust refuses the delete"}'
+      writeFileSync(join(dir, 'deltas.json'), deltas)
       syncManifest(CRATE, SLICE, [{ id: 'c1' }], 1, 'write')
-      expect(loadDeltas(CRATE, SLICE)).toEqual({
-        c1: 'Rust refuses the delete'
-      })
-      expect(existsSync(root)).toBe(true)
-    })
-  })
-
-  it('a live case with no recording fails outside record mode', async () => {
-    await withScratchFixtures(() => {
-      expect(() =>
-        assertLiveRecorded(CRATE, SLICE, { id: 'l', live: true }, 'compare')
-      ).toThrow(/live case not recorded/)
-      expect(() =>
-        assertLiveRecorded(CRATE, SLICE, { id: 'l', live: true }, 'record')
-      ).not.toThrow()
-      expect(() =>
-        assertLiveRecorded(CRATE, SLICE, { id: 'l' }, 'compare')
-      ).not.toThrow()
+      expect(readFileSync(join(dir, 'deltas.json'), 'utf8')).toBe(deltas)
     })
   })
 })
