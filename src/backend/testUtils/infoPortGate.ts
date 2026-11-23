@@ -156,9 +156,9 @@ export function findRollbackFlag(
   return files.filter((f) => f.raw.includes(flag)).map((f) => f.path)
 }
 
-interface RustInfoCall {
+export interface RustCall {
   path: string
-  /** The `RUST_INFO_*` constant passed as the channel. */
+  /** The `RUST_*` constant passed as the channel. */
   constant: string
   /** The enclosing function's name; `<anonymous>` when it has none. */
   fn: string
@@ -214,28 +214,36 @@ function isRequestRustInvokeCall(node: ts.Node): node is ts.CallExpression {
   )
 }
 
-const isRustInfoConstant = (node: ts.Node | undefined): node is ts.Identifier =>
+/** `RUST_<X>_` style channel constant names, e.g. `RUST_INFO_RECENT_ADD` for the prefix `RUST_INFO_`. */
+const isRustConstant = (
+  node: ts.Node | undefined,
+  prefixes: readonly string[]
+): node is ts.Identifier =>
   node !== undefined &&
   ts.isIdentifier(node) &&
-  /^RUST_INFO_[A-Z0-9_]+$/.test(node.text)
+  new RegExp(`^(${prefixes.map(escapeRe).join('|')})[A-Z0-9_]+$`).test(
+    node.text
+  )
 
 /**
- * Every `requestRustInvoke(RUST_INFO_<X>, ...)` call in `files`, with its file, the constant and the
- * name of the function holding it. Parsed from the comment-stripped code, so a call named in a
- * comment is not a call.
+ * Every `requestRustInvoke(<prefix><X>, ...)` call in `files` for any of `prefixes`, with its file,
+ * the constant and the name of the function holding it. Parsed from the comment-stripped code, so a
+ * call named in a comment is not a call. Phase 86 passes `['RUST_INFO_']`, Phase 87
+ * `['RUST_ENGINE_', 'RUST_WINE_']`.
  */
-export function findRustInfoCalls(
-  files: readonly StrippedFile[]
-): RustInfoCall[] {
-  const calls: RustInfoCall[] = []
+export function findRustCalls(
+  files: readonly StrippedFile[],
+  prefixes: readonly string[]
+): RustCall[] {
+  const calls: RustCall[] = []
   for (const f of files) {
     if (!/\.tsx?$/.test(f.path)) continue
-    if (!f.code.includes('RUST_INFO_')) continue
+    if (!prefixes.some((p) => f.code.includes(p))) continue
     const sf = parse(f.path, f.code)
     const visit = (node: ts.Node): void => {
       if (
         isRequestRustInvokeCall(node) &&
-        isRustInfoConstant(node.arguments[0])
+        isRustConstant(node.arguments[0], prefixes)
       ) {
         calls.push({
           path: f.path,
@@ -248,6 +256,11 @@ export function findRustInfoCalls(
     visit(sf)
   }
   return calls
+}
+
+/** Every `requestRustInvoke(RUST_INFO_<X>, ...)` call in `files` (the Phase 86 channel prefix). */
+export function findRustInfoCalls(files: readonly StrippedFile[]): RustCall[] {
+  return findRustCalls(files, ['RUST_INFO_'])
 }
 
 /** Names of every exported function in `source`: declarations, and `export const f = () => ...`. */
@@ -452,13 +465,15 @@ const excerpt = (n: ts.Node): string =>
   n.getText().replace(/\s+/g, ' ').slice(0, 60)
 
 /**
- * Checks that `fnName` in `source` has the D-06 shape its schedule `row` claims. Returns the
+ * Checks that `fnName` in `source` has the D-06 shape its schedule `row` claims, its channel constant
+ * starting with one of `prefixes` (the Phase 86 `RUST_INFO_` by default). Returns the
  * violations (an empty array is a pass), each naming the offending statement.
  */
 export function checkShimShape(
   source: string,
   fnName: string,
-  row: ShimRow
+  row: ShimRow,
+  prefixes: readonly string[] = ['RUST_INFO_']
 ): string[] {
   const sf = parse('shim.ts', source)
   const fn = findFunction(sf, fnName)
@@ -541,9 +556,9 @@ export function checkShimShape(
     )
     return problems
   }
-  if (!isRustInfoConstant(call.arguments[0])) {
+  if (!isRustConstant(call.arguments[0], prefixes)) {
     problems.push(
-      `${label}: the first argument must be a RUST_INFO_* constant, found: ${call.arguments[0] ? excerpt(call.arguments[0]) : 'none'}`
+      `${label}: the first argument must be a ${prefixes.map((p) => `${p}*`).join(' or ')} constant, found: ${call.arguments[0] ? excerpt(call.arguments[0]) : 'none'}`
     )
   }
 
