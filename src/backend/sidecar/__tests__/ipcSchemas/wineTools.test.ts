@@ -124,10 +124,8 @@ const asyncTable: FixtureTable<typeof wineToolsAsyncArgs> = {
     ],
     invalid: [[{ ...wineVersionInfo, type: 'Wine-Mystery' }]]
   },
-  refreshWineVersionInfo: {
-    valid: [[true], [false], [], [undefined]],
-    invalid: [['yes'], [true, true]]
-  },
+  // Phase 87 (87-20, D-14): `refreshWineVersionInfo` is a native `wine` channel; its vectors are in
+  // `nativeChannels.json`.
   removeWineVersion: {
     valid: [
       [{ ...wineVersionInfo, isInstalled: true }],

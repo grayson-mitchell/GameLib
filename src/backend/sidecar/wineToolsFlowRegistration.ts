@@ -30,12 +30,12 @@
  * by this deletion and are removed with it (`sendChannelObservable.ts` keeps exporting the latter
  * for `appShellFlowRegistration.ts`'s `frontendReady` channel).
  *
- * Declared channel list (15 total, 15 invoke + 0 send — verified against `main.ts`,
+ * Declared channel list (14 total, 14 invoke + 0 send — verified against `main.ts`,
  * `wine/manager/ipc_handler.ts` and `tools/ipc_handler.ts` source by 34.5-RESEARCH.md/this plan's
  * own `<interfaces>` block; Phase 45 Plan 01, 2026-10-10, adds the winetricks-queue trio; Phase 45
  * Plan 02, 2026-10-10, retires `winetricksInstall`):
  *
- *   invoke (deps.ipc.handle, 15):
+ *   invoke (deps.ipc.handle, 14):
  *     - `runWineCommand`         -> main.ts:766
  *     - `getAlternativeWine`     -> main.ts:973
  *     - `wine.isValidVersion`    -> main.ts:1532
@@ -43,7 +43,7 @@
  *     - `toggleDXVKNVAPI`        -> main.ts:1007
  *     - `toggleVKD3D`            -> main.ts:1015
  *     - `installWineVersion`     -> wine/manager/ipc_handler.ts:14
- *     - `refreshWineVersionInfo` -> wine/manager/ipc_handler.ts:46
+ *     - `refreshWineVersionInfo` -> native `wine` slice since Phase 87 (87-20, D-14); no handle here
  *     - `removeWineVersion`      -> wine/manager/ipc_handler.ts:56
  *     - `winetricksAvailable`    -> tools/ipc_handler.ts (Phase 34.6 Plan 07)
  *     - `winetricksInstalled`    -> tools/ipc_handler.ts (Phase 34.6 Plan 07)
@@ -71,7 +71,6 @@ import type { IpcRegistry } from './ipcRegistry'
 import {
   installWineVersion as installWineVersionForRelease,
   removeWineVersion as removeWineVersionForRelease,
-  updateWineVersionInfos,
   updateWineListsIfOutdated
 } from '../wine/manager/utils'
 import { createTools, type ToolsDeps } from '../tools'
@@ -83,7 +82,7 @@ import { notify, type DialogBoxDeps, type NotifyDeps } from '../dialog/dialog'
 import type { GlobalConfigSlice } from '../config'
 import type { GameConfigs } from '../game_config'
 import type { AppInfo } from '../process/context'
-import { logDebug, logError, LogPrefix } from '../logger'
+import { logDebug, LogPrefix } from '../logger'
 import type { AppRuntimeSlice } from '../appRuntime'
 import { t } from 'i18next'
 import type {
@@ -142,8 +141,9 @@ export interface WineToolsFlowDeps
 }
 
 /**
- * Registers this cluster's 15 channels (15 invoke, 0 send — `winetricksInstall` retired, Phase 45
- * Plan 02, D-11 promote). As of Phase 45 Plan 01 (2026-10-10), the count was 12 invoke + 1 send
+ * Registers this cluster's 14 channels (14 invoke, 0 send — `winetricksInstall` retired, Phase 45
+ * Plan 02, D-11 promote; `refreshWineVersionInfo` moved to the Rust native `wine` slice, Phase 87
+ * Plan 20, D-14). As of Phase 45 Plan 01 (2026-10-10), the count was 12 invoke + 1 send
  * from Phase 34.6 Plan 07 plus the 3 new winetricks-queue invoke channels (`winetricksApply`,
  * `winetricksQueueState`, `winetricksCancelRemaining`); Phase 45 Plan 02 then retired the one send
  * channel outright. Called once from `handlers.ts` — this module owns no side effects at import
@@ -270,21 +270,8 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
     }
   )
 
-  // Source: wine/manager/ipc_handler.ts:46 — the swallow-and-return-undefined shape on both the
-  // success and catch paths is inherited behaviour, kept as-is (not this port's decision to make).
-  deps.ipc.handle(
-    'refreshWineVersionInfo',
-    async (_event: unknown, ...args: unknown[]) => {
-      const fetch = args[0] as boolean | undefined
-      try {
-        await updateWineVersionInfos(deps, fetch)
-        return
-      } catch (error) {
-        logError(error, LogPrefix.WineDownloader)
-        return
-      }
-    }
-  )
+  // Phase 87 (87-20, D-14): `refreshWineVersionInfo` is a native `wine` channel now (the Rust
+  // `wine_manager_refresh`); the sidecar registers no handle for it (one owner, D-06).
 
   deps.ipc.handle(
     'removeWineVersion',

@@ -818,6 +818,32 @@
         ["UMU"],
         [{ "name": "umu" }]
       ]
+    },
+    "refreshWineVersionInfo": {
+      "kind": "invoke",
+      "slice": "wine",
+      "args": [
+        {
+          "name": "fetch",
+          "type": "boolean",
+          "optional": true,
+          "nullable": true
+        }
+      ],
+      "returns": "void",
+      "valid": [[], [null], [true], [false]],
+      "invalid": [
+        [1],
+        [0],
+        ["true"],
+        [""],
+        [{}],
+        [[]],
+        [{ "fetch": true }],
+        [true, true],
+        [null, null],
+        [false, "x"]
+      ]
     }
   }
 }

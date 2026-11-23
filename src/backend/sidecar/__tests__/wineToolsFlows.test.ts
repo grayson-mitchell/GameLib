@@ -166,7 +166,6 @@ describe('registration kind — all 9 Wine channels are registered with the corr
     'getAlternativeWine',
     'wine.isValidVersion',
     'installWineVersion',
-    'refreshWineVersionInfo',
     'removeWineVersion',
     'toggleDXVK',
     'toggleDXVKNVAPI',

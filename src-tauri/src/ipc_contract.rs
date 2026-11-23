@@ -863,6 +863,7 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "isRuntimeInstalled",
     "itad.getKeyStatus",
     "itad.setApiKey",
+    "refreshWineVersionInfo",
     "removeRecent",
     "searchStores",
     "sidecar:store-fetch",

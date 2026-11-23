@@ -12,7 +12,6 @@ import type {
 } from '../../types'
 import {
   nonEmptyString,
-  optionalArg,
   runnerArg,
   wineInstallationArg,
   type InvokeFns,
@@ -117,7 +116,7 @@ export const wineToolsAsyncArgs = {
     })
   ]),
   installWineVersion: z.tuple([wineVersionInfo]),
-  refreshWineVersionInfo: z.tuple([optionalArg(z.boolean())]),
+  // Phase 87 (87-20, D-14): `refreshWineVersionInfo` is a native `wine` channel (`nativeChannels.json`).
   removeWineVersion: z.tuple([wineVersionInfo]),
   'wine.isValidVersion': z.tuple([wineInstallationArg()]),
   toggleDXVK: z.tuple([toolArgs]),
@@ -135,7 +134,6 @@ interface WineToolsAsyncReturns {
   getAlternativeWine: Promise<WineInstallation[]>
   runWineCommandForGame: Promise<ExecResult>
   installWineVersion: Promise<void>
-  refreshWineVersionInfo: Promise<void>
   removeWineVersion: Promise<void>
   'wine.isValidVersion': Promise<boolean>
   toggleDXVK: Promise<boolean>

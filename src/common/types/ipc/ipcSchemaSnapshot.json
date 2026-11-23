@@ -5591,20 +5591,16 @@
     {
       "channel": "refreshWineVersionInfo",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          }
-        ],
-        "items": false,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "fetch",
+          "type": "boolean",
+          "optional": true,
+          "nullable": true
+        }
+      ],
+      "returns": "void"
     },
     {
       "channel": "relaunchApp",

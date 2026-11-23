@@ -139,6 +139,11 @@ export interface NativeAsync {
   // The same one-of-three decode as `isRuntimeInstalled`. It runs with no wall-clock bound, so it is not
   // among the sidecar's long-running invoke channels any more.
   downloadRuntime: (name: RuntimeName) => Promise<boolean>
+  // Phase 87 (87-20, D-14): refresh the wine-downloader info store from the seven release feeds,
+  // answered by the Rust `wine` slice (`wine_manager_refresh`). `fetch` is the one optional boolean; it
+  // answers `undefined` on success and on every failure (the TypeScript swallowed an error the same
+  // way), so only a rejected argument ever rejects.
+  refreshWineVersionInfo: (fetch?: boolean) => Promise<void>
 }
 
 export interface NativeSync {

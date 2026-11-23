@@ -118,6 +118,43 @@ pub(crate) fn download_runtime(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> Native
     )
 }
 
+/// Decodes the one optional `fetch` argument of `refreshWineVersionInfo`: nothing, `null` (what an
+/// `undefined` becomes over JSON) or one boolean. Anything else is a fixed-literal rejection, never
+/// the renderer's value (T-87-67).
+fn parse_refresh_fetch(args: &[Value]) -> Result<bool, Rejection> {
+    match args {
+        [] | [Value::Null] => Ok(false),
+        [Value::Bool(fetch)] => Ok(*fetch),
+        [_] => Err(("0", "invalid_type")),
+        _ => Err(("(args)", "too_big")),
+    }
+}
+
+/// The native `refreshWineVersionInfo` handler (slice `wine`, D-14): refreshes the wine-downloader
+/// info store from the seven release feeds, answered by `wine_manager_refresh` on the blocking pool.
+/// It answers `undefined` on success and on every failure, as the TS handler did (a failed refresh is
+/// logged and the renderer keeps the list it had), so only a rejected argument ever rejects.
+pub(crate) fn refresh_wine_version_info(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        let fetch = parse_refresh_fetch(&args)
+            .map_err(|(path, code)| invalid_args("refreshWineVersionInfo", &[path], &[code]))?;
+        let wine = wine_ctx().ok_or_else(|| "refreshWineVersionInfo: not ready".to_string())?;
+        let answer = run_wine_op(
+            Arc::clone(wine),
+            "wine_manager_refresh",
+            vec![Value::Bool(fetch)],
+            "refreshWineVersionInfo: the refresh did not finish",
+        )
+        .await;
+        // The TS handler swallowed an error and returned undefined on both paths. The log line is a
+        // fixed literal (the crate has logged the cause itself).
+        if answer.is_err() {
+            shell_log("refreshWineVersionInfo: the refresh did not finish");
+        }
+        Ok(Value::Null)
+    })
+}
+
 /// Runs `op` over `args` for a `rustInvoke` arm. These arms run on the dispatcher's worker thread, never
 /// inside a runtime, so the crate's own `dispatch_sync` drives the op there. Before [`install`] the
 /// answer is `<op>:not-ready`.
@@ -309,6 +346,56 @@ mod tests {
             "x",
         ));
         assert_eq!(answer, Ok(json!(false)));
+    }
+
+    #[test]
+    fn the_refresh_fetch_is_nothing_null_or_one_boolean() {
+        assert_eq!(parse_refresh_fetch(&[]), Ok(false));
+        assert_eq!(parse_refresh_fetch(&[json!(null)]), Ok(false));
+        assert_eq!(parse_refresh_fetch(&[json!(true)]), Ok(true));
+        assert_eq!(parse_refresh_fetch(&[json!(false)]), Ok(false));
+        for (args, want) in [
+            (vec![json!(1)], ("0", "invalid_type")),
+            (vec![json!("true")], ("0", "invalid_type")),
+            (vec![json!({})], ("0", "invalid_type")),
+            (vec![json!({ "fetch": true })], ("0", "invalid_type")),
+            (vec![json!([true])], ("0", "invalid_type")),
+            (vec![json!(true), json!(true)], ("(args)", "too_big")),
+            (vec![json!(null), json!(null)], ("(args)", "too_big")),
+        ] {
+            assert_eq!(parse_refresh_fetch(&args), Err(want), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn the_refresh_handler_validates_first_and_answers_not_ready_before_install() {
+        assert!(wine_ctx().is_none());
+        let router_ctx = Arc::new(crate::native_router::NativeCtx::for_tests(
+            Arc::new(NoHost),
+            None,
+        ));
+        let secret = "SECRET-FETCH-".repeat(80);
+        for bad in [vec![json!(secret)], vec![json!(true), json!(true)]] {
+            let error = tauri::async_runtime::block_on(refresh_wine_version_info(
+                Arc::clone(&router_ctx),
+                bad,
+            ))
+            .unwrap_err();
+            assert!(
+                error.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+                "{error}"
+            );
+            assert!(!error.contains("SECRET"), "{error}");
+        }
+        for ok in [vec![], vec![json!(null)], vec![json!(true)]] {
+            assert_eq!(
+                tauri::async_runtime::block_on(refresh_wine_version_info(
+                    Arc::clone(&router_ctx),
+                    ok
+                )),
+                Err("refreshWineVersionInfo: not ready".to_string())
+            );
+        }
     }
 
     #[test]

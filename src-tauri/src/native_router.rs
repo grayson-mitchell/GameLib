@@ -483,6 +483,12 @@ impl NativeRouter {
         // Phase 87 (87-18, D-14): the renderer's runtime download, the same slice and decode. The
         // sidecar no longer registers `downloadRuntime` (one owner, D-06).
         invoke.insert("downloadRuntime", wine_dispatch::download_runtime);
+        // Phase 87 (87-20, D-14): the renderer's wine-list refresh, the same slice. The sidecar no
+        // longer registers `refreshWineVersionInfo` (one owner, D-06).
+        invoke.insert(
+            "refreshWineVersionInfo",
+            wine_dispatch::refresh_wine_version_info,
+        );
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -877,6 +883,7 @@ mod tests {
             .collect();
         assert!(wine.contains(&"isRuntimeInstalled"), "{wine:?}");
         assert!(wine.contains(&"downloadRuntime"), "{wine:?}");
+        assert!(wine.contains(&"refreshWineVersionInfo"), "{wine:?}");
         for name in wine {
             // The wine slice is invoke-only: no send queue exists for it.
             assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");
