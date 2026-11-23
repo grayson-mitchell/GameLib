@@ -578,3 +578,13 @@ async fn every_is_installed_case_matches_the_ts_result_requests_and_tree() {
         replay_case(case).await;
     }
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn every_download_case_matches_the_ts_result_requests_spawns_and_tree() {
+    let all = cases();
+    let wanted: Vec<&Value> = all.iter().filter(|c| c["op"] == "download").collect();
+    assert!(wanted.len() >= 4, "{} download cases", wanted.len());
+    for case in wanted {
+        replay_case(case).await;
+    }
+}
