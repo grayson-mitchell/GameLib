@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-20-PLAN.md
-last_updated: "2026-11-23T05:27:04.733Z"
+stopped_at: Completed 87-21-PLAN.md
+last_updated: "2026-11-23T05:44:35.903Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 19d2dde4096a2bef875a8a5c67efe395acb8e26b
+state_head: 3bfb47bf961a7c808ed8cc0719ad352be06784a6
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 21 of 59
+Plan: 22 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -430,6 +430,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P18 | 28 min | 3 tasks | 27 files |
 | Phase 87 P19 | 21min | 2 tasks | 11 files |
 | Phase 87 P20 | 33 min | 3 tasks | 31 files |
+| Phase 87 P21 | 35 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -883,6 +884,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: The shell reads downloadProtonToSteam and defaultSteamPath from the global config at install time; the wine-manager shims take no settings argument
 - [Phase 87]: wine_manager_refresh and wine_releases_info_ready join wine_manager_install in the sidecar's unbounded rustInvoke list (up to seven 60 s feeds)
 - [Phase 87]: WineVersionInfo is decoded strictly in the shell (unknown key rejects), stricter than the loose TS zod; the rustInvoke release argument is opaque and decoded by parse_wine_version
+- [Phase 87]: D-22: the wine command core (valid_wine, env builders, run_wine_command with prefix check) is Rust in gamelib-wine; the process env, Darwin release, default settings and a cancel arrive as a WineHost the shell supplies, since the crate reads no environment
+- [Phase 87]: 87-21: run_wine_command spawns as a wine-command Helper child, 4 MiB output cap, shutdown registrant, argv only; trackKey and resolveOnExit are accepted and ignored until Phase 88 (deltas.json)
 
 ### Pending Todos
 
@@ -1161,8 +1164,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T05:27:02.836Z
-Stopped at: Completed 87-20-PLAN.md
+Last session: 2026-11-23T05:44:33.646Z
+Stopped at: Completed 87-21-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
