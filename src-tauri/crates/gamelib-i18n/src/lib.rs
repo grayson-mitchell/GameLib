@@ -14,7 +14,9 @@
 //!   default, never the raw key; empty strings count as missing (`returnEmptyString: false`);
 //! - `{{name}}` interpolation is a single pass with i18next's default HTML escaping of `& < > " ' /`
 //!   (`escapeValue: true`: the backend init sets no `interpolation` option), `{{- name}}` is the
-//!   unescaped form, and an unknown name leaves the `{{name}}` token as written.
+//!   unescaped form, and an unknown name leaves the `{{name}}` token as written;
+//! - [`Catalog::t_unescaped`] is the call that passes `interpolation: { escapeValue: false }`
+//!   (a dialog message the TS renders verbatim): the same lookup, every `{{name}}` verbatim.
 //!
 //! Not ported: `{{name, format}}` formatters, `$t()` nesting and plural suffixes; none of the
 //! poll notifications use them.
@@ -112,14 +114,33 @@ impl Catalog {
         None
     }
 
-    /// Render `key` (optionally `ns:key`), falling back to `default`, with `params` interpolated.
+    /// Render `key` (optionally `ns:key`), falling back to `default`, with `params` interpolated
+    /// and HTML-escaped (i18next's default `escapeValue: true`).
     pub fn t(&self, key: &str, default: &str, params: &Map<String, Value>) -> String {
+        self.render(key, default, params, true)
+    }
+
+    /// [`Catalog::t`] for a call the TS makes with `interpolation: { escapeValue: false }`: params
+    /// are placed verbatim. Use it only where the TS call does (a dialog message shown as text);
+    /// the golden (`tests/fixtures/rendered.json`) flags each such row with `escapeValue: false`.
+    pub fn t_unescaped(&self, key: &str, default: &str, params: &Map<String, Value>) -> String {
+        self.render(key, default, params, false)
+    }
+
+    /// The one lookup both entry points share: namespace split, language chain, `en`, default.
+    fn render(
+        &self,
+        key: &str,
+        default: &str,
+        params: &Map<String, Value>,
+        escape: bool,
+    ) -> String {
         let (namespace, path) = match key.split_once(':') {
             Some((ns, rest)) => (ns, rest),
             None => ("translation", key),
         };
         let template = self.lookup(namespace, path).unwrap_or(default);
-        interpolate(template, params)
+        interpolate(template, params, escape)
     }
 }
 
@@ -147,8 +168,9 @@ fn param_text(value: &Value) -> String {
     }
 }
 
-/// Single-pass `{{name}}` / `{{- name}}` substitution (values are never re-scanned).
-fn interpolate(template: &str, params: &Map<String, Value>) -> String {
+/// Single-pass `{{name}}` / `{{- name}}` substitution (values are never re-scanned). `escape_values`
+/// is whether a plain `{{name}}` is HTML-escaped; `{{- name}}` never is.
+fn interpolate(template: &str, params: &Map<String, Value>, escape_values: bool) -> String {
     let mut out = String::with_capacity(template.len());
     let mut rest = template;
     while let Some(start) = rest.find("{{") {
@@ -166,7 +188,11 @@ fn interpolate(template: &str, params: &Map<String, Value>) -> String {
         match params.get(name) {
             Some(value) => {
                 let text = param_text(value);
-                out.push_str(&if unescaped { text } else { escape(&text) });
+                out.push_str(&if unescaped || !escape_values {
+                    text
+                } else {
+                    escape(&text)
+                });
             }
             None => out.push_str(token),
         }
@@ -199,13 +225,39 @@ mod tests {
     fn interpolation_is_single_pass_and_escapes() {
         let p = params(&[("a", "{{b}}"), ("b", "x"), ("c", "<&>")]);
         assert_eq!(
-            interpolate("{{a}} {{ c }} {{- c}} {{z}}", &p),
+            interpolate("{{a}} {{ c }} {{- c}} {{z}}", &p, true),
             "{{b}} &lt;&amp;&gt; <&> {{z}}"
         );
     }
 
     #[test]
+    fn unescaped_interpolation_places_values_verbatim() {
+        let p = params(&[("a", "{{b}}"), ("c", "<&>\"'/")]);
+        assert_eq!(
+            interpolate("{{a}} {{ c }} {{- c}} {{z}}", &p, false),
+            "{{b}} <&>\"'/ <&>\"'/ {{z}}"
+        );
+    }
+
+    #[test]
+    fn t_and_t_unescaped_share_lookup_and_differ_only_in_escaping() {
+        let catalog = Catalog::default();
+        let p = params(&[("game", "A & B")]);
+        assert_eq!(catalog.t("no.such.key", "Hi {{game}}", &p), "Hi A &amp; B");
+        assert_eq!(
+            catalog.t_unescaped("no.such.key", "Hi {{game}}", &p),
+            "Hi A & B"
+        );
+        // A missing param and the inline default behave the same for both.
+        assert_eq!(catalog.t("no.such.key", "Hi {{who}}", &p), "Hi {{who}}");
+        assert_eq!(
+            catalog.t_unescaped("no.such.key", "Hi {{who}}", &p),
+            "Hi {{who}}"
+        );
+    }
+
+    #[test]
     fn unterminated_token_is_left_alone() {
-        assert_eq!(interpolate("a {{b", &Map::new()), "a {{b");
+        assert_eq!(interpolate("a {{b", &Map::new(), true), "a {{b");
     }
 }
