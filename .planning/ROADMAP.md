@@ -1091,7 +1091,7 @@ Plans:
   1. Humble keys sync, can be claimed and redeemed as before, with secrets still read through the keyring dispatch and no new Keychain prompt
   2. Shortcuts are created and removed as before on macOS, Windows and Linux
   3. The Humble and shortcut test oracles are ported as Rust tests or recorded fixtures
-  4. The Humble and shortcuts TypeScript and their sidecar registrations are deleted in this phase
+  4. The Humble and shortcuts TypeScript and their sidecar registrations are deleted in this phase, except scheduled survivors listed in the schedule test (D-03, D-04, D-24, D-27)
 
 **Plans:** 32 plans in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
 

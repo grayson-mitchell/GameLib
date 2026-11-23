@@ -20,6 +20,11 @@
  * Amended 2026-11-23 (Phase 87 planning, D-05): `pci_ids_device` and `pci_ids_vendor` move 87 -> 88,
  * because GPU system information ports with `launcher.ts` in Phase 88. `wineDownloaderInfoStore` and
  * `steam_engine_notices` stay at 87 (see the amendment in 82-STATE-OWNERSHIP.md).
+ *
+ * Amended 2026-11-24 (Phase 94 planning, D-03, D-24): `humbleConfigStore` moves 94 -> 92, because the
+ * sign-in probe pass and verdict (ported last, in 92) read it synchronously and keep a read-only TS
+ * mirror while Rust is the sole writer from 94; `timestampStore` moves 94 -> 88, because `launcher.ts`
+ * writes `${appName}.lastPlayed` and ports in 88 (see the amendment in 82-STATE-OWNERSHIP.md).
  */
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
@@ -66,7 +71,7 @@ const DELETED_IN_PHASE_87: ReadonlySet<string> = new Set([
 /** Store (TS name) -> the slice that deletes its TS mirror (82-STATE-OWNERSHIP.md). */
 const SCHEDULE: Readonly<Record<string, number>> = {
   configStore: 98,
-  timestampStore: 94,
+  timestampStore: 88,
   // R2: steamConfigStore and steamBottleConfigStore are one file; the file's mirror lives to 96.
   steamConfigStore: 90,
   steamBottleConfigStore: 96,
@@ -77,7 +82,7 @@ const SCHEDULE: Readonly<Record<string, number>> = {
   nileConfigStore: 92,
   legendaryConfigStore: 91,
   sideloadedStore: 92,
-  humbleConfigStore: 94,
+  humbleConfigStore: 92,
   downloadManager: 93,
   gameOverridesStore: 86,
   migrationsStore: 85,
