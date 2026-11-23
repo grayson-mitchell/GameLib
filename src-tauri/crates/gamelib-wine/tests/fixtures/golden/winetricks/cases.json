@@ -1,0 +1,138 @@
+[
+  {
+    "id": "download-online-fresh",
+    "op": "download",
+    "platform": "linux",
+    "script": "absent",
+    "note": "online, no script on disk: one GET of the raw.githubusercontent.com URL with the pinned User-Agent, the body written to <TOOLS>/winetricks and chmod 0755"
+  },
+  {
+    "id": "download-tools-dir-missing",
+    "op": "download",
+    "platform": "linux",
+    "script": "absent",
+    "noToolsDir": true,
+    "note": "the tools directory does not exist: the write fails with ENOENT and the one warning is logged; nothing is created"
+  },
+  {
+    "id": "download-offline-skipped",
+    "op": "download",
+    "platform": "linux",
+    "script": "absent",
+    "online": false,
+    "note": "offline: no request, nothing written"
+  },
+  {
+    "id": "download-windows-skipped",
+    "op": "download",
+    "platform": "windows",
+    "script": "absent",
+    "note": "Windows host: download returns before anything else, even online"
+  },
+  {
+    "id": "download-server-error",
+    "op": "download",
+    "platform": "linux",
+    "script": "absent",
+    "serve": "500",
+    "note": "the URL answers 500: downloadFile returns the AxiosError instead of throwing, the chmod of the missing file then fails and the one warning 'Error Downloading Winetricks' is logged"
+  },
+  {
+    "id": "install-single-verb-linux",
+    "op": "install",
+    "platform": "linux",
+    "verb": "vcrun2019",
+    "note": "tracer: one verb, script present, the five which probes, winetricks -q vcrun2019 with its env, streamed stdout and stderr (info line, curl meter redrawn by bare CR, a 1s tick flush, a wine noise line), exit 0: progressOfWinetricks ending in the ['Done'] event with failed false, then installing-winetricks-component ''",
+    "run": {
+      "code": 0,
+      "steps": [
+        {
+          "err": "Executing w_do_call vcrun2019\n"
+        },
+        {
+          "err": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n 42 12.3M   42 5229k    0     0  1234k      0  0:00:10  0:00:04  0:00:06 1233k\r"
+        },
+        {
+          "tick": true
+        },
+        {
+          "err": "100 12.3M  100 12.3M    0     0  1234k      0  0:00:10  0:00:10 --:--:-- 1233k\r0024:fixme:ntdll:NtQuerySystemInformation info_class 1\n"
+        },
+        {
+          "out": "Using winetricks 20260125-next - sha256sum: synthetic\n"
+        },
+        {
+          "out": "Executing wine64 vc_redist.x64.exe /q\n"
+        },
+        {
+          "tick": true
+        },
+        {
+          "out": "vcrun2019 installed"
+        }
+      ]
+    }
+  },
+  {
+    "id": "install-missing-dependency-mac-wiki",
+    "op": "install",
+    "platform": "mac",
+    "verb": "corefonts",
+    "wineVersion": {
+      "type": "crossover",
+      "name": "CrossOver 25",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+    },
+    "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+    "missing": [
+      "cabextract",
+      "zenity"
+    ],
+    "note": "macOS bottle: two host dependencies are missing, so each gets its 'not installed!' environment line and the wiki page line follows; the missing subset is recorded sorted; the mac env carries WINESERVER, WINE, WINE64 and the homebrew PATH; setupEnvVars and setupWineEnvVars see the unreplaced settings",
+    "run": {
+      "code": 0,
+      "steps": [
+        {
+          "err": "Executing w_do_call corefonts\n"
+        },
+        {
+          "out": "corefonts installed\n"
+        }
+      ]
+    }
+  },
+  {
+    "id": "install-unsupported-wine-notice",
+    "op": "install",
+    "platform": "linux",
+    "verb": "vcrun2019",
+    "note": "winetricks prints its own unsupported-wine warning: the line is an environment line, the version 7.7 is recorded and the queue pushes winetricksQueueChanged for the game with no run",
+    "run": {
+      "code": 0,
+      "steps": [
+        {
+          "err": "warning: Your version of wine 7.7 is no longer supported upstream. You should upgrade to 8.x\n"
+        },
+        {
+          "err": "Executing w_do_call vcrun2019\n"
+        }
+      ]
+    }
+  },
+  {
+    "id": "install-script-missing-downloads-first",
+    "op": "install",
+    "platform": "linux",
+    "verb": "d3dx9",
+    "script": "absent",
+    "note": "no script on disk and online: runWithArgs downloads it (one recorded GET), then runs it",
+    "run": {
+      "code": 0,
+      "steps": [
+        {
+          "err": "Executing w_do_call d3dx9\n"
+        }
+      ]
+    }
+  }
+]

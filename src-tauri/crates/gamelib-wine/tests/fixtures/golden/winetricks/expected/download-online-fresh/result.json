@@ -1,0 +1,18 @@
+{
+  "op": "download",
+  "platform": "linux",
+  "returned": null,
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Downloading Winetricks"
+    }
+  ]
+}

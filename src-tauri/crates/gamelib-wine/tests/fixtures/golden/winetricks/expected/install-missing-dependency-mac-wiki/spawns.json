@@ -1,0 +1,159 @@
+[
+  {
+    "program": "which",
+    "argv": [
+      "7z"
+    ],
+    "envDiff": {
+      "set": {
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin:/usr/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "cabextract"
+    ],
+    "envDiff": {
+      "set": {
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin:/usr/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 1,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "zenity"
+    ],
+    "envDiff": {
+      "set": {
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin:/usr/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 1,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "unzip"
+    ],
+    "envDiff": {
+      "set": {
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin:/usr/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "which",
+    "argv": [
+      "curl"
+    ],
+    "envDiff": {
+      "set": {
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin:/usr/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<TOOLS>/winetricks",
+    "argv": [
+      "-q",
+      "corefonts"
+    ],
+    "envDiff": {
+      "set": {
+        "ORACLE_SETUP_ENV": "1",
+        "ORACLE_WINE_ENV": "game",
+        "PATH": "/opt/local/bin:/opt/homebrew/bin:/oracle/bin:/usr/bin",
+        "WINE": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINE64": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibBottle",
+        "WINESERVER": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "corefonts installed\n",
+      "stderr": "Executing w_do_call corefonts\n"
+    }
+  }
+]

@@ -429,6 +429,52 @@ describe('spawn tracer', () => {
     expect(tracer.records).toEqual([])
   })
 
+  it('delivers a streamed scripted run chunk by chunk and records what it wrote per stream', async () => {
+    const tracer = createSpawnTracer({
+      baseEnv: {},
+      scripted: [
+        {
+          program: 'winetricks',
+          argv: ['-q', 'x'],
+          code: 3,
+          stream: (io) => {
+            io.stdout('a')
+            io.stderr('b')
+            io.stdout('c')
+          }
+        }
+      ]
+    })
+    const seen: string[] = []
+    const result = await tracer.runner.run('winetricks', ['-q', 'x'], {
+      onStdout: (c) => seen.push(`out:${c}`),
+      onStderr: (c) => seen.push(`err:${c}`)
+    })
+    expect(seen).toEqual(['out:a', 'err:b', 'out:c'])
+    expect(result).toMatchObject({ code: 3, stdout: 'ac', stderr: 'b' })
+    expect(tracer.records[0]?.result).toEqual({
+      code: 3,
+      stdout: 'ac',
+      stderr: 'b'
+    })
+  })
+
+  it('rejects a scripted spawn failure and still records the attempt', async () => {
+    const tracer = createSpawnTracer({
+      baseEnv: {},
+      scripted: [{ program: 'winetricks', throws: 'spawn ENOENT' }]
+    })
+    await expect(tracer.runner.run('winetricks', ['list-all'])).rejects.toThrow(
+      'spawn ENOENT'
+    )
+    expect(tracer.records[0]?.result).toEqual({
+      code: null,
+      stdout: '',
+      stderr: '',
+      error: 'spawn ENOENT'
+    })
+  })
+
   it('consumes a non-repeating script once', async () => {
     const tracer = createSpawnTracer({
       baseEnv: {},

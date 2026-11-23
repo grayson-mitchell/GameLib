@@ -48,7 +48,22 @@ interface SpawnRecord {
   stdin: string | null
   /** The seam the call came through. */
   via: 'run' | 'runSync'
-  result: { code: number | null; stdout: string; stderr: string }
+  result: {
+    code: number | null
+    stdout: string
+    stderr: string
+    /** Only a scripted spawn failure carries this: the message the run rejected with. */
+    error?: string
+    /** Only a scripted run the runner cut short carries these. */
+    timedOut?: true
+    truncated?: true
+  }
+}
+
+/** What a streamed scripted run writes to: each call delivers one chunk to the run's callbacks. */
+interface ScriptedStreamIo {
+  stdout(text: string): void
+  stderr(text: string): void
 }
 
 interface ScriptedOutput {
@@ -56,10 +71,23 @@ interface ScriptedOutput {
   /** Exact argv. Omit to match any argv. */
   argv?: readonly string[]
   match?: (argv: readonly string[]) => boolean
-  code?: number
+  /** `null` is a run with no exit code (killed, or timed out). Default 0. */
+  code?: number | null
   stdout?: string
   stderr?: string
+  /** The runner cut the run at its time limit. */
+  timedOut?: boolean
+  /** The runner cut the output at its buffer limit. */
+  truncated?: boolean
   repeat?: boolean
+  /**
+   * A run whose output arrives in steps (winetricks installs): called once with the run's two
+   * streams, awaited, then the run settles with `code`. What it wrote, per stream, is the
+   * recorded `stdout` and `stderr`; `stdout` and `stderr` above are ignored.
+   */
+  stream?: (io: ScriptedStreamIo) => Promise<void> | void
+  /** The run rejects with this message, like a spawn error. The attempt is still recorded. */
+  throws?: string
 }
 
 export interface SpawnTracer {
@@ -142,15 +170,50 @@ export function createSpawnTracer(options: SpawnTracerOptions): SpawnTracer {
     async run(program, argv, opts?: RunOptions): Promise<RunResult> {
       const scripted = take(program, argv)
       let result: RunResult
-      if (scripted) {
+      if (scripted?.throws !== undefined) {
+        records.push({
+          program,
+          argv: [...argv],
+          envDiff: diffEnv(options.baseEnv, opts?.env, opts?.replaceEnv),
+          cwd: opts?.cwd ?? null,
+          stdin: opts?.stdin ?? null,
+          via: 'run',
+          result: { code: null, stdout: '', stderr: '', error: scripted.throws }
+        })
+        throw new Error(scripted.throws)
+      }
+      if (scripted?.stream) {
+        let streamedOut = ''
+        let streamedErr = ''
+        await scripted.stream({
+          stdout(text) {
+            streamedOut += text
+            opts?.onStdout?.(text, noChild)
+          },
+          stderr(text) {
+            streamedErr += text
+            opts?.onStderr?.(text, noChild)
+          }
+        })
         result = {
-          code: scripted.code ?? 0,
+          code: scripted.code === undefined ? 0 : scripted.code,
+          signal: null,
+          stdout: streamedOut,
+          stderr: streamedErr,
+          timedOut: scripted.timedOut ?? false,
+          aborted: false,
+          truncated: scripted.truncated ?? false,
+          pid: undefined
+        }
+      } else if (scripted) {
+        result = {
+          code: scripted.code === undefined ? 0 : scripted.code,
           signal: null,
           stdout: scripted.stdout ?? '',
           stderr: scripted.stderr ?? '',
-          timedOut: false,
+          timedOut: scripted.timedOut ?? false,
           aborted: false,
-          truncated: false,
+          truncated: scripted.truncated ?? false,
           pid: undefined
         }
         if (result.stdout) opts?.onStdout?.(result.stdout, noChild)
@@ -170,7 +233,9 @@ export function createSpawnTracer(options: SpawnTracerOptions): SpawnTracer {
         result: {
           code: result.code,
           stdout: result.stdout,
-          stderr: result.stderr
+          stderr: result.stderr,
+          ...(result.timedOut && { timedOut: true as const }),
+          ...(result.truncated && { truncated: true as const })
         }
       })
       return result

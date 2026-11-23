@@ -1,0 +1,82 @@
+[
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      "corefonts"
+    ]
+  },
+  {
+    "channel": "winetricksQueueChanged",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "game",
+        "run": null,
+        "busy": true,
+        "environment": {
+          "unsupportedWineVersion": null,
+          "missingDependencies": [
+            "cabextract",
+            "zenity"
+          ]
+        },
+        "revision": 1
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "cabextract not installed! Winetricks might fail to install some packages or even open",
+          "zenity not installed! Winetricks might fail to install some packages or even open",
+          "Check https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/Using-Heroic-on-a-Mac-computer#winetricks-setup to install the missing dependencies.",
+          "Executing w_do_call corefonts",
+          "corefonts installed"
+        ],
+        "installingComponent": "corefonts",
+        "lines": [
+          {
+            "kind": "environment",
+            "text": "cabextract not installed! Winetricks might fail to install some packages or even open"
+          },
+          {
+            "kind": "environment",
+            "text": "zenity not installed! Winetricks might fail to install some packages or even open"
+          },
+          {
+            "kind": "environment",
+            "text": "Check https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/Using-Heroic-on-a-Mac-computer#winetricks-setup to install the missing dependencies."
+          },
+          {
+            "kind": "info",
+            "text": "Executing w_do_call corefonts"
+          },
+          {
+            "kind": "info",
+            "text": "corefonts installed"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "progressOfWinetricks",
+    "args": [
+      {
+        "messages": [
+          "Done"
+        ],
+        "installingComponent": "corefonts",
+        "failed": false
+      }
+    ]
+  },
+  {
+    "channel": "installing-winetricks-component",
+    "args": [
+      ""
+    ]
+  }
+]

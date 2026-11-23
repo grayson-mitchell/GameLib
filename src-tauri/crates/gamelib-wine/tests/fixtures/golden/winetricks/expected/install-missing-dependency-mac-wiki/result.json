@@ -1,0 +1,104 @@
+{
+  "op": "install",
+  "platform": "mac",
+  "verb": "corefonts",
+  "outcome": "installed",
+  "onLines": [
+    {
+      "kind": "environment",
+      "text": "cabextract not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "kind": "environment",
+      "text": "zenity not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "kind": "environment",
+      "text": "Check https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/Using-Heroic-on-a-Mac-computer#winetricks-setup to install the missing dependencies."
+    },
+    {
+      "kind": "info",
+      "text": "Executing w_do_call corefonts"
+    },
+    {
+      "kind": "info",
+      "text": "corefonts installed"
+    }
+  ],
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": [
+      "cabextract",
+      "zenity"
+    ]
+  },
+  "launcher": [
+    {
+      "fn": "validWine",
+      "name": "CrossOver 25"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "crossover",
+        "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "crossover",
+        "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "appName": "game"
+    },
+    {
+      "fn": "setupEnvVars",
+      "wineVersion": {
+        "type": "crossover",
+        "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      }
+    },
+    {
+      "fn": "setupWineEnvVars",
+      "wineVersion": {
+        "type": "crossover",
+        "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "appName": "game"
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Running <TOOLS>/winetricks -q corefonts"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "cabextract not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "zenity not installed! Winetricks might fail to install some packages or even open"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Winetricks",
+      "message": "Check https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/Using-Heroic-on-a-Mac-computer#winetricks-setup to install the missing dependencies."
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "Executing w_do_call corefonts"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Winetricks",
+      "message": "corefonts installed"
+    }
+  ]
+}

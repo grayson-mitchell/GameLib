@@ -1,0 +1,12 @@
+{
+  "op": "download",
+  "platform": "windows",
+  "returned": null,
+  "installing": "",
+  "environment": {
+    "unsupportedWineVersion": null,
+    "missingDependencies": []
+  },
+  "launcher": [],
+  "logs": []
+}
