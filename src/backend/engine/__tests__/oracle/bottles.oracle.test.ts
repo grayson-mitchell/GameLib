@@ -27,6 +27,7 @@
  * `process.env` is replaced for a case by the fake profile's own env, so the recorded env diff is
  * only what the call set.
  */
+import { createFakeBottleRust } from 'backend/testUtils/fakeBottleRust'
 import { createHash } from 'crypto'
 import {
   existsSync,
@@ -401,14 +402,24 @@ describeSkipOnWindows('bottles and markers oracle (87-11)', () => {
             autoInstallDxvk: true,
             launcherArgs: '-skip'
           }) as unknown as GameSettings
+        const rustOps = createFakeBottleRust({
+          spawnAsync,
+          paths: { userHome: profile.home },
+          installRemove
+        })
         const services = {
           paths: { userHome: profile.home },
           spawnAsync,
           installRemove,
-          globalGameSettings
+          globalGameSettings,
+          engineRuntime: rustOps
         }
         const crossoverArgs = (): Parameters<typeof createCrossoverBottle> => [
-          { spawnAsync, paths: { userHome: profile.home } },
+          {
+            spawnAsync,
+            paths: { userHome: profile.home },
+            engineRuntime: rustOps
+          },
           args.bottle ?? '',
           args.binDir ?? CX_BIN_DIR,
           {

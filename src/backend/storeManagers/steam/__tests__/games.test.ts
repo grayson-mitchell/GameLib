@@ -1,3 +1,5 @@
+import * as bottlesModule from 'backend/enginewine/bottles'
+import * as prepareBottleModule from 'backend/engine/prepareBottle'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import type { GameConfigSlice } from 'backend/game_config'
 import type { SteamDrm } from '../bridge/drm/drmLaunchSetup'
@@ -963,15 +965,6 @@ jest.mock('backend/engine/engineSwitch', () => ({
   reconcileBottleEngineMarker: jest.fn(),
   restoreNeedsAbsentPin: jest.fn()
 }))
-// 87-42: the switch is Rust's, reached through `prepareBottle`. This file's recording fake stands in for it and sees
-// the call as the TS switcher saw it: the caller's `ensurePinEngine` and `onSwitching` ride on the args as before.
-jest.mock('backend/engine/prepareBottle', () => ({
-  prepareBottle: (_services: unknown, call: Record<string, unknown>) =>
-    mockPrepareBottleForEngine({
-      ...call,
-      deps: { ensurePinEngine: call.ensurePinEngine }
-    })
-}))
 jest.mock('backend/engine/fallbackEngine', () => ({
   createFallbackEngine: () => ({
     ensurePinnedEngine: (...a: unknown[]) => mockEnsurePinnedEngine(...a),
@@ -1861,6 +1854,24 @@ function trackSpy<T extends jest.SpyInstance>(spy: T): T {
 }
 afterEach(() => {
   for (const spy of trackedSpies.splice(0)) spy.mockRestore()
+})
+
+// 87-42: the switch is Rust's, reached through `prepareBottle`, and the DRM launch's marker reconcile is a Rust op
+// reached through its shim. This file's recording fakes stand in for both (spied, not module-mocked, so the
+// file's jest.mock count stays at its ceiling): `prepareBottle` sees the call as the TS switcher saw it, the
+// caller's `ensurePinEngine` riding on `deps` as before.
+beforeEach(() => {
+  jest
+    .spyOn(prepareBottleModule, 'prepareBottle')
+    .mockImplementation((_services, call) =>
+      mockPrepareBottleForEngine({
+        ...call,
+        deps: { ensurePinEngine: call.ensurePinEngine }
+      })
+    )
+  jest
+    .spyOn(bottlesModule, 'reconcileBottleEngineMarker')
+    .mockResolvedValue(null)
 })
 
 beforeEach(() => {
@@ -7550,7 +7561,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         )
         expect(result).toEqual({ status: 'abort' })
         expect(discardNewBridgeBottle).toHaveBeenCalledWith(
-          steamTestDeps.paths,
+          steamTestDeps,
           `GameLibSteamBridge-${APP_ID}`
         )
         expect(downloadSteamDepots).not.toHaveBeenCalled()
@@ -13860,8 +13871,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           expect.objectContaining({ appName: id, status: 'done' })
         )
         expect(
-          jest.requireMock('backend/engine/engineSwitch')
-            .reconcileBottleEngineMarker
+          bottlesModule.reconcileBottleEngineMarker as jest.Mock
         ).not.toHaveBeenCalled()
       })
     })
@@ -17251,8 +17261,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     it('a TCP launch never reconciles the engine marker (76-04)', async () => {
       await new SteamGame(ID, steamTestDeps).launch({} as any)
       expect(
-        jest.requireMock('backend/engine/engineSwitch')
-          .reconcileBottleEngineMarker
+        bottlesModule.reconcileBottleEngineMarker as jest.Mock
       ).not.toHaveBeenCalled()
     })
 
@@ -17641,8 +17650,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       )
 
       it('reconciles the marker before the offline pre-check, pre-flight and switch (76-04)', async () => {
-        const reconcile = jest.requireMock('backend/engine/engineSwitch')
-          .reconcileBottleEngineMarker as jest.Mock
+        const reconcile = bottlesModule.reconcileBottleEngineMarker as jest.Mock
         mockPrepareBottleForEngine.mockResolvedValue({
           ok: true,
           changed: false
@@ -17661,8 +17669,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
 
       it('the offline pre-check reads the reconciled marker (76-04)', async () => {
         offline()
-        const reconcile = jest.requireMock('backend/engine/engineSwitch')
-          .reconcileBottleEngineMarker as jest.Mock
+        const reconcile = bottlesModule.reconcileBottleEngineMarker as jest.Mock
         await new SteamGame(ID, steamTestDeps).launch({} as any)
         expect(reconcile).toHaveBeenCalledTimes(1)
         expect(reconcile.mock.invocationCallOrder[0]).toBeLessThan(

@@ -10,6 +10,7 @@ import { logInfo, LogPrefix } from 'backend/logger'
 import type { AppPaths } from 'backend/process/context'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import { isNonCrossover } from 'backend/engine/engineTypes'
+import { engineSelectionView } from 'backend/enginewine/selectionView'
 import type { NonCrossoverSelection } from 'backend/engine/engineTypes'
 import {
   buildFallbackGameSettings,
@@ -487,7 +488,8 @@ export function getBridgeBottleSettings(
       entry.kind
     )
   }
-  const engine = deps.engineRuntime.registry.getEngineSelection(appId)
+  // 87-42 (D-24): the sync read the engine selection view answers; no sync function became async for it.
+  const engine = engineSelectionView.get(appId)
   if (engine && isNonCrossover(engine)) {
     return fallbackBridgeBottleSettings(deps, appId, engine)
   }

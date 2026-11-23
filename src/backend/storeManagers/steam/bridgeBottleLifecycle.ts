@@ -30,13 +30,15 @@ import {
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import { isNonCrossover } from 'backend/engine/engineTypes'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
+import { sanitizeBottleName } from 'backend/engine/bottlePrimitives'
+import { createFallbackBottleCancellable } from 'backend/engine/fallbackBottleCall'
 import {
-  createFallbackBottle,
   killBottleWineServerWith,
-  removeCreatedBottleDir,
-  sanitizeBottleName
-} from 'backend/engine/bottlePrimitives'
-import type { AppPaths } from 'backend/process/context'
+  recordCrossoverBottleEngine,
+  recordPinnedBottleEngine,
+  removeCreatedBottleDir
+} from 'backend/enginewine/bottles'
+import { engineSelectionView } from 'backend/enginewine/selectionView'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import {
   checkRemoval,
@@ -59,7 +61,7 @@ import {
  */
 /** SpawnDeps plus the config slice the shared-bottle guard reads (66.3-08). */
 export type BottleLifecycleDeps = KillBottleDeps & {
-  engineRuntime: Pick<EngineRuntime, 'registry'>
+  engineRuntime: Pick<EngineRuntime, 'registry' | 'requestRustInvoke'>
   steamLaunchRuntime: Pick<SteamLaunchRuntime, 'drmRunners'>
   config: Pick<GlobalConfigSlice, 'getSettings'>
   steamBottle: Pick<SteamBottle, 'configStore' | 'persistedWineBins'>
@@ -345,13 +347,34 @@ function refusedOrError(
  * best-effort) - no new spawn site. Never throws.
  */
 /**
+ * `wineserver -k` with an explicit wineserver, through Rust (87-42): the TS shim answers `unknown`, the bridge wants
+ * the boolean the TS function resolved.
+ */
+async function killWith(
+  deps: { engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'> },
+  bottleName: string,
+  wineserverBin: string,
+  extraEnv: Record<string, string>,
+  timeoutMs: number
+): Promise<boolean> {
+  const killed = await killBottleWineServerWith(
+    { requestRustInvoke: deps.engineRuntime.requestRustInvoke },
+    bottleName,
+    wineserverBin,
+    extraEnv,
+    timeoutMs
+  )
+  return killed === true
+}
+
+/**
  * The one engine dispatch for killing a per-game bottle, in order: DRM runner,
  * registered non-CrossOver engine, the caller's engine hint (59-31 H2), then
  * stock CrossOver (D-10).
  */
 async function killForRegisteredEngine(
   deps: KillBottleDeps & {
-    engineRuntime: Pick<EngineRuntime, 'registry'>
+    engineRuntime: Pick<EngineRuntime, 'registry' | 'requestRustInvoke'>
     steamLaunchRuntime: Pick<SteamLaunchRuntime, 'drmRunners'>
   },
   appId: string,
@@ -368,9 +391,9 @@ async function killForRegisteredEngine(
       timeoutMs
     )
   }
-  const engine = deps.engineRuntime.registry.getEngineSelection(appId)
+  const engine = engineSelectionView.get(appId)
   if (engine && isNonCrossover(engine)) {
-    return killBottleWineServerWith(
+    return killWith(
       deps,
       name,
       engine.wineserverBin,
@@ -383,7 +406,7 @@ async function killForRegisteredEngine(
       isAbsolute(engineHint.wineserverBin) &&
       existsSync(engineHint.wineserverBin)
     ) {
-      return killBottleWineServerWith(
+      return killWith(
         deps,
         name,
         engineHint.wineserverBin,
@@ -574,15 +597,15 @@ export async function endPerGameBridgeBottleSession(
  * already stopped by the post-create kill. Same single-segment-under-Bottles-root guard as
  * removeCreatedBottleDir (T-59-25). Never call for a bottle that pre-existed.
  */
-export function discardNewBridgeBottle(
-  paths: Pick<AppPaths, 'userHome'>,
+export async function discardNewBridgeBottle(
+  deps: RustInvokeDeps,
   bottleName: string
-): void {
+): Promise<void> {
   logInfo(
     `provisionBridgeBottle: discarding newly created bottle "${bottleName}"`,
     LogPrefix.Steam
   )
-  removeCreatedBottleDir(paths, bottleName)
+  await removeCreatedBottleDir(deps, bottleName)
 }
 
 export async function provisionBridgeBottle(
@@ -605,6 +628,9 @@ export async function provisionBridgeBottle(
 ): Promise<ProvisionBottleResult> {
   const rawName = opts.bottleName
   const bottleName = sanitizeBottleName(rawName)
+  const rust: RustInvokeDeps = {
+    requestRustInvoke: deps.engineRuntime.requestRustInvoke
+  }
 
   // (1) Reject unsafe names before any path/argv construction (T-24-06,
   // the same sanitizeBottleName chokepoint T-17-01 established).
@@ -649,19 +675,18 @@ export async function provisionBridgeBottle(
     const { engineServicesFrom } =
       await import('backend/services/engineServices')
     const services = engineServicesFrom(deps)
-    const made = await createFallbackBottle(
-      services,
+    // The TS `AbortSignal` ends the Rust creation through its cancel id (engine/fallbackBottleCall.ts).
+    const made = (await createFallbackBottleCancellable(rust, {
       bottleName,
-      opts.fallbackEngine,
-      opts.signal
-    )
+      engine: opts.fallbackEngine,
+      fallbackSettings: services.globalGameSettings(),
+      signal: opts.signal
+    })) as ProvisionBottleResult
     if (made.status === 'done') {
       // D-07a: install records the engine it used (the choice is unchanged).
-      const { recordPinnedBottleEngine, switchContextFrom } =
-        await import('backend/engine/engineSwitch')
       const { ENGINE_PINS } = await import('backend/engine/enginePins')
       await recordPinnedBottleEngine(
-        switchContextFrom(services),
+        rust,
         bottleName,
         opts.fallbackPinId ?? ENGINE_PINS.current.id,
         opts.fallbackEngine
@@ -700,7 +725,7 @@ export async function provisionBridgeBottle(
       LogPrefix.Steam
     )
     await killBottleWineServer(deps, bottleName, binDir, 15_000)
-    if (createdHere) removeCreatedBottleDir(deps.paths, bottleName)
+    if (createdHere) await removeCreatedBottleDir(rust, bottleName)
     return {
       status: 'error',
       errorCode: PROVISION_ABORTED,
@@ -731,7 +756,7 @@ export async function provisionBridgeBottle(
         LogPrefix.Steam
       )
       await killBottleWineServer(deps, bottleName, binDir, 15_000)
-      if (createdHere) removeCreatedBottleDir(deps.paths, bottleName)
+      if (createdHere) await removeCreatedBottleDir(rust, bottleName)
       return {
         status: 'error',
         errorCode: CROSSOVER_CREATE_TIMEOUT,
@@ -750,7 +775,7 @@ export async function provisionBridgeBottle(
         LogPrefix.Steam
       )
       await killBottleWineServer(deps, bottleName, binDir, 15_000)
-      if (createdHere) removeCreatedBottleDir(deps.paths, bottleName)
+      if (createdHere) await removeCreatedBottleDir(rust, bottleName)
       return {
         status: 'error',
         errorCode: CROSSOVER_CREATE_FAILED,
@@ -764,7 +789,7 @@ export async function provisionBridgeBottle(
     )
     if (opts.signal?.aborted) return await abortedCrossOver()
     await killBottleWineServer(deps, bottleName, binDir, 15_000)
-    if (createdHere) removeCreatedBottleDir(deps.paths, bottleName)
+    if (createdHere) await removeCreatedBottleDir(rust, bottleName)
     return {
       status: 'error',
       errorCode: CROSSOVER_CREATE_FAILED,
@@ -778,17 +803,7 @@ export async function provisionBridgeBottle(
   await killBottleWineServer(deps, bottleName, binDir)
 
   // D-07a: record the CrossOver marker so a new bottle never relies on inference.
-  {
-    const { recordCrossoverBottleEngine, switchContextFrom } =
-      await import('backend/engine/engineSwitch')
-    const { engineServicesFrom } =
-      await import('backend/services/engineServices')
-    await recordCrossoverBottleEngine(
-      switchContextFrom(engineServicesFrom(deps)),
-      bottleName,
-      binDir
-    )
-  }
+  await recordCrossoverBottleEngine(rust, bottleName, binDir)
 
   logInfo(
     `provisionBridgeBottle: bridge bottle "${bottleName}" created (no Windows Steam client installed — R6)`,

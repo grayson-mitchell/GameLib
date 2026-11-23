@@ -1,4 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
+import { RUST_ENGINE_BOTTLE_KILL_WINESERVER } from 'common/types/sidecarTransport'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import {
@@ -1033,26 +1035,26 @@ describe('inconclusive pre-flight never falls back (CR-01, D-05)', () => {
 })
 
 describe('killCrossoverWineserverWith (66.1-22e)', () => {
-  it('stops the bottle wineserver through the injected spawnAsync with CX_ROOT and the 15 s cap', async () => {
-    const spawnAsync = jest.fn(() =>
-      Promise.resolve({ code: 0, stdout: '', stderr: '' })
-    )
+  it('stops the bottle wineserver through Rust with CX_ROOT and the 15 s cap (87-42)', async () => {
+    const requestRustInvoke = jest.fn(() => Promise.resolve(true))
     await killCrossoverWineserverWith({
-      spawnAsync: spawnAsync as unknown as Parameters<
-        typeof killCrossoverWineserverWith
-      >[0]['spawnAsync'],
-      paths: rt.paths
+      engineRuntime: {
+        requestRustInvoke:
+          requestRustInvoke as unknown as RustInvokeDeps['requestRustInvoke']
+      }
     })('GameLibBottle', CX_BIN)
-    expect(spawnAsync).toHaveBeenCalledTimes(1)
-    const [bin, args, opts] = spawnAsync.mock.calls[0] as unknown as [
-      string,
-      string[],
-      { env: Record<string, string>; timeout: number }
-    ]
-    expect(bin).toBe(join(CX_BIN, 'wineserver'))
-    expect(args).toEqual(['-k'])
-    expect(opts.env.CX_ROOT).toBe(join(CX_BIN, '..'))
-    expect(opts.timeout).toBe(15_000)
+    expect(requestRustInvoke).toHaveBeenCalledTimes(1)
+    expect(requestRustInvoke).toHaveBeenCalledWith(
+      RUST_ENGINE_BOTTLE_KILL_WINESERVER,
+      [
+        {
+          bottleName: 'GameLibBottle',
+          wineserverBin: join(CX_BIN, 'wineserver'),
+          extraEnv: { CX_ROOT: join(CX_BIN, '..') },
+          timeoutMs: 15_000
+        }
+      ]
+    )
   })
 })
 

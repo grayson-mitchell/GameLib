@@ -52,7 +52,14 @@ import {
   switchContextFrom,
   switchServicesFrom
 } from './engineSwitch'
-import type { EngineSwitchDeps, EngineSwitcher } from './engineSwitch'
+import type { EngineSwitchDeps } from './engineSwitch'
+import { prepareBottle } from './prepareBottle'
+import type { PrepareBottleCall, PrepareOutcome } from './prepareBottle'
+import {
+  dropEngineSelection,
+  recordGameRunning,
+  recordGameStopped
+} from './engineSync'
 import { engineLogLabel, isNonCrossover } from './engineTypes'
 import type { EngineSelection } from './engineTypes'
 import { ENGINE_PINS } from './enginePins'
@@ -112,7 +119,8 @@ export interface LaunchEngineDeps {
       | 'ensurePinEngine'
       | 'fallbackSettings'
     >
-  prepare: EngineSwitcher['prepareBottleForEngine']
+  /** The bottle switch: Rust's, reached through `prepareBottle` (87-42). */
+  prepare: (call: PrepareBottleCall) => Promise<PrepareOutcome>
   sendStatus(update: {
     appName: string
     runner: Runner
@@ -149,8 +157,7 @@ const defaultDeps = (
     services.engineRuntime.fallback.isPinnedEngineInstalled(
       ENGINE_PINS.current
     ),
-  prepare: (args) =>
-    services.engineRuntime.switcher.prepareBottleForEngine(args),
+  prepare: (call) => prepareBottle(services, call),
   sendStatus: (update) => sendGameStatusUpdate(services.notices, update),
   showDialog: showEngineDialog,
   notifyFallback: notifyEngineFallback
@@ -286,8 +293,8 @@ export async function selectEngineForLaunch(
   if (prefix.kind === 'legacy') return { kind: 'legacy', key }
 
   const rt = services.engineRuntime
-  const refuse = (): LaunchEngineStep => {
-    rt.registry.clearEngineSelection(key)
+  const refuse = async (): Promise<LaunchEngineStep> => {
+    await dropEngineSelection(rt, key)
     rt.launchSettings.clearLaunchOverlayContext(key)
     return { kind: 'refused', key }
   }
@@ -455,19 +462,18 @@ export async function selectEngineForLaunch(
       // 59-UAT G10: an override to CrossOver on an expired bottle must not run the DXVK restore
       // through CrossOver.
       crossoverHealthy: decision.preflight?.kind === 'healthy',
-      deps: {
-        ...d.switchDeps(),
-        crossoverSettings: () =>
-          buildCrossoverGameSettings(
-            settings,
-            bottleName,
-            cxBinDir ||
-              (decision.preflight && 'binDir' in decision.preflight
-                ? (decision.preflight.binDir ?? '')
-                : ''),
-            cxBuild
-          )
-      },
+      // The settings the CrossOver restore runs with; only a switch to CrossOver reads them in Rust.
+      crossoverSettings: buildCrossoverGameSettings(
+        settings,
+        bottleName,
+        cxBinDir ||
+          (decision.preflight && 'binDir' in decision.preflight
+            ? (decision.preflight.binDir ?? '')
+            : ''),
+        cxBuild
+      ),
+      fallbackSettings: services.globalGameSettings(),
+      ensurePinEngine: d.switchDeps().ensurePinEngine,
       // IN-05 (59-22): a real engine switch is "setting up", not a stale "Downloading (100%)".
       onSwitching: () =>
         d.sendStatus({
@@ -526,7 +532,7 @@ export async function selectEngineForLaunch(
         return refuse()
       }
     }
-    if (rt.ledger.markGameRunning(bottleName, key)) {
+    if (await recordGameRunning(rt, bottleName, key)) {
       rt.launchState.rememberLedgerBottle(key, bottleName)
     }
   }
@@ -664,17 +670,22 @@ export function armEngineLaunchDeadline(
 }
 
 /** Release everything a launch held: registry, overlay context, ledger entry and deadline. */
-export function endEngineLaunch(
+export async function endEngineLaunch(
   rt: Pick<
     EngineRuntime,
-    'launchState' | 'registry' | 'launchSettings' | 'ledger' | 'deadlines'
+    | 'launchState'
+    | 'registry'
+    | 'launchSettings'
+    | 'ledger'
+    | 'deadlines'
+    | 'requestRustInvoke'
   >,
   key: EngineKey
-): void {
+): Promise<void> {
   rt.launchState.stopWatcher(key)
-  rt.registry.clearEngineSelection(key)
   rt.launchSettings.clearLaunchOverlayContext(key)
-  const bottle = rt.launchState.takeLedgerBottle(key)
-  if (bottle !== undefined) rt.ledger.markGameStopped(bottle, key)
   rt.deadlines.cancelLaunchDeadline(key, 'launcher-exited')
+  const bottle = rt.launchState.takeLedgerBottle(key)
+  await dropEngineSelection(rt, key)
+  if (bottle !== undefined) await recordGameStopped(rt, bottle, key)
 }

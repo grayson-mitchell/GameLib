@@ -133,6 +133,16 @@ const TOOLS_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/services/engineServices.ts',
   'src/backend/storeManagers/steam/bridgeKnownFixes.ts'
 ]
+/** Every non-test importer of `enginewine/bottles.ts` (the check is per file, so every row of that file lists them all). */
+const BOTTLES_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/engine/engineDecision.ts',
+  'src/backend/engine/engineSync.ts',
+  'src/backend/engine/fallbackBottleCall.ts',
+  'src/backend/engine/perGameBottle.ts',
+  'src/backend/engine/prepareBottle.ts',
+  'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
+  'src/backend/storeManagers/steam/gameBridgeLaunch.ts'
+]
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
   'src/backend/services/types.ts',
   'src/backend/sidecar/bootstrap.ts',
@@ -263,7 +273,90 @@ const SCHEDULE: readonly ScheduleRow[] = [
     file: 'src/backend/enginewine/bottles.ts',
     shape: 'shim',
     channel: 'RUST_ENGINE_BOTTLE_PREPARE',
-    callers: ['src/backend/engine/prepareBottle.ts'],
+    callers: BOTTLES_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  // 87-42 (D-03, D-15): the rest of the bottle shims. Each is one typed call; the callers are the bridge's bottle
+  // lifecycle, the launch and the still-TS engine files that reach Rust through `engine/engineSync.ts`,
+  // `engine/fallbackBottleCall.ts` and the files listed. `callers` is every importer of the file (the check is per file).
+  {
+    name: 'killBottleWineServerWith',
+    file: 'src/backend/enginewine/bottles.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_BOTTLE_KILL_WINESERVER',
+    callers: BOTTLES_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'removeCreatedBottleDir',
+    file: 'src/backend/enginewine/bottles.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_BOTTLE_REMOVE_CREATED',
+    callers: BOTTLES_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'createFallbackBottle',
+    file: 'src/backend/enginewine/bottles.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_BOTTLE_CREATE_FALLBACK',
+    callers: BOTTLES_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'cancelFallbackBottle',
+    file: 'src/backend/enginewine/bottles.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_BOTTLE_CANCEL_CREATE',
+    callers: BOTTLES_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'reconcileBottleEngineMarker',
+    file: 'src/backend/enginewine/bottles.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_BOTTLE_RECONCILE_MARKER',
+    callers: BOTTLES_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'recordPinnedBottleEngine',
+    file: 'src/backend/enginewine/bottles.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_BOTTLE_RECORD_PINNED',
+    callers: BOTTLES_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'recordCrossoverBottleEngine',
+    file: 'src/backend/enginewine/bottles.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_BOTTLE_RECORD_CROSSOVER',
+    callers: BOTTLES_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'markGameRunning',
+    file: 'src/backend/enginewine/bottles.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_LEDGER_MARK_RUNNING',
+    callers: BOTTLES_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'markGameStopped',
+    file: 'src/backend/enginewine/bottles.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_LEDGER_MARK_STOPPED',
+    callers: BOTTLES_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'clearEngineSelection',
+    file: 'src/backend/enginewine/bottles.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_SELECTION_CLEAR',
+    callers: BOTTLES_SHIM_IMPORTERS,
     deletedBy: 96
   },
   // 87-42 (D-24): the engine selection view, the write-through mirror of Rust's registry. The sync bridge reads
@@ -276,9 +369,17 @@ const SCHEDULE: readonly ScheduleRow[] = [
     vectors: 'src/backend/enginewine/__tests__/selectionView.test.ts',
     wiring: ['registerEngineSelectionView'],
     callers: [
+      'src/backend/engine/engineSync.ts',
       'src/backend/engine/prepareBottle.ts',
       'src/backend/sidecar/bootstrap.ts',
-      'src/backend/sidecar/handlers.ts'
+      'src/backend/sidecar/handlers.ts',
+      'src/backend/storeManagers/steam/bridgeBottle.ts',
+      'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
+      'src/backend/storeManagers/steam/bridgeWineTools.ts',
+      'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts',
+      'src/backend/storeManagers/steam/gameLaunch.ts',
+      'src/backend/storeManagers/steam/gameLaunchOverlay.ts',
+      'src/backend/testUtils/testEngineRuntime.ts'
     ],
     deletedBy: 96
   },

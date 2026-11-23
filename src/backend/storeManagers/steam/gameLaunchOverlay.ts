@@ -7,6 +7,7 @@
  * gameLaunch -> gameBridgeLaunch). A call a test spies on stays a
  * `steamGame.X()` call (quick-261107-an2).
  */
+import { engineSelectionView } from 'backend/enginewine/selectionView'
 import { createRunTool } from 'backend/engine/runTool'
 import i18next from 'i18next'
 import { lstatSync, mkdirSync } from 'node:fs'
@@ -302,9 +303,7 @@ export async function prepareTcpOverlay(
       : settings
   try {
     const { isNonCrossover } = await import('backend/engine/engineTypes')
-    const sel = steamGame.deps.engineRuntime.registry.getEngineSelection(
-      steamGame.appId
-    )
+    const sel = engineSelectionView.get(steamGame.appId)
     const fallbackEngine = sel
       ? isNonCrossover(sel)
       : settings.wineVersion.type !== 'crossover'

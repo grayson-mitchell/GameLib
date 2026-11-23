@@ -3,10 +3,34 @@
  * The shape of every shim is pinned by `engineWineShimSchedule.test.ts`; this file pins what crosses and what comes
  * back.
  */
-import { RUST_ENGINE_BOTTLE_PREPARE } from 'common/types/sidecarTransport'
+import {
+  RUST_ENGINE_BOTTLE_CANCEL_CREATE,
+  RUST_ENGINE_BOTTLE_CREATE_FALLBACK,
+  RUST_ENGINE_BOTTLE_KILL_WINESERVER,
+  RUST_ENGINE_BOTTLE_PREPARE,
+  RUST_ENGINE_BOTTLE_RECONCILE_MARKER,
+  RUST_ENGINE_BOTTLE_RECORD_CROSSOVER,
+  RUST_ENGINE_BOTTLE_RECORD_PINNED,
+  RUST_ENGINE_BOTTLE_REMOVE_CREATED,
+  RUST_ENGINE_LEDGER_MARK_RUNNING,
+  RUST_ENGINE_LEDGER_MARK_STOPPED,
+  RUST_ENGINE_SELECTION_CLEAR
+} from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import type { EngineSelection } from 'backend/engine/engineTypes'
-import { prepareBottleForEngine } from '../bottles'
+import {
+  cancelFallbackBottle,
+  clearEngineSelection,
+  createFallbackBottle,
+  killBottleWineServerWith,
+  markGameRunning,
+  markGameStopped,
+  prepareBottleForEngine,
+  reconcileBottleEngineMarker,
+  recordCrossoverBottleEngine,
+  recordPinnedBottleEngine,
+  removeCreatedBottleDir
+} from '../bottles'
 
 function fakeTransport(answer: unknown): RustInvokeDeps & {
   calls: Array<[string, unknown[]]>
@@ -58,4 +82,118 @@ describe('prepareBottleForEngine', () => {
       prepareBottleForEngine(deps, { key: 'x', bottleName: 'b', next: NEXT })
     ).rejects.toThrow('engine_bottle_prepare:bad-args')
   })
+})
+
+describe('the other bottle, ledger and selection shims', () => {
+  const ENGINE = {
+    wineBin: '/engines/wine',
+    wineserverBin: '/engines/wineserver',
+    label: 'Pinned',
+    version: '11.20',
+    dxvk: null
+  }
+
+  it.each([
+    [
+      'killBottleWineServerWith',
+      (d: RustInvokeDeps) =>
+        killBottleWineServerWith(
+          d,
+          'GameLib-gog-1',
+          '/engines/wineserver',
+          { USER: 'crossover' },
+          15_000
+        ),
+      RUST_ENGINE_BOTTLE_KILL_WINESERVER,
+      {
+        bottleName: 'GameLib-gog-1',
+        wineserverBin: '/engines/wineserver',
+        extraEnv: { USER: 'crossover' },
+        timeoutMs: 15_000
+      }
+    ],
+    [
+      'removeCreatedBottleDir',
+      (d: RustInvokeDeps) => removeCreatedBottleDir(d, 'GameLib-gog-1'),
+      RUST_ENGINE_BOTTLE_REMOVE_CREATED,
+      { bottleName: 'GameLib-gog-1' }
+    ],
+    [
+      'createFallbackBottle',
+      (d: RustInvokeDeps) =>
+        createFallbackBottle(d, {
+          bottleName: 'GameLib-gog-1',
+          engine: ENGINE,
+          fallbackSettings: {} as never,
+          cancelId: 'c-1'
+        }),
+      RUST_ENGINE_BOTTLE_CREATE_FALLBACK,
+      {
+        bottleName: 'GameLib-gog-1',
+        engine: ENGINE,
+        fallbackSettings: {},
+        cancelId: 'c-1'
+      }
+    ],
+    [
+      'cancelFallbackBottle',
+      (d: RustInvokeDeps) => cancelFallbackBottle(d, 'c-1'),
+      RUST_ENGINE_BOTTLE_CANCEL_CREATE,
+      { cancelId: 'c-1' }
+    ],
+    [
+      'reconcileBottleEngineMarker',
+      (d: RustInvokeDeps) => reconcileBottleEngineMarker(d, 'GameLib-gog-1'),
+      RUST_ENGINE_BOTTLE_RECONCILE_MARKER,
+      { bottleName: 'GameLib-gog-1' }
+    ],
+    [
+      'recordPinnedBottleEngine',
+      (d: RustInvokeDeps) =>
+        recordPinnedBottleEngine(
+          d,
+          'GameLib-gog-1',
+          'wine-staging-11.20',
+          ENGINE
+        ),
+      RUST_ENGINE_BOTTLE_RECORD_PINNED,
+      {
+        bottleName: 'GameLib-gog-1',
+        pinId: 'wine-staging-11.20',
+        engine: ENGINE
+      }
+    ],
+    [
+      'recordCrossoverBottleEngine',
+      (d: RustInvokeDeps) =>
+        recordCrossoverBottleEngine(d, 'GameLib-gog-1', '/cx/bin'),
+      RUST_ENGINE_BOTTLE_RECORD_CROSSOVER,
+      { bottleName: 'GameLib-gog-1', binDir: '/cx/bin' }
+    ],
+    [
+      'markGameRunning',
+      (d: RustInvokeDeps) => markGameRunning(d, 'GameLib-gog-1', 'gog:1'),
+      RUST_ENGINE_LEDGER_MARK_RUNNING,
+      { bottleName: 'GameLib-gog-1', key: 'gog:1' }
+    ],
+    [
+      'markGameStopped',
+      (d: RustInvokeDeps) => markGameStopped(d, 'GameLib-gog-1', 'gog:1'),
+      RUST_ENGINE_LEDGER_MARK_STOPPED,
+      { bottleName: 'GameLib-gog-1', key: 'gog:1' }
+    ],
+    [
+      'clearEngineSelection',
+      (d: RustInvokeDeps) => clearEngineSelection(d, '620'),
+      RUST_ENGINE_SELECTION_CLEAR,
+      { key: '620' }
+    ]
+  ])(
+    '%s sends one typed call with what the caller resolved',
+    async (_n, call, channel, arg) => {
+      const deps = fakeTransport('answer')
+      expect(await call(deps)).toBe('answer')
+      expect(deps.calls).toEqual([[channel, [arg]]])
+    }
+  )
 })

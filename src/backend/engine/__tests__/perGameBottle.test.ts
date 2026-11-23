@@ -1,4 +1,5 @@
 import { execFile } from 'child_process'
+import { createFakeBottleRust } from 'backend/testUtils/fakeBottleRust'
 import { chmodSync, existsSync, mkdirSync, copyFileSync } from 'fs'
 import { join } from 'path'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
@@ -59,7 +60,12 @@ const spawnAsync = (
       )
     }
   )
-const deps = { spawnAsync, paths }
+// 87-42: the bottle kill and removal are Rust's; the fake runs the TS reference over the same spawn and paths.
+const deps = {
+  spawnAsync,
+  paths,
+  engineRuntime: createFakeBottleRust({ spawnAsync, paths })
+}
 
 afterAll(() => mockProfile.dispose())
 

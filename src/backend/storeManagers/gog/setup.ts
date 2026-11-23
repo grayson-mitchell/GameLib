@@ -133,7 +133,7 @@ async function setup(
         installRedist
       )
     } finally {
-      endEngineLaunch(deps.engineRuntime, step.key)
+      await endEngineLaunch(deps.engineRuntime, step.key)
     }
   }
 

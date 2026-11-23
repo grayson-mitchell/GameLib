@@ -9,6 +9,12 @@ import { GameSettings } from 'common/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
 import { getBridgeBottleSettings } from './bridgeBottle'
+import {
+  dropEngineSelection,
+  recordGameRunning,
+  recordGameStopped
+} from 'backend/engine/engineSync'
+import { engineSelectionView } from 'backend/enginewine/selectionView'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 // Phase 60: Steam overlay in bridged games (macOS).
 import {
@@ -179,10 +185,13 @@ export async function fireBridgeWineLaunch(
     const { bindDeadlineToMonitor } =
       await import('backend/engine/launchDeadline')
     const { armLaunchDeadline } = steamGame.deps.engineRuntime.deadlines
-    const { getEngineSelection, clearEngineSelection } =
-      steamGame.deps.engineRuntime.registry
-    const { markGameRunning, markGameStopped } =
-      steamGame.deps.engineRuntime.ledger
+    // 87-42: the selection is read through the sync view; the clears and the ledger writes land locally at once and
+    // in Rust after (`engineSync`), so the callbacks below, which cannot await, only start the Rust half.
+    const { engineRuntime } = steamGame.deps
+    const clearEngineSelection = (key: string) =>
+      void dropEngineSelection(engineRuntime, key)
+    const markGameStopped = (bottle: string, key: string) =>
+      void recordGameStopped(engineRuntime, bottle, key)
     const { applySteamBridgeKnownFixes, steamBridgeLaunchCommandParts } =
       await import('./bridgeKnownFixes')
     const { applyBridgeBottleDllOverrides } =
@@ -214,7 +223,7 @@ export async function fireBridgeWineLaunch(
     // cancellable; the monitor matches built-in-engine processes by host path
     // (1a5b750bb, G8), and bindDeadlineToMonitor stands the deadline down
     // when no monitor starts (59-REVIEW CR-01).
-    const sel = getEngineSelection(steamGame.appId)
+    const sel = engineSelectionView.get(steamGame.appId)
     if (!installRoot) {
       logInfo(
         `SteamGame: appId ${steamGame.appId} has no process monitor, so no launch deadline is armed`,
@@ -520,7 +529,7 @@ export async function fireBridgeWineLaunch(
     let handle: ReturnType<typeof startBottleProcessMonitor> = null
     const ledgerBottle = bridgeBottleSettings.wineCrossoverBottle
     if (installRoot) {
-      markGameRunning(ledgerBottle, steamGame.appId)
+      await recordGameRunning(engineRuntime, ledgerBottle, steamGame.appId)
       handle = bindDeadlineToMonitor(
         deadline,
         startBottleProcessMonitor(steamGame.deps, {
@@ -726,8 +735,9 @@ export async function fireBridgeWineLaunch(
     return true
   } catch (error) {
     deadline?.cancel('launch-error')
-    steamGame.deps.engineRuntime.registry.clearEngineSelection(steamGame.appId)
-    steamGame.deps.engineRuntime.ledger.markGameStopped(
+    await dropEngineSelection(steamGame.deps.engineRuntime, steamGame.appId)
+    await recordGameStopped(
+      steamGame.deps.engineRuntime,
       bridgeBottleSettings.wineCrossoverBottle,
       steamGame.appId
     )

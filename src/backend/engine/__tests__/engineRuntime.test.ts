@@ -75,8 +75,8 @@ describe('createEngineRuntime', () => {
   })
 
   it('the CrossOver memo is per instance', () => {
-    const a = createTestEngineRuntime()
-    const b = createTestEngineRuntime()
+    const a = createTestEngineRuntime({ privateSelections: true })
+    const b = createTestEngineRuntime({ privateSelections: true })
     expect(a.crossover).not.toBe(b.crossover)
     expect(a.registry.setEngineSelection('gog:1', cx)).toBe(true)
     expect(b.registry.getEngineSelection('gog:1')).toBeUndefined()

@@ -324,8 +324,8 @@ async function runLaunchEventCallback(
   }
   const engineControlled = engineStep.kind === 'use'
   const engineKey = engineStep.kind === 'use' ? engineStep.key : null
-  const releaseEngine = () => {
-    if (engineKey !== null) endEngineLaunch(deps.engineRuntime, engineKey)
+  const releaseEngine = async () => {
+    if (engineKey !== null) await endEngineLaunch(deps.engineRuntime, engineKey)
   }
   if (engineControlled) {
     // Everything that follows sees the overlay, never the stored settings.
@@ -403,7 +403,7 @@ async function runLaunchEventCallback(
     await deps.launchHooks[runner].setPresence?.(appName)
   } catch (error) {
     // The engine selection must not outlive a launch that never got going.
-    releaseEngine()
+    await releaseEngine()
     throw error
   }
 
@@ -422,7 +422,7 @@ async function runLaunchEventCallback(
         await runAfterLaunchScript(deps, gameInfo, gameSettings, logWriter)
         await logWriter.close()
       } finally {
-        releaseEngine()
+        await releaseEngine()
       }
     })
 

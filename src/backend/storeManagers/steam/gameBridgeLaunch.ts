@@ -5,6 +5,7 @@
  * body is reachable as a module export (quick-261108-ca6). Cross-module calls
  * are free functions, so a test spies on the module export.
  */
+import { reconcileBottleEngineMarker } from 'backend/enginewine/bottles'
 import { createRunTool } from 'backend/engine/runTool'
 import { existsSync } from 'graceful-fs'
 import { basename } from 'node:path'
@@ -247,9 +248,8 @@ export async function launchBridgeGameBody(
     // demo-status probe adds a Timestamp to cxbottle.conf, so a Staging bottle
     // is never inferred as CrossOver and the offline pre-check reads the real
     // engine.
-    const sw = await import('backend/engine/engineSwitch')
-    await sw.reconcileBottleEngineMarker(
-      sw.switchContextFrom(steamGame.deps),
+    await reconcileBottleEngineMarker(
+      steamGame.deps.engineRuntime,
       bridgeBottleSettings.wineCrossoverBottle
     )
     const offlineOk = await drmOfflinePrecheck(

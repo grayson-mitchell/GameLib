@@ -11,19 +11,31 @@ import { join } from 'path'
 import type { AppPaths } from '../process/context'
 import type { Clock } from '../process/types'
 import type { EngineRuntime, EngineRuntimeDeps } from '../engine/engineRuntime'
+import { engineSelectionView } from '../enginewine/selectionView'
 import { createTestAbortRegistry } from './testAbortRegistry'
 import { createFakeClock } from './fakeClock'
-import { RUST_STORE_VERSION_GATE } from 'common/types/sidecarTransport'
+import {
+  RUST_ENGINE_LEDGER_MARK_RUNNING,
+  RUST_ENGINE_LEDGER_MARK_STOPPED,
+  RUST_ENGINE_SELECTION_CLEAR,
+  RUST_STORE_VERSION_GATE
+} from 'common/types/sidecarTransport'
 
 export type TestEnginePaths = Pick<AppPaths, 'userHome' | 'toolsPath'>
 
-/** A transport that answers the bottle version gate `ok` and refuses every other channel. */
+/** A transport that answers the bottle version gate `ok`, answers the ledger and selection ops and refuses every other channel. */
 const okBottleGateTransport: EngineRuntimeDeps['requestRustInvoke'] = (
   channel
-) =>
-  channel === RUST_STORE_VERSION_GATE
-    ? Promise.resolve({ state: 'ok', version: 1, current: 1 })
-    : Promise.reject(new Error(`testEngineRuntime: unexpected ${channel}`))
+) => {
+  if (channel === RUST_STORE_VERSION_GATE) {
+    return Promise.resolve({ state: 'ok', version: 1, current: 1 })
+  }
+  // 87-42: Rust's ledger and selection clear answer as an empty Rust state would.
+  if (channel === RUST_ENGINE_LEDGER_MARK_RUNNING) return Promise.resolve(true)
+  if (channel === RUST_ENGINE_LEDGER_MARK_STOPPED) return Promise.resolve(null)
+  if (channel === RUST_ENGINE_SELECTION_CLEAR) return Promise.resolve(false)
+  return Promise.reject(new Error(`testEngineRuntime: unexpected ${channel}`))
+}
 
 export function createTestEngineRuntime(
   opts: {
@@ -31,6 +43,8 @@ export function createTestEngineRuntime(
     paths?: Partial<TestEnginePaths>
     aborts?: EngineRuntimeDeps['aborts']
     requestRustInvoke?: EngineRuntimeDeps['requestRustInvoke']
+    /** A registry of its own instead of the process-wide selection view (a test of instance isolation). */
+    privateSelections?: boolean
   } = {}
 ): EngineRuntime {
   /* eslint-disable @typescript-eslint/no-require-imports */
@@ -42,6 +56,14 @@ export function createTestEngineRuntime(
     clock: opts.clock ?? createFakeClock(),
     aborts: opts.aborts ?? createTestAbortRegistry(),
     requestRustInvoke: opts.requestRustInvoke ?? okBottleGateTransport,
+    // 87-42 (D-24): the Steam bridge reads selections through the process-wide view, so the runtime a test builds
+    // shares it, emptied here so no test sees another's selection.
+    selections: opts.privateSelections
+      ? undefined
+      : (() => {
+          engineSelectionView.reset()
+          return engineSelectionView
+        })(),
     paths: {
       userHome: opts.paths?.userHome ?? join(root, 'home'),
       toolsPath: opts.paths?.toolsPath ?? join(root, 'tools')

@@ -4,9 +4,10 @@
  * selectEngineForLaunch + endEngineLaunch; the only permitted difference is Phase 59's engine
  * marker `.gamelib-engine.json`.
  *
- * Real: selectEngineForLaunch, resolveGamePrefix, prepareBottleForEngine (marker handling).
- * Injected: every spawning dependency (pre-flight, wineserver kill, DXVK install/remove, the
- * per-game bottle creation). No child process is spawned, so the fake HOME profile only hosts
+ * Real: selectEngineForLaunch, resolveGamePrefix. The bottle switch is Rust's since 87-42 (its marker handling
+ * is replayed by `gamelib-engine`'s switch goldens and `switch_incidents.rs`, including the legacy bottle); here it
+ * is a stub that answers `ok`, so this test pins what the launch step itself leaves alone.
+ * Injected: every spawning dependency (pre-flight, the bottle switch, the per-game bottle creation). No child process is spawned, so the fake HOME profile only hosts
  * the plain prefixes; bottles live under the jest-contained HOME that `getBottleDir` resolves.
  */
 import {
@@ -193,6 +194,7 @@ const deps = (): Partial<LaunchEngineDeps> => ({
   showDialog: jest.fn(),
   notifyFallback: jest.fn(),
   ensureGameBottle,
+  prepare: () => Promise.resolve({ ok: true, changed: false }),
   switchDeps: () => ({
     ctx: switchContextFrom(services),
     getMonitorPhase: () => null,
@@ -224,7 +226,7 @@ async function launchAndEnd(): Promise<string> {
     { offline: false },
     deps()
   )
-  endEngineLaunch(KEY)
+  await endEngineLaunch(KEY)
   return step.kind
 }
 

@@ -10,6 +10,7 @@
  * Nothing runs at import; heavy collaborators are reached through injectable
  * deps whose defaults are built lazily inside each function.
  */
+import { killBottleWineServerWith } from 'backend/enginewine/bottles'
 import { accessSync, constants as fsConstants, existsSync } from 'fs'
 import { dirname, isAbsolute, join, relative } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -229,16 +230,15 @@ export type ReleasesDeps = Pick<EngineDecisionDeps, 'wineManagerReleases'>
 export type KillDeps = Pick<EngineDecisionDeps, 'killCrossoverWineserver'>
 
 /**
- * 66.1-22e: stop the CrossOver wineserver for a bottle (after a failed probe), spawning
- * through the injected `spawnAsync`. Same wineserver path, CX_ROOT env and 15 s timeout.
+ * 66.1-22e: stop the CrossOver wineserver for a bottle (after a failed probe). The spawn is Rust's (87-42): the
+ * same wineserver path, CX_ROOT env and 15 s timeout.
  */
-export function killCrossoverWineserverWith(
-  services: Pick<EngineServices, 'spawnAsync' | 'paths'>
-): EngineDecisionDeps['killCrossoverWineserver'] {
+export function killCrossoverWineserverWith(services: {
+  engineRuntime: Pick<EngineServices['engineRuntime'], 'requestRustInvoke'>
+}): EngineDecisionDeps['killCrossoverWineserver'] {
   return async (bottleName, binDir) => {
-    const { killBottleWineServerWith } = await import('./bottlePrimitives')
     await killBottleWineServerWith(
-      { spawnAsync: services.spawnAsync, paths: services.paths },
+      { requestRustInvoke: services.engineRuntime.requestRustInvoke },
       bottleName,
       join(binDir, 'wineserver'),
       { CX_ROOT: dirname(binDir) },

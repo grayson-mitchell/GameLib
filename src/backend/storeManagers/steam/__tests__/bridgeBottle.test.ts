@@ -9,6 +9,9 @@
  *  - graceful-fs mocked (existsSync) — no real filesystem access
  */
 import { createEngineRegistry } from 'backend/engine/engineRegistry'
+import { engineSelectionView } from 'backend/enginewine/selectionView'
+import { createFakeBottleRust } from 'backend/testUtils/fakeBottleRust'
+import type { SpawnAsync } from 'backend/spawnAsync'
 import {
   existsSync,
   mkdirSync,
@@ -110,7 +113,20 @@ const crossover = {
   resolveCrossoverBinDir: () => cxState.binDir,
   resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir)
 }
-const engineRuntime = { crossover, registry: createEngineRegistry() }
+// 87-42: the selections the bridge reads are the process-wide view, and the bottle kill is Rust's, answered by the TS
+// reference over this file's spawn fake (`fakeBottleRust`).
+const engineRuntime = {
+  crossover,
+  registry: createEngineRegistry(engineSelectionView),
+  requestRustInvoke: createFakeBottleRust({
+    spawnAsync: (...a: Parameters<SpawnAsync>) => mockedSpawnAsync(...a),
+    paths: {
+      get userHome() {
+        return paths.userHome
+      }
+    }
+  }).requestRustInvoke
+}
 // One per-boot Steam launch runtime for this suite, on the global-timer clock so jest fake timers drive it (66.4-06).
 const steamLaunchRuntime = createTestSteamLaunchRuntime({
   clock: createGlobalTimerClock()

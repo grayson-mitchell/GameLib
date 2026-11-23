@@ -14,6 +14,7 @@
  *
  * Sidecar exit contract: nothing runs at import, no timers.
  */
+import { engineSelectionView } from 'backend/enginewine/selectionView'
 import type { AppPaths } from 'backend/process/context'
 import type { GameSettings } from 'common/types'
 import { logError, LogPrefix } from 'backend/logger'
@@ -58,7 +59,7 @@ function defaultSteamWineToolsDeps(
     findInstallBottle: (appId) =>
       findBridgeInstallBottle(services.paths, appId),
     hasLiveRunner: (appId) =>
-      services.engineRuntime.registry.getEngineSelection(appId) !== undefined ||
+      engineSelectionView.get(appId) !== undefined ||
       services.steamLaunchRuntime.drmRunners.getDrmBridgeRunner(appId) !==
         undefined,
     bridgeSettings: (appId) =>

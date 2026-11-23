@@ -32,6 +32,8 @@ import { prepareOverlayTokens } from './bridge/overlay/overlayLaunch'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import type { CrossoverPreflight } from 'backend/engine/engineDecision'
 import type { EngineSelection } from 'backend/engine/engineTypes'
+import { dropEngineSelection } from 'backend/engine/engineSync'
+import { engineSelectionView } from 'backend/enginewine/selectionView'
 import { detectLaunchDrmWrapper } from './bridge/drm/drmScanExe'
 import { detectSteamDrmInPe } from './bridge/peScan'
 import { type DrmLaunchReady } from './bridge/drm/drmLaunchSetup'
@@ -427,8 +429,9 @@ export async function selectLaunchEngine(
 ): Promise<{ ok: true; settings: GameSettings } | { ok: false }> {
   const bottleName = current.wineCrossoverBottle
   const { decideLaunchEngine } = await import('backend/engine/engineDecision')
-  const { setEngineSelection, clearEngineSelection } =
-    steamGame.deps.engineRuntime.registry
+  const { setEngineSelection } = steamGame.deps.engineRuntime.registry
+  const clearEngineSelection = (key: string) =>
+    dropEngineSelection(steamGame.deps.engineRuntime, key)
   const { prepareBottle } = await import('backend/engine/prepareBottle')
   const { STEAM_ENGINE_RUNNER, steamEngineStateDeps } =
     await import('./engine/steamEngineDeps')
@@ -582,7 +585,7 @@ export async function selectLaunchEngine(
     if (prep.reason === 'dxvk-failed' && sel.kind === 'crossover') {
       // CR-03 (D-03/D-07): never start on CrossOver over DXVK-macOS DLLs. No reroute to
       // bottled Steam; the switch is retried on the next launch.
-      clearEngineSelection(steamGame.appId)
+      await clearEngineSelection(steamGame.appId)
       logWarning(
         `SteamGame: appId ${steamGame.appId} could not switch back to CrossOver (${prep.detail}); not launching`,
         LogPrefix.Steam
@@ -611,7 +614,7 @@ export async function selectLaunchEngine(
       prep.reason === 'bottle-busy'
     ) {
       // 59-REVIEW WR-06: refuse, kill nothing, and say why.
-      clearEngineSelection(steamGame.appId)
+      await clearEngineSelection(steamGame.appId)
       logWarning(
         `SteamGame: appId ${steamGame.appId} cannot switch engine (${prep.reason}: ${prep.detail}); not launching`,
         LogPrefix.Steam
@@ -629,7 +632,7 @@ export async function selectLaunchEngine(
       return { ok: false }
     } else if (prep.reason === 'marker-newer') {
       // Quick 261109-w52: the bottle's engine marker is from a newer GameLib build.
-      clearEngineSelection(steamGame.appId)
+      await clearEngineSelection(steamGame.appId)
       logWarning(
         `SteamGame: appId ${steamGame.appId} cannot switch engine (${prep.reason}: ${prep.detail}); not launching`,
         LogPrefix.Steam
@@ -646,7 +649,7 @@ export async function selectLaunchEngine(
       )
       return { ok: false }
     } else {
-      clearEngineSelection(steamGame.appId)
+      await clearEngineSelection(steamGame.appId)
       logWarning(
         `SteamGame: appId ${steamGame.appId} cannot switch engine (${prep.reason}: ${prep.detail}); not launching`,
         LogPrefix.Steam
@@ -715,13 +718,11 @@ export async function onBridgeLaunchDeadline(
   clearLaunchRecord: () => void,
   armedSelection: EngineSelection | undefined
 ): Promise<void> {
-  const { clearEngineSelection, getEngineSelection } =
-    steamGame.deps.engineRuntime.registry
   const { engineLogLabel } = await import('backend/engine/engineTypes')
   const { LAUNCH_DEADLINE_MS } = await import('backend/engine/launchDeadline')
   // Phase 59 UAT (G5): the monitor's onStopped can clear the registry entry
   // before the deadline fires, so fall back to the selection seen at arm time.
-  const sel = getEngineSelection(steamGame.appId) ?? armedSelection
+  const sel = engineSelectionView.get(steamGame.appId) ?? armedSelection
   logWarning(
     `SteamGame: appId ${steamGame.appId} launch deadline fired (${sel ? engineLogLabel(sel) : 'engine=crossover'}); stopping the bottle`,
     LogPrefix.Steam
@@ -732,7 +733,7 @@ export async function onBridgeLaunchDeadline(
   await killBridgeBottleWineServer(steamGame.deps, steamGame.appId, 15_000)
   steamGame.deps.bridgeHelpers.stop(steamGame.appId)
   clearLaunchRecord()
-  clearEngineSelection(steamGame.appId)
+  await dropEngineSelection(steamGame.deps.engineRuntime, steamGame.appId)
   sendLaunchDone(steamGame)
   showEngineDialog(
     steamGame,

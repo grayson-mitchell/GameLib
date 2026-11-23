@@ -20,15 +20,19 @@ import { dirname, join } from 'path'
 import { existsSync } from 'graceful-fs'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { EngineServices } from './engineServices'
+import type { NonCrossoverEngine } from './engineTypes'
 import {
   type BottleSpawnDeps,
-  createFallbackBottle,
   getBottleDir,
   isBottleProvisioned,
-  killBottleWineServerWith,
-  removeCreatedBottleDir,
   sanitizeBottleName
 } from './bottlePrimitives'
+import {
+  killBottleWineServerWith,
+  removeCreatedBottleDir
+} from 'backend/enginewine/bottles'
+import { createFallbackBottleCancellable } from './fallbackBottleCall'
+import type { EngineRuntime } from './engineRuntime'
 import {
   CX_CREATE_CAP_MS,
   decideCreationEngine,
@@ -62,7 +66,9 @@ export type CreateBottleResult = {
 
 /** CrossOver `cxbottle --create`, capped; on any failure removes what this call created. */
 export async function createCrossoverBottle(
-  deps: BottleSpawnDeps,
+  deps: BottleSpawnDeps & {
+    engineRuntime: Pick<EngineRuntime, 'requestRustInvoke'>
+  },
   bottleName: string,
   binDir: string,
   opts: { createTimeoutMs?: number; signal?: AbortSignal } = {}
@@ -77,15 +83,16 @@ export async function createCrossoverBottle(
     return { status: 'error', error: `Invalid bottle name: "${bottleName}"` }
   }
   const createdHere = !existsSync(getBottleDir(deps.paths, bottleName))
+  const rust = { requestRustInvoke: deps.engineRuntime.requestRustInvoke }
   const cleanup = async () => {
     await killBottleWineServerWith(
-      deps,
+      rust,
       bottleName,
       join(binDir, 'wineserver'),
       { CX_ROOT: dirname(binDir) },
       15_000
     )
-    if (createdHere) removeCreatedBottleDir(deps.paths, bottleName)
+    if (createdHere) await removeCreatedBottleDir(rust, bottleName)
   }
   const aborted = async (): Promise<CreateBottleResult> => {
     logInfo(
@@ -152,7 +159,7 @@ export async function createCrossoverBottle(
   }
   // Best effort: a fresh bottle must not leave a wedged wineserver behind.
   await killBottleWineServerWith(
-    deps,
+    rust,
     bottleName,
     join(binDir, 'wineserver'),
     { CX_ROOT: dirname(binDir) },
@@ -180,14 +187,12 @@ export interface PerGameBottleDeps {
       ? R
       : never
   ) => ReturnType<typeof createCrossoverBottle>
+  /** The built-in engine's creation, over Rust (87-42): the engine, then the signal that cancels it. */
   createFallback: (
-    ...args: Parameters<typeof createFallbackBottle> extends [
-      unknown,
-      ...infer R
-    ]
-      ? R
-      : never
-  ) => ReturnType<typeof createFallbackBottle>
+    bottleName: string,
+    engine: NonCrossoverEngine,
+    signal?: AbortSignal
+  ) => Promise<CreateBottleResult>
   ensurePin: (
     args: Omit<
       Parameters<typeof ensurePinnedEngineReportingStatus>[0],
@@ -347,7 +352,16 @@ export function createPerGameBottleFlights(): PerGameBottleFlights {
           appRuntime: services.notices.appRuntime
         }),
       createCrossover: (...a) => createCrossoverBottle(services, ...a),
-      createFallback: (...a) => createFallbackBottle(services, ...a),
+      createFallback: (bottleName, engine, signal) =>
+        createFallbackBottleCancellable(
+          { requestRustInvoke: services.engineRuntime.requestRustInvoke },
+          {
+            bottleName,
+            engine,
+            fallbackSettings: services.globalGameSettings(),
+            signal
+          }
+        ),
       decide: (a) => decideCreationEngine(a, services),
       resolveBinDir: () => resolveCrossoverBinDirForEngine(services),
       ...defaultDeps(services),

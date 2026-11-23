@@ -195,6 +195,8 @@ const deps = (
   currentPinInstalled: () => true,
   ensurePinned,
   prepare,
+  // 87-42: only the pin download is read from the switch deps now (the switch itself is Rust's).
+  switchDeps: (() => ({ ensurePinEngine: jest.fn() })) as never,
   sendStatus,
   recordDecision,
   showDialog,
@@ -499,7 +501,7 @@ describe('ledger and release', () => {
     await run(makeGame({}))
     expect(gamesRunningIn('GameLib')).toEqual(['gog:1234'])
     expect(getEngineSelection('gog:1234')).toBeDefined()
-    endEngineLaunch('gog:1234')
+    await endEngineLaunch('gog:1234')
     expect(gamesRunningIn('GameLib')).toEqual([])
     expect(getEngineSelection('gog:1234')).toBeUndefined()
     expect(

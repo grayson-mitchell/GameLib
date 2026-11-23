@@ -192,8 +192,8 @@ export async function installBridgeGame(
         installEngine = provisioned.engine
         if (signal?.aborted) {
           if (provisioned.createdHere) {
-            bbLifecycle.discardNewBridgeBottle(
-              steamGame.deps.paths,
+            await bbLifecycle.discardNewBridgeBottle(
+              steamGame.deps,
               bridgeBottleName
             )
           }
@@ -409,9 +409,9 @@ export async function resolveInstallEngineSettings(
   }
   // Bottle already existed: the same decision + preparation as a launch.
   const { decideLaunchEngine } = await import('backend/engine/engineDecision')
-  const { prepareBottleForEngine } = steamGame.deps.engineRuntime.switcher
+  const { prepareBottle } = await import('backend/engine/prepareBottle')
   const { isNonCrossover } = await import('backend/engine/engineTypes')
-  const { steamDecisionDeps, steamDecisionServices, steamSwitchDeps } =
+  const { steamDecisionDeps, steamDecisionServices, steamPrepareFacts } =
     await import('./engine/steamEngineDeps')
   const { steamEngineServicesFrom } =
     await import('backend/services/engineServices')
@@ -427,15 +427,17 @@ export async function resolveInstallEngineSettings(
     if ('status' in engine) return { skipped: 'engine download failed' }
   }
   const sel = decision.selection
-  const prep = await prepareBottleForEngine({
+  const prep = await prepareBottle(steamEngineServicesFrom(steamGame.deps), {
     key: steamGame.appId,
     bottleName: bridgeBottleName,
     next: sel,
     crossoverHealthy: decision.preflight?.kind === 'healthy',
-    deps: {
-      ...steamSwitchDeps(steamEngineServicesFrom(steamGame.deps)),
-      ensurePinEngine: steamGame.restorePinEngine
-    }
+    ...steamPrepareFacts(
+      steamEngineServicesFrom(steamGame.deps),
+      steamGame.appId,
+      sel
+    ),
+    ensurePinEngine: steamGame.restorePinEngine
   })
   if (!prep.ok && prep.reason !== 'dxvk-failed') {
     return { skipped: `${prep.reason}: ${prep.detail}` }

@@ -17,6 +17,9 @@ import { copyFileSync, existsSync, readFileSync, chmodSync } from 'fs'
 import { basename, dirname, join } from 'path'
 import type { RequestRustInvoke } from 'backend/host'
 import {
+  RUST_ENGINE_LEDGER_MARK_RUNNING,
+  RUST_ENGINE_LEDGER_MARK_STOPPED,
+  RUST_ENGINE_SELECTION_CLEAR,
   RUST_STORE_BACKUP_FILE,
   RUST_STORE_VERSION_GATE
 } from 'common/types/sidecarTransport'
@@ -93,6 +96,19 @@ export function createFakeBottleGateRust(options: FakeBottleGateOptions = {}): {
       copyFileSync(path, target)
       chmodSync(target, 0o600)
       return Promise.resolve(file)
+    }
+    // 87-42: the running-games ledger and selection clear are Rust's; with no `base` they answer what an empty Rust
+    // state would (`engine_ledger_mark_running` records, the other two have nothing to drop).
+    if (!options.base) {
+      if (channel === RUST_ENGINE_LEDGER_MARK_RUNNING) {
+        return Promise.resolve(true)
+      }
+      if (channel === RUST_ENGINE_LEDGER_MARK_STOPPED) {
+        return Promise.resolve(null)
+      }
+      if (channel === RUST_ENGINE_SELECTION_CLEAR) {
+        return Promise.resolve(false)
+      }
     }
     return options.base
       ? options.base(channel, args)

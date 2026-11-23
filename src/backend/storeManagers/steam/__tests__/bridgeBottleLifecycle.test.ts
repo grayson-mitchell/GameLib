@@ -9,6 +9,10 @@
  *  - graceful-fs mocked (existsSync) — no real filesystem access
  */
 import { createEngineRegistry } from 'backend/engine/engineRegistry'
+import { engineSelectionView } from 'backend/enginewine/selectionView'
+import { createFakeBottleRust } from 'backend/testUtils/fakeBottleRust'
+import type { SpawnAsync } from 'backend/spawnAsync'
+import type { EngineServices } from 'backend/engine/engineServices'
 import {
   existsSync,
   mkdirSync,
@@ -29,7 +33,7 @@ import {
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import * as engineServicesModule from 'backend/services/engineServices'
-import * as engineSwitchModule from 'backend/engine/engineSwitch'
+import * as bottlesModule from 'backend/enginewine/bottles'
 import { ENGINE_PINS } from 'backend/engine/enginePins'
 import type { EngineServicesSource } from 'backend/services/engineServices'
 import { writeCxbottleConf } from 'backend/engine/adoptBottle'
@@ -135,7 +139,26 @@ const crossover = {
   resolveCrossoverBinDir: () => cxState.binDir,
   resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir)
 }
-const engineRuntime = { crossover, registry: createEngineRegistry() }
+// 87-42: the selections the bridge reads are the process-wide view; the bottle kill and removal are Rust's, answered
+// here by the TS reference over this file's spawn and fs fakes (`fakeBottleRust`).
+// The DXVK installer the fallback creation runs, set by the cases that script one.
+const bottleRustHooks: { installRemove: EngineServices['installRemove'] } = {
+  installRemove: () => Promise.resolve(false)
+}
+const engineRuntime = {
+  crossover,
+  registry: createEngineRegistry(engineSelectionView),
+  requestRustInvoke: createFakeBottleRust({
+    spawnAsync: (...a: Parameters<SpawnAsync>) => mockedSpawnAsync(...a),
+    installRemove: (...a: Parameters<EngineServices['installRemove']>) =>
+      bottleRustHooks.installRemove(...a),
+    paths: {
+      get userHome() {
+        return paths.userHome
+      }
+    }
+  }).requestRustInvoke
+}
 // One per-boot Steam launch runtime for this suite, on the global-timer clock so jest fake timers drive it (66.4-06).
 const steamLaunchRuntime = createTestSteamLaunchRuntime({
   clock: createGlobalTimerClock()
@@ -1221,6 +1244,7 @@ describe('Phase 59 engine registry', () => {
       order.length = 0
       dxvkMarker = false
       mockedInstallRemove.mockReset()
+      bottleRustHooks.installRemove = mockedInstallRemove
       servicesSpy = jest
         .spyOn(engineServicesModule, 'engineServicesFrom')
         .mockImplementation((d) => ({
@@ -1346,10 +1370,10 @@ describe('Phase 59 engine registry', () => {
       let crossover: jest.SpyInstance
       beforeEach(() => {
         pinned = jest
-          .spyOn(engineSwitchModule, 'recordPinnedBottleEngine')
+          .spyOn(bottlesModule, 'recordPinnedBottleEngine')
           .mockResolvedValue(true)
         crossover = jest
-          .spyOn(engineSwitchModule, 'recordCrossoverBottleEngine')
+          .spyOn(bottlesModule, 'recordCrossoverBottleEngine')
           .mockResolvedValue(true)
       })
       afterEach(() => {
@@ -1634,7 +1658,8 @@ describe('Phase 59 engine registry', () => {
       expect(killed()).toBe(true)
       expect(mockedRmSync).toHaveBeenCalledWith(...rmCall())
       expect(mockedWriteConf).not.toHaveBeenCalled()
-      expect(mockedSpawnAsync.mock.calls[0][2].signal).toBe(ac.signal)
+      // 87-42: the TS signal reaches the creation as its cancel id, so the spawn's own signal is the one it ended.
+      expect(mockedSpawnAsync.mock.calls[0][2].signal.aborted).toBe(true)
     })
 
     test.each(['wineserver -w', 'dxvk'])(
@@ -1661,7 +1686,8 @@ describe('Phase 59 engine registry', () => {
         expect(result.errorCode).toBe(PROVISION_ABORTED)
         expect(mockedWriteConf).not.toHaveBeenCalled()
         expect(mockedRmSync).toHaveBeenCalledWith(...rmCall())
-        expect(mockedSpawnAsync.mock.calls[1][2].signal).toBe(ac.signal)
+        // 87-42: the TS signal reaches the creation as its cancel id (see fakeBottleRust).
+        expect(mockedSpawnAsync.mock.calls[1][2].signal.aborted).toBe(true)
       }
     )
 
@@ -1706,11 +1732,11 @@ describe('Phase 59 engine registry', () => {
       expect(mockedRmSync).not.toHaveBeenCalled()
     })
 
-    test('discardNewBridgeBottle removes the dir and refuses an unsafe name', () => {
-      discardNewBridgeBottle(paths, name)
+    test('discardNewBridgeBottle removes the dir and refuses an unsafe name', async () => {
+      await discardNewBridgeBottle(engineRuntime, name)
       expect(mockedRmSync).toHaveBeenCalledWith(...rmCall())
       mockedRmSync.mockClear()
-      discardNewBridgeBottle(paths, 'a/../b')
+      await discardNewBridgeBottle(engineRuntime, 'a/../b')
       expect(mockedRmSync).not.toHaveBeenCalled()
     })
 

@@ -4,6 +4,7 @@
  * body across a module boundary, where a test can spy on the export
  * (quick-261108-ca6).
  */
+import { dropEngineSelection } from 'backend/engine/engineSync'
 import i18next from 'i18next'
 import { logInfo, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
@@ -85,9 +86,7 @@ export async function runBridgeLaunch(
     return started
   } finally {
     if (!started) {
-      steamGame.deps.engineRuntime.registry.clearEngineSelection(
-        steamGame.appId
-      )
+      await dropEngineSelection(steamGame.deps.engineRuntime, steamGame.appId)
     }
   }
 }

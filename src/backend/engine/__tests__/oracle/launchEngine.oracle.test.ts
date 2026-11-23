@@ -700,10 +700,7 @@ describeSkipOnWindows('launch step oracle (87-15)', () => {
             next: engineLogLabel(a.next),
             nextKind: a.next.kind,
             crossoverHealthy: a.crossoverHealthy,
-            crossoverSettings: normalisePaths(
-              a.deps.crossoverSettings(a.key),
-              profile
-            )
+            crossoverSettings: normalisePaths(a.crossoverSettings, profile)
           })
           if (world.prepareSwitching) a.onSwitching?.()
           const mode = world.prepare ?? 'ok'
@@ -901,7 +898,7 @@ describeSkipOnWindows('launch step oracle (87-15)', () => {
                 return { now: recording.fake.now() }
               }
               case 'end':
-                endEngineLaunch(rt, key)
+                await endEngineLaunch(rt, key)
                 return { ended: true }
               default:
                 // quit: the host exits with whatever is armed. Nothing is cancelled and nothing

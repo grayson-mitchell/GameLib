@@ -10,13 +10,6 @@ import { prepareBottle } from '../prepareBottle'
 import type { EngineSelection } from '../engineTypes'
 import { ENGINE_PINS } from '../enginePins'
 
-jest.mock('backend/logger', () => ({
-  logInfo: jest.fn(),
-  logWarning: jest.fn(),
-  logError: jest.fn(),
-  LogPrefix: { Backend: 'Backend' }
-}))
-
 const CROSSOVER: EngineSelection = {
   kind: 'crossover',
   reason: 'cx-healthy',

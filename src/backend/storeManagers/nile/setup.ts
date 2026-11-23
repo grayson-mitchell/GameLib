@@ -127,7 +127,7 @@ export default async function setup(
         deps.engineRuntime.launchSettings.getLaunchSettings(step.key, stored)
       )
     } finally {
-      endEngineLaunch(deps.engineRuntime, step.key)
+      await endEngineLaunch(deps.engineRuntime, step.key)
     }
   }
 
