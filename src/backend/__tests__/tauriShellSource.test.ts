@@ -499,7 +499,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 87 plan 34: 148 -> 149, wine_dxvk_install_remove.
     // Phase 87 plan 35: 149 -> 154, wine_winetricks_apply, _available, _installed, _install and _list_installed.
     // Phase 87 plan 36: 154 -> 156, wine_run_command_for_game and wine_tool_call.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(156)
+    // Phase 87 plan 42: 156 -> 167, the eleven bottle, ledger and selection ops.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(167)
     expect(router).not.toContain('_ =>')
   })
 
@@ -972,7 +973,23 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // `runWineCommandForGame` resolver (`engineWineResolvers.ts`), for the renderer and the launcher.
       'wine_run_command_for_game',
       // ... and its tool-button twin: the `callTool` registration (`engineWineResolvers.ts`) is its one caller.
-      'wine_tool_call'
+      'wine_tool_call',
+
+      // Phase 87 plan 42 -- the bottle, ledger and selection ops. PROVEN: `engine_dispatch::tests` drives each arm's
+      // one-object decode (a fixed bad-args literal, not-ready before install) and the registry's change frame;
+      // `gamelib-engine`'s own tests drive the ops (strict arguments, the ledger, the quiet selection clear, the
+      // cancel id). The callers are the shims in `enginewine/bottles.ts` and the bridge and engine files that use them.
+      'engine_bottle_prepare',
+      'engine_bottle_create_fallback',
+      'engine_bottle_cancel_create',
+      'engine_bottle_kill_wineserver',
+      'engine_bottle_remove_created',
+      'engine_bottle_reconcile_marker',
+      'engine_bottle_record_pinned',
+      'engine_bottle_record_crossover',
+      'engine_ledger_mark_running',
+      'engine_ledger_mark_stopped',
+      'engine_selection_clear'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

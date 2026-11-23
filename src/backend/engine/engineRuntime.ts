@@ -17,6 +17,7 @@ import type { BottleLedger } from './bottleLedger'
 import { createCrossoverLocator } from './crossoverLocation'
 import type { CrossoverLocator } from './crossoverLocation'
 import { createEngineRegistry } from './engineRegistry'
+import type { SelectionStore } from './engineRegistry'
 import type { EngineRegistry } from './engineRegistry'
 import { createEngineSwitcher } from './engineSwitch'
 import type { EngineSwitcher } from './engineSwitch'
@@ -58,10 +59,15 @@ export interface EngineRuntimeDeps {
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
   /** The host's sidecar -> Rust transport (D-17): the engine marker's version gate asks Rust. */
   requestRustInvoke: RustInvokeDeps['requestRustInvoke']
+  /**
+   * Where the selections live. The boot passes `engineSelectionView` (87-42, D-24), the write-through mirror of Rust's
+   * registry the synchronous bridge reads share; omitted, the runtime gets a private map (tests).
+   */
+  selections?: SelectionStore
 }
 
 export function createEngineRuntime(deps: EngineRuntimeDeps): EngineRuntime {
-  const registry = createEngineRegistry()
+  const registry = createEngineRegistry(deps.selections)
   return {
     ledger: createBottleLedger(),
     crossover: createCrossoverLocator({

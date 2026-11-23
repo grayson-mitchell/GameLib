@@ -14,6 +14,8 @@ import type {
 } from 'backend/engine/engineDecision'
 import type { AppPaths } from 'backend/process/context'
 import type { EngineServices } from 'backend/engine/engineServices'
+import type { PrepareBottleCall } from 'backend/engine/prepareBottle'
+import type { EngineSelection } from 'backend/engine/engineTypes'
 import { switchServicesFrom } from 'backend/engine/engineSwitch'
 import type { EngineSwitchDeps } from 'backend/engine/engineSwitch'
 import { readStoredGameConfig } from 'backend/engine/engineConfig'
@@ -156,6 +158,34 @@ export function steamSwitchDeps(
         appId
       ),
     resolveCrossoverBinDir: () => hintedBinDir(services)
+  }
+}
+
+/**
+ * The facts the Rust engine switch takes as values (87-42): what `steamSwitchDeps` handed the TS switch as callbacks.
+ * `monitorPhase` and `ownBottle` are read now, `crossoverSettings` only when the switch is to CrossOver (the one
+ * case that runs a restore through it; it reads the registered selection, which the caller has set for `appId`), and
+ * `fallbackSettings` is the global game settings the DXVK step builds over.
+ */
+export function steamPrepareFacts(
+  services: EngineServices & SteamEngineBottle,
+  appId: string,
+  next: EngineSelection
+): Pick<
+  PrepareBottleCall,
+  | 'monitorPhase'
+  | 'ownBottle'
+  | 'crossoverSettings'
+  | 'fallbackSettings'
+  | 'ensurePinEngine'
+> {
+  const deps = steamSwitchDeps(services)
+  return {
+    monitorPhase: deps.getMonitorPhase?.(appId) ?? null,
+    ownBottle: { name: bridgeBottleNameFor(appId) },
+    crossoverSettings:
+      next.kind === 'crossover' ? deps.crossoverSettings(appId) : undefined,
+    fallbackSettings: services.globalGameSettings()
   }
 }
 

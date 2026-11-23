@@ -88,6 +88,7 @@ import { registerHumbleLoginFlows } from './humbleLoginFlowRegistration'
 import { registerOAuthLoginFlows } from './oauthLoginFlowRegistration'
 import { registerRunnerAuthFlows } from './runnerAuthFlowRegistration'
 import { registerEngineWineResolvers } from './engineWineResolvers'
+import { registerEngineSelectionView } from 'backend/enginewine/selectionView'
 import { registerShortcutsFlows } from './shortcutsFlowRegistration'
 import { registerRunnerMiscFlows } from './runnerMiscFlowRegistration'
 import { registerEosOverlayFlows } from './eosOverlayFlowRegistration'
@@ -405,6 +406,8 @@ export function registerHandlers(deps: {
     gameCommandFacts: (runner, appName, opts) =>
       gatherGameCommandFacts(engineSource, runner, appName, opts)
   })
+  // Rust's engine registry changed on its own (87-42, D-24): the sync selection view applies the frame.
+  registerEngineSelectionView(ipc)
   registerShortcutsFlows({
     ipc,
     appRuntime: deps.services.appRuntime,

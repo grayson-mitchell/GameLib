@@ -124,10 +124,20 @@ describe('renderer channel allow-list', () => {
       'trayResolveRunner',
       'shellWindowFocused',
       'handleProtocolUrl',
-      'minimizeWindow'
+      'minimizeWindow',
+      // 87-42 (T-87-41): Rust to sidecar only; the renderer cannot send it.
+      'engineSelectionChanged'
     ]) {
       expect(l.has(n)).toBe(false)
     }
+  })
+
+  test('engineSelectionChanged is a shell-originated send channel the renderer cannot reach (T-87-41)', () => {
+    const entry = channelSchemas['engineSelectionChanged']
+    expect(entry?.kind).toBe('send')
+    expect(entry?.caller).toBe('shell')
+    expect(allowed.has('engineSelectionChanged')).toBe(false)
+    expect(preloadChannels().has('engineSelectionChanged')).toBe(false)
   })
 
   test('a push-only name never opens the renderer direction', () => {

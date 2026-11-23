@@ -121,6 +121,9 @@ pub struct PrepareArgs {
     /// Record `selection` in the context's registry once the bottle is on that engine. The TS switch
     /// never touched the registry (its callers set it), so this is off unless a caller asks.
     pub register_selection: bool,
+    /// Register without telling the registry's change hook: a TS-initiated op's reply already carries
+    /// the selection, so the `engineSelectionChanged` frame is only for changes Rust makes on its own.
+    pub register_quietly: bool,
 }
 
 impl PrepareArgs {
@@ -138,6 +141,7 @@ impl PrepareArgs {
             ensure_pin: None,
             on_switching: None,
             register_selection: false,
+            register_quietly: false,
         }
     }
 }
@@ -472,8 +476,16 @@ pub async fn prepare_bottle_for_engine_with(
     let result = prepare_body(ctx, gate, args).await;
     if result.is_ok() && args.register_selection {
         if let Some(selection) = &result.selection {
-            ctx.registry
-                .set_engine_selection(ctx.log.as_deref(), &args.key, selection.clone());
+            if args.register_quietly {
+                ctx.registry.set_engine_selection_quiet(
+                    ctx.log.as_deref(),
+                    &args.key,
+                    selection.clone(),
+                );
+            } else {
+                ctx.registry
+                    .set_engine_selection(ctx.log.as_deref(), &args.key, selection.clone());
+            }
         }
     }
     drop(turn);

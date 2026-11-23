@@ -99,6 +99,45 @@ const invokeTable: FixtureTable<typeof sidecarInternalInvokeArgs> = {
 const sendTable: FixtureTable<typeof sidecarInternalSendArgs> = {
   // main.rs SHELL_WINDOW_FOCUSED: empty args
   shellWindowFocused: noArgs,
+  // 87-42: Rust's engine registry changed by itself; `selection` null is a cleared key
+  engineSelectionChanged: {
+    valid: [
+      [{ key: '620', selection: null }],
+      [
+        {
+          key: '620',
+          selection: {
+            kind: 'crossover',
+            reason: 'cx-healthy',
+            crossoverBuild: null,
+            binDir: '/cx/bin'
+          }
+        }
+      ],
+      [
+        {
+          key: 'gog:1',
+          selection: {
+            kind: 'pinned',
+            pinId: 'p',
+            reason: 'cx-missing',
+            wineBin: '/w',
+            wineserverBin: '/ws',
+            label: 'Pinned',
+            version: '11.20',
+            dxvk: { dir: '/d', version: 'v1' }
+          }
+        }
+      ]
+    ],
+    invalid: [
+      [],
+      [{ key: '', selection: null }],
+      [{ key: '620' }],
+      [{ key: '620', selection: { kind: 'other' } }],
+      [{ key: '620', selection: null, extra: 1 }]
+    ]
+  },
   // 73-11: Rust depot job events (flattened kind tag)
   depotJobEvent: {
     valid: [
@@ -228,7 +267,8 @@ describe('sidecarInternal schemas', () => {
       'depotManifestRequestCode',
       'depotJobEvent',
       'storeMirrorEvent',
-      'steamPollStateEvent'
+      'steamPollStateEvent',
+      'engineSelectionChanged'
     ]
     for (const k of Object.keys(sidecarInternalInvokeArgs)) {
       expect(defined(channelSchemas[k], k).kind).toBe('invoke')
@@ -245,6 +285,6 @@ describe('sidecarInternal schemas', () => {
     expect(
       Object.keys(sidecarInternalInvokeArgs).length +
         Object.keys(sidecarInternalSendArgs).length
-    ).toBe(10)
+    ).toBe(11)
   })
 })

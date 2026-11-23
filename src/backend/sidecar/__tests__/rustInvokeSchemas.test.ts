@@ -45,7 +45,8 @@ describe('rustInvokeArgs', () => {
     // Phase 87 plan 34: 148 -> 149, wine_dxvk_install_remove.
     // Phase 87 plan 35: 149 -> 154, wine_winetricks_apply, _available, _installed, _install and _list_installed.
     // Phase 87 plan 36: 154 -> 156, wine_run_command_for_game and wine_tool_call.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(156)
+    // Phase 87 plan 42: 156 -> 167, the eleven bottle, ledger and selection ops.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(167)
   })
 
   it('parses the store-embed wire fixtures', () => {

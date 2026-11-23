@@ -429,7 +429,7 @@ export async function selectLaunchEngine(
   const { decideLaunchEngine } = await import('backend/engine/engineDecision')
   const { setEngineSelection, clearEngineSelection } =
     steamGame.deps.engineRuntime.registry
-  const { prepareBottleForEngine } = steamGame.deps.engineRuntime.switcher
+  const { prepareBottle } = await import('backend/engine/prepareBottle')
   const { STEAM_ENGINE_RUNNER, steamEngineStateDeps } =
     await import('./engine/steamEngineDeps')
   const { isNonCrossover } = await import('backend/engine/engineTypes')
@@ -446,7 +446,7 @@ export async function selectLaunchEngine(
   const {
     steamDecisionDeps,
     steamDecisionServices,
-    steamSwitchDeps,
+    steamPrepareFacts,
     readSteamEngineOverride
   } = await import('./engine/steamEngineDeps')
   const { steamEngineServicesFrom } =
@@ -554,18 +554,20 @@ export async function selectLaunchEngine(
     )
     return { ok: false }
   }
-  const prep = await prepareBottleForEngine({
+  const prep = await prepareBottle(steamEngineServicesFrom(steamGame.deps), {
     key: steamGame.appId,
     bottleName,
     next: sel,
     // 59-UAT G10: an override to CrossOver on an expired bottle must not run
     // the DXVK restore through CrossOver.
     crossoverHealthy: decision.preflight?.kind === 'healthy',
+    ...steamPrepareFacts(
+      steamEngineServicesFrom(steamGame.deps),
+      steamGame.appId,
+      sel
+    ),
     // WR-05: a restore's pin download reports the same progress as a launch download.
-    deps: {
-      ...steamSwitchDeps(steamEngineServicesFrom(steamGame.deps)),
-      ensurePinEngine: steamGame.restorePinEngine
-    },
+    ensurePinEngine: steamGame.restorePinEngine,
     // IN-05 (59-22): a real engine switch is "setting up", not a stale
     // "Downloading (100%)", until the monitor's launching status.
     onSwitching: () =>

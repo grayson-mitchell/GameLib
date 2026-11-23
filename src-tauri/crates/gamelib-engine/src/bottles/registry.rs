@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use serde::{Deserialize, Serialize};
 
@@ -74,10 +74,22 @@ impl EngineSelection {
     }
 }
 
+/// Called with the key and its new selection (`None`: cleared) whenever the registry changes on its own,
+/// that is through [`Registry::set_engine_selection`] or [`Registry::clear_engine_selection`] and not
+/// through a `quiet` variant. The shell wires it to the `engineSelectionChanged` frame (87-42, D-24).
+pub type ChangeHook = Arc<dyn Fn(&str, Option<&EngineSelection>) + Send + Sync>;
+
 /// The selection of every running title, by engine key.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Registry {
     selections: Mutex<HashMap<String, EngineSelection>>,
+    hook: Mutex<Option<ChangeHook>>,
+}
+
+impl std::fmt::Debug for Registry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Registry").finish_non_exhaustive()
+    }
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -89,10 +101,38 @@ impl Registry {
         Registry::default()
     }
 
+    /// Installs (or removes) the change hook the notifying setters call.
+    pub fn set_change_hook(&self, hook: Option<ChangeHook>) {
+        *lock(&self.hook) = hook;
+    }
+
+    fn notify(&self, key: &str, selection: Option<&EngineSelection>) {
+        let hook = lock(&self.hook).clone();
+        if let Some(hook) = hook {
+            hook(key, selection);
+        }
+    }
+
     /// `setEngineSelection`: false, storing nothing, for a key that is not an engine key and for a
     /// non-CrossOver selection whose Wine or wineserver is not on disk. A later set replaces the
-    /// earlier one. The stored value is the caller's own (an owned copy, as the TS made one).
+    /// earlier one. The stored value is the caller's own (an owned copy, as the TS made one). A change
+    /// the registry makes on its own tells the change hook; a TS-initiated op uses
+    /// [`Registry::set_engine_selection_quiet`], whose reply already carries the selection.
     pub fn set_engine_selection(
+        &self,
+        log: Option<&dyn EngineLog>,
+        key: &str,
+        selection: EngineSelection,
+    ) -> bool {
+        let stored = self.set_engine_selection_quiet(log, key, selection.clone());
+        if stored {
+            self.notify(key, Some(&selection));
+        }
+        stored
+    }
+
+    /// [`Registry::set_engine_selection`] without telling the change hook.
+    pub fn set_engine_selection_quiet(
         &self,
         log: Option<&dyn EngineLog>,
         key: &str,
@@ -119,9 +159,18 @@ impl Registry {
         lock(&self.selections).get(key).cloned()
     }
 
-    /// `clearEngineSelection`: harmless for a key that has none.
+    /// `clearEngineSelection`: harmless for a key that has none. Tells the change hook when a selection
+    /// was removed.
     pub fn clear_engine_selection(&self, key: &str) {
-        lock(&self.selections).remove(key);
+        if self.clear_engine_selection_quiet(key) {
+            self.notify(key, None);
+        }
+    }
+
+    /// [`Registry::clear_engine_selection`] without telling the change hook; true when a selection
+    /// was removed.
+    pub fn clear_engine_selection_quiet(&self, key: &str) -> bool {
+        lock(&self.selections).remove(key).is_some()
     }
 }
 
@@ -185,5 +234,39 @@ mod tests {
         .unwrap();
         assert!(!registry.set_engine_selection(None, "gog:1", pinned));
         assert_eq!(registry.get_engine_selection("gog:1"), None);
+    }
+
+    #[test]
+    fn the_change_hook_hears_a_notifying_change_and_not_a_quiet_one() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let heard = Arc::new(Mutex::new(Vec::<(String, bool)>::new()));
+        let count = Arc::new(AtomicUsize::new(0));
+        let registry = Registry::new();
+        {
+            let heard = Arc::clone(&heard);
+            let count = Arc::clone(&count);
+            registry.set_change_hook(Some(Arc::new(move |key, selection| {
+                count.fetch_add(1, Ordering::SeqCst);
+                lock(&heard).push((key.to_string(), selection.is_some()));
+            })));
+        }
+        let crossover = EngineSelection::Crossover {
+            reason: "cx-healthy".into(),
+            crossover_build: None,
+            bin_dir: "/b".into(),
+        };
+        assert!(registry.set_engine_selection_quiet(None, "620", crossover.clone()));
+        assert!(registry.clear_engine_selection_quiet("620"));
+        assert!(!registry.clear_engine_selection_quiet("620"));
+        assert_eq!(count.load(Ordering::SeqCst), 0, "quiet changes are silent");
+        assert!(registry.set_engine_selection(None, "620", crossover.clone()));
+        assert!(!registry.set_engine_selection(None, "abc", crossover));
+        registry.clear_engine_selection("620");
+        registry.clear_engine_selection("620");
+        assert_eq!(
+            *lock(&heard),
+            [("620".to_string(), true), ("620".to_string(), false)],
+            "a refused set and a clear of nothing say nothing"
+        );
     }
 }

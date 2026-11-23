@@ -179,6 +179,17 @@ pub(crate) enum RustInvokeChannel {
     WineRunCommandForGame,
     WineToolCall,
     EngineSetOnline,
+    EngineBottlePrepare,
+    EngineBottleCreateFallback,
+    EngineBottleCancelCreate,
+    EngineBottleKillWineserver,
+    EngineBottleRemoveCreated,
+    EngineBottleReconcileMarker,
+    EngineBottleRecordPinned,
+    EngineBottleRecordCrossover,
+    EngineLedgerMarkRunning,
+    EngineLedgerMarkStopped,
+    EngineSelectionClear,
 }
 
 impl RustInvokeChannel {
@@ -339,6 +350,17 @@ impl RustInvokeChannel {
         RustInvokeChannel::WineRunCommandForGame,
         RustInvokeChannel::WineToolCall,
         RustInvokeChannel::EngineSetOnline,
+        RustInvokeChannel::EngineBottlePrepare,
+        RustInvokeChannel::EngineBottleCreateFallback,
+        RustInvokeChannel::EngineBottleCancelCreate,
+        RustInvokeChannel::EngineBottleKillWineserver,
+        RustInvokeChannel::EngineBottleRemoveCreated,
+        RustInvokeChannel::EngineBottleReconcileMarker,
+        RustInvokeChannel::EngineBottleRecordPinned,
+        RustInvokeChannel::EngineBottleRecordCrossover,
+        RustInvokeChannel::EngineLedgerMarkRunning,
+        RustInvokeChannel::EngineLedgerMarkStopped,
+        RustInvokeChannel::EngineSelectionClear,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -499,6 +521,17 @@ impl RustInvokeChannel {
             "wine_run_command_for_game" => Some(RustInvokeChannel::WineRunCommandForGame),
             "wine_tool_call" => Some(RustInvokeChannel::WineToolCall),
             "engine_set_online" => Some(RustInvokeChannel::EngineSetOnline),
+            "engine_bottle_prepare" => Some(RustInvokeChannel::EngineBottlePrepare),
+            "engine_bottle_create_fallback" => Some(RustInvokeChannel::EngineBottleCreateFallback),
+            "engine_bottle_cancel_create" => Some(RustInvokeChannel::EngineBottleCancelCreate),
+            "engine_bottle_kill_wineserver" => Some(RustInvokeChannel::EngineBottleKillWineserver),
+            "engine_bottle_remove_created" => Some(RustInvokeChannel::EngineBottleRemoveCreated),
+            "engine_bottle_reconcile_marker" => Some(RustInvokeChannel::EngineBottleReconcileMarker),
+            "engine_bottle_record_pinned" => Some(RustInvokeChannel::EngineBottleRecordPinned),
+            "engine_bottle_record_crossover" => Some(RustInvokeChannel::EngineBottleRecordCrossover),
+            "engine_ledger_mark_running" => Some(RustInvokeChannel::EngineLedgerMarkRunning),
+            "engine_ledger_mark_stopped" => Some(RustInvokeChannel::EngineLedgerMarkStopped),
+            "engine_selection_clear" => Some(RustInvokeChannel::EngineSelectionClear),
             _ => None,
         }
     }
@@ -661,6 +694,17 @@ impl RustInvokeChannel {
             RustInvokeChannel::WineRunCommandForGame => "wine_run_command_for_game",
             RustInvokeChannel::WineToolCall => "wine_tool_call",
             RustInvokeChannel::EngineSetOnline => "engine_set_online",
+            RustInvokeChannel::EngineBottlePrepare => "engine_bottle_prepare",
+            RustInvokeChannel::EngineBottleCreateFallback => "engine_bottle_create_fallback",
+            RustInvokeChannel::EngineBottleCancelCreate => "engine_bottle_cancel_create",
+            RustInvokeChannel::EngineBottleKillWineserver => "engine_bottle_kill_wineserver",
+            RustInvokeChannel::EngineBottleRemoveCreated => "engine_bottle_remove_created",
+            RustInvokeChannel::EngineBottleReconcileMarker => "engine_bottle_reconcile_marker",
+            RustInvokeChannel::EngineBottleRecordPinned => "engine_bottle_record_pinned",
+            RustInvokeChannel::EngineBottleRecordCrossover => "engine_bottle_record_crossover",
+            RustInvokeChannel::EngineLedgerMarkRunning => "engine_ledger_mark_running",
+            RustInvokeChannel::EngineLedgerMarkStopped => "engine_ledger_mark_stopped",
+            RustInvokeChannel::EngineSelectionClear => "engine_selection_clear",
         }
     }
 }
@@ -3420,5 +3464,137 @@ impl EngineSetOnlineArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "engine_set_online:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "engine_set_online:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineBottlePrepareArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineBottlePrepareArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_bottle_prepare:bad-args".to_string())?.clone()).map_err(|_| "engine_bottle_prepare:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineBottleCreateFallbackArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineBottleCreateFallbackArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_bottle_create_fallback:bad-args".to_string())?.clone()).map_err(|_| "engine_bottle_create_fallback:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineBottleCancelCreateArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineBottleCancelCreateArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_bottle_cancel_create:bad-args".to_string())?.clone()).map_err(|_| "engine_bottle_cancel_create:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineBottleKillWineserverArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineBottleKillWineserverArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_bottle_kill_wineserver:bad-args".to_string())?.clone()).map_err(|_| "engine_bottle_kill_wineserver:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineBottleRemoveCreatedArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineBottleRemoveCreatedArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_bottle_remove_created:bad-args".to_string())?.clone()).map_err(|_| "engine_bottle_remove_created:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineBottleReconcileMarkerArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineBottleReconcileMarkerArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_bottle_reconcile_marker:bad-args".to_string())?.clone()).map_err(|_| "engine_bottle_reconcile_marker:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineBottleRecordPinnedArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineBottleRecordPinnedArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_bottle_record_pinned:bad-args".to_string())?.clone()).map_err(|_| "engine_bottle_record_pinned:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineBottleRecordCrossoverArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineBottleRecordCrossoverArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_bottle_record_crossover:bad-args".to_string())?.clone()).map_err(|_| "engine_bottle_record_crossover:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineLedgerMarkRunningArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineLedgerMarkRunningArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_ledger_mark_running:bad-args".to_string())?.clone()).map_err(|_| "engine_ledger_mark_running:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineLedgerMarkStoppedArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineLedgerMarkStoppedArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_ledger_mark_stopped:bad-args".to_string())?.clone()).map_err(|_| "engine_ledger_mark_stopped:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineSelectionClearArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineSelectionClearArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_selection_clear:bad-args".to_string())?.clone()).map_err(|_| "engine_selection_clear:bad-args".to_string())?;
+        Ok(Self { request })
     }
 }

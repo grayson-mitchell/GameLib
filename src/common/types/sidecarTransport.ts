@@ -1268,6 +1268,40 @@ export const RUST_WINE_TOOL_CALL = 'wine_tool_call' as const
 export const RUST_ENGINE_SET_ONLINE = 'engine_set_online' as const
 
 /**
+ * Phase 87 (SVC-02, 87-42): the bottle, ledger and selection ops the Steam bridge and the still-TS engine decision
+ * reach through the shims in `enginewine/bottles.ts` (every one a typed call over one object argument, which the
+ * crate decodes strictly; D-03, D-15). `engine_bottle_prepare` makes a bottle's engine the requested one: it may
+ * download DXVK, so it has no limit of its own beyond the app shutdown (it joins the sidecar's unbounded list). So
+ * does `engine_bottle_create_fallback` (`wineboot -i` 180 s, `wineserver -w` 60 s, then DXVK), which takes an
+ * optional `cancelId` that `engine_bottle_cancel_create` ends (the TS `AbortSignal`). The other ops are bounded:
+ * the wineserver stop carries its own 15 s cap, the rest read or write one small file or one in-memory map.
+ * `engine_selection_clear` and the two `engine_ledger_*` ops write the registry and the running-games ledger the
+ * switch reads. Reply shapes: prepare `{ok, changed, selection?}` or `{ok: false, reason, detail}`; the creation
+ * `{status, error?, errorCode?, createdHere?}`; the stop, the removal, the record ops, the clear and the mark-running
+ * a boolean; the reconcile `'crossover' | 'pinned' | null`; the mark-stopped `null`.
+ */
+export const RUST_ENGINE_BOTTLE_PREPARE = 'engine_bottle_prepare' as const
+export const RUST_ENGINE_BOTTLE_CREATE_FALLBACK =
+  'engine_bottle_create_fallback' as const
+export const RUST_ENGINE_BOTTLE_CANCEL_CREATE =
+  'engine_bottle_cancel_create' as const
+export const RUST_ENGINE_BOTTLE_KILL_WINESERVER =
+  'engine_bottle_kill_wineserver' as const
+export const RUST_ENGINE_BOTTLE_REMOVE_CREATED =
+  'engine_bottle_remove_created' as const
+export const RUST_ENGINE_BOTTLE_RECONCILE_MARKER =
+  'engine_bottle_reconcile_marker' as const
+export const RUST_ENGINE_BOTTLE_RECORD_PINNED =
+  'engine_bottle_record_pinned' as const
+export const RUST_ENGINE_BOTTLE_RECORD_CROSSOVER =
+  'engine_bottle_record_crossover' as const
+export const RUST_ENGINE_LEDGER_MARK_RUNNING =
+  'engine_ledger_mark_running' as const
+export const RUST_ENGINE_LEDGER_MARK_STOPPED =
+  'engine_ledger_mark_stopped' as const
+export const RUST_ENGINE_SELECTION_CLEAR = 'engine_selection_clear' as const
+
+/**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
  * the macOS bridge helper loads: the GameLib cache, else a snapshot of the Steam client's own copy
  * when it already hashes to the pin, else a fetch from Valve's client-update CDN (sha2vz, VZ decode,
@@ -1620,7 +1654,18 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_WINE_WINETRICKS_LIST_INSTALLED,
   RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_WINE_TOOL_CALL,
-  RUST_ENGINE_SET_ONLINE
+  RUST_ENGINE_SET_ONLINE,
+  RUST_ENGINE_BOTTLE_PREPARE,
+  RUST_ENGINE_BOTTLE_CREATE_FALLBACK,
+  RUST_ENGINE_BOTTLE_CANCEL_CREATE,
+  RUST_ENGINE_BOTTLE_KILL_WINESERVER,
+  RUST_ENGINE_BOTTLE_REMOVE_CREATED,
+  RUST_ENGINE_BOTTLE_RECONCILE_MARKER,
+  RUST_ENGINE_BOTTLE_RECORD_PINNED,
+  RUST_ENGINE_BOTTLE_RECORD_CROSSOVER,
+  RUST_ENGINE_LEDGER_MARK_RUNNING,
+  RUST_ENGINE_LEDGER_MARK_STOPPED,
+  RUST_ENGINE_SELECTION_CLEAR
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

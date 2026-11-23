@@ -20,8 +20,31 @@ export interface EngineRegistry {
   clearEngineSelection: (key: string) => void
 }
 
-export function createEngineRegistry(): EngineRegistry {
-  const engineSelections = new Map<string, EngineSelection>()
+/**
+ * Where the selections are kept: the boot's is `engineSelectionView` (87-42, D-24), the write-through mirror of
+ * Rust's registry the synchronous bridge reads share; a test gets a private map.
+ */
+export interface SelectionStore {
+  get: (key: string) => EngineSelection | undefined
+  apply: (key: string, selection: EngineSelection | null) => void
+  clear: (key: string) => void
+}
+
+function privateStore(): SelectionStore {
+  const map = new Map<string, EngineSelection>()
+  return {
+    get: (key) => map.get(key),
+    apply(key, selection) {
+      if (selection === null) map.delete(key)
+      else map.set(key, selection)
+    },
+    clear: (key) => void map.delete(key)
+  }
+}
+
+export function createEngineRegistry(
+  store: SelectionStore = privateStore()
+): EngineRegistry {
   return {
     setEngineSelection(key, sel) {
       if (!isEngineKey(key)) return false
@@ -34,13 +57,13 @@ export function createEngineRegistry(): EngineRegistry {
       } else {
         copy = { ...sel }
       }
-      engineSelections.set(key, copy)
+      store.apply(key, copy)
       logInfo(`Engine: ${key} uses ${engineLogLabel(copy)}`, LogPrefix.Backend)
       return true
     },
-    getEngineSelection: (key) => engineSelections.get(key),
+    getEngineSelection: (key) => store.get(key),
     clearEngineSelection(key) {
-      engineSelections.delete(key)
+      store.clear(key)
     }
   }
 }

@@ -32,7 +32,11 @@ const ceilings = require('../../../meta/backendDiCeilings.cjs') as {
 const SANCTIONED: Readonly<Record<string, number>> = Object.freeze({
   'src/backend/process/runner.ts': 0,
   'src/backend/logger/index.ts': 2,
-  'src/backend/sidecar/bootstrap.ts': 1
+  'src/backend/sidecar/bootstrap.ts': 1,
+  // 87-42 (D-24): the engine selection view, a write-through mirror of Rust's registry. The synchronous bridge reads
+  // import it directly, so it is one process-lifetime Map (a sidecar boot is a process); it holds only what Rust
+  // answered. Deleted with the Steam bridge callers in Phase 96.
+  'src/backend/enginewine/selectionView.ts': 1
 })
 
 /** Pure: every way `found` (file -> site count) departs from `sanctioned`. */
@@ -125,6 +129,7 @@ describe('module-state census is zero outside the sanctioned list (D-66.4-02)', 
       throw new Error(`${bad.join('\n')}\nsites:\n${rows.join('\n')}`)
     }
     expect(current.moduleState).toEqual({
+      'src/backend/enginewine/selectionView.ts': 1,
       'src/backend/logger/index.ts': 2,
       'src/backend/sidecar/bootstrap.ts': 1
     })
@@ -148,6 +153,9 @@ describe('module-state census is zero outside the sanctioned list (D-66.4-02)', 
         'src/backend/x.ts: 1 site(s), not a sanctioned file'
       ),
       expect.stringContaining(
+        'src/backend/enginewine/selectionView.ts: 0 sites < sanctioned 1'
+      ),
+      expect.stringContaining(
         'src/backend/sidecar/bootstrap.ts: 0 sites < sanctioned 1'
       )
     ])
@@ -155,7 +163,8 @@ describe('module-state census is zero outside the sanctioned list (D-66.4-02)', 
       violations(
         {
           'src/backend/logger/index.ts': 2,
-          'src/backend/sidecar/bootstrap.ts': 1
+          'src/backend/sidecar/bootstrap.ts': 1,
+          'src/backend/enginewine/selectionView.ts': 1
         },
         SANCTIONED
       )

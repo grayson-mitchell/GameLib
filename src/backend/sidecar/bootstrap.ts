@@ -249,6 +249,7 @@ import { createSteamUser } from '../storeManagers/steam/user'
 import { setupEnvVars, setupWineEnvVars, verifyWinePrefix } from '../launcher'
 import { validWine } from '../enginewine/wineCore'
 import { setEngineOnline } from '../enginewine/engineOnline'
+import { engineSelectionView } from '../enginewine/selectionView'
 import { getUmuPath, isUmuSupported } from '../utils/compatibility_layers'
 import { searchForExecutableOnPath } from '../utils/os/path'
 import {
@@ -2077,7 +2078,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             clock: ctx.clock,
             paths: ctx.paths,
             aborts: requireAborts(state),
-            requestRustInvoke: requireHost(state).requestRustInvoke
+            requestRustInvoke: requireHost(state).requestRustInvoke,
+            // 87-42 (D-24): the boot's selections are the view Rust's registry is mirrored into.
+            selections: engineSelectionView
           })
       }
     },

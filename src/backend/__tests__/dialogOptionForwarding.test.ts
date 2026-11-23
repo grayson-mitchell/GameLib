@@ -241,6 +241,11 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // runs the prefix's registry commands, so it has no limit of its own beyond the shutdown. Not a dialog
     // channel either.
     'RUST_WINE_DXVK_INSTALL_REMOVE',
+    // Phase 87 plan 42: engine_bottle_prepare may download DXVK and engine_bottle_create_fallback runs wineboot and
+    // wineserver -w before it installs DXVK, so neither has a limit of its own beyond a cancel or the shutdown.
+    // Not dialog channels either.
+    'RUST_ENGINE_BOTTLE_PREPARE',
+    'RUST_ENGINE_BOTTLE_CREATE_FALLBACK',
     // Phase 87 plan 35: wine_winetricks_apply and wine_winetricks_available read the catalog, whose first read
     // downloads the winetricks script and lists it; wine_winetricks_install runs one winetricks per verb. None
     // has a limit of its own beyond the shutdown. Not a dialog channel either.

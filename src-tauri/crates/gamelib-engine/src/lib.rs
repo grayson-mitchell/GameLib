@@ -39,6 +39,7 @@ use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
 pub const OPS: &[&str] = &[
+    "engine_bottle_cancel_create",
     "engine_bottle_create_crossover",
     "engine_bottle_create_fallback",
     "engine_bottle_ensure_per_game",
@@ -50,10 +51,13 @@ pub const OPS: &[&str] = &[
     "engine_bottle_record_pinned",
     "engine_bottle_remove_created",
     "engine_default_engine",
+    "engine_ledger_mark_running",
+    "engine_ledger_mark_stopped",
     "engine_list_options",
     "engine_per_game_bottle_name",
     "engine_pins",
     "engine_resolve_tool_settings",
+    "engine_selection_clear",
     "engine_set_online",
 ];
 
@@ -148,15 +152,30 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
             if !request.fallback_settings.is_object() || !engine_is_trusted(ctx, &engine) {
                 return Err(format!("{op}:bad-args"));
             }
+            // The caller's `cancelId` names this creation, so a cancel op (the TS `AbortSignal`) can end it.
+            let cancel = match request.cancel_id.as_deref() {
+                None => None,
+                Some(id) if is_cancel_id(id) => Some(register_create_cancel(id)),
+                Some(_) => return Err(format!("{op}:bad-args")),
+            };
             let result = bottles::fallback_bottle::create_fallback_bottle(
                 ctx,
                 &request.bottle_name,
                 &engine,
                 &request.fallback_settings,
-                None,
+                cancel.as_ref().map(|(token, _)| token),
             )
             .await;
+            drop(cancel);
             Ok(result.to_value())
+        }
+        // Cancels the fallback creation that registered `cancelId`; `true` when one was in flight.
+        "engine_bottle_cancel_create" => {
+            let request: CancelCreateRequest = decode(op, args)?;
+            if !is_cancel_id(&request.cancel_id) {
+                return Err(format!("{op}:bad-args"));
+            }
+            Ok(Value::Bool(cancel_create(&request.cancel_id)))
         }
         // Creates a game's bottle once (concurrent callers share one creation): with CrossOver when the
         // caller's decision says so and CrossOver is found, else with the built-in engine, which must be
@@ -201,6 +220,31 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
             let removed = bottles::lifecycle::remove_created_bottle_dir(ctx, &request.bottle_name)
                 == bottles::lifecycle::RemoveCreated::Removed;
             Ok(Value::Bool(removed))
+        }
+        // The running-games ledger the switch reads (D-16): `true` when the game was recorded (an unsafe
+        // bottle name or a key that is not an engine key is refused), as `markGameRunning` answered.
+        "engine_ledger_mark_running" => {
+            let request: LedgerRequest = decode(op, args)?;
+            Ok(Value::Bool(ctx.ledger.mark_game_running(
+                ctx.log.as_deref(),
+                &request.bottle_name,
+                &request.key,
+            )))
+        }
+        "engine_ledger_mark_stopped" => {
+            let request: LedgerRequest = decode(op, args)?;
+            ctx.ledger
+                .mark_game_stopped(&request.bottle_name, &request.key);
+            Ok(Value::Null)
+        }
+        // Drops the registry's selection for a title (the launch stopped, the deadline fired, the launch
+        // failed). `true` when one was removed. The reply is the sidecar view's own update, so the change
+        // hook stays quiet.
+        "engine_selection_clear" => {
+            let request: SelectionClearRequest = decode(op, args)?;
+            Ok(Value::Bool(
+                ctx.registry.clear_engine_selection_quiet(&request.key),
+            ))
         }
         // D-09: the global default engine, derived or stored, Legacy included.
         "engine_default_engine" => {
@@ -259,6 +303,89 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
         }
         _ => Err(format!("unknown op: {op}")),
     }
+}
+
+/// The argument of `engine_ledger_mark_running` and `engine_ledger_mark_stopped`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct LedgerRequest {
+    bottle_name: String,
+    key: String,
+}
+
+/// The argument of `engine_selection_clear`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SelectionClearRequest {
+    key: String,
+}
+
+/// The argument of `engine_bottle_cancel_create`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct CancelCreateRequest {
+    cancel_id: String,
+}
+
+/// A cancel id the sidecar makes: 1 to 64 of `[A-Za-z0-9_-]`.
+fn is_cancel_id(id: &str) -> bool {
+    (1..=64).contains(&id.len())
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+}
+
+type CreateCancels =
+    std::sync::Mutex<std::collections::HashMap<String, (u64, tokio_util::sync::CancellationToken)>>;
+
+/// The fallback creations in flight by cancel id. The entry ends with its creation.
+fn create_cancels() -> &'static CreateCancels {
+    static CANCELS: OnceLock<CreateCancels> = OnceLock::new();
+    CANCELS.get_or_init(Default::default)
+}
+
+/// Ends a creation's registration when it finishes, but only if the entry is still its own.
+struct CreateCancelGuard {
+    id: String,
+    generation: u64,
+}
+
+impl Drop for CreateCancelGuard {
+    fn drop(&mut self) {
+        let mut map = create_cancels().lock().unwrap_or_else(|e| e.into_inner());
+        if map
+            .get(&self.id)
+            .is_some_and(|(g, _)| *g == self.generation)
+        {
+            map.remove(&self.id);
+        }
+    }
+}
+
+fn register_create_cancel(id: &str) -> (tokio_util::sync::CancellationToken, CreateCancelGuard) {
+    static GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let generation = GENERATION.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let token = tokio_util::sync::CancellationToken::new();
+    create_cancels()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .insert(id.to_string(), (generation, token.clone()));
+    (
+        token,
+        CreateCancelGuard {
+            id: id.to_string(),
+            generation,
+        },
+    )
+}
+
+fn cancel_create(id: &str) -> bool {
+    let token = create_cancels()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .get(id)
+        .map(|(_, token)| token.clone());
+    token.map(|t| t.cancel()).is_some()
 }
 
 /// The argument of `engine_bottle_is_provisioned`.
@@ -330,6 +457,8 @@ struct CreateFallbackRequest {
     engine: RecordedEngine,
     #[serde(default = "empty_object")]
     fallback_settings: Value,
+    #[serde(default)]
+    cancel_id: Option<String>,
 }
 
 /// The argument of `engine_bottle_ensure_per_game`: the game, the engine the caller's decision chose
@@ -506,6 +635,8 @@ impl PrepareRequest {
             ensure_pin: None,
             on_switching: None,
             register_selection: self.register_selection,
+            // The op's reply carries the selection, so the change hook stays quiet (87-42).
+            register_quietly: true,
         })
     }
 }
@@ -644,6 +775,7 @@ mod tests {
         assert_eq!(sorted, OPS);
         assert!(OPS.contains(&"engine_pins"));
         for op in [
+            "engine_bottle_cancel_create",
             "engine_bottle_create_crossover",
             "engine_bottle_create_fallback",
             "engine_bottle_ensure_per_game",
@@ -655,12 +787,139 @@ mod tests {
             "engine_bottle_record_pinned",
             "engine_bottle_remove_created",
             "engine_default_engine",
+            "engine_ledger_mark_running",
+            "engine_ledger_mark_stopped",
             "engine_list_options",
             "engine_per_game_bottle_name",
             "engine_resolve_tool_settings",
+            "engine_selection_clear",
             "engine_set_online",
         ] {
             assert!(OPS.contains(&op), "{op}");
+        }
+    }
+
+    #[tokio::test]
+    async fn the_ledger_ops_record_and_drop_a_running_game_and_refuse_what_the_ledger_refuses() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        let args = json!({"bottleName": "GameLib-gog-1", "key": "gog:1"});
+        let ran = dispatch(
+            "engine_ledger_mark_running",
+            std::slice::from_ref(&args),
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(ran, json!(true));
+        assert_eq!(ctx.ledger.games_running_in("GameLib-gog-1"), ["gog:1"]);
+        let stopped = dispatch("engine_ledger_mark_stopped", &[args], &ctx)
+            .await
+            .unwrap();
+        assert_eq!(stopped, Value::Null);
+        assert_eq!(ctx.ledger.size(), 0);
+        // An unsafe bottle and a key that is not an engine key are `false`, never recorded.
+        for bad in [
+            json!({"bottleName": "a/b", "key": "gog:1"}),
+            json!({"bottleName": "GameLib-x", "key": "steam:620"}),
+        ] {
+            let answer = dispatch("engine_ledger_mark_running", &[bad], &ctx)
+                .await
+                .unwrap();
+            assert_eq!(answer, json!(false));
+        }
+        assert_eq!(ctx.ledger.size(), 0);
+        for bad in [
+            vec![],
+            vec![json!({"bottleName": "x"})],
+            vec![json!({"bottleName": "x", "key": "620", "extra": 1})],
+        ] {
+            for op in ["engine_ledger_mark_running", "engine_ledger_mark_stopped"] {
+                let err = dispatch(op, &bad, &ctx).await.unwrap_err();
+                assert_eq!(err, format!("{op}:bad-args"), "{bad:?}");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn the_selection_clear_op_drops_a_selection_quietly() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        let heard = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&heard);
+        ctx.registry.set_change_hook(Some(Arc::new(move |_, _| {
+            counter.fetch_add(1, Ordering::SeqCst);
+        })));
+        let selection: bottles::registry::EngineSelection = serde_json::from_value(
+            json!({"kind": "crossover", "reason": "cx-healthy", "crossoverBuild": null, "binDir": "/b"}),
+        )
+        .unwrap();
+        assert!(ctx
+            .registry
+            .set_engine_selection_quiet(None, "620", selection));
+        let cleared = dispatch("engine_selection_clear", &[json!({"key": "620"})], &ctx)
+            .await
+            .unwrap();
+        assert_eq!(cleared, json!(true));
+        let again = dispatch("engine_selection_clear", &[json!({"key": "620"})], &ctx)
+            .await
+            .unwrap();
+        assert_eq!(again, json!(false));
+        assert_eq!(heard.load(Ordering::SeqCst), 0, "the reply is the update");
+        for bad in [
+            vec![],
+            vec![json!({"key": "620", "x": 1})],
+            vec![json!("620")],
+        ] {
+            let err = dispatch("engine_selection_clear", &bad, &ctx)
+                .await
+                .unwrap_err();
+            assert_eq!(err, "engine_selection_clear:bad-args", "{bad:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn the_cancel_op_ends_the_creation_that_registered_its_id() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        let (token, guard) = register_create_cancel("cancel-test-1");
+        let none = dispatch(
+            "engine_bottle_cancel_create",
+            &[json!({"cancelId": "another-id"})],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(none, json!(false));
+        assert!(!token.is_cancelled());
+        let hit = dispatch(
+            "engine_bottle_cancel_create",
+            &[json!({"cancelId": "cancel-test-1"})],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(hit, json!(true));
+        assert!(token.is_cancelled());
+        drop(guard);
+        let gone = dispatch(
+            "engine_bottle_cancel_create",
+            &[json!({"cancelId": "cancel-test-1"})],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(gone, json!(false), "a finished creation has no cancel");
+        for bad in ["", "a b", "../x", &"x".repeat(65)] {
+            let err = dispatch(
+                "engine_bottle_cancel_create",
+                &[json!({"cancelId": bad})],
+                &ctx,
+            )
+            .await
+            .unwrap_err();
+            assert_eq!(err, "engine_bottle_cancel_create:bad-args", "{bad}");
         }
     }
 

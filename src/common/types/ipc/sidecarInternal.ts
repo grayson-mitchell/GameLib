@@ -184,6 +184,50 @@ const storeMirrorEvent = z.discriminatedUnion('op', [
   storeMirrorChanged
 ])
 
+// Phase 87 (87-42, D-24): Rust's engine registry changed on its own (a launch deadline, a game exit); the sidecar's
+// selection view applies it. `selection` is the registry's value for `key`, `null` when the key was cleared. The
+// engine fields mirror `EngineSelection` in `backend/engine/engineTypes.ts` and the crate's serialisation.
+const engineDxvk = z
+  .strictObject({ dir: z.string().max(4096), version: z.string().max(256) })
+  .nullable()
+const engineBinaries = {
+  wineBin: z.string().max(4096),
+  wineserverBin: z.string().max(4096),
+  label: z.string().max(256),
+  version: z.string().max(256),
+  dxvk: engineDxvk
+}
+const engineSelectionWire = z.discriminatedUnion('kind', [
+  z.strictObject({
+    kind: z.literal('crossover'),
+    reason: z.enum(['cx-healthy', 'cx-inconclusive', 'override']),
+    crossoverBuild: z.string().max(256).nullable(),
+    binDir: z.string().max(4096)
+  }),
+  z.strictObject({
+    kind: z.literal('pinned'),
+    pinId: z.string().max(256),
+    reason: z.enum([
+      'cx-missing',
+      'cx-expired',
+      'cx-broken',
+      'cx-inconclusive',
+      'override'
+    ]),
+    ...engineBinaries
+  }),
+  z.strictObject({
+    kind: z.literal('wine-manager'),
+    managerVersion: z.string().max(256),
+    reason: z.enum(['override', 'cx-inconclusive']),
+    ...engineBinaries
+  })
+])
+const engineSelectionChanged = z.strictObject({
+  key: nonEmptyString(256),
+  selection: engineSelectionWire.nullable()
+})
+
 const noArgs = z.tuple([])
 
 export const sidecarInternalInvokeArgs = {
@@ -205,7 +249,9 @@ export const sidecarInternalSendArgs = {
   // Shell-originated: Rust depot job progress events.
   depotJobEvent: z.tuple([depotJobEvent]),
   // Shell-originated: the answer to one sidecar store frame (Phase 85).
-  storeMirrorEvent: z.tuple([storeMirrorEvent])
+  storeMirrorEvent: z.tuple([storeMirrorEvent]),
+  // Shell-originated: Rust's engine registry changed by itself (87-42). Never renderer-reachable.
+  engineSelectionChanged: z.tuple([engineSelectionChanged])
 }
 
 /** Channels only the Rust shell invokes; the 67-19 relay allow-list excludes them. */
@@ -218,7 +264,8 @@ export const sidecarInternalCallers = {
   depotManifestRequestCode: 'shell',
   depotJobEvent: 'shell',
   storeMirrorEvent: 'shell',
-  steamPollStateEvent: 'shell'
+  steamPollStateEvent: 'shell',
+  engineSelectionChanged: 'shell'
 } as const
 
 /** One Rust steampoll state event, as validated off the wire. */

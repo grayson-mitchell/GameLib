@@ -113,6 +113,17 @@ import {
   RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_WINE_TOOL_CALL,
   RUST_ENGINE_SET_ONLINE,
+  RUST_ENGINE_BOTTLE_PREPARE,
+  RUST_ENGINE_BOTTLE_CREATE_FALLBACK,
+  RUST_ENGINE_BOTTLE_CANCEL_CREATE,
+  RUST_ENGINE_BOTTLE_KILL_WINESERVER,
+  RUST_ENGINE_BOTTLE_REMOVE_CREATED,
+  RUST_ENGINE_BOTTLE_RECONCILE_MARKER,
+  RUST_ENGINE_BOTTLE_RECORD_PINNED,
+  RUST_ENGINE_BOTTLE_RECORD_CROSSOVER,
+  RUST_ENGINE_LEDGER_MARK_RUNNING,
+  RUST_ENGINE_LEDGER_MARK_STOPPED,
+  RUST_ENGINE_SELECTION_CLEAR,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -175,6 +186,10 @@ import {
  */
 
 /** The keyring slot is optional on the wire: Rust defaults an absent or null slot to the Steam token. */
+/** One opaque object the engine crate decodes strictly (the 87-42 bottle, ledger and selection ops). */
+const engineOpRequest = z.tuple([
+  z.unknown().meta({ title: 'request', 'x-rust-value': true })
+])
 const slot = z.string().nullish().meta({ title: 'slot' })
 const label = z.string().meta({ title: 'label' })
 const names = z.array(z.string()).meta({ title: 'names' })
@@ -906,7 +921,21 @@ export const rustInvokeArgs = {
   // One strict object with one boolean; the crate decodes it again (deny_unknown_fields).
   [RUST_ENGINE_SET_ONLINE]: z.tuple([
     z.object({ online: z.boolean() }).strict()
-  ])
+  ]),
+  // Phase 87 (SVC-02, 87-42): the bottle, ledger and selection ops. Each takes one object, opaque here and decoded
+  // strictly by the crate (every request struct denies unknown fields; the paths, names and keys it is handed are
+  // checked there, T-87-82).
+  [RUST_ENGINE_BOTTLE_PREPARE]: engineOpRequest,
+  [RUST_ENGINE_BOTTLE_CREATE_FALLBACK]: engineOpRequest,
+  [RUST_ENGINE_BOTTLE_CANCEL_CREATE]: engineOpRequest,
+  [RUST_ENGINE_BOTTLE_KILL_WINESERVER]: engineOpRequest,
+  [RUST_ENGINE_BOTTLE_REMOVE_CREATED]: engineOpRequest,
+  [RUST_ENGINE_BOTTLE_RECONCILE_MARKER]: engineOpRequest,
+  [RUST_ENGINE_BOTTLE_RECORD_PINNED]: engineOpRequest,
+  [RUST_ENGINE_BOTTLE_RECORD_CROSSOVER]: engineOpRequest,
+  [RUST_ENGINE_LEDGER_MARK_RUNNING]: engineOpRequest,
+  [RUST_ENGINE_LEDGER_MARK_STOPPED]: engineOpRequest,
+  [RUST_ENGINE_SELECTION_CLEAR]: engineOpRequest
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

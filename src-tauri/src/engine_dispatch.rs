@@ -265,7 +265,7 @@ pub(crate) fn build_ctx(
     shutdown: Shutdown,
 ) -> EngineCtx {
     let clock = Arc::new(SystemClock);
-    EngineCtx::new(
+    let ctx = EngineCtx::new(
         host,
         clock.clone(),
         platform(),
@@ -283,11 +283,33 @@ pub(crate) fn build_ctx(
     .with_proc(Arc::new(SpecProcRunner))
     .with_fetch(Arc::new(ReqwestFetch::with_clock(clock)))
     .with_emitter(emitter)
-    .with_ui(ui)
+    .with_ui(Arc::clone(&ui))
     .with_app_version(native_handlers::app_version())
     .with_dxvk(Arc::new(ShellDxvk::new()))
     .with_default_wine(default_wine_hook(Arc::new(|| std::env::var("PATH").ok())))
-    .with_crossover_bin_dir(crossover_bin_dir_hook())
+    .with_crossover_bin_dir(crossover_bin_dir_hook());
+    wire_selection_frames(&ctx, ui);
+    ctx
+}
+
+/// The name of the frame that tells the sidecar's selection view the registry changed on its own
+/// (87-42, D-24). Rust to sidecar only: it is not in the renderer allow-list.
+pub(crate) const SELECTION_CHANGED_CHANNEL: &str = "engineSelectionChanged";
+
+/// Wires the registry's change hook to one `engineSelectionChanged` frame carrying `{key, selection}`
+/// (`selection` is `null` when the key was cleared). A change a TS-initiated op makes is answered in
+/// that op's reply and never reaches the hook.
+fn wire_selection_frames(ctx: &EngineCtx, ui: Arc<dyn EngineUi>) {
+    ctx.registry
+        .set_change_hook(Some(Arc::new(move |key, selection| {
+            let selection = selection
+                .and_then(|s| serde_json::to_value(s).ok())
+                .unwrap_or(Value::Null);
+            ui.send_to_sidecar(
+                SELECTION_CHANGED_CHANNEL,
+                vec![serde_json::json!({ "key": key, "selection": selection })],
+            );
+        })));
 }
 
 /// The process `PATH` as the hook reads it each call (`None`: unset). A function so a test scripts it.
@@ -564,6 +586,42 @@ pub(crate) fn rpc_engine_set_online(args: &[Value]) -> Result<Value, String> {
     }
     let engine = engine_ctx().ok_or_else(|| "engine_set_online:not-ready".to_string())?;
     gamelib_engine::dispatch_sync("engine_set_online", args, engine)
+}
+
+/// One `rustInvoke` arm of the bottle, ledger and selection ops (87-42): exactly one object argument, then
+/// the crate's own op, which decodes it strictly (every request struct denies unknown fields) and checks
+/// every path and name it is handed. Runs on the dispatcher's worker thread, so `dispatch_sync` drives it.
+/// Before [`install`] the answer is `<op>:not-ready`.
+fn rpc_engine_op(op: &'static str, args: &[Value]) -> Result<Value, String> {
+    if !matches!(args, [Value::Object(_)]) {
+        return Err(format!("{op}:bad-args"));
+    }
+    let engine = engine_ctx().ok_or_else(|| format!("{op}:not-ready"))?;
+    gamelib_engine::dispatch_sync(op, args, engine)
+}
+
+macro_rules! engine_op_arms {
+    ($($name:ident => $op:literal),+ $(,)?) => {
+        $(
+            pub(crate) fn $name(args: &[Value]) -> Result<Value, String> {
+                rpc_engine_op($op, args)
+            }
+        )+
+    };
+}
+
+engine_op_arms! {
+    rpc_bottle_prepare => "engine_bottle_prepare",
+    rpc_bottle_create_fallback => "engine_bottle_create_fallback",
+    rpc_bottle_cancel_create => "engine_bottle_cancel_create",
+    rpc_bottle_kill_wineserver => "engine_bottle_kill_wineserver",
+    rpc_bottle_remove_created => "engine_bottle_remove_created",
+    rpc_bottle_reconcile_marker => "engine_bottle_reconcile_marker",
+    rpc_bottle_record_pinned => "engine_bottle_record_pinned",
+    rpc_bottle_record_crossover => "engine_bottle_record_crossover",
+    rpc_ledger_mark_running => "engine_ledger_mark_running",
+    rpc_ledger_mark_stopped => "engine_ledger_mark_stopped",
+    rpc_selection_clear => "engine_selection_clear",
 }
 
 #[cfg(test)]
@@ -876,6 +934,80 @@ mod tests {
             ["notify t|b", "raise", "send c []"]
         );
         assert_eq!(frames.0.lock().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn a_registry_change_sends_one_selection_changed_frame_and_a_quiet_one_sends_none() {
+        let home = gamelib_testutil::FakeHome::new("engine-selection-frame-");
+        let frames = Arc::new(Frames::default());
+        let seen: Seen = Arc::default();
+        let emitter: Arc<dyn FrontendEmitter> = Arc::clone(&frames) as Arc<dyn FrontendEmitter>;
+        let ctx = build_ctx(
+            Arc::new(StoreHost::new()),
+            home.root(),
+            home.root().join("home"),
+            home.root().join("tmp"),
+            Arc::clone(&emitter),
+            Arc::new(recording_ui(emitter, &seen)),
+            Shutdown::new(),
+        );
+        let selection = gamelib_engine::bottles::registry::EngineSelection::Crossover {
+            reason: "cx-healthy".into(),
+            crossover_build: None,
+            bin_dir: "/b".into(),
+        };
+        assert!(ctx
+            .registry
+            .set_engine_selection_quiet(None, "620", selection.clone()));
+        assert!(seen.lock().unwrap().is_empty(), "a quiet set sends nothing");
+        assert!(ctx.registry.set_engine_selection(None, "620", selection));
+        ctx.registry.clear_engine_selection("620");
+        assert_eq!(
+            seen.lock().unwrap().as_slice(),
+            [
+                "send engineSelectionChanged [{\"key\":\"620\",\"selection\":{\"binDir\":\"/b\",\"crossoverBuild\":null,\"kind\":\"crossover\",\"reason\":\"cx-healthy\"}}]",
+                "send engineSelectionChanged [{\"key\":\"620\",\"selection\":null}]"
+            ]
+        );
+    }
+
+    #[test]
+    fn the_bottle_ledger_and_selection_arms_take_one_object_and_are_not_ready_before_install() {
+        for (arm, op) in [
+            (
+                rpc_bottle_prepare as fn(&[Value]) -> Result<Value, String>,
+                "engine_bottle_prepare",
+            ),
+            (rpc_bottle_create_fallback, "engine_bottle_create_fallback"),
+            (rpc_bottle_cancel_create, "engine_bottle_cancel_create"),
+            (rpc_bottle_kill_wineserver, "engine_bottle_kill_wineserver"),
+            (rpc_bottle_remove_created, "engine_bottle_remove_created"),
+            (
+                rpc_bottle_reconcile_marker,
+                "engine_bottle_reconcile_marker",
+            ),
+            (rpc_bottle_record_pinned, "engine_bottle_record_pinned"),
+            (
+                rpc_bottle_record_crossover,
+                "engine_bottle_record_crossover",
+            ),
+            (rpc_ledger_mark_running, "engine_ledger_mark_running"),
+            (rpc_ledger_mark_stopped, "engine_ledger_mark_stopped"),
+            (rpc_selection_clear, "engine_selection_clear"),
+        ] {
+            for bad in [
+                vec![],
+                vec![serde_json::json!("x")],
+                vec![serde_json::json!({}), serde_json::json!({})],
+            ] {
+                assert_eq!(arm(&bad), Err(format!("{op}:bad-args")), "{op} {bad:?}");
+            }
+            assert_eq!(
+                arm(&[serde_json::json!({})]),
+                Err(format!("{op}:not-ready")),
+                "{op}"
+            );
+        }
     }
 
     #[test]

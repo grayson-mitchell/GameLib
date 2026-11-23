@@ -235,5 +235,34 @@ pub(crate) fn dispatch_rust_channel(
         }
         RustInvokeChannel::WineToolCall => wine_dispatch::rpc_wine_tool_call(args),
         RustInvokeChannel::EngineSetOnline => engine_dispatch::rpc_engine_set_online(args),
+        RustInvokeChannel::EngineBottlePrepare => engine_dispatch::rpc_bottle_prepare(args),
+        RustInvokeChannel::EngineBottleCreateFallback => {
+            engine_dispatch::rpc_bottle_create_fallback(args)
+        }
+        RustInvokeChannel::EngineBottleCancelCreate => {
+            engine_dispatch::rpc_bottle_cancel_create(args)
+        }
+        RustInvokeChannel::EngineBottleKillWineserver => {
+            engine_dispatch::rpc_bottle_kill_wineserver(args)
+        }
+        RustInvokeChannel::EngineBottleRemoveCreated => {
+            engine_dispatch::rpc_bottle_remove_created(args)
+        }
+        RustInvokeChannel::EngineBottleReconcileMarker => {
+            engine_dispatch::rpc_bottle_reconcile_marker(args)
+        }
+        RustInvokeChannel::EngineBottleRecordPinned => {
+            engine_dispatch::rpc_bottle_record_pinned(args)
+        }
+        RustInvokeChannel::EngineBottleRecordCrossover => {
+            engine_dispatch::rpc_bottle_record_crossover(args)
+        }
+        RustInvokeChannel::EngineLedgerMarkRunning => {
+            engine_dispatch::rpc_ledger_mark_running(args)
+        }
+        RustInvokeChannel::EngineLedgerMarkStopped => {
+            engine_dispatch::rpc_ledger_mark_stopped(args)
+        }
+        RustInvokeChannel::EngineSelectionClear => engine_dispatch::rpc_selection_clear(args),
     }
 }

@@ -65,6 +65,8 @@ import {
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_RUN_COMMAND,
   RUST_WINE_DXVK_INSTALL_REMOVE,
+  RUST_ENGINE_BOTTLE_CREATE_FALLBACK,
+  RUST_ENGINE_BOTTLE_PREPARE,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,
@@ -187,6 +189,11 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * Eleventh (Phase 87, 87-36): `wine_run_command_for_game` runs one wine command on a game (a winecfg, an installer, a
  * known-fix program with `wait` true): it ends with the program or the app shutdown, with no limit of its own.
  * `wine_tool_call` is the same for the Wine tool buttons (winecfg, Run EXE in prefix).
+ *
+ * Twelfth (Phase 87, 87-42): `engine_bottle_prepare` may download DXVK and run the restore through the engine's own
+ * Wine, and `engine_bottle_create_fallback` runs `wineboot -i` (180 s) and `wineserver -w` (60 s) before it installs
+ * DXVK: neither has a limit of its own beyond a cancel or the app shutdown. The wineserver stop (its own 15 s cap),
+ * the marker, ledger, removal and selection ops are bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -220,6 +227,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_WINE_RUN_COMMAND,
   RUST_WINE_DISCOVER_ALTERNATIVES,
   RUST_WINE_DXVK_INSTALL_REMOVE,
+  RUST_ENGINE_BOTTLE_CREATE_FALLBACK,
+  RUST_ENGINE_BOTTLE_PREPARE,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,

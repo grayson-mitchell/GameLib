@@ -947,7 +947,8 @@ jest.mock('../engine/steamEngineDeps', () => ({
   steamEngineStateDeps: jest.fn(() => ({})),
   steamDecisionDeps: jest.fn(() => ({})),
   steamDecisionServices: jest.fn(() => ({})),
-  steamSwitchDeps: jest.fn(() => ({ crossoverSettings: jest.fn() }))
+  steamSwitchDeps: jest.fn(() => ({ crossoverSettings: jest.fn() })),
+  steamPrepareFacts: jest.fn(() => ({}))
 }))
 // Phase 59 (59-10): per-launch bottle preparation and state publishing.
 // 66.4-05: the switcher and the fallback-engine owner are boot instances reached through
@@ -961,6 +962,15 @@ jest.mock('backend/engine/engineSwitch', () => ({
   readBottleEngineMarkerKind: jest.fn(),
   reconcileBottleEngineMarker: jest.fn(),
   restoreNeedsAbsentPin: jest.fn()
+}))
+// 87-42: the switch is Rust's, reached through `prepareBottle`. This file's recording fake stands in for it and sees
+// the call as the TS switcher saw it: the caller's `ensurePinEngine` and `onSwitching` ride on the args as before.
+jest.mock('backend/engine/prepareBottle', () => ({
+  prepareBottle: (_services: unknown, call: Record<string, unknown>) =>
+    mockPrepareBottleForEngine({
+      ...call,
+      deps: { ensurePinEngine: call.ensurePinEngine }
+    })
 }))
 jest.mock('backend/engine/fallbackEngine', () => ({
   createFallbackEngine: () => ({

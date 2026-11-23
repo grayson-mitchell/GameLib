@@ -99,7 +99,7 @@ const COMPATIBILITY_LAYERS_IMPORTERS: readonly string[] = [
 /**
  * Every non-test importer of `enginewine/twin.ts` (the check is per file, so every twin row lists them all):
  * the launcher and the five `games.ts` (`engineKeyFor`), the settings and install flows (the override
- * validation and the import settings), the engine flows, and the engine TS alive until 87-56 (87-39 adds the four
+ * validation and the import settings), the engine flows, and the engine TS alive until 87-56 (87-42 adds `prepareBottle`; 87-39 adds the four
  * modules that re-export the bridge's bottle helpers: `bottlePrimitives`, `engineSwitch`, `fallbackEngine`,
  * `enginePins`; 87-43 repoints their callers and deletes them).
  */
@@ -112,6 +112,7 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/engine/fallbackEngine.ts',
   'src/backend/engine/gameEngineState.ts',
   'src/backend/engine/perGameBottle.ts',
+  'src/backend/engine/prepareBottle.ts',
   'src/backend/engine/toolSettings.ts',
   'src/backend/launcher.ts',
   'src/backend/sidecar/engineFlowRegistration.ts',
@@ -252,6 +253,34 @@ const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_ENGINE_SET_ONLINE',
     callers: ['src/backend/sidecar/bootstrap.ts'],
     deletedBy: 98
+  },
+  // 87-42 (D-03, D-15): the bottle shims. The engine switch is one typed call into Rust; the TS callbacks became values
+  // and the pin download, the status update and the selection view are `engine/prepareBottle.ts`'s work around it.
+  // The Steam launch, the DRM launch, the install's redist step and the still-TS launch step call it through
+  // `prepareBottle`; Phase 96 moves the last Steam callers into Rust and deletes the shim.
+  {
+    name: 'prepareBottleForEngine',
+    file: 'src/backend/enginewine/bottles.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_BOTTLE_PREPARE',
+    callers: ['src/backend/engine/prepareBottle.ts'],
+    deletedBy: 96
+  },
+  // 87-42 (D-24): the engine selection view, the write-through mirror of Rust's registry. The sync bridge reads
+  // (`getBridgeBottleSettings` and the launch settings) stay sync; `registerEngineSelectionView` installs the one
+  // `engineSelectionChanged` listener Rust's own registry changes reach it through.
+  {
+    name: 'engineSelectionView',
+    file: 'src/backend/enginewine/selectionView.ts',
+    shape: 'view',
+    vectors: 'src/backend/enginewine/__tests__/selectionView.test.ts',
+    wiring: ['registerEngineSelectionView'],
+    callers: [
+      'src/backend/engine/prepareBottle.ts',
+      'src/backend/sidecar/bootstrap.ts',
+      'src/backend/sidecar/handlers.ts'
+    ],
+    deletedBy: 96
   },
   // 87-34 (D-23): the DXVK family's resolvers. `toggleDXVK` is the first, registered by
   // `registerEngineWineResolvers` (named in `wiring`, one owner, D-06); the TS-only input is the game's merged
