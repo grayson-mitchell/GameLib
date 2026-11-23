@@ -35,11 +35,15 @@ use gamelib_core::process::SpecOutput;
 use gamelib_engine::bottles::marker::MarkerSummary;
 use gamelib_engine::crossover::locate::CrossoverLocator;
 use gamelib_engine::ctx::EngineCtx;
+use gamelib_engine::decision::creation::{decide_creation_engine, CX_CREATE_CAP_MS};
 use gamelib_engine::decision::launch::{decide_launch_engine, DecideArgs};
+use gamelib_engine::decision::override_options::{
+    list_engine_override_options, options_value, resolve_wine_manager_staging,
+};
 use gamelib_engine::decision::preflight::{
     is_crossover_missing, preflight_crossover, MonitorPhase, PreflightArgs, ProbeTuning,
 };
-use gamelib_engine::engines::{pinned_engine_paths, resolve_wine_manager_staging};
+use gamelib_engine::engines::pinned_engine_paths;
 use gamelib_engine::pins::{pins, EnginePin, EnginePins};
 use gamelib_engine::testing::{FixedClock, RecordingLog, ScriptedSpecRunner};
 use serde_json::{json, Value};
@@ -56,7 +60,14 @@ const RETIRED_PIN_ID: &str = "wine-staging-11.1";
 const BUILD_TESTED: &str = "26.3.0.39832";
 
 /// The ops this file replays.
-const OPS: [&str; 4] = ["launch", "preflight", "is-missing", "wm-staging"];
+const OPS: [&str; 6] = [
+    "launch",
+    "preflight",
+    "creation",
+    "options",
+    "is-missing",
+    "wm-staging",
+];
 
 fn golden_dir() -> std::path::PathBuf {
     common::fixtures().join("golden/decision")
@@ -476,6 +487,15 @@ async fn replay_item(profile: &Profile, op: &str, sc: Value) -> Replayed {
             .await;
             json!({ "preflight": preflight.to_value() })
         }
+        "creation" => {
+            let decision = decide_creation_engine(ctx, &key, Some(&table))
+                .await
+                .unwrap();
+            json!({ "decision": decision.to_value(), "createCapMs": CX_CREATE_CAP_MS })
+        }
+        "options" => {
+            json!({ "options": options_value(&list_engine_override_options(ctx, Some(&table)).await) })
+        }
         "is-missing" => json!({ "missing": is_crossover_missing(ctx, &[]).await }),
         "wm-staging" => {
             let engine = resolve_wine_manager_staging(ctx, sc["version"].as_str().unwrap());
@@ -533,7 +553,7 @@ async fn replay_item(profile: &Profile, op: &str, sc: Value) -> Replayed {
 fn expected_outcome(op: &str, want: &Value) -> Value {
     let mut out = serde_json::Map::new();
     let keys: &[&str] = match op {
-        "launch" => &["decision"],
+        "launch" | "creation" => &["decision"],
         "preflight" => &["preflight"],
         "options" => &["options"],
         "is-missing" => &["missing"],
@@ -541,6 +561,9 @@ fn expected_outcome(op: &str, want: &Value) -> Value {
     };
     for key in keys {
         out.insert((*key).to_string(), want[*key].clone());
+    }
+    if op == "creation" {
+        out.insert("createCapMs".to_string(), want["createCapMs"].clone());
     }
     out.insert("logs".to_string(), want["logs"].clone());
     Value::Object(out)

@@ -56,13 +56,17 @@ pub const OPS: &[&str] = &[
     "engine_cancel",
     "engine_cx_demo_status",
     "engine_cx_resolve_bin_dir",
+    "engine_decide_creation",
     "engine_decide_launch",
     "engine_default_engine",
+    "engine_is_crossover_missing",
     "engine_ledger_mark_running",
     "engine_ledger_mark_stopped",
     "engine_list_options",
+    "engine_list_override_options",
     "engine_per_game_bottle_name",
     "engine_pins",
+    "engine_preflight_crossover",
     "engine_resolve_tool_settings",
     "engine_run_tool",
     "engine_selection_clear",
@@ -354,6 +358,46 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
             .await
             .map_err(|e| format!("{op}:{e}"))?;
             Ok(decision.to_value())
+        }
+        // The engine a bottle is created with: a presence check only (59-REVIEW WR-02/WR-03).
+        "engine_decide_creation" => {
+            let request: DecideCreationRequest = decode(op, args)?;
+            let decision = decision::creation::decide_creation_engine(ctx, &request.key, None)
+                .await
+                .map_err(|e| format!("{op}:{e}"))?;
+            Ok(serde_json::json!({
+                "decision": decision.to_value(),
+                "createCapMs": decision::creation::CX_CREATE_CAP_MS,
+            }))
+        }
+        // The engines the per-game picker offers.
+        "engine_list_override_options" => {
+            let options = decision::override_options::list_engine_override_options(ctx, None).await;
+            Ok(decision::override_options::options_value(&options))
+        }
+        // The CrossOver pre-flight (G29 two-probe rule): the sidecar's `CrossoverPreflight`.
+        "engine_preflight_crossover" => {
+            let request: PreflightRequest = decode(op, args)?;
+            let preflight = decision::preflight::preflight_crossover(
+                ctx,
+                &decision::preflight::PreflightArgs {
+                    bottle_name: request.bottle_name,
+                    key: request.key,
+                    kill_on_timeout: request.kill_on_timeout,
+                    monitor_phase: request.monitor_phase,
+                    hint_wine_bins: request.hint_wine_bins,
+                    tuning: decision::preflight::ProbeTuning::default(),
+                },
+            )
+            .await;
+            Ok(preflight.to_value())
+        }
+        // G25: true when CrossOver is not installed; never probes.
+        "engine_is_crossover_missing" => {
+            let request: ResolveBinDirRequest = decode(op, args)?;
+            Ok(Value::Bool(
+                decision::preflight::is_crossover_missing(ctx, &request.hint_wine_bins).await,
+            ))
         }
         // One of the five allowlisted tools with the isolated profile (D-18). A program outside the list is
         // an answer (`stderr: "tool not allowed: ..."`), as `runTool` gave, and spawns nothing. `cancelId`
@@ -757,6 +801,28 @@ struct DecideLaunchRequest {
     hint_wine_bins: Vec<String>,
 }
 
+/// The argument of `engine_decide_creation`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DecideCreationRequest {
+    key: String,
+}
+
+/// The argument of `engine_preflight_crossover`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct PreflightRequest {
+    bottle_name: String,
+    #[serde(default)]
+    key: Option<String>,
+    #[serde(default)]
+    kill_on_timeout: Option<bool>,
+    #[serde(default)]
+    monitor_phase: Option<decision::preflight::MonitorPhase>,
+    #[serde(default)]
+    hint_wine_bins: Vec<String>,
+}
+
 /// The argument of `engine_set_online`: the monitor's answer.
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -905,12 +971,16 @@ mod tests {
             "engine_cancel",
             "engine_cx_demo_status",
             "engine_cx_resolve_bin_dir",
+            "engine_decide_creation",
             "engine_decide_launch",
             "engine_default_engine",
+            "engine_is_crossover_missing",
             "engine_ledger_mark_running",
             "engine_ledger_mark_stopped",
             "engine_list_options",
+            "engine_list_override_options",
             "engine_per_game_bottle_name",
+            "engine_preflight_crossover",
             "engine_resolve_tool_settings",
             "engine_run_tool",
             "engine_selection_clear",
@@ -973,8 +1043,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn the_launch_decision_op_takes_strict_arguments_and_falls_back_when_crossover_is_missing(
-    ) {
+    async fn the_decision_ops_take_strict_arguments_and_fall_back_when_crossover_is_missing() {
         let home = FakeHome::new("engine-lib-");
         let mut ctx = ctx(&home);
         // The machine's own /Applications must not answer.
@@ -994,6 +1063,9 @@ mod tests {
                 "engine_decide_launch",
                 json!({"key": "gog:1", "bottleName": "b", "monitorPhase": "paused"}),
             ),
+            ("engine_decide_creation", json!({"key": "gog:1", "x": 1})),
+            ("engine_preflight_crossover", json!({"key": "gog:1"})),
+            ("engine_is_crossover_missing", json!({"hintWineBins": 3})),
         ] {
             assert_eq!(
                 dispatch(op, &[bad], &ctx).await,
@@ -1033,6 +1105,34 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(refused["kind"], "unavailable");
+
+        let creation = dispatch("engine_decide_creation", &[json!({"key": "gog:1"})], &ctx)
+            .await
+            .unwrap();
+        assert_eq!(creation["decision"]["kind"], "pinned");
+        assert_eq!(creation["decision"]["reason"], "cx-missing");
+        assert_eq!(creation["createCapMs"], 120_000);
+        let preflight = dispatch(
+            "engine_preflight_crossover",
+            &[json!({"bottleName": "GameLib-gog-1"})],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            preflight,
+            json!({"kind": "missing", "detail": "CrossOver is not installed"})
+        );
+        assert_eq!(
+            dispatch("engine_is_crossover_missing", &[json!({})], &ctx).await,
+            Ok(json!(true))
+        );
+        let options = dispatch("engine_list_override_options", &[], &ctx)
+            .await
+            .unwrap();
+        assert_eq!(options[0]["id"], "automatic");
+        assert_eq!(options[1]["id"], "crossover");
+        assert_eq!(options[1]["available"], false);
     }
 
     #[tokio::test]

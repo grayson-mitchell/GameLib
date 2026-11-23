@@ -15,11 +15,7 @@ use crate::config::{
     EngineSource,
 };
 use crate::ctx::EngineCtx;
-use crate::engines::{
-    is_installed_macos_release, is_pinned_engine_installed, wine_manager_releases,
-};
-use crate::ids::parse_engine_override_str;
-use crate::jsutil::{js_to_string, js_trim, prop};
+use crate::jsutil::{js_to_string, js_trim};
 use crate::key::{engine_key_for, uses_bottle_runtime};
 use crate::pins::pins;
 
@@ -107,7 +103,7 @@ pub struct EngineOption {
     pub is_previous_pin: bool,
 }
 
-fn option(
+pub(crate) fn option(
     id: String,
     kind: &'static str,
     label: String,
@@ -125,69 +121,13 @@ fn option(
     }
 }
 
-/// `/-DXMT$|gptk|toolkit/i`.
-fn is_unusable_release_name(version: &str) -> bool {
-    let lower = version.to_lowercase();
-    lower.ends_with("-dxmt") || lower.contains("gptk") || lower.contains("toolkit")
-}
-
 /// `listEngineOverrideOptions`: Automatic, CrossOver (installed or not), the current pin and the
 /// previous one when there is one, then every installed Wine Manager macOS build the grammar
-/// accepts. GPTK, toolkit and DXMT builds and custom paths are never offered (D-11).
+/// accepts. GPTK, toolkit and DXMT builds and custom paths are never offered (D-11). The rows are
+/// built by [`crate::decision::override_options::override_option_rows`].
 pub async fn list_engine_override_options(ctx: &EngineCtx) -> Vec<EngineOption> {
-    let mut out = vec![option(
-        "automatic".to_string(),
-        "automatic",
-        "Automatic".to_string(),
-        true,
-        true,
-        false,
-    )];
     let crossover = (ctx.crossover_bin_dir)().await.is_some();
-    out.push(option(
-        "crossover".to_string(),
-        "crossover",
-        "CrossOver".to_string(),
-        crossover,
-        crossover,
-        false,
-    ));
-    if let Ok(table) = pins() {
-        for (pin, previous) in std::iter::once((&table.current, false))
-            .chain(table.previous.as_ref().map(|p| (p, true)))
-        {
-            out.push(option(
-                format!("pinned:{}", pin.id),
-                "pinned",
-                pin.label.clone(),
-                true,
-                is_pinned_engine_installed(ctx, pin),
-                previous,
-            ));
-        }
-    }
-    for release in wine_manager_releases(ctx) {
-        if !is_installed_macos_release(&release) {
-            continue;
-        }
-        let version = prop(&release, "version").map_or("undefined".to_string(), js_to_string);
-        if is_unusable_release_name(&version) {
-            continue;
-        }
-        let id = format!("wine-manager:{version}");
-        if parse_engine_override_str(&id) == "automatic" {
-            continue;
-        }
-        out.push(option(
-            id,
-            "wine-manager",
-            format!("Wine Manager: {version}"),
-            true,
-            true,
-            false,
-        ));
-    }
-    out
+    crate::decision::override_options::override_option_rows(ctx, crossover, pins().ok())
 }
 
 /// A read-only `Legacy: <name>` row while the game (or the global default) is on Legacy. The id is

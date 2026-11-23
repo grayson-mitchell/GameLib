@@ -11,5 +11,7 @@
 //! install check) or a value field of the op's arguments that the caller fills (the stored override,
 //! the process monitor's phase).
 
+pub mod creation;
 pub mod launch;
+pub mod override_options;
 pub mod preflight;
