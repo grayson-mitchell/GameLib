@@ -78,6 +78,7 @@ import { isEpicServiceOffline } from '../utils'
 import { logWarning, LogPrefix } from '../logger'
 import type { NileRegisterData } from '../../common/types/nile'
 import type { ManagerDeps, StoreManagers, Stores } from '../services/types'
+import type { RustInvokeDeps } from '../host/rustInvokeDeps'
 
 /** The slices the runner auth channels read: the library managers and the per-runner stores. */
 export interface RunnerAuthFlowDeps extends DialogBoxDeps {
@@ -96,6 +97,8 @@ export interface RunnerAuthFlowDeps extends DialogBoxDeps {
   /** The Nile login-data single-flight the amazon login read joins (66.4-11). */
   nileRuntime: Pick<ManagerDeps['nileRuntime'], 'loginFlight'>
   paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath' | 'userData'>
+  /** The sign-outs' `clearCache` empties the Rust wiki cache through it (86-23, 86-27). */
+  requestRustInvoke: RustInvokeDeps['requestRustInvoke']
 }
 
 function logSendFailure(channel: string, error: unknown): void {
@@ -132,7 +135,8 @@ export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {
     loginWindowSeam: deps.loginWindowSeam,
     gogRuntime: deps.gogRuntime,
     nileRuntime: deps.nileRuntime,
-    paths: deps.paths
+    paths: deps.paths,
+    requestRustInvoke: deps.requestRustInvoke
   })
 
   // Source: main.ts:772 -> `isEpicServiceOffline()`.

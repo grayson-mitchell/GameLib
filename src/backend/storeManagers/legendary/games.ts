@@ -58,7 +58,7 @@ import {
   PositiveInteger
 } from './commands/base'
 import { LegendaryCommand } from './commands'
-import { getUmuId } from 'backend/info/wiki'
+import { resolveLaunchUmuId } from 'backend/storeManagers/storeManagerCommon/umuGameId'
 import thirdParty from './thirdParty'
 import { Path } from 'backend/schemas'
 import { mkdirSync } from 'fs'
@@ -1070,11 +1070,11 @@ export default class LegendaryGame implements Game {
       }
 
       if (await isUmuSupported(this.deps, gameSettings)) {
-        const umuId = (await getUmuId(
+        const umuId = await resolveLaunchUmuId(
           this.deps,
           gameInfo.app_name,
           gameInfo.runner
-        )) as string | null
+        )
         if (umuId) {
           commandEnv['GAMEID'] = umuId
         }

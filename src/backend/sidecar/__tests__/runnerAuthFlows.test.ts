@@ -141,7 +141,8 @@ const { handlerRegistry, listenerRegistry } = ipcViews(ipc)
 const flowDeps = {
   ipc,
   managers: { library: { marker: 'library' } },
-  stores: { marker: 'stores' }
+  stores: { marker: 'stores' },
+  requestRustInvoke: jest.fn()
 } as unknown as Parameters<typeof registerRunnerAuthFlows>[0]
 registerRunnerAuthFlows(flowDeps)
 
@@ -397,7 +398,8 @@ describe('injected slices reach the user modules', () => {
   it('logoutLegendary and authGOG pass the registered deps object contents through', async () => {
     const expected = {
       stores: flowDeps.stores,
-      libraryManagers: flowDeps.managers.library
+      libraryManagers: flowDeps.managers.library,
+      requestRustInvoke: flowDeps.requestRustInvoke
     }
     await defined(
       handlerRegistry.get('logoutLegendary'),
@@ -409,5 +411,31 @@ describe('injected slices reach the user modules', () => {
       'a-code'
     )
     expect(mockGOGLogin).toHaveBeenCalledWith(expected, 'a-code')
+  })
+})
+
+describe('86-27: the sign-outs carry the Rust transport so clearCache empties the wiki cache', () => {
+  it('86-27 logoutLegendary, logoutAmazon and logoutGOG pass the registered requestRustInvoke to the user modules', async () => {
+    const carries = expect.objectContaining({
+      requestRustInvoke: flowDeps.requestRustInvoke
+    })
+    await defined(
+      handlerRegistry.get('logoutLegendary'),
+      'logoutLegendary handler'
+    )({})
+    expect(mockLegendaryLogout).toHaveBeenLastCalledWith(carries)
+
+    await defined(
+      handlerRegistry.get('logoutAmazon'),
+      'logoutAmazon handler'
+    )({})
+    expect(mockNileLogout).toHaveBeenLastCalledWith(carries)
+
+    mockGOGLogout.mockImplementation(() => undefined)
+    defined(
+      listenerRegistry.get('logoutGOG')?.[0],
+      'logoutGOG listener'
+    )(undefined)
+    expect(mockGOGLogout).toHaveBeenLastCalledWith(carries)
   })
 })

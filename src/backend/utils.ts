@@ -338,11 +338,10 @@ export interface ClearCacheDeps extends DialogBoxDeps, Partial<RustInvokeDeps> {
 
 /**
  * Whether `clearCache` can reach the wiki cache, which is Rust's (86-23). `requestRustInvoke` is
- * optional because the per-library sign-out paths (`GOGUser`, `NileUser`, `LegendaryUser`) are built
- * by `runnerAuthFlowRegistration.ts`, whose only caller, `sidecar/handlers.ts`, does not pass it yet;
- * those paths leave the wiki cache as it is (public game data, refreshed after 30 days anyway). OWED:
- * once `handlers.ts` is clean, pass `requestRustInvoke` to `registerRunnerAuthFlows`, add it to
- * `userDeps()` there, and make this member required.
+ * optional because not every `ClearCacheDeps` construction passes one. The per-library sign-outs
+ * (`GOGUser`, `NileUser`, `LegendaryUser`) do: `handlers.ts` hands `requestRustInvoke` to
+ * `registerRunnerAuthFlows`, whose `userDeps()` carries it (86-27). OWED: make this member required
+ * and drop this guard once every construction passes one.
  */
 function canClearWikiCache(
   deps: ClearCacheDeps

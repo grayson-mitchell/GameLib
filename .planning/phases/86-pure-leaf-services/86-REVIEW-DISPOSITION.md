@@ -5,7 +5,7 @@ titles: json
 findings:
   - id: CR-41
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "unguarded `await addRecentGame` aborts the post-game callback when the Rust write rejects"
   - id: WR-01
     severity: warning
@@ -33,11 +33,11 @@ findings:
     title: "`getGameMetadataOverride` bound (256) is tighter than the TS schema (4096) and than the crate's own bound (1024)"
   - id: WR-41
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "a failed or refused umu id lookup now aborts a Linux game launch"
   - id: WR-42
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`getGameInfo` and the non-Steam shortcut flow now fail whole on a Rust round-trip rejection"
   - id: WR-61
     severity: warning
@@ -171,8 +171,20 @@ findings:
     severity: info
     disposition: open
     title: "gameDetails round-trip cases now test a double that re-implements the Rust rule"
+  - id: WR-64
+    severity: warning
+    disposition: open
+    title: "`ClearCacheDeps.requestRustInvoke` still optional and `LegendaryUserDeps` lacks it; the silent-skip guard that hid the 86-23 regression is now unreachable in production (round 2, 86-REVIEW-ROUND2.md)"
+  - id: IN-69
+    severity: info
+    disposition: open
+    title: "new 86-27 warning lines omit appName/runner; `getGameInfo` can warn on every call while Rust is not ready (round 2)"
+  - id: IN-70
+    severity: info
+    disposition: open
+    title: "the three `launch()` bodies' best-effort umu lookup is covered only by a source-regex gate, no behavioural launch test (round 2)"
 open: 42
-total: 42
+total: 45
 recorded: 2026-11-22T19:54:24.939Z
 ---
 
@@ -180,15 +192,15 @@ recorded: 2026-11-22T19:54:24.939Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-41 | critical | open | - |
+| CR-41 | critical | fixed | 9acbfc580 |
 | WR-01 | warning | open | - |
 | WR-02 | warning | open | - |
 | WR-03 | warning | open | - |
 | WR-04 | warning | open | - |
 | WR-21 | warning | open | - |
 | WR-22 | warning | open | - |
-| WR-41 | warning | open | - |
-| WR-42 | warning | open | - |
+| WR-41 | warning | fixed | 97b62cb2d |
+| WR-42 | warning | fixed | 92d18429d |
 | WR-61 | warning | open | - |
 | WR-62 | warning | open | - |
 | WR-63 | warning | open | - |
@@ -222,6 +234,9 @@ recorded: 2026-11-22T19:54:24.939Z
 | IN-66 | info | open | - |
 | IN-67 | info | open | - |
 | IN-68 | info | open | - |
+| WR-64 | warning | open | 86-REVIEW-ROUND2.md |
+| IN-69 | info | open | 86-REVIEW-ROUND2.md |
+| IN-70 | info | open | 86-REVIEW-ROUND2.md |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
