@@ -6,13 +6,15 @@
  *    `body.nord-light` block in themes.scss, every `body.nord-light`-scoped rule in
  *    any other frontend stylesheet, the thumbnail base-override literal, and the
  *    resolved token seed.
- * 2. `gamelib-light` is the pre-change Nord Light, kept verbatim: same flattened
- *    seed, same themes.scss block body (sha256), same component overrides.
+ * 2. `gamelib-light` is GameLib's own light theme (quick 261123-pnl): light
+ *    chrome, one #4c6f99 accent with white labels on every action fill, green
+ *    only as status text, and neutral greys for secondary surfaces. It began as
+ *    the pre-change Nord Light; the verbatim pin was replaced by a pin of the
+ *    new palette, its contrast pairs and its re-paired rules.
  *
  * The guard checks declared literals and resolved tokens. It does NOT check
  * colours computed at render time by `color-mix()` between two palette colours.
  */
-import { createHash } from 'crypto'
 import { readFileSync, readdirSync } from 'fs'
 import { join, relative } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
@@ -121,11 +123,6 @@ const nordLightRules = (): Array<{ file: string; body: string }> =>
   })
 
 const collapse = (text: string): string => text.replace(/\s+/g, ' ').trim()
-const sha256 = (text: string): string =>
-  createHash('sha256').update(text).digest('hex')
-
-const GAMELIB_LIGHT_BODY_SHA256 =
-  '10ab554e9a5929edd5e39f9afc96c412112781e64d2a4d498e36f1b70563c184'
 
 describe('Nord Light uses only the official Nord palette', () => {
   const rules = nordLightRules()
@@ -184,26 +181,173 @@ describe('Nord Light uses only the official Nord palette', () => {
   })
 })
 
-describe('GameLib Light is the pre-change Nord Light', () => {
-  it('its flattened seed equals the pre-change nord-light seed', () => {
-    expect(Object.keys(preChange)).toHaveLength(94)
-    expect(BUILTIN_TOKENS['gamelib-light']).toEqual(preChange)
-  })
-
-  it('its themes.scss block body is the pre-change nord-light body (sha256)', () => {
-    const body = collapse(
-      cssBlock(readStripped(THEMES_SCSS), 'body.gamelib-light')
-    )
-    expect(sha256(body)).toBe(GAMELIB_LIGHT_BODY_SHA256)
-  })
-
-  it('its component overrides carry the pre-change declarations', () => {
-    const buttons = readStripped(join(FRONTEND_ROOT, 'styles/_buttons.scss'))
-    expect(
-      collapse(
-        cssBlock(buttons, 'body.gamelib-light &:not(.is-link):not(:disabled)')
+describe('GameLib Light is a light-chrome, one-accent theme (261123-pnl)', () => {
+  const seed = BUILTIN_TOKENS['gamelib-light'] ?? {}
+  const token = (name: string): string => seed[name] ?? ''
+  const rawBlock = (): string =>
+    cssBlock(readStripped(THEMES_SCSS), 'body.gamelib-light')
+  const noticeSource = (): string =>
+    readStripped(
+      join(
+        FRONTEND_ROOT,
+        'screens/Library/components/LibrarySignInNotice/index.scss'
       )
-    ).toBe('color: var(--neutral-01, #070a0b);')
+    )
+
+  it('D-01: the chrome is light, with legible labels and a seam under the top bar', () => {
+    expect({
+      bar: token('--navbar-background'),
+      activeRow: token('--navbar-active-background'),
+      inactive: token('--navbar-inactive'),
+      active: token('--navbar-active'),
+      accent: token('--navbar-accent'),
+      brandText: token('--brand-text-01'),
+      statusDefaultHover: token('--status-default-hover')
+    }).toEqual({
+      bar: '#e5e9f0',
+      activeRow: '#d8dee9',
+      inactive: '#4c566a',
+      active: '#2e3440',
+      accent: '#2e3440',
+      brandText: '#2e3440',
+      statusDefaultHover: '#2e3440'
+    })
+    const bar = token('--navbar-background')
+    for (const name of [
+      '--navbar-inactive',
+      '--navbar-accent',
+      '--brand-text-01'
+    ]) {
+      expect(contrastRatio(token(name), bar)).toBeGreaterThanOrEqual(4.5)
+    }
+    expect(
+      contrastRatio(
+        token('--navbar-active'),
+        token('--navbar-active-background')
+      )
+    ).toBeGreaterThanOrEqual(4.5)
+    expect(
+      contrastRatio(token('--status-default-hover'), bar)
+    ).toBeGreaterThanOrEqual(3)
+    expect(collapse(rawBlock())).toMatch(
+      /\.NavShell__navbar \{ border-bottom-color: var\(--neutral-04\); \}/
+    )
+  })
+
+  it('D-02: one accent family drives every action fill', () => {
+    expect(token('--primary')).toBe('#4c6f99')
+    expect(token('--primary-hover')).toBe('#3f5f86')
+    for (const name of [
+      '--accent',
+      '--install-button',
+      '--secondary-button',
+      '--success-button',
+      '--brand-primary'
+    ]) {
+      expect([name, token(name)]).toEqual([name, token('--primary')])
+    }
+    for (const name of [
+      '--accent-overlay',
+      '--brand-primary-hover',
+      '--status-success-hover',
+      '--text-hover'
+    ]) {
+      expect([name, token(name)]).toEqual([name, token('--primary-hover')])
+    }
+    expect(token('--text-tertiary')).toBe('#ffffff')
+    expect(
+      contrastRatio(token('--text-tertiary'), token('--primary'))
+    ).toBeGreaterThanOrEqual(4.5)
+    expect(
+      contrastRatio(token('--text-tertiary'), token('--primary-hover'))
+    ).toBeGreaterThanOrEqual(4.5)
+    expect(
+      contrastRatio(token('--accent'), token('--body-background'))
+    ).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('D-03: green is status text only and no Play control is green', () => {
+    expect(token('--success')).toBe('#2f6b4b')
+    for (const surface of [
+      '--body-background',
+      '--navbar-background',
+      '--input-background'
+    ]) {
+      expect(
+        contrastRatio(token('--success'), token(surface))
+      ).toBeGreaterThanOrEqual(4.5)
+    }
+    expect(
+      contrastRatio(token('--success-hover'), token('--body-background'))
+    ).toBeGreaterThanOrEqual(4.5)
+    const raw = rawBlock()
+    const flat = collapse(raw)
+    expect(flat).toContain(
+      '.playIcon { --success: var(--accent); --success-hover: var(--primary-hover); }'
+    )
+    expect(flat).toContain(
+      '.gameConfigContainer .MuiLinearProgress-root { --success: var(--accent); }'
+    )
+    expect(raw).not.toMatch(/^\s*button\.is-primary \{/m)
+    expect(raw).not.toMatch(/^\s*\.button\.is-success \{/m)
+  })
+
+  it('D-04: secondary surfaces are neutral greys with dark text', () => {
+    expect({
+      tertiary: token('--tertiary-button'),
+      tertiaryOverlay: token('--tertiary-button-overlay'),
+      icons: token('--icons-background'),
+      neutral03: token('--neutral-03')
+    }).toEqual({
+      tertiary: '#d8dee9',
+      tertiaryOverlay: '#c8d0dc',
+      icons: '#d8dee9',
+      neutral03: '#b8c2d1'
+    })
+    expect(token('--text-log')).toBe(token('--text-default'))
+    expect(
+      contrastRatio(token('--text-default'), token('--tertiary-button-overlay'))
+    ).toBeGreaterThanOrEqual(4.5)
+    const flat = collapse(rawBlock())
+    for (const rule of [
+      '.genre { background: #e5e9f0 !important; color: #2e3440 !important; }',
+      '.runnerIcon { background: var(--input-background); }',
+      '.button.is-tertiary:not(:disabled) { color: var(--text-default); }'
+    ]) {
+      expect(flat).toContain(rule)
+    }
+  })
+
+  it('D-01: block rules that assumed dark chrome are re-paired', () => {
+    const raw = rawBlock()
+    const flat = collapse(raw)
+    const declared = customProps(raw)
+    expect(flat).toContain(
+      '.gameCard > .gameCardStatus { color: #d0ddff; --success: var(--status-success); }'
+    )
+    expect(flat).toContain(
+      '.heroicVersion:hover { color: var(--primary-hover); }'
+    )
+    expect(flat).toContain('background-color: #c8d0dc;')
+    expect(flat).toContain(
+      '.introjs-nextbutton { color: var(--text-tertiary); }'
+    )
+    expect(declared.get('--osk-button-border')).toBe('var(--navbar-inactive)')
+    expect(raw).not.toMatch(/^\s*\.button\.is-link \{/m)
+    expect(raw).not.toMatch(/^\s*\.currentDownload \{/m)
+  })
+
+  it('D-05: the shared stylesheets scope nothing to gamelib-light beyond the sign-in triangle, tabs and facet row', () => {
+    const buttons = readStripped(join(FRONTEND_ROOT, 'styles/_buttons.scss'))
+    expect(buttons).not.toContain('gamelib-light')
+
+    const notice = noticeSource()
+    expect(collapse(cssBlock(notice, 'body.gamelib-light &'))).toBe(
+      'color: var(--danger);'
+    )
+    expect(
+      contrastRatio(token('--danger'), token('--navbar-background'))
+    ).toBeGreaterThanOrEqual(3)
 
     const navTabs = readStripped(
       join(
@@ -223,16 +367,6 @@ describe('GameLib Light is the pre-change Nord Light', () => {
     )
     expect(filterFocusRow).toMatch(
       /body\.dracula &,\s*body\.nord-light &,\s*body\.gamelib-light & \{/
-    )
-
-    const notice = readStripped(
-      join(
-        FRONTEND_ROOT,
-        'screens/Library/components/LibrarySignInNotice/index.scss'
-      )
-    )
-    expect(collapse(cssBlock(notice, 'body.gamelib-light &'))).toBe(
-      'color: #ffb3b8;'
     )
   })
 })

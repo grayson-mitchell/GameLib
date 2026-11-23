@@ -426,16 +426,19 @@ body.dracula {
   }
 }
 
-/* GameLib Light: the pre-261122-qwk nord-light, kept verbatim. customThemes/__tests__/nordLightPalette.test.ts pins it. */
+/* GameLib Light is GameLib's own light theme (quick 261123-pnl): light chrome,
+   one #4c6f99 accent on every action fill, and green only as status text. It
+   began as the pre-261122-qwk nord-light. customThemes/__tests__/nordLightPalette.test.ts
+   pins it. */
 body.gamelib-light {
   --background-light: #eceff4;
   --body-background: var(--background-light);
   --fav: #a03a45;
-  --accent-overlay: #81a1c1;
-  --navbar-accent: #81a1c1;
+  --accent-overlay: var(--primary-hover);
+  --navbar-accent: #2e3440;
   --background-darker: var(--body-background);
   --current-background: var(--body-background);
-  --navbar-active-background: #60697a; /* lighter than --navbar-background, so the active row stands out */
+  --navbar-active-background: #d8dee9; /* one step darker than the light --navbar-background, so the active row stands out */
   --gradient-body-background: linear-gradient(
     90deg,
     var(--background-light) -32px,
@@ -444,45 +447,49 @@ body.gamelib-light {
   );
   --modal-background: var(--body-background);
   --modal-border: var(--body-background);
-  --primary: #b48ead;
-  --primary-hover: #a17399;
+  --primary: #4c6f99;
+  --primary-hover: #3f5f86;
+  --brand-primary: var(--primary);
+  --brand-primary-hover: var(--primary-hover);
   --danger: #bf616a;
-  --text-tertiary: var(--brand-text-01);
+  --text-tertiary: #ffffff;
   --osk-background: var(--body-background);
   --osk-button-background: var(--input-background);
-  --osk-button-border: var(--navbar-background);
+  --osk-button-border: var(--navbar-inactive);
   --action-icon-hover: var(--accent);
   --action-icon-active: var(--text-default);
-  --navbar-inactive: #ffffff;
-  --navbar-active: #d0ddff;
-  --success-button: #3687a9;
-  --secondary-button: #15a3e0;
-  --icons-background: #6f738f;
-  --tertiary-button: #6f738f;
+  --navbar-inactive: #4c566a;
+  --navbar-active: #2e3440;
+  --status-default-hover: #2e3440;
+  --success-button: var(--primary);
+  --secondary-button: var(--primary);
+  --icons-background: #d8dee9;
+  --tertiary-button: #d8dee9;
+  --tertiary-button-overlay: #c8d0dc;
 
-  --brand-text-01: #e0f9ff;
+  --brand-text-01: #2e3440;
 
   --neutral-06: #2e3440;
-  --neutral-03: #429ec5;
-  --accent: #30444a;
+  --neutral-03: #b8c2d1;
+  --accent: var(--primary);
   --background: var(--background-light);
-  --navbar-background: #4c566a;
+  --navbar-background: #e5e9f0;
   --input-background: #d8dee9;
-  --success: #3e532d;
-  --success-hover: #617550;
+  --success: #2f6b4b;
+  --success-hover: #245238;
   --text-title: #20242c;
   --text-default: var(--text-title);
   --text-secondary: #393b41;
-  --text-hover: #5e81ac;
+  --text-hover: var(--primary-hover);
   --action-icon: #748aa0;
   --status-warning: #b86901;
   --gamecard-title-color: #ccdaf8cc;
   --install-button: var(--primary);
-  --status-success-hover: #5e81ac;
-  --text-log: var(--status-warning);
+  --status-success-hover: var(--primary-hover);
+  --text-log: var(--text-default);
   --tour-popup-background: var(--input-background);
   --tour-bullet-active: var(--accent);
-  --tour-bullet-inactive: var(--accent-overlay);
+  --tour-bullet-inactive: var(--navbar-inactive);
   --tour-popup-title: var(--text-title);
   --tour-popup-skip-color: var(--text-secondary);
   --tour-popup-skip-color-hover: var(--text-title);
@@ -498,39 +505,39 @@ body.gamelib-light {
     color: var(--text-default);
   }
 
+  /* The top bar (#e5e9f0) against the page (#eceff4) is a 1.06:1 step, so the
+     bar-to-page edge needs a seam. NavShell paints this border in the body
+     colour, which hides the seam beneath the selected tab: the card/folder look.
+     --neutral-04 is the tier-2 panel's ::after edge colour. */
+  .NavShell__navbar {
+    border-bottom-color: var(--neutral-04);
+  }
+
   .runnerIcon {
-    background: #88c0d0;
+    background: var(--input-background);
   }
 
   .genre {
-    background: #2e3440 !important;
-    color: #e5e9f0 !important;
+    background: #e5e9f0 !important;
+    color: #2e3440 !important;
   }
 
-  button.is-primary {
+  /* Play pills and circles fill from --success, so re-scope it to the accent. */
+  .playIcon {
+    --success: var(--accent);
+    --success-hover: var(--primary-hover);
+  }
+
+  .gameConfigContainer .MuiLinearProgress-root {
+    --success: var(--accent);
+  }
+
+  .button.is-tertiary:not(:disabled) {
     color: var(--text-default);
   }
 
-  .button.is-success {
-    color: var(--text-default);
-    background-color: #81a1c1;
-  }
-
-  .playIcon circle {
-    fill: var(--status-success);
-  }
-
-  .downIcon circle {
-    fill: var(--primary-active);
-  }
-
-  .button.is-link {
-    color: var(--navbar-active);
-  }
-
-  .currentDownload {
-    color: var(--navbar-active);
-    --success: var(--status-success);
+  .introjs-nextbutton {
+    color: var(--text-tertiary);
   }
 
   .selectFieldWrapper select > option {
@@ -545,14 +552,14 @@ body.gamelib-light {
   }
 
   .heroicVersion:hover {
-    color: var(--navbar-active);
+    color: var(--primary-hover);
   }
   .contextMenu > .MuiPaper-root {
     &,
     & > .MuiMenu-list {
       background-color: var(--input-background);
       .MuiMenuItem-root:hover {
-        background-color: var(--navbar-accent);
+        background-color: #c8d0dc;
       }
     }
   }
@@ -562,7 +569,8 @@ body.gamelib-light {
   }
 
   .gameCard > .gameCardStatus {
-    color: var(--navbar-active);
+    color: #d0ddff;
+    --success: var(--status-success);
   }
 
   .CategoriesManager__Dialog {
