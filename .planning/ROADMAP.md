@@ -648,13 +648,13 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 2/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
+**Plans:** 3/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
 
 Plans:
 **Wave 1**
 - [x] 87-01-PLAN.md — Live macOS gate contract 87-HUMAN-UAT.md (four D-11 items, D-12 signed upgrade), the 82 ownership amendment (D-05) and the SC4 wording (D-23)
 - [x] 87-02-PLAN.md — gamelib-engine and gamelib-wine (+cli) crates, CI wiring, the shared enginePins.json (tracer: engine_pins through the CLI)
-- [ ] 87-03-PLAN.md — Delete-gate machinery: engineWinePortComplete (no rollback flag) and the shim/resolver/twin/view schedule with exact discovery rules
+- [x] 87-03-PLAN.md — Delete-gate machinery: engineWinePortComplete (no rollback flag) and the shim/resolver/twin/view schedule with exact discovery rules
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 87-04-PLAN.md — SpecRunner spawn seam in gamelib-core/gamelib-proc with the spec-tree orphan arm (D-17)
