@@ -531,6 +531,13 @@ impl NativeRouter {
         // (one owner, D-06).
         invoke.insert("listEngineOptions", engine_dispatch::list_engine_options);
         invoke.insert("getDefaultEngine", engine_dispatch::get_default_engine);
+        // Phase 87 (87-49, D-14): recording that the user dismissed an engine notice, the same slice, over
+        // `engine_notice_dismiss`. The notices store is read and written only through the StoreHost, and a
+        // corrupt file is kept (FND-06). The sidecar no longer registers it (one owner, D-06).
+        invoke.insert(
+            "dismissEngineNotice",
+            engine_dispatch::dismiss_engine_notice,
+        );
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -956,6 +963,7 @@ mod tests {
         assert!(engine.contains(&"getPerGameBottleName"), "{engine:?}");
         assert!(engine.contains(&"listEngineOptions"), "{engine:?}");
         assert!(engine.contains(&"getDefaultEngine"), "{engine:?}");
+        assert!(engine.contains(&"dismissEngineNotice"), "{engine:?}");
         for name in engine {
             // The engine slice is invoke-only: no send queue exists for it.
             assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");

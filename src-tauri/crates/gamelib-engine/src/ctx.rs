@@ -24,6 +24,8 @@ use crate::dxvk::{DxvkInstaller, NoDxvk};
 use crate::fallback::Flights;
 use crate::fetch::{Fetch, ReqwestFetch};
 use crate::sinks::{EngineLog, EngineUi, NullEmitter};
+use crate::state::engine_state::EngineStateOwner;
+use crate::state::notices::Notices;
 
 /// The version a context reports (the `User-Agent` of its requests) until the shell sets the app's.
 pub const DEFAULT_APP_VERSION: &str = "0.0.0";
@@ -209,6 +211,11 @@ pub struct EngineCtx {
     /// The fallback engine downloads in flight, by pin id (the single flight of `ensurePinnedEngine`),
     /// and the installs holding a temp directory. In memory only: empty at construction.
     pub fallback: Flights,
+    /// The engine notices store (D-07): opened on first use, never at construction (D-17).
+    pub notices: Notices,
+    /// The engine-state caches, the page pre-flight single flight and the notice sequence (D-05). In
+    /// memory only: empty at construction.
+    pub engine_state: EngineStateOwner,
 }
 
 impl EngineCtx {
@@ -240,6 +247,8 @@ impl EngineCtx {
             crossover_locator: CrossoverLocator::new(),
             cancels: Cancels::default(),
             fallback: Flights::new(),
+            notices: Notices::new(),
+            engine_state: EngineStateOwner::new(),
             host,
             clock,
             platform,

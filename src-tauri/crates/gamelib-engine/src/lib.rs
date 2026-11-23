@@ -26,6 +26,7 @@ pub mod launch;
 pub mod offline;
 pub mod pins;
 pub mod sinks;
+pub mod state;
 #[cfg(feature = "testing")]
 pub mod testing;
 pub mod tool_settings;
@@ -67,6 +68,7 @@ pub const OPS: &[&str] = &[
     "engine_ledger_mark_stopped",
     "engine_list_options",
     "engine_list_override_options",
+    "engine_notice_dismiss",
     "engine_per_game_bottle_name",
     "engine_pins",
     "engine_preflight_crossover",
@@ -74,6 +76,10 @@ pub const OPS: &[&str] = &[
     "engine_run_tool",
     "engine_selection_clear",
     "engine_set_online",
+    "engine_state_get",
+    "engine_state_publish_overlay_exit_notice",
+    "engine_state_publish_overlay_notice",
+    "engine_state_record_decision",
 ];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
@@ -423,6 +429,110 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
             let pin = ids::pin_by_id(&request.pin_id).ok_or_else(|| format!("{op}:bad-args"))?;
             Ok(Value::Bool(fallback::ensure::is_pinned_engine_installed(
                 ctx, pin,
+            )))
+        }
+        // `dismissEngineNotice` (D-14): `{kind: 'no-crossover'}` or `{kind: 'untested-crossover', build}`. The
+        // answer is `{ok}`; any other shape, a build that is not four dotted numbers and a write the store
+        // refused (a corrupt notices file is kept, FND-06) are `{ok: false}` and write nothing more.
+        "engine_notice_dismiss" => {
+            let [dismissal] = args else {
+                return Err(format!("{op}:bad-args"));
+            };
+            Ok(serde_json::json!({ "ok": state::notices::dismiss(ctx, dismissal) }))
+        }
+        // The per-title engine state the game page reads, or `null` (D-10). A non-Steam game's facts are
+        // derived from its stored settings; a caller that gathered the facts itself (a Steam bridge game's
+        // bottle and eligibility) passes them as values in `facts`.
+        "engine_state_get" => {
+            let request: StateGetRequest = decode(op, args)?;
+            let state = match request.facts {
+                None => {
+                    state::engine_state::get_game_engine_state(
+                        ctx,
+                        &request.identity,
+                        &state::engine_state::LiveProbes,
+                    )
+                    .await?
+                }
+                Some(facts) => {
+                    let Some((runner, app_name)) = identity_of(&request.identity) else {
+                        return Ok(Value::Null);
+                    };
+                    let facts = facts
+                        .into_facts(ctx, &runner, &app_name)
+                        .ok_or_else(|| format!("{op}:bad-args"))?;
+                    state::engine_state::get_engine_state(
+                        ctx,
+                        &request.identity,
+                        &facts,
+                        &state::engine_state::LiveProbes,
+                    )
+                    .await?
+                }
+            };
+            Ok(state.map_or(Value::Null, |s| s.to_value()))
+        }
+        // `recordLaunchDecision`: what a launch used, cached and pushed as `engineStateChanged`. Without a
+        // `selection` the decision is an unavailable one and nothing is recorded. The answer is whether a
+        // decision was recorded.
+        "engine_state_record_decision" => {
+            let request: RecordDecisionRequest = decode(op, args)?;
+            let Some(selection) = request.selection else {
+                return Ok(Value::Bool(false));
+            };
+            // The override is the closed grammar, and the bottle a plain bottle name.
+            if !bottles::paths::is_clean_bottle_name(&request.bottle_name)
+                || ids::parse_engine_override_str(&request.override_id) != request.override_id
+            {
+                return Err(format!("{op}:bad-args"));
+            }
+            let preflight = match request.preflight {
+                None | Some(Value::Null) => None,
+                Some(value) => Some(
+                    state::engine_state::crossover_preflight_from_value(&value)
+                        .ok_or_else(|| format!("{op}:bad-args"))?,
+                ),
+            };
+            let facts = request
+                .facts
+                .into_facts(ctx, &request.runner, &request.app_name)
+                .ok_or_else(|| format!("{op}:bad-args"))?;
+            let decision =
+                decision::launch::LaunchDecision::Use(Box::new(decision::launch::LaunchUse {
+                    selection,
+                    preflight,
+                    pin: None,
+                    needs_download: false,
+                    override_id: request.override_id,
+                    log_lines: Vec::new(),
+                }));
+            state::engine_state::record_launch_decision(
+                ctx,
+                &request.runner,
+                &request.app_name,
+                &decision,
+                &request.bottle_name,
+                &facts,
+            );
+            Ok(Value::Bool(true))
+        }
+        // The in-app overlay-unavailable notice for the step that failed; whether it published.
+        "engine_state_publish_overlay_notice" => {
+            let request: OverlayNoticeRequest = decode(op, args)?;
+            Ok(Value::Bool(state::publish::publish_overlay_notice(
+                ctx,
+                &request.runner,
+                &request.app_name,
+                &request.step,
+            )))
+        }
+        // The "game closed soon after starting" notice for an overlay launch; whether it published.
+        "engine_state_publish_overlay_exit_notice" => {
+            let request: GameIdentityRequest = decode(op, args)?;
+            Ok(Value::Bool(state::publish::publish_overlay_exit_notice(
+                ctx,
+                &request.runner,
+                &request.app_name,
             )))
         }
         // G25: true when CrossOver is not installed; never probes.
@@ -817,6 +927,101 @@ impl PrepareRequest {
             register_quietly: true,
         })
     }
+}
+
+/// The identity of a game: the runner and the runner-local app name.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct GameIdentityRequest {
+    runner: String,
+    app_name: String,
+}
+
+/// The argument of `engine_state_publish_overlay_notice`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct OverlayNoticeRequest {
+    runner: String,
+    app_name: String,
+    step: String,
+}
+
+/// The facts about one game a caller gathered itself (the TS-only half of the engine state).
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct FactsRequest {
+    #[serde(default)]
+    bottle: Option<String>,
+    #[serde(default)]
+    state_without_bottle: bool,
+    override_eligible: bool,
+    overlay_eligible: bool,
+    wine_tools_eligible: bool,
+    #[serde(default)]
+    prefix_kind: Option<String>,
+    #[serde(default)]
+    per_game_bottle_name: Option<String>,
+}
+
+impl FactsRequest {
+    /// The facts as the state layer takes them. The effective engine is read from the game's stored
+    /// settings, as every other engine read is. `None` for a `prefixKind` outside the closed set.
+    fn into_facts(
+        self,
+        ctx: &EngineCtx,
+        runner: &str,
+        app_name: &str,
+    ) -> Option<state::engine_state::GameFacts> {
+        if let Some(kind) = &self.prefix_kind {
+            if !["bottle", "plain", "legacy"].contains(&kind.as_str()) {
+                return None;
+            }
+        }
+        Some(state::engine_state::GameFacts {
+            bottle: self.bottle,
+            state_without_bottle: self.state_without_bottle,
+            override_eligible: self.override_eligible,
+            overlay_eligible: self.overlay_eligible,
+            wine_tools_eligible: self.wine_tools_eligible,
+            effective: config::read_engine_for_game(ctx, runner, app_name),
+            prefix_kind: self.prefix_kind,
+            per_game_bottle_name: self.per_game_bottle_name,
+        })
+    }
+}
+
+/// The argument of `engine_state_get`: the identity, and the facts when the caller has them.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct StateGetRequest {
+    identity: Value,
+    #[serde(default)]
+    facts: Option<FactsRequest>,
+}
+
+/// The argument of `engine_state_record_decision`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct RecordDecisionRequest {
+    runner: String,
+    app_name: String,
+    bottle_name: String,
+    #[serde(rename = "override")]
+    override_id: String,
+    #[serde(default)]
+    selection: Option<bottles::registry::EngineSelection>,
+    #[serde(default)]
+    preflight: Option<Value>,
+    facts: FactsRequest,
+}
+
+/// The `{runner, appName}` of an untyped identity.
+fn identity_of(identity: &Value) -> Option<(String, String)> {
+    let object = identity.as_object()?;
+    Some((
+        object.get("runner")?.as_str()?.to_string(),
+        object.get("appName")?.as_str()?.to_string(),
+    ))
 }
 
 /// The argument of `engine_cx_resolve_bin_dir`.

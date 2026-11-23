@@ -16,7 +16,7 @@ import type {
   WineVersionInfo,
   WinetricksQueueState
 } from '../../types'
-import type { EngineOption } from '../engine'
+import type { EngineNoticeDismissal, EngineOption } from '../engine'
 import type { StoreSearchDeal, StoreSearchResponse } from '../storeSearch'
 import type { GetLogFileArgs } from './logger'
 import type { MetadataOverride } from './gameDetails'
@@ -207,6 +207,13 @@ export interface NativeAsync {
     engineSource: 'stored' | 'derived'
     legacyLabel: string | null
   }>
+  // Phase 87 (87-49, D-14): records that the user dismissed an engine notice (the "no CrossOver" note, or the
+  // untested-CrossOver-build notice for one build), answered by `engine_notice_dismiss`. The notices store is
+  // read and written only through the StoreHost, and a notices file that is not valid JSON is kept as it is, so
+  // such a dismissal answers `{ ok: false }`. It takes exactly one strict dismissal.
+  dismissEngineNotice: (
+    dismissal: EngineNoticeDismissal
+  ) => Promise<{ ok: boolean }>
 }
 
 export interface NativeSync {

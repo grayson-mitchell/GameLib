@@ -874,51 +874,15 @@
     {
       "channel": "dismissEngineNotice",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "no-crossover"
-                  }
-                },
-                "required": [
-                  "kind"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "untested-crossover"
-                  },
-                  "build": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 256
-                  }
-                },
-                "required": [
-                  "kind",
-                  "build"
-                ],
-                "additionalProperties": false
-              }
-            ]
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "dismissal",
+          "type": "{ kind: 'no-crossover' } | { kind: 'untested-crossover', build: string }",
+          "strict": true
+        }
+      ],
+      "returns": "{ ok: boolean }"
     },
     {
       "channel": "downloadRuntime",

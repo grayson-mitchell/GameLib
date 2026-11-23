@@ -12,7 +12,9 @@ use crate::jsutil::js_trim;
 const TESTED_CROSSOVER_BUILDS: [&str; 1] = ["26.3.0.39832"];
 
 const CX_BIN_SUFFIX: &str = "/Contents/SharedSupport/CrossOver/bin";
-const MAX_DISMISSED: usize = 50;
+/// The most dismissed builds the notices store keeps: a longer list is cut to its last entries on the
+/// next write.
+pub const MAX_DISMISSED: usize = 50;
 /// The store key of the builds whose untested notice the user dismissed.
 pub const UNTESTED_DISMISSED_KEY: &str = "dismissedUntestedCrossoverBuilds";
 /// `plutil` reads one key of one plist: a second is plenty.

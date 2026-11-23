@@ -18,7 +18,6 @@ jest.mock('../../constants/environment', () => ({
 }))
 const getGame = jest.fn()
 
-const dismiss = jest.fn()
 const gameState = jest.fn()
 jest.mock('backend/engine/gameEngineState', () => ({
   getGameEngineState: (...a: unknown[]) => gameState(...a)
@@ -62,10 +61,7 @@ const config = createTestGlobalConfig()
 const engineServices = createTestEngineServices()
 const steamBottle = createTestSteamBottle({ stores, config })
 const steamLaunchRuntime = createTestSteamLaunchRuntime()
-const engineState = {
-  ...createTestEngineState(),
-  dismissEngineNotice: (...a: unknown[]) => dismiss(...a)
-} as unknown as ReturnType<typeof createTestEngineState>
+const engineState = createTestEngineState()
 
 describe('engine flows', () => {
   beforeAll(() =>
@@ -88,11 +84,8 @@ describe('engine flows', () => {
     envState.isMac = true
   })
 
-  it('registers the two invoke channels (the other three are native engine channels, Phase 87 Plan 28)', () => {
-    expect([...handlers.keys()].sort()).toEqual([
-      'dismissEngineNotice',
-      'getEngineState'
-    ])
+  it('registers the one invoke channel (the other four are native engine channels, Phase 87 Plans 28 and 49)', () => {
+    expect([...handlers.keys()].sort()).toEqual(['getEngineState'])
   })
 
   it('dispatches a bottle-runtime store to the Steam adapter with the app id', async () => {
@@ -177,20 +170,14 @@ describe('engine flows', () => {
     expect(gameState).not.toHaveBeenCalled()
   })
 
-  it('registers no handle for the three native engine channels (one owner, D-06)', () => {
+  it('registers no handle for the four native engine channels (one owner, D-06)', () => {
     for (const channel of [
       'listEngineOptions',
       'getDefaultEngine',
-      'getPerGameBottleName'
+      'getPerGameBottleName',
+      'dismissEngineNotice'
     ]) {
       expect(handlers.has(channel)).toBe(false)
     }
-  })
-
-  it('passes dismissEngineNotice args[0] through unmodified', async () => {
-    dismiss.mockResolvedValue({ ok: false })
-    const arg = { kind: 'bogus' }
-    await handlers.get('dismissEngineNotice')!({}, arg)
-    expect(dismiss).toHaveBeenCalledWith(arg)
   })
 })

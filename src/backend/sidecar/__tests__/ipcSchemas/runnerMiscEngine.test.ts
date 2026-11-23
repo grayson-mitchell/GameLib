@@ -101,20 +101,9 @@ const engineTable: FixtureTable<typeof engineAsyncArgs> = {
       [{ runner: 'steam', appName: '1', x: 1 }],
       []
     ]
-  },
-  // Phase 87 Plan 28 (D-14): `listEngineOptions`, `getDefaultEngine` and `getPerGameBottleName` are native
-  // `engine` channels; their vectors are in `nativeChannels.json`.
-  dismissEngineNotice: {
-    valid: [
-      [{ kind: 'no-crossover' }],
-      [{ kind: 'untested-crossover', build: '25.0.1' }]
-    ],
-    invalid: [
-      [{ kind: 'untested-crossover' }],
-      [{ kind: 'other' }],
-      [{ kind: 'no-crossover', build: 'x' }]
-    ]
   }
+  // Phase 87 Plans 28 and 49 (D-14): `listEngineOptions`, `getDefaultEngine`, `getPerGameBottleName` and
+  // `dismissEngineNotice` are native `engine` channels; their vectors are in `nativeChannels.json`.
 }
 
 // D-12: push schemas are typing only, never parsed at runtime; the fixture pins the shape the

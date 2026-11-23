@@ -87,7 +87,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // getDefaultEngine, getPerGameBottleName, dismissEngineNotice)
   // Phase 87 Plan 28 (D-14): invoke 5 -> 2 -- `getPerGameBottleName`, `listEngineOptions` and
   // `getDefaultEngine` are native `engine` channels.
-  'engineFlowRegistration.ts': { invoke: 2, send: 0 },
+  // Phase 87 Plan 49 (D-14): invoke 2 -> 1 -- `dismissEngineNotice` is a native `engine` channel too.
+  'engineFlowRegistration.ts': { invoke: 1, send: 0 },
   'dialogFlowRegistration.ts': { invoke: 1, send: 0 },
   'downloadQueueFlowRegistration.ts': { invoke: 1, send: 4 },
   // Quick 261027-ch9 (2026-10-27): invoke 14 -> 15 -- getGamelibFixStatus

@@ -12,6 +12,9 @@
 //! context spawns nothing, connects to nothing and waits for nothing: the HTTP client is built on
 //! first use. Until [`install`] has run, an op answers `<op>:not-ready` (see `wine_dispatch`).
 //!
+//! 87-49 (D-14): `dismissEngineNotice` is a native `engine` channel too, over `engine_notice_dismiss`, and the
+//! context's notices store opens on first use, so [`install`] reads no file (D-17).
+//!
 //! 87-28 (D-14, D-25 (b)): the `engine` native slice serves `getPerGameBottleName`, `listEngineOptions`
 //! and `getDefaultEngine` over the crate's `engine_*` ops, and the context's `default_wine` and
 //! `crossover_bin_dir` hooks are filled here from `gamelib-wine`'s discovery (the shell depends on both
@@ -622,6 +625,51 @@ async fn get_default_engine_channel(
 /// stored, answered by the crate's `engine_default_engine`.
 pub(crate) fn get_default_engine(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
     Box::pin(get_default_engine_channel(engine_ctx().cloned(), args))
+}
+
+/// `dismissEngineNotice`'s one argument: `{kind: 'no-crossover'}` or `{kind: 'untested-crossover', build}`,
+/// each strict, the build 1 to 256 units. Anything else is the union's one rejection. A build that is not
+/// four dotted numbers decodes (the zod schema never held that rule) and is refused by the op as
+/// `{ok: false}`.
+fn parse_dismissal_args(args: &[Value]) -> Result<Vec<Value>, Rejection> {
+    let map = one_object(args)?;
+    let kind = map.get("kind").and_then(Value::as_str);
+    let valid = match kind {
+        Some("no-crossover") => map.len() == 1,
+        Some("untested-crossover") => {
+            map.len() == 2 && bounded_string(map.get("build"), 256, "0.build").is_ok()
+        }
+        _ => false,
+    };
+    if !valid {
+        return Err(("0", "invalid_union"));
+    }
+    Ok(vec![Value::Object(map.clone())])
+}
+
+/// The body of `dismissEngineNotice`: decode first, then the crate's `engine_notice_dismiss`, which
+/// answers `{ok}`. The kind and the build are the renderer's, so the op re-checks both and never takes a
+/// path or a store name from them (T-87-50).
+async fn dismiss_engine_notice_channel(
+    engine: Option<Arc<EngineCtx>>,
+    args: Vec<Value>,
+) -> Result<Value, String> {
+    let op_args = parse_dismissal_args(&args)
+        .map_err(|(path, code)| invalid_args("dismissEngineNotice", &[path], &[code]))?;
+    let engine = engine.ok_or_else(|| "dismissEngineNotice: not ready".to_string())?;
+    run_engine_op(
+        engine,
+        "engine_notice_dismiss",
+        op_args,
+        "dismissEngineNotice: the dismissal did not finish",
+    )
+    .await
+}
+
+/// The native `dismissEngineNotice` handler (slice `engine`, D-14): records that the user dismissed an
+/// engine notice in the notices store, through the StoreHost, answering `{ok}`.
+pub(crate) fn dismiss_engine_notice(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(dismiss_engine_notice_channel(engine_ctx().cloned(), args))
 }
 
 /// The `engine_set_online` `rustInvoke` arm (87-31, D-17): the sidecar's online monitor reporting its
@@ -1416,6 +1464,176 @@ mod tests {
         let game = serde_json::json!({"runner": "gog", "appName": "1234"});
         let rows = block(list_engine_options_channel(Some(engine), vec![game])).unwrap();
         assert!(rows.is_array(), "{rows}");
+    }
+
+    #[test]
+    fn dismiss_engine_notice_decodes_the_two_strict_arms_and_nothing_else() {
+        let none = serde_json::json!({"kind": "no-crossover"});
+        assert_eq!(parse_dismissal_args(&[none.clone()]), Ok(vec![none]));
+        let build = serde_json::json!({"kind": "untested-crossover", "build": "27.0.0.1"});
+        assert_eq!(parse_dismissal_args(&[build.clone()]), Ok(vec![build]));
+        // A build the op will refuse still decodes: the schema never held that rule.
+        let odd = serde_json::json!({"kind": "untested-crossover", "build": "1.2.3"});
+        assert_eq!(parse_dismissal_args(&[odd.clone()]), Ok(vec![odd]));
+        let long = "9".repeat(257);
+        let cases: Vec<(Vec<Value>, Rejection)> = vec![
+            (vec![], ("(args)", "too_small")),
+            (vec![Value::Null], ("0", "invalid_type")),
+            (
+                vec![serde_json::json!("no-crossover")],
+                ("0", "invalid_type"),
+            ),
+            (vec![serde_json::json!({})], ("0", "invalid_union")),
+            (
+                vec![serde_json::json!({"kind": "other"})],
+                ("0", "invalid_union"),
+            ),
+            (vec![serde_json::json!({"kind": 5})], ("0", "invalid_union")),
+            (
+                vec![serde_json::json!({"kind": "no-crossover", "extra": 1})],
+                ("0", "invalid_union"),
+            ),
+            (
+                vec![serde_json::json!({"kind": "untested-crossover"})],
+                ("0", "invalid_union"),
+            ),
+            (
+                vec![serde_json::json!({"kind": "untested-crossover", "build": ""})],
+                ("0", "invalid_union"),
+            ),
+            (
+                vec![serde_json::json!({"kind": "untested-crossover", "build": 5})],
+                ("0", "invalid_union"),
+            ),
+            (
+                vec![serde_json::json!({"kind": "untested-crossover", "build": long})],
+                ("0", "invalid_union"),
+            ),
+            (
+                vec![serde_json::json!({"kind": "untested-crossover", "build": "1.2.3.4", "x": 1})],
+                ("0", "invalid_union"),
+            ),
+            (
+                vec![serde_json::json!({"kind": "no-crossover"}), Value::Null],
+                ("(args)", "too_big"),
+            ),
+        ];
+        for (args, expected) in cases {
+            assert_eq!(parse_dismissal_args(&args), Err(expected), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn dismiss_engine_notice_rejects_before_the_context_and_answers_not_ready() {
+        let err = block(dismiss_engine_notice_channel(None, vec![Value::Null])).unwrap_err();
+        assert!(err.starts_with(IPC_INVALID_ARGS_MARKER), "{err}");
+        assert_eq!(
+            rejection(&err),
+            (vec!["0".to_string()], vec!["invalid_type".to_string()])
+        );
+        // The rejection never echoes the renderer's value.
+        let secret = serde_json::json!({"kind": "no-crossover", "leak": "/Users/someone/secret"});
+        let err = block(dismiss_engine_notice_channel(None, vec![secret])).unwrap_err();
+        assert!(!err.contains("someone"), "{err}");
+        assert_eq!(
+            block(dismiss_engine_notice_channel(
+                None,
+                vec![serde_json::json!({"kind": "no-crossover"})]
+            ))
+            .unwrap_err(),
+            "dismissEngineNotice: not ready"
+        );
+    }
+
+    #[test]
+    fn dismiss_engine_notice_writes_the_store_through_the_host_and_installing_reads_no_file() {
+        let home = gamelib_testutil::FakeHome::new("engine-notices-");
+        let engine = engine_with_path(&home, None);
+        let store = home.root().join("store_cache/steam_engine_notices.json");
+        // Building the context opened nothing and made no file (D-17): the first use loads the store.
+        assert!(!engine.notices.is_loaded());
+        assert!(!store.exists());
+        let refused = block(dismiss_engine_notice_channel(
+            Some(Arc::clone(&engine)),
+            vec![serde_json::json!({"kind": "untested-crossover", "build": "1.2.3"})],
+        ))
+        .unwrap();
+        assert_eq!(refused, serde_json::json!({"ok": false}));
+        assert!(engine.notices.is_loaded(), "the first use loaded the store");
+        assert!(!store.exists(), "a refused dismissal wrote nothing");
+        let done = block(dismiss_engine_notice_channel(
+            Some(Arc::clone(&engine)),
+            vec![serde_json::json!({"kind": "untested-crossover", "build": "27.0.0.1"})],
+        ))
+        .unwrap();
+        assert_eq!(done, serde_json::json!({"ok": true}));
+        let text = std::fs::read_to_string(&store).unwrap();
+        assert!(
+            text.contains("\"dismissedUntestedCrossoverBuilds\""),
+            "{text}"
+        );
+        assert!(text.contains("27.0.0.1"), "{text}");
+        assert!(text.contains("__timestamp"), "{text}");
+        let none = block(dismiss_engine_notice_channel(
+            Some(engine),
+            vec![serde_json::json!({"kind": "no-crossover"})],
+        ))
+        .unwrap();
+        assert_eq!(none, serde_json::json!({"ok": true}));
+        let text = std::fs::read_to_string(&store).unwrap();
+        assert!(text.contains("noCrossoverNoteDismissed"), "{text}");
+        assert!(
+            text.contains("27.0.0.1"),
+            "the earlier dismissal stays: {text}"
+        );
+    }
+
+    #[test]
+    fn install_builds_a_context_whose_notices_are_not_loaded_and_the_first_state_loads_them() {
+        let home = gamelib_testutil::FakeHome::new("engine-state-boot-");
+        let userdata = home.root().join("userData");
+        let store = userdata.join("store_cache/steam_engine_notices.json");
+        // A notices file already on disk: building the context must not read it.
+        std::fs::create_dir_all(store.parent().unwrap()).unwrap();
+        std::fs::write(&store, "not json {").unwrap();
+        let ctx = build_ctx(
+            Arc::new(StoreHost::new()),
+            &userdata,
+            home.root().to_path_buf(),
+            home.root().join("tmp"),
+            Arc::new(Pushes::default()),
+            Arc::new(ShellEngineUi::silent(Arc::new(Pushes::default()))),
+            Shutdown::new(),
+        );
+        assert!(!ctx.notices.is_loaded());
+        let siblings = |dir: &Path| std::fs::read_dir(dir).unwrap().count();
+        assert_eq!(
+            siblings(store.parent().unwrap()),
+            1,
+            "no backup made at boot"
+        );
+        // The first engine_state_get loads it (a non-macOS host answers null, after the load or before:
+        // the load is lazy to the first notice read, which a state read makes).
+        let engine = Arc::new(ctx);
+        let answer = block(run_engine_op(
+            Arc::clone(&engine),
+            "engine_state_get",
+            vec![serde_json::json!({"identity": {"runner": "gog", "appName": "1"}})],
+            "failed",
+        ))
+        .unwrap();
+        assert!(answer.is_null() || answer.is_object(), "{answer}");
+        let read = block(run_engine_op(
+            Arc::clone(&engine),
+            "engine_notice_dismiss",
+            vec![serde_json::json!({"kind": "no-crossover"})],
+            "failed",
+        ))
+        .unwrap();
+        // The corrupt file was only read and refused: kept byte for byte (FND-06).
+        assert_eq!(read, serde_json::json!({"ok": false}));
+        assert!(engine.notices.is_loaded());
+        assert_eq!(std::fs::read_to_string(&store).unwrap(), "not json {");
     }
 
     #[test]

@@ -3,8 +3,8 @@
  *
  * One store-agnostic domain replaces the three Steam-named engine channels.
  *
- *   invoke (ipcMain.handle, 2): getEngineState, dismissEngineNotice (`listEngineOptions`,
- *     `getDefaultEngine` and `getPerGameBottleName` are native `engine` channels since 87-28)
+ *   invoke (ipcMain.handle, 1): getEngineState (`listEngineOptions`, `getDefaultEngine` and
+ *     `getPerGameBottleName` are native `engine` channels since 87-28, `dismissEngineNotice` since 87-49)
  *   push (sendFrontendMessage): engineStateChanged
  *
  * Renderer args[0] is passed UNCAST to the module guards (engineKeyFor / asNonSteamIdentity /
@@ -110,8 +110,8 @@ async function getEngineStateFor(
 }
 
 /**
- * Registers the two engine invoke channels (`getEngineState`, `dismissEngineNotice`; the other three are
- * native `engine` channels, 87-28). Invoke channels use
+ * Registers the one engine invoke channel (`getEngineState`; the other four are native `engine` channels,
+ * 87-28 and 87-49). Invoke channels use
  * `ipcMain.handle`; the `engineStateChanged` push is the boot-built engine state's publisher.
  */
 export function registerEngineFlows(deps: EngineFlowDeps): void {
@@ -121,13 +121,8 @@ export function registerEngineFlows(deps: EngineFlowDeps): void {
       getEngineStateFor(deps, args[0])
   )
 
-  // Phase 87 (87-28, D-14): `listEngineOptions`, `getDefaultEngine` and `getPerGameBottleName` are native
-  // `engine` channels (the Rust `engine_list_options`, `engine_default_engine` and
-  // `engine_per_game_bottle_name`); the sidecar registers no handle for any of them (one owner, D-06).
-
-  deps.ipc.handle(
-    'dismissEngineNotice',
-    async (_event: unknown, ...args: unknown[]) =>
-      deps.engineState.dismissEngineNotice(args[0])
-  )
+  // Phase 87 (87-28, 87-49, D-14): `listEngineOptions`, `getDefaultEngine`, `getPerGameBottleName` and
+  // `dismissEngineNotice` are native `engine` channels (the Rust `engine_list_options`,
+  // `engine_default_engine`, `engine_per_game_bottle_name` and `engine_notice_dismiss`); the sidecar
+  // registers no handle for any of them (one owner, D-06).
 }

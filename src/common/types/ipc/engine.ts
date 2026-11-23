@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import type { EngineNoticeDismissal, EngineState } from '../engine'
+import type { EngineState } from '../engine'
 import { nonEmptyString, type InvokeFns, type PushFns } from './schemaTypes'
 
 // Runner here is a plain string, not the Runner union: the sidecar dispatches Steam to its
@@ -10,29 +10,20 @@ const gameIdentity = z.strictObject({
   appName: nonEmptyString()
 })
 
-// The renderer constructs both arms itself, so they are strict.
-const noticeDismissal = z.union([
-  z.strictObject({ kind: z.literal('no-crossover') }),
-  z.strictObject({
-    kind: z.literal('untested-crossover'),
-    build: nonEmptyString(256)
-  })
-]) as z.ZodType<EngineNoticeDismissal, EngineNoticeDismissal>
-
 // Phase 61 Plan 13 (D-12): one store-agnostic engine domain. A game is identified by
 // runner + appName; Steam is dispatched to its adapter by the sidecar.
 export const engineAsyncArgs = {
-  getEngineState: z.tuple([gameIdentity]),
+  getEngineState: z.tuple([gameIdentity])
   // Phase 87 (87-28, D-14): `listEngineOptions` and `getDefaultEngine` are native `engine` channels too
   // (`nativeChannels.json`); the Rust decode accepts a game identity or `{ appName: 'default' }`, strict.
   // Phase 87 (87-28, D-14): `getPerGameBottleName` is a native `engine` channel (`nativeChannels.json`);
   // the strict identity decode lives in the Rust `parse_game_identity`.
-  dismissEngineNotice: z.tuple([noticeDismissal])
+  // Phase 87 (87-49, D-14): `dismissEngineNotice` is a native `engine` channel too; its strict two-arm
+  // decode lives in the Rust `parse_dismissal_args` and its vectors in `nativeChannels.json`.
 }
 
 interface EngineAsyncReturns {
   getEngineState: Promise<EngineState | null>
-  dismissEngineNotice: Promise<{ ok: boolean }>
 }
 
 export type EngineAsync = InvokeFns<typeof engineAsyncArgs, EngineAsyncReturns>
