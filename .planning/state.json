@@ -556,26 +556,11 @@
     {
       "number": "87",
       "name": "Engine, Wine and tools",
-      "status": "in_progress"
+      "status": "pending"
     },
     {
       "number": "88",
-      "name": "Launch scaffolding and known fixes",
-      "status": "pending"
-    },
-    {
-      "number": "88.1",
-      "name": "Launch builders and prepare steps",
-      "status": "pending"
-    },
-    {
-      "number": "88.2",
-      "name": "Command runner and game processes",
-      "status": "pending"
-    },
-    {
-      "number": "88.3",
-      "name": "Launch funnel, re-adoption and the live gate",
+      "name": "Launch pipeline",
       "status": "pending"
     },
     {
@@ -616,7 +601,7 @@
     {
       "number": "94",
       "name": "Humble Bundle and shortcuts",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "95",
@@ -655,9 +640,9 @@
     }
   ],
   "next": {
-    "command": "/gsd-progress --next",
+    "command": "/gsd:progress --next",
     "label": "Advance to the next step",
-    "reason": "Phase 31 of 49 · 100% · executing"
+    "reason": "Phase 94 of 22 · 100% · executing"
   },
-  "updated_at": "2026-11-24T16:22:16.935Z"
+  "updated_at": "2026-11-23T20:37:27.006Z"
 }

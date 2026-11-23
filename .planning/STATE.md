@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 milestone: v0.11
 milestone_name: Node Sidecar Retirement
-current_phase: 87
-current_phase_name: Engine, Wine and tools
+current_phase: 94
+current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 87-67-PLAN.md
-last_updated: "2026-11-24T12:08:05.664Z"
+stopped_at: Completed 94-01-PLAN.md
+last_updated: "2026-11-23T20:37:29.660Z"
 last_activity: 2026-11-24
-last_activity_desc: Phase 87 execution started
-state_head: 216df4c62bfdc71d6a3856d993bb95d0e298459a
+last_activity_desc: Phase 94 execution started
+state_head: 647748bf7fd6eebeaf6404cdc45f194a547d82eb
 progress:
   total_phases: 22
   completed_phases: 23
-  total_plans: 220
+  total_plans: 209
   completed_plans: 531
   percent: 100
 ---
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-20)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 87 — Engine, Wine and tools
+**Current focus:** Phase 94 — Humble Bundle and shortcuts
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 72 of 73
-Status: Ready to execute
-Last activity: 2026-11-24 — Phase 87 execution started
+Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
+Plan: 2 of 32
+Status: Ready to execute (94-02 next; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-01 (live macOS gate contract 94-HUMAN-UAT.md authored, 82 ownership amendment: humbleConfigStore 94 -> 92, timestampStore 94 -> 88)
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -471,15 +471,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P57 | not recorded | 2 tasks | 12 files |
 | Phase 87 P58 | 280min | 3 tasks | 21 files |
 | Phase 87 P59 | 6h25m | 3 tasks | 3 files |
-| Phase 87 P60 | 4 min | 3 tasks | 7 files |
-| Phase 87 P61 | 12 min | 3 tasks | 6 files |
-| Phase 87 P62 | 20 min | 2 tasks | 8 files |
-| Phase 87 P64 | 75 min | 3 tasks | 5 files |
-| Phase 87 P65 | 14 min | 2 tasks | 3 files |
-| Phase 87 P63 | 23 min | 3 tasks | 6 files |
-| Phase 87 P66 | 15min | 2 tasks | 4 files |
-| Phase 87 P70 | 15 min | 2 tasks | 10 files |
-| Phase 87 P67 | 30 min | 2 tasks | 7 files |
+| Phase 94 P01 | 15min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -530,16 +522,6 @@ Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archi
 - Phase 66.2 inserted after Phase 66: Split from Phase 66 at plan time (2026-11-10): ~50 plans at full depth; see ROADMAP § Phase 66
 - Phase 66.3 inserted after Phase 66: Split from Phase 66 at plan time (2026-11-10): ~50 plans at full depth; see ROADMAP § Phase 66
 - Phase 66.4 inserted after Phase 66.3: Split from Phase 66.3 at plan time (2026-11-11, D-66.3-04): long tail, census-to-test flip, poller revive, live macOS smoke + Windows UAT
-- Phase 91 edited: edited fields: depends_on 90.2 -> 88 (Lane B); v0.11 lane map added 2026-11-24
-- Phase 93 edited: edited fields: depends_on 92 -> 90.1, 92; v0.11 lane map added 2026-11-24
-- Phase 94 edited: edited fields: depends_on 93 -> 86 (Lane C); v0.11 lane map added 2026-11-24
-- Phase 95 edited: edited fields: research note: runs in Lane A beside 91-93; v0.11 lane map added 2026-11-24
-- Phase 98 edited: edited fields: depends_on 94, 97 -> 93, 94, 97; v0.11 lane map added 2026-11-24
-- Phase 88 split at plan time (2026-11-25, 88-CONTEXT D-30): 88 renamed "Launch scaffolding and known fixes" (SVC-03 part 1 of 4)
-- Phase 88.1 inserted after Phase 88: Launch builders and prepare steps (D-30, SVC-03 part 2 of 4)
-- Phase 88.2 inserted after Phase 88.1: Command runner and game processes (D-30, SVC-03 part 3 of 4)
-- Phase 88.3 inserted after Phase 88.2: Launch funnel, re-adoption and the live gate (D-30, SVC-03 part 4 of 4)
-- Phases 89 and 91 edited: depends_on 88 -> 88.3; Lane A and Lane B lane map updated (2026-11-25)
 
 ### Decisions
 
@@ -1031,21 +1013,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-58: push-and-build with dry_run=true; D-10 accepted as met by the operator; D-12 gate blocked (a dry run uploads no artifact)
 - [Phase 87]: 87-58: Windows-only test reds (twelve CI runs) fixed by #[cfg(unix)] gating and a leading-tilde fix in tools/dxvk.rs, not by loosening assertions
 - [Phase 87]: 87-59: the live gate scored item 1 issue, item 2 pass, item 3 blocked, item 4 issue; the offline refusal, Winetricks target prefix and wine-manager install of never-installed releases go to /gsd-plan-phase 87 --gaps; the engine-log wiring is the deferred decision
-- [Phase 87]: 87-60: re-run item 7 (bottle removal) runs as its own launch 4 after launches 1-3 with the sibling compare app closed; every required literal is CONDITIONAL on 87-61's engine log, re-checked by 87-69 Task 1
-- [Phase 87]: 87-61: the engine log writes through a literal shell_log_at(level, &redacted) call so the category-only gate can require the redactor's output at the call site
-- [Phase 87]: 87-61: the redactor removes the home and account name plus secret/account pairs, argument lines, URL userinfo/query and caps a line at 512 UTF-16 units; other absolute paths and game keys stay (87-69 item 2 is the live check)
-- [Phase 87]: 87-61: gamelib_log::sanitize::truncate_utf16 is now pub so the shell reuses the one cut rule
-- [Phase 87]: 87-62: a never-installed wine entry's three state keys (isInstalled, hasUpdate, installDir) are defaulted at parse, not normalized at the store (store bytes are D-07 state); the install ignores the renderer's installDir (V5)
-- [Phase 87]: 87-62: wineVersionsUpdated is queued behind the store host's pending change events (StoreHost::post in build_ctx), so the renderer snapshot is patched before the Wine Manager list re-reads it (F4 root cause: push/notify ordering)
-- [Phase 87]: 87-64: a CrossOver target's Wine-tool prefix is the bottle directory from direct_child_dir (wine_cmd::prefix::tool_prefix), never the stored winePrefix; the resolver and build_crossover_game_settings are unchanged — The F3 red test showed the resolver answering engine/crossover with CX_BOTTLE correct and build_env overwriting WINEPREFIX with the stored shared prefix. An unsafe bottle name spawns nothing (T-87-112); an empty name keeps the stored prefix (golden GameLibBottle shape).
-- [Phase 87]: 87-64: a winetricks run ends the verb failed on the closed form "regedit: The file '<path>' was not found" even on exit 0 (D-06 gate fix); the exit-code rule stays the TS's (D-16) — Exit 1 already reached the Winetricks tab; the 87-59 silence was the exit-0 class, because w_try does not abort on a failed regedit import. One fixed sentence, not every err: wine line.
-- [Phase 87]: 87-65: Stop of a CrossOver bottle overlay routes shutdownWine to killBottleWineServerWith (bottle name, CX_ROOT, CX_BOTTLE, 15 s cap) instead of wineserver -k on the stored prefix; failures warn, never throw
-- [Phase 87]: 87-63: F1 (offline refusal did not fire in 87-59) did not reproduce at the dispatch layer, the shell or the TS caller; the offline gate now writes its inputs and verdict as one engine-log line so the 87-69 re-run names the cause
-- [Phase 87]: 87-66: per-game bottle removal target is per_game_bottle_name and only when stored wineCrossoverBottle equals it; a link at the bottle's place spawns nothing (wineserver stop and cxbottle would follow it)
-- [Phase 87]: 87-70: removeGameBottle is a scheduled survivor with deletedBy 98 (no ROADMAP section names uninstaller.ts); the user's 2026-11-24 gap decision 5 authorises the extra EXPECTED_SURVIVORS row (78)
-- [Phase 87]: 87-70: crate-only bottle refusal words (in-use, unsafe-name) read as bad-reply in the closed remove-bottle notice vocabulary; widening it is left to 87-67
-- [Phase 87]: 87-67: uninstall-dialog catalogue keys live in the gamelib namespace (gamelib:uninstall.removeBottle*), because the churn guard forbids changes to upstream catalogues such as gamepage.json
-- [Phase 87]: 87-67: disabled ToggleSwitch label and box use --border-color (4.36/3.73/3.61 against the dialog surface in midnightMirage/gruvbox_dark/dracula); shared component, so every disabled toggle changes
+- [Phase 94]: 94-01: humbleConfigStore TS mirror deletion moves 94 -> 92 and timestampStore 94 -> 88 (D-24); item 3 needs the Desktop-shortcut setting on; item 4 runs with Mac Steam closed
 
 ### Pending Todos
 
@@ -1327,8 +1295,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T12:08:02.967Z
-Stopped at: Completed 87-67-PLAN.md
+Last session: 2026-11-23T20:37:29.528Z
+Stopped at: Completed 94-01-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
