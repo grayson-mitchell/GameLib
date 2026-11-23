@@ -2376,6 +2376,79 @@
     }
   },
   {
+    "id": "resolve-prefix-crossover-padded-bottle-refused",
+    "op": "resolve-prefix",
+    "note": "a CrossOver game whose stored bottle carries leading or trailing whitespace (U+2028 included) falls back to the shared GameLib bottle exactly as an unsafe name does, where the TS used the trimmed name, and a clean name is kept (hand-authored in quick 261124-8f3; deltas.json prefix-refuses-a-padded-bottle-name)",
+    "args": {
+      "inputs": [
+        {
+          "runner": "gog",
+          "appName": "1207658924",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g",
+            "wineVersion": {
+              "type": "crossover"
+            },
+            "wineCrossoverBottle": " Shared "
+          },
+          "effective": {
+            "kind": "override",
+            "id": "crossover",
+            "source": "stored"
+          }
+        },
+        {
+          "runner": "gog",
+          "appName": "1207658924",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g",
+            "wineVersion": {
+              "type": "crossover"
+            },
+            "wineCrossoverBottle": " GameLib-gog-1207658924"
+          },
+          "effective": {
+            "kind": "override",
+            "id": "crossover",
+            "source": "stored"
+          }
+        },
+        {
+          "runner": "gog",
+          "appName": "1207658924",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g",
+            "wineVersion": {
+              "type": "crossover"
+            },
+            "wineCrossoverBottle": "Shared\u2028"
+          },
+          "effective": {
+            "kind": "override",
+            "id": "crossover",
+            "source": "stored"
+          }
+        },
+        {
+          "runner": "gog",
+          "appName": "1207658924",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g",
+            "wineVersion": {
+              "type": "crossover"
+            },
+            "wineCrossoverBottle": "Shared"
+          },
+          "effective": {
+            "kind": "override",
+            "id": "crossover",
+            "source": "stored"
+          }
+        }
+      ]
+    }
+  },
+  {
     "id": "resolve-prefix-per-game-bottle",
     "op": "resolve-prefix",
     "note": "a non-CrossOver game whose stored bottle is its per-game name stays on it",

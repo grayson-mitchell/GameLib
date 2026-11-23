@@ -46,7 +46,10 @@ export function resolveGamePrefix(args: {
   const storedBottle = settings.wineCrossoverBottle
   // (2) a CrossOver game keeps the bottle it already names (D-02, D-05)
   if (settings.wineVersion?.type === 'crossover') {
-    const name = sanitizeBottleName(storedBottle ?? '') ?? 'GameLib'
+    // Only a name the sanitiser leaves unchanged is kept; a padded or unsafe
+    // one falls back to GameLib (quick 261124-8f3).
+    const stored = storedBottle ?? ''
+    const name = sanitizeBottleName(stored) === stored ? stored : 'GameLib'
     return {
       kind: 'bottle',
       bottleName: name,

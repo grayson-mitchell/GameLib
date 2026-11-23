@@ -61,7 +61,7 @@ use sha2::{Digest, Sha256};
 use std::panic::AssertUnwindSafe;
 use tokio_util::sync::CancellationToken;
 
-/// `golden/bottles` holds 146 cases; a later edit may raise this, never lower it.
+/// `golden/bottles` holds 147 cases; a later edit may raise this, never lower it.
 const CASE_FLOOR: usize = 140;
 
 /// The ops this build replays (the state half of the slice).
@@ -1434,6 +1434,7 @@ fn the_documented_deltas_are_exactly_those_this_replay_treats_differently() {
             "conf-log-lines-name-the-bottle-not-its-path",
             "gate-is-in-process-and-cannot-fail",
             "installer-answers-a-bool-and-a-throw-is-a-panic",
+            "prefix-refuses-a-padded-bottle-name",
             "provisioned-answers-false-for-an-unclean-name",
             "removal-goes-through-the-safety-guard",
             "removal-refusal-names-the-bottle-not-its-path",

@@ -12,8 +12,9 @@
 
 use serde_json::Value;
 
+use crate::bottles::paths::is_clean_bottle_name;
 use crate::config::EffectiveEngine;
-use crate::game_engine::{per_game_bottle_name, sanitize_bottle_name};
+use crate::game_engine::per_game_bottle_name;
 use crate::ids::{AUTOMATIC, CROSSOVER};
 use crate::jsutil::prop;
 
@@ -70,12 +71,12 @@ fn resolve_non_legacy(
         .and_then(Value::as_str)
         == Some("crossover");
     if crossover {
+        // Only a name the sanitiser leaves unchanged is kept; a padded or unsafe one falls back to
+        // GameLib (quick 261124-8f3).
         let name = match stored_bottle {
-            None | Some(Value::Null) => sanitize_bottle_name(""),
-            Some(Value::String(text)) => sanitize_bottle_name(text),
-            Some(_) => None,
-        }
-        .unwrap_or_else(|| "GameLib".to_string());
+            Some(Value::String(text)) if is_clean_bottle_name(text) => text.clone(),
+            _ => "GameLib".to_string(),
+        };
         let origin = if name == per_game {
             BottleOrigin::PerGame
         } else {
@@ -174,6 +175,39 @@ mod tests {
             resolve_game_prefix("gog", "1234", &plain, &pinned),
             GamePrefix::Plain {
                 wine_prefix: Some(json!("/p"))
+            }
+        );
+    }
+
+    #[test]
+    fn a_padded_crossover_bottle_falls_back_like_an_unsafe_one() {
+        let shared_gamelib = |bottle: Value| {
+            let settings =
+                json!({"wineVersion": {"type": "crossover"}, "wineCrossoverBottle": bottle});
+            resolve_game_prefix("gog", "1207658924", &settings, &automatic())
+        };
+        let gamelib = GamePrefix::Bottle {
+            bottle_name: "GameLib".to_string(),
+            origin: BottleOrigin::LegacyCrossover,
+            previous_prefix: None,
+        };
+        for refused in [
+            json!(" Shared "),
+            json!(" GameLib-gog-1207658924"),
+            json!("Shared\u{2028}"),
+            json!("a/b"),
+            json!(""),
+            json!(null),
+            json!(7),
+        ] {
+            assert_eq!(shared_gamelib(refused.clone()), gamelib, "{refused}");
+        }
+        assert_eq!(
+            shared_gamelib(json!("Shared")),
+            GamePrefix::Bottle {
+                bottle_name: "Shared".to_string(),
+                origin: BottleOrigin::LegacyCrossover,
+                previous_prefix: None
             }
         );
     }

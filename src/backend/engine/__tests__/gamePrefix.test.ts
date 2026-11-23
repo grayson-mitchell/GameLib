@@ -62,6 +62,19 @@ describe('resolveGamePrefix', () => {
     })
   })
 
+  it('falls back to GameLib for a padded stored CrossOver bottle name', () => {
+    const gameLib = {
+      kind: 'bottle',
+      bottleName: 'GameLib',
+      origin: 'legacy-crossover'
+    }
+    expect(resolve(settings('crossover', ' MyBottle '), cx)).toEqual(gameLib)
+    expect(resolve(settings('crossover', ` ${PER_GAME}`), cx)).toEqual(gameLib)
+    expect(resolve(settings('crossover', 'MyBottle\u2028'), cx)).toEqual(
+      gameLib
+    )
+  })
+
   it.each([cx, auto, pinned])(
     'recognises the per-game bottle under any engine (%#)',
     (effective) => {
