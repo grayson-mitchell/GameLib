@@ -450,11 +450,9 @@ pub(crate) fn remove_recent(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFut
     })
 }
 
-/// The longest `appName` `getGameMetadataOverride` accepts, in UTF-16 code units.
-const OVERRIDE_APP_NAME_MAX_UTF16: usize = 256;
-
 /// Decodes the one `appName` argument of `getGameMetadataOverride`: exactly one string of 1 to
-/// [`OVERRIDE_APP_NAME_MAX_UTF16`] UTF-16 code units.
+/// [`gamelib_info::recent::APP_NAME_MAX_UTF16`] UTF-16 code units, the bound `info_overrides_set`
+/// and `info_overrides_get` already apply (WR-22: a name the set path stored must be readable back).
 fn parse_get_game_metadata_override(args: &[Value]) -> Result<&str, Rejection> {
     let [arg] = args else {
         return Err(("(args)", "invalid_type"));
@@ -465,7 +463,7 @@ fn parse_get_game_metadata_override(args: &[Value]) -> Result<&str, Rejection> {
     if name.is_empty() {
         return Err(("0", "too_small"));
     }
-    if name.encode_utf16().count() > OVERRIDE_APP_NAME_MAX_UTF16 {
+    if name.encode_utf16().count() > gamelib_info::recent::APP_NAME_MAX_UTF16 {
         return Err(("0", "too_big"));
     }
     Ok(name)
@@ -1355,10 +1353,13 @@ mod tests {
     #[test]
     fn get_game_metadata_override_accepts_exactly_one_bounded_non_empty_string() {
         assert_eq!(parse_get_game_metadata_override(&[json!("abc")]), Ok("abc"));
-        assert_eq!(
-            parse_get_game_metadata_override(&[json!("x".repeat(256))]).map(str::len),
-            Ok(256)
-        );
+        // The crate's own bound (1024), so an override stored for a 257-1024 unit name reads back.
+        for len in [256, 257, 1024] {
+            assert_eq!(
+                parse_get_game_metadata_override(&[json!("x".repeat(len))]).map(str::len),
+                Ok(len)
+            );
+        }
         for (args, want) in [
             (vec![], ("(args)", "invalid_type")),
             (vec![json!(1)], ("0", "invalid_type")),
@@ -1366,9 +1367,9 @@ mod tests {
             (vec![json!({})], ("0", "invalid_type")),
             (vec![json!("a"), json!("b")], ("(args)", "invalid_type")),
             (vec![json!("")], ("0", "too_small")),
-            (vec![json!("x".repeat(257))], ("0", "too_big")),
-            // Two UTF-16 units per astral character: 129 of them are 258 units.
-            (vec![json!("\u{1F3AE}".repeat(129))], ("0", "too_big")),
+            (vec![json!("x".repeat(1025))], ("0", "too_big")),
+            // Two UTF-16 units per astral character: 513 of them are 1026 units.
+            (vec![json!("\u{1F3AE}".repeat(513))], ("0", "too_big")),
         ] {
             assert_eq!(
                 parse_get_game_metadata_override(&args),
@@ -1445,7 +1446,8 @@ mod tests {
             tauri::async_runtime::block_on(get_all_game_overrides(Arc::clone(&router_ctx), vec![]));
         assert_eq!(not_ready, Err("getAllGameOverrides: not ready".to_string()));
         // A bad call is rejected with the marker and a fixed literal, before the context.
-        let secret = "SECRET-APP-NAME-".repeat(40);
+        // Over the 1024-unit bound (16 units x 70).
+        let secret = "SECRET-APP-NAME-".repeat(70);
         for bad in [
             tauri::async_runtime::block_on(get_game_metadata_override(
                 Arc::clone(&router_ctx),
