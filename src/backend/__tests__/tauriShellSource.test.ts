@@ -501,7 +501,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 87 plan 36: 154 -> 156, wine_run_command_for_game and wine_tool_call.
     // Phase 87 plan 42: 156 -> 167, the eleven bottle, ledger and selection ops.
     // Phase 87 plan 52: 167 -> 172, engine_launch_select, _arm_deadline, _end, _settings_get and engine_state_get.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(172)
+    // Phase 87 plan 53: 172 -> 173, engine_dialog_displayed.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(173)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1001,7 +1002,10 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'engine_launch_end',
       'engine_launch_settings_get',
       // Phase 87 plan 52: the renderer's getEngineState, through the resolver in `sidecar/engineWineResolvers.ts`.
-      'engine_state_get'
+      'engine_state_get',
+      // Phase 87 plan 53: the renderer's `dialogDisplayed` ack of an `engine:` id, forwarded by `appShellFlowRegistration.ts`
+      // through the `engineDialogDisplayed` shim. PROVEN: `engine_dispatch::tests` drives the arm's decode and not-ready.
+      'engine_dialog_displayed'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

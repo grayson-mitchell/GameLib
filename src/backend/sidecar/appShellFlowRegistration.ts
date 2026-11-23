@@ -211,6 +211,10 @@ import {
   trayIconWireArgs
 } from '../../common/trayIconVariant'
 import { logSendHandlerReached } from './sendChannelObservable'
+import { engineDialogDisplayed } from '../enginewine/launch'
+
+/** The prefix of an ack id Rust's engine dialogs issue (`gamelib-engine` `launch::dialogs`); the TS table's ids never start with it. */
+const ENGINE_ACK_PREFIX = 'engine:'
 
 function logSendFailure(channel: string, error: unknown): void {
   console.warn(
@@ -426,10 +430,19 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   })
 
   // The renderer echoes the correlation id of a showDialog frame once the dialog is on screen
-  // (see ../dialog/displayAck.ts). An unknown or repeated id is ignored.
+  // (see ../dialog/displayAck.ts). An unknown or repeated id is ignored. An id that starts with
+  // `engine:` is one Rust's engine dialogs issued (87-50): it is forwarded to Rust, which logs the
+  // display; every other id is the TS table's own and is acknowledged there.
   deps.ipc.on('dialogDisplayed', (_event: unknown, ...args: unknown[]) => {
     try {
-      deps.dialogs.displayAcks.acknowledge(args[0])
+      const ackId = args[0]
+      if (typeof ackId === 'string' && ackId.startsWith(ENGINE_ACK_PREFIX)) {
+        engineDialogDisplayed(deps, ackId).catch((error) =>
+          logSendFailure('dialogDisplayed', error)
+        )
+        return
+      }
+      deps.dialogs.displayAcks.acknowledge(ackId)
     } catch (error) {
       logSendFailure('dialogDisplayed', error)
     }

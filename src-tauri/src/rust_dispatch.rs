@@ -273,5 +273,6 @@ pub(crate) fn dispatch_rust_channel(
             engine_dispatch::rpc_launch_settings_get(args)
         }
         RustInvokeChannel::EngineStateGet => engine_dispatch::rpc_state_get(args),
+        RustInvokeChannel::EngineDialogDisplayed => engine_dispatch::rpc_dialog_displayed(args),
     }
 }

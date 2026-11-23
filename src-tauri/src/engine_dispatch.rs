@@ -727,6 +727,7 @@ engine_op_arms! {
     rpc_launch_end => "engine_launch_end",
     rpc_launch_settings_get => "engine_launch_settings_get",
     rpc_state_get => "engine_state_get",
+    rpc_dialog_displayed => "engine_dialog_displayed",
 }
 
 #[cfg(test)]
@@ -1204,6 +1205,7 @@ mod tests {
             (rpc_launch_end, "engine_launch_end"),
             (rpc_launch_settings_get, "engine_launch_settings_get"),
             (rpc_state_get, "engine_state_get"),
+            (rpc_dialog_displayed, "engine_dialog_displayed"),
         ] {
             for bad in [
                 vec![],

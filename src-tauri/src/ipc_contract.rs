@@ -195,6 +195,7 @@ pub(crate) enum RustInvokeChannel {
     EngineLaunchEnd,
     EngineLaunchSettingsGet,
     EngineStateGet,
+    EngineDialogDisplayed,
 }
 
 impl RustInvokeChannel {
@@ -371,6 +372,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineLaunchEnd,
         RustInvokeChannel::EngineLaunchSettingsGet,
         RustInvokeChannel::EngineStateGet,
+        RustInvokeChannel::EngineDialogDisplayed,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -547,6 +549,7 @@ impl RustInvokeChannel {
             "engine_launch_end" => Some(RustInvokeChannel::EngineLaunchEnd),
             "engine_launch_settings_get" => Some(RustInvokeChannel::EngineLaunchSettingsGet),
             "engine_state_get" => Some(RustInvokeChannel::EngineStateGet),
+            "engine_dialog_displayed" => Some(RustInvokeChannel::EngineDialogDisplayed),
             _ => None,
         }
     }
@@ -725,6 +728,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineLaunchEnd => "engine_launch_end",
             RustInvokeChannel::EngineLaunchSettingsGet => "engine_launch_settings_get",
             RustInvokeChannel::EngineStateGet => "engine_state_get",
+            RustInvokeChannel::EngineDialogDisplayed => "engine_dialog_displayed",
         }
     }
 }
@@ -3676,6 +3680,18 @@ pub(crate) struct EngineStateGetArgs {
 impl EngineStateGetArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let request = serde_json::from_value(args.first().ok_or_else(|| "engine_state_get:bad-args".to_string())?.clone()).map_err(|_| "engine_state_get:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineDialogDisplayedArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineDialogDisplayedArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_dialog_displayed:bad-args".to_string())?.clone()).map_err(|_| "engine_dialog_displayed:bad-args".to_string())?;
         Ok(Self { request })
     }
 }

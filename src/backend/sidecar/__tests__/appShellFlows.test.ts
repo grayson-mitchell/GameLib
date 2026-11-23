@@ -285,6 +285,7 @@ import type * as protocolModule from '../../protocol'
 import {
   RUST_APP_EXIT,
   RUST_DIALOG_MESSAGE,
+  RUST_ENGINE_DIALOG_DISPLAYED,
   RUST_NOTIFICATION_SHOW,
   RUST_STORE_READ_ONLY_NOTICE,
   RUST_TRAY_SET_ICON,
@@ -555,6 +556,60 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_NOTIFICATION_SHOW, [
       { title: 'GameLib', body: 'Install complete' }
     ])
+  })
+
+  it('87-53 dialogDisplayed (send) forwards an engine: ack id to Rust and does not touch the TS ack table', async () => {
+    const { input, services } = boot()
+    const acknowledge = jest.spyOn(
+      services.host.dialogs.displayAcks,
+      'acknowledge'
+    )
+    writeSend(input, 'dialog-displayed-engine-1', 'dialogDisplayed', [
+      'engine:12'
+    ])
+    await flush()
+
+    expect(mockRequestRustInvoke).toHaveBeenCalledWith(
+      RUST_ENGINE_DIALOG_DISPLAYED,
+      [{ ackId: 'engine:12' }]
+    )
+    expect(acknowledge).not.toHaveBeenCalled()
+  })
+
+  it('87-53 dialogDisplayed (send) keeps acknowledging a TS table id and never forwards it to Rust', async () => {
+    const { input, services } = boot()
+    const acknowledge = jest.spyOn(
+      services.host.dialogs.displayAcks,
+      'acknowledge'
+    )
+    writeSend(input, 'dialog-displayed-ts-1', 'dialogDisplayed', ['ack-1'])
+    await flush()
+
+    expect(acknowledge).toHaveBeenCalledWith('ack-1')
+    expect(
+      mockRequestRustInvoke.mock.calls.some(
+        ([channel]) => channel === RUST_ENGINE_DIALOG_DISPLAYED
+      )
+    ).toBe(false)
+  })
+
+  it('87-53 dialogDisplayed (send) survives a rejected engine forward and still serves the next ack', async () => {
+    const { input, services } = boot()
+    const acknowledge = jest.spyOn(
+      services.host.dialogs.displayAcks,
+      'acknowledge'
+    )
+    mockRequestRustInvoke.mockRejectedValueOnce(
+      new Error('engine_dialog_displayed:bad-args')
+    )
+    writeSend(input, 'dialog-displayed-engine-2', 'dialogDisplayed', [
+      'engine:bad'
+    ])
+    await flush()
+    writeSend(input, 'dialog-displayed-ts-2', 'dialogDisplayed', ['ack-2'])
+    await flush()
+
+    expect(acknowledge).toHaveBeenCalledWith('ack-2')
   })
 
   it('REQ-34.1-05 quit (send) reaches handleExit() -> app.exit() -> the existing app_exit rustInvoke arm', async () => {

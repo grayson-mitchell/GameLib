@@ -47,7 +47,8 @@ describe('rustInvokeArgs', () => {
     // Phase 87 plan 36: 154 -> 156, wine_run_command_for_game and wine_tool_call.
     // Phase 87 plan 42: 156 -> 167, the eleven bottle, ledger and selection ops.
     // Phase 87 plan 52: 167 -> 172, engine_launch_select, _arm_deadline, _end, _settings_get and engine_state_get.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(172)
+    // Phase 87 plan 53: 172 -> 173, engine_dialog_displayed.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(173)
   })
 
   it('parses the store-embed wire fixtures', () => {

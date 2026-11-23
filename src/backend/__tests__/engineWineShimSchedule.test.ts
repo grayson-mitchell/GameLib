@@ -168,6 +168,7 @@ const BOTTLES_SHIM_IMPORTERS: readonly string[] = [
 const LAUNCH_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/launchEngineStep.ts',
   'src/backend/launcher.ts',
+  'src/backend/sidecar/appShellFlowRegistration.ts',
   'src/backend/storeManagers/gog/setup.ts',
   'src/backend/storeManagers/nile/setup.ts'
 ]
@@ -422,6 +423,16 @@ const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_ENGINE_LAUNCH_SETTINGS_GET',
     callers: LAUNCH_SHIM_IMPORTERS,
     deletedBy: 92
+  },
+  // 87-53 (D-02): the renderer's `dialogDisplayed` send is still the app shell's, so an ack id Rust's engine dialogs
+  // issued (the `engine:` prefix) is forwarded to Rust by the shell registration until the dialogs move native (98).
+  {
+    name: 'engineDialogDisplayed',
+    file: 'src/backend/enginewine/launch.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_DIALOG_DISPLAYED',
+    callers: LAUNCH_SHIM_IMPORTERS,
+    deletedBy: 98
   },
   // 87-42 (D-24): the engine selection view, the write-through mirror of Rust's registry. The sync bridge reads
   // (`getBridgeBottleSettings` and the launch settings) stay sync; `registerEngineSelectionView` installs the one

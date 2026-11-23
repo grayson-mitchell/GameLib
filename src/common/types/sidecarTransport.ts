@@ -1324,6 +1324,12 @@ export const RUST_ENGINE_LAUNCH_END = 'engine_launch_end' as const
 export const RUST_ENGINE_LAUNCH_SETTINGS_GET =
   'engine_launch_settings_get' as const
 /**
+ * Phase 87 (87-53, D-02): the renderer's `dialogDisplayed` ack of an engine dialog, over `{ackId}`. Only an id that
+ * starts with `engine:` is forwarded (the ids the TS table issued are acknowledged there). Answers `true` when Rust
+ * was waiting on the id, `false` for a repeated or unknown one. Bounded: it settles an in-memory entry.
+ */
+export const RUST_ENGINE_DIALOG_DISPLAYED = 'engine_dialog_displayed' as const
+/**
  * Phase 87 (87-52, D-23): the renderer's `getEngineState`, one typed call from the resolver in
  * `sidecar/engineWineResolvers.ts`. The argument is `{identity, facts?}`: `identity` is the game (`{runner, appName}`)
  * or `null` when TypeScript found the game ineligible (a native game, a Browser install, an unknown runner, a failing
@@ -1703,7 +1709,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_LAUNCH_ARM_DEADLINE,
   RUST_ENGINE_LAUNCH_END,
   RUST_ENGINE_LAUNCH_SETTINGS_GET,
-  RUST_ENGINE_STATE_GET
+  RUST_ENGINE_STATE_GET,
+  RUST_ENGINE_DIALOG_DISPLAYED
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

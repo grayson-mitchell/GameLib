@@ -1,5 +1,6 @@
 import type { GameSettings } from 'common/types'
 import {
+  RUST_ENGINE_DIALOG_DISPLAYED,
   RUST_ENGINE_LAUNCH_ARM_DEADLINE,
   RUST_ENGINE_LAUNCH_END,
   RUST_ENGINE_LAUNCH_SELECT,
@@ -93,4 +94,16 @@ export async function getLaunchSettings(
   return deps.requestRustInvoke(RUST_ENGINE_LAUNCH_SETTINGS_GET, [
     { key, stored }
   ])
+}
+
+/**
+ * Tells Rust the renderer has an engine dialog on screen (the renderer's `dialogDisplayed` send with an `engine:` ack
+ * id, D-02). Resolves `true` when Rust was waiting on the id, `false` for a repeated or unknown one; rejects with
+ * Rust's category word for an id the crate refused (a bad-shaped id).
+ */
+export async function engineDialogDisplayed(
+  deps: RustInvokeDeps,
+  ackId: string
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_ENGINE_DIALOG_DISPLAYED, [{ ackId }])
 }
