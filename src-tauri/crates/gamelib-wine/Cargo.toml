@@ -1,0 +1,45 @@
+[package]
+name = "gamelib-wine"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+# Tauri-free wine, bottle and runtime services (Phase 87, SVC-02): the wine-manager, bottles,
+# winetricks and the wine-runtime ports from the TypeScript sidecar. No `tauri`, no `keyring`, no
+# environment reads. May depend on `gamelib-engine`; `gamelib-engine` never depends on this crate (D-04).
+gamelib-engine = { path = "../gamelib-engine" }
+gamelib-core = { path = "../gamelib-core" }
+# Persisted state goes through the one store owner (Phase 85), never file I/O of this crate's own.
+gamelib-store = { path = "../gamelib-store" }
+# Every child process (wine, wineserver, winetricks, tar) goes through `gamelib-proc`.
+gamelib-proc = { path = "../gamelib-proc" }
+# Destructive deletes (bottle removal, wine-manager remove, runtime directory) are guarded by `gamelib-safety`.
+gamelib-safety = { path = "../gamelib-safety" }
+# User-facing notice text is resolved through the shared catalog.
+gamelib-i18n = { path = "../gamelib-i18n" }
+# `rt-multi-thread` like gamelib-info's runtime: the shell calls `dispatch_sync` from several plain
+# worker threads, and concurrent `block_on` calls on a current-thread runtime stall. `process`, `fs`
+# and `io-util` are for the wine ports that follow (child output, archive writes, streamed copies).
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "process", "fs", "io-util"] }
+# The `Shutdown` token type; the version gamelib-core already locks.
+tokio-util = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+# Test seams for the golden tests and the CLI (later slices add theirs).
+testing = []
+
+[dev-dependencies]
+gamelib-wine = { path = ".", features = ["testing"] }
+gamelib-testutil = { path = "../gamelib-testutil" }
+tempfile = "3"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"

@@ -176,7 +176,9 @@ describe('Phase 34.4.2 Plan 13 (operator decision D-A) objc2-app-kit NSGraphicsC
  * gamelib-info-cli alone: reqwest, rustls, url, jiff, tokio, serde and serde_json were already
  * locked, so no third-party name enters the tree), and by Phase 86-12 (md-5 0.10, the one new crate
  * of the phase: the anti-cheat data file's change check; its `digest` and `cfg-if` were already
- * locked, research Package Legitimacy Audit verdict OK).
+ * locked, research Package Legitimacy Audit verdict OK), and by Phase 87-02 (gamelib-engine,
+ * gamelib-engine-cli, gamelib-wine and gamelib-wine-cli alone: every dependency was already locked,
+ * so no third-party name enters the tree).
  */
 const CARGO_LOCK_PATH = join(
   __dirname,
@@ -228,8 +230,8 @@ const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "find-msvc-tools", "fixedbitset", "flate2", "fnv", "foldhash", "foreign-types",
   "foreign-types-macros", "foreign-types-shared", "form_urlencoded", "fs_extra", "futures-channel", "futures-core",
   "futures-executor", "futures-io", "futures-lite", "futures-macro", "futures-sink", "futures-task",
-  "futures-util", "gamelib-core", "gamelib-depot", "gamelib-depot-cli", "gamelib-i18n", "gamelib-info", "gamelib-info-cli", "gamelib-log", "gamelib-proc", "gamelib-safety", "gamelib-scan", "gamelib-scan-cli", "gamelib-shell",
-  "gamelib-steamcm", "gamelib-steamcm-cli", "gamelib-steamfiles", "gamelib-steamfiles-cli", "gamelib-steampoll", "gamelib-steampoll-cli", "gamelib-store", "gamelib-store-cli", "gamelib-testutil", "gdk", "gdk-pixbuf",
+  "futures-util", "gamelib-core", "gamelib-depot", "gamelib-depot-cli", "gamelib-engine", "gamelib-engine-cli", "gamelib-i18n", "gamelib-info", "gamelib-info-cli", "gamelib-log", "gamelib-proc", "gamelib-safety", "gamelib-scan", "gamelib-scan-cli", "gamelib-shell",
+  "gamelib-steamcm", "gamelib-steamcm-cli", "gamelib-steamfiles", "gamelib-steamfiles-cli", "gamelib-steampoll", "gamelib-steampoll-cli", "gamelib-store", "gamelib-store-cli", "gamelib-testutil", "gamelib-wine", "gamelib-wine-cli", "gdk", "gdk-pixbuf",
   "gdk-pixbuf-sys", "gdk-sys", "gdkwayland-sys", "gdkx11", "gdkx11-sys", "generic-array",
   "gethostname", "getrandom", "gilrs", "gilrs-core", "gio", "gio-sys",
   "glib", "glib-macros", "glib-sys", "glob", "gobject-sys", "gtk",

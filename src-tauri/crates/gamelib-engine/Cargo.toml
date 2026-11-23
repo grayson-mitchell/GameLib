@@ -1,0 +1,44 @@
+[package]
+name = "gamelib-engine"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+# Tauri-free engine services (Phase 87, SVC-02): the pinned fallback engine, engine selection and the
+# tool resolvers, ported from the TypeScript sidecar. No `tauri`, no `keyring`, no environment reads:
+# directories, clock and platform all arrive in `EngineCtx`. Never depends on `gamelib-wine` (D-04).
+gamelib-core = { path = "../gamelib-core" }
+# Persisted state goes through the one store owner (Phase 85), never file I/O of this crate's own.
+gamelib-store = { path = "../gamelib-store" }
+# Every child process this crate starts goes through `gamelib-proc` (`SpawnClass::Helper`).
+gamelib-proc = { path = "../gamelib-proc" }
+# Destructive deletes (engine prune, runtime directories) are guarded by `gamelib-safety`.
+gamelib-safety = { path = "../gamelib-safety" }
+# User-facing notice text is resolved through the shared catalog.
+gamelib-i18n = { path = "../gamelib-i18n" }
+# `rt-multi-thread` like gamelib-info's runtime: the shell calls `dispatch_sync` from several plain
+# worker threads, and concurrent `block_on` calls on a current-thread runtime stall. `process`, `fs`
+# and `io-util` are for the engine ports that follow (child output, archive writes, streamed copies).
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "process", "fs", "io-util"] }
+# The `Shutdown` token type; the version gamelib-core already locks.
+tokio-util = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+# Test seams for the golden tests and the CLI (later slices add theirs).
+testing = []
+
+[dev-dependencies]
+gamelib-engine = { path = ".", features = ["testing"] }
+gamelib-testutil = { path = "../gamelib-testutil" }
+tempfile = "3"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"

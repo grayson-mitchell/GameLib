@@ -58,6 +58,18 @@ function testsInfoCrate(text: string): boolean {
   return /(^|\s)-p gamelib-info(\s|$)/.test(multiCrateRunLine(text))
 }
 
+// Phase 87 (SVC-02): the engine and wine services are two Tauri-free crate pairs and run in the
+// multi-crate step.
+function testsEngineAndWineCrates(text: string): boolean {
+  const line = multiCrateRunLine(text)
+  return (
+    /(^|\s)-p gamelib-engine(\s|$)/.test(line) &&
+    /(^|\s)-p gamelib-engine-cli(\s|$)/.test(line) &&
+    /(^|\s)-p gamelib-wine(\s|$)/.test(line) &&
+    /(^|\s)-p gamelib-wine-cli(\s|$)/.test(line)
+  )
+}
+
 function hasSafetyCrateStep(text: string): boolean {
   const block = steps(text).find((s) => s.includes(SAFETY_TEST_RUN))
   if (!block) return false
@@ -147,6 +159,10 @@ describe('rust-test.yml covers the gamelib-scan crates', () => {
     expect(testsInfoCrate(workflow)).toBe(true)
   })
 
+  test('the multi-crate step tests gamelib-engine and gamelib-wine (Phase 87)', () => {
+    expect(testsEngineAndWineCrates(workflow)).toBe(true)
+  })
+
   test('clippy ratchet lints the whole workspace', () => {
     expect(hasWorkspaceClippy(workflow)).toBe(true)
   })
@@ -177,8 +193,8 @@ describe('anti-vacuity: the predicates reject mutated workflows', () => {
 
   test('rejects a workflow whose step is conditional', () => {
     const mutated = workflow.replace(
-      '- name: cargo test (gamelib-core, gamelib-scan, gamelib-depot, gamelib-steamfiles, gamelib-steamcm, gamelib-steampoll, gamelib-i18n, gamelib-log, gamelib-store and gamelib-info crates)\n',
-      "- name: cargo test (gamelib-core, gamelib-scan, gamelib-depot, gamelib-steamfiles, gamelib-steamcm, gamelib-steampoll, gamelib-i18n, gamelib-log, gamelib-store and gamelib-info crates)\n        if: runner.os == 'macOS'\n"
+      '- name: cargo test (gamelib-core, gamelib-scan, gamelib-depot, gamelib-steamfiles, gamelib-steamcm, gamelib-steampoll, gamelib-i18n, gamelib-log, gamelib-store, gamelib-info, gamelib-engine and gamelib-wine crates)\n',
+      "- name: cargo test (gamelib-core, gamelib-scan, gamelib-depot, gamelib-steamfiles, gamelib-steamcm, gamelib-steampoll, gamelib-i18n, gamelib-log, gamelib-store, gamelib-info, gamelib-engine and gamelib-wine crates)\n        if: runner.os == 'macOS'\n"
     )
     expect(mutated).not.toBe(workflow)
     expect(hasScanCrateStep(mutated)).toBe(false)
@@ -209,6 +225,18 @@ describe('anti-vacuity: the predicates reject mutated workflows', () => {
     const mutated = workflow.replace(' -p gamelib-info -p gamelib-info-cli', '')
     expect(mutated).not.toBe(workflow)
     expect(testsInfoCrate(mutated)).toBe(false)
+  })
+
+  test('rejects a workflow whose multi-crate step omits gamelib-engine or gamelib-wine', () => {
+    const noEngine = workflow.replace(
+      ' -p gamelib-engine -p gamelib-engine-cli',
+      ''
+    )
+    expect(noEngine).not.toBe(workflow)
+    expect(testsEngineAndWineCrates(noEngine)).toBe(false)
+    const noWine = workflow.replace(' -p gamelib-wine -p gamelib-wine-cli', '')
+    expect(noWine).not.toBe(workflow)
+    expect(testsEngineAndWineCrates(noWine)).toBe(false)
   })
 
   test('rejects a workflow without the safety step', () => {

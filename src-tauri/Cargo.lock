@@ -1652,6 +1652,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "gamelib-engine"
+version = "0.1.0"
+dependencies = [
+ "gamelib-core",
+ "gamelib-engine",
+ "gamelib-i18n",
+ "gamelib-proc",
+ "gamelib-safety",
+ "gamelib-store",
+ "gamelib-testutil",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
+name = "gamelib-engine-cli"
+version = "0.1.0"
+dependencies = [
+ "gamelib-core",
+ "gamelib-engine",
+ "gamelib-store",
+ "gamelib-testutil",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "gamelib-i18n"
 version = "0.1.0"
 dependencies = [
@@ -1760,6 +1790,7 @@ dependencies = [
  "dispatch2",
  "gamelib-core",
  "gamelib-depot",
+ "gamelib-engine",
  "gamelib-i18n",
  "gamelib-info",
  "gamelib-log",
@@ -1771,6 +1802,7 @@ dependencies = [
  "gamelib-steampoll",
  "gamelib-store",
  "gamelib-testutil",
+ "gamelib-wine",
  "gilrs",
  "gtk",
  "keyring",
@@ -1904,6 +1936,38 @@ dependencies = [
 name = "gamelib-testutil"
 version = "0.1.0"
 dependencies = [
+ "tempfile",
+]
+
+[[package]]
+name = "gamelib-wine"
+version = "0.1.0"
+dependencies = [
+ "gamelib-core",
+ "gamelib-engine",
+ "gamelib-i18n",
+ "gamelib-proc",
+ "gamelib-safety",
+ "gamelib-store",
+ "gamelib-testutil",
+ "gamelib-wine",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
+name = "gamelib-wine-cli"
+version = "0.1.0"
+dependencies = [
+ "gamelib-core",
+ "gamelib-engine",
+ "gamelib-store",
+ "gamelib-testutil",
+ "gamelib-wine",
+ "serde_json",
  "tempfile",
 ]
 

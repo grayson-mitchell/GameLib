@@ -21,6 +21,11 @@ gamelib-store = { path = "crates/gamelib-store" }
 # Phase 86 (SVC-01): Tauri-free leaf information and cache services (wiki, CrossOver index, store search,
 # anti-cheat, recent games, overrides, artwork), behind the info_* arms from the plans that follow.
 gamelib-info = { path = "crates/gamelib-info" }
+# Phase 87 (SVC-02): Tauri-free engine and wine services (the pinned fallback engine, engine selection,
+# tool resolvers; bottles, wine-manager, winetricks), behind the engine_* and wine_* arms from the plans
+# that follow. `gamelib-wine` may depend on `gamelib-engine`; never the reverse (D-04).
+gamelib-engine = { path = "crates/gamelib-engine" }
+gamelib-wine = { path = "crates/gamelib-wine" }
 # Phase 83 (FND-04, D-11): spawn classes, the Windows kill-on-close Job, group kill and the
 # SIGKILL reaper (`--gamelib-reaper`, dispatched first in `fn main`). Already pinned in Cargo.lock.
 gamelib-proc = { path = "crates/gamelib-proc" }
@@ -489,5 +494,9 @@ members = [
   "crates/gamelib-store-cli",
   "crates/gamelib-info",
   "crates/gamelib-info-cli",
+  "crates/gamelib-engine",
+  "crates/gamelib-engine-cli",
+  "crates/gamelib-wine",
+  "crates/gamelib-wine-cli",
 ]
 resolver = "2"
