@@ -183,8 +183,32 @@ findings:
     severity: info
     disposition: open
     title: "the three `launch()` bodies' best-effort umu lookup is covered only by a source-regex gate, no behavioural launch test (round 2)"
-open: 32
-total: 45
+  - id: WR-65
+    severity: warning
+    disposition: open
+    title: "WR-04's `set_async`/`get_async` spawn_blocking Keychain work holds no shutdown Registrant; a cancelled write is left unwaited (round 3, 86-REVIEW-ROUND3.md)"
+  - id: WR-66
+    severity: warning
+    disposition: open
+    title: "`set_async` takes no lock: overlapping saves can reach the Keychain in one order and `finish_write` in the other, caching a stale key (round 3)"
+  - id: IN-71
+    severity: info
+    disposition: open
+    title: "`native.ts:69` still documents the old 256-unit cap for `getGameMetadataOverride` (round 3)"
+  - id: IN-72
+    severity: info
+    disposition: open
+    title: "vault doc says a planted link is replaced though the write refuses; a zero-length vault is corrupt forever; crash-orphaned plaintext .tmp files never swept (round 3)"
+  - id: IN-73
+    severity: info
+    disposition: open
+    title: "three new fix tests assert less than they claim (AGW positive control, atomic-write test, effective_async shutdown path) (round 3)"
+  - id: IN-74
+    severity: info
+    disposition: open
+    title: "PCGW GOG id is encoded but not digit-validated (round 3)"
+open: 38
+total: 51
 recorded: 2026-11-22T19:54:24.939Z
 ---
 
@@ -237,6 +261,12 @@ recorded: 2026-11-22T19:54:24.939Z
 | WR-64 | warning | fixed | a85189b85 |
 | IN-69 | info | open | 86-REVIEW-ROUND2.md |
 | IN-70 | info | open | 86-REVIEW-ROUND2.md |
+| WR-65 | warning | open | 86-REVIEW-ROUND3.md |
+| WR-66 | warning | open | 86-REVIEW-ROUND3.md |
+| IN-71 | info | open | 86-REVIEW-ROUND3.md |
+| IN-72 | info | open | 86-REVIEW-ROUND3.md |
+| IN-73 | info | open | 86-REVIEW-ROUND3.md |
+| IN-74 | info | open | 86-REVIEW-ROUND3.md |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
