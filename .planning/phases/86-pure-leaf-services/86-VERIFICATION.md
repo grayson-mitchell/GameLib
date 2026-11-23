@@ -1,6 +1,6 @@
 ---
 phase: 86-pure-leaf-services
-verified: 2026-11-23T12:00:00Z
+verified: 2026-11-23T18:00:00Z
 status: passed
 score: 5/5 must-haves verified
 covered_files:
@@ -58,16 +58,32 @@ covered_files:
   - ".planning/phases/86-pure-leaf-services/86-26-SUMMARY.md"
   - ".planning/phases/86-pure-leaf-services/86-27-PLAN.md"
   - ".planning/phases/86-pure-leaf-services/86-27-SUMMARY.md"
+  - "meta/__tests__/releaseItadKey.test.ts"
+  - "src-tauri/crates/gamelib-info/src/itad/cache.rs"
+  - "src-tauri/crates/gamelib-info/src/itad/mod.rs"
   - "src-tauri/crates/gamelib-info/src/lib.rs"
   - "src-tauri/crates/gamelib-info/src/recent.rs"
+  - "src-tauri/crates/gamelib-info/src/secrets.rs"
+  - "src-tauri/crates/gamelib-info/src/steamgrid.rs"
   - "src-tauri/crates/gamelib-info/src/umu.rs"
+  - "src-tauri/crates/gamelib-info/src/wiki/agw.rs"
+  - "src-tauri/crates/gamelib-info/src/wiki/deck.rs"
+  - "src-tauri/crates/gamelib-info/src/wiki/gog_ctx.rs"
+  - "src-tauri/crates/gamelib-info/src/wiki/mod.rs"
+  - "src-tauri/crates/gamelib-info/src/wiki/pcgw.rs"
+  - "src-tauri/crates/gamelib-info/src/wiki/protondb.rs"
+  - "src-tauri/crates/gamelib-info/tests/cache_view.rs"
+  - "src-tauri/crates/gamelib-info/tests/secrets.rs"
+  - "src-tauri/crates/gamelib-info/tests/wiki_source_edges.rs"
   - "src-tauri/src/info_dispatch.rs"
+  - "src-tauri/src/info_secrets.rs"
   - "src/backend/__tests__/clearCacheWiki.test.ts"
   - "src/backend/__tests__/infoPortComplete.test.ts"
   - "src/backend/__tests__/infoShimSchedule.test.ts"
   - "src/backend/__tests__/launcher_launchSingleFlight.test.ts"
   - "src/backend/gamedetails/__tests__/gameDetailsModules.test.ts"
   - "src/backend/gamedetails/dispatch.ts"
+  - "src/backend/info/__tests__/fixtureRedaction.test.ts"
   - "src/backend/info/recentGames.ts"
   - "src/backend/info/wiki.ts"
   - "src/backend/launcher.ts"
@@ -78,11 +94,12 @@ covered_files:
   - "src/backend/sidecar/runnerAuthFlowRegistration.ts"
   - "src/backend/storeManagers/gog/games.ts"
   - "src/backend/storeManagers/legendary/games.ts"
+  - "src/backend/storeManagers/legendary/user.ts"
   - "src/backend/storeManagers/nile/games.ts"
   - "src/backend/storeManagers/storeManagerCommon/__tests__/umuGameId.test.ts"
   - "src/backend/storeManagers/storeManagerCommon/umuGameId.ts"
   - "src/backend/utils.ts"
-covered_digest: "v4:sha256:efe65fa9c8f500f5a67523a18b3c3fc6a52ad536b589bbd8340debb9d5001ac5"
+covered_digest: "v4:sha256:20f25ed2eff9432b8ec174370a3c3c281da0d898d92b873afd56b94dae4f78e2"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
@@ -92,7 +109,15 @@ re_verification:
   gaps_remaining: []
   regressions: []
 deferred: []
-advisory: []
+advisory:
+  - finding: "WR-65: spawn_blocking Keychain call in SlotOwner::set_async/get_async holds no shutdown Registrant"
+    category: other
+    reason: "Round-3 review, open in ledger; affects exit-time only, no phase truth; fix by moving a registrant into the blocking closure"
+    evidence_status: "read at HEAD, no failing test"
+  - finding: "WR-66: SlotOwner::set_async does not serialise writers; overlapping saves can leave cache != Keychain"
+    category: other
+    reason: "Round-3 review, open in ledger; double save behind a Keychain prompt only; no phase truth"
+    evidence_status: "read at HEAD, no failing test"
 behavior_unverified_items: []
 coincidental_reliance_items: []
 human_verification: []
@@ -102,9 +127,77 @@ human_verification: []
 
 **Phase Goal:** The self-contained information and cache services run in Rust and behave as before.
 **Requirement:** SVC-01 (declared by all 27 PLAN files, including gap plan 86-27; the milestone requirements file maps only SVC-01 to Phase 86; no orphans)
-**Verified:** 2026-11-23
+**Verified:** 2026-11-23 (re-verified on main `4348051f5` after the review-fix merge)
 **Status:** passed
 **Re-verification:** Yes, on main at `ff56f13d4` after the gap-closure merge (prior report was written on the gap branch at `361397ba1`, status `passed`, 5/5; it went stale because Phase 87 commits landed in the merge)
+
+## Re-verification after the review fixes (main `4348051f5`)
+
+The report below went stale because merge `6bee3d20b` (branch `phase/86-review-fix`: WR-01..04, WR-21, WR-22, WR-61..64) changed
+covered files: 21 files under `src-tauri/crates/gamelib-info`, `src-tauri/src/info_dispatch.rs`, `src-tauri/src/info_secrets.rs`,
+`src/backend/utils.ts`, `src/backend/storeManagers/legendary/user.ts` and four test files
+(`git diff c8d55b0ed HEAD --stat -- src src-tauri meta`: 21 files, 772 insertions, 125 deletions). I read the diffs, not 86-REVIEW-FIX.md,
+and re-ran the gates. SC1-SC4 and G still hold. Status stays `passed`, 5/5.
+
+### What each fix does to "behave as before" (read at HEAD by me)
+
+| Fix | Behavior change | Phase-truth impact |
+|-----|-----------------|--------------------|
+| WR-03 (`wiki/mod.rs:131` `is_numeric_id`, used in `protondb.rs:37`, `deck.rs:36`, `pcgw.rs:211`, `agw.rs:111`; `encode_uri_component` in `gog_ctx.rs`, `pcgw.rs:188`) | ProtonDB and Deck answer `None` with no request for a Steam id that is not all digits; PCGW and AGW skip a non-digit page id; GOG id, store and id are percent-encoded. | None for real callers. The only source of a Steam id is `wiki/mod.rs:339-345`: the app name when `app_name_is_steam_app_id` (runner `steam` only, `runner_caps.rs`; `gamelib-engine/src/key.rs:56` already requires a Steam app name to be 1 to 10 ASCII digits), GamesDB's `steam` `external_id`, or PCGW's `steam appid` capture `([0-9]+)` (`regexes.rs:79`). The page ids come from the PCGW/AGW search and cargoquery answers (numeric). Epic, Amazon and GOG ids passed to `gamesdb_release`/`gog_store_url` are alphanumerics, `.` and `-`, which `encodeURIComponent` leaves unchanged. Digit-only ids produce byte-identical URLs, so the 86-06 goldens are unchanged: `golden_wiki_sources` and the rest pass (below). |
+| WR-04 (`secrets.rs` `get_async`/`set_async`/`effective_async`; `resolve_key`, `key_status`, `set_key`, `stored_key`, `has_api_key`, `set_api_key` now async) | Same answers, same cache and failure memo (shared `finish_read`/`finish_write`); the Keychain call now runs on `spawn_blocking` so a guarded op can answer `<op>:shutdown`. The sync forms remain for the boot migration. | None on results. Every async caller compiles (`pnpm -s codecheck` exit 0, `cargo test -p gamelib-shell` info_ filter passes) and the secrets suite passes. See WR-65/WR-66 below. |
+| WR-21 (`info_secrets.rs`) | Dev vault: `O_NOFOLLOW` reads, temp-file + `rename` writes at mode 0600; a vault that does not parse now makes a write refuse with `corrupt` instead of rebuilding from one slot. | Departure from the old TS rebuild-on-corrupt, but dev-only: reachable only when `GAMELIB_DEV_SECRET_VAULT=1` AND `tauri::is_dev()` (`use_dev_vault`), never in a packaged build, and it protects the Steam and Humble slots that share the file. A read still treats a bad vault as empty. No fixture or data-file contract involved. Not a phase truth. |
+| WR-22 (`info_dispatch.rs`) | `getGameMetadataOverride` appName bound 256 -> `APP_NAME_MAX_UTF16` (1024), the bound the sibling override ops already use. | Loosens a bound to match the crate; no recorded fixture depends on the 256 edge. Parser test updated and passes. |
+| WR-64 (`utils.ts`, `legendary/user.ts`) | `ClearCacheDeps` and `LegendaryUserDeps` now require `requestRustInvoke`; `canClearWikiCache` removed; `clearCache` always clears the wiki cache. | Strengthens truth G: the 86-27 sign-out wiki-cache clear can no longer be silently skipped. Codecheck exit 0 proves every production construction supplies it; `clearCacheWiki.test.ts` carries two `@ts-expect-error` compile assertions. The key link `handlers.ts` -> `registerRunnerAuthFlows` with `requestRustInvoke` is unchanged (`runnerAuthFlows.test.ts` passes). |
+| WR-01, WR-02 | Epoch bump on write; module-level price-index lock. | Internal ordering fixes; the on-disk files are unchanged in shape. Tests pass. |
+| WR-61, WR-62, WR-63 | Test-gate floors and rules only (no product code). | Strengthen the redaction and "bakes nothing" gates; both suites pass. |
+
+### Gates run by me
+
+| Check | Command | Result |
+|-------|---------|--------|
+| Crate suite incl. goldens | `cargo test -p gamelib-info --features testing` (from `src-tauri`) | exit 0; 19 result lines, 374 passed, 0 failed |
+| Shell info ops | `cargo test -p gamelib-shell --bin gamelib-shell info_` | 70 passed, 0 failed (covers `info_dispatch` and `info_secrets` incl. the WR-21 and WR-22 tests) |
+| Backend jest (15 suites) | `pnpm exec jest --selectProjects Backend --runTestsByPath` the 7 `src/backend/info` suites (anticheat, crossover, discounts, fixtureRedaction, gameOverrides, recentGames, wiki), `clearCacheWiki`, `infoShimSchedule`, `infoPortComplete`, plus the 86-27 suites `umuGameId`, `runnerAuthFlows`, `launcher_launchSingleFlight`, `gameDetailsModules`, `nonesteamgame` | `Test Suites: 15 passed, 15 total; Tests: 367 passed, 367 total` |
+| Release key gate | `pnpm exec jest --runTestsByPath meta/__tests__/releaseItadKey.test.ts` | 13 passed, 13 total |
+| Types | `pnpm -s codecheck` | exit 0, no output |
+
+Not repeated by me: the orchestrator's full jest run (1139 passed, 2 failed). The two reds are `genI18nGateScope` A-17 (R5, operator-deferred stale
+`meta/i18nForkTouchedFiles.json`) and `steamLoginPollLifecycle` (5 s timeout under full-suite load, passes alone 23/23, not in the fix diff
+and nothing it imports is in the diff). Neither touches Phase 86.
+
+### WR-65 and WR-66 (round-3 review, open): non-blocking for the phase truths
+
+I read `secrets.rs` `set_async` and `get_async` at HEAD and confirm both findings are real:
+
+- **WR-65**: the `spawn_blocking` Keychain call carries no shutdown Registrant, so a write abandoned by shutdown can be cut off by the 5 s exit
+  budget. This departs from the Rust shutdown convention (discipline-only, the new test codifies the deviation). Effect: at process exit only; an
+  interrupted `SecItemAdd`/`SecItemDelete` is atomic at the OS level and the renderer is gone. It does not change any fixture result, data
+  file, or the delete gate, so SC1-SC4 and G are untouched.
+- **WR-66**: `set_async` takes no writer lock (`get_async` takes `fetch_async`), so two overlapping saves of the same API key could leave the
+  in-memory cache disagreeing with the Keychain for the session. Requires a double save while the first is parked behind a Keychain prompt; the
+  sync `set` had the same hole across threads before WR-04. It is an edge in the ITAD/SteamGridDB key slot, not in any recorded-fixture behavior.
+
+Decision: both are WARNINGs for the follow-up queue (ledger rows exist), not blockers. IN-71..74 are informational (stale `native.ts:69` comment,
+dev-vault doc and recovery edges, three under-asserting tests, PCGW GOG id encoded but not digit-checked). Recommend fixing WR-65 first because
+it is a stated repo convention.
+
+### Anti-pattern scan over the fix diff
+
+No `TBD`/`FIXME`/`XXX` added in the covered source files (scanned the 21 changed files). No new blocker.
+
+### Updated truth table
+
+| # | Truth | Status | Evidence |
+|---|-------|--------|----------|
+| SC1 | Same results for recorded fixtures (wiki, CrossOver, store search, discounts, anti-cheat) | VERIFIED | `cargo test -p gamelib-info --features testing` 374 passed incl. goldens; WR-03 leaves digit ids byte-identical |
+| SC2 | Recent games, overrides, artwork caches read and write the existing files unchanged | VERIFIED | Crate and shell `info_` suites pass; WR-02 adds a lock only; no format change |
+| SC3 | Fixtures recorded before each port | VERIFIED | Fixture tree unchanged apart from the redaction scan that now covers 992 files |
+| SC4 | TS and sidecar registrations deleted (delete gate) | VERIFIED | `infoPortComplete` and `infoShimSchedule` pass at HEAD |
+| G | Ported services behave as before on launch, game page and shortcut paths | VERIFIED | The five 86-27 suites pass; WR-64 makes the sign-out transport compile-time required |
+
+**Score:** 5/5 (0 present-but-behavior-unverified). Advisory: WR-65, WR-66 (open, non-blocking).
+
+---
 
 ## Merge re-verification (main `ff56f13d4`)
 
