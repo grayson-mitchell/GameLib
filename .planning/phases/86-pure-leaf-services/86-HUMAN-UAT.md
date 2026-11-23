@@ -1,11 +1,11 @@
 ---
-status: partial
+status: complete
 phase: 86-pure-leaf-services
 source: [86-CONTEXT.md D-14 D-15 D-16 D-21 D-22]
 authored_by: 86-02
 run_by: 86-26
 started: 2026-11-22T19:03:45Z
-updated: 2026-11-23
+updated: 2026-11-23T09:06:41.094Z
 ---
 
 This is the live macOS gate contract for SVC-01 (the pure leaf services, the wiki and anticheat info, store search and
@@ -321,14 +321,13 @@ Task 1 re-check confirms the push still exists.
 
 ## Current Test
 
-[complete: 4 of 4 scored by 86-26 Task 3 on 2026-11-23: 3 pass, 1 issue (item 1, the GOG page's PCGamingWiki and
-HowLongToBeat info, the pre-existing PCGamingWiki cargoquery refusal); see `## Run record` and `## Closing inventory`]
+[testing complete]
 
 ## Tests
 
 ### 1. Game page info
 expected: On the signed Phase 86 build, a Steam, an Epic and a GOG game page each show the PCGamingWiki and HowLongToBeat info, the AppleGamingWiki block and the CrossOver rating as they did on the 85 build (same fields, same values), at least one of the three after the wiki block's Refresh control forces a fresh fetch (`store_cache/wikigameinfo.json` changes), the Epic page of a title the runner picked from MacAnticheatData (`areweanticheatyet.json`) shows its anticheat badge, and the Steam and GOG pages show none; ProtonDB and Steam Deck rows are absent as before (D-30).
-result: issue — launch 2 (2026-11-22T19:19:50Z), `gamelib-launch-2.log`, `notes.log` launch 2 section. Epic: **ARK: Survival Evolved** showed the PCGamingWiki ratings, HowLongToBeat, the AppleGamingWiki block with CrossOver `unrated`, and the anticheat badge (cache `fetchStatus` pcgamingwiki `ok`, howlongtobeat `ok`). Steam: **Ara: History Untold** showed ratings, HowLongToBeat and CrossOver `unrated` (`ok`/`ok`). GOG: **Alan Wake** showed the CrossOver rating (4 stars) but the "Couldn't load extra info" empty state in place of PCGamingWiki and HowLongToBeat: the log has `pcgamingwiki lookup failed (shape)` then `hltb gog page does not match` / `no hltb data available`, and the cache entry holds `fetchStatus` pcgamingwiki `error`, howlongtobeat `notfound`, with applegamingwiki and codeweavers present. The operator clicked Retry (the empty state's refresh control, `refreshWikiInfo`): four forced refetches at 08:26:21 to 08:26:30 local, each `getting wiki data` with no `using cached wiki data`, each the same failure; the last rewrote Alan Wake's cache timestamp (19:26:31Z). `store_cache/wikigameinfo.json` sha256 `0cd5829c...` before launch 2, `5537f021...` after; none of the three titles was in the cache before (the P3 copy holds 2 titles), so all three pages were fresh Rust fetches. The GOG gap is the pre-existing PCGamingWiki `permissiondenied` answer to the cargo query (`.planning/todos/pending/2026-11-22-pcgw-cargoquery-permissiondenied-gog-lookup.md`): the 85 build's TS fails the same way for every GOG title and golden `live-gog-linux` pins it, so the port reproducing it is the as-before behaviour that todo requires, not a Phase 86 regression; the 85 build's Alan Wake page itself was not viewed in this session. Still, the GOG page does not show PCGamingWiki or HowLongToBeat info, so the expected text is not fully met. No Refresh was clicked inside a populated AppleGamingWiki block; the forced path was exercised only through the empty state's Retry. Anticheat: `areweanticheatyet.json` sha256 `93f110e0...` at the pick and at launch 2's quit (F8 holds); no badge was reported on the Steam or GOG page, whose absence is the structural guarantee of Test 4 (no Epic namespace); no anticheat download WARN. ProtonDB and Steam Deck rows absent as before (D-30). Failure lines in launch 2: the 5 `pcgamingwiki lookup failed (shape)` above and nothing else from L1/L1a; `[dev-secret-vault]` 0; L5 0.
+result: pass — re-scored 2026-11-23 in /gsd-verify-work 86 (operator decision): the GOG page matches the 85 build, which fails the same PCGamingWiki cargoquery lookup (golden `live-gog-linux`), and the expected text asks for the page "as they did on the 85 build"; the fix stays with `.planning/todos/pending/2026-11-22-pcgw-cargoquery-permissiondenied-gog-lookup.md`. Originally scored `issue` by 86-26: launch 2 (2026-11-22T19:19:50Z), `gamelib-launch-2.log`, `notes.log` launch 2 section. Epic: **ARK: Survival Evolved** showed the PCGamingWiki ratings, HowLongToBeat, the AppleGamingWiki block with CrossOver `unrated`, and the anticheat badge (cache `fetchStatus` pcgamingwiki `ok`, howlongtobeat `ok`). Steam: **Ara: History Untold** showed ratings, HowLongToBeat and CrossOver `unrated` (`ok`/`ok`). GOG: **Alan Wake** showed the CrossOver rating (4 stars) but the "Couldn't load extra info" empty state in place of PCGamingWiki and HowLongToBeat: the log has `pcgamingwiki lookup failed (shape)` then `hltb gog page does not match` / `no hltb data available`, and the cache entry holds `fetchStatus` pcgamingwiki `error`, howlongtobeat `notfound`, with applegamingwiki and codeweavers present. The operator clicked Retry (the empty state's refresh control, `refreshWikiInfo`): four forced refetches at 08:26:21 to 08:26:30 local, each `getting wiki data` with no `using cached wiki data`, each the same failure; the last rewrote Alan Wake's cache timestamp (19:26:31Z). `store_cache/wikigameinfo.json` sha256 `0cd5829c...` before launch 2, `5537f021...` after; none of the three titles was in the cache before (the P3 copy holds 2 titles), so all three pages were fresh Rust fetches. The GOG gap is the pre-existing PCGamingWiki `permissiondenied` answer to the cargo query (`.planning/todos/pending/2026-11-22-pcgw-cargoquery-permissiondenied-gog-lookup.md`): the 85 build's TS fails the same way for every GOG title and golden `live-gog-linux` pins it, so the port reproducing it is the as-before behaviour that todo requires, not a Phase 86 regression; the 85 build's Alan Wake page itself was not viewed in this session. Still, the GOG page does not show PCGamingWiki or HowLongToBeat info, so the expected text is not fully met. No Refresh was clicked inside a populated AppleGamingWiki block; the forced path was exercised only through the empty state's Retry. Anticheat: `areweanticheatyet.json` sha256 `93f110e0...` at the pick and at launch 2's quit (F8 holds); no badge was reported on the Steam or GOG page, whose absence is the structural guarantee of Test 4 (no Epic namespace); no anticheat download WARN. ProtonDB and Steam Deck rows absent as before (D-30). Failure lines in launch 2: the 5 `pcgamingwiki lookup failed (shape)` above and nothing else from L1/L1a; `[dev-secret-vault]` 0; L5 0.
 
 ### 2. Store search and discounts
 expected: On the signed Phase 86 build, a Store Search query for a term not searched before returns results with badges and prices (`store_cache/itad_prices.json` changes), the Discounts screen lists deals with prices (the GOG deals and, with the ITAD key, the ITAD ones), and Settings, Advanced shows the ITAD key as saved (placeholder reading "Key saved") when the key is set, with no "unavailable" text.
@@ -422,8 +421,8 @@ committed. Delete `$S` once Phase 86 is verified.
 ## Summary
 
 total: 4
-passed: 3
-issues: 1
+passed: 4
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
