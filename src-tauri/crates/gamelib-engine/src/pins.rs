@@ -1,7 +1,8 @@
 //! The pinned fallback engine table (Phase 59 D-08 release lever), read from the one file both
-//! languages share: `src/common/enginePins.json`. The TS keeps `ENGINE_PINS` in
-//! `src/backend/engine/enginePins.ts` until its callers move; the jest test `enginePins.test.ts`
-//! proves the JSON equals it field for field, so the two sides cannot drift.
+//! languages share: `src/common/enginePins.json`. The TS `ENGINE_PINS` and `pinById` (the D-24 twin
+//! `src/backend/enginewine/twin.ts`, re-exported by `engine/enginePins.ts` until its callers move) read
+//! that same file, and the jest test `enginePins.test.ts` still proves the JSON equals the table field
+//! for field, so the two sides cannot drift.
 //!
 //! Each GameLib release ships exactly one `current` pin. The release assets are not immutable, so
 //! the exact build is fixed by size and sha256 and a downloader refuses anything else.
