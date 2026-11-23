@@ -651,7 +651,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 52/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
+**Plans:** 53/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
 
 Plans:
 **Wave 1**
@@ -769,7 +769,7 @@ Plans:
 - [x] 87-52-PLAN.md — Non-Steam callers switched: launch shims, getLaunchSettings, the getEngineState resolver
 
 **Wave 32** *(blocked on Wave 31 completion)*
-- [ ] 87-53-PLAN.md — Engine dialog acks forwarded; engineFlowRegistration deleted
+- [x] 87-53-PLAN.md — Engine dialog acks forwarded; engineFlowRegistration deleted
 
 **Wave 33** *(blocked on Wave 32 completion)*
 - [ ] 87-54-PLAN.md — Bridge callers switched: decision, deadline, state publishes
