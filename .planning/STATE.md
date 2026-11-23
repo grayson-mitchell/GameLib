@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-05-PLAN.md
-last_updated: "2026-11-23T01:18:03.742Z"
+stopped_at: Completed 87-06-PLAN.md
+last_updated: "2026-11-23T01:30:47.127Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: db9b7b9e3eae221f7249132aeb33a455487ffa8c
+state_head: 7e39e165e11f75ca336f86a825f5fefae4ecb5d8
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 6 of 59
+Plan: 7 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -415,6 +415,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P03 | 20 min | 2 tasks | 5 files |
 | Phase 87 P04 | 25 min | 2 tasks | 6 files |
 | Phase 87 P05 | 11 min | 2 tasks | 8 files |
+| Phase 87 P06 | 12 min | 2 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -836,6 +837,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: Oracle harness: response headers go through an allow-list and record mode only reaches the network through allowLive, so an archive is never downloaded and a CDN colo never lands in a fixture
 - [Phase 87]: Oracle goldens carry a hand-authored cases.json plus a harness-written requests.json beside the four planned files, so the Rust replay reads inputs and pins requests
 - [Phase 87]: Fixture redaction allow-lists role accounts (shared, public, default, crossover, steamuser) and four synthetic BottleIDs; every other home path or BottleID fails
+- [Phase 87]: DxvkRequest follows the TS (dxvk-macOS tool, source dir+version); the plan's three-name shorthand was too narrow
+- [Phase 87]: Fetch::get returns any HTTP status, error_for_status is the axios throw; Replay makes a download HEAD only when the case recorded one
+- [Phase 87]: CLI default home stays <user-data>/home, never the parent directory
 
 ### Pending Todos
 
@@ -1114,8 +1118,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T01:18:01.984Z
-Stopped at: Completed 87-05-PLAN.md
+Last session: 2026-11-23T01:30:45.290Z
+Stopped at: Completed 87-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
