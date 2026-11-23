@@ -292,6 +292,7 @@ export function registerHandlers(deps: {
     sendFrontendMessage: deps.services.host.sendFrontendMessage,
     paths: deps.services.paths,
     config: deps.services.config,
+    onlineMonitor: deps.services.onlineMonitor,
     requestRustInvoke: deps.services.host.requestRustInvoke
   })
   // Phase 34.3 Plan 06 (REQ-34.3-03/-04/-13): the clipboard channels — the ONLY

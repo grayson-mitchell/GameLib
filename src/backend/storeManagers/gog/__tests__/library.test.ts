@@ -108,7 +108,8 @@ const fakeGogStores = {
     get: jest.fn(),
     set: jest.fn(),
     use_in_memory: jest.fn(),
-    commit: jest.fn()
+    commit: jest.fn(),
+    discard: jest.fn()
   },
   privateBranchesStore: {
     get: (...a: unknown[]) => mockPrivateBranchesStoreGet(...a)
@@ -144,7 +145,7 @@ jest.mock('axios', () => ({
 
 import GOGLibraryManager from '../library'
 import { GOGUser } from '../user'
-import { logWarning } from 'backend/logger'
+import { getRunnerLogWriter, logError, logWarning } from 'backend/logger'
 import type {
   GOGCredentials,
   GogInstalledInfo,
@@ -753,5 +754,145 @@ describe('getLaunchOptions never yields an undefined option name (IN-02)', () =>
       '',
       'Named'
     ])
+  })
+})
+
+/**
+ * debug/gog-offline-empties-cache.md part 2: `refresh()` assembled its result from the fetches
+ * that worked and persisted it, so a refresh whose per-game fetches all failed replaced the
+ * cached library with just the redistributables entry (and a partial failure dropped each
+ * failed game). A failed fetch must never cost the library what it already had.
+ */
+describe('refresh() keeps the cached library when per-game fetches fail (gog-offline-empties-cache)', () => {
+  const galaxyEntry = (id: string) => ({
+    platform_id: 'gog',
+    external_id: id,
+    origin: 'galaxy',
+    owned: true,
+    date_created: 0,
+    owned_since: null,
+    certificate: `cert-${id}`
+  })
+  const cachedGame = (id: string, title: string) => ({
+    app_name: id,
+    runner: 'gog',
+    title,
+    install: {},
+    is_installed: false
+  })
+  const cachedOne = cachedGame('1', 'One (cached)')
+  const cachedTwo = cachedGame('2', 'Two (cached)')
+
+  let manager: GOGLibraryManager
+
+  /** Runs refresh() through its 5 x 2 s retry waits per failing game without real delays. */
+  async function refreshWithFakeTimers() {
+    jest.useFakeTimers()
+    const done = manager.refresh()
+    await jest.runAllTimersAsync()
+    return done
+  }
+
+  beforeEach(() => {
+    manager = new GOGLibraryManager(makeDeps())
+    mockIsOnline.mockReturnValue(true)
+    mockIsLoggedIn.mockReturnValue(true)
+    mockGetCredentials.mockResolvedValue(fakeCredentials)
+    mockInstalledGamesStoreGet.mockReturnValue([])
+    mockLibraryStoreGet.mockReturnValue([cachedOne, cachedTwo])
+    // resetMocks wiped the factory default; refresh() logs the game list through this writer.
+    jest
+      .mocked(getRunnerLogWriter)
+      .mockReturnValue({ logInfo: jest.fn() } as never)
+    jest
+      .spyOn(
+        manager as unknown as {
+          getGalaxyLibrary: () => Promise<unknown[]>
+        },
+        'getGalaxyLibrary'
+      )
+      .mockResolvedValue([galaxyEntry('1'), galaxyEntry('2')])
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it('every fetch failing: writes nothing, drops the in-memory cache batch and logs the failure', async () => {
+    jest
+      .spyOn(manager, 'getGamesdbData')
+      .mockRejectedValue(new Error('connection error'))
+
+    await refreshWithFakeTimers()
+
+    expect(fakeGogStores.libraryStore.set).not.toHaveBeenCalled()
+    expect(fakeGogStores.apiInfoCache.commit).not.toHaveBeenCalled()
+    expect(fakeGogStores.apiInfoCache.discard).toHaveBeenCalledTimes(1)
+    expect(logError).toHaveBeenCalledWith(
+      expect.stringContaining('keeping the cached library'),
+      'Gog'
+    )
+  })
+
+  it('some fetches failing: a failed game keeps its cached entry and the fetched one is refreshed', async () => {
+    jest
+      .spyOn(manager, 'getGamesdbData')
+      .mockImplementation(async (_store, id) => {
+        if (id === '2') return { isUpdated: false, data: {} as never }
+        throw new Error('connection error')
+      })
+    jest.spyOn(manager, 'gogToUnifiedInfo').mockResolvedValue({
+      ...cachedGame('2', 'Two (fresh)'),
+      canRunOffline: true
+    } as never)
+
+    await refreshWithFakeTimers()
+
+    expect(fakeGogStores.libraryStore.set).toHaveBeenCalledTimes(1)
+    const [key, written] = fakeGogStores.libraryStore.set.mock.calls[0] as [
+      string,
+      Array<{ app_name: string; title: string }>
+    ]
+    expect(key).toBe('games')
+    expect(written.map((g) => [g.app_name, g.title])).toEqual([
+      ['gog-redist', 'Galaxy Common Redistributables'],
+      ['1', 'One (cached)'],
+      ['2', 'Two (fresh)']
+    ])
+    expect(fakeGogStores.apiInfoCache.commit).toHaveBeenCalledTimes(1)
+    expect(fakeGogStores.apiInfoCache.discard).not.toHaveBeenCalled()
+  })
+
+  it('every fetch succeeding: unchanged, the fetched library is written and committed', async () => {
+    jest
+      .spyOn(manager, 'getGamesdbData')
+      .mockResolvedValue({ isUpdated: false, data: {} as never })
+    jest
+      .spyOn(manager, 'gogToUnifiedInfo')
+      .mockResolvedValue(cachedGame('1', 'One (fresh)') as never)
+
+    await refreshWithFakeTimers()
+
+    expect(fakeGogStores.libraryStore.set).toHaveBeenCalledTimes(1)
+    expect(fakeGogStores.apiInfoCache.commit).toHaveBeenCalledTimes(1)
+    expect(fakeGogStores.apiInfoCache.discard).not.toHaveBeenCalled()
+  })
+
+  it('no gog-platform entries to fetch: nothing failed, so the (empty) library is still written', async () => {
+    jest
+      .spyOn(
+        manager as unknown as {
+          getGalaxyLibrary: () => Promise<unknown[]>
+        },
+        'getGalaxyLibrary'
+      )
+      .mockResolvedValue([{ ...galaxyEntry('9'), platform_id: 'epic' }])
+    const getGamesdbData = jest.spyOn(manager, 'getGamesdbData')
+
+    await refreshWithFakeTimers()
+
+    expect(getGamesdbData).not.toHaveBeenCalled()
+    expect(fakeGogStores.libraryStore.set).toHaveBeenCalledTimes(1)
+    expect(fakeGogStores.apiInfoCache.commit).toHaveBeenCalledTimes(1)
   })
 })

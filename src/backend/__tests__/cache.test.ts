@@ -106,6 +106,43 @@ describe('backend/cache.ts', () => {
 
     memStore.commit()
   })
+
+  // debug/gog-offline-empties-cache.md: a refresh whose fetches all failed must leave the file
+  // exactly as it was, so the batch has to be droppable without commit() rewriting it.
+  test('discard() drops the in-memory batch and leaves the stored data untouched', () => {
+    const batchStore = new CacheStore<string>('test_store_discard', undefined, {
+      root,
+      kind: 'cache'
+    })
+    const batchInternal = new Store({
+      root,
+      cwd: 'store_cache',
+      name: 'test_store_discard'
+    })
+    batchStore.set('foo', 'bar')
+
+    batchStore.use_in_memory()
+    batchStore.set('baz', 'qux')
+    batchStore.delete('foo')
+    batchStore.discard()
+
+    expect(batchStore.get('foo')).toBe('bar')
+    expect(batchStore.has('baz')).toBe(false)
+    expect(batchInternal.get('foo')).toBe('bar')
+    expect(batchInternal.has('baz')).toBe(false)
+
+    // In-memory mode is off again: a plain write reaches the stored data.
+    batchStore.set('later', 'value')
+    expect(batchInternal.get('later')).toBe('value')
+
+    batchStore.clear()
+  })
+
+  test('discard() outside in-memory mode changes nothing', () => {
+    testStore.set('foo', 'bar')
+    testStore.discard()
+    expect(testStore.get('foo')).toBe('bar')
+  })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────

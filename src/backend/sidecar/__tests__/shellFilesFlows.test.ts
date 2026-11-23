@@ -203,6 +203,7 @@ import {
 } from '../../constants/urls'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { fakeSafetyRustInvoke } from 'backend/testUtils/fakeSafetyRust'
+import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 
 // The config paths a boot derives for the jest-contained HOME (`jest.setupContainment`).
 const { appFolder, configPath, gamesConfigPath } = createContainedHomeAppPaths()
@@ -703,6 +704,84 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
         String(first).includes('clearCache')
       )
       expect(warned).toBe(true)
+    })
+
+    // debug/gog-offline-empties-cache.md: the renderer sends `clearCache(false, true)` on every
+    // version change. Offline, the refresh that follows cannot repopulate, so clearing then left
+    // the GOG library empty (gog_library.json 10 games -> 66 B). The version-change clear now
+    // waits for a connection; the clear a user asks for does not.
+    describe('version-change clear waits for a connection (debug/gog-offline-empties-cache.md)', () => {
+      const cachedGame = [{ app_name: '1207659037', title: 'Cached' }]
+
+      const bootWithMonitor = (
+        monitor: ReturnType<typeof createTestOnlineMonitor>
+      ) =>
+        bootFresh({
+          reuseRegistry: true,
+          services: { storeRoot: testRoot, onlineMonitor: monitor },
+          context: { paths: { appFolder, configPath, gamesConfigPath } }
+        })
+
+      const seedLibrary = (
+        services: ReturnType<typeof bootFresh>['services']
+      ) => services.stores.gog.libraryStore.set('games', cachedGame as never)
+
+      const refreshFrames = (frames: Frame[]) =>
+        frames.filter(
+          (f) => f.kind === 'frontendMessage' && f.channel === 'refreshLibrary'
+        )
+
+      it('offline: leaves the GOG library cache untouched and pushes no refresh', async () => {
+        const monitor = createTestOnlineMonitor({ online: false })
+        const { input, frames, services } = bootWithMonitor(monitor)
+        seedLibrary(services)
+
+        writeSend(input, 'clear-version-offline-1', 'clearCache', [false, true])
+        await flush()
+
+        expect(services.stores.gog.libraryStore.get('games', [])).toEqual(
+          cachedGame
+        )
+        expect(refreshFrames(frames)).toHaveLength(0)
+      })
+
+      it('offline: clears and refreshes once the connection returns', async () => {
+        const monitor = createTestOnlineMonitor({ online: false })
+        const { input, frames, services } = bootWithMonitor(monitor)
+        seedLibrary(services)
+
+        writeSend(input, 'clear-version-offline-2', 'clearCache', [false, true])
+        await flush()
+        monitor.setOnline(true)
+        await flush()
+
+        expect(services.stores.gog.libraryStore.get('games', [])).toEqual([])
+        expect(refreshFrames(frames)).toHaveLength(1)
+      })
+
+      it('online: clears and refreshes at once, as before', async () => {
+        const monitor = createTestOnlineMonitor({ online: true })
+        const { input, frames, services } = bootWithMonitor(monitor)
+        seedLibrary(services)
+
+        writeSend(input, 'clear-version-online-1', 'clearCache', [false, true])
+        await flush()
+
+        expect(services.stores.gog.libraryStore.get('games', [])).toEqual([])
+        expect(refreshFrames(frames)).toHaveLength(1)
+      })
+
+      it('a clear the user asks for still happens offline', async () => {
+        const monitor = createTestOnlineMonitor({ online: false })
+        const { input, frames, services } = bootWithMonitor(monitor)
+        seedLibrary(services)
+
+        writeSend(input, 'clear-user-offline-1', 'clearCache', [false])
+        await flush()
+
+        expect(services.stores.gog.libraryStore.get('games', [])).toEqual([])
+        expect(refreshFrames(frames)).toHaveLength(1)
+      })
     })
 
     it('REQ-34.3-06 clearAchievementCache (send) removes the appName entry from gogAchievementStore', async () => {

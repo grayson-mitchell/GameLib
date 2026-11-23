@@ -207,6 +207,19 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
       .map(([key, value]) => [key as KeyType, value as ValueType])
   }
 
+  /**
+   * commit()'s counterpart for a batch that must not land: leaves in-memory mode WITHOUT
+   * writing, so the file on drive is exactly what it was before `use_in_memory()`. Nothing is
+   * announced either; the renderer's snapshot never saw the batch. A no-op outside in-memory
+   * mode.
+   */
+  public discard() {
+    if (!this.using_in_memory) return
+    this.in_memory_store = new Map<string, ValueType>()
+    this.using_in_memory = false
+    this.current_store = this.store
+  }
+
   public commit() {
     if (this.using_in_memory && this.readOnly) {
       // D-03: the batched session writes are lost; nothing is written or announced.

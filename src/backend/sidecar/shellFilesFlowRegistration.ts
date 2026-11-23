@@ -117,6 +117,7 @@ import i18next from 'i18next'
 import type { DiskSpaceData } from 'common/types'
 import type { ClearCacheDeps } from '../utils'
 import type { BootServices, StoreManagers } from '../services/types'
+import type { OnlineMonitor } from '../online_monitor'
 
 function logSendFailure(channel: string, error: unknown): void {
   console.warn(
@@ -170,6 +171,8 @@ export function registerShellFilesFlows(deps: {
   >
   /** Settings, for the guard's protected roots (82-07). */
   config: Pick<BootServices['config'], 'getSettings'>
+  /** The version-change cache clear waits for a connection (debug/gog-offline-empties-cache.md). */
+  onlineMonitor: Pick<OnlineMonitor, 'runOnceWhenOnline'>
   /** The sidecar -> Rust leg the safety guard asks (82-07). */
   requestRustInvoke: HostServices['requestRustInvoke']
 }): void {
@@ -252,13 +255,34 @@ export function registerShellFilesFlows(deps: {
   // which never throws. `refreshLibrary` rides the generic frontend_message
   // relay via `pushFrontendMessage` — zero new Rust arms ─────────────────────
 
+  // The renderer sends `clearCache(false, true)` on every version change, so the next refresh
+  // refetches what the new version reads differently. That refetch needs a connection: cleared
+  // offline, the library is left empty with nothing to refill it (gog_library.json went from 10
+  // games to 66 B on an offline first launch after an update, debug/gog-offline-empties-cache.md).
+  // So the version-change clear waits for one (`runOnceWhenOnline` runs it at once when already
+  // online). If the app closes first the clear is skipped and the caches stay as they were; the
+  // next online refresh rewrites them. The clear a user asks for is not deferred.
   deps.ipc.on('clearCache', (_event: unknown, ...args: unknown[]) => {
     try {
       const showDialog = args[0]
       const fromVersionChange = args[1] === true
-      clearCache(deps, undefined, fromVersionChange)
-      startLegendaryCleanup({ libraryManagers: deps.managers.library })
-      deps.pushFrontendMessage('refreshLibrary')
+      const clearAndRefresh = () => {
+        clearCache(deps, undefined, fromVersionChange)
+        startLegendaryCleanup({ libraryManagers: deps.managers.library })
+        deps.pushFrontendMessage('refreshLibrary')
+      }
+      if (fromVersionChange) {
+        // Runs later than this handler's try block, so it needs a catch of its own.
+        deps.onlineMonitor.runOnceWhenOnline(() => {
+          try {
+            clearAndRefresh()
+          } catch (error) {
+            logSendFailure('clearCache', error)
+          }
+        })
+      } else {
+        clearAndRefresh()
+      }
 
       if (showDialog) {
         showDialogBoxModalAuto(deps, {

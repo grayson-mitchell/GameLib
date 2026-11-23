@@ -586,9 +586,18 @@ export default class GOGLibraryManager implements LibraryManager {
     )
 
     const gamesObjects: GogGameInfo[] = [redistGameInfo]
+    // What the store holds now: a game whose fetch fails below keeps this entry rather than
+    // vanishing from the library (debug/gog-offline-empties-cache.md).
+    const cachedGames = new Map(
+      this.deps.stores.gog.libraryStore
+        .get('games', [])
+        .map((cached) => [cached.app_name, cached])
+    )
+    let failedFetches = 0
     this.deps.stores.gog.apiInfoCache.use_in_memory() // Prevent blocking operations
     for (const game of filteredApiArray) {
       let retries = 5
+      let fetched = false
       while (retries > 0) {
         let gdbData
         try {
@@ -641,8 +650,31 @@ export default class GOGLibraryManager implements LibraryManager {
           }
           this.library.set(copyObject.app_name, copyObject)
         }
+        fetched = true
         break
       }
+
+      if (!fetched) {
+        failedFetches += 1
+        const cachedGame = cachedGames.get(String(game.external_id))
+        if (cachedGame) gamesObjects.push(cachedGame)
+      }
+    }
+
+    // Every fetch failed (a connection that dropped, GOG answering with errors): there is nothing
+    // new to store, and what was assembled holds only what the cache already had. Writing it would
+    // at best rewrite the cache for nothing and at worst replace it with the redistributables
+    // entry alone, so leave both cache files exactly as they were.
+    if (
+      filteredApiArray.length > 0 &&
+      failedFetches === filteredApiArray.length
+    ) {
+      logError(
+        `Could not get data for any of the ${filteredApiArray.length} GOG games, keeping the cached library`,
+        LogPrefix.Gog
+      )
+      this.deps.stores.gog.apiInfoCache.discard()
+      return this.defaultExecResult
     }
 
     this.deps.stores.gog.apiInfoCache.commit() // Sync cache to drive
