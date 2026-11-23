@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-49-PLAN.md
-last_updated: "2026-11-23T16:03:53.187Z"
+stopped_at: Completed 87-50-PLAN.md
+last_updated: "2026-11-23T16:28:28.347Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: fadec53922cf7f1e4a04f4af210367024404ae63
+state_head: 0d9d38431c73c7a5f9c0d67b772e799da9b799a4
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 50 of 59
+Plan: 51 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -459,6 +459,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P47 | n/a | 2 tasks | 11 files |
 | Phase 87 P48 | not recorded | 2 tasks | 8 files |
 | Phase 87 P49 | 20 min | 3 tasks | 20 files |
+| Phase 87 P50 | 22 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -975,6 +976,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: The corrupt notices file is kept and a dismissal it cannot record answers ok false; the host keeps one corrupt copy beside it, made once per process (FND-06 delta from the TS, golden/state/deltas.json)
 - [Phase 87]: State notices push cannot fail in Rust: a launch always publishes and a notice answers true once a state was published (publisher-throws delta); no engine log line is ported, so none reaches gamelib.log
 - [Phase 87]: get_engine_state takes GameFacts values and a StateProbes seam; a non-Steam game's facts are derived in Rust, a Steam bridge game's come in engine_state_get facts, so the 87-52 resolver makes one typed call
+- [Phase 87]: 87-50: engine_launch_select replies {kind, key, selection, prefix, logLines, launchSettings}; the prefix is added to the plan's reply because the TS launcher branches on it
+- [Phase 87]: 87-50: the select step sets and clears the registry quietly and marks the ledger itself; LaunchState remembers the bottle for 87-51's end of launch
+- [Phase 87]: 87-50: engine log lines (warnings, [engine-notice] lines) still reach no log in the app because ctx.log is None; wiring an engine log into gamelib.log stays an open privacy decision for the user
 
 ### Pending Todos
 
@@ -1255,8 +1259,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T16:03:50.560Z
-Stopped at: Completed 87-49-PLAN.md
+Last session: 2026-11-23T16:28:25.963Z
+Stopped at: Completed 87-50-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
