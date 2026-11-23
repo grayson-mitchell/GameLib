@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-32-PLAN.md
-last_updated: "2026-11-23T10:15:29.217Z"
+stopped_at: Completed 87-33-PLAN.md
+last_updated: "2026-11-23T10:35:15.938Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: b5ac62800475630444dba695d7da049454a023b4
+state_head: 69628e28bbcfc01cc4412e6838c5780774434a64
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 33 of 59
+Plan: 34 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -442,6 +442,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P30 | 14 min | 2 tasks | 9 files |
 | Phase 87 P31 | 13 min | 2 tasks | 18 files |
 | Phase 87 P32 | 28 min | 2 tasks | 15 files |
+| Phase 87 P33 | 17min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -918,6 +919,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: The caller resolves the game and passes Target with ToolSettings::Resolved or Unavailable(reason); the Launcher trait backs setupEnvVars, setupWineEnvVars and validWine (HostLauncher in production)
 - [Phase 87]: The dependency and wine-version probes run beside the child and are joined, so every environment report is final when a run returns
 - [Phase 87]: The install op checks the verb shape before any spawn; the full apply guard (100 maximum, catalog membership, hidden-verb recheck) is ported for the queue in 87-33
+- [Phase 87]: 87-33: the Winetricks queue state lives in WineCtx; WineCtx and ToolsState are cloneable handles so a detached run owns a context while the op answers
+- [Phase 87]: 87-33: a quit cancels the verb in flight and drops the rest; the run holds a wine-winetricks registrant, races the shutdown token and ends through a drop guard
+- [Phase 87]: 87-33: run_wine_command_for_game takes the Steam eligibility, native flag, install path and resolved settings as caller facts; assert_command_parts adds the 256 x 4096 bounds to the TS shape check; the Windows branch moved in with the op
 
 ### Pending Todos
 
@@ -1198,8 +1202,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T10:15:27.315Z
-Stopped at: Completed 87-32-PLAN.md
+Last session: 2026-11-23T10:35:14.056Z
+Stopped at: Completed 87-33-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
