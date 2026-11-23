@@ -1,7 +1,7 @@
 /**
- * Store-agnostic `ps` / `pgrep` process listing and line parser, moved
- * unchanged from steam/bottleProcessMonitor.ts (phase 61 plan 04) so the
- * non-Steam first-match watcher reuses it. Nothing runs at import.
+ * The `ps` / `pgrep` process listing and line parser the bottle process monitor reads. Phase 61 lifted it into the
+ * engine for the non-Steam first-match watcher; that watcher is Rust's now (87-56 deleted `gameProcessWatch.ts`), so
+ * the monitor is its only caller and it lives beside it again. Nothing runs at import.
  */
 import type { SpawnAsync } from 'backend/spawnAsync'
 

@@ -387,9 +387,10 @@ describe('bottlesPortComplete', () => {
  * by `gamelib-engine`'s switch goldens, `switch_incidents.rs`, and its launch goldens). The runtime builds no
  * deadlines and no per-launch state. The launch goldens stay for the Rust replay (`golden_launch.rs`).
  *
+ * `processListing.ts` (the `ps` / `pgrep` listing) moved to `storeManagers/steam/`, beside the one monitor that reads it.
  * The rest of `src/backend/engine` stays, and the 87-56 SUMMARY lists why, module by module: a live TS caller outside
  * the engine still reads it (the Steam launch and install files read the caller-side halves `prepareBottle`,
- * `engineSync`, `offlineRefusal`, `fallbackBottleCall`, `pinnedEngineProgress` and `processListing`; the Wine tools
+ * `engineSync`, `offlineRefusal`, `fallbackBottleCall` and `pinnedEngineProgress`; the Wine tools
  * read `toolSettings`; the boot builds `engineRuntime` and `engineState`), or one of its oracles replays it against
  * goldens Rust also owns (`engineConfig.oracle`, `engineDecision.oracle`, `engineState.oracle`,
  * `fallbackEngine.oracle`). Those modules and the `describe('enginePortComplete')` that deletes them whole are owed to
@@ -404,10 +405,12 @@ const ENGINE: SliceSpec = {
     'src/backend/engine/gameProcessWatch.ts',
     'src/backend/engine/engineDialogs.ts',
     'src/backend/engine/pinEngine.ts',
+    'src/backend/engine/processListing.ts',
     'src/backend/engine/__tests__/launchEngine.test.ts',
     'src/backend/engine/__tests__/launchEngine.deadline.test.ts',
     'src/backend/engine/__tests__/launchDeadline.test.ts',
     'src/backend/engine/__tests__/gameProcessWatch.test.ts',
+    'src/backend/engine/__tests__/processListing.test.ts',
     'src/backend/engine/__tests__/legacyBottleUntouched.test.ts',
     'src/backend/engine/__tests__/oracle/launchEngine.oracle.test.ts'
   ],

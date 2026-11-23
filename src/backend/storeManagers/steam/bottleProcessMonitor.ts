@@ -42,7 +42,7 @@
  * comes to the front instead of opening behind GameLib.
  */
 import { relative, sep } from 'node:path'
-import { parsePsLine, processListing } from 'backend/engine/processListing'
+import { parsePsLine, processListing } from './processListing'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import {
