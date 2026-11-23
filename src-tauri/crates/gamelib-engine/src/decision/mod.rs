@@ -13,5 +13,6 @@
 
 pub mod creation;
 pub mod launch;
+pub mod offline;
 pub mod override_options;
 pub mod preflight;

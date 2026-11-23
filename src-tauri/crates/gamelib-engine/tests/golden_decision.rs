@@ -8,13 +8,13 @@
 //! running-games ledger for a busy bottle. The `--demo-status` probe, the `plutil` build read and the
 //! wineserver stop are scripted spawns through the one seam. What is compared to the golden: the
 //! decision (the selection, the pre-flight, the pin, `needsDownload`, the override and the log lines),
-//! the log lines the run wrote, and the `wine --demo-status` spawn trace; the order of the probes and
+//! for a launch item the offline gate (its inputs, read from the replay's own disk and marker view, its
+//! verdict from `offline_launch_certainly_blocked`, and the launch outcome word; the oracle's list of the
+//! gate's dependency calls is not compared, `is-missing` replays that read), the log lines the run wrote, and the `wine --demo-status` spawn trace; the order of the probes and
 //! wineserver stops is compared to the order of the TS's dependency calls. The tree is unchanged after
 //! every item (reading engine state never creates or edits a file, 59-UAT G11).
 //!
 //! What this file does not replay, each with its reason:
-//! - the offline gate and the `launch` verdict of a launch item (`gate`, `launch`): 87-46's
-//!   `offline_launch_certainly_blocked` replay;
 //! - the `locator` cases: 87-44's locator tests cover the resolver;
 //! - items that script a rejecting resolver (`resolverRejects`): the Rust locator cannot reject;
 //! - `g29-kill-throws`: the TS injected a wineserver stop that threw. Rust's stop never fails, so
@@ -37,13 +37,18 @@ use gamelib_engine::crossover::locate::CrossoverLocator;
 use gamelib_engine::ctx::EngineCtx;
 use gamelib_engine::decision::creation::{decide_creation_engine, CX_CREATE_CAP_MS};
 use gamelib_engine::decision::launch::{decide_launch_engine, DecideArgs};
+use gamelib_engine::decision::offline::{
+    launch_outcome, offline_launch_certainly_blocked, verdict_value, MarkerKind,
+    OfflineRefusalInput,
+};
 use gamelib_engine::decision::override_options::{
     list_engine_override_options, options_value, resolve_wine_manager_staging,
 };
 use gamelib_engine::decision::preflight::{
     is_crossover_missing, preflight_crossover, MonitorPhase, PreflightArgs, ProbeTuning,
 };
-use gamelib_engine::engines::pinned_engine_paths;
+use gamelib_engine::engines::{is_pinned_engine_installed, pinned_engine_paths};
+use gamelib_engine::ids::parse_engine_override;
 use gamelib_engine::pins::{pins, EnginePin, EnginePins};
 use gamelib_engine::testing::{FixedClock, RecordingLog, ScriptedSpecRunner};
 use serde_json::{json, Value};
@@ -455,6 +460,26 @@ async fn replay_item(profile: &Profile, op: &str, sc: Value) -> Replayed {
 
     let mut outcome = match op {
         "launch" => {
+            // The offline gate as the oracle built it: its inputs, then the verdict and what the launch does.
+            let marker = marker_view(&built);
+            let marker_kind = marker.as_ref().map(|m| {
+                if m.crossover {
+                    MarkerKind::Crossover
+                } else {
+                    MarkerKind::NonCrossover
+                }
+            });
+            let current_pin_installed = is_pinned_engine_installed(ctx, &table.current);
+            let gate_input = OfflineRefusalInput {
+                offline: sc["offline"].as_bool().unwrap(),
+                override_id: parse_engine_override(sc.get("setting").unwrap_or(&Value::Null)),
+                crossover_missing: is_crossover_missing(ctx, &[]).await,
+                marker_kind,
+                current_pin_installed,
+                restore_needs_absent_pin: marker_kind == Some(MarkerKind::NonCrossover)
+                    && !current_pin_installed,
+            };
+            let verdict = offline_launch_certainly_blocked(&gate_input);
             let decision = decide_launch_engine(
                 ctx,
                 &DecideArgs {
@@ -464,13 +489,27 @@ async fn replay_item(profile: &Profile, op: &str, sc: Value) -> Replayed {
                     monitor_phase: monitor_of(sc),
                     hint_wine_bins: Vec::new(),
                     pins: Some(table),
-                    marker_view: marker_view(&built),
+                    marker_view: marker,
                     tuning: tuning(profile, sc),
                 },
             )
             .await
             .unwrap();
-            json!({ "decision": decision.to_value() })
+            json!({
+                "gate": {
+                    "input": {
+                        "offline": gate_input.offline,
+                        "override": gate_input.override_id,
+                        "crossoverMissing": gate_input.crossover_missing,
+                        "markerKind": gate_input.marker_kind.map(MarkerKind::as_str),
+                        "currentPinInstalled": gate_input.current_pin_installed,
+                        "restoreNeedsAbsentPin": gate_input.restore_needs_absent_pin,
+                    },
+                    "verdict": verdict_value(verdict),
+                },
+                "launch": launch_outcome(verdict),
+                "decision": decision.to_value(),
+            })
         }
         "preflight" => {
             let preflight = preflight_crossover(
@@ -562,6 +601,14 @@ fn expected_outcome(op: &str, want: &Value) -> Value {
     for key in keys {
         out.insert((*key).to_string(), want[*key].clone());
     }
+    if op == "launch" {
+        // The gate's inputs and verdict and the launch word; the oracle's call list is not compared.
+        out.insert(
+            "gate".to_string(),
+            json!({"input": want["gate"]["input"], "verdict": want["gate"]["verdict"]}),
+        );
+        out.insert("launch".to_string(), want["launch"].clone());
+    }
     if op == "creation" {
         out.insert("createCapMs".to_string(), want["createCapMs"].clone());
     }
@@ -588,6 +635,8 @@ async fn every_decision_golden_replays() {
     assert_eq!(folders, cases.len(), "expected/ holds one folder per case");
 
     let mut items = 0;
+    // The launch words the replay produced, so a gate that never refuses (or always does) cannot pass.
+    let mut launch_words: std::collections::BTreeMap<String, usize> = Default::default();
     let mut failures = Vec::new();
     for case in &cases {
         let id = case["id"].as_str().unwrap();
@@ -607,6 +656,9 @@ async fn every_decision_golden_replays() {
             let profile = Profile::new();
             let message = throws_message(&sc);
             let replayed = replay_item(&profile, op, sc).await;
+            if let Some(word) = replayed.outcome["launch"].as_str() {
+                *launch_words.entry(word.to_string()).or_default() += 1;
+            }
             let mut got = replayed.outcome.clone();
             if let Some(message) = &message {
                 got = map_strings(got, message);
@@ -657,6 +709,17 @@ async fn every_decision_golden_replays() {
         }
     }
     assert!(items >= MANIFEST_FLOOR, "replayed {items} items");
+    // The gate replayed for the launch items: both refusal arms and the proceeding launches.
+    for word in [
+        "proceeds",
+        "refused-offline:crossover-missing",
+        "refused-offline:restore-needs-pin",
+    ] {
+        assert!(
+            launch_words.get(word).copied().unwrap_or(0) > 0,
+            "no launch item replayed to {word}: {launch_words:?}"
+        );
+    }
     assert!(
         failures.is_empty(),
         "{} failures, first:\n{}",

@@ -81,6 +81,16 @@ pub enum OfflineArm {
     RestoreNeedsPin,
 }
 
+impl OfflineArm {
+    /// The arm's word as the TS has it (`crossover-missing`, `restore-needs-pin`).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            OfflineArm::CrossoverMissing => "crossover-missing",
+            OfflineArm::RestoreNeedsPin => "restore-needs-pin",
+        }
+    }
+}
+
 /// `{blocked: false}` or `{blocked: true, arm}` in the TS; `None` is not blocked.
 pub fn offline_launch_certainly_blocked(input: &OfflineRefusalInput) -> Option<OfflineArm> {
     if !input.offline {
