@@ -9,30 +9,14 @@ import {
 import { tmpdir } from 'os'
 import { join } from 'path'
 
-// The table moved into the D-24 twin (87-39) and `enginePins.ts` re-exports it, so the mock is built from the
-// shared JSON the table reads, not from `requireActual('../enginePins')` (which would load the twin, which loads
-// `engineIds`, which loads this very mock mid-factory).
-jest.mock('../enginePins', () => {
+// The pinned-engine table lives in the D-24 twin (87-39) and `parseEngineOverride` is the twin's (87-56b), so the test's
+// table with a `previous` pin (the shipped one has none yet) is the JSON file the twin reads, mocked: `enginePins`, the
+// twin's `pinById` and the override grammar all see it.
+jest.mock('common/enginePins.json', () => {
   const table = jest.requireActual('common/enginePins.json')
-  const previous = {
-    ...table.current,
-    id: 'wine-staging-11.10'
-  }
-  const pins = { current: table.current, previous }
-  const pinnedEngineIdsFrom = (p: {
-    current: { id: string }
-    previous: { id: string } | null
-  }) => (p.previous ? [p.current.id, p.previous.id] : [p.current.id])
   return {
-    ENGINE_PINS: pins,
-    pinnedEngineIdsFrom,
-    pinnedEngineIds: () => pinnedEngineIdsFrom(table),
-    pinById: (id: string) =>
-      id === pins.current.id
-        ? pins.current
-        : id === previous.id
-          ? previous
-          : null
+    ...table,
+    previous: { ...table.current, id: 'wine-staging-11.10' }
   }
 })
 jest.mock('backend/logger', () => ({

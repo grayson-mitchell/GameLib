@@ -1,18 +1,18 @@
 /**
- * Store-agnostic tool runner: spawns one of five allowlisted absolute-path
- * tools with the isolated fake-HOME env (two-profile rule, isolated half).
+ * A real tool runner over a process runner, for the tests that must run the five allowlisted absolute-path tools:
+ * spawns one of them with the isolated fake-HOME env (two-profile rule, isolated half). The production tool runner is
+ * Rust's (`steam/engine/rustRunTool.ts`, Phase 87 87-55); this is the TS one the engine used, kept only as test
+ * support (87-56b moved it here from `engine/runTool.ts`, which 87-56c deletes with the directory).
  * Moved unchanged from steam/bridge/drm/runnerClone.ts (phase 61 plan 04).
  *
  * Nothing runs at import; every child runs through the injected process runner,
  * which owns the timeout, the abort signal and the unref discipline.
  */
 import type { ProcessRunner } from 'backend/process/types'
-import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
+import { createFakeHomeProfile } from './fakeHomeProfile'
 import type { RunTool, RunToolResult, RunnerTool } from 'common/types/engine'
 
-// The result and call types moved to common/types/engine.ts in Phase 87 (87-55); re-exported for the TS engine that
-// 87-56 deletes with this file.
-export type { RunTool, RunToolResult }
+// The result and call types live in common/types/engine.ts (Phase 87, 87-55).
 
 const RUNNER_TOOLS: readonly RunnerTool[] = [
   '/bin/cp',

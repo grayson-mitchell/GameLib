@@ -2739,5 +2739,415 @@
       },
       "expected": false
     }
+  ],
+  "crossoverBinDirSync": [
+    {
+      "id": "sync-nothing-installed",
+      "input": {
+        "seed": [],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": []
+      },
+      "expected": null
+    },
+    {
+      "id": "sync-system-only",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": []
+      },
+      "expected": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-user-only",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": []
+      },
+      "expected": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-system-wins-over-user",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": []
+      },
+      "expected": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-system-bin-without-cxbottle",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": []
+      },
+      "expected": null
+    },
+    {
+      "id": "sync-system-without-cxbottle-user-has",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": []
+      },
+      "expected": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-hint-wins-over-system-and-user",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": [
+          "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/wine"
+        ]
+      },
+      "expected": "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-hint-only",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": [
+          "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/wine"
+        ]
+      },
+      "expected": "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-hint-without-cxbottle-falls-to-system",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": [
+          "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/wine"
+        ]
+      },
+      "expected": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-hint-missing-bundle-falls-to-user",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": [
+          "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/wine"
+        ]
+      },
+      "expected": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-hint-not-a-crossover-wine-is-ignored",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/usr/local/bin/cxbottle",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": [
+          "<HOME>/usr/local/bin/wine"
+        ]
+      },
+      "expected": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-hint-wrong-binary-name-is-ignored",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": [
+          "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/wine64"
+        ]
+      },
+      "expected": null
+    },
+    {
+      "id": "sync-hint-wrong-case-suffix-is-ignored",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/h/sharedsupport/crossover/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": [
+          "<HOME>/h/sharedsupport/crossover/bin/wine"
+        ]
+      },
+      "expected": null
+    },
+    {
+      "id": "sync-empty-hint-is-ignored",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": [
+          ""
+        ]
+      },
+      "expected": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-bare-suffix-hint-falls-to-system",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": [
+          "/SharedSupport/CrossOver/bin/wine"
+        ]
+      },
+      "expected": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-two-hints-first-lacks-cxbottle",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Hinted/Two.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": [
+          "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/wine",
+          "<HOME>/Hinted/Two.app/Contents/SharedSupport/CrossOver/bin/wine"
+        ]
+      },
+      "expected": "<HOME>/Hinted/Two.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-two-hints-first-wins",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Hinted/Two.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": [
+          "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/wine",
+          "<HOME>/Hinted/Two.app/Contents/SharedSupport/CrossOver/bin/wine"
+        ]
+      },
+      "expected": "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-two-hints-both-lack-cxbottle-user-has",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Hinted/Two.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": [
+          "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/wine",
+          "<HOME>/Hinted/Two.app/Contents/SharedSupport/CrossOver/bin/wine"
+        ]
+      },
+      "expected": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-dangling-cxbottle-symlink-does-not-count",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "symlink": "<HOME>/nowhere"
+          },
+          {
+            "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": []
+      },
+      "expected": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-cxbottle-directory-counts",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "dir": true
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": []
+      },
+      "expected": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-cxbottle-symlink-to-a-file-counts",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/real-cxbottle",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "symlink": "<HOME>/real-cxbottle"
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": []
+      },
+      "expected": "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-hint-with-dotdot-segment",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/Hinted/One.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/SystemApplications",
+        "hintWineBins": [
+          "<HOME>/Hinted/../Hinted/One.app/Contents/SharedSupport/CrossOver/bin/wine"
+        ]
+      },
+      "expected": "<HOME>/Hinted/../Hinted/One.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-system-applications-with-a-space",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/System Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/System Applications",
+        "hintWineBins": []
+      },
+      "expected": "<HOME>/System Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    },
+    {
+      "id": "sync-user-install-answers-when-system-dir-is-absent",
+      "input": {
+        "seed": [
+          {
+            "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+            "text": ""
+          }
+        ],
+        "systemApplications": "<HOME>/NoSuchDir",
+        "hintWineBins": []
+      },
+      "expected": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+    }
   ]
 }

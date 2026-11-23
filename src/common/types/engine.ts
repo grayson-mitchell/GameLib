@@ -185,6 +185,9 @@ export type EngineSelection =
       reason: 'override' | 'cx-inconclusive'
     } & NonCrossoverEngine)
 
+/** Store-agnostic engine key (phase 61, D-12): a Steam appId bare, every other store `${runner}:${appName}`. */
+export type EngineKey = string
+
 /** The closed engine-override grammar (59 D-14): anything outside it parses to `automatic`. */
 export type EngineOverrideId =
   | 'automatic'

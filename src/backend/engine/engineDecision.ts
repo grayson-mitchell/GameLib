@@ -37,7 +37,7 @@ import {
   readCrossoverBuild,
   untestedCrossoverLogLine
 } from './testedCrossoverVersions'
-import { createRunTool } from './runTool'
+import { createRunTool } from 'backend/testUtils/realRunTool'
 
 /** Bounds the D-12 create-under-expiry case; a normal cxbottle create is well under a minute. */
 export const CX_CREATE_CAP_MS = 120_000

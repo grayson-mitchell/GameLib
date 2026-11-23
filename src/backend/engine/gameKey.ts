@@ -10,8 +10,9 @@
  * Rust `key::engine_key_for` by shared vectors); the clean-name and known-runner rules it needs stay here.
  */
 import { hasCapability, storeCapabilities } from 'common/storeCapabilities'
+import type { EngineKey } from 'common/types/engine'
 
-export type EngineKey = string
+export type { EngineKey }
 
 export const STEAM_APP_ID_RE = /^[0-9]{1,10}$/
 

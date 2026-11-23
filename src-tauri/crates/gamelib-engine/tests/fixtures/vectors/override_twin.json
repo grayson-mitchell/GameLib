@@ -1,0 +1,407 @@
+{
+  "parseEngineOverride": [
+    {
+      "id": "automatic",
+      "input": {
+        "value": "automatic"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "crossover",
+      "input": {
+        "value": "crossover"
+      },
+      "expected": "crossover"
+    },
+    {
+      "id": "upper-automatic",
+      "input": {
+        "value": "Automatic"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "upper-crossover",
+      "input": {
+        "value": "CROSSOVER"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "empty",
+      "input": {
+        "value": ""
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "leading-space",
+      "input": {
+        "value": " crossover"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "trailing-space",
+      "input": {
+        "value": "crossover "
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "crossover-with-suffix",
+      "input": {
+        "value": "crossover:x"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "automatic-with-newline",
+      "input": {
+        "value": "automatic\n"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "null",
+      "input": {
+        "value": null
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "number",
+      "input": {
+        "value": 5
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "zero",
+      "input": {
+        "value": 0
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "true",
+      "input": {
+        "value": true
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "false",
+      "input": {
+        "value": false
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "empty-object",
+      "input": {
+        "value": {}
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "object-with-crossover",
+      "input": {
+        "value": {
+          "value": "crossover"
+        }
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "empty-array",
+      "input": {
+        "value": []
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "array-with-crossover",
+      "input": {
+        "value": [
+          "crossover"
+        ]
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "path-absolute",
+      "input": {
+        "value": "/usr/bin/wine"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "path-relative",
+      "input": {
+        "value": "../crossover"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "path-pinned-dir",
+      "input": {
+        "value": "/tools/steam-engines/wine-staging-11.20"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "pinned-current",
+      "input": {
+        "value": "pinned:wine-staging-11.20"
+      },
+      "expected": "pinned:wine-staging-11.20"
+    },
+    {
+      "id": "pinned-empty",
+      "input": {
+        "value": "pinned:"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "pinned-unknown",
+      "input": {
+        "value": "pinned:nope"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "pinned-current-suffix",
+      "input": {
+        "value": "pinned:wine-staging-11.20x"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "pinned-current-trailing-space",
+      "input": {
+        "value": "pinned:wine-staging-11.20 "
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "pinned-current-upper",
+      "input": {
+        "value": "pinned:WINE-STAGING-11.20"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "pinned-wrong-case-prefix",
+      "input": {
+        "value": "PINNED:wine-staging-11.20"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "pinned-path-traversal",
+      "input": {
+        "value": "pinned:../wine-staging-11.20"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-plain",
+      "input": {
+        "value": "wine-manager:Wine-Staging-10.5"
+      },
+      "expected": "wine-manager:Wine-Staging-10.5"
+    },
+    {
+      "id": "wm-single-char",
+      "input": {
+        "value": "wine-manager:a"
+      },
+      "expected": "wine-manager:a"
+    },
+    {
+      "id": "wm-dots-underscores",
+      "input": {
+        "value": "wine-manager:v1_2.3-rc.1"
+      },
+      "expected": "wine-manager:v1_2.3-rc.1"
+    },
+    {
+      "id": "wm-crossover-build",
+      "input": {
+        "value": "wine-manager:Wine-Crossover-23.7.1"
+      },
+      "expected": "wine-manager:Wine-Crossover-23.7.1"
+    },
+    {
+      "id": "wm-empty",
+      "input": {
+        "value": "wine-manager:"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-dotdot",
+      "input": {
+        "value": "wine-manager:a..b"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-only-dotdot",
+      "input": {
+        "value": "wine-manager:.."
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-single-dot",
+      "input": {
+        "value": "wine-manager:."
+      },
+      "expected": "wine-manager:."
+    },
+    {
+      "id": "wm-dxmt-suffix",
+      "input": {
+        "value": "wine-manager:x-DXMT"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-dxmt-lower-suffix-kept",
+      "input": {
+        "value": "wine-manager:x-dxmt"
+      },
+      "expected": "wine-manager:x-dxmt"
+    },
+    {
+      "id": "wm-dxmt-inside-kept",
+      "input": {
+        "value": "wine-manager:x-DXMT-2"
+      },
+      "expected": "wine-manager:x-DXMT-2"
+    },
+    {
+      "id": "wm-gptk",
+      "input": {
+        "value": "wine-manager:GPTK-2"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-gptk-lower",
+      "input": {
+        "value": "wine-manager:gptk"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-toolkit",
+      "input": {
+        "value": "wine-manager:Game-Porting-Toolkit"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-toolkit-upper",
+      "input": {
+        "value": "wine-manager:TOOLKIT"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-porting",
+      "input": {
+        "value": "wine-manager:Porting-1"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-porting-lower",
+      "input": {
+        "value": "wine-manager:porting"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-space",
+      "input": {
+        "value": "wine-manager:has space"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-slash",
+      "input": {
+        "value": "wine-manager:a/b"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-backslash",
+      "input": {
+        "value": "wine-manager:a\\b"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-newline",
+      "input": {
+        "value": "wine-manager:a\n"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-nul",
+      "input": {
+        "value": "wine-manager:a\u0000"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-non-ascii",
+      "input": {
+        "value": "wine-manager:é"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-fullwidth",
+      "input": {
+        "value": "wine-manager:ａ"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-64-chars",
+      "input": {
+        "value": "wine-manager:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expected": "wine-manager:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "id": "wm-65-chars",
+      "input": {
+        "value": "wine-manager:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-wrong-case-prefix",
+      "input": {
+        "value": "Wine-Manager:Wine-1"
+      },
+      "expected": "automatic"
+    },
+    {
+      "id": "wm-no-colon",
+      "input": {
+        "value": "wine-manager"
+      },
+      "expected": "automatic"
+    }
+  ]
+}

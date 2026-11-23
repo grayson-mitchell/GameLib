@@ -17,7 +17,7 @@ import {
   RUST_ENGINE_SELECTION_CLEAR
 } from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import type { EngineSelection } from 'backend/engine/engineTypes'
+import type { EngineSelection } from 'common/types/engine'
 import {
   cancelFallbackBottle,
   clearEngineSelection,

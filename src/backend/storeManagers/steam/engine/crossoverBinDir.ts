@@ -3,6 +3,20 @@ import { logWarning, LogPrefix } from 'backend/logger'
 import { resolveCrossoverBinDir } from 'backend/enginewine/decision'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
+/** What a caller knows about where CrossOver is: the persisted wine installation and wine binaries it has seen. */
+export interface CrossoverHint {
+  wineVersion?: WineInstallation
+  hintWineBins?: string[]
+}
+
+/** The hinted wine binaries a lookup starts from: a `crossover` wine installation first, then the named binaries. */
+export function crossoverHintWineBins(hint: CrossoverHint): string[] {
+  return [
+    ...(hint.wineVersion?.type === 'crossover' ? [hint.wineVersion.bin] : []),
+    ...(hint.hintWineBins ?? [])
+  ]
+}
+
 /**
  * Where CrossOver's `bin` directory is, answered by Rust (Phase 87, 87-55, D-04, D-15).
  *
@@ -14,14 +28,12 @@ import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
  */
 export async function crossoverBinDir(
   deps: RustInvokeDeps,
-  hint: { wineVersion?: WineInstallation; hintWineBins?: string[] } = {}
+  hint: CrossoverHint = {}
 ): Promise<string | undefined> {
-  const hintWineBins = [
-    ...(hint.wineVersion?.type === 'crossover' ? [hint.wineVersion.bin] : []),
-    ...(hint.hintWineBins ?? [])
-  ]
   try {
-    const reply = await resolveCrossoverBinDir(deps, { hintWineBins })
+    const reply = await resolveCrossoverBinDir(deps, {
+      hintWineBins: crossoverHintWineBins(hint)
+    })
     return typeof reply === 'string' && reply !== '' ? reply : undefined
   } catch (error) {
     logWarning(

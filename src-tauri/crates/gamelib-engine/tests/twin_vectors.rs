@@ -7,6 +7,11 @@
 //! (through `is_pinned_engine_installed`) and `tool_settings::build_fallback_game_settings`; the TS replay is
 //! `twinVectors.test.ts`, so neither side can drift without one of the two failing.
 //!
+//! 87-56b adds a ninth group to `bottle_twin.json` (`crossoverBinDirSync`, over `CrossoverLocator::resolve_bin_dir_sync`
+//! with an empty memo and a system directory the vector names) and `override_twin.json` (`parseEngineOverride`, over
+//! `ids::parse_engine_override`; its own file because the `engine_twin.json` rule asks every group to answer null or
+//! false and the grammar never does). The TS replay is `twinVectors.test.ts`.
+//!
 //! `fixtures/vectors/engine_twin.json` pins four sync pure helpers that the TypeScript keeps until their
 //! callers move (`engineKeyFor`, `isWritableEngineOverride`, `importEngineSettings`,
 //! `getPerGameBottleNameFor`, in `src/backend/enginewine/twin.ts`). The 87-12 oracle recorded the vectors
@@ -177,6 +182,7 @@ mod bottle_twin {
     use gamelib_core::shutdown::Shutdown;
     use gamelib_engine::bottles::marker::{read_marker_summary, restore_needs_absent_pin};
     use gamelib_engine::bottles::paths::{bottle_dir, sanitize_bottle_name};
+    use gamelib_engine::crossover::locate::CrossoverLocator;
     use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
     use gamelib_engine::engines::{
         is_bottle_provisioned, is_pinned_engine_installed, read_bottle_engine_marker_kind,
@@ -194,7 +200,7 @@ mod bottle_twin {
     const VECTORS: &str = include_str!("fixtures/vectors/bottle_twin.json");
 
     /// The group counts the file held when recorded (87-11); never lower one.
-    const GROUP_FLOORS: [(&str, usize); 8] = [
+    const GROUP_FLOORS: [(&str, usize); 9] = [
         ("getBottleDir", 16),
         ("sanitizeBottleName", 31),
         ("isBottleProvisioned", 25),
@@ -203,8 +209,9 @@ mod bottle_twin {
         ("readBottleEngineMarkerSummary", 25),
         ("restoreNeedsAbsentPin", 46),
         ("isPinnedEngineInstalled", 36),
+        ("crossoverBinDirSync", 24),
     ];
-    const TOTAL_FLOOR: usize = 216;
+    const TOTAL_FLOOR: usize = 240;
     const SYNTHETIC_PIN_LABEL: &str = "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)";
     const BOTTLES_REL: &str = "Library/Application Support/CrossOver/Bottles";
 
@@ -447,6 +454,24 @@ mod bottle_twin {
                         &ctx,
                         &pin_variant(input["pin"].as_str().unwrap_or_default())
                     )),
+                    // The sync CrossOver lookup over an empty memo; the system-wide directory is the vector's,
+                    // so a CrossOver on the machine running the test cannot answer (87-56b).
+                    "crossoverBinDirSync" => {
+                        let hints: Vec<String> = input["hintWineBins"]
+                            .as_array()
+                            .into_iter()
+                            .flatten()
+                            .map(|bin| profile.expand(bin.as_str().unwrap_or_default()))
+                            .collect();
+                        let locator = CrossoverLocator::with_system_applications(
+                            profile
+                                .expand(input["systemApplications"].as_str().unwrap_or_default()),
+                        );
+                        let user_home = profile.root().to_string_lossy().into_owned();
+                        locator
+                            .resolve_bin_dir_sync(&user_home, &hints)
+                            .map_or(Value::Null, Value::String)
+                    }
                     other => panic!("unknown vector group {other}"),
                 };
                 profile.normalise(answer)
@@ -462,7 +487,7 @@ mod bottle_twin {
     }
 
     #[test]
-    fn the_bottle_vector_file_holds_the_eight_groups_over_their_floors() {
+    fn the_bottle_vector_file_holds_the_nine_groups_over_their_floors() {
         let groups = load();
         let mut names: Vec<&str> = groups.keys().map(String::as_str).collect();
         names.sort_unstable();
@@ -525,6 +550,20 @@ mod bottle_twin {
         let differs = json!({"engines": "installed", "pin": "wine-sha-differs"});
         assert_eq!(replay("isPinnedEngineInstalled", &installed), true);
         assert_eq!(replay("isPinnedEngineInstalled", &differs), false);
+        // A cxbottle in the system directory answers, and the same layout without it does not.
+        let bin = "<HOME>/SystemApplications/CrossOver.app/Contents/SharedSupport/CrossOver/bin";
+        let with = json!({
+            "seed": [{"path": format!("{bin}/cxbottle"), "text": ""}],
+            "systemApplications": "<HOME>/SystemApplications",
+            "hintWineBins": []
+        });
+        let without = json!({
+            "seed": [{"path": format!("{bin}/wine"), "text": ""}],
+            "systemApplications": "<HOME>/SystemApplications",
+            "hintWineBins": []
+        });
+        assert!(replay("crossoverBinDirSync", &with).is_string());
+        assert_eq!(replay("crossoverBinDirSync", &without), Value::Null);
     }
 }
 
@@ -625,5 +664,85 @@ mod selection_twin {
             replay("engineLogLabel", &crossover),
             "engine=crossover build=27.0.0.2 reason=cx-healthy"
         );
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// override_twin.json (87-56b): the engine override grammar
+// ---------------------------------------------------------------------------------------------
+
+mod override_twin {
+    use gamelib_engine::ids::parse_engine_override;
+    use serde_json::Value;
+
+    use super::{check_floor, materialise};
+
+    const VECTORS: &str = include_str!("fixtures/vectors/override_twin.json");
+
+    /// The file holds 57 vectors when recorded (87-56b); never lower the floor.
+    const FLOOR: usize = 57;
+
+    fn load() -> Vec<Value> {
+        match serde_json::from_str::<Value>(VECTORS).expect("override_twin.json parses") {
+            Value::Object(mut map) => {
+                assert_eq!(map.len(), 1, "one group");
+                match map.remove("parseEngineOverride") {
+                    Some(Value::Array(list)) => list,
+                    other => panic!("parseEngineOverride is not an array: {other:?}"),
+                }
+            }
+            other => panic!("override_twin.json is not an object: {other}"),
+        }
+    }
+
+    fn replay(input: &Value) -> Value {
+        Value::String(parse_engine_override(&input["value"]))
+    }
+
+    #[test]
+    fn the_override_vector_file_holds_its_group_over_the_floor_and_both_answers_occur() {
+        let list = load();
+        check_floor("override twin vectors", list.len(), FLOOR).unwrap();
+        let mut ids: Vec<&str> = list.iter().map(|v| v["id"].as_str().unwrap()).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids.len(), list.len(), "duplicate ids");
+        // A grammar that kept every id, or refused every id, would pass a function that ignores its input.
+        let refused = |v: &&Value| {
+            v["expected"] == "automatic" && v["input"]["value"] != Value::String("automatic".into())
+        };
+        let refusals = list.iter().filter(refused).count();
+        assert!(refusals > 5, "too few refusals: {refusals}");
+        assert!(list.len() - refusals > 5, "too few kept ids");
+        assert!(list.iter().any(|v| !v["input"]["value"].is_string()));
+    }
+
+    #[test]
+    fn every_recorded_override_vector_replays_against_the_rust_grammar() {
+        let list = load();
+        let mismatches: Vec<String> = list
+            .iter()
+            .filter_map(|vector| {
+                let got = replay(&materialise(&vector["input"]));
+                (got != vector["expected"]).then(|| {
+                    format!(
+                        "{}: expected {}, got {got}",
+                        vector["id"].as_str().unwrap(),
+                        vector["expected"]
+                    )
+                })
+            })
+            .collect();
+        assert!(mismatches.is_empty(), "{mismatches:#?}");
+        check_floor("replayed override vectors", list.len(), FLOOR).unwrap();
+    }
+
+    #[test]
+    fn the_override_replay_is_not_vacuous() {
+        assert!(check_floor("empty", 0, FLOOR).is_err());
+        let kept = serde_json::json!({"value": "pinned:wine-staging-11.20"});
+        assert_eq!(replay(&kept), "pinned:wine-staging-11.20");
+        let tampered = serde_json::json!({"value": "pinned:wine-staging-11.20x"});
+        assert_eq!(replay(&tampered), "automatic");
     }
 }

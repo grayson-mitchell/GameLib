@@ -110,6 +110,7 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/engine/engineDecision.ts',
   'src/backend/engine/engineEligibility.ts',
   'src/backend/engine/enginePins.ts',
+  'src/backend/engine/engineIds.ts',
   'src/backend/engine/engineState.ts',
   'src/backend/engine/engineTypes.ts',
   'src/backend/engine/fallbackEngine.ts',
@@ -119,6 +120,7 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/engine/perGameBottle.ts',
   'src/backend/engine/toolSettings.ts',
   'src/backend/launcher.ts',
+  'src/backend/sidecar/bootstrap.ts',
   'src/backend/sidecar/engineWineResolvers.ts',
   'src/backend/sidecar/installFlowRegistration.ts',
   'src/backend/sidecar/settingsFlowRegistration.ts',
@@ -1009,37 +1011,25 @@ const SCHEDULE: readonly ScheduleRow[] = [
     callers: ENGINE_TWIN_IMPORTERS,
     deletedBy: 96
   },
+  // 87-56b (D-24): the Steam bottle's synchronous CrossOver read and the override grammar. Rust owns them as
+  // `CrossoverLocator::resolve_bin_dir_sync` and `ids::parse_engine_override`; `bottle_twin.json` and
+  // `override_twin.json` pin the two sides (`twinVectors.test.ts` here, `twin_vectors.rs` in Rust). The first goes
+  // with the bridge's launch in Phase 96, the second with the settings and install flows in Phase 98.
   {
-    name: 'isInside',
+    name: 'crossoverBinDirSync',
     file: 'src/backend/enginewine/twin.ts',
     shape: 'twin',
     vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
     callers: ENGINE_TWIN_IMPORTERS,
-    deletedBy: 87
+    deletedBy: 96
   },
   {
-    name: 'readEngineMarker',
+    name: 'parseEngineOverride',
     file: 'src/backend/enginewine/twin.ts',
     shape: 'twin',
     vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
     callers: ENGINE_TWIN_IMPORTERS,
-    deletedBy: 87
-  },
-  {
-    name: 'hasStagingDxvk',
-    file: 'src/backend/enginewine/twin.ts',
-    shape: 'twin',
-    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
-    callers: ENGINE_TWIN_IMPORTERS,
-    deletedBy: 87
-  },
-  {
-    name: 'isContradictedCrossover',
-    file: 'src/backend/enginewine/twin.ts',
-    shape: 'twin',
-    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
-    callers: ENGINE_TWIN_IMPORTERS,
-    deletedBy: 87
+    deletedBy: 98
   },
   {
     name: 'pinMarkerMatches',

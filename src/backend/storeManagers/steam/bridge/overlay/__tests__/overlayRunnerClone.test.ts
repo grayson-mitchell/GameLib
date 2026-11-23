@@ -34,7 +34,7 @@ import {
   DYLD_ENTITLEMENT,
   STOCK_LOADER_ENTITLEMENTS
 } from '../../drm/runnerEntitlements'
-import type { RunTool, RunToolResult } from 'backend/engine/runTool'
+import type { RunTool, RunToolResult } from 'common/types/engine'
 import {
   OVERLAY_MARKER_SCHEMA,
   detectCrossoverForOverlay,

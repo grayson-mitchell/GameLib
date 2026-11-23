@@ -73,7 +73,7 @@ const setEngineSelection = (
 ) => engineRuntime.registry.setEngineSelection(...a)
 const clearEngineSelection = (key: string) =>
   engineRuntime.registry.clearEngineSelection(key)
-import type { NonCrossoverSelection } from 'backend/engine/engineTypes'
+import type { NonCrossoverSelection } from 'common/types/engine'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
 import type { ManagerDeps, Stores } from 'backend/services/types'

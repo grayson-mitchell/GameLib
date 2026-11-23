@@ -466,12 +466,7 @@ const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
   engineConfig: [],
   engineDecision: [],
   engineEligibility: [],
-  engineIds: [
-    'src/backend/enginewine/decision.ts',
-    'src/backend/enginewine/twin.ts',
-    'src/backend/storeManagers/steam/bridgeWineTools.ts',
-    'src/backend/storeManagers/steam/gameLaunch.ts'
-  ],
+  engineIds: [],
   engineNoticeStore: ['src/backend/stores/createStores.ts'],
   enginePins: [],
   engineRegistry: [],
@@ -501,7 +496,6 @@ const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
   launchSettings: [],
   perGameBottle: [],
   pinnedEngineProgress: [],
-  runTool: [],
   testedCrossoverVersions: [],
   toolSettings: [],
   wineManagerReleases: ['src/backend/services/engineServices.ts']
@@ -512,9 +506,7 @@ const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
  * `fallback`, `launchSettings`, `perGameBottle`), directly or through `requireEngineRuntime(...)`, with the members each
  * reads. Slimming the runtime (87-56b) and deleting the members' modules (87-56c) edit this in the same commit.
  */
-const ENGINE_RUNTIME_MEMBER_READS: Record<string, readonly string[]> = {
-  'src/backend/sidecar/bootstrap.ts': ['crossover']
-}
+const ENGINE_RUNTIME_MEMBER_READS: Record<string, readonly string[]> = {}
 
 const ENGINE_DIR = 'src/backend/engine'
 const RUNTIME_MEMBER_RE =
@@ -596,10 +588,10 @@ describe('engineOutsideImporters', () => {
       {
         path: 'src/backend/services/plantedCaller.ts',
         raw: '',
-        code: "import { x } from 'backend/engine/runTool'\nconst y = engineRuntime.perGameBottle\n"
+        code: "import { x } from 'backend/engine/gamePrefix'\nconst y = engineRuntime.perGameBottle\n"
       }
     ]
-    expect(engineImportersOf(planted)['runTool']).toEqual([
+    expect(engineImportersOf(planted)['gamePrefix']).toEqual([
       'src/backend/services/plantedCaller.ts'
     ])
     expect(
@@ -610,10 +602,10 @@ describe('engineOutsideImporters', () => {
       {
         path: 'src/backend/services/plantedCaller.test.ts',
         raw: '',
-        code: "import { x } from 'backend/engine/runTool'\n"
+        code: "import { x } from 'backend/engine/gamePrefix'\n"
       }
     ]
-    expect(engineImportersOf(quiet)['runTool']).toEqual([])
+    expect(engineImportersOf(quiet)['gamePrefix']).toEqual([])
   })
 })
 

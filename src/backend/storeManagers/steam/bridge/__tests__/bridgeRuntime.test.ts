@@ -5,7 +5,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
-import type { RunTool } from 'backend/engine/runTool'
+import type { RunTool } from 'common/types/engine'
 import { createBridgeRuntime } from '../bridgeRuntime'
 import { createAbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { bridgeAllowlist } from '../allowlist'

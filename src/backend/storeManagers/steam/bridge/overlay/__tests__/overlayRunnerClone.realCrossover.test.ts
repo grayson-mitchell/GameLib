@@ -16,7 +16,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Backend: 'Backend', Steam: 'Steam' }
 }))
 
-import { createRunTool } from 'backend/engine/runTool'
+import { createRunTool } from 'backend/testUtils/realRunTool'
 import { createRealRunner } from 'backend/testUtils/realRunner'
 import {
   DYLD_ENTITLEMENT,

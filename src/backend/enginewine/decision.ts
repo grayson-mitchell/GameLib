@@ -3,7 +3,7 @@ import type {
   EngineSelection,
   FallbackReason
 } from 'common/types/engine'
-import type { EngineOverrideId } from 'backend/engine/engineIds'
+import type { EngineOverrideId } from 'common/types/engine'
 import {
   RUST_ENGINE_CX_RESOLVE_BIN_DIR,
   RUST_ENGINE_DECIDE_CREATION,

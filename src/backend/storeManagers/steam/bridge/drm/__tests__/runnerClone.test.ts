@@ -59,11 +59,8 @@ import {
   DYLD_ENTITLEMENT,
   STOCK_LOADER_ENTITLEMENTS
 } from '../runnerEntitlements'
-import {
-  createRunTool,
-  type RunTool,
-  type RunToolResult
-} from 'backend/engine/runTool'
+import type { RunTool, RunToolResult } from 'common/types/engine'
+import { createRunTool } from 'backend/testUtils/realRunTool'
 import { createRealRunner } from 'backend/testUtils/realRunner'
 import { buildDrmPaths } from '../drmPaths'
 import type { NtdllPatchRow } from '../ntdllPatchTable'

@@ -24,7 +24,7 @@ import {
   buildFallbackGameSettings,
   readBottleEngineMarkerKind
 } from 'backend/enginewine/twin'
-import { parseEngineOverride } from 'backend/engine/engineIds'
+import { parseEngineOverride } from 'backend/enginewine/twin'
 import type {
   NonCrossoverEngine,
   ToolSettingsResult

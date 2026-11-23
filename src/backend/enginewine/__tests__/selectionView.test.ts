@@ -11,7 +11,7 @@ import {
   engineSelectionView,
   registerEngineSelectionView
 } from '../selectionView'
-import type { EngineSelection } from 'backend/engine/engineTypes'
+import type { EngineSelection } from 'common/types/engine'
 
 interface Step {
   call: 'set' | 'get' | 'clear'

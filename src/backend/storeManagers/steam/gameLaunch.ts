@@ -456,7 +456,7 @@ export async function selectLaunchEngine(
   const { isCrossoverMissing } = await import('backend/enginewine/decision')
   const { steamPrepareFacts, steamEngineFacts, readSteamEngineOverride } =
     await import('./engine/steamEngineDeps')
-  const { parseEngineOverride } = await import('backend/engine/engineIds')
+  const { parseEngineOverride } = await import('backend/enginewine/twin')
   const earlyOverride = parseEngineOverride(
     readSteamEngineOverride(steamGame.deps, steamGame.appId)
   )

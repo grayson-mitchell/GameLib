@@ -1,8 +1,5 @@
-import {
-  createScriptedRunner,
-  type ScriptedRunner
-} from 'backend/testUtils/scriptedRunner'
-import { createRunTool } from '../runTool'
+import { createScriptedRunner, type ScriptedRunner } from '../scriptedRunner'
+import { createRunTool } from '../realRunTool'
 
 type Opts = {
   timeoutMs: number

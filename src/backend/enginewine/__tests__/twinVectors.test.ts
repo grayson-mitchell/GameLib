@@ -8,6 +8,11 @@
  * fresh fake profile (the placeholders `<HOME>`, `<TOOLS>`, `<APPFOLDER>`, `<USERDATA>` expanded), exactly as the
  * Rust replay does, and the answer is compared with the profile's roots turned back into placeholders.
  *
+ * 87-56b adds `crossoverBinDirSync` to `bottle_twin.json` (24 vectors laid as fake trees; Rust:
+ * `CrossoverLocator::resolve_bin_dir_sync` over an empty memo) and `override_twin.json` (`parseEngineOverride`; Rust:
+ * `ids::parse_engine_override`), a file of its own because `engine_twin.json`'s anti-vacuity rule asks every group to
+ * answer null or false and the grammar never does.
+ *
  * 87-55 adds `selection_twin.json`: `isNonCrossover` and `engineLogLabel`, the engine selection's two pure helpers
  * (Rust: `EngineSelection::engine` and `EngineSelection::log_label`). The last describe block replays its 83 + 83
  * vectors, which `twin_vectors.rs` replays against the Rust selection.
@@ -46,6 +51,7 @@ import { dirname, join } from 'path'
 import {
   ENGINE_PINS,
   buildFallbackGameSettings,
+  crossoverBinDirSync,
   engineKeyFor,
   engineLogLabel,
   getBottleDir,
@@ -55,6 +61,7 @@ import {
   isNonCrossover,
   isPinnedEngineInstalled,
   isWritableEngineOverride,
+  parseEngineOverride,
   readBottleEngineMarkerKind,
   readBottleEngineMarkerSummary,
   restoreNeedsAbsentPin,
@@ -195,9 +202,10 @@ const BOTTLE_GROUP_FLOORS: Record<string, number> = {
   readBottleEngineMarkerKind: 25,
   readBottleEngineMarkerSummary: 25,
   restoreNeedsAbsentPin: 46,
-  isPinnedEngineInstalled: 36
+  isPinnedEngineInstalled: 36,
+  crossoverBinDirSync: 24
 }
-const BOTTLE_TOTAL_FLOOR = 216
+const BOTTLE_TOTAL_FLOOR = 240
 const SYNTHETIC_PIN_LABEL = 'Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)'
 const BOTTLES_REL = join(
   'Library',
@@ -405,6 +413,16 @@ function replayBottle(group: string, input: Item): unknown {
           )
         )
       }
+      case 'crossoverBinDirSync':
+        return profile.normalise(
+          crossoverBinDirSync(
+            profile.home,
+            ((input['hintWineBins'] as string[] | undefined) ?? []).map((bin) =>
+              profile.expand(bin)
+            ),
+            profile.expand(input['systemApplications'] as string)
+          )
+        )
       case 'isPinnedEngineInstalled': {
         const derive = PIN_VARIANTS[input['pin'] as string]
         if (!derive)
@@ -423,7 +441,7 @@ function replayBottle(group: string, input: Item): unknown {
 }
 
 describe('twin vectors (bottle_twin.json)', () => {
-  it('anti-vacuity: the file holds the eight groups over their floors, answering both ways', () => {
+  it('anti-vacuity: the file holds the nine groups over their floors, answering both ways', () => {
     expect(Object.keys(bottleVectors).sort()).toEqual(
       Object.keys(BOTTLE_GROUP_FLOORS).sort()
     )
@@ -570,5 +588,79 @@ describe('twin vectors (selection_twin.json)', () => {
       String(vector.expected).replace('27.0.0.1', '27.0.0.2')
     )
     expect(isNonCrossover(selection)).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------------------------
+// override_twin.json (87-56b): the engine override grammar
+// ---------------------------------------------------------------------------------------------
+
+const OVERRIDE_VECTORS = join(
+  REPO_ROOT,
+  'src-tauri',
+  'crates',
+  'gamelib-engine',
+  'tests',
+  'fixtures',
+  'vectors',
+  'override_twin.json'
+)
+// `override_twin.json` holds 57 vectors when recorded (87-56b). Never lower a floor to turn a red run green.
+const OVERRIDE_FLOOR = 57
+
+const overrideVectors = JSON.parse(
+  readFileSync(OVERRIDE_VECTORS, 'utf8')
+) as Record<string, Vector[]>
+
+describe('twin vectors (override_twin.json)', () => {
+  const list = overrideVectors['parseEngineOverride'] ?? []
+
+  it('anti-vacuity: the file holds the one group over its floor, and the grammar both keeps and refuses', () => {
+    expect(Object.keys(overrideVectors)).toEqual(['parseEngineOverride'])
+    assertAtOrAboveFloor('override twin vectors', list.length, OVERRIDE_FLOOR)
+    const ids = list.map((v) => v.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    // A grammar that kept every id, or refused every id, would pass a twin that ignores its input.
+    const kept = list.filter(
+      (v) =>
+        v.expected !== 'automatic' || (v.input as Item)['value'] === 'automatic'
+    )
+    const refused = list.filter(
+      (v) =>
+        v.expected === 'automatic' && (v.input as Item)['value'] !== 'automatic'
+    )
+    expect(kept.length).toBeGreaterThan(5)
+    expect(refused.length).toBeGreaterThan(5)
+    // Every shape of id and every kind of value that is not a string is covered.
+    const prefixes = new Set(
+      list
+        .map((v) => (v.input as Item)['value'])
+        .filter((value): value is string => typeof value === 'string')
+        .map((value) => value.split(':')[0])
+    )
+    expect(prefixes.has('pinned')).toBe(true)
+    expect(prefixes.has('wine-manager')).toBe(true)
+    expect(
+      list.some((v) => typeof (v.input as Item)['value'] !== 'string')
+    ).toBe(true)
+  })
+
+  it('parseEngineOverride answers every recorded vector', () => {
+    const mismatches = list
+      .map((v) => ({
+        id: v.id,
+        got: parseEngineOverride((materialise(v.input) as Item)['value']),
+        want: v.expected
+      }))
+      .filter((r) => r.got !== r.want)
+    expect(mismatches).toEqual([])
+  })
+
+  it('a vector whose expected answer is wrong is caught (the replay is not vacuous)', () => {
+    const pinned = list.find((v) => v.id === 'pinned-current') as Vector
+    const value = (pinned.input as Item)['value']
+    expect(parseEngineOverride(value)).toBe(pinned.expected)
+    expect(parseEngineOverride(value)).not.toBe('automatic')
+    expect(parseEngineOverride(`${String(value)}x`)).toBe('automatic')
   })
 })

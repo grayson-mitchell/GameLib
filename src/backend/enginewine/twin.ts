@@ -17,8 +17,9 @@
  * `gameEngineState`, through `perGameBottle.ts`) calls it, so it is an intra-phase row
  * (`deletedBy: 87`) and 87-56 makes it private when that TS goes.
  *
- * The grammar of an engine override id and the Steam / clean-name rules are imported, not copied: they
- * stay in `engine/engineIds.ts` and `engine/gameKey.ts` until the same deletion.
+ * The Steam / clean-name rules are imported, not copied: they stay in `engine/gameKey.ts` until 87-56c deletes it
+ * with the directory. The grammar of an engine override id is `parseEngineOverride` here (87-56b), pinned to Rust
+ * `ids::parse_engine_override` by `override_twin.json`; `engine/engineIds.ts` only re-exports it.
  *
  * 87-39 (D-24) adds the bridge's sync bottle helpers: `getBottleDir`, `sanitizeBottleName`,
  * `isBottleProvisioned`, `buildFallbackGameSettings`, the three read-only marker views, `isPinnedEngineInstalled`
@@ -29,38 +30,42 @@
  * stay synchronous because the launch path and the bridge still call them inline. 87-43 repointed every caller
  * here and deleted `bottlePrimitives.ts` and `engineSwitch.ts`; `enginePins.ts` still re-exports the pin table for
  * the engine files that import it until 87-56. The helpers the still-TS marker writers and the
- * pinned-engine installer share with the readers (`readEngineMarker`, `hasStagingDxvk`,
- * `isContradictedCrossover`, `isInside`, `pinMarkerMatches`, `pinnedEnginePaths`) are intra-phase rows
- * (`deletedBy: 87`): 87-56 deletes their callers and makes them private, as with `perGameBottleName`.
+ * pinned-engine installer share with the readers (`pinMarkerMatches`, `pinnedEnginePaths`) are intra-phase rows
+ * (`deletedBy: 87`): 87-56c deletes their callers and makes them private, as with `perGameBottleName`.
+ * `readEngineMarker`, `hasStagingDxvk`, `isContradictedCrossover` and `isInside` are private as of 87-56b (nothing
+ * outside this file imports them).
  *
  * 87-55 (D-24) adds `isNonCrossover` and `engineLogLabel`, the two pure helpers of the engine selection that the bridge
  * calls inline (a type guard and the launch-log line). The Rust owners are `EngineSelection::engine` and
  * `EngineSelection::log_label` (`bottles::registry`); the shared `selection_twin.json` vectors pin the two sides
  * (`twinVectors.test.ts` here, `twin_vectors.rs` in Rust). Both go with the bridge's launch in Phase 96.
+ *
+ * 87-56b (D-24) adds `crossoverBinDirSync`, the synchronous CrossOver lookup the Steam bottle's sync reads call (Rust:
+ * `CrossoverLocator::resolve_bin_dir_sync`, pinned by `bottle_twin.json`), and `parseEngineOverride` (Rust:
+ * `ids::parse_engine_override`, pinned by `override_twin.json`).
  */
 import { createHash } from 'crypto'
 import { existsSync, readFileSync } from 'fs'
 import { existsSync as gracefulExistsSync } from 'graceful-fs'
-import { basename, isAbsolute, join, relative, resolve } from 'path'
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import enginePinsTable from 'common/enginePins.json'
 import { hasCapability } from 'common/storeCapabilities'
 import type { GameSettings } from 'common/types'
 import type { AppPaths } from 'backend/process/context'
 import type {
+  EngineKey,
+  EngineOverrideId,
   EnginePin,
   EngineSelection,
   NonCrossoverEngine,
   NonCrossoverSelection,
   PinnedArtifact
 } from 'common/types/engine'
-import { parseEngineOverride } from 'backend/engine/engineIds'
-import type { EngineOverrideId } from 'backend/engine/engineIds'
 import {
   isCleanAppName,
   isKnownRunner,
   STEAM_APP_ID_RE
 } from 'backend/engine/gameKey'
-import type { EngineKey } from 'backend/engine/gameKey'
 
 const PER_GAME_BOTTLE_NAME_MAX = 64
 const BOTTLE_PREFIX = 'GameLib'
@@ -91,6 +96,31 @@ export function engineLogLabel(sel: EngineSelection): string {
     return `engine=crossover build=${sel.crossoverBuild ?? 'unknown'} reason=${sel.reason}`
   }
   return `engine=${sel.kind} name="${sel.label}" version=${sel.version} reason=${sel.reason}`
+}
+
+const WINE_MANAGER_VERSION_RE = /^[A-Za-z0-9._-]{1,64}$/
+
+/**
+ * Engine override id grammar (phase 59, D-14): a closed set, anything else (including any path or a non-string)
+ * parses to `automatic`. The backend validation point for the renderer-supplied per-game override. Rust owner:
+ * `ids::parse_engine_override`; `override_twin.json` pins the two sides (87-56b).
+ */
+export function parseEngineOverride(raw: unknown): EngineOverrideId {
+  if (typeof raw !== 'string') return 'automatic'
+  if (raw === 'automatic' || raw === 'crossover') return raw
+  if (raw.startsWith('pinned:')) {
+    return pinById(raw.slice('pinned:'.length))
+      ? (raw as EngineOverrideId)
+      : 'automatic'
+  }
+  if (raw.startsWith('wine-manager:')) {
+    const v = raw.slice('wine-manager:'.length)
+    if (!WINE_MANAGER_VERSION_RE.test(v) || v.includes('..')) return 'automatic'
+    if (v.endsWith('-DXMT')) return 'automatic'
+    if (/toolkit|gptk|porting/i.test(v)) return 'automatic'
+    return raw as EngineOverrideId
+  }
+  return 'automatic'
 }
 
 /** True only for a value that survives the closed grammar unchanged. */
@@ -257,6 +287,41 @@ export function isBottleProvisioned(
   )
 }
 
+/** A CrossOver bundle's `bin` directory below the `.app`. */
+const CROSSOVER_BIN_SUBPATH = 'Contents/SharedSupport/CrossOver/bin'
+/** The tail of a CrossOver wine binary. */
+const CROSSOVER_WINE_BIN_SUFFIX = '/SharedSupport/CrossOver/bin/wine'
+
+/**
+ * The synchronous half of the CrossOver lookup (quick 261024-cjq `resolveCrossoverBinDir`): the `bin` directory of
+ * each hinted wine binary that ends in the CrossOver suffix, then the system-wide and the per-user default install,
+ * and the first that holds `cxbottle` wins. Null when none does. The memo of an earlier Spotlight find is not
+ * consulted (nothing writes it any more: the Spotlight lookup is Rust's, `engine_cx_resolve_bin_dir`), so this equals
+ * Rust `CrossoverLocator::resolve_bin_dir_sync` over an empty memo, which `bottle_twin.json` pins (87-56b). The
+ * system directory is injectable the way the Rust locator's is, so a test cannot be answered by a CrossOver on the
+ * machine running it.
+ */
+export function crossoverBinDirSync(
+  userHome: string,
+  hintWineBins: readonly string[],
+  systemApplications = '/Applications'
+): string | null {
+  const candidates: string[] = []
+  for (const bin of hintWineBins) {
+    if (typeof bin === 'string' && bin.endsWith(CROSSOVER_WINE_BIN_SUFFIX)) {
+      candidates.push(dirname(bin))
+    }
+  }
+  candidates.push(
+    join(systemApplications, 'CrossOver.app', CROSSOVER_BIN_SUBPATH),
+    join(userHome, 'Applications/CrossOver.app', CROSSOVER_BIN_SUBPATH)
+  )
+  return (
+    candidates.find((dir) => dir !== '' && existsSync(join(dir, 'cxbottle'))) ??
+    null
+  )
+}
+
 const FALLBACK_STRIPPED_ENV_KEYS: readonly string[] = Object.freeze([
   'USER',
   'WINEPREFIX',
@@ -335,7 +400,7 @@ export interface BottleReadContext {
 }
 
 /** True when `path` is absolute and strictly below `root` (resolved lexically, so `..` cannot escape). */
-export function isInside(root: string, path: string): boolean {
+function isInside(root: string, path: string): boolean {
   if (!isAbsolute(path)) return false
   const rel = relative(resolve(root), resolve(path))
   return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
@@ -346,7 +411,7 @@ export function isInside(root: string, path: string): boolean {
  * DXVK dir that must sit inside the pinned-engine root: T-59-60, a hand-edited dir must not steer the DLL
  * removal list elsewhere). Null for an absent or unreadable marker.
  */
-export function readEngineMarker(
+function readEngineMarker(
   bottleDir: string,
   ctx: Pick<BottleReadContext, 'fallback'>
 ): EngineMarker | null {
@@ -395,12 +460,12 @@ export function readEngineMarker(
  * switch to CrossOver removes it. A bottle that carries it was set up by a non-CrossOver engine
  * (76-VERIFICATION CR-01).
  */
-export function hasStagingDxvk(bottleDir: string): boolean {
+function hasStagingDxvk(bottleDir: string): boolean {
   return existsSync(join(bottleDir, DXVK_VERSION_FILE))
 }
 
 /** A crossover marker contradicted by DXVK-macOS in the bottle (76 CR-01). */
-export function isContradictedCrossover(
+function isContradictedCrossover(
   bottleDir: string,
   marker: EngineMarker | null
 ): boolean {

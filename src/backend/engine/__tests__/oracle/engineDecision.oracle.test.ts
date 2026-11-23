@@ -81,7 +81,7 @@ import { createEngineRuntime } from '../../engineRuntime'
 import { ENGINE_PINS, type EnginePin } from '../../enginePins'
 import { parseEngineOverride } from '../../engineIds'
 import { offlineLaunchCertainlyBlocked } from 'backend/storeManagers/steam/engine/offlineRefusal'
-import type { RunTool } from '../../runTool'
+import type { RunTool } from 'common/types/engine'
 import {
   dismissUntestedNotice,
   isTestedCrossover,

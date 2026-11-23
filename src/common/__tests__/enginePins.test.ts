@@ -7,7 +7,7 @@
  * move, so this test proves the JSON equals it field for field (current and previous). A bumped pin,
  * a changed hash or a renamed field on either side fails here before the two sides disagree.
  */
-import { ENGINE_PINS } from '../../backend/engine/enginePins'
+import { ENGINE_PINS } from 'backend/enginewine/twin'
 import enginePins from '../enginePins.json'
 
 describe('enginePins.json', () => {

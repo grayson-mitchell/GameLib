@@ -194,9 +194,10 @@ export function bottleWineArch(
 }
 
 /**
- * How the Steam bottle finds CrossOver (87-55): the sync fast path (the hinted wine binaries, the memo, the two default
- * install locations; `resolveCrossoverWine` reads it inline) is still the boot's TS locator, and the async lookup is
- * Rust's (`crossoverBinDir`, wired by the boot's facade). `deps` is what the TS locator took; Rust needs nothing from it.
+ * How the Steam bottle finds CrossOver (87-55): the sync fast path (the hinted wine binaries and the two default
+ * install locations; `resolveCrossoverWine` reads it inline) is the twin `crossoverBinDirSync` (87-56b), and the async
+ * lookup is Rust's (`crossoverBinDir`); the boot's facade wires both. `deps` is what the TS locator took; Rust needs
+ * nothing from it.
  */
 export interface SteamCrossoverLocator {
   resolveCrossoverBinDir: (opts?: {

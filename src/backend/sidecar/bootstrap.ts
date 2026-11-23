@@ -93,7 +93,10 @@ import {
   clearOrphanedElectronToken
 } from '../storeManagers/steam/tokenStore'
 import { createSteamBottle } from '../storeManagers/steam/bottle'
-import { crossoverBinDir } from '../storeManagers/steam/engine/crossoverBinDir'
+import {
+  crossoverBinDir,
+  crossoverHintWineBins
+} from '../storeManagers/steam/engine/crossoverBinDir'
 import {
   migrateRestartHolds,
   resumeAdoptionWatches
@@ -251,6 +254,7 @@ import { setupEnvVars, setupWineEnvVars, verifyWinePrefix } from '../launcher'
 import { validWine } from '../enginewine/wineCore'
 import { setEngineOnline } from '../enginewine/engineOnline'
 import { engineSelectionView } from '../enginewine/selectionView'
+import { crossoverBinDirSync } from '../enginewine/twin'
 import { getUmuPath, isUmuSupported } from '../utils/compatibility_layers'
 import { searchForExecutableOnPath } from '../utils/os/path'
 import {
@@ -1757,10 +1761,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             paths: ctx.paths,
             // 'engine-runtime' runs after this step: resolve the locator at call time.
             crossover: {
+              // The synchronous lookup is the twin of Rust's `resolve_bin_dir_sync` (87-56b, D-24).
               resolveCrossoverBinDir: (opts) =>
-                requireEngineRuntime(state).crossover.resolveCrossoverBinDir(
-                  opts
-                ),
+                crossoverBinDirSync(
+                  ctx.paths.userHome,
+                  crossoverHintWineBins(opts ?? {})
+                ) ?? undefined,
               // Rust finds CrossOver (87-55, D-04): the engine runtime's transport carries the call.
               resolveCrossoverBinDirAsync: (_d, opts) =>
                 crossoverBinDir(requireEngineRuntime(state), opts)

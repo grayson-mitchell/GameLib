@@ -19,7 +19,7 @@ jest.mock('../../utils/systeminfo', () => ({ getSystemInfo: jest.fn() }))
 jest.mock('../../utils/os/path', () => ({ hasExecutable: jest.fn() }))
 
 import { defined } from 'backend/testUtils/indexed'
-import { ENGINE_PINS } from '../../engine/enginePins'
+import { ENGINE_PINS } from 'backend/enginewine/twin'
 import { registerSettingsFlows } from '../settingsFlowRegistration'
 
 let stderr: jest.SpyInstance

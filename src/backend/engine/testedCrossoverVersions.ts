@@ -5,7 +5,7 @@
  *
  * Nothing runs at import.
  */
-import type { RunTool } from './runTool'
+import type { RunTool } from 'common/types/engine'
 
 type TestedCrossoverRow = { build: string; testedIn: string }
 
