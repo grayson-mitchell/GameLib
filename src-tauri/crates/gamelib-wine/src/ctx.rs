@@ -11,6 +11,7 @@ use gamelib_engine::fetch::Fetch;
 
 use crate::tools::macho::{MachoScan, UnavailableScan};
 use crate::tools::state::ToolsState;
+use crate::winetricks::queue::WinetricksQueue;
 
 /// The CPU architecture the app runs on, as the shell reports it. The wine manager picks a release
 /// asset by it (GE-Proton ships an `aarch64` and an `x86_64` build), and a golden pins it so a
@@ -36,7 +37,10 @@ impl Arch {
     }
 }
 
-/// The shell (or the CLI) builds one `WineCtx` and every op takes `&WineCtx`.
+/// The shell (or the CLI) builds one `WineCtx` and every op takes `&WineCtx`. Cloning gives another
+/// handle on the same state (every shared field is an `Arc` or an `Arc` inside), which a detached
+/// task (the Winetricks queue's run) holds while the op that started it has already answered.
+#[derive(Clone)]
 pub struct WineCtx {
     /// The directories, clock, platform, shutdown, sinks and DXVK installer the engine crate already
     /// owns.
@@ -54,6 +58,9 @@ pub struct WineCtx {
     /// The tools' in-memory state (the single-flight install slot, the catalog caches): one per
     /// context, so every op of a boot shares it.
     pub tools: ToolsState,
+    /// The Winetricks apply queue of the boot (82 row `winetricks-queue`): the run, its outcomes and
+    /// the snapshot revision, in memory only (87-33).
+    pub winetricks_queue: Arc<WinetricksQueue>,
     /// The winemac export scan the DXMT gate asks (`MachoScan`): the shell implements it over
     /// `gamelib-scan`, so this crate takes no domain-crate dependency. Until the shell's is
     /// installed it never answers, which keeps the gate closed.
@@ -62,11 +69,19 @@ pub struct WineCtx {
 
 impl WineCtx {
     pub fn new(engine: Arc<EngineCtx>, runtime_path: PathBuf) -> WineCtx {
+        let tools = ToolsState::new();
         WineCtx {
             fetch: engine.fetch.clone(),
             proc: engine.proc.clone(),
             arch: Arch::host(),
-            tools: ToolsState::new(),
+            // The queue subscribes to the environment reports here, once, as the TS boot did: no I/O
+            // and no timer.
+            winetricks_queue: WinetricksQueue::new(
+                Arc::clone(&engine.emitter),
+                tools.installing_slot(),
+                Arc::clone(&tools.winetricks_env),
+            ),
+            tools,
             macho: Arc::new(UnavailableScan),
             engine,
             runtime_path,

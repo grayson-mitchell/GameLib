@@ -1,6 +1,6 @@
 //! Winetricks against the TS goldens (87-10 recorded them, 87-32 ports them; SC3, D-08, D-10, D-17):
-//! every case in `tests/fixtures/golden/winetricks/cases.json` that is not the queue's (87-33) runs the
-//! Rust entry point of the TS call it recorded, over a fake HOME laid out like the oracle's, a scripted
+//! every case in `tests/fixtures/golden/winetricks/cases.json` runs the Rust entry point of the TS call
+//! it recorded (the install lifecycle, the catalog reads and probes: 87-32; the apply queue: 87-33), over a fake HOME laid out like the oracle's, a scripted
 //! spawn seam that streams the case's output chunks (and advances a paused clock for its ticks), the
 //! oracle's launcher stubs and a `Replay` of its recorded exchanges.
 //!
@@ -16,7 +16,9 @@
 //!   in completion order; the Rust joins them, so the spawns are compared as a set;
 //! - the launcher stubs are asked only for the platform's own environment (the TS computed both);
 //! - the request carries the GameLib `User-Agent`, where the oracle's axios client sent
-//!   `HeroicGamesLauncher/<version>`; the replay is given the recorded one.
+//!   `HeroicGamesLauncher/<version>`; the replay is given the recorded one;
+//! - the queue's game status goes out as the `gameStatusUpdate` push where the oracle's sink recorded
+//!   `queue:sendGameStatus` (the oracle's own sink name; the payload is the same).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -46,6 +48,7 @@ use gamelib_wine::winetricks::install::{
     catalog_for, check_dependencies, check_wine_version, download_script, install, list_available,
     list_installed,
 };
+use gamelib_wine::winetricks::queue::{apply, OwnedTarget, GAME_STATUS_CHANNEL, QUEUE_CHANNEL};
 use gamelib_wine::winetricks::{Launcher, Session, Target, ToolSettings};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -55,13 +58,15 @@ use tokio_util::sync::CancellationToken;
 /// alone cannot lower the bar.
 const FLOOR: usize = 76;
 
-/// The channels the Rust side emits. The queue's own pushes (`winetricksQueueChanged`, the game status
-/// updates) are 87-33's.
+/// The channels the install lifecycle emits and every case compares.
 const CHANNELS: [&str; 3] = [
     "progressOfWinetricks",
     "installing-winetricks-component",
     "showDialog",
 ];
+
+/// The oracle's name for the game status the queue sends.
+const ORACLE_GAME_STATUS: &str = "queue:sendGameStatus";
 
 fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
@@ -426,6 +431,13 @@ impl Script {
     }
 }
 
+/// What a run's steps reach back into: the queue's `cancelRemaining` and a second `apply`.
+#[derive(Clone)]
+struct Hooks {
+    cancel: Arc<dyn Fn() + Send + Sync>,
+    apply_again: Arc<dyn Fn(Value) -> BoxFuture<()> + Send + Sync>,
+}
+
 /// The spawn seam of a case: answers each program from the case's script, streams a winetricks run's
 /// chunks (advancing the paused clock for a tick step) and records every spawn in the oracle's
 /// `spawns.json` shape.
@@ -441,6 +453,8 @@ struct OracleRunner {
     winetricks_program: String,
     runs: Mutex<Vec<(Vec<String>, Script, bool)>>,
     spawns: Mutex<Vec<Value>>,
+    /// Set once the context exists (a queue case's steps call back into it).
+    hooks: Mutex<Option<Hooks>>,
 }
 
 impl OracleRunner {
@@ -570,6 +584,7 @@ impl SpecRunner for OracleRunner {
         };
         self.record(&spec, record);
         let program = spec.program.clone();
+        let hooks = lock(&self.hooks).clone();
         Box::pin(async move {
             // A real install runs for minutes: the probes beside it have long settled before its
             // first byte.
@@ -588,6 +603,21 @@ impl SpecRunner for OracleRunner {
                     on_chunk(Pipe::Stdout, text);
                 } else if let Some(text) = step["err"].as_str() {
                     on_chunk(Pipe::Stderr, text);
+                } else if step["cancel"] == true || step.get("applyAgain").is_some() {
+                    // The oracle handled a chunk synchronously; here the run drains its channel when
+                    // it is polled, so the step waits for the lines before it to land first.
+                    for _ in 0..8 {
+                        tokio::task::yield_now().await;
+                    }
+                    let hooks = hooks.as_ref().expect("a hook step needs the queue's hooks");
+                    if step["cancel"] == true {
+                        (hooks.cancel)();
+                    } else {
+                        (hooks.apply_again)(step["applyAgain"].clone()).await;
+                    }
+                } else if step["hang"] == true {
+                    // A verb that never ends (a quit must cut it off).
+                    std::future::pending::<()>().await;
                 } else if step["tick"] == true {
                     // On the paused clock the runtime jumps to the next timer when it is idle: the
                     // run's own one-second flush interval fires first (its branch is polled before
@@ -773,9 +803,11 @@ struct Run {
     runner: Arc<OracleRunner>,
     events: Arc<Events>,
     log: Arc<RecordingLog>,
-    launcher: OracleLauncher,
-    host: WineHost,
+    launcher: Arc<OracleLauncher>,
+    host: Arc<WineHost>,
     ctx: Arc<WineCtx>,
+    /// What the steps of a queue case did while the run was going (`duringRun`).
+    hook_log: Arc<Mutex<Vec<Value>>>,
     /// The game the case is for.
     runner_name: String,
     app_name: String,
@@ -869,6 +901,11 @@ fn start(case: &Value) -> Run {
         let verb = case["verb"].as_str().unwrap_or("vcrun2019");
         runs.push((argv(verb), Script::from_run(&case["run"]), false));
     }
+    if let Some(installs) = case["installs"].as_object() {
+        for (verb, run) in installs {
+            runs.push((argv(verb), Script::from_run(run), false));
+        }
+    }
     if let Some(list) = case.get("list") {
         let list_argv = if umu {
             vec!["winetricks".to_string(), "list-all".to_string()]
@@ -902,6 +939,7 @@ fn start(case: &Value) -> Run {
         winetricks_program: program.to_string_lossy().into_owned(),
         runs: Mutex::new(runs),
         spawns: Mutex::new(Vec::new()),
+        hooks: Mutex::new(None),
     });
 
     let replay = Arc::new(
@@ -960,15 +998,16 @@ fn start(case: &Value) -> Run {
         std::mem::forget(ctx.tools.begin_install(installing).unwrap());
     }
 
-    let host = WineHost {
+    let host = Arc::new(WineHost {
         env: EnvSnapshot::from_pairs(base_env),
         ..WineHost::default()
-    };
+    });
     Run {
-        launcher: OracleLauncher {
+        launcher: Arc::new(OracleLauncher {
             valid: case["validWine"] != false,
             calls: Mutex::new(Vec::new()),
-        },
+        }),
+        hook_log: Arc::new(Mutex::new(Vec::new())),
         profile,
         replay,
         tap,
@@ -989,7 +1028,7 @@ impl Run {
         Session {
             ctx: &self.ctx,
             host: &self.host,
-            launcher: &self.launcher,
+            launcher: &*self.launcher,
         }
     }
 
@@ -1018,6 +1057,104 @@ impl Run {
             settings: self.tool_settings(case),
         }
     }
+}
+
+/// What the oracle's hooks did: a step's `cancelRemaining` or a second `apply` while a run is going,
+/// each noted in `duringRun`.
+fn install_hooks(run: &Run, case: &Value) {
+    let target = OwnedTarget::from_target(&run.target(case));
+    let cancel = {
+        let (ctx, log) = (Arc::clone(&run.ctx), Arc::clone(&run.hook_log));
+        let (runner, app) = (run.runner_name.clone(), run.app_name.clone());
+        Arc::new(move || {
+            let state = ctx.winetricks_queue.cancel_remaining(&runner, &app);
+            lock(&log).push(json!({ "step": "cancelRemaining", "state": state }));
+        })
+    };
+    let apply_again = {
+        let (ctx, log) = (Arc::clone(&run.ctx), Arc::clone(&run.hook_log));
+        let (host, launcher) = (Arc::clone(&run.host), Arc::clone(&run.launcher));
+        Arc::new(move |payload: Value| -> BoxFuture<()> {
+            let (ctx, log) = (Arc::clone(&ctx), Arc::clone(&log));
+            let (host, launcher) = (Arc::clone(&host), Arc::clone(&launcher));
+            let target = target.clone();
+            Box::pin(async move {
+                let result = apply(&ctx, host, launcher, target, &payload).await;
+                lock(&log).push(json!({ "step": "applyDuringRun", "result": result.to_json() }));
+            })
+        })
+    };
+    *lock(&run.runner.hooks) = Some(Hooks {
+        cancel,
+        apply_again,
+    });
+}
+
+/// Whether a `done` snapshot has been pushed.
+fn run_is_done(run: &Run) -> bool {
+    lock(&run.events.seen)
+        .iter()
+        .any(|e| e["channel"] == QUEUE_CHANNEL && e["args"][0]["run"]["status"] == "done")
+}
+
+/// Lets the detached run go on until its `done` push is out (the paused clock jumps over a tick).
+async fn wait_for_done(run: &Run) {
+    for _ in 0..5000 {
+        if run_is_done(run) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    assert!(run_is_done(run), "the run never ended");
+    for _ in 0..8 {
+        tokio::task::yield_now().await;
+    }
+}
+
+/// One `apply` of a queue case, as the renderer's handler would make it.
+async fn apply_payload(run: &Run, case: &Value, payload: &Value) -> Value {
+    let target = OwnedTarget::from_target(&run.target(case));
+    apply(
+        &run.ctx,
+        Arc::clone(&run.host),
+        Arc::clone(&run.launcher) as Arc<dyn Launcher>,
+        target,
+        payload,
+    )
+    .await
+    .to_json()
+}
+
+/// The queue cases: an optional catalog read first, the payloads applied (one after another, or in the
+/// same tick), then the run left to finish.
+async fn run_queue(run: &Run, case: &Value) -> Value {
+    if case["prelist"] == true {
+        let target = run.target(case);
+        list_available(&run.session(), &target).await;
+    }
+    let payloads = case["applies"].as_array().cloned().unwrap_or_default();
+    let applies: Vec<Value> = if case["concurrent"] == true {
+        assert_eq!(payloads.len(), 2, "the same-tick case applies twice");
+        let (first, second) = tokio::join!(
+            apply_payload(run, case, &payloads[0]),
+            apply_payload(run, case, &payloads[1])
+        );
+        vec![first, second]
+    } else {
+        let mut out = Vec::new();
+        for payload in &payloads {
+            out.push(apply_payload(run, case, payload).await);
+        }
+        out
+    };
+    if applies.iter().any(|a| a["accepted"] == true) {
+        wait_for_done(run).await;
+    }
+    json!({
+        "applies": applies,
+        "duringRun": lock(&run.hook_log).clone(),
+        "finalState": run.ctx.winetricks_queue.state(&run.runner_name, &run.app_name),
+    })
 }
 
 /// The result object the oracle wrote, for the ops this file replays.
@@ -1083,6 +1220,7 @@ async fn run_op(run: &Run, case: &Value) -> Value {
             .await;
             json!({ "messages": messages })
         }
+        "queue" => run_queue(run, case).await,
         other => panic!("op {other} is not replayed here"),
     }
 }
@@ -1092,6 +1230,7 @@ async fn replay_case(case: &Value) {
     let id = case["id"].as_str().unwrap();
     let expected_dir = golden_dir().join("expected").join(id);
     let run = start(case);
+    install_hooks(&run, case);
     let mut result = run_op(&run, case).await;
     run.replay
         .finish()
@@ -1142,16 +1281,37 @@ async fn replay_case(case: &Value) {
         .collect();
     assert_eq!(got_logs, want_logs, "{id}: logs");
 
+    // The queue's own pushes are compared in the queue cases; the oracle recorded them in the others
+    // too (its queue existed in every case), where the install lifecycle is what the case is about.
+    let queue_case = case["op"] == "queue";
     let want_events: Vec<Value> = read_json(&expected_dir.join("events.json"))
         .as_array()
         .unwrap()
         .iter()
-        .filter(|e| CHANNELS.contains(&e["channel"].as_str().unwrap()))
+        .filter(|e| {
+            let channel = e["channel"].as_str().unwrap();
+            CHANNELS.contains(&channel)
+                || (queue_case && (channel == QUEUE_CHANNEL || channel == ORACLE_GAME_STATUS))
+        })
         .cloned()
+        .map(|mut e| {
+            if e["channel"] == ORACLE_GAME_STATUS {
+                e["channel"] = json!(GAME_STATUS_CHANNEL);
+            }
+            e
+        })
         .collect();
-    let got_events = run
-        .profile
-        .normalise(Value::Array(lock(&run.events.seen).clone()));
+    let got_events = run.profile.normalise(Value::Array(
+        lock(&run.events.seen)
+            .iter()
+            .filter(|e| {
+                let channel = e["channel"].as_str().unwrap();
+                CHANNELS.contains(&channel)
+                    || (queue_case && (channel == QUEUE_CHANNEL || channel == GAME_STATUS_CHANNEL))
+            })
+            .cloned()
+            .collect(),
+    ));
     assert_eq!(got_events, Value::Array(want_events), "{id}: events");
 
     let got_spawns = run
@@ -1200,7 +1360,7 @@ async fn the_single_verb_install_replays() {
     replay_case(&case_of("install-single-verb-linux")).await;
 }
 
-/// Every case of the oracle but the queue's (87-33): the install lifecycle (the refusal, the missing
+/// Every case of the oracle but the queue's: the install lifecycle (the refusal, the missing
 /// dependencies, the unsupported wine, a failing verb, a signal, a spawn error, umu and Proton), the
 /// script download (fresh, cached, stale, offline, a failing server, no tools directory), the catalog
 /// reads (list, annotate from the script, cache, installed log) and the two environment probes.
@@ -1228,4 +1388,108 @@ async fn every_case_but_the_queues_replays() {
         assert!(by_op.get(op).copied().unwrap_or(0) >= 2, "{op}: {by_op:?}");
     }
     assert!(by_op.values().sum::<usize>() >= 55, "{by_op:?}");
+}
+
+/// The tracer of the queue: three verbs applied through the Rust queue end to end (the guard, the
+/// catalog read, the sequential spawns, every state push, the game status) and every golden of it
+/// matched.
+#[tokio::test(start_paused = true)]
+async fn three_verbs_apply_through_the_queue() {
+    replay_case(&case_of("queue-apply-three-verbs-sequential")).await;
+}
+
+/// All 17 queue goldens: the apply (cached or fresh catalog, de-duplicated verbs), the busy refusals
+/// (a run going, a component installing, the same tick), the six `invalid` payloads, the cancel
+/// mid-queue, a failing verb, a spawn error and an environment warning during a run.
+#[tokio::test(start_paused = true)]
+async fn every_queue_case_replays() {
+    let mut count = 0;
+    for case in cases() {
+        if case["op"] != "queue" {
+            continue;
+        }
+        replay_case(&case).await;
+        count += 1;
+    }
+    assert_eq!(count, 17, "the queue goldens");
+}
+
+/// T-87-78, D-17: a quit cuts off the verb in flight, cancels the rest, ends the run with the `done`
+/// push and the `done` game status, frees the component slot and releases the run's registrant.
+#[tokio::test(start_paused = true)]
+async fn a_quit_cancels_the_running_verb_and_drops_the_rest() {
+    let mut case = case_of("queue-apply-three-verbs-sequential");
+    case["prelist"] = json!(true);
+    case["installs"]["vcrun2019"]["steps"] = json!([
+        { "err": "Executing w_do_call vcrun2019\n" },
+        { "hang": true }
+    ]);
+    let run = start(&case);
+    if case["prelist"] == true {
+        list_available(&run.session(), &run.target(&case)).await;
+    }
+    let accepted = apply_payload(&run, &case, &case["applies"][0]).await;
+    assert_eq!(accepted["accepted"], true);
+    assert_eq!(accepted["state"]["run"]["currentVerb"], "vcrun2019");
+    // The verb is running (its child printed one line and hangs).
+    for _ in 0..16 {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(run.ctx.tools.installing(), "vcrun2019");
+
+    run.ctx.engine.shutdown.token().cancel();
+    wait_for_done(&run).await;
+
+    let state = run
+        .ctx
+        .winetricks_queue
+        .state(&run.runner_name, &run.app_name);
+    let run_state = state.run.expect("the run");
+    let outcomes: Vec<String> = serde_json::to_value(&run_state).unwrap()["outcomes"]
+        .as_object()
+        .unwrap()
+        .values()
+        .map(|v| v.as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(outcomes, ["cancelled", "cancelled", "cancelled"]);
+    assert_eq!(run_state.current_verb, "");
+    assert!(!state.busy);
+    assert_eq!(run.ctx.tools.installing(), "");
+    // The rest never started: only vcrun2019's winetricks spawn happened.
+    let spawned_verbs: Vec<String> = lock(&run.runner.spawns)
+        .iter()
+        .filter(|s| s["argv"][0] == "-q")
+        .map(|s| s["argv"][1].as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(spawned_verbs, ["vcrun2019"]);
+    // The game status closed and the registrant is gone.
+    let statuses: Vec<Value> = lock(&run.events.seen)
+        .iter()
+        .filter(|e| e["channel"] == GAME_STATUS_CHANNEL)
+        .map(|e| e["args"][0]["status"].clone())
+        .collect();
+    assert_eq!(statuses, ["winetricks", "done"]);
+    assert!(run
+        .ctx
+        .engine
+        .shutdown
+        .drain(Duration::from_millis(50))
+        .is_empty());
+}
+
+/// A shape the guard refuses reaches no spawn: the invalid goldens already show the answers; this pins
+/// that nothing was spawned beyond the catalog read.
+#[tokio::test(start_paused = true)]
+async fn a_refused_apply_spawns_no_verb() {
+    let case = case_of("queue-invalid-shape");
+    let run = start(&case);
+    install_hooks(&run, &case);
+    let result = run_op(&run, &case).await;
+    assert_eq!(result["applies"][0]["reason"], "invalid");
+    assert!(lock(&run.runner.spawns).iter().all(|s| s["argv"]
+        .as_array()
+        .unwrap()
+        .first()
+        .map(|a| a != "-q")
+        .unwrap_or(true)));
 }

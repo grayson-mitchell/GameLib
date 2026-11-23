@@ -6,9 +6,10 @@
 //! (`tests/golden_winetricks.rs`) and its pure vectors (`tests/winetricks_pure.rs`).
 //!
 //! Crate-only (D-06): ops `wine_winetricks_install`, `wine_winetricks_available` and
-//! `wine_winetricks_installed` exist with no channel and no caller. The sequential apply queue lands in
-//! 87-33 and every Winetricks caller flips in 87-35; until then the TS path stays the only live one
-//! (a TS and a Rust writer of the same prefix at once is what D-06 forbids).
+//! `wine_winetricks_installed` exist with no channel and no caller, and so do the queue's
+//! (`wine_winetricks_apply`, `wine_winetricks_queue_state`, `wine_winetricks_cancel_remaining`, 87-33).
+//! Every Winetricks caller flips in 87-35; until then the TS path stays the only live one (a TS and a
+//! Rust writer of the same prefix at once is what D-06 forbids).
 //!
 //! - [`classify`]: the output classifier, the wine-version derivation, the chunk splitter and the
 //!   bounded line buffer.
@@ -18,6 +19,7 @@
 //! - [`env`]: the environment reports (unsupported wine, missing host tools).
 //! - [`install`]: the script download, the run with its streamed lines, the catalog reads and the
 //!   install.
+//! - [`queue`]: the sequential apply queue (87-33), with cancel, state pushes and the quit contract.
 //!
 //! What the TS read from places this crate may not reach arrives as an argument: the game's resolved
 //! tool settings ([`Target`], the library lookup and the bottle resolution stay with the caller until
@@ -30,6 +32,7 @@ pub mod guard;
 pub mod install;
 pub mod list_parse;
 pub mod metadata;
+pub mod queue;
 
 use std::collections::BTreeMap;
 use std::path::Path;

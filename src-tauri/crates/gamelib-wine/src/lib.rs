@@ -49,9 +49,12 @@ pub const OPS: &[&str] = &[
     "wine_runtime_download",
     "wine_runtime_is_installed",
     "wine_valid",
+    "wine_winetricks_apply",
     "wine_winetricks_available",
+    "wine_winetricks_cancel_remaining",
     "wine_winetricks_install",
     "wine_winetricks_installed",
+    "wine_winetricks_queue_state",
 ];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
@@ -165,6 +168,42 @@ async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String>
                 host.darwin_release.as_deref(),
                 &|path| path.exists(),
             )))
+        }
+        // The apply queue (87-33): validates the verbs against the game's catalog (the guard runs before
+        // any verb reaches an argv), starts the run and answers at once with the state or the refusal
+        // (`WinetricksApplyResult`); the verbs install detached, holding their own shutdown registrant.
+        "wine_winetricks_apply" => {
+            let (request, verbs, host) = winetricks_apply_args(op, args)?;
+            let target = request.target().ok_or_else(|| format!("{op}:bad-args"))?;
+            if request.verb.is_some() {
+                return Err(format!("{op}:bad-args"));
+            }
+            let host = std::sync::Arc::new(host);
+            let launcher: std::sync::Arc<dyn winetricks::Launcher> =
+                std::sync::Arc::new(winetricks::queue::SharedHostLauncher(host.clone()));
+            let result = winetricks::queue::apply(
+                ctx,
+                host,
+                launcher,
+                winetricks::queue::OwnedTarget::from_target(&target),
+                verbs,
+            )
+            .await;
+            Ok(result.to_json())
+        }
+        // The state of a game's queue (`getState`), one new revision.
+        "wine_winetricks_queue_state" => {
+            let key = queue_key_arg(op, args)?;
+            let state = ctx.winetricks_queue.state(&key.runner, &key.app_name);
+            serde_json::to_value(state).map_err(|_| format!("{op}:bad-result"))
+        }
+        // `cancelRemaining`: the verbs not yet started are cancelled, the one running finishes.
+        "wine_winetricks_cancel_remaining" => {
+            let key = queue_key_arg(op, args)?;
+            let state = ctx
+                .winetricks_queue
+                .cancel_remaining(&key.runner, &key.app_name);
+            serde_json::to_value(state).map_err(|_| format!("{op}:bad-result"))
         }
         // The verbs winetricks can install for a game (`listAvailable`, visible ones only), cached for
         // the apply guard. Answers the components as the TS object had them.
@@ -338,6 +377,41 @@ fn winetricks_args(
     Ok((request, host))
 }
 
+/// `wine_winetricks_apply`'s arguments: the [`winetricks::TargetArg`] of the game, the renderer's verbs
+/// payload exactly as it sent it (any JSON: the apply guard judges its shape, so a wrong one is an
+/// `invalid` answer, not a bad argument) and, optionally, the [`wine_cmd::WineHost`] facts. A bad
+/// shape is a fixed `<op>:bad-args`.
+fn winetricks_apply_args<'a>(
+    op: &str,
+    args: &'a [Value],
+) -> Result<(winetricks::TargetArg, &'a Value, wine_cmd::WineHost), String> {
+    let bad = || format!("{op}:bad-args");
+    let (request, verbs, host) = match args {
+        [request @ Value::Object(_), verbs] => (request, verbs, None),
+        [request @ Value::Object(_), verbs, host] => (request, verbs, Some(host)),
+        _ => return Err(bad()),
+    };
+    let request = serde_json::from_value(request.clone()).map_err(|_| bad())?;
+    let host = match host {
+        None | Some(Value::Null) => wine_cmd::WineHost::default(),
+        Some(host) => serde_json::from_value(host.clone()).map_err(|_| bad())?,
+    };
+    Ok((request, verbs, host))
+}
+
+/// The game a queue op is about.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct QueueKeyArg {
+    runner: String,
+    app_name: String,
+}
+
+/// `wine_winetricks_queue_state`'s and `wine_winetricks_cancel_remaining`'s one argument.
+fn queue_key_arg(op: &str, args: &[Value]) -> Result<QueueKeyArg, String> {
+    decode(op, args)
+}
+
 /// The one string argument of a runtime op: exactly one string that is a [`runtimes::valid_name`].
 /// The error is a fixed `<op>:bad-args`; the string never reaches it.
 fn runtime_name_arg<'a>(op: &str, args: &'a [Value]) -> Result<&'a str, String> {
@@ -426,7 +500,6 @@ fn decode_lenient<T: serde::de::DeserializeOwned>(op: &str, args: &[Value]) -> R
 
 /// The one object argument of an op, decoded strictly (the arg structs deny unknown fields). The
 /// error is a fixed `<op>:bad-args`: a renderer or sidecar string never reaches it.
-#[allow(dead_code)] // the first op with an object argument lands in a later plan
 fn decode<T: serde::de::DeserializeOwned>(op: &str, args: &[Value]) -> Result<T, String> {
     let [arg] = args else {
         return Err(format!("{op}:bad-args"));

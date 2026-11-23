@@ -16,14 +16,23 @@ use serde_json::Value;
 use crate::winetricks::env::WinetricksEnvironment;
 use crate::winetricks::metadata::ScriptMetadata;
 
-/// The state of the tools of one boot.
-#[derive(Default)]
+/// The component being installed (the single-flight slot), shared so the Winetricks queue (87-33) can
+/// read it for its `busy` flag from the environment listener, which outlives any one op.
+pub type InstallingSlot = Arc<Mutex<String>>;
+
+/// The parsed script metadata with the `mtimeMs:size` key it was derived under.
+type CachedMetadata = Option<(String, Arc<ScriptMetadata>)>;
+
+/// The state of the tools of one boot. Cloning gives another handle on the same state: a detached
+/// task (the Winetricks apply queue's run) holds one, so every op and the task see one slot and one
+/// set of caches.
+#[derive(Default, Clone)]
 pub struct ToolsState {
-    installing: Mutex<String>,
-    catalog: Mutex<HashMap<String, Vec<Value>>>,
-    script_metadata: Mutex<Option<(String, Arc<ScriptMetadata>)>>,
+    installing: InstallingSlot,
+    catalog: Arc<Mutex<HashMap<String, Vec<Value>>>>,
+    script_metadata: Arc<Mutex<CachedMetadata>>,
     /// The winetricks environment reports and their one change listener (87-32).
-    pub winetricks_env: WinetricksEnvironment,
+    pub winetricks_env: Arc<WinetricksEnvironment>,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -44,6 +53,11 @@ impl Drop for InstallSlot<'_> {
     }
 }
 
+/// The component named by a shared slot, or `""`.
+pub fn installing_of(slot: &InstallingSlot) -> String {
+    lock(slot).clone()
+}
+
 impl ToolsState {
     pub fn new() -> ToolsState {
         ToolsState::default()
@@ -51,7 +65,12 @@ impl ToolsState {
 
     /// The component being installed, or `""` (the TS `installing.get()`).
     pub fn installing(&self) -> String {
-        lock(&self.installing).clone()
+        installing_of(&self.installing)
+    }
+
+    /// The shared slot itself, for a reader that must outlive the borrow of this state.
+    pub fn installing_slot(&self) -> InstallingSlot {
+        Arc::clone(&self.installing)
     }
 
     /// Takes the single-flight slot for `component`. `Err` names the component that holds it: the
