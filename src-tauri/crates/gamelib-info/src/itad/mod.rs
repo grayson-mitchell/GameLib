@@ -200,8 +200,9 @@ fn write_price(view: &Option<CacheView>, key: &str, data: Json, now: u64) {
 
 /// Key precedence (D-02, D-05): the user key (set, and not rejected this session), then
 /// `GAMELIB_ITAD_API_KEY`, then the baked key. D-03: no key at all is a typed error, not a crash.
-fn resolve_key(ctx: &InfoCtx, endpoint: &'static str) -> Result<ResolvedKey, Fail> {
-    ctx.itad_key.effective(ctx).ok_or(Fail::Typed {
+async fn resolve_key(ctx: &InfoCtx, endpoint: &'static str) -> Result<ResolvedKey, Fail> {
+    // The Keychain read runs on the blocking pool, so the op can still answer `<op>:shutdown` (WR-04).
+    ctx.itad_key.effective_async(ctx).await.ok_or(Fail::Typed {
         code: Code::NotConfigured,
         endpoint,
         status: None,
@@ -224,7 +225,7 @@ where
 {
     let resolved = match first {
         Some(resolved) => resolved,
-        None => resolve_key(ctx, endpoint)?,
+        None => resolve_key(ctx, endpoint).await?,
     };
     match request(resolved.key.clone()).await {
         Ok(value) => Ok(value),
@@ -233,7 +234,7 @@ where
                 return Err(fail);
             }
             ctx.itad_key.mark_rejected();
-            let fallback = resolve_key(ctx, endpoint)?;
+            let fallback = resolve_key(ctx, endpoint).await?;
             request(fallback.key).await
         }
     }
@@ -519,7 +520,9 @@ pub async fn search(ctx: &InfoCtx, args: SearchArgs) -> Result<Value, String> {
             None => Err(error_message(Code::RateLimited, "search", Some(429))),
         };
     }
-    let resolved = resolve_key(ctx, "search").map_err(|fail| fail.into_message("search"))?;
+    let resolved = resolve_key(ctx, "search")
+        .await
+        .map_err(|fail| fail.into_message("search"))?;
     ctx.itad_gate
         .single_flight(&cache_key, async {
             match search_remote(ctx, &prices, &query, &country, &cache_key, resolved).await {
@@ -640,7 +643,9 @@ pub async fn deals(ctx: &InfoCtx, args: DealsArgs) -> Result<Value, String> {
             None => Err(error_message(Code::RateLimited, "deals", Some(429))),
         };
     }
-    let resolved = resolve_key(ctx, "deals").map_err(|fail| fail.into_message("deals"))?;
+    let resolved = resolve_key(ctx, "deals")
+        .await
+        .map_err(|fail| fail.into_message("deals"))?;
     ctx.itad_gate
         .single_flight(&cache_key, async {
             match deals_remote(ctx, &prices, &game_id, &country, resolved).await {
@@ -780,9 +785,9 @@ impl std::fmt::Debug for SetKeyArgs {
 /// whether the user key slot holds a key (the built-in env and baked keys do not count, as in TS);
 /// a slot the Keychain cannot read is the same as no key (the TS owner was total). `rejected` is the
 /// session memory of ITAD refusing the user key.
-pub fn key_status(ctx: &InfoCtx, _args: KeyStatusArgs) -> Result<Value, String> {
+pub async fn key_status(ctx: &InfoCtx, _args: KeyStatusArgs) -> Result<Value, String> {
     let has_key = matches!(
-        ctx.itad_key.get(ctx, "info_itad_key_status"),
+        ctx.itad_key.get_async(ctx, "info_itad_key_status").await,
         Ok(Some(key)) if !key.is_empty()
     );
     Ok(json!({ "hasKey": has_key, "rejected": ctx.itad_key.is_rejected() }))
@@ -793,12 +798,12 @@ pub fn key_status(ctx: &InfoCtx, _args: KeyStatusArgs) -> Result<Value, String> 
 /// naming only the category (`<op>:secret-timeout|unavailable`); TS swallowed it and told the
 /// renderer it had worked, which left the user believing a key was saved (as `steamgriddb.setApiKey`
 /// was fixed in 86-15).
-pub fn set_key(ctx: &InfoCtx, args: SetKeyArgs) -> Result<Value, String> {
+pub async fn set_key(ctx: &InfoCtx, args: SetKeyArgs) -> Result<Value, String> {
     const OP: &str = "info_itad_set_key";
     if utf16_len(&args.key) > KEY_MAX_UTF16 {
         return Err(format!("{OP}:bad-args"));
     }
-    ctx.itad_key.set(ctx, OP, &args.key)?;
+    ctx.itad_key.set_async(ctx, OP, &args.key).await?;
     Ok(Value::Null)
 }
 

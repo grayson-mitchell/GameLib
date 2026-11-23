@@ -797,3 +797,68 @@ fn a_migration_requested_after_shutdown_began_is_not_started() {
         .unwrap()
         .contains("plain-key"));
 }
+
+/// A source whose reads and writes park until the test lets them go (a Keychain behind a prompt).
+struct Stuck {
+    release: Mutex<std::sync::mpsc::Receiver<()>>,
+}
+
+impl SecretSource for Stuck {
+    fn get(&self, _slot: Slot) -> Result<Option<String>, String> {
+        let _ = self.release.lock().unwrap().recv();
+        Ok(None)
+    }
+    fn set(&self, _slot: Slot, _value: &str) -> Result<(), String> {
+        let _ = self.release.lock().unwrap().recv();
+        Ok(())
+    }
+    fn delete(&self, _slot: Slot) -> Result<(), String> {
+        let _ = self.release.lock().unwrap().recv();
+        Ok(())
+    }
+}
+
+/// WR-04: a Keychain read or write that is parked must not keep a guarded op from answering
+/// `<op>:shutdown`, nor keep the op's `info` registrant held.
+#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
+async fn a_parked_keychain_call_does_not_hold_an_op_past_shutdown() {
+    use gamelib_info::dispatch;
+    use std::time::Duration;
+
+    for (op, args) in [
+        ("info_itad_key_status", serde_json::json!({})),
+        ("info_steamgrid_has_key", serde_json::json!({})),
+        ("info_itad_set_key", serde_json::json!({ "key": "k" })),
+        ("info_steamgrid_set_key", serde_json::json!({ "key": "k" })),
+    ] {
+        let (release_tx, release_rx) = std::sync::mpsc::channel();
+        let mut f = Fixture::new();
+        f.ctx.secrets = Some(Arc::new(Stuck {
+            release: Mutex::new(release_rx),
+        }));
+        let _home = f.home;
+        let ctx = Arc::new(f.ctx);
+        let token = ctx.shutdown.token();
+        let canceller = tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            token.cancel();
+        });
+        // Spawned, so a read that blocks its worker thread shows up as a timeout and not a hang.
+        let running = {
+            let ctx = Arc::clone(&ctx);
+            tokio::spawn(async move { dispatch(op, &[args], &ctx).await })
+        };
+        let out = tokio::time::timeout(Duration::from_secs(5), running)
+            .await
+            .unwrap_or_else(|_| panic!("{op} was not cancelled by shutdown"))
+            .unwrap();
+        canceller.await.unwrap();
+        assert_eq!(out, Err(format!("{op}:shutdown")));
+        assert!(
+            ctx.shutdown.drain(Duration::from_millis(500)).is_empty(),
+            "{op} must release its registrant"
+        );
+        // Let the parked pool thread finish.
+        let _ = release_tx.send(());
+    }
+}
