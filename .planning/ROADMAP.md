@@ -780,7 +780,7 @@ Plans:
 - [x] 87-55-PLAN.md — Bridge callers switched: run_tool, CrossOver bin dir, engine types to common
 
 **Wave 35** *(blocked on Wave 34 completion)*
-- [ ] 87-56-PLAN.md — Engine TS, boot steps and the notices store registration deleted
+- [ ] 87-56-PLAN.md — Engine TS, boot steps and the notices store registration deleted (PARTIAL, closed 2026-11-23: launch step, deadline, process watch, dialogs and pin download deleted; remainder split by user decision into 87-56a clusters A+B, 87-56b clusters C+D+E, 87-56c cluster F and the finish, to be planned before 87-57)
 
 **Wave 36** *(blocked on Wave 35 completion)*
 - [ ] 87-57-PLAN.md — Survivor sweep item by item against D-22/D-23/D-24, census and ratchets (SC4)

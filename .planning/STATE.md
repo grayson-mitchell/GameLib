@@ -5,7 +5,7 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-55-PLAN.md
+stopped_at: Closed 87-56-PLAN.md as a partial; 87-56a/b/c to be planned before 87-57
 last_updated: "2026-11-23T18:24:49.540Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
@@ -77,8 +77,8 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 56 of 59
-Status: Ready to execute
+Plan: 56 of 59 (closed partial 2026-11-23; 87-56a/b/c to be planned before 87-57)
+Status: Ready to plan (87-56a/b/c via /gsd-plan-phase)
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
 
@@ -994,6 +994,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-55: rustRunTool and cancelRunTool are one-call shims; the RunTool closure (cancel id per run, engine_cancel on abort, never rejects) is createRustRunTool in steam/engine/rustRunTool.ts
 - [Phase 87]: 87-55: the async CrossOver bin-dir lookup is Rust's through crossoverBinDir (folds a failed call into 'not installed'); the sync fast path bottle.ts reads inline stays the TS locator, which 87-56 must replace with a sync twin before deleting createCrossoverLocator
 - [Phase 87]: 87-55: isNonCrossover and engineLogLabel are twins pinned to Rust by selection_twin.json (EngineSelection::engine and log_label); the engine types live in common/types/engine
+- [Phase 87]: 87-56: the plan's premise (every caller of src/backend/engine already switched) was false for six clusters (A tool settings, B pinned-engine download, C Steam caller-side halves, D runtime/state plumbing, E pure helpers, F oracles); the user chose to split the remainder into 87-56a (A, B), 87-56b (C, D, E) and 87-56c (F and the finish) before 87-57, and 87-56 closed as a partial (status halted) after deleting the TS launch step, deadline, process watch, dialogs and pin download
+- [Phase 87]: 87-56: SVC-02 stays open; enginePortComplete is written and red, noIntraPhaseRowsLeft and the engine-state/engine-runtime boot steps and the steam_engine_notices TS registration are carried to 87-56c
 
 ### Pending Todos
 
@@ -1275,8 +1277,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T18:24:46.795Z
-Stopped at: Completed 87-55-PLAN.md
+Last session: 2026-11-23T18:45:00.000Z
+Stopped at: Closed 87-56-PLAN.md as a partial; 87-56a/b/c to be planned before 87-57
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
