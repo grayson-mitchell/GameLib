@@ -55,27 +55,46 @@ pub fn pinned_engine_root(ctx: &EngineCtx) -> String {
 }
 
 pub fn pinned_engine_paths(ctx: &EngineCtx, pin: &EnginePin) -> PinnedEnginePaths {
-    let root = pinned_engine_root(ctx);
-    let wine_dir = path_join(&[&root, &pin.id]);
+    pinned_engine_paths_at(&pinned_engine_root(ctx), pin)
+}
+
+/// [`pinned_engine_paths`] under an engine root already resolved (the fallback download's task holds
+/// the root, not the context).
+pub fn pinned_engine_paths_at(root: &str, pin: &EnginePin) -> PinnedEnginePaths {
+    let wine_dir = path_join(&[root, &pin.id]);
     let bin_dir = path_join(&[&wine_dir, "Contents", "Resources", "wine", "bin"]);
     PinnedEnginePaths {
         wine_bin: path_join(&[&bin_dir, "wine"]),
         wineserver_bin: path_join(&[&bin_dir, "wineserver"]),
-        dxvk_dir: path_join(&[&root, &format!("dxvk-macOS-{}", pin.dxvk.version)]),
+        dxvk_dir: path_join(&[root, &format!("dxvk-macOS-{}", pin.dxvk.version)]),
         wine_dir,
     }
 }
 
+/// `wineInstalled`: Wine's binaries are on disk and the directory carries the pin's own sha256.
+pub fn is_wine_installed_at(root: &str, pin: &EnginePin) -> bool {
+    let paths = pinned_engine_paths_at(root, pin);
+    Path::new(&paths.wine_bin).exists()
+        && Path::new(&paths.wineserver_bin).exists()
+        && pin_marker::matches(Path::new(&paths.wine_dir), &pin.wine)
+}
+
+/// `dxvkInstalled`: both DXVK architectures are on disk and the directory carries the pin's sha256.
+pub fn is_dxvk_installed_at(root: &str, pin: &EnginePin) -> bool {
+    let paths = pinned_engine_paths_at(root, pin);
+    Path::new(&paths.dxvk_dir).join("x32").exists()
+        && Path::new(&paths.dxvk_dir).join("x64").exists()
+        && pin_marker::matches(Path::new(&paths.dxvk_dir), &pin.dxvk)
+}
+
 /// Both halves of the pin are on disk and carry the pin's own sha256 (`isPinnedEngineInstalled`).
 pub fn is_pinned_engine_installed(ctx: &EngineCtx, pin: &EnginePin) -> bool {
-    let paths = pinned_engine_paths(ctx, pin);
-    let wine = Path::new(&paths.wine_bin).exists()
-        && Path::new(&paths.wineserver_bin).exists()
-        && pin_marker::matches(Path::new(&paths.wine_dir), &pin.wine);
-    let dxvk = Path::new(&paths.dxvk_dir).join("x32").exists()
-        && Path::new(&paths.dxvk_dir).join("x64").exists()
-        && pin_marker::matches(Path::new(&paths.dxvk_dir), &pin.dxvk);
-    wine && dxvk
+    is_pinned_engine_installed_at(&pinned_engine_root(ctx), pin)
+}
+
+/// [`is_pinned_engine_installed`] under an engine root already resolved.
+pub fn is_pinned_engine_installed_at(root: &str, pin: &EnginePin) -> bool {
+    is_wine_installed_at(root, pin) && is_dxvk_installed_at(root, pin)
 }
 
 /// The pin as a launchable engine (`pinEngine`).

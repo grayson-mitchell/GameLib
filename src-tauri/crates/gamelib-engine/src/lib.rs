@@ -15,6 +15,7 @@ pub mod ctx;
 pub mod decision;
 pub mod dxvk;
 pub mod engines;
+pub mod fallback;
 pub mod fetch;
 pub mod game_engine;
 pub mod game_prefix;
@@ -59,6 +60,8 @@ pub const OPS: &[&str] = &[
     "engine_decide_creation",
     "engine_decide_launch",
     "engine_default_engine",
+    "engine_fallback_ensure",
+    "engine_fallback_is_installed",
     "engine_is_crossover_missing",
     "engine_ledger_mark_running",
     "engine_ledger_mark_stopped",
@@ -392,6 +395,36 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
             .await;
             Ok(preflight.to_value())
         }
+        // The pinned built-in engine, made available (downloaded, verified, extracted) with the
+        // `gameStatusUpdate` sequence every store shares (D-10). Callers for one pin share one download;
+        // `cancelId` names the run for `engine_cancel`. The answer is the sidecar's `PinnedEngineResult`:
+        // a failure or a cancel is an answer, an unknown pin or a bad cancel id is an error.
+        "engine_fallback_ensure" => {
+            let request: FallbackEnsureRequest = decode(op, args)?;
+            if request.app_name.is_empty() || request.runner.is_empty() {
+                return Err(format!("{op}:bad-args"));
+            }
+            let result = fallback::ensure::ensure_pinned_engine(
+                ctx,
+                &fallback::ensure::EnsureArgs {
+                    pin_id: request.pin_id,
+                    app_name: request.app_name,
+                    runner: request.runner,
+                    cancel_id: request.cancel_id,
+                },
+            )
+            .await
+            .map_err(|e| format!("{op}:{e}"))?;
+            Ok(result.to_value())
+        }
+        // Whether both halves of a shipped pin are on disk and carry the pin's own sha256.
+        "engine_fallback_is_installed" => {
+            let request: FallbackPinRequest = decode(op, args)?;
+            let pin = ids::pin_by_id(&request.pin_id).ok_or_else(|| format!("{op}:bad-args"))?;
+            Ok(Value::Bool(fallback::ensure::is_pinned_engine_installed(
+                ctx, pin,
+            )))
+        }
         // G25: true when CrossOver is not installed; never probes.
         "engine_is_crossover_missing" => {
             let request: ResolveBinDirRequest = decode(op, args)?;
@@ -430,6 +463,24 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
         }
         _ => Err(format!("unknown op: {op}")),
     }
+}
+
+/// The argument of `engine_fallback_ensure`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct FallbackEnsureRequest {
+    pin_id: String,
+    app_name: String,
+    runner: String,
+    #[serde(default)]
+    cancel_id: Option<String>,
+}
+
+/// The argument of `engine_fallback_is_installed`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct FallbackPinRequest {
+    pin_id: String,
 }
 
 /// The argument of `engine_ledger_mark_running` and `engine_ledger_mark_stopped`.
@@ -974,6 +1025,8 @@ mod tests {
             "engine_decide_creation",
             "engine_decide_launch",
             "engine_default_engine",
+            "engine_fallback_ensure",
+            "engine_fallback_is_installed",
             "engine_is_crossover_missing",
             "engine_ledger_mark_running",
             "engine_ledger_mark_stopped",
@@ -988,6 +1041,59 @@ mod tests {
         ] {
             assert!(OPS.contains(&op), "{op}");
         }
+    }
+
+    #[tokio::test]
+    async fn the_fallback_ops_take_strict_arguments_and_know_only_the_shipped_pins() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        let current = pins::pins().unwrap().current.id.clone();
+        for (op, bad) in [
+            ("engine_fallback_ensure", json!({"pinId": current})),
+            (
+                "engine_fallback_ensure",
+                json!({"pinId": current, "appName": "", "runner": "nile"}),
+            ),
+            (
+                "engine_fallback_ensure",
+                json!({"pinId": current, "appName": "a", "runner": "nile", "x": 1}),
+            ),
+            ("engine_fallback_is_installed", json!({"pinId": "nope"})),
+            ("engine_fallback_is_installed", json!({})),
+        ] {
+            assert_eq!(
+                dispatch(op, &[bad], &ctx).await,
+                Err(format!("{op}:bad-args"))
+            );
+        }
+        assert_eq!(
+            dispatch(
+                "engine_fallback_ensure",
+                &[json!({"pinId": "nope", "appName": "a", "runner": "nile"})],
+                &ctx
+            )
+            .await,
+            Err("engine_fallback_ensure:unknown-pin".to_string())
+        );
+        assert_eq!(
+            dispatch(
+                "engine_fallback_ensure",
+                &[json!({"pinId": current, "appName": "a", "runner": "nile", "cancelId": "bad id"})],
+                &ctx
+            )
+            .await,
+            Err("engine_fallback_ensure:bad-cancel-id".to_string())
+        );
+        // Nothing is installed on a fresh profile; the answer is a plain bool.
+        assert_eq!(
+            dispatch(
+                "engine_fallback_is_installed",
+                &[json!({"pinId": current})],
+                &ctx
+            )
+            .await,
+            Ok(json!(false))
+        );
     }
 
     #[tokio::test]

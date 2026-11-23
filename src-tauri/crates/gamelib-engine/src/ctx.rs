@@ -21,6 +21,7 @@ use crate::bottles::registry::Registry;
 use crate::bottles::switch::InFlightSwitches;
 use crate::crossover::locate::{CrossoverDiscovery, CrossoverLocator, NoCrossoverDiscovery};
 use crate::dxvk::{DxvkInstaller, NoDxvk};
+use crate::fallback::Flights;
 use crate::fetch::{Fetch, ReqwestFetch};
 use crate::sinks::{EngineLog, EngineUi, NullEmitter};
 
@@ -205,6 +206,9 @@ pub struct EngineCtx {
     pub crossover_locator: CrossoverLocator,
     /// The cancellable runs in flight, by cancel id (`run_tool`). In memory only.
     pub cancels: Cancels,
+    /// The fallback engine downloads in flight, by pin id (the single flight of `ensurePinnedEngine`),
+    /// and the installs holding a temp directory. In memory only: empty at construction.
+    pub fallback: Flights,
 }
 
 impl EngineCtx {
@@ -235,6 +239,7 @@ impl EngineCtx {
             crossover_discovery: Arc::new(NoCrossoverDiscovery),
             crossover_locator: CrossoverLocator::new(),
             cancels: Cancels::default(),
+            fallback: Flights::new(),
             host,
             clock,
             platform,
