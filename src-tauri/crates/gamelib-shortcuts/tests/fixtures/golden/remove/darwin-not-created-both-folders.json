@@ -1,0 +1,47 @@
+{
+  "family": "remove",
+  "platform": "darwin",
+  "input": {
+    "title": "Plain Game",
+    "appName": "plainapp",
+    "createdByTheTypeScript": "none",
+    "desktop": "folder",
+    "menu": "folder",
+    "registryDesktop": null,
+    "seededBeforeAdd": false
+  },
+  "createOutcome": null,
+  "gameLibWroteEverythingPresent": false,
+  "outcome": {
+    "result": "resolved"
+  },
+  "tree": {
+    "before": [
+      {
+        "path": "Applications/Plain Game.app/Contents/Info.plist",
+        "kind": "file",
+        "mode": null,
+        "utf8": "<plist/>\n"
+      },
+      {
+        "path": "Applications/Plain Game.app/Contents/MacOS/run.sh",
+        "kind": "file",
+        "mode": null,
+        "utf8": "#!/bin/bash\necho foreign\n"
+      },
+      {
+        "path": "Desktop/Plain Game.app/Contents/Info.plist",
+        "kind": "file",
+        "mode": null,
+        "utf8": "<plist/>\n"
+      },
+      {
+        "path": "Desktop/Plain Game.app/Contents/MacOS/run.sh",
+        "kind": "file",
+        "mode": null,
+        "utf8": "#!/bin/bash\necho foreign\n"
+      }
+    ],
+    "after": []
+  }
+}

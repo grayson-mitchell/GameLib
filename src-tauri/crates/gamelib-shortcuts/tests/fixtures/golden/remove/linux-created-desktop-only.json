@@ -1,0 +1,31 @@
+{
+  "family": "remove",
+  "platform": "linux",
+  "input": {
+    "title": "Plain Game",
+    "appName": "plainapp",
+    "createdByTheTypeScript": "desktop",
+    "desktop": null,
+    "menu": null,
+    "registryDesktop": null,
+    "seededBeforeAdd": false
+  },
+  "createOutcome": {
+    "result": "resolved"
+  },
+  "gameLibWroteEverythingPresent": true,
+  "outcome": {
+    "result": "resolved"
+  },
+  "tree": {
+    "before": [
+      {
+        "path": "Desktop/Plain Game.desktop",
+        "kind": "file",
+        "mode": "0777",
+        "utf8": "[Desktop Entry]\nName=Plain Game\nExec=xdg-open gamelib://launch?appName=plainapp&runner=legendary\nTerminal=false\nType=Application\nCategories=Game;\n"
+      }
+    ],
+    "after": []
+  }
+}

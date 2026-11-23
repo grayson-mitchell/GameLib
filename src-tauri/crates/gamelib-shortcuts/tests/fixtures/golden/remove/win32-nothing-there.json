@@ -1,0 +1,22 @@
+{
+  "family": "remove",
+  "platform": "win32",
+  "input": {
+    "title": "Plain Game",
+    "appName": "plainapp",
+    "createdByTheTypeScript": "none",
+    "desktop": null,
+    "menu": null,
+    "registryDesktop": true,
+    "seededBeforeAdd": false
+  },
+  "createOutcome": null,
+  "gameLibWroteEverythingPresent": true,
+  "outcome": {
+    "result": "resolved"
+  },
+  "tree": {
+    "before": [],
+    "after": []
+  }
+}

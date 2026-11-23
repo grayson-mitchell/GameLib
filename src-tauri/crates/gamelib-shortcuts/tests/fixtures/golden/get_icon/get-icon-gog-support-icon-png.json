@@ -1,0 +1,25 @@
+{
+  "input": {
+    "runner": "gog",
+    "appName": "1207658645",
+    "artSquare": "https://art.example.test/square.{ext}",
+    "installPathGiven": true,
+    "installFiles": [
+      "support/icon.png"
+    ],
+    "productApi": {
+      "kind": "null"
+    },
+    "presentIcons": [],
+    "download": "ok",
+    "iconsFolderExistedBefore": false
+  },
+  "outcome": {
+    "result": "resolved",
+    "icon": "<HOME>/GOG Games/Icon Game/support/icon.png"
+  },
+  "productApiCalls": [],
+  "aborts": [],
+  "downloads": [],
+  "iconsFolder": []
+}

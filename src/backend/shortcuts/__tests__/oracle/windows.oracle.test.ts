@@ -60,6 +60,7 @@ import {
   type ShortcutsOracleProfile
 } from 'backend/testUtils/shortcutsOracle/harness'
 import { HOSTILE_NAMES } from './hostileNames'
+import { REG_ENV } from './windowsInputs'
 import type { GameInfo } from 'common/types'
 import type { Game } from 'common/types/game_manager'
 import type { ProcessRunner, RunOptions } from 'backend/process/types'
@@ -72,12 +73,6 @@ const FLOOR = 30
 const REGISTRY_DESKTOP = 'Z:\\GameLibOracle\\Desktop'
 /** The `SystemRoot` the explorer.exe indirection sees; the host's own is never recorded. */
 const SYSTEM_ROOT = 'Z:\\GameLibOracle\\Windows'
-/** The env `%NAME%` expands against in the `reg-` cases. */
-const REG_ENV: NodeJS.ProcessEnv = {
-  USERPROFILE: 'Z:\\GameLibOracle\\Home',
-  ONEDRIVE: 'Z:\\GameLibOracle\\OneDrive'
-}
-
 const USER_SHELL_FOLDERS =
   'HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders'
 

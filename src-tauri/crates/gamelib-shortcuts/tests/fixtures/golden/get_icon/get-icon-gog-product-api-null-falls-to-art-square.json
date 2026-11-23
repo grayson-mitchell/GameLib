@@ -1,0 +1,34 @@
+{
+  "input": {
+    "runner": "gog",
+    "appName": "1207658645",
+    "artSquare": "https://art.example.test/square.{ext}",
+    "installPathGiven": true,
+    "installFiles": [],
+    "productApi": {
+      "kind": "null"
+    },
+    "presentIcons": [],
+    "download": "ok",
+    "iconsFolderExistedBefore": false
+  },
+  "outcome": {
+    "result": "resolved",
+    "icon": "<ICONS>/1207658645.jpg"
+  },
+  "productApiCalls": [
+    "1207658645"
+  ],
+  "aborts": [
+    "https://art.example.test/square.jpg"
+  ],
+  "downloads": [
+    {
+      "url": "https://art.example.test/square.jpg",
+      "dest": "<ICONS>/1207658645.jpg"
+    }
+  ],
+  "iconsFolder": [
+    "1207658645.jpg"
+  ]
+}

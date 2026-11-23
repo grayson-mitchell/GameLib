@@ -29,8 +29,13 @@ const FIXTURES_ROOT = join(
   'fixtures'
 )
 
-/** The files 94-05 commits (the text, sanitize, paths and exists goldens with their manifests: 132 + 72 + 84 + 58 cases and four MANIFEST.json); a half-scanned tree fails. */
-const FILE_FLOOR = 350
+/**
+ * The files 94-05 and 94-07 commit; a half-scanned tree fails. 94-05: the text, sanitize, paths and exists
+ * goldens with their manifests (132 + 72 + 84 + 58 cases and four MANIFEST.json = 350). 94-07: windows (116 +
+ * MANIFEST), steam (86 + MANIFEST), remove (44 + MANIFEST + deltas.json) and get_icon (19 + MANIFEST) = 270.
+ * The darwin-only icon_geometry slice (4 cases + MANIFEST) is recorded on a Mac and raises this by 5.
+ */
+const FILE_FLOOR = 620
 
 /** Account names that name a role, never a person. */
 const SYNTHETIC_ACCOUNTS: readonly string[] = ['shared', 'public', 'default']

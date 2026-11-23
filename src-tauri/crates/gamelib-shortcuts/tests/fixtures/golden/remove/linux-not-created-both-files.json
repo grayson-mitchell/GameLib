@@ -1,0 +1,35 @@
+{
+  "family": "remove",
+  "platform": "linux",
+  "input": {
+    "title": "Plain Game",
+    "appName": "plainapp",
+    "createdByTheTypeScript": "none",
+    "desktop": "file",
+    "menu": "file",
+    "registryDesktop": null,
+    "seededBeforeAdd": false
+  },
+  "createOutcome": null,
+  "gameLibWroteEverythingPresent": false,
+  "outcome": {
+    "result": "resolved"
+  },
+  "tree": {
+    "before": [
+      {
+        "path": ".local/share/applications/Plain Game.desktop",
+        "kind": "file",
+        "mode": null,
+        "utf8": "[Desktop Entry]\nName=Foreign\nExec=/usr/bin/foreign\nType=Application\n"
+      },
+      {
+        "path": "Desktop/Plain Game.desktop",
+        "kind": "file",
+        "mode": null,
+        "utf8": "[Desktop Entry]\nName=Foreign\nExec=/usr/bin/foreign\nType=Application\n"
+      }
+    ],
+    "after": []
+  }
+}

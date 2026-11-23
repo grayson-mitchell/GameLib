@@ -1,0 +1,21 @@
+{
+  "addclear-darwin-foreign-dangling-elsewhere": "FND-02/D-22: add refuses to clear an unproven Desktop item",
+  "addclear-darwin-foreign-file": "FND-02/D-22: add refuses to clear an unproven Desktop item",
+  "addclear-darwin-foreign-real-folder": "FND-02/D-22: add refuses to clear an unproven Desktop item",
+  "addclear-darwin-foreign-symlink-elsewhere": "FND-02/D-22: add refuses to clear an unproven Desktop item",
+  "darwin-not-created-both-folders": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)",
+  "darwin-not-created-desktop-dangling-elsewhere": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)",
+  "darwin-not-created-desktop-real-folder": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)",
+  "darwin-not-created-desktop-symlink-elsewhere": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)",
+  "darwin-not-created-plain-app-folder": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)",
+  "linux-created-desktop-foreign-menu": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)",
+  "linux-not-created-both-files": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)",
+  "linux-not-created-desktop-only": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)",
+  "linux-not-created-desktop-symlink-elsewhere": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)",
+  "linux-not-created-menu-only": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)",
+  "win32-created-desktop-foreign-menu": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)",
+  "win32-not-created-both-lnk": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)",
+  "win32-not-created-desktop-only": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)",
+  "win32-not-created-menu-only": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)",
+  "win32-not-created-registry-failed-menu": "D-29: Rust refuses and reports not removed (no creation proof for an item GameLib did not write)"
+}

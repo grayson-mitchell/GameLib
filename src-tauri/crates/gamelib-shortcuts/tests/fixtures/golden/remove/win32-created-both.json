@@ -1,0 +1,37 @@
+{
+  "family": "remove",
+  "platform": "win32",
+  "input": {
+    "title": "Plain Game",
+    "appName": "plainapp",
+    "createdByTheTypeScript": "both",
+    "desktop": null,
+    "menu": null,
+    "registryDesktop": true,
+    "seededBeforeAdd": false
+  },
+  "createOutcome": {
+    "result": "resolved"
+  },
+  "gameLibWroteEverythingPresent": true,
+  "outcome": {
+    "result": "resolved"
+  },
+  "tree": {
+    "before": [
+      {
+        "path": "AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Plain Game.lnk",
+        "kind": "file",
+        "mode": null,
+        "utf8": "GAMELIB-LNK \"gamelib://launch?appName=plainapp&runner=legendary\"\r\n"
+      },
+      {
+        "path": "Desktop/Plain Game.lnk",
+        "kind": "file",
+        "mode": null,
+        "utf8": "GAMELIB-LNK \"gamelib://launch?appName=plainapp&runner=legendary\"\r\n"
+      }
+    ],
+    "after": []
+  }
+}

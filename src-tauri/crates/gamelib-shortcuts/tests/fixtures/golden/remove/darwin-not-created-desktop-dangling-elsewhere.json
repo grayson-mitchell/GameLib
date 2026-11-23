@@ -1,0 +1,28 @@
+{
+  "family": "remove",
+  "platform": "darwin",
+  "input": {
+    "title": "Plain Game",
+    "appName": "plainapp",
+    "createdByTheTypeScript": "none",
+    "desktop": "dangling-elsewhere",
+    "menu": null,
+    "registryDesktop": null,
+    "seededBeforeAdd": false
+  },
+  "createOutcome": null,
+  "gameLibWroteEverythingPresent": false,
+  "outcome": {
+    "result": "resolved"
+  },
+  "tree": {
+    "before": [
+      {
+        "path": "Desktop/Plain Game.app",
+        "kind": "symlink",
+        "symlinkTarget": "<HOME>/Elsewhere/does-not-exist"
+      }
+    ],
+    "after": []
+  }
+}
