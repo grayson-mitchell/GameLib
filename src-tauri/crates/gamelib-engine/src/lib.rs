@@ -11,6 +11,10 @@
 pub mod ctx;
 pub mod dxvk;
 pub mod fetch;
+pub mod game_engine;
+pub mod ids;
+pub mod jsutil;
+pub mod key;
 pub mod pins;
 pub mod sinks;
 #[cfg(feature = "testing")]
@@ -26,7 +30,7 @@ use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
-pub const OPS: &[&str] = &["engine_pins"];
+pub const OPS: &[&str] = &["engine_per_game_bottle_name", "engine_pins"];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
 /// shutdown, a wrong thread or a panic (`<op>:panic`).
@@ -40,6 +44,13 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value
 /// Each plan adds its arms here, in step with `OPS`.
 async fn route(op: &str, args: &[Value], _ctx: &EngineCtx) -> Result<Value, String> {
     match op {
+        // One untyped argument: garbage answers null, as `getPerGameBottleNameFor` did.
+        "engine_per_game_bottle_name" => {
+            let [arg] = args else {
+                return Err(format!("{op}:bad-args"));
+            };
+            Ok(game_engine::per_game_bottle_name_for(arg).map_or(Value::Null, Value::String))
+        }
         "engine_pins" => {
             if !args.is_empty() {
                 return Err(format!("{op}:bad-args"));
@@ -166,6 +177,27 @@ mod tests {
         sorted.dedup();
         assert_eq!(sorted, OPS);
         assert!(OPS.contains(&"engine_pins"));
+        assert!(OPS.contains(&"engine_per_game_bottle_name"));
+    }
+
+    #[tokio::test]
+    async fn the_per_game_bottle_name_op_names_a_game_and_nulls_garbage() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        let args = [json!({"runner": "gog", "appName": "1234"})];
+        let named = dispatch("engine_per_game_bottle_name", &args, &ctx)
+            .await
+            .unwrap();
+        assert_eq!(named, "GameLib-gog-1234");
+        let steam = [json!({"runner": "steam", "appName": "620"})];
+        let none = dispatch("engine_per_game_bottle_name", &steam, &ctx)
+            .await
+            .unwrap();
+        assert!(none.is_null());
+        let err = dispatch("engine_per_game_bottle_name", &[], &ctx)
+            .await
+            .unwrap_err();
+        assert_eq!(err, "engine_per_game_bottle_name:bad-args");
     }
 
     #[tokio::test]
