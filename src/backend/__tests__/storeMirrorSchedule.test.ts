@@ -16,6 +16,10 @@
  *   - the schedule and the ownership table disagree, or a registered store has no schedule row.
  *
  * A slice that deletes a mirror moves the store's row here and in 82-STATE-OWNERSHIP.md together.
+ *
+ * Amended 2026-11-23 (Phase 87 planning, D-05): `pci_ids_device` and `pci_ids_vendor` move 87 -> 88,
+ * because GPU system information ports with `launcher.ts` in Phase 88. `wineDownloaderInfoStore` and
+ * `steam_engine_notices` stay at 87 (see the amendment in 82-STATE-OWNERSHIP.md).
  */
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
@@ -101,8 +105,8 @@ const SCHEDULE: Readonly<Record<string, number>> = {
   crossover_index: 86,
   itad_prices: 86,
   itad_steam_gids: 86,
-  pci_ids_device: 87,
-  pci_ids_vendor: 87,
+  pci_ids_device: 88,
+  pci_ids_vendor: 88,
   wikigameinfo: 86,
   umu: 86
 }

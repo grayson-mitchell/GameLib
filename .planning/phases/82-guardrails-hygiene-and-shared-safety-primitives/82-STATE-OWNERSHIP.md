@@ -77,8 +77,8 @@ On-disk path is `<userData>/<dir>/<file>.json` (a store with no `name` is `confi
 | `crossover_index` | cache | `store_cache`/`crossover_index` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 86 | CrossOver compatibility index leaf and the app-runtime fetch memo | cache; 24 h TTL |
 | `itad_prices` | cache | `store_cache`/`itad_prices` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 86 | store search and discounts leaf | cache; 30-day TTL |
 | `itad_steam_gids` | cache | `store_cache`/`itad_steam_gids` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 86 | store search and discounts leaf | cache; 30-day TTL |
-| `pci_ids_device` | cache | `store_cache`/`pci_ids_device` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 87 | GPU system information | cache; 7-day TTL; registered twice in the fixture (one name, two registrations) |
-| `pci_ids_vendor` | cache | `store_cache`/`pci_ids_vendor` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 87 | GPU system information | cache; 7-day TTL; registered twice in the fixture |
+| `pci_ids_device` | cache | `store_cache`/`pci_ids_device` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 88 | GPU system information | cache; 7-day TTL; registered twice in the fixture (one name, two registrations) |
+| `pci_ids_vendor` | cache | `store_cache`/`pci_ids_vendor` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 88 | GPU system information | cache; 7-day TTL; registered twice in the fixture |
 | `wikigameinfo` | cache | `store_cache`/`wikigameinfo` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 86 | wiki_game_info leaf; the clear-cache op | cache; 30-day TTL |
 | `umu` | cache | `store_cache`/`umu` | SC | SC | SC | RH* | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | RH | 86 | umu lookup (wine from Proton, wiki_game_info/umu) | cache; 6 h TTL |
 
@@ -95,7 +95,7 @@ Not in `EXPECTED_KINDS` or the fixture, but persisted and owned by someone today
 | `dev-vault` | user-state | `<appFolder>`/dev vault file | SC (createDevSecretVault) | SC | SC | SC | SC | SC | SC | SC | SC | SC | SC | SC | SC | SC | SC | SC | X* | X | dev-only plaintext vault; must not exist in release builds (98 SC3) |
 | `legendary-installed-json` | user-state | legendary's `installed.json` | ext (the legendary binary) | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | written by the bundled legendary binary, never by GameLib; only the watcher (installed-json-watcher step, 91) moves |
 | `steam-client-files` | user-state | libraryfolders.vdf, ACF, registry.vdf, localconfig.vdf, shortcuts.vdf | ext (the Steam client) | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | ext | read by the in-repo gamelib-steamfiles Rust crate already; adoption writes ACFs through Rust (Phase 81) |
-| `steam-engines-dir` | user-state | `<appFolder>`/steam-engines/ | SC (engine runtime and temp sweep) | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | R | engine downloads and the stale temp sweep move with 87 |
+| `steam-engines-dir` | user-state | `<appFolder>`/tools/steam-engines/ | SC (engine runtime and temp sweep) | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | R | engine downloads and the stale temp sweep move with 87 |
 
 ## In-memory owners
 
@@ -127,10 +127,10 @@ Tier follows ARCHITECTURE 2.4: "domain" is long-lived state owned by one Rust ac
 | `misc-runtime` | scratch | misc-runtime | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | R | R | leaf crates (macArch, overrides, ITAD) | metadata-override push, Mac arch prompt chain, ITAD rate-limit gate | |
 | `secret-owners:steamgrid-itad` | domain | steamgrid-secrets, itad-secrets | SC (handles to the keyring) | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | R | R | leaf crates | SteamGridDB and ITAD calls | the key owners; the keyring dispatch is already Rust |
 | `engine-state` | domain | engine-state | SC | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | R | gamelib-engine | engine selection and notices | decision and notice owner over steam_engine_notices |
-| `engine-runtime` | domain | engine-runtime | SC | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | R | gamelib-engine | launch and bottle paths | ledger, selection registry, overlay contexts, launch deadlines, single-flight maps, CrossOver bin-dir memo |
-| `tools-state` | scratch | tools-state | SC | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | R | gamelib-engine | Wine tools UI | single-flight slot, catalog and script-metadata caches, winetricks environment reports |
-| `winetricks-queue` | domain | winetricks-queue | SC | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | R | gamelib-engine | Wine tools UI | apply queue |
-| `info-caches:systemInfo` | scratch | info-caches | SC | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | R | gamelib-engine | the system-information RPC | lazy probes, no boot dump |
+| `engine-runtime` | domain | engine-runtime | SC | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | R | gamelib-engine | launch and bottle paths | selection registry, overlay contexts, launch deadlines, single-flight maps, CrossOver bin-dir memo (the bottle ledger is in memory only and is not persisted) |
+| `tools-state` | scratch | tools-state | SC | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | R | gamelib-wine | Wine tools UI | single-flight slot, catalog and script-metadata caches, winetricks environment reports |
+| `winetricks-queue` | domain | winetricks-queue | SC | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | R | gamelib-wine | Wine tools UI | apply queue |
+| `info-caches:systemInfo` | scratch | info-caches | SC | SC | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | gamelib-engine | the system-information RPC | lazy probes, no boot dump |
 | `command-runner` | domain | command-runner | SC | SC | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | launch crate | launcher and every runner spawn | commandRunner and the launcher are deleted in 88; the runner object spawns through the tracked-children registry below |
 | `tracked-children` | domain | command-runner | SC (process registry behind ctx.runner) | SC | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | gamelib-core ProcessRunner | quit and stdin-EOF teardown, launched-game tracking | the TS registry and the Rust ProcessRunner registry are disjoint by child (each child has one spawner) from 83 to 88; the parent-kill reap at 83 is shell-side and reads, never owns |
 | `app-runtime:launch-single-flight` | scratch | app-runtime | SC | SC | SC | SC | SC | SC | R* | R | R | R | R | R | R | R | R | R | R | R | launch crate | one in-flight launch per game (88 SC2) |  |
@@ -184,3 +184,24 @@ Three "TS mirror deleted" cells in "Persisted stores" changed. Only that column 
 | `runsForMeStore` | 86 | 96 | runsForMe is not an 86 slice (D-01). Its non-test importers are `launcher.ts` (Phase 88), `storeManagers/steam/bottledSteam.ts` and `storeManagers/steam/bottleProcessMonitor.ts` (Phase 96); the cell takes the latest, 96 (D-27). |
 
 `src/backend/__tests__/storeMirrorSchedule.test.ts` copies this column and fails when the two disagree, so its `SCHEDULE` moved with the table in the same change.
+
+### 2026-11-23 (Phase 87 planning, D-05, D-22..D-24)
+
+Cells changed in "Persisted stores", "Persisted state outside the store registry" and "In-memory owners". Only one owner token moved (`info-caches:systemInfo`, whose single `*` moves from the 87 column to the 88 column), so no row gains a second `*` and the Sequencing rule holds. The writer is `RH` throughout for the cache rows, and the two cache deletions are A2 deletions, not ownership moves. The corrections come from 87-RESEARCH.md ("STATE-OWNERSHIP amendment rows (D-05)"), verified against the tree.
+
+| row | cell | old | new | reason |
+| --- | --- | --- | --- | --- |
+| `pci_ids_device` | TS mirror deleted | 87 | 88 | The GPU info moves to 88 with `launcher.ts` (87-CONTEXT D-05); its only consumer is the GPU info the launcher uses. |
+| `pci_ids_vendor` | TS mirror deleted | 87 | 88 | Same reason as `pci_ids_device`. |
+| `info-caches:systemInfo` | owner flip (the `*`) | 87 | 88 | Its only consumer is the GPU info the launcher uses; flipping it in 87 would leave a row with no owner. 87 becomes `SC`, 88 becomes `R*`. |
+| `wineDownloaderInfoStore` | TS mirror deleted | 87 | 87 (unchanged) | D-03/D-04 re-check: the last TS readers (`config.ts` `getAlternativeWine`, `utils.ts`, `dxmt`, `installFormIpc.ts`) either port in 87 or reach the store through a scheduled shim, so the mirror is still deleted in 87. |
+| `steam_engine_notices` | TS mirror deleted | 87 | 87 (unchanged) | The store is read only by `engineState`, which ports in 87. |
+| steam-engines-dir (the engines folder) | file | `<appFolder>`/steam-engines/ | `<appFolder>`/tools/steam-engines/ | Verified: `fallbackEngine.ts` builds `join(deps.paths.toolsPath, 'steam-engines')` and `appPaths.ts` sets `toolsPath`. The flip stays at 87. |
+| `tools-state` | Rust owner | `gamelib-engine` | `gamelib-wine` | D-04 puts tools and Winetricks in `gamelib-wine`. |
+| `winetricks-queue` | Rust owner | `gamelib-engine` | `gamelib-wine` | Same reason as `tools-state`. |
+| `engine-runtime` | notes | ledger listed among the persisted content | the bottle ledger is in memory only | Verified in the tree: the ledger is not written to disk; the registry, overlay contexts and deadlines are the content. |
+| `engine-runtime` | note (no cell change) | | `engine-runtime:registry` keeps a scheduled TS write-through view, `engineSelectionView`, until 96 while Rust stays the owner (D-24) | The bridge's synchronous engine-selection read cannot go async before 96. The view is a schedule-test row (phase 96), pinned to Rust by shared test vectors. |
+
+No row gains a second `*`: `info-caches:systemInfo` keeps one `*`, in the 88 column, and `engine-runtime` keeps its single `R*` at 87 with the write-through view recorded as a note, not a second move.
+
+`src/backend/__tests__/storeMirrorSchedule.test.ts` copies the "TS mirror deleted" column and fails when the two disagree, so its `SCHEDULE` moved with the table in the same commit.

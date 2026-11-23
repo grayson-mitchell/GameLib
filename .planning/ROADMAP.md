@@ -646,7 +646,7 @@ Plans:
   1. A game uses CrossOver first and falls back to the pinned Wine-Staging with DXVK exactly as before, verified live on real engines
   2. Per-game bottles are created, reused and removed as before; removing a bottle never touches a sibling game
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
-  4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase
+  4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
 **Plans:** 59 plans in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
 
