@@ -35,7 +35,6 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
-  realpathSync,
   rmSync,
   writeFileSync
 } from 'fs'
@@ -64,14 +63,19 @@ export const PINNED_NOW_MS = Date.UTC(2026, 10, 24, 12, 0, 0)
 /** The repo root, so `publicDir` points at the real `public/` tree. */
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..')
 
-export const goldenDir = (slice: string): string =>
+const goldenDir = (slice: string): string =>
   join(fixturesRoot(), 'golden', slice)
 
 /** `GAMELIB_WRITE_HUMBLE_GOLDEN=1` writes the goldens, anything else compares. */
-export function humbleGoldenMode(): HumbleGoldenMode {
+function humbleGoldenMode(): HumbleGoldenMode {
   return process.env.GAMELIB_WRITE_HUMBLE_GOLDEN === '1' ? 'write' : 'compare'
 }
 
+/**
+ * What a case runs over.
+ *
+ * @public consumed by the Humble flow oracles from 94-08 on (this plan's contract names it)
+ */
 export interface HumbleOracleProfile {
   /** The isolated fake HOME and its disposer (the eight home variables all point inside it). */
   readonly fake: FakeHomeProfile
@@ -87,6 +91,8 @@ export interface HumbleOracleProfile {
  * Runs `fn` over a fresh fake HOME profile (one per case, never reused) and disposes it afterwards,
  * whatever `fn` did. The layout is the macOS one on every host, on purpose, so a recorded path is
  * the same wherever the golden is compared.
+ *
+ * @public consumed by the Humble flow oracles from 94-08 on (this plan's contract names it)
  */
 export async function withHumbleOracleProfile<T>(
   fn: (profile: HumbleOracleProfile) => Promise<T> | T
@@ -192,13 +198,19 @@ function assertStatePath(rel: string): void {
   }
 }
 
-/** `{ "<rel path>": "<base64 bytes>" }`, sorted by path. */
+/**
+ * `{ "<rel path>": "<base64 bytes>" }`, sorted by path.
+ *
+ * @public consumed by the Humble flow oracles from 94-08 on (this plan's contract names it)
+ */
 export type HumbleStateSnapshot = Record<string, string>
 
 /**
  * The bytes of every Humble state file under `userData`: `store_cache/humble_*.json` and
  * `humble_store/config.json` (D-07), keyed by their `/`-separated path, base64, sorted. A file that
  * does not exist is absent from the result.
+ *
+ * @public consumed by the Humble flow oracles from 94-08 on (this plan's contract names it)
  */
 export function snapshotHumbleState(userData: string): HumbleStateSnapshot {
   const rels: string[] = []
@@ -222,10 +234,18 @@ export function snapshotHumbleState(userData: string): HumbleStateSnapshot {
   return out
 }
 
-/** A seed file: base64 bytes (as a snapshot holds them) or UTF-8 text. */
+/**
+ * A seed file: base64 bytes (as a snapshot holds them) or UTF-8 text.
+ *
+ * @public consumed by the Humble flow oracles from 94-08 on (this plan's contract names it)
+ */
 export type HumbleSeedFile = string | { utf8: string }
 
-/** Writes a case's starting Humble state into `userData`, byte for byte. */
+/**
+ * Writes a case's starting Humble state into `userData`, byte for byte.
+ *
+ * @public consumed by the Humble flow oracles from 94-08 on (this plan's contract names it)
+ */
 export function seedHumbleState(
   userData: string,
   files: Readonly<Record<string, HumbleSeedFile>>
@@ -239,39 +259,6 @@ export function seedHumbleState(
       typeof file === 'string' ? Buffer.from(file, 'base64') : file.utf8
     )
   }
-}
-
-/** Replaces the profile's roots in `value` with `<HOME>` / `<USERDATA>` (strings only, not keys). */
-export function normalisePaths<T>(value: T, profile: HumbleOracleProfile): T {
-  const roots: [string, string][] = [
-    ['<USERDATA>', profile.userData],
-    ['<HOME>', profile.home]
-  ]
-  const real = realpathSync(profile.home)
-  if (real !== profile.home) {
-    roots.push(
-      ['<USERDATA>', join(real, 'Library', 'Application Support', 'GameLib')],
-      ['<HOME>', real]
-    )
-  }
-  const walk = (node: unknown): unknown => {
-    if (typeof node === 'string') {
-      let out = node
-      for (const [token, root] of roots) out = out.split(root).join(token)
-      return out
-    }
-    if (Array.isArray(node)) return node.map(walk)
-    if (node !== null && typeof node === 'object') {
-      return Object.fromEntries(
-        Object.entries(node as Record<string, unknown>).map(([k, v]) => [
-          k,
-          walk(v)
-        ])
-      )
-    }
-    return node
-  }
-  return walk(value) as T
 }
 
 const json = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`
@@ -410,6 +397,8 @@ export function expectEmptyCasesToFail(slice: string, minFloor: number): void {
  * Notes a deliberate difference the Rust port will have from the TypeScript for one case (D-20) in
  * `<slice>/deltas.json`, keeping the file sorted. The only golden file written by hand-driven code;
  * the reason is mandatory.
+ *
+ * @public consumed by the Humble flow oracles from 94-08 on (this plan's contract names it)
  */
 export function recordDelta(
   slice: string,

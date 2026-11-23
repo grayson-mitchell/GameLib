@@ -62,12 +62,12 @@ import { dirname, join } from 'path'
 export type WireMode = 'replay' | 'write' | 'forward'
 
 /** The crate the Humble fixtures live in. */
-export const HUMBLE_CRATE = 'gamelib-humble'
+const HUMBLE_CRATE = 'gamelib-humble'
 
-export const REDACTED = 'REDACTED'
+const REDACTED = 'REDACTED'
 
 /** The real origins a request belongs to, by default. */
-export const HUMBLE_ORIGIN = 'https://www.humblebundle.com'
+const HUMBLE_ORIGIN = 'https://www.humblebundle.com'
 export const STEAM_STORE_ORIGIN = 'https://store.steampowered.com'
 
 let fixturesRootOverride: string | null = null
@@ -243,14 +243,14 @@ function redactRequestBody(target: string, text: string): string {
 // The recorded shapes
 // ---------------------------------------------------------------------------------------------
 
-export interface RecordedMultipartPart {
+interface RecordedMultipartPart {
   name: string
   filename?: string
   /** The part's text, redacted. Omitted for a file part. */
   value?: string
 }
 
-export interface RecordedBody {
+interface RecordedBody {
   /** The body when it round-trips as UTF-8, redacted. */
   utf8?: string
   /** The body's bytes, when it does not. */
@@ -269,7 +269,7 @@ export interface RecordedRequest {
   multipart?: RecordedMultipartPart[]
 }
 
-export interface RecordedResponse {
+interface RecordedResponse {
   status: number
   /** The allow-listed response headers, in the order served. */
   headers: [string, string][]
@@ -277,7 +277,7 @@ export interface RecordedResponse {
   bodyFile?: string
 }
 
-export interface Exchange {
+interface Exchange {
   id: number
   request: RecordedRequest
   response: RecordedResponse
