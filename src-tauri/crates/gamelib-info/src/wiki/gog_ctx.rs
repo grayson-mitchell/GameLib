@@ -23,7 +23,7 @@ use serde_json::Value;
 use url::Url;
 
 use crate::ctx::InfoCtx;
-use crate::js::{opt_prop, prop, to_js_text, truthy};
+use crate::js::{encode_uri_component, opt_prop, prop, to_js_text, truthy};
 
 use super::{get_data, user_agent, Thrown};
 
@@ -35,7 +35,13 @@ const AFFILIATE: &str = "1838482841";
 /// and an answer that is not an object or an array (the TS assigned `data.etag` and a text or `null`
 /// cannot take it).
 pub async fn gamesdb_release(ctx: &InfoCtx, store: &str, id: &str) -> Option<Value> {
-    let url = format!("https://gamesdb.gog.com/platforms/{store}/external_releases/{id}");
+    // WR-03: `store` and `id` come from the caller (an Epic or Amazon app name); encode them so a `/`,
+    // `?` or `#` cannot rewrite the path or query.
+    let url = format!(
+        "https://gamesdb.gog.com/platforms/{}/external_releases/{}",
+        encode_uri_component(store),
+        encode_uri_component(id)
+    );
     match get_data(ctx, url, &user_agent(ctx)).await {
         Ok(data @ (Value::Object(_) | Value::Array(_))) => Some(data),
         Ok(_) => {
@@ -55,7 +61,10 @@ pub async fn gamesdb_release(ctx: &InfoCtx, store: &str, id: &str) -> Option<Val
 /// so did the whole wiki lookup) or a link that is not a URL.
 pub async fn gog_store_url(ctx: &InfoCtx, id: &str) -> Result<Option<String>, Thrown> {
     // `getGamesData(appName)`: `locale=en-US`, any failure is `null`.
-    let url = format!("https://api.gog.com/v2/games/{id}?locale=en-US");
+    let url = format!(
+        "https://api.gog.com/v2/games/{}?locale=en-US",
+        encode_uri_component(id)
+    );
     let data = match get_data(ctx, url, &user_agent(ctx)).await {
         Ok(data) => data,
         Err(thrown) => {
