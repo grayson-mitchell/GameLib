@@ -71,6 +71,50 @@ describe('runtimesPortComplete', () => {
   runSlice(RUNTIMES)
 })
 
+/**
+ * 87-22, D-06 and D-15: the wine-downloads sub-slice is Rust's (87-19 ported it, 87-20 switched the
+ * three channels). The TS wine manager (the install, the remove and the list refresh, the seven
+ * release feeds and the downloader), their five unit tests and the wine-manager oracle are deleted;
+ * the goldens, the state and the recordings stay for the Rust replay (`golden_wine_manager.rs`).
+ * `stores.ts` stays too: it still holds the `wineDownloaderInfoStore` mirror, which the TS DXMT reads
+ * until 87-37, so deleting it with the modules would break the store registration (T-87-69).
+ */
+const WINE_DOWNLOADS: SliceSpec = {
+  deleted: [
+    'src/backend/wine/manager/utils.ts',
+    'src/backend/wine/manager/downloader/main.ts',
+    'src/backend/wine/manager/downloader/utilities.ts',
+    'src/backend/wine/manager/downloader/constants.ts',
+    'src/backend/wine/manager/__tests__/removeWineVersion.test.ts',
+    'src/backend/wine/manager/downloader/__tests__/main/getter.test.ts',
+    'src/backend/wine/manager/downloader/__tests__/utilities/geProtonArch.test.ts',
+    'src/backend/wine/manager/downloader/__tests__/utilities/rest.test.ts',
+    'src/backend/wine/manager/downloader/__tests__/utilities/unzip.test.ts',
+    'src/backend/wine/__tests__/oracle/wineManager.oracle.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-wine/tests/fixtures/golden/wine_manager',
+    'src-tauri/crates/gamelib-wine/tests/fixtures/recorded/wine_manager',
+    'src/backend/wine/manager/stores.ts'
+  ],
+  forbiddenIdentifiers: [
+    'updateWineListsIfOutdated',
+    'WineManagerDeps',
+    'getAvailableVersions',
+    'fetchReleases',
+    'PROTONGE_URL',
+    'WINESTAGINGMACOS_URL'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_WINE',
+  manifestSlice: 'wine',
+  channelsFloor: 5
+}
+
+describe('wineDownloadsPortComplete', () => {
+  runSlice(WINE_DOWNLOADS)
+})
+
 describe('noRollbackFlag', () => {
   it('anti-vacuity: the walks read real trees', () => {
     assertAtOrAboveFloor(

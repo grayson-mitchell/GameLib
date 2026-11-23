@@ -647,12 +647,6 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
     const runWineCommandOnGameMock = jest.fn()
 
     jest.isolateModules(() => {
-      jest.doMock('../../wine/manager/utils', () => ({
-        installWineVersion: jest.fn(),
-        removeWineVersion: jest.fn(),
-        updateWineVersionInfos: jest.fn(),
-        updateWineListsIfOutdated: jest.fn()
-      }))
       jest.doMock('../../tools', () => ({
         DXVK: { getLatest: jest.fn(), installRemove: jest.fn() },
         Winetricks: {

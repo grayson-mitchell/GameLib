@@ -1027,7 +1027,7 @@ export type Type =
  * - checksum link
  * - size (download and disk)
  */
-export interface VersionInfo {
+interface VersionInfo {
   version: string
   type: Type
   date: string
@@ -1036,19 +1036,6 @@ export interface VersionInfo {
   disksize: number
   checksum: string
   release_notes_link: string
-}
-
-/**
- * Enum for the supported repositorys
- */
-export enum Repositorys {
-  PROTONGE,
-  PROTON,
-  WINELUTRIS,
-  WINECROSSOVER,
-  WINESTAGINGMACOS,
-  GPTK,
-  PROTONCACHYOS
 }
 
 export type WineManagerStatus =

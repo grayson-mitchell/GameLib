@@ -85,9 +85,7 @@
     // clang: C toolchain compiler invoked by the bridge test steam/bridge/__tests__/cbqueue.test.ts.
     "clang",
     // wine: the Windows-compat runner launched by src/backend/utils/compatibility_layers.ts.
-    "wine",
-    // du: disk-usage tool run by src/backend/wine/manager/downloader/utilities.ts.
-    "du"
+    "wine"
   ],
   "project": [
     "src/**/*.{ts,tsx,scss,sass}",
