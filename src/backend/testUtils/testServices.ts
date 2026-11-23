@@ -25,15 +25,10 @@ import { createSteamStores } from '../storeManagers/steam/stores'
 import { createPciIdCaches } from '../utils/systeminfo/gpu/pci_ids'
 import type { StoreFamilyDeps, StoreRoot } from '../stores/storeRoot'
 import { createTestStoreRoot } from './testStoreRoot'
-import type { EngineServices } from '../engine/engineServices'
 import { createFakeClock } from './fakeClock'
 import { createTestOnlineMonitor } from './testOnlineMonitor'
 import { createTestAppRuntime } from './testAppRuntime'
 import { createTestMiscRuntime } from './testMiscRuntime'
-import {
-  interimEngineRuntime,
-  interimEngineState
-} from './testInterimEngineRuntime'
 import { createTestSteamLaunchRuntime } from './testSteamLaunchRuntime'
 import { createTestBridgeRuntime } from './testBridgeRuntime'
 import { createTestGogRuntime } from './testGogRuntime'
@@ -57,7 +52,7 @@ import { createTestHumbleServices } from './testHumble'
 import { createLoginWindowSeamSlot } from '../humble/loginWindowSeam'
 import { createTestBridgeHelpers } from './testBridgeHelpers'
 import { createTestAppPaths } from './testAppPaths'
-import type { GameSettings, Runner } from 'common/types'
+import type { Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
 import type {
   BootServices,
@@ -391,28 +386,6 @@ export function createTestManagerDeps(
       overrides.steamBottle ?? createTestSteamBottle({ stores, config }),
     steamUser: overrides.steamUser ?? createInertTestSteamUser(),
     loginWindowSeam: overrides.loginWindowSeam ?? createLoginWindowSeamSlot()
-  }
-}
-
-/** The engine's injected capabilities (66.1-22i): an unscripted installRemove fails loudly; no releases. */
-export function createTestEngineServices(
-  overrides: Partial<EngineServices> = {}
-): EngineServices {
-  return {
-    spawnAsync: createTestServices().spawnAsync,
-    installRemove: () => {
-      throw new Error('unscripted installRemove call')
-    },
-    wineManagerReleases: () => [],
-    globalSettings: () => ({}),
-    globalGameSettings: () => ({}) as GameSettings,
-    notices: unscriptedMembers<EngineServices['notices']>('notices', {}),
-    runner: unscriptedMembers<EngineServices['runner']>('process runner', {}),
-    onlineMonitor: createTestOnlineMonitor(),
-    engineState: interimEngineState(),
-    engineRuntime: interimEngineRuntime(),
-    paths: createTestPaths(),
-    ...overrides
   }
 }
 

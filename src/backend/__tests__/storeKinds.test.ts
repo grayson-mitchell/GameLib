@@ -63,11 +63,15 @@ const EXEMPT_NAMES: readonly { name: string; reason: string }[] = [
 // 47 -> 46 at Phase 87 plan 87-37 (2026-11-24): deleting wine/manager/stores.ts removed exactly one construction
 // (wineDownloaderInfoStore), leaving 46. The floor tracks the construction list that plan shrank; it is not
 // lowered to turn a run green.
-const MIN_CONSTRUCTIONS = 46
+// 46 -> 45 at Phase 87 plan 87-56c (2026-11-24): deleting engine/engineNoticeStore.ts removed exactly one construction
+// (steam_engine_notices), leaving 45. The floor tracks the construction list that plan shrank; it is not lowered to turn a
+// run green.
+const MIN_CONSTRUCTIONS = 45
 // 15 -> 13 at Phase 86 plan 86-24 (2026-11-23): the same two deleted files, wiki_game_info/stores.ts and
 // crossover_index/stores.ts, were two of the files holding a construction.
 // 13 -> 12 at Phase 87 plan 87-37 (2026-11-24): wine/manager/stores.ts was one of the files holding a construction.
-const MIN_FILES_WITH_CONSTRUCTION = 12
+// 12 -> 11 at Phase 87 plan 87-56c (2026-11-24): engine/engineNoticeStore.ts was one of the files holding a construction.
+const MIN_FILES_WITH_CONSTRUCTION = 11
 const MIN_MIRRORS = 10
 
 // This is a shrink-and-grow equality ratchet. Never widen it to admit a failing case
@@ -90,7 +94,7 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   downloadManager: 'user-state',
   macArchStore: 'user-state',
   runsForMeStore: 'user-state',
-  // CacheStore (33)
+  // CacheStore (32)
   steam_library: 'user-state',
   gog_library: 'user-state',
   legendary_library: 'user-state',
@@ -104,7 +108,8 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   // quick 261117-p38: a derivable "Launch without Steam" eligibility verdict (appId ->
   // verdict), recomputed from the install on demand, so cache, not user state.
   steam_direct_launch_verdict: 'cache',
-  steam_engine_notices: 'user-state',
+  // 87-56c: `steam_engine_notices` (user-state) lost its TS store with the engine directory; its `storeTable.json` row stays for
+  // the Rust host (`EXTRA_ROWS`), so it is no longer a TS declaration named here.
   gog_api_info: 'cache',
   gog_achievements: 'cache',
   gog_install_info: 'cache',

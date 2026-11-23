@@ -15,7 +15,7 @@
  * - view (D-24): a write-through mirror of Rust's in-memory state, pinned the same way.
  *
  * `deletedBy` is the phase that deletes the row, an integer in 87..99. 87 marks an intra-phase shim
- * that a TS module still alive inside Phase 87 uses; 87-56 asserts no 87 row remains
+ * that a TS module still alive inside Phase 87 uses; 87-56c asserts no 87 row remains
  * (`noIntraPhaseRowsLeft`), and 87-57 compares the final schedule item by item with the D-22, D-23
  * and D-24 survivor list.
  *
@@ -76,7 +76,7 @@ interface ScheduleRow extends ShimRow {
   wiring?: readonly string[]
   /** Repo-relative non-test files that import `file`. */
   callers: readonly string[]
-  /** The phase that deletes this row, 87..99. 87 is an intra-phase shim; 87-56 asserts none remain. */
+  /** The phase that deletes this row, 87..99. 87 is an intra-phase shim; 87-56c asserts none remain. */
   deletedBy: number
 }
 
@@ -99,26 +99,12 @@ const COMPATIBILITY_LAYERS_IMPORTERS: readonly string[] = [
 /**
  * Every non-test importer of `enginewine/twin.ts` (the check is per file, so every twin row lists them all):
  * the launcher and the five `games.ts` (`engineKeyFor`), the settings and install flows (the override
- * validation and the import settings), the engine flows, the engine TS alive until 87-56 (87-42 adds `prepareBottle`),
+ * validation and the import settings), the engine flows (87-42 adds `prepareBottle`),
  * and (87-43) every bridge file that used to reach the helpers through the re-exporting engine modules.
- * 87-55 adds `engine/engineTypes.ts`, which re-exports the two selection helpers for the TS engine until 87-56, and
- * `gameLaunchOverlay.ts`, which takes `isNonCrossover` from here now.
+ * 87-55 adds `gameLaunchOverlay.ts`, which takes `isNonCrossover` from here now. The TS engine's own importers of the
+ * file (`src/backend/engine/*`) were deleted with the directory in 87-56c.
  */
 const ENGINE_TWIN_IMPORTERS: readonly string[] = [
-  'src/backend/engine/bottleLedger.ts',
-  'src/backend/engine/demoStatus.ts',
-  'src/backend/engine/engineDecision.ts',
-  'src/backend/engine/engineEligibility.ts',
-  'src/backend/engine/enginePins.ts',
-  'src/backend/engine/engineIds.ts',
-  'src/backend/engine/engineState.ts',
-  'src/backend/engine/engineTypes.ts',
-  'src/backend/engine/fallbackEngine.ts',
-  'src/backend/engine/gameEngineState.ts',
-  'src/backend/engine/gamePrefix.ts',
-  'src/backend/engine/launchSettings.ts',
-  'src/backend/engine/perGameBottle.ts',
-  'src/backend/engine/toolSettings.ts',
   'src/backend/launcher.ts',
   'src/backend/sidecar/bootstrap.ts',
   'src/backend/sidecar/engineWineResolvers.ts',
@@ -163,8 +149,6 @@ const TOOLS_SHIM_IMPORTERS: readonly string[] = [
 ]
 /** Every non-test importer of `enginewine/bottles.ts` (the check is per file, so every row of that file lists them all). */
 const BOTTLES_SHIM_IMPORTERS: readonly string[] = [
-  'src/backend/engine/engineDecision.ts',
-  'src/backend/engine/perGameBottle.ts',
   'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
   'src/backend/storeManagers/steam/engine/engineSync.ts',
   'src/backend/storeManagers/steam/engine/fallbackBottleCall.ts',
@@ -181,11 +165,10 @@ const LAUNCH_SHIM_IMPORTERS: readonly string[] = [
 ]
 /**
  * Every non-test importer of `enginewine/decision.ts` (the check is per file, so every row of that file lists them all):
- * the Steam launch and its engine adapter (87-54), the CrossOver bin-dir lookup (87-55) and the still-TS decision module, which takes its types from here
- * until 87-56 deletes it.
+ * the Steam launch and its engine adapter (87-54) and the CrossOver bin-dir lookup (87-55); the still-TS decision module
+ * that took its types from here went with the engine directory in 87-56c.
  */
 const DECISION_SHIM_IMPORTERS: readonly string[] = [
-  'src/backend/engine/engineDecision.ts',
   'src/backend/enginewine/state.ts',
   'src/backend/storeManagers/steam/engine/crossoverBinDir.ts',
   'src/backend/storeManagers/steam/engine/engineDecisionReply.ts',
@@ -245,7 +228,7 @@ const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
  * Rows are added by the plan that creates the survivor, in the same commit. Each row needs its file,
  * name, shape and callers; shims and resolvers a channel; twins and views a vectors test.
  */
-const SCHEDULE: readonly ScheduleRow[] = [
+export const SCHEDULE: readonly ScheduleRow[] = [
   // 87-18 (D-15): the launcher's pre-launch runtime step. Phase 88 moves launch into Rust and deletes both.
   {
     name: 'isRuntimeInstalled',
@@ -328,8 +311,8 @@ const SCHEDULE: readonly ScheduleRow[] = [
   },
   // 87-26 (D-15, D-22): wine discovery. `discoverAlternativeWine` is the one async TS reach into the Rust discovery
   // (config.ts's `getAlternativeWine`, which utils.ts and the Steam install form call), deleted with the config in
-  // Phase 98. `discoverCrossover` is an intra-phase shim for the still-TS engine's CrossOver locator
-  // (`engine/crossoverLocation.ts`); 87-56 deletes the engine TS and removes the row (`deletedBy` 87).
+  // Phase 98. The intra-phase `discoverCrossover` shim (`enginewine/intraPhase.ts`, for the still-TS engine's CrossOver
+  // locator) went with the engine TS in 87-56c.
   {
     name: 'discoverAlternativeWine',
     file: 'src/backend/enginewine/wineDiscovery.ts',
@@ -337,14 +320,6 @@ const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_WINE_DISCOVER_ALTERNATIVES',
     callers: ['src/backend/config.ts'],
     deletedBy: 98
-  },
-  {
-    name: 'discoverCrossover',
-    file: 'src/backend/enginewine/intraPhase.ts',
-    shape: 'shim',
-    channel: 'RUST_WINE_DISCOVER_CROSSOVER',
-    callers: ['src/backend/engine/crossoverLocation.ts'],
-    deletedBy: 87
   },
   // 87-31 (D-17): the online monitor's status, written through to `EngineCtx.online` at boot and on every
   // change. The monitor itself (the probing) stays TS until the config and its callers move in Phase 98.
@@ -534,7 +509,7 @@ const SCHEDULE: readonly ScheduleRow[] = [
   },
   // 87-55 (D-04, D-15): where CrossOver's bin directory is. The bridge's call sites (`steam/engine/crossoverBinDir.ts`, which
   // folds a rejection into "not installed" as the TS locator did) and the app shell's App Management probe ask Rust; the
-  // sync fast path `bottle.ts` reads inline stays the boot's TS locator until 87-56. Phase 98 moves the lookup's last
+  // sync fast path `bottle.ts` reads inline is the twin `crossoverBinDirSync` (87-56b). Phase 98 moves the lookup's last
   // callers (the App Management probe, with the settings flows) into Rust.
   {
     name: 'resolveCrossoverBinDir',
@@ -668,10 +643,8 @@ const SCHEDULE: readonly ScheduleRow[] = [
       'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts',
       'src/backend/storeManagers/steam/gameLaunch.ts',
       'src/backend/storeManagers/steam/gameLaunchOverlay.ts',
-      // 87-56c: the test transport empties the view per test; the interim engine runtime the engine TS's own tests
-      // still build does the same (Task 3 deletes it with them).
-      'src/backend/testUtils/testEngineTransport.ts',
-      'src/backend/testUtils/testInterimEngineRuntime.ts'
+      // 87-56c: the test transport empties the view per test.
+      'src/backend/testUtils/testEngineTransport.ts'
     ],
     deletedBy: 96
   },
@@ -863,8 +836,7 @@ const SCHEDULE: readonly ScheduleRow[] = [
   // cannot become async shims; each lives once in `enginewine/twin.ts`, pinned to Rust by the shared
   // `engine_twin.json` vectors that `twinVectors.test.ts` and `gamelib-engine`'s `twin_vectors.rs` both replay.
   // `callers` is every importer of the file (the check is per file). `perGameBottleName` is the naming rule the
-  // bottle functions share: the engine TS alive until 87-56 (gamePrefix, gameEngineState, through
-  // perGameBottle.ts) calls it, so it is an intra-phase row that 87-56 makes private; the plan named four rows.
+  // bottle functions share; it was an intra-phase row until 87-56c deleted the engine TS that called it and made it private.
   {
     name: 'engineKeyFor',
     file: 'src/backend/enginewine/twin.ts',
@@ -917,22 +889,14 @@ const SCHEDULE: readonly ScheduleRow[] = [
     callers: ENGINE_TWIN_IMPORTERS,
     deletedBy: 98
   },
-  {
-    name: 'perGameBottleName',
-    file: 'src/backend/enginewine/twin.ts',
-    shape: 'twin',
-    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
-    callers: ENGINE_TWIN_IMPORTERS,
-    deletedBy: 87
-  },
   // 87-39 (D-24): the bridge's sync pure bottle helpers, moved out of `bottlePrimitives`, `engineSwitch` and
   // `fallbackEngine` into `enginewine/twin.ts` and pinned to the Rust `bottles::paths`, `bottles::marker`,
   // `bottles::pin_marker`, `engines` and `tool_settings` by the shared `bottle_twin.json` vectors that
   // `twinVectors.test.ts` and `twin_vectors.rs` both replay. The launch path and the bridge call them inline, so
   // they stay synchronous until Phase 96 moves the Steam bridge; `ENGINE_PINS` and `pinById` read the
-  // `common/enginePins.json` the Rust crate reads. The six `deletedBy: 87` rows are the helpers the still-TS marker
-  // writers and pinned-engine installer share with the readers: intra-phase, 87-56 deletes their callers and makes
-  // them private (the plan named ten rows).
+  // `common/enginePins.json` the Rust crate reads. The helpers the marker
+  // writers and pinned-engine installer shared with the readers were intra-phase rows until 87-56c deleted their callers
+  // and made them private (the plan named ten rows).
   {
     name: 'getBottleDir',
     file: 'src/backend/enginewine/twin.ts',
@@ -1032,22 +996,6 @@ const SCHEDULE: readonly ScheduleRow[] = [
     vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
     callers: ENGINE_TWIN_IMPORTERS,
     deletedBy: 98
-  },
-  {
-    name: 'pinMarkerMatches',
-    file: 'src/backend/enginewine/twin.ts',
-    shape: 'twin',
-    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
-    callers: ENGINE_TWIN_IMPORTERS,
-    deletedBy: 87
-  },
-  {
-    name: 'pinnedEnginePaths',
-    file: 'src/backend/enginewine/twin.ts',
-    shape: 'twin',
-    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
-    callers: ENGINE_TWIN_IMPORTERS,
-    deletedBy: 87
   }
 ]
 
@@ -1170,7 +1118,7 @@ function deletedByProblems(schedule: readonly ScheduleRow[]): string[] {
 }
 
 /**
- * 87-56 calls this over the final schedule: throws naming every row still marked `deletedBy: 87`,
+ * 87-56c calls this over the final schedule (`enginePortComplete`, in `engineWinePortComplete.test.ts`): throws naming every row still marked `deletedBy: 87`,
  * an intra-phase shim that a TS module alive inside Phase 87 used and that must be gone by the end.
  */
 export function noIntraPhaseRowsLeft(

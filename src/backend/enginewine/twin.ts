@@ -13,13 +13,12 @@
  * Deleting phases (the schedule in `engineWineShimSchedule.test.ts`): `engineKeyFor` goes with its launch
  * callers in Phase 92; `isWritableEngineOverride`, `importEngineSettings` and `getPerGameBottleNameFor` go
  * with the settings and install flows in Phase 98. `perGameBottleName` is the naming rule the two bottle
- * functions share; it is exported only because the engine TS that is still alive in Phase 87 (`gamePrefix`,
- * `gameEngineState`, through `perGameBottle.ts`) calls it, so it is an intra-phase row
- * (`deletedBy: 87`) and 87-56 makes it private when that TS goes.
+ * functions share; it is private as of 87-56c, when the engine TS that called it was deleted.
  *
- * The Steam / clean-name rules are imported, not copied: they stay in `engine/gameKey.ts` until 87-56c deletes it
- * with the directory. The grammar of an engine override id is `parseEngineOverride` here (87-56b), pinned to Rust
- * `ids::parse_engine_override` by `override_twin.json`; `engine/engineIds.ts` only re-exports it.
+ * The Steam / clean-name rules (`STEAM_APP_ID_RE`, `isCleanAppName`, `isKnownRunner`) are private here as of 87-56c: this
+ * file was their one outside user, so inlining them when `engine/gameKey.ts` went with the directory left the logic
+ * once, not twice. The grammar of an engine override id is `parseEngineOverride` here (87-56b), pinned to Rust
+ * `ids::parse_engine_override` by `override_twin.json`.
  *
  * 87-39 (D-24) adds the bridge's sync bottle helpers: `getBottleDir`, `sanitizeBottleName`,
  * `isBottleProvisioned`, `buildFallbackGameSettings`, the three read-only marker views, `isPinnedEngineInstalled`
@@ -28,10 +27,9 @@
  * `engines::is_pinned_engine_installed` and `tool_settings::build_fallback_game_settings`; the shared
  * `bottle_twin.json` vectors pin the two sides (`twinVectors.test.ts` here, `twin_vectors.rs` in Rust). They
  * stay synchronous because the launch path and the bridge still call them inline. 87-43 repointed every caller
- * here and deleted `bottlePrimitives.ts` and `engineSwitch.ts`; `enginePins.ts` still re-exports the pin table for
- * the engine files that import it until 87-56. The helpers the still-TS marker writers and the
- * pinned-engine installer share with the readers (`pinMarkerMatches`, `pinnedEnginePaths`) are intra-phase rows
- * (`deletedBy: 87`): 87-56c deletes their callers and makes them private, as with `perGameBottleName`.
+ * here and deleted `bottlePrimitives.ts` and `engineSwitch.ts`. The helpers the marker writers and the
+ * pinned-engine installer shared with the readers (`pinMarkerMatches`, `pinnedEnginePaths`) are private as of 87-56c,
+ * when their callers (the engine TS) were deleted, as with `perGameBottleName`.
  * `readEngineMarker`, `hasStagingDxvk`, `isContradictedCrossover` and `isInside` are private as of 87-56b (nothing
  * outside this file imports them).
  *
@@ -49,7 +47,7 @@ import { existsSync, readFileSync } from 'fs'
 import { existsSync as gracefulExistsSync } from 'graceful-fs'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import enginePinsTable from 'common/enginePins.json'
-import { hasCapability } from 'common/storeCapabilities'
+import { hasCapability, storeCapabilities } from 'common/storeCapabilities'
 import type { GameSettings } from 'common/types'
 import type { AppPaths } from 'backend/process/context'
 import type {
@@ -61,11 +59,26 @@ import type {
   NonCrossoverSelection,
   PinnedArtifact
 } from 'common/types/engine'
-import {
-  isCleanAppName,
-  isKnownRunner,
-  STEAM_APP_ID_RE
-} from 'backend/engine/gameKey'
+const STEAM_APP_ID_RE = /^[0-9]{1,10}$/
+
+/** A non-empty, trimmed app name of at most 255 characters with no path separator, NUL or `..` in it. */
+function isCleanAppName(appName: unknown): appName is string {
+  if (typeof appName !== 'string') return false
+  if (appName.length < 1 || appName.length > 255) return false
+  if (appName !== appName.trim()) return false
+  if (/[/\\\0]/.test(appName)) return false
+  if (appName.split(/[/\\]/).includes('..') || appName.includes('..')) {
+    return false
+  }
+  return true
+}
+
+function isKnownRunner(runner: unknown): runner is string {
+  return (
+    typeof runner === 'string' &&
+    Object.prototype.hasOwnProperty.call(storeCapabilities, runner)
+  )
+}
 
 const PER_GAME_BOTTLE_NAME_MAX = 64
 const BOTTLE_PREFIX = 'GameLib'
@@ -155,10 +168,7 @@ function encodeAppName(appName: string): string {
  * a name that does not survive `sanitizeBottleName`. Spike 068 accepted names up to 120 characters; the
  * cap is held at 64 so every id real stores produce stays whole.
  */
-export function perGameBottleName(
-  runner: string,
-  appName: string
-): string | null {
+function perGameBottleName(runner: string, appName: string): string | null {
   if (engineKeyFor(runner, appName) === null) return null
   let name = `${BOTTLE_PREFIX}-${runner}-${encodeAppName(appName)}`
   if (name.length > PER_GAME_BOTTLE_NAME_MAX) {
@@ -590,10 +600,7 @@ export type PinnedEnginePaths = {
   dxvkDir: string
 }
 
-export function pinnedEnginePaths(
-  root: string,
-  pin: EnginePin
-): PinnedEnginePaths {
+function pinnedEnginePaths(root: string, pin: EnginePin): PinnedEnginePaths {
   const wineDir = join(root, pin.id)
   const wineBinDir = join(wineDir, 'Contents', 'Resources', 'wine', 'bin')
   return {
@@ -605,10 +612,7 @@ export function pinnedEnginePaths(
 }
 
 /** The artifact directory's `.gamelib-pin.json` names this artifact's sha256 (a missing or broken one does not). */
-export function pinMarkerMatches(
-  dir: string,
-  artifact: PinnedArtifact
-): boolean {
+function pinMarkerMatches(dir: string, artifact: PinnedArtifact): boolean {
   try {
     const m = JSON.parse(readFileSync(join(dir, PIN_MARKER_FILE), 'utf8')) as {
       sha256?: string

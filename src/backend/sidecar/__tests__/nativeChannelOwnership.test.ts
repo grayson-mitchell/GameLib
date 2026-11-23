@@ -44,8 +44,12 @@ const RENDERER_CHANNELS_FLOOR = 231
 /**
  * Lowest number of non-test src/backend source files the registration walk may read. Measured
  * 617 on 2026-11-20 (83-05), minus a margin of 50 for ordinary deletions.
+ *
+ * 567 -> 540 at Phase 87 plan 87-56c (2026-11-24): the plan deleted exactly 27 files this walk read (the 24 modules of
+ * `src/backend/engine`, `services/engineServices.ts`, `enginewine/intraPhase.ts` and `testUtils/testEngineState.ts`),
+ * leaving 561. The floor tracks the tree that plan shrank; it is not lowered to turn a run green.
  */
-const BACKEND_FILES_FLOOR = 567
+const BACKEND_FILES_FLOOR = 540
 
 /**
  * RENDERER_CHANNELS names that no static registration matches, each with the route that serves it.

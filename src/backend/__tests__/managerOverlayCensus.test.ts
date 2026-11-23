@@ -2,12 +2,15 @@
  * Phase 61-15 (T-61-45), 87-52: source census of the settings reads on every store manager's launch and
  * stop paths. A read that skips the overlay would launch (or shut down) the wrong Wine, so this
  * fails the build instead.
+ *
+ * 87-56c: moved here unchanged in what it asserts from `src/backend/engine/__tests__` when that directory was
+ * deleted; only the path root of `read` changed (it still reads the same files).
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
 const read = (rel: string) =>
-  readFileSync(join(__dirname, '..', '..', 'storeManagers', rel), 'utf8')
+  readFileSync(join(__dirname, '..', 'storeManagers', rel), 'utf8')
 
 /** Text of the first `{ ... }` after `marker`, by brace matching. */
 function bodyOf(source: string, marker: string): string {

@@ -5,12 +5,14 @@
  * The census of the TS tools' own settings reads (T-61-63, `tools/index.ts`) went with the TS tools in
  * Phase 87 Plan 37 (D-08): a wine command on a game now takes its settings through
  * `services/gameCommandFacts.ts`, whose order and `ensureBottle` choice `gameCommandFacts.test.ts` pins.
+ *
+ * 87-56c: moved here unchanged in what it asserts from `src/backend/engine/__tests__` when that directory was
+ * deleted; only the path root of `read` changed (it still reads the same files).
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-const read = (rel: string) =>
-  readFileSync(join(__dirname, '..', '..', rel), 'utf8')
+const read = (rel: string) => readFileSync(join(__dirname, '..', rel), 'utf8')
 
 /** Text from `startMarker` to the next column-0 closing brace. */
 function bodyOf(source: string, startMarker: string): string {

@@ -22,9 +22,9 @@
  * files it read, and the self-tests at the bottom plant a violation and watch each scan fail.
  */
 import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
+import { noIntraPhaseRowsLeft, SCHEDULE } from './engineWineShimSchedule.test'
 import {
   findExportedValues,
-  findImporters,
   findRollbackFlag,
   walkStripped
 } from 'backend/testUtils/infoPortGate'
@@ -38,7 +38,7 @@ import {
   SCANNED_FILES_FLOOR,
   tsWalk
 } from 'backend/testUtils/portSliceGate'
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -229,9 +229,8 @@ describe('wineDiscoveryPortComplete', () => {
     expect(exportsOf('src/backend/enginewine/wineDiscovery.ts')).toContain(
       'discoverAlternativeWine'
     )
-    expect(exportsOf('src/backend/enginewine/intraPhase.ts')).toContain(
-      'discoverCrossover'
-    )
+    // 87-56c: `enginewine/intraPhase.ts` (the `discoverCrossover` shim) is deleted with the engine TS that used it; the
+    // enginePortComplete deleted list holds that.
     const layers = exportsOf('src/backend/utils/compatibility_layers.ts')
     expect(layers).toContain('getDefaultWineBinary')
     expect(layers).toContain('getWineExecs')
@@ -364,12 +363,9 @@ const BOTTLES: SliceSpec = {
 describe('bottlesPortComplete', () => {
   runSlice(BOTTLES)
 
-  it('the engine runtime builds no switcher and the bottle fake runs no TS reference', () => {
-    const runtime = tsWalk.files.find(
-      (f) => f.path === 'src/backend/engine/engineRuntime.ts'
-    )
-    expect(runtime).toBeDefined()
-    expect(runtime?.code).not.toMatch(/switcher/)
+  // 87-56c: the engine runtime (`engine/engineRuntime.ts`) this test also read is deleted, so its "builds no switcher" half
+  // goes with its subject; enginePortComplete holds the deletion.
+  it('the bottle fake runs no TS reference', () => {
     const fake = tsWalk.files.find(
       (f) => f.path === 'src/backend/testUtils/fakeBottleRust.ts'
     )
@@ -389,15 +385,21 @@ describe('bottlesPortComplete', () => {
  * deadlines and no per-launch state. The launch goldens stay for the Rust replay (`golden_launch.rs`).
  *
  * `processListing.ts` (the `ps` / `pgrep` listing) moved to `storeManagers/steam/`, beside the one monitor that reads it.
- * The rest of `src/backend/engine` stays, and the 87-56 SUMMARY lists why, module by module: a live TS caller outside
- * the engine still reads it (the Steam launch and install files read the caller-side halves `prepareBottle`,
- * `engineSync`, `offlineRefusal`, `fallbackBottleCall` and `pinnedEngineProgress`; the Wine tools
- * read `toolSettings`; the boot builds `engineRuntime` and `engineState`), or one of its oracles replays it against
- * goldens Rust also owns (`engineConfig.oracle`, `engineDecision.oracle`, `engineState.oracle`,
- * `fallbackEngine.oracle`). Those modules and the `describe('enginePortComplete')` that deletes them whole are owed to
- * the plan that routes their callers (see the SUMMARY's decision list). The identifiers below are the ones the deleted
- * files owned and no scheduled shim or Steam caller reuses (`armEngineLaunchDeadline`, `bindDeadlineToMonitor` and
- * `showEngineDialog` are names the launch shims and the Steam files carry too, so they cannot be forbidden).
+ *
+ * 87-56c deleted the rest: `src/backend/engine` does not exist, with its tests, the four oracles and
+ * `oracle/fixtureBottles.ts`, as do `services/engineServices.ts`, `testUtils/testEngineRuntime.ts`,
+ * `testUtils/testEngineState.ts` and `enginewine/intraPhase.ts`. The two census tests that guarded live code
+ * (`launcherOverlayCensus` for `launcher.ts`, T-61-43, and `managerOverlayCensus` for the store managers, T-61-45) moved to
+ * `src/backend/__tests__` unchanged in what they assert, and are `kept` below. The measured-importer map
+ * (`describe('engineOutsideImporters')`) that 87-56a added to drive the switches is gone with the directory it mapped:
+ * the deleted list below supersedes it, and the TS factories and builders that died are forbidden identifiers. The
+ * `engineRuntime` and `engineState` boot steps and deps members, the `steam_engine_notices` TS registration (its
+ * `storeTable.json` row stays for the Rust host, `storeRowKeys`) and the "engine runtime builds no launch deadlines"
+ * check (its subject is gone) went in the same plan. `noIntraPhaseRowsLeft(SCHEDULE)` is called below over the
+ * schedule `engineWineShimSchedule.test.ts` exports (importing that file registers its own tests here too). The identifiers
+ * below are the ones the deleted files owned and no scheduled shim or Steam caller reuses (`armEngineLaunchDeadline`,
+ * `bindDeadlineToMonitor` and `showEngineDialog` are names the launch shims and the Steam files carry too, so they
+ * cannot be forbidden).
  */
 const ENGINE: SliceSpec = {
   deleted: [
@@ -468,7 +470,6 @@ const ENGINE: SliceSpec = {
     'src/backend/services/engineServices.ts',
     'src/backend/testUtils/testEngineRuntime.ts',
     'src/backend/testUtils/testEngineState.ts',
-    'src/backend/testUtils/testInterimEngineRuntime.ts',
     'src/backend/enginewine/intraPhase.ts'
   ],
   kept: [
@@ -532,156 +533,8 @@ const ENGINE: SliceSpec = {
 describe('enginePortComplete', () => {
   runSlice(ENGINE)
 
-  it('the engine runtime builds no launch deadlines and no per-launch state', () => {
-    const runtime = tsWalk.files.find(
-      (f) => f.path === 'src/backend/engine/engineRuntime.ts'
-    )
-    expect(runtime).toBeDefined()
-    expect(runtime?.code).not.toMatch(/deadlines|launchState/)
-  })
-})
-
-/**
- * 87-56a, the 87-56 lesson: a deletion plan that assumes "every caller already switched" was wrong for six clusters, and
- * the miss surfaced only at the first delete. This map is the MEASURED set of live non-test importers, outside
- * `src/backend/engine`, of every non-test module under it (alias and relative specifiers, dynamic imports and requires;
- * `testUtils` files count as tests), written out and never derived. An unlisted caller fails here instead of at a
- * deletion; every later switch in 87-56a/b/c removes its row entries in the same commit. Never widen a list to pass.
- */
-const ENGINE_OUTSIDE_IMPORTERS: Record<string, readonly string[]> = {
-  bottleLedger: [],
-  crossoverLocation: [],
-  demoStatus: [],
-  engineConfig: [],
-  engineDecision: [],
-  engineEligibility: [],
-  engineIds: [],
-  engineNoticeStore: [],
-  enginePins: [],
-  engineRegistry: [],
-  // 87-56c Task 1: the boot step, the deps member and every Steam slice that typed the runtime are gone.
-  engineRuntime: [],
-  engineServices: [],
-  // 87-56c Task 2: the 'engine-state' step, the deps member and the notices store registration are gone.
-  engineState: [],
-  engineTypes: [],
-  fallbackEngine: [],
-  gameEngineState: [],
-  gameKey: ['src/backend/enginewine/twin.ts'],
-  gamePrefix: [],
-  launchSettings: [],
-  perGameBottle: [],
-  pinnedEngineProgress: [],
-  testedCrossoverVersions: [],
-  toolSettings: [],
-  wineManagerReleases: []
-}
-
-/**
- * The files outside the engine directory that read a member of the engine runtime (`ledger`, `registry`, `crossover`,
- * `fallback`, `launchSettings`, `perGameBottle`), directly or through `requireEngineRuntime(...)`, with the members each
- * reads. Slimming the runtime (87-56b) and deleting the members' modules (87-56c) edit this in the same commit.
- */
-const ENGINE_RUNTIME_MEMBER_READS: Record<string, readonly string[]> = {}
-
-const ENGINE_DIR = 'src/backend/engine'
-const RUNTIME_MEMBER_RE =
-  /(?:requireEngineRuntime\([^)]*\)|[eE]ngineRuntime)\??\.(ledger|registry|crossover|fallback|launchSettings|perGameBottle)\b/g
-
-const outsideEngineFiles = (files: readonly StrippedFileLike[]) =>
-  files.filter(
-    (f) =>
-      f.path.startsWith('src/') &&
-      !f.path.startsWith(`${ENGINE_DIR}/`) &&
-      !f.path.startsWith('src/backend/testUtils/') &&
-      !/\.test\./.test(f.path)
-  )
-
-interface StrippedFileLike {
-  path: string
-  code: string
-}
-
-function engineImportersOf(
-  files: readonly StrippedFileLike[]
-): Record<string, string[]> {
-  const outside = outsideEngineFiles(files)
-  const modules = readdirSync(join(REPO_ROOT_FOR_GATE, ENGINE_DIR))
-    .filter((f) => f.endsWith('.ts'))
-    .map((f) => f.replace(/\.ts$/, ''))
-  const out: Record<string, string[]> = {}
-  for (const m of modules) {
-    out[m] = findImporters(
-      outside.map((f) => ({ ...f, raw: f.code })),
-      `${ENGINE_DIR}/${m}.ts`
-    ).sort()
-  }
-  return out
-}
-
-function runtimeMemberReadsOf(
-  files: readonly StrippedFileLike[]
-): Record<string, string[]> {
-  const out: Record<string, string[]> = {}
-  for (const f of outsideEngineFiles(files)) {
-    const members = new Set<string>()
-    for (const m of f.code.matchAll(RUNTIME_MEMBER_RE)) members.add(m[1]!)
-    if (members.size > 0) out[f.path] = [...members].sort()
-  }
-  return out
-}
-
-const REPO_ROOT_FOR_GATE = process.cwd()
-
-describe('engineOutsideImporters', () => {
-  it('the map has one key per non-test module under src/backend/engine', () => {
-    const modules = readdirSync(join(REPO_ROOT_FOR_GATE, ENGINE_DIR))
-      .filter((f) => f.endsWith('.ts'))
-      .map((f) => f.replace(/\.ts$/, ''))
-      .sort()
-    expect(Object.keys(ENGINE_OUTSIDE_IMPORTERS).sort()).toEqual(modules)
-  })
-
-  it('every engine module has exactly its listed live importers outside the engine directory', () => {
-    expect(engineImportersOf(tsWalk.files)).toEqual(
-      Object.fromEntries(
-        Object.entries(ENGINE_OUTSIDE_IMPORTERS).map(([k, v]) => [
-          k,
-          [...v].sort()
-        ])
-      )
-    )
-  })
-
-  it('the engine runtime members are read outside the directory only where listed', () => {
-    expect(runtimeMemberReadsOf(tsWalk.files)).toEqual(
-      ENGINE_RUNTIME_MEMBER_READS
-    )
-  })
-
-  it('self-test: a planted importer and a planted member read are each reported', () => {
-    const planted = [
-      {
-        path: 'src/backend/services/plantedCaller.ts',
-        raw: '',
-        code: "import { x } from 'backend/engine/gamePrefix'\nconst y = engineRuntime.perGameBottle\n"
-      }
-    ]
-    expect(engineImportersOf(planted)['gamePrefix']).toEqual([
-      'src/backend/services/plantedCaller.ts'
-    ])
-    expect(
-      runtimeMemberReadsOf(planted)['src/backend/services/plantedCaller.ts']
-    ).toEqual(['perGameBottle'])
-    // a test file and a testUtils file are not importers
-    const quiet = [
-      {
-        path: 'src/backend/services/plantedCaller.test.ts',
-        raw: '',
-        code: "import { x } from 'backend/engine/gamePrefix'\n"
-      }
-    ]
-    expect(engineImportersOf(quiet)['gamePrefix']).toEqual([])
+  it('no schedule row has deletedBy 87: every intra-phase shim is gone with the engine TS (87-56c, D-21)', () => {
+    expect(() => noIntraPhaseRowsLeft(SCHEDULE)).not.toThrow()
   })
 })
 

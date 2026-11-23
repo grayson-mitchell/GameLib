@@ -5,11 +5,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import {
-  ENGINE_PINS,
-  isPinnedEngineInstalled,
-  pinnedEnginePaths
-} from 'backend/enginewine/twin'
+import { ENGINE_PINS, isPinnedEngineInstalled } from 'backend/enginewine/twin'
 import {
   RUST_ENGINE_CANCEL,
   RUST_ENGINE_FALLBACK_ENSURE
@@ -47,7 +43,15 @@ describe('pinnedEngineReader', () => {
   it('answers true for a fully stamped install, equal to the twin', () => {
     const pin = ENGINE_PINS.current
     const root = join(toolsPath, 'steam-engines')
-    const p = pinnedEnginePaths(root, pin)
+    // The pinned-engine layout, laid out here by hand (the twin's own path helper is private as of 87-56c).
+    const wineDir = join(root, pin.id)
+    const wineBinDir = join(wineDir, 'Contents', 'Resources', 'wine', 'bin')
+    const p = {
+      wineDir,
+      wineBin: join(wineBinDir, 'wine'),
+      wineserverBin: join(wineBinDir, 'wineserver'),
+      dxvkDir: join(root, `dxvk-macOS-${pin.dxvk.version}`)
+    }
     mkdirSync(join(p.wineDir, 'Contents', 'Resources', 'wine', 'bin'), {
       recursive: true
     })
