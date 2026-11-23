@@ -132,9 +132,7 @@ where
         .lock()
         .map_err(|_| "store_embed_take_nav_events:history-registry-poisoned".to_string())?;
     if let Some(live) = live_url {
-        if let Some(change) =
-            state.observe_live_url_at(live.as_str(), generation, now)
-        {
+        if let Some(change) = state.observe_live_url_at(live.as_str(), generation, now) {
             shell_eprintln!(
                 "[shell] store_embed: same-document navigation {} host={}",
                 change.as_str(),
