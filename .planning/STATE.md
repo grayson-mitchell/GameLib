@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-51-PLAN.md
-last_updated: "2026-11-23T16:52:24.315Z"
+stopped_at: Completed 87-52-PLAN.md
+last_updated: "2026-11-23T17:17:34.212Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 2c955b5614ef71c2b954f59d4b11da510df4244f
+state_head: 4a93a990f41262485d9cb9713cdbf009dd42b037
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 52 of 59
+Plan: 53 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -461,6 +461,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P49 | 20 min | 3 tasks | 20 files |
 | Phase 87 P50 | 22 min | 2 tasks | 9 files |
 | Phase 87 P51 | 17 min | 2 tasks | 11 files |
+| Phase 87 P52 | 60 min | 3 tasks | 38 files |
 
 ## Accumulated Context
 
@@ -983,6 +984,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-51: a task that fires after its arming op returned (the launch deadline, the process watch) reaches EngineCtx through a weak handle: EngineCtx::share() records it, the shell shares its context, and the arming ops answer <op>:not-shared for an unshared one
 - [Phase 87]: 87-51: a fired bridge deadline sends the sidecar engineDeadlineFired {key, reason: no-game-process} through EngineUi::send_to_sidecar; a non-Steam one shows the no-kill notice and never raises the window; a quit ends both with no notice or frame
 - [Phase 87]: 87-51: deadline goldens run on a paused tokio clock over a scripted ps; the TS fake clock's timer trace is not compared, what the launch sees is. Engine log lines of this plan still reach no log in the app (ctx.log is None), decision open
+- [Phase 87]: 87-52: the Rust launch step's reply is narrowed and its log lines written in launchEngineStep.ts (not in the shim), and getLaunchSettings reads go through launchSettingsFor; arm and end are awaited with a logged catch
+- [Phase 87]: 87-52: getEngineState sends {identity, facts?} with a null identity for an ineligible game, so the resolver keeps the consts-then-one-call shape; Steam facts are steamEngineStateFacts
 
 ### Pending Todos
 
@@ -1263,8 +1266,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T16:52:21.693Z
-Stopped at: Completed 87-51-PLAN.md
+Last session: 2026-11-23T17:17:31.709Z
+Stopped at: Completed 87-52-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
