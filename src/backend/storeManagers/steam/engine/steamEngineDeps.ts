@@ -1,38 +1,24 @@
 /**
- * Steam adapter for the store-agnostic engine decision (phase 61, D-16, D-08).
+ * Steam adapter for the store-agnostic engine decision (phase 61, D-16, D-08; phase 87, 87-54).
  *
- * `backend/engine/engineDecision` imports nothing from this store. Everything
- * Steam-only they used to default to is injected here: the persisted wine-bin hint for the
- * CrossOver lookup, the Steam override reader, the bridge monitor phase, the title's own bridge
- * bottle and the bridge bottle's CrossOver settings.
+ * The decision itself is Rust's (`enginewine/decision.ts` shims). This module gathers what only the Steam side knows
+ * and hands it over as values (research Pattern 2): the stored override, the bridge monitor's phase, the persisted
+ * wine-binary hints (`steamEngineFacts`), what the bottle switch needs (`steamPrepareFacts`) and the facts of the
+ * engine state (`steamEngineStateFacts`). Nothing here is a callback and no Rust code calls back into it.
  */
-import { killCrossoverWineserverWith } from 'backend/engine/engineDecision'
-import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
-import type {
-  EngineDecisionDeps,
-  RunnerDeps
-} from 'backend/engine/engineDecision'
 import type { AppPaths } from 'backend/process/context'
 import type { EngineServices } from 'backend/engine/engineServices'
 import type { PrepareBottleCall } from 'backend/engine/prepareBottle'
 import type { EngineSelection } from 'backend/engine/engineTypes'
 import { readStoredGameConfig } from 'backend/engine/engineConfig'
-import type {
-  EffectiveEngine,
-  EngineConfigDeps
-} from 'backend/engine/engineConfig'
-import { parseEngineOverride } from 'backend/engine/engineIds'
-import type {
-  EngineStateDeps,
-  EngineStateService
-} from 'backend/engine/engineState'
+import type { EngineConfigDeps } from 'backend/engine/engineConfig'
 import type { EngineState } from 'common/types/engine'
+import type { MonitorPhase } from 'backend/enginewine/decision'
 import type { SteamEngineBottle } from '../bottle'
 import {
   bridgeBottleNameFor,
   findBridgeInstallBottle,
-  getBridgeBottleSettings,
-  isBridgeBottleReady
+  getBridgeBottleSettings
 } from '../bridgeBottle'
 import { steamWineToolsBottle } from '../bridgeWineTools'
 import { readBridgeVerdict } from '../bridge/bridgeVerdict'
@@ -60,71 +46,41 @@ export function readSteamEngineOverride(
   return readStoredTitleConfig(appId, deps)?.steamEngineOverride
 }
 
-const hintedBinDir = (
-  services: Pick<EngineServices, 'runner' | 'engineRuntime'> & SteamEngineBottle
-) =>
-  services.engineRuntime.crossover.resolveCrossoverBinDirAsync(
-    { runner: services.runner },
-    { hintWineBins: services.steamBottle.persistedWineBins() }
-  )
+/**
+ * The facts the Rust engine decision takes as values (87-54, D-03): what the TS decision's deps held as callbacks.
+ * `override` is the title's stored override unvalidated (Rust parses the closed grammar), `monitorPhase` the bridge
+ * monitor's answer for the title now, and `hintWineBins` the persisted wine binaries the CrossOver lookup starts from.
+ * The field names are the request's, so a caller spreads them next to its own `key` and `bottleName`.
+ */
+export interface SteamEngineFacts {
+  override: unknown
+  monitorPhase: MonitorPhase | null
+  hintWineBins: string[]
+}
 
-/** The spawn and release-reader slice the steam decision paths need, from a store's deps (66.1-22i). */
-export function steamDecisionServices(
-  deps: {
-    spawnAsync: EngineServices['spawnAsync']
-    runner: EngineServices['runner']
-    paths: EngineServices['paths']
-    engineRuntime: EngineServices['engineRuntime']
-    storeRoot?: EngineServices['storeRoot']
-  } & SteamEngineBottle
-): Pick<
-  EngineServices,
-  | 'spawnAsync'
-  | 'runner'
-  | 'wineManagerReleases'
-  | 'paths'
-  | 'engineRuntime'
-  | 'storeRoot'
-> &
-  SteamEngineBottle {
+export function steamEngineFacts(
+  services: {
+    paths: Pick<AppPaths, 'gamesConfigPath'>
+    storeRoot?: EngineConfigDeps['storeRoot']
+  } & SteamEngineBottle,
+  key: string
+): SteamEngineFacts {
   return {
-    spawnAsync: deps.spawnAsync,
-    runner: deps.runner,
-    paths: deps.paths,
-    engineRuntime: deps.engineRuntime,
-    storeRoot: deps.storeRoot,
-    steamBottle: deps.steamBottle,
-    steamLaunchRuntime: deps.steamLaunchRuntime,
-    wineManagerReleases: wineManagerReleasesFrom(deps)
+    override: readSteamEngineOverride(services, key),
+    monitorPhase:
+      services.steamLaunchRuntime.monitors.getBottleProcessMonitorPhase(key),
+    hintWineBins: steamWineBinHints(services)
   }
 }
 
-export function steamDecisionDeps(
-  services: Pick<
-    EngineServices,
-    | 'spawnAsync'
-    | 'runner'
-    | 'wineManagerReleases'
-    | 'paths'
-    | 'engineRuntime'
-    | 'storeRoot'
-  > &
-    SteamEngineBottle
-): Partial<EngineDecisionDeps> &
-  Pick<EngineDecisionDeps, 'killCrossoverWineserver' | 'wineManagerReleases'> &
-  RunnerDeps {
-  return {
-    runner: services.runner,
-    paths: services.paths,
-    engineRuntime: services.engineRuntime,
-    storeRoot: services.storeRoot,
-    killCrossoverWineserver: killCrossoverWineserverWith(services),
-    wineManagerReleases: services.wineManagerReleases,
-    resolveCrossoverBinDir: () => hintedBinDir(services),
-    readOverride: (appId) => readSteamEngineOverride(services, appId),
-    monitorPhase:
-      services.steamLaunchRuntime.monitors.getBottleProcessMonitorPhase
-  }
+/**
+ * The wine binaries the bottled Steam config persisted, which the CrossOver lookup starts from. The pre-flight and the
+ * missing check of a title with no engine key of its own (the bottled Steam client) take only these.
+ */
+export function steamWineBinHints(services: {
+  steamBottle: Pick<SteamEngineBottle['steamBottle'], 'persistedWineBins'>
+}): string[] {
+  return services.steamBottle.persistedWineBins()
 }
 
 /**
@@ -192,48 +148,7 @@ export function isDrmModeFromVerdict(
 }
 
 /**
- * The Steam side of the shared engine state: a title has state only with a bridge install, an
- * override only applies in its own per-game bottle outside DRM mode, and the overlay toggle
- * applies to every bridge title (Phase 60 D-02).
- */
-export function steamEngineStateDeps(
-  deps: SteamStoresDeps & Parameters<typeof steamDecisionServices>[0],
-  appId: string,
-  over: Partial<EngineStateDeps> = {}
-): EngineStateDeps {
-  const own = bridgeBottleNameFor(appId)
-  return {
-    ...steamDecisionDeps(steamDecisionServices(deps)),
-    bottleFor: () => findBridgeInstallBottle(deps.paths, appId),
-    overrideEligible: (_id, bottle) =>
-      bottle === own && !isDrmModeFromVerdict(readBridgeVerdict(deps, appId)),
-    overlayEligible: true,
-    // isMac true: getEngineState already returns null off macOS (quick 261110-vi4).
-    wineToolsEligible: (_id, bottle) =>
-      bottle !== null &&
-      bottle ===
-        steamWineToolsBottle(appId, {
-          isMac: true,
-          ownBottleName: bridgeBottleNameFor,
-          findInstallBottle: (id) => findBridgeInstallBottle(deps.paths, id)
-        }),
-    effective: (): EffectiveEngine => {
-      const raw = readSteamEngineOverride(deps, appId)
-      return {
-        kind: 'override',
-        id: parseEngineOverride(raw),
-        source: typeof raw === 'string' ? 'stored' : 'derived'
-      }
-    },
-    prefixKind: 'bottle',
-    perGameBottleName: own,
-    isBottleReady: (name) => isBridgeBottleReady(deps.paths, name),
-    ...over
-  }
-}
-
-/**
- * The facts of a Steam title's engine state as values (87-52, D-23): what `steamEngineStateDeps` held as callbacks, for the
+ * The facts of a Steam title's engine state as values (87-52, D-23): what the TS engine state's deps held as callbacks, for the
  * one typed call into Rust's `engine_state_get`. Rust reads the effective engine itself (the stored override, the
  * older `steamEngineOverride` key as the fallback), runs the pre-flight and the notices; TypeScript keeps only what
  * lives in the bridge: the title's install bottle, whether the override and the Wine tools apply to it, and its own
@@ -249,33 +164,28 @@ export interface SteamEngineStateFacts {
 }
 
 export function steamEngineStateFacts(
-  deps: Parameters<typeof steamEngineStateDeps>[0],
+  deps: SteamStoresDeps & { paths: Pick<AppPaths, 'userHome'> },
   appId: string
 ): SteamEngineStateFacts {
-  const state = steamEngineStateDeps(deps, appId)
-  const identity = { runner: STEAM_ENGINE_RUNNER, appName: appId }
-  const bottle = state.bottleFor(identity)
+  const own = bridgeBottleNameFor(appId)
+  const bottle = findBridgeInstallBottle(deps.paths, appId)
   return {
     bottle,
-    overrideEligible: state.overrideEligible(identity, bottle),
-    overlayEligible: state.overlayEligible,
-    wineToolsEligible: state.wineToolsEligible?.(identity, bottle) ?? false,
-    prefixKind: state.prefixKind ?? 'bottle',
-    perGameBottleName: state.perGameBottleName ?? null
+    // An override only applies in the title's own per-game bottle, outside DRM mode.
+    overrideEligible:
+      bottle === own && !isDrmModeFromVerdict(readBridgeVerdict(deps, appId)),
+    // The overlay toggle applies to every bridge title (Phase 60 D-02).
+    overlayEligible: true,
+    // isMac true: getEngineState already returns null off macOS (quick 261110-vi4).
+    wineToolsEligible:
+      bottle !== null &&
+      bottle ===
+        steamWineToolsBottle(appId, {
+          isMac: true,
+          ownBottleName: bridgeBottleNameFor,
+          findInstallBottle: (id) => findBridgeInstallBottle(deps.paths, id)
+        }),
+    prefixKind: 'bottle',
+    perGameBottleName: own
   }
-}
-
-export async function getSteamEngineState(
-  deps: SteamStoresDeps &
-    Parameters<typeof steamDecisionServices>[0] & {
-      engineState: Pick<EngineStateService, 'getEngineState'>
-    },
-  appId: unknown,
-  over?: Partial<EngineStateDeps>
-): Promise<EngineState | null> {
-  if (typeof appId !== 'string' || !/^\d+$/.test(appId)) return null
-  return deps.engineState.getEngineState(
-    { runner: STEAM_ENGINE_RUNNER, appName: appId },
-    steamEngineStateDeps(deps, appId, over)
-  )
 }

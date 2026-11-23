@@ -261,12 +261,15 @@ export async function launchBridgeGameBody(
       sendLaunchDone(steamGame)
       return false
     }
-    const { preflightCrossover } = await import('backend/engine/engineDecision')
-    const { steamDecisionDeps, steamDecisionServices } =
-      await import('./engine/steamEngineDeps')
-    const pre = await preflightCrossover(
-      bridgeBottleSettings.wineCrossoverBottle,
-      steamDecisionDeps(steamDecisionServices(steamGame.deps))
+    const { preflightCrossover } = await import('backend/enginewine/decision')
+    const { preflightFrom } = await import('./engine/engineDecisionReply')
+    const { steamEngineFacts } = await import('./engine/steamEngineDeps')
+    const pre = preflightFrom(
+      await preflightCrossover(steamGame.deps, {
+        bottleName: bridgeBottleSettings.wineCrossoverBottle,
+        hintWineBins: steamEngineFacts(steamGame.deps, steamGame.appId)
+          .hintWineBins
+      })
     )
     if (pre.kind !== 'healthy') {
       notifyCrossoverRequired(steamGame, 'drm', pre)

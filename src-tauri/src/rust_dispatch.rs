@@ -274,5 +274,23 @@ pub(crate) fn dispatch_rust_channel(
         }
         RustInvokeChannel::EngineStateGet => engine_dispatch::rpc_state_get(args),
         RustInvokeChannel::EngineDialogDisplayed => engine_dispatch::rpc_dialog_displayed(args),
+        RustInvokeChannel::EngineDecideLaunch => engine_dispatch::rpc_decide_launch(args),
+        RustInvokeChannel::EngineDecideCreation => engine_dispatch::rpc_decide_creation(args),
+        RustInvokeChannel::EnginePreflightCrossover => {
+            engine_dispatch::rpc_preflight_crossover(args)
+        }
+        RustInvokeChannel::EngineIsCrossoverMissing => {
+            engine_dispatch::rpc_is_crossover_missing(args)
+        }
+        RustInvokeChannel::EngineCxResolveBinDir => engine_dispatch::rpc_cx_resolve_bin_dir(args),
+        RustInvokeChannel::EngineStateRecordDecision => {
+            engine_dispatch::rpc_state_record_decision(args)
+        }
+        RustInvokeChannel::EngineStatePublishOverlayNotice => {
+            engine_dispatch::rpc_state_publish_overlay_notice(args)
+        }
+        RustInvokeChannel::EngineStatePublishOverlayExitNotice => {
+            engine_dispatch::rpc_state_publish_overlay_exit_notice(args)
+        }
     }
 }

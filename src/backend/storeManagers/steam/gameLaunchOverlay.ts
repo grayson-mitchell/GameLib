@@ -8,6 +8,8 @@
  * `steamGame.X()` call (quick-261107-an2).
  */
 import { engineSelectionView } from 'backend/enginewine/selectionView'
+import { publishOverlayNotice } from 'backend/enginewine/state'
+import type { OverlayNoticeStep } from 'common/types/engine'
 import { createRunTool } from 'backend/engine/runTool'
 import i18next from 'i18next'
 import { lstatSync, mkdirSync } from 'node:fs'
@@ -86,23 +88,34 @@ export function resolveLaunchOverlay(steamGame: SteamGame): {
  * opposite of DRM's fail-closed rule (D-56-13): the overlay is an
  * enhancement, so the game still launches.
  */
-export function notifyOverlaySetupFailed(
+export async function notifyOverlaySetupFailed(
   steamGame: SteamGame,
   step: OverlayStep,
   cause: string
-): void {
+): Promise<void> {
   logWarning(
     formatOverlayNoticeLine(steamGame.appId, step, cause),
     LogPrefix.Steam
   )
-  const pushed = (OVERLAY_STEPS as readonly string[]).includes(step)
-    ? steamGame.deps.engineState.publishOverlayNotice(
-        { runner: STEAM_ENGINE_RUNNER, appName: steamGame.appId },
-        step
+  // 87-54: the push is Rust's now. A refused push is only the missing in-app toast; the OS notification below still
+  // goes out and the launch carries on without the overlay.
+  let pushed: unknown = false
+  if ((OVERLAY_STEPS as readonly string[]).includes(step)) {
+    try {
+      pushed = await publishOverlayNotice(steamGame.deps, {
+        runner: STEAM_ENGINE_RUNNER,
+        appName: steamGame.appId,
+        step: step as OverlayNoticeStep
+      })
+    } catch (error) {
+      logWarning(
+        `SteamGame: appId ${steamGame.appId} overlay notice could not be pushed: ${String(error)}`,
+        LogPrefix.Steam
       )
-    : false
+    }
+  }
   logInfo(
-    `SteamGame: appId ${steamGame.appId} overlay notice surface=in-app pushed=${pushed}`,
+    `SteamGame: appId ${steamGame.appId} overlay notice surface=in-app pushed=${pushed === true}`,
     LogPrefix.Steam
   )
   notify(steamGame.deps, {
@@ -327,7 +340,7 @@ export async function prepareTcpOverlay(
           ...overlayProbeArg(steamGame)
         })
         if (result.status === 'error') {
-          notifyOverlaySetupFailed(steamGame, result.step, result.cause)
+          await notifyOverlaySetupFailed(steamGame, result.step, result.cause)
         } else {
           envVars = result.vars
           logInfo(
@@ -355,7 +368,7 @@ export async function prepareTcpOverlay(
         }
       )
       if (result.status === 'error') {
-        notifyOverlaySetupFailed(steamGame, result.step, result.cause)
+        await notifyOverlaySetupFailed(steamGame, result.step, result.cause)
       } else {
         ok = { runner: result.runner, tokens: result.tokens }
       }
@@ -389,7 +402,7 @@ export async function prepareTcpOverlay(
         carried = ok.tokens
         return launched
       }
-      notifyOverlaySetupFailed(
+      await notifyOverlaySetupFailed(
         steamGame,
         'clone',
         'overlay runner registration refused'

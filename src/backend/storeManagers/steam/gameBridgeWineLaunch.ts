@@ -15,6 +15,7 @@ import {
   recordGameStopped
 } from 'backend/engine/engineSync'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
+import { publishOverlayExitNotice } from 'backend/enginewine/state'
 import { getBottleDir } from 'backend/enginewine/twin'
 // Phase 60: Steam overlay in bridged games (macOS).
 import {
@@ -424,7 +425,7 @@ export async function fireBridgeWineLaunch(
         }
         overlayInjected = true
       } catch (error) {
-        notifyOverlaySetupFailed(steamGame, 'env', String(error))
+        await notifyOverlaySetupFailed(steamGame, 'env', String(error))
       }
     } else if (!drm && overlay?.kind === 'cx-env') {
       // One runner per bottle (T-60-08-04): a known fix must not swap it.
@@ -447,7 +448,7 @@ export async function fireBridgeWineLaunch(
         launchSettings = { ...launchSettings, enviromentOptions: merged.env }
         overlayInjected = true
       } else {
-        notifyOverlaySetupFailed(steamGame, 'env', merged.cause)
+        await notifyOverlaySetupFailed(steamGame, 'env', merged.cause)
       }
     }
 
@@ -506,12 +507,25 @@ export async function fireBridgeWineLaunch(
         return
       }
       logWarning(formatOverlayExitNoticeLine(steamGame.appId), LogPrefix.Steam)
-      const pushed = steamGame.deps.engineState.publishOverlayExitNotice({
-        runner: STEAM_ENGINE_RUNNER,
-        appName: steamGame.appId
-      })
+      void reportOverlayExit()
+    }
+    // 87-54: the in-app push is Rust's, so it is awaited before the OS notification it precedes. A refused push is only
+    // the missing in-app toast; the notification still goes out.
+    const reportOverlayExit = async (): Promise<void> => {
+      let pushed: unknown = false
+      try {
+        pushed = await publishOverlayExitNotice(steamGame.deps, {
+          runner: STEAM_ENGINE_RUNNER,
+          appName: steamGame.appId
+        })
+      } catch (error) {
+        logWarning(
+          `SteamGame: appId ${steamGame.appId} overlay exit notice could not be pushed: ${String(error)}`,
+          LogPrefix.Steam
+        )
+      }
       logInfo(
-        `SteamGame: appId ${steamGame.appId} overlay exit notice surface=in-app pushed=${pushed}`,
+        `SteamGame: appId ${steamGame.appId} overlay exit notice surface=in-app pushed=${pushed === true}`,
         LogPrefix.Steam
       )
       notify(steamGame.deps, {

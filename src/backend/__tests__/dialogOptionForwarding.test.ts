@@ -249,6 +249,10 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // Phase 87 plan 52: engine_launch_select is the whole launch-time engine step, which may download the 228 MB
     // pinned engine and run the bottle switch: no limit of its own beyond the shutdown. Not a dialog channel either.
     'RUST_ENGINE_LAUNCH_SELECT',
+    // Phase 87 plan 54: engine_decide_launch and engine_preflight_crossover run the G29 pre-flight, up to two 15 s probes
+    // each followed by a capped wineserver stop, which together can pass the sidecar's 60 s cap. Not dialog channels.
+    'RUST_ENGINE_DECIDE_LAUNCH',
+    'RUST_ENGINE_PREFLIGHT_CROSSOVER',
     // Phase 87 plan 35: wine_winetricks_apply and wine_winetricks_available read the catalog, whose first read
     // downloads the winetricks script and lists it; wine_winetricks_install runs one winetricks per verb. None
     // has a limit of its own beyond the shutdown. Not a dialog channel either.

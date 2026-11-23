@@ -261,12 +261,10 @@ export async function provisionBridgeBottleForInstall(
     `SteamGame: bridge bottle "${bridgeBottleName}" not yet provisioned for appId ${steamGame.appId} — provisioning inline (BLOCKER 1, no consent dialog needed)`,
     LogPrefix.Steam
   )
-  const { decideCreationEngine } = await import('backend/engine/engineDecision')
-  const { steamDecisionDeps, steamDecisionServices } =
-    await import('./engine/steamEngineDeps')
-  const creation = await decideCreationEngine(
-    { key: steamGame.appId },
-    steamDecisionDeps(steamDecisionServices(steamGame.deps))
+  const { decideCreationEngine } = await import('backend/enginewine/decision')
+  const { creationDecisionFrom } = await import('./engine/engineDecisionReply')
+  const creation = creationDecisionFrom(
+    await decideCreationEngine(steamGame.deps, { key: steamGame.appId })
   )
   logInfo(
     `SteamGame: bridge bottle creation engine for appId ${steamGame.appId}: ${creation.kind}${creation.kind === 'pinned' ? ` (${creation.reason})` : ''}`,
@@ -408,16 +406,20 @@ export async function resolveInstallEngineSettings(
     }
   }
   // Bottle already existed: the same decision + preparation as a launch.
-  const { decideLaunchEngine } = await import('backend/engine/engineDecision')
+  const { decideLaunchEngine } = await import('backend/enginewine/decision')
+  const { launchDecisionFrom } = await import('./engine/engineDecisionReply')
   const { prepareBottle } = await import('backend/engine/prepareBottle')
   const { isNonCrossover } = await import('backend/engine/engineTypes')
-  const { steamDecisionDeps, steamDecisionServices, steamPrepareFacts } =
+  const { steamEngineFacts, steamPrepareFacts } =
     await import('./engine/steamEngineDeps')
   const { steamEngineServicesFrom } =
     await import('backend/services/engineServices')
-  const decision = await decideLaunchEngine(
-    { key: steamGame.appId, bottleName: bridgeBottleName },
-    steamDecisionDeps(steamDecisionServices(steamGame.deps))
+  const decision = launchDecisionFrom(
+    await decideLaunchEngine(steamGame.deps, {
+      key: steamGame.appId,
+      bottleName: bridgeBottleName,
+      ...steamEngineFacts(steamGame.deps, steamGame.appId)
+    })
   )
   if (decision.kind === 'unavailable') {
     return { skipped: `engine unavailable: ${decision.detail}` }

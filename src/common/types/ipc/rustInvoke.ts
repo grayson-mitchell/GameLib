@@ -130,6 +130,14 @@ import {
   RUST_ENGINE_LAUNCH_SETTINGS_GET,
   RUST_ENGINE_STATE_GET,
   RUST_ENGINE_DIALOG_DISPLAYED,
+  RUST_ENGINE_DECIDE_LAUNCH,
+  RUST_ENGINE_DECIDE_CREATION,
+  RUST_ENGINE_PREFLIGHT_CROSSOVER,
+  RUST_ENGINE_IS_CROSSOVER_MISSING,
+  RUST_ENGINE_CX_RESOLVE_BIN_DIR,
+  RUST_ENGINE_STATE_RECORD_DECISION,
+  RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE,
+  RUST_ENGINE_STATE_PUBLISH_OVERLAY_EXIT_NOTICE,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -953,7 +961,19 @@ export const rustInvokeArgs = {
   // validated there (an unknown runner or a path-shaped app name answers null) and the facts are values only.
   [RUST_ENGINE_STATE_GET]: engineOpRequest,
   // Phase 87 (87-53): the renderer's engine dialog ack, one `{ackId}` object the crate decodes strictly.
-  [RUST_ENGINE_DIALOG_DISPLAYED]: engineOpRequest
+  [RUST_ENGINE_DIALOG_DISPLAYED]: engineOpRequest,
+  // Phase 87 (87-54, D-03): the Steam bridge's engine decisions. One object each, decoded strictly by the crate; the
+  // stored override, the monitor's phase and the wine-binary hints are values TypeScript gathered, never callbacks.
+  [RUST_ENGINE_DECIDE_LAUNCH]: engineOpRequest,
+  [RUST_ENGINE_DECIDE_CREATION]: engineOpRequest,
+  [RUST_ENGINE_PREFLIGHT_CROSSOVER]: engineOpRequest,
+  [RUST_ENGINE_IS_CROSSOVER_MISSING]: engineOpRequest,
+  [RUST_ENGINE_CX_RESOLVE_BIN_DIR]: engineOpRequest,
+  // Phase 87 (87-54, D-03): the bridge's engine-state writes, one object each (the facts are values; the override id and
+  // the bottle name are checked by the crate).
+  [RUST_ENGINE_STATE_RECORD_DECISION]: engineOpRequest,
+  [RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE]: engineOpRequest,
+  [RUST_ENGINE_STATE_PUBLISH_OVERLAY_EXIT_NOTICE]: engineOpRequest
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

@@ -172,6 +172,30 @@ const LAUNCH_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/gog/setup.ts',
   'src/backend/storeManagers/nile/setup.ts'
 ]
+/**
+ * Every non-test importer of `enginewine/decision.ts` (the check is per file, so every row of that file lists them all):
+ * the Steam launch and its engine adapter (87-54) and the still-TS decision module, which takes its types from here
+ * until 87-56 deletes it.
+ */
+const DECISION_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/engine/engineDecision.ts',
+  'src/backend/enginewine/state.ts',
+  'src/backend/storeManagers/steam/engine/engineDecisionReply.ts',
+  'src/backend/storeManagers/steam/engine/steamEngineDeps.ts',
+  'src/backend/storeManagers/steam/gameBridgeLaunch.ts',
+  'src/backend/storeManagers/steam/gameEngineDialogs.ts',
+  'src/backend/storeManagers/steam/gameInstallBridge.ts',
+  'src/backend/storeManagers/steam/gameLaunch.ts'
+]
+/**
+ * Every non-test importer of `enginewine/state.ts` (the check is per file, so every row of that file lists them all): the
+ * Steam launch, its overlay policy and the wine launch that publishes the overlay exit notice.
+ */
+const STATE_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts',
+  'src/backend/storeManagers/steam/gameLaunch.ts',
+  'src/backend/storeManagers/steam/gameLaunchOverlay.ts'
+]
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
   'src/backend/services/types.ts',
   'src/backend/sidecar/bootstrap.ts',
@@ -433,6 +457,68 @@ const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_ENGINE_DIALOG_DISPLAYED',
     callers: LAUNCH_SHIM_IMPORTERS,
     deletedBy: 98
+  },
+  // 87-54 (D-03, D-15): the Steam bridge's engine decisions. The bridge gathers the stored override, the monitor's phase
+  // and the wine-binary hints as values (`steamEngineFacts`), makes one call, and narrows the reply
+  // (`engineDecisionReply.ts`); Phase 96 moves the bridge's launch into Rust and deletes the shims.
+  {
+    name: 'decideLaunchEngine',
+    file: 'src/backend/enginewine/decision.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_DECIDE_LAUNCH',
+    callers: DECISION_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'decideCreationEngine',
+    file: 'src/backend/enginewine/decision.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_DECIDE_CREATION',
+    callers: DECISION_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'preflightCrossover',
+    file: 'src/backend/enginewine/decision.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_PREFLIGHT_CROSSOVER',
+    callers: DECISION_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'isCrossoverMissing',
+    file: 'src/backend/enginewine/decision.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_IS_CROSSOVER_MISSING',
+    callers: DECISION_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  // 87-54 (D-03, D-15): the Steam bridge's engine-state writes. The launch records what it used (`recordLaunchDecision`,
+  // with the bridge's facts as values) and the overlay setup and exit notices are pushed over the last state; Rust
+  // pushes `engineStateChanged` itself. Phase 96 moves the launch's decision record, Phase 97 the overlay's notices.
+  {
+    name: 'recordLaunchDecision',
+    file: 'src/backend/enginewine/state.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_STATE_RECORD_DECISION',
+    callers: STATE_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'publishOverlayNotice',
+    file: 'src/backend/enginewine/state.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE',
+    callers: STATE_SHIM_IMPORTERS,
+    deletedBy: 97
+  },
+  {
+    name: 'publishOverlayExitNotice',
+    file: 'src/backend/enginewine/state.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_STATE_PUBLISH_OVERLAY_EXIT_NOTICE',
+    callers: STATE_SHIM_IMPORTERS,
+    deletedBy: 97
   },
   // 87-42 (D-24): the engine selection view, the write-through mirror of Rust's registry. The sync bridge reads
   // (`getBridgeBottleSettings` and the launch settings) stay sync; `registerEngineSelectionView` installs the one

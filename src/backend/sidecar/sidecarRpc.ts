@@ -67,7 +67,9 @@ import {
   RUST_WINE_DXVK_INSTALL_REMOVE,
   RUST_ENGINE_BOTTLE_CREATE_FALLBACK,
   RUST_ENGINE_BOTTLE_PREPARE,
+  RUST_ENGINE_DECIDE_LAUNCH,
   RUST_ENGINE_LAUNCH_SELECT,
+  RUST_ENGINE_PREFLIGHT_CROSSOVER,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,
@@ -199,6 +201,12 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * Thirteenth (Phase 87, 87-52): `engine_launch_select` is the whole launch-time engine step, which may download the
  * 228 MB pinned engine and run the bottle switch: no limit of its own beyond the app shutdown. The deadline arm and the
  * end of a launch are bounded.
+ *
+ * Fourteenth (Phase 87, 87-54): `engine_decide_launch` and `engine_preflight_crossover` run the G29 pre-flight, up to two
+ * 15 s `--demo-status` probes with a 2 s settle between them and a capped wineserver stop after each, which together can
+ * pass the generic 60 s cap; the TS they replace had no cap at all. Each probe, stop and spawn carries its own limit in
+ * Rust and the app shutdown ends them, so no entry can outlive the sidecar. `engine_decide_creation`,
+ * `engine_is_crossover_missing` and `engine_cx_resolve_bin_dir` are presence checks and stay bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -235,6 +243,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_ENGINE_BOTTLE_CREATE_FALLBACK,
   RUST_ENGINE_BOTTLE_PREPARE,
   RUST_ENGINE_LAUNCH_SELECT,
+  RUST_ENGINE_DECIDE_LAUNCH,
+  RUST_ENGINE_PREFLIGHT_CROSSOVER,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,

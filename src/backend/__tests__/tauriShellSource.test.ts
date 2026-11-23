@@ -502,7 +502,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 87 plan 42: 156 -> 167, the eleven bottle, ledger and selection ops.
     // Phase 87 plan 52: 167 -> 172, engine_launch_select, _arm_deadline, _end, _settings_get and engine_state_get.
     // Phase 87 plan 53: 172 -> 173, engine_dialog_displayed.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(173)
+    // Phase 87 plan 54: 173 -> 181, the four decision ops, the CrossOver bin-dir lookup and the three engine-state writes.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(181)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1005,7 +1006,17 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'engine_state_get',
       // Phase 87 plan 53: the renderer's `dialogDisplayed` ack of an `engine:` id, forwarded by `appShellFlowRegistration.ts`
       // through the `engineDialogDisplayed` shim. PROVEN: `engine_dispatch::tests` drives the arm's decode and not-ready.
-      'engine_dialog_displayed'
+      'engine_dialog_displayed',
+      // Phase 87 plan 54: the Steam bridge's engine decisions (`enginewine/decision.ts` shims) and the CrossOver bin-dir
+      // lookup (its shim is 87-55's). PROVEN: `engine_dispatch::tests` drives each arm's decode and not-ready.
+      'engine_decide_launch',
+      'engine_decide_creation',
+      'engine_preflight_crossover',
+      'engine_is_crossover_missing',
+      'engine_cx_resolve_bin_dir',
+      'engine_state_record_decision',
+      'engine_state_publish_overlay_notice',
+      'engine_state_publish_overlay_exit_notice'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

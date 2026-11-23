@@ -1339,6 +1339,43 @@ export const RUST_ENGINE_DIALOG_DISPLAYED = 'engine_dialog_displayed' as const
  * pre-flight it may run carries its own probe timeouts, well under the sidecar's 60 s.
  */
 export const RUST_ENGINE_STATE_GET = 'engine_state_get' as const
+/**
+ * Phase 87 (87-54, D-03, D-15): the Steam bridge's engine decisions, reached through the shims in
+ * `enginewine/decision.ts`. Every one takes one object the crate decodes strictly, with the facts TypeScript holds
+ * (the stored override, the process monitor's phase, the persisted wine-binary hints) as values. `engine_decide_launch`
+ * answers the `LaunchDecision` (`{kind: 'use', selection, preflight, pin, needsDownload, override, logLines}` or
+ * `{kind: 'unavailable', override, detail}`); `engine_decide_creation` the `{decision, createCapMs}` of the engine a
+ * new bottle is made with; `engine_preflight_crossover` the `CrossoverPreflight` (the G29 two-probe rule);
+ * `engine_is_crossover_missing` a boolean that never probes. The decision and the pre-flight run up to two 15 s
+ * `--demo-status` probes with a wineserver stop after each, which can pass the sidecar's 60 s, so they join its
+ * unbounded list; the other two are presence checks and stay bounded.
+ */
+export const RUST_ENGINE_DECIDE_LAUNCH = 'engine_decide_launch' as const
+export const RUST_ENGINE_DECIDE_CREATION = 'engine_decide_creation' as const
+export const RUST_ENGINE_PREFLIGHT_CROSSOVER =
+  'engine_preflight_crossover' as const
+export const RUST_ENGINE_IS_CROSSOVER_MISSING =
+  'engine_is_crossover_missing' as const
+/**
+ * Phase 87 (87-54): where CrossOver's `bin` directory is, over `{hintWineBins}`: answers the path or `null` for "not
+ * installed". Its first shim is 87-55's; the channel and the shell arm land here with the decision ops. Bounded: the
+ * Spotlight search it may run has its own 10 s limit.
+ */
+export const RUST_ENGINE_CX_RESOLVE_BIN_DIR =
+  'engine_cx_resolve_bin_dir' as const
+/**
+ * Phase 87 (87-54, D-03, D-15): the Steam bridge's engine-state writes, reached through the shims in
+ * `enginewine/state.ts`. `engine_state_record_decision` takes `{runner, appName, bottleName, override, selection?,
+ * preflight?, facts}` (the facts are the bridge's own, as values) and answers whether a decision was recorded; the two
+ * overlay notices take `{runner, appName, step}` and `{runner, appName}` and answer whether they published. All three are
+ * in-memory and bounded.
+ */
+export const RUST_ENGINE_STATE_RECORD_DECISION =
+  'engine_state_record_decision' as const
+export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
+  'engine_state_publish_overlay_notice' as const
+export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_EXIT_NOTICE =
+  'engine_state_publish_overlay_exit_notice' as const
 
 /**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
@@ -1710,7 +1747,15 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_LAUNCH_END,
   RUST_ENGINE_LAUNCH_SETTINGS_GET,
   RUST_ENGINE_STATE_GET,
-  RUST_ENGINE_DIALOG_DISPLAYED
+  RUST_ENGINE_DIALOG_DISPLAYED,
+  RUST_ENGINE_DECIDE_LAUNCH,
+  RUST_ENGINE_DECIDE_CREATION,
+  RUST_ENGINE_PREFLIGHT_CROSSOVER,
+  RUST_ENGINE_IS_CROSSOVER_MISSING,
+  RUST_ENGINE_CX_RESOLVE_BIN_DIR,
+  RUST_ENGINE_STATE_RECORD_DECISION,
+  RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE,
+  RUST_ENGINE_STATE_PUBLISH_OVERLAY_EXIT_NOTICE
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

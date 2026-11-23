@@ -196,6 +196,14 @@ pub(crate) enum RustInvokeChannel {
     EngineLaunchSettingsGet,
     EngineStateGet,
     EngineDialogDisplayed,
+    EngineDecideLaunch,
+    EngineDecideCreation,
+    EnginePreflightCrossover,
+    EngineIsCrossoverMissing,
+    EngineCxResolveBinDir,
+    EngineStateRecordDecision,
+    EngineStatePublishOverlayNotice,
+    EngineStatePublishOverlayExitNotice,
 }
 
 impl RustInvokeChannel {
@@ -373,6 +381,14 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineLaunchSettingsGet,
         RustInvokeChannel::EngineStateGet,
         RustInvokeChannel::EngineDialogDisplayed,
+        RustInvokeChannel::EngineDecideLaunch,
+        RustInvokeChannel::EngineDecideCreation,
+        RustInvokeChannel::EnginePreflightCrossover,
+        RustInvokeChannel::EngineIsCrossoverMissing,
+        RustInvokeChannel::EngineCxResolveBinDir,
+        RustInvokeChannel::EngineStateRecordDecision,
+        RustInvokeChannel::EngineStatePublishOverlayNotice,
+        RustInvokeChannel::EngineStatePublishOverlayExitNotice,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -550,6 +566,14 @@ impl RustInvokeChannel {
             "engine_launch_settings_get" => Some(RustInvokeChannel::EngineLaunchSettingsGet),
             "engine_state_get" => Some(RustInvokeChannel::EngineStateGet),
             "engine_dialog_displayed" => Some(RustInvokeChannel::EngineDialogDisplayed),
+            "engine_decide_launch" => Some(RustInvokeChannel::EngineDecideLaunch),
+            "engine_decide_creation" => Some(RustInvokeChannel::EngineDecideCreation),
+            "engine_preflight_crossover" => Some(RustInvokeChannel::EnginePreflightCrossover),
+            "engine_is_crossover_missing" => Some(RustInvokeChannel::EngineIsCrossoverMissing),
+            "engine_cx_resolve_bin_dir" => Some(RustInvokeChannel::EngineCxResolveBinDir),
+            "engine_state_record_decision" => Some(RustInvokeChannel::EngineStateRecordDecision),
+            "engine_state_publish_overlay_notice" => Some(RustInvokeChannel::EngineStatePublishOverlayNotice),
+            "engine_state_publish_overlay_exit_notice" => Some(RustInvokeChannel::EngineStatePublishOverlayExitNotice),
             _ => None,
         }
     }
@@ -729,6 +753,14 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineLaunchSettingsGet => "engine_launch_settings_get",
             RustInvokeChannel::EngineStateGet => "engine_state_get",
             RustInvokeChannel::EngineDialogDisplayed => "engine_dialog_displayed",
+            RustInvokeChannel::EngineDecideLaunch => "engine_decide_launch",
+            RustInvokeChannel::EngineDecideCreation => "engine_decide_creation",
+            RustInvokeChannel::EnginePreflightCrossover => "engine_preflight_crossover",
+            RustInvokeChannel::EngineIsCrossoverMissing => "engine_is_crossover_missing",
+            RustInvokeChannel::EngineCxResolveBinDir => "engine_cx_resolve_bin_dir",
+            RustInvokeChannel::EngineStateRecordDecision => "engine_state_record_decision",
+            RustInvokeChannel::EngineStatePublishOverlayNotice => "engine_state_publish_overlay_notice",
+            RustInvokeChannel::EngineStatePublishOverlayExitNotice => "engine_state_publish_overlay_exit_notice",
         }
     }
 }
@@ -3692,6 +3724,102 @@ pub(crate) struct EngineDialogDisplayedArgs {
 impl EngineDialogDisplayedArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let request = serde_json::from_value(args.first().ok_or_else(|| "engine_dialog_displayed:bad-args".to_string())?.clone()).map_err(|_| "engine_dialog_displayed:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineDecideLaunchArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineDecideLaunchArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_decide_launch:bad-args".to_string())?.clone()).map_err(|_| "engine_decide_launch:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineDecideCreationArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineDecideCreationArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_decide_creation:bad-args".to_string())?.clone()).map_err(|_| "engine_decide_creation:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EnginePreflightCrossoverArgs {
+    pub(crate) request: Value,
+}
+
+impl EnginePreflightCrossoverArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_preflight_crossover:bad-args".to_string())?.clone()).map_err(|_| "engine_preflight_crossover:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineIsCrossoverMissingArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineIsCrossoverMissingArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_is_crossover_missing:bad-args".to_string())?.clone()).map_err(|_| "engine_is_crossover_missing:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineCxResolveBinDirArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineCxResolveBinDirArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_cx_resolve_bin_dir:bad-args".to_string())?.clone()).map_err(|_| "engine_cx_resolve_bin_dir:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineStateRecordDecisionArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineStateRecordDecisionArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_state_record_decision:bad-args".to_string())?.clone()).map_err(|_| "engine_state_record_decision:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineStatePublishOverlayNoticeArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineStatePublishOverlayNoticeArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_state_publish_overlay_notice:bad-args".to_string())?.clone()).map_err(|_| "engine_state_publish_overlay_notice:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineStatePublishOverlayExitNoticeArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineStatePublishOverlayExitNoticeArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_state_publish_overlay_exit_notice:bad-args".to_string())?.clone()).map_err(|_| "engine_state_publish_overlay_exit_notice:bad-args".to_string())?;
         Ok(Self { request })
     }
 }

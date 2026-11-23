@@ -396,16 +396,7 @@ export function registerHandlers(deps: {
       const { steamEngineStateFacts } =
         await import('backend/storeManagers/steam/engine/steamEngineDeps')
       return steamEngineStateFacts(
-        {
-          stores: deps.services.stores,
-          spawnAsync: deps.services.spawnAsync,
-          runner: deps.services.runner,
-          engineRuntime: deps.services.engineRuntime,
-          storeRoot: deps.services.storeRoot,
-          paths: deps.services.paths,
-          steamBottle: deps.services.steamBottle,
-          steamLaunchRuntime: deps.services.steamLaunchRuntime
-        },
+        { stores: deps.services.stores, paths: deps.services.paths },
         appId
       )
     }

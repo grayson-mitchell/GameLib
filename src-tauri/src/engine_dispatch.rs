@@ -728,6 +728,14 @@ engine_op_arms! {
     rpc_launch_settings_get => "engine_launch_settings_get",
     rpc_state_get => "engine_state_get",
     rpc_dialog_displayed => "engine_dialog_displayed",
+    rpc_decide_launch => "engine_decide_launch",
+    rpc_decide_creation => "engine_decide_creation",
+    rpc_preflight_crossover => "engine_preflight_crossover",
+    rpc_is_crossover_missing => "engine_is_crossover_missing",
+    rpc_cx_resolve_bin_dir => "engine_cx_resolve_bin_dir",
+    rpc_state_record_decision => "engine_state_record_decision",
+    rpc_state_publish_overlay_notice => "engine_state_publish_overlay_notice",
+    rpc_state_publish_overlay_exit_notice => "engine_state_publish_overlay_exit_notice",
 }
 
 #[cfg(test)]
@@ -1206,6 +1214,20 @@ mod tests {
             (rpc_launch_settings_get, "engine_launch_settings_get"),
             (rpc_state_get, "engine_state_get"),
             (rpc_dialog_displayed, "engine_dialog_displayed"),
+            (rpc_decide_launch, "engine_decide_launch"),
+            (rpc_decide_creation, "engine_decide_creation"),
+            (rpc_preflight_crossover, "engine_preflight_crossover"),
+            (rpc_is_crossover_missing, "engine_is_crossover_missing"),
+            (rpc_cx_resolve_bin_dir, "engine_cx_resolve_bin_dir"),
+            (rpc_state_record_decision, "engine_state_record_decision"),
+            (
+                rpc_state_publish_overlay_notice,
+                "engine_state_publish_overlay_notice",
+            ),
+            (
+                rpc_state_publish_overlay_exit_notice,
+                "engine_state_publish_overlay_exit_notice",
+            ),
         ] {
             for bad in [
                 vec![],

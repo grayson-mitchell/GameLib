@@ -24,7 +24,6 @@ import type { DemoStatusProbe } from './demoStatus'
 import { ENGINE_PINS } from './enginePins'
 import type { EnginePin } from './enginePins'
 import { parseEngineOverride } from './engineIds'
-import type { EngineOverrideId } from './engineIds'
 import { engineLogLabel } from './engineTypes'
 import type { EngineServices } from './engineServices'
 import type { WineManagerRelease } from './wineManagerReleases'
@@ -57,44 +56,14 @@ const PROBE_ATTEMPTS = 2
 /** Settle wait before a retry after a nonzero exit or spawn error (G29). */
 const RETRY_SETTLE_MS = 2000
 
-export type CrossoverPreflight =
-  | {
-      kind: 'healthy'
-      binDir: string
-      build: string | null
-      trialDaysRemaining: number | null
-    }
-  | { kind: 'expired'; binDir: string; build: string | null; daysAgo: number }
-  | {
-      kind: 'broken'
-      binDir: string | null
-      build: string | null
-      detail: string
-      /** A page read timed out without a retry; says nothing certain about CrossOver. */
-      inconclusive?: boolean
-    }
-  | { kind: 'missing'; detail: string }
-
-export type LaunchDecision =
-  | {
-      kind: 'use'
-      selection: EngineSelection
-      preflight: CrossoverPreflight | null
-      pin: EnginePin | null
-      needsDownload: boolean
-      override: EngineOverrideId
-      logLines: string[]
-    }
-  | { kind: 'unavailable'; override: EngineOverrideId; detail: string }
-
-export type CreationDecision =
-  | {
-      kind: 'crossover'
-      createTimeoutMs: number
-      probed: boolean
-      build: string | null
-    }
-  | { kind: 'pinned'; reason: FallbackReason; pin: EnginePin }
+// 87-54: the three decision types live with the shims that hand them out; this module (deleted in 87-56) keeps its
+// own names for them.
+import type {
+  CreationDecision,
+  CrossoverPreflight,
+  LaunchDecision
+} from 'backend/enginewine/decision'
+export type { CreationDecision, CrossoverPreflight, LaunchDecision }
 
 export type { WineManagerRelease } from './wineManagerReleases'
 export { wineManagerReleasesFrom } from './wineManagerReleases'

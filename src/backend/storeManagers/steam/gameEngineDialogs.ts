@@ -7,7 +7,7 @@ import i18next from 'i18next'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import { sendGameStatusUpdate } from 'backend/utils'
-import type { CrossoverPreflight } from 'backend/engine/engineDecision'
+import type { CrossoverPreflight } from 'backend/enginewine/decision'
 import type { EngineSelection } from 'backend/engine/engineTypes'
 import type SteamGame from './games'
 
@@ -59,9 +59,8 @@ export async function drmOfflinePrecheck(
 ): Promise<{ ok: true } | { ok: false }> {
   if (!connectivity.offline) return { ok: true }
   const twin = await import('backend/enginewine/twin')
-  const { isCrossoverMissing } = await import('backend/engine/engineDecision')
-  const { steamDecisionDeps, steamDecisionServices } =
-    await import('./engine/steamEngineDeps')
+  const { isCrossoverMissing } = await import('backend/enginewine/decision')
+  const { steamEngineFacts } = await import('./engine/steamEngineDeps')
   const { isPinnedEngineInstalled } = steamGame.deps.engineRuntime.fallback
   const switchCtx = {
     paths: steamGame.deps.paths,
@@ -73,9 +72,12 @@ export async function drmOfflinePrecheck(
   const refusal = offlineLaunchCertainlyBlocked({
     offline: connectivity.offline,
     override: 'crossover',
-    crossoverMissing: await isCrossoverMissing(
-      steamDecisionDeps(steamDecisionServices(steamGame.deps))
-    ),
+    // An error in the lookup is "unknown", which never refuses (G25), so only `true` counts.
+    crossoverMissing:
+      (await isCrossoverMissing(steamGame.deps, {
+        hintWineBins: steamEngineFacts(steamGame.deps, steamGame.appId)
+          .hintWineBins
+      })) === true,
     markerKind: twin.readBottleEngineMarkerKind(switchCtx, bottleName),
     currentPinInstalled: isPinnedEngineInstalled(ENGINE_PINS.current),
     restoreNeedsAbsentPin: twin.restoreNeedsAbsentPin(switchCtx, bottleName)

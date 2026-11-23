@@ -30,7 +30,7 @@ import { getBottleDir } from 'backend/enginewine/twin'
 // Phase 60: Steam overlay in bridged games (macOS).
 import { prepareOverlayTokens } from './bridge/overlay/overlayLaunch'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
-import type { CrossoverPreflight } from 'backend/engine/engineDecision'
+import type { CrossoverPreflight } from 'backend/enginewine/decision'
 import type { EngineSelection } from 'backend/engine/engineTypes'
 import { dropEngineSelection } from 'backend/engine/engineSync'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
@@ -174,13 +174,16 @@ export async function launch(
     )
     // Phase 59: bottled Steam stays CrossOver-only (no built-in engine).
     // A clear message beats a hang behind CrossOver's own dialog.
-    const { preflightCrossover } = await import('backend/engine/engineDecision')
-    const { steamDecisionDeps, steamDecisionServices } =
-      await import('./engine/steamEngineDeps')
-    const pre = await preflightCrossover(
-      steamGame.deps.steamBottle.getSteamBottleSettings()
-        ?.wineCrossoverBottle ?? DEFAULT_STEAM_BOTTLE_NAME,
-      steamDecisionDeps(steamDecisionServices(steamGame.deps))
+    const { preflightCrossover } = await import('backend/enginewine/decision')
+    const { preflightFrom } = await import('./engine/engineDecisionReply')
+    const { steamWineBinHints } = await import('./engine/steamEngineDeps')
+    const pre = preflightFrom(
+      await preflightCrossover(steamGame.deps, {
+        bottleName:
+          steamGame.deps.steamBottle.getSteamBottleSettings()
+            ?.wineCrossoverBottle ?? DEFAULT_STEAM_BOTTLE_NAME,
+        hintWineBins: steamWineBinHints(steamGame.deps)
+      })
     )
     if (pre.kind !== 'healthy') {
       notifyCrossoverRequired(steamGame, 'bottled', pre)
@@ -428,12 +431,14 @@ export async function selectLaunchEngine(
   connectivity: { offline: boolean }
 ): Promise<{ ok: true; settings: GameSettings } | { ok: false }> {
   const bottleName = current.wineCrossoverBottle
-  const { decideLaunchEngine } = await import('backend/engine/engineDecision')
+  const { decideLaunchEngine } = await import('backend/enginewine/decision')
+  const { recordLaunchDecision } = await import('backend/enginewine/state')
+  const { launchDecisionFrom } = await import('./engine/engineDecisionReply')
   const { setEngineSelection } = steamGame.deps.engineRuntime.registry
   const clearEngineSelection = (key: string) =>
     dropEngineSelection(steamGame.deps.engineRuntime, key)
   const { prepareBottle } = await import('backend/engine/prepareBottle')
-  const { STEAM_ENGINE_RUNNER, steamEngineStateDeps } =
+  const { STEAM_ENGINE_RUNNER, steamEngineStateFacts } =
     await import('./engine/steamEngineDeps')
   const { isNonCrossover } = await import('backend/engine/engineTypes')
   const title = steamGame.getGameInfo().title
@@ -445,13 +450,9 @@ export async function selectLaunchEngine(
   // Play (the monitor status can be stale, 59-40 diagnosis). This only refuses: no engine is
   // selected and nothing is routed or launched, so D-07/D-09 hold, and every launch that can
   // start still probes below.
-  const { isCrossoverMissing } = await import('backend/engine/engineDecision')
-  const {
-    steamDecisionDeps,
-    steamDecisionServices,
-    steamPrepareFacts,
-    readSteamEngineOverride
-  } = await import('./engine/steamEngineDeps')
+  const { isCrossoverMissing } = await import('backend/enginewine/decision')
+  const { steamPrepareFacts, steamEngineFacts, readSteamEngineOverride } =
+    await import('./engine/steamEngineDeps')
   const { steamEngineServicesFrom } =
     await import('backend/services/engineServices')
   const { parseEngineOverride } = await import('backend/engine/engineIds')
@@ -474,9 +475,12 @@ export async function selectLaunchEngine(
     const refusal = offlineLaunchCertainlyBlocked({
       offline: connectivity.offline,
       override: earlyOverride,
-      crossoverMissing: await isCrossoverMissing(
-        steamDecisionDeps(steamDecisionServices(steamGame.deps))
-      ),
+      // An error in the lookup is "unknown", which never refuses (G25), so only `true` counts.
+      crossoverMissing:
+        (await isCrossoverMissing(steamGame.deps, {
+          hintWineBins: steamEngineFacts(steamGame.deps, steamGame.appId)
+            .hintWineBins
+        })) === true,
       markerKind: twin.readBottleEngineMarkerKind(switchCtx, bottleName),
       currentPinInstalled: isPinnedEngineInstalled(ENGINE_PINS.current),
       restoreNeedsAbsentPin: twin.restoreNeedsAbsentPin(switchCtx, bottleName)
@@ -504,9 +508,13 @@ export async function selectLaunchEngine(
     }
   }
 
-  const decision = await decideLaunchEngine(
-    { key: steamGame.appId, bottleName },
-    steamDecisionDeps(steamDecisionServices(steamGame.deps))
+  // 87-54: the decision is Rust's; the stored override, the monitor's phase and the wine-binary hints go as values.
+  const decision = launchDecisionFrom(
+    await decideLaunchEngine(steamGame.deps, {
+      key: steamGame.appId,
+      bottleName,
+      ...steamEngineFacts(steamGame.deps, steamGame.appId)
+    })
   )
   if (decision.kind === 'unavailable') {
     logWarning(
@@ -666,12 +674,24 @@ export async function selectLaunchEngine(
   for (const line of decision.logLines) {
     logInfo(`SteamGame: appId ${steamGame.appId} ${line}`, LogPrefix.Steam)
   }
-  steamGame.deps.engineState.recordLaunchDecision(
-    { runner: STEAM_ENGINE_RUNNER, appName: steamGame.appId },
-    decision,
-    bottleName,
-    steamEngineStateDeps(steamGame.deps, steamGame.appId)
-  )
+  // 87-54: the record is Rust's now (it pushes `engineStateChanged` itself); the bridge's facts go as values. A refused
+  // record must not stop a launch that is otherwise ready.
+  try {
+    await recordLaunchDecision(steamGame.deps, {
+      runner: STEAM_ENGINE_RUNNER,
+      appName: steamGame.appId,
+      bottleName,
+      override: decision.override,
+      selection: decision.selection,
+      preflight: decision.preflight,
+      facts: steamEngineStateFacts(steamGame.deps, steamGame.appId)
+    })
+  } catch (error) {
+    logWarning(
+      `SteamGame: appId ${steamGame.appId} could not record the launch decision: ${String(error)}`,
+      LogPrefix.Steam
+    )
+  }
 
   if (
     isNonCrossover(sel) &&
@@ -895,7 +915,7 @@ export async function launchDrmModeGame(
   let overlayTokens: string[] | undefined
   if (resolveLaunchOverlay(steamGame).enabled) {
     if (ready.runner.wineloaderResigned !== true) {
-      notifyOverlaySetupFailed(
+      await notifyOverlaySetupFailed(
         steamGame,
         'resign',
         'DRM runner wineloader not re-signed'
@@ -909,7 +929,7 @@ export async function launchDrmModeGame(
         ...overlayProbeArg(steamGame)
       })
       if (r.status === 'ok') overlayTokens = r.tokens
-      else notifyOverlaySetupFailed(steamGame, r.step, r.cause)
+      else await notifyOverlaySetupFailed(steamGame, r.step, r.cause)
     }
   }
   return fireBridgeWineLaunch(steamGame, exePath, ready.bottleSettings, {
