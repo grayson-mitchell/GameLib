@@ -1588,33 +1588,38 @@ mod tests {
         );
     }
 
+    /// 87-49 (D-17): installing the context reads no notices file. A corrupt notices file sits on disk
+    /// before the context is built; building it neither opens it (no `.corrupt.` copy is made) nor loads
+    /// it, and the first engine-state read is what loads it. Nothing the read does changes the file.
+    #[cfg(unix)]
     #[test]
     fn install_builds_a_context_whose_notices_are_not_loaded_and_the_first_state_loads_them() {
         let home = gamelib_testutil::FakeHome::new("engine-state-boot-");
-        let userdata = home.root().join("userData");
-        let store = userdata.join("store_cache/steam_engine_notices.json");
-        // A notices file already on disk: building the context must not read it.
+        let store = home.root().join("store_cache/steam_engine_notices.json");
         std::fs::create_dir_all(store.parent().unwrap()).unwrap();
         std::fs::write(&store, "not json {").unwrap();
-        let ctx = build_ctx(
-            Arc::new(StoreHost::new()),
-            &userdata,
-            home.root().to_path_buf(),
-            home.root().join("tmp"),
-            Arc::new(Pushes::default()),
-            Arc::new(ShellEngineUi::silent(Arc::new(Pushes::default()))),
-            Shutdown::new(),
+        let entries = |dir: &Path| {
+            let mut names: Vec<String> = std::fs::read_dir(dir)
+                .unwrap()
+                .flatten()
+                .map(|e| e.file_name().to_string_lossy().into_owned())
+                .collect();
+            names.sort();
+            names
+        };
+        // The same build `install` makes (`build_ctx`), over a fake profile and a scripted `PATH`.
+        let engine = engine_with_path(&home, None);
+        assert!(
+            !engine.notices.is_loaded(),
+            "building the context loads no notices"
         );
-        assert!(!ctx.notices.is_loaded());
-        let siblings = |dir: &Path| std::fs::read_dir(dir).unwrap().count();
         assert_eq!(
-            siblings(store.parent().unwrap()),
-            1,
-            "no backup made at boot"
+            entries(store.parent().unwrap()),
+            ["steam_engine_notices.json"],
+            "building the context opened nothing: no backup of the corrupt file was made"
         );
-        // The first engine_state_get loads it (a non-macOS host answers null, after the load or before:
-        // the load is lazy to the first notice read, which a state read makes).
-        let engine = Arc::new(ctx);
+        // The first engine-state read loads the store (a computed state reads the notices; a host that
+        // is not macOS answers null before reading any).
         let answer = block(run_engine_op(
             Arc::clone(&engine),
             "engine_state_get",
@@ -1623,17 +1628,28 @@ mod tests {
         ))
         .unwrap();
         assert!(answer.is_null() || answer.is_object(), "{answer}");
-        let read = block(run_engine_op(
+        assert_eq!(
+            engine.notices.is_loaded(),
+            answer.is_object(),
+            "a state that was computed read the notices, and only then"
+        );
+        // A dismissal on the corrupt file is refused and the file is kept byte for byte (FND-06).
+        let refused = block(run_engine_op(
             Arc::clone(&engine),
             "engine_notice_dismiss",
             vec![serde_json::json!({"kind": "no-crossover"})],
             "failed",
         ))
         .unwrap();
-        // The corrupt file was only read and refused: kept byte for byte (FND-06).
-        assert_eq!(read, serde_json::json!({"ok": false}));
+        assert_eq!(refused, serde_json::json!({"ok": false}));
         assert!(engine.notices.is_loaded());
         assert_eq!(std::fs::read_to_string(&store).unwrap(), "not json {");
+        let names = entries(store.parent().unwrap());
+        assert_eq!(names.len(), 2, "{names:?}");
+        assert!(
+            names[0].starts_with("steam_engine_notices.corrupt."),
+            "{names:?}"
+        );
     }
 
     #[test]
