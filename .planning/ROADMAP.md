@@ -651,7 +651,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 34/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
+**Plans:** 35/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
 
 Plans:
 **Wave 1**
@@ -717,7 +717,7 @@ Plans:
 - [x] 87-34-PLAN.md — DXVK family flipped: three D-23 resolvers and the DXVK shim
 
 **Wave 15** *(blocked on Wave 14 completion)*
-- [ ] 87-35-PLAN.md — Winetricks family flipped: queue channels native, three resolvers, launcher shims
+- [x] 87-35-PLAN.md — Winetricks family flipped: queue channels native, three resolvers, launcher shims
 
 **Wave 16** *(blocked on Wave 15 completion)*
 - [ ] 87-36-PLAN.md — Wine-command family flipped: three resolvers; wineToolsFlowRegistration deleted

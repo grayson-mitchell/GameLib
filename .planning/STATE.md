@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-34-PLAN.md
-last_updated: "2026-11-23T10:50:09.144Z"
+stopped_at: Completed 87-35-PLAN.md
+last_updated: "2026-11-23T11:06:31.243Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 1c1c06590c0511ed193879364f456161b9696e47
+state_head: 9c5bd4b9ae903c4492cf7ac0580468ed6004d579
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 35 of 59
+Plan: 36 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -444,6 +444,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P32 | 28 min | 2 tasks | 15 files |
 | Phase 87 P33 | 17min | 2 tasks | 10 files |
 | Phase 87 P34 | 11 min | 2 tasks | 22 files |
+| Phase 87 P35 | 12 min | 2 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -926,6 +927,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: The shell, not the sidecar, supplies every host fact (public directory, online answer, environment, Darwin release) to wine_dxvk_install_remove; the zod tuple is one request object
 - [Phase 87]: toolsFrom moved to services/toolsFrom.ts rather than deleted: the launcher's Winetricks and wine-command uses and the Steam bridge known fixes still build TS tools until 87-35 and 87-36; engineServices.ts no longer value-imports backend/tools
 - [Phase 87]: wine_dispatch::tools_host is the one ToolsHost builder, shared by the renderer toggles, the launcher DXVK step and the engine's ShellDxvk
+- [Phase 87]: 87-35: the shell supplies the wine host facts (environment, Darwin release) to every Winetricks arm; the zod tuples carry only the target and the verbs
+- [Phase 87]: 87-35: which Wine environment a game's Winetricks calls act on stays TS (services/winetricksTarget.ts, never throws, unavailable reason on failure); apply and the catalog read resolve with ensureBottle true, the installed read false
+- [Phase 87]: 87-35: winetricksInstallVerbs takes the whole verb list and the shell arm installs one after another, so the shim is one returned call; a verb that is no verb counts as failed without reaching the crate
+- [Phase 87]: 87-35: the Steam bridge's known fixes were routed to the install shim in this plan; toolsFrom now has one live caller, the launcher's runInPrefix step (87-36); no in-process gameStatusUpdate listener exists, so no game-status hook was needed
 
 ### Pending Todos
 
@@ -1206,8 +1211,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T10:50:06.559Z
-Stopped at: Completed 87-34-PLAN.md
+Last session: 2026-11-23T11:06:28.790Z
+Stopped at: Completed 87-35-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
