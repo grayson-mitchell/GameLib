@@ -152,6 +152,31 @@ Steam key redeem itself (`steam/userRedeem.ts`) is Phase 90's surface, not 94's.
   before porting, and the phase's last plan leaves no TS or registrations for any ported slice
   beyond the scheduled survivors.
 
+### Amendments after research (plan-phase, 2026-11-24)
+Decided by the user after `94-RESEARCH.md` showed premises in D-04, D-06 and D-13 don't match the code.
+- **D-24:** **Rust owns Humble sign-in state.** Rust is the sole writer of the Humble expired flag,
+  `userData` and the sign-in epoch/outcome notes (`noteSignInSucceeded`/`noteSignedOut('humble')`).
+  `signInProbe/verdict.ts` and `pass.ts` reach it through one scheduled resolver plus a TS
+  `isLoggedIn` view cache updated from a Rust event. The `humbleConfigStore` mirror-schedule cell
+  moves 94 → 92 and `timestampStore` moves 94 → 88; amend `82-STATE-OWNERSHIP.md` and
+  `storeMirrorSchedule.test.ts` together. Extends D-04's caller list with `verdict.ts`,
+  `steamFlowRegistration.ts` (`humble.library.recomputeOwnership()`), and the `LoginWindowSeam`
+  slot install relocated with the seam (D-03).
+- **D-25:** **macOS shortcut icon copies the shipped centred crop** (the `/usr/bin/sips` shim's
+  behaviour), superseding D-13's "crop 0,0". Top-left is filed as a D-20 quirk todo.
+- **D-26:** **Keep `humble_reveal_post` as the reveal fallback** until the D-08 live reveal passes
+  on the reqwest port, then delete it (and the seam's `revealPost`) in the gate-closing plan.
+  `humble_login_clear_storage` stays (disconnect uses it).
+- **D-27:** **`processShortcut` (ctrl+q/k/j/l) is relocated unchanged to
+  `appShellFlowRegistration.ts`** as a scheduled survivor (deleted by Phase 98 with the quit path),
+  not ported. The shortcuts registration is still deleted (SC4).
+- **D-28:** **`humbleRunValidation` and `validation.ts` are deleted, not ported** (dev-only, no UI
+  caller). The renderer/common suites under `src/backend/humble/__tests__/` that test
+  `src/common/humble/*` stay TS; D-06's "port as Rust tests" doesn't apply to them.
+- **D-29:** **Shortcut removal requires a creation proof** (D-22 made concrete): `~/Applications/<title>.app`
+  is deleted only when the `run.sh` marker and `Info.plist` prove GameLib created it; otherwise it
+  refuses. This deliberately changes today's unconditional `rm -rf`.
+
 ### Claude's Discretion
 - Crate layout: research suggested `gamelib-humble` and `gamelib-shortcuts` (with `-cli` where
   `meta/` needs it), following the per-domain crate pattern of 63–87. Planner may merge or split.
