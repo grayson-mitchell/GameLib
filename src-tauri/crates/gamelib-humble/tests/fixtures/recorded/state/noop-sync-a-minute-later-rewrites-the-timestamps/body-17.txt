@@ -1,0 +1,2 @@
+0:{"a":"$@1","f":"","b":"x"}
+1:{"results":[{"id":"fake-gamekey-0006","title":"Fake Bundle Expiring","entitlements":{"keys":[{"id":"expiring_steam","title":"Fake Expiring Game","keyIntegrationId":"gog","gameKey":null,"redeemedAt":null,"expired":false,"redemptionExpiryDate":"$D2027-03-04T00:00:00.000Z"}],"downloads":[]}}],"bundlesCount":0,"pagination":{"page":2,"totalPages":2,"totalDocs":6},"success":true}
