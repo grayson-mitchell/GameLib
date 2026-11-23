@@ -75,8 +75,8 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   // Phase 87 Plan 36 (D-23): `runWineCommand` and `callTool` are scheduled resolvers too.
   'Async:runWineCommand': 'wineTools',
   'Async:callTool': 'runnerMisc',
-  // Phase 87 Plan 52 (D-23): `getEngineState` is a scheduled resolver (`engineWineResolvers.ts`), no longer registered by
-  // `engineFlowRegistration.ts`.
+  // Phase 87 Plan 52 (D-23): `getEngineState` is a scheduled resolver (`engineWineResolvers.ts`); `engineFlowRegistration.ts`
+  // is gone (87-53).
   'Async:getEngineState': 'engine',
   'Async:gamepadAction': 'testStubs',
   'Async:get-connectivity-status': 'mainProcess',
@@ -218,15 +218,14 @@ function ownerlessChannels(
  * `wineToolsFlowRegistration.ts` (a measured file, not a parse miss): its last channel moved to the
  * scheduled resolvers of `engineWineResolvers.ts`. The scan reads 20 `*FlowRegistration.ts` files,
  * the same count as the on-disk listing. The declaration total is unchanged.
+ *
+ * Phase 87 Plan 53 (2026-11-24): FILES_FLOOR 20 -> 19. The drop is the deliberate deletion of
+ * `engineFlowRegistration.ts` (a measured file, not a parse miss): `getEngineState`, its last handle, became a
+ * scheduled resolver in 87-52. The scan reads 19 `*FlowRegistration.ts` files, the same count as the on-disk
+ * listing. The declaration total is unchanged.
  */
-const FILES_FLOOR = 20
+const FILES_FLOOR = 19
 
-/**
- * Registration files that register nothing for a while. 87-52 moved `getEngineState`, the last handle of
- * `engineFlowRegistration.ts`, to a scheduled resolver; 87-53 deletes the file (and this entry, and the count of 20 in
- * (a) becomes 19, as it did for the wine tools module in 87-36).
- */
-const REGISTERS_NOTHING = new Set(['engineFlowRegistration.ts'])
 const DECLARATIONS_FLOOR = 284
 
 /** Declared channels across every domain part, all kinds. */
@@ -256,16 +255,12 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
   it('(a) every channel a FlowRegistration registers is declared in its paired ipc/<domain>.ts', () => {
     const files = registrationFiles()
     assertAtOrAboveFloor('ipcDomainCensus files', files.length, FILES_FLOOR)
-    expect(files.length).toBe(20) // 22 before 84-06 deleted loggerFlowRegistration.ts, 21 before 87-36 deleted wineToolsFlowRegistration.ts
+    expect(files.length).toBe(19) // 22 before 84-06 deleted loggerFlowRegistration.ts, 21 before 87-36 deleted wineToolsFlowRegistration.ts, 20 before 87-53 deleted engineFlowRegistration.ts
     for (const f of files) {
       const domain = f.replace('FlowRegistration.ts', '')
       expect(Object.keys(domains)).toContain(domain)
       const source = readFileSync(join(SIDECAR_DIR, f), 'utf-8')
       const registered = registeredChannels(source, constants)
-      if (REGISTERS_NOTHING.has(f)) {
-        expect(registered).toEqual([])
-        continue
-      }
       expect(registered.length).toBeGreaterThan(0)
       // Shared-transport constants that are not part of the typed IPC contract are exempt
       // only when no domain declares them at all.

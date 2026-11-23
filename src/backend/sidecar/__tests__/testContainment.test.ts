@@ -861,12 +861,6 @@ const IN_SCOPE_SUITES = [
  * under `os.tmpdir()`, no child process. Neither was classified by its landing commit; the
  * T-34.2-83 tripwire caught it (Phase 56 plan 30).
  *
- * `engineFlows.test.ts` (Phase 59 Plan 08 as `steamEngineFlows.test.ts`, renamed in Phase 61 Plan 13) is structurally contained on the same basis as
- * `steamAuthFlows.test.ts`: it requires the real `../steamAuthFlowRegistration` with `../../platform`,
- * the Steam store modules, the electron stores, `engineState`/`engineDecision` and `../../ipc` all
- * replaced by `jest.mock` factories, so no path module, `homedir()`, filesystem or child process is
- * reached. Its landing commit did not classify it; the T-34.2-83 tripwire caught it.
- *
  * `gameSettingWrite.test.ts` (Phase 59 Plan 25, G17) is structurally contained: it replaces
  * `../../game_config` and `../../logger` with `jest.mock` factories and calls the pure
  * `applyGameSetting`, so no path module, `homedir()`, filesystem or child process is reached.
@@ -959,7 +953,6 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'downloadQueueFlows.test.ts',
   'electronReachLedger.test.ts',
   'electronUntouched.test.ts',
-  'engineFlows.test.ts',
   'engineOverrideWriteGuard.test.ts',
   'engineStateWiring.test.ts',
   'engineTempSweepBootWire.test.ts',

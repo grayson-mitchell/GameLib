@@ -72,7 +72,6 @@ import type { BootServices, ShellState } from '../services/types'
 
 import { registerSteamFlows } from './steamFlowRegistration'
 import { registerSteamAuthFlows } from './steamAuthFlowRegistration'
-import { registerEngineFlows } from './engineFlowRegistration'
 import { registerInstallFlows } from './installFlowRegistration'
 import { registerSettingsFlows } from './settingsFlowRegistration'
 import { registerDevEpicCookieSweepFlow } from './devEpicCookieSweepRegistration'
@@ -164,20 +163,6 @@ export function registerHandlers(deps: {
     humble: deps.services.humble
   })
   registerSteamAuthFlows({ ...deps.services, ipc })
-  registerEngineFlows({
-    ipc,
-    managers: deps.services.managers,
-    stores: deps.services.stores,
-    spawnAsync: deps.services.spawnAsync,
-    runner: deps.services.runner,
-    config: deps.services.config,
-    engineState: deps.services.engineState,
-    engineRuntime: deps.services.engineRuntime,
-    storeRoot: deps.services.storeRoot,
-    paths: deps.services.paths,
-    steamBottle: deps.services.steamBottle,
-    steamLaunchRuntime: deps.services.steamLaunchRuntime
-  })
   registerInstallFlows({ ...deps.services, ipc })
   registerSettingsFlows({
     ipc,

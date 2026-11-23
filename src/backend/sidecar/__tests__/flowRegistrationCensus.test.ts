@@ -89,8 +89,7 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // `getDefaultEngine` are native `engine` channels.
   // Phase 87 Plan 49 (D-14): invoke 2 -> 1 -- `dismissEngineNotice` is a native `engine` channel too.
   // Phase 87 Plan 52 (D-23): invoke 1 -> 0 -- `getEngineState` is a scheduled resolver (`engineWineResolvers.ts`), so the
-  // module registers nothing; 87-53 deletes it (as 87-36 did the wine tools module).
-  'engineFlowRegistration.ts': { invoke: 0, send: 0 },
+  // module registered nothing; 87-53 deleted it (as 87-36 did the wine tools module).
   'dialogFlowRegistration.ts': { invoke: 1, send: 0 },
   'downloadQueueFlowRegistration.ts': { invoke: 1, send: 4 },
   // Quick 261027-ch9 (2026-10-27): invoke 14 -> 15 -- getGamelibFixStatus
@@ -188,8 +187,6 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
  */
 const NO_COUNT_CLAIM = new Set([
   'dialogFlowRegistration.ts',
-  // 87-52: registers nothing until 87-53 deletes it; its docstring says so instead of stating a total.
-  'engineFlowRegistration.ts',
   'steamAuthFlowRegistration.ts',
   'steamFlowRegistration.ts'
   // 66.4-19 (D-66.4-01): runnerAuth/shortcuts/wineTools lost their `let registered` latch, so

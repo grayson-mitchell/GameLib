@@ -268,7 +268,8 @@ describe('66.1 end state: no direct child_process', () => {
 
   it('finds the flow registrations', () => {
     // 24 -> 23 (Phase 87 Plan 36): `wineToolsFlowRegistration.ts` is deleted.
-    assertAtOrAboveFloor('66.1 flow registrations', registrations.length, 23)
+    // 23 -> 22 (Phase 87 Plan 53): `engineFlowRegistration.ts` is deleted.
+    assertAtOrAboveFloor('66.1 flow registrations', registrations.length, 22)
   })
 
   it('launcher, runner front doors and every registration import no child_process', () => {
