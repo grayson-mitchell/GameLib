@@ -207,7 +207,7 @@ export function expandPlaceholders(
 }
 
 /** Writes a case's starting state into the profile. */
-export function seedProfile(
+function seedProfile(
   profile: EngineOracleProfile,
   seed: readonly SeedEntry[]
 ): void {
@@ -257,6 +257,9 @@ export async function withEngineOracleProfile<T>(
 }
 
 /**
+ * @public Consumed by the later 87 golden plans (clock-driven cases: the launch deadline, trial
+ * notices); not used by the runtimes slice, which has no clock.
+ *
  * Pins `Date` to `ms` and makes sure the process asks for UTC. Only `Date` is faked: a slice's
  * timers, `setImmediate` and streams keep working. Under jest `process.env` is a copy, so a TZ set
  * here does not reach the native date code: run the oracle with `TZ=UTC` for a slice that formats
@@ -304,8 +307,7 @@ export function mockPlatform(platform: OraclePlatform): () => void {
   }
 }
 
-export const json = (value: unknown): string =>
-  `${JSON.stringify(value, null, 2)}\n`
+const json = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`
 
 /** What one case records. Every field is already normalised and redacted by the caller. */
 export interface GoldenCapture {
@@ -399,7 +401,7 @@ export function loadDeltas(
   return JSON.parse(readFileSync(file, 'utf8')) as Record<string, string>
 }
 
-export interface Manifest {
+interface Manifest {
   count: number
   floor: number
 }

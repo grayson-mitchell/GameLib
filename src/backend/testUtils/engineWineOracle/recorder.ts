@@ -74,7 +74,7 @@ export const recordedCaseDir = (
   caseId: string
 ): string => join(fixturesRoot(crate), 'recorded', slice, caseId)
 
-export const REDACTED = 'REDACTED'
+const REDACTED = 'REDACTED'
 
 /** The mode the environment asks for. Record wins over write when both are set. */
 export function oracleMode(env: NodeJS.ProcessEnv = process.env): OracleMode {
@@ -100,7 +100,7 @@ export interface SyntheticResponse {
   networkError?: boolean
 }
 
-export interface RustOnlyRequest {
+interface RustOnlyRequest {
   method: string
   url: string
   headers?: Record<string, string>
@@ -129,7 +129,7 @@ export interface RecorderOptions {
   allowLive?: (url: string) => boolean
 }
 
-export interface RecordedExchange {
+interface RecordedExchange {
   id: string
   request: {
     method: string
@@ -201,7 +201,7 @@ function allowResponseHeaders(
 }
 
 /** A `"token": "<value>"` field in a JSON body (the HowLongToBeat search-init response). */
-export function redactBody(body: Buffer, contentType: string): Buffer {
+function redactBody(body: Buffer, contentType: string): Buffer {
   if (!/json/i.test(contentType)) return body
   const text = body.toString('utf8')
   const redacted = text.replace(/("token"\s*:\s*")[^"]*(")/g, `$1${REDACTED}$2`)

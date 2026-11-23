@@ -40,7 +40,7 @@ const noChild: ChildHandle = {
   kill: () => false
 }
 
-export interface SpawnRecord {
+interface SpawnRecord {
   program: string
   argv: string[]
   envDiff: { set: Record<string, string>; unset: string[] }
@@ -51,7 +51,7 @@ export interface SpawnRecord {
   result: { code: number | null; stdout: string; stderr: string }
 }
 
-export interface ScriptedOutput {
+interface ScriptedOutput {
   program: string
   /** Exact argv. Omit to match any argv. */
   argv?: readonly string[]
