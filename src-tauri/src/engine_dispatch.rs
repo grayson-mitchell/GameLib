@@ -26,6 +26,7 @@ use gamelib_core::clock::SystemClock;
 use gamelib_core::emitter::FrontendEmitter;
 use gamelib_core::process::BoxFuture;
 use gamelib_core::shutdown::Shutdown;
+use gamelib_engine::crossover::locate::CrossoverDiscovery;
 use gamelib_engine::ctx::{
     CrossoverBinDirHook, DefaultWineHook, EngineCtx, EnginePaths, Platform, WineInstallationView,
 };
@@ -287,7 +288,8 @@ pub(crate) fn build_ctx(
     .with_app_version(native_handlers::app_version())
     .with_dxvk(Arc::new(ShellDxvk::new()))
     .with_default_wine(default_wine_hook(Arc::new(|| std::env::var("PATH").ok())))
-    .with_crossover_bin_dir(crossover_bin_dir_hook());
+    .with_crossover_bin_dir(crossover_bin_dir_hook())
+    .with_crossover_discovery(Arc::new(ShellCrossoverDiscovery));
     wire_selection_frames(&ctx, ui);
     ctx
 }
@@ -396,6 +398,30 @@ pub(crate) fn crossover_bin_dir_hook() -> CrossoverBinDirHook {
             locate_crossover_bin_dir(Path::new("/Applications"), &home, move || bins)
         })
     })
+}
+
+/// The shell's `EngineCtx.crossover_discovery` (D-22): the engine crate's locator asks it for the wine
+/// binaries Spotlight reports, answered by `gamelib-wine`'s `discover_crossover` (one `mdfind` with its own
+/// 10 s limit, macOS only). The wine context is looked up at call time, not at build time: it is built from
+/// the engine context, so before it exists the answer is none.
+pub(crate) struct ShellCrossoverDiscovery;
+
+impl CrossoverDiscovery for ShellCrossoverDiscovery {
+    fn discover(&self) -> BoxFuture<Vec<String>> {
+        Box::pin(async {
+            if !cfg!(target_os = "macos") {
+                return Vec::new();
+            }
+            let Some(wine) = wine_dispatch::wine_ctx() else {
+                return Vec::new();
+            };
+            gamelib_wine::discovery::discover_crossover(wine)
+                .await
+                .into_iter()
+                .map(|installation| installation.bin)
+                .collect()
+        })
+    }
 }
 
 /// Builds the one context and stores it. Called from `run_setup` after the store host opened and
@@ -735,6 +761,14 @@ mod tests {
         assert_eq!(ctx.paths.user_home, Path::new("/fake/home"));
         assert_eq!(ctx.paths.temp, Path::new("/fake/tmp"));
         assert_eq!(ctx.app_version, env!("CARGO_PKG_VERSION"));
+    }
+
+    #[test]
+    fn the_context_carries_the_shell_crossover_discovery_which_finds_nothing_before_the_wine_context(
+    ) {
+        let ctx = built(Arc::new(Pushes::default()));
+        assert!(wine_dispatch::wine_ctx().is_none());
+        assert!(block(ctx.crossover_discovery.discover()).is_empty());
     }
 
     fn dxvk_request(prefix: &Path, source: Option<DxvkSource>) -> DxvkRequest {

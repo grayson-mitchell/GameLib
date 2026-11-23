@@ -78,6 +78,8 @@ pub struct RecordedSpawn {
     pub cwd: Option<PathBuf>,
     pub stdin: Option<String>,
     pub timeout: Option<Duration>,
+    /// The per-stream output cap the spec asked for.
+    pub max_buffer: usize,
     pub label: &'static str,
     /// What the script answered (`code: None` and an explanatory stderr when none matched).
     pub result: SpecOutput,
@@ -244,6 +246,7 @@ impl SpecRunner for ScriptedSpecRunner {
             cwd: spec.cwd,
             stdin: spec.stdin,
             timeout: spec.timeout,
+            max_buffer: spec.max_buffer,
             label: spec.label,
             result: output.clone(),
         });

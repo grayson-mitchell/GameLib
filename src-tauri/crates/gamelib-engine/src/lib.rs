@@ -10,6 +10,7 @@
 
 pub mod bottles;
 pub mod config;
+pub mod crossover;
 pub mod ctx;
 pub mod dxvk;
 pub mod engines;
@@ -50,6 +51,8 @@ pub const OPS: &[&str] = &[
     "engine_bottle_record_crossover",
     "engine_bottle_record_pinned",
     "engine_bottle_remove_created",
+    "engine_cx_demo_status",
+    "engine_cx_resolve_bin_dir",
     "engine_default_engine",
     "engine_ledger_mark_running",
     "engine_ledger_mark_stopped",
@@ -294,6 +297,33 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
             )
             .await;
             Ok(result.to_value())
+        }
+        // Where CrossOver's `bin` directory is (D-04): the hinted wine binaries, the memo, the two default
+        // install locations, then the shell's Spotlight search. `null` is "not installed".
+        "engine_cx_resolve_bin_dir" => {
+            let request: ResolveBinDirRequest = decode(op, args)?;
+            let found = ctx
+                .crossover_locator
+                .resolve_bin_dir(ctx, &request.hint_wine_bins)
+                .await;
+            Ok(found.map_or(Value::Null, Value::String))
+        }
+        // The trial state of the CrossOver in `binDir` for a bottle (the declared real-profile arm, D-18):
+        // the sidecar's `DemoStatusProbe`. A name the engine layer refuses is a `failed` answer, never a spawn.
+        "engine_cx_demo_status" => {
+            let request: DemoStatusRequest = decode(op, args)?;
+            if !Path::new(&request.bin_dir).is_absolute() {
+                return Err(format!("{op}:bad-args"));
+            }
+            let probe = crossover::demo_status::probe_demo_status(
+                ctx,
+                &request.bin_dir,
+                &request.bottle_name,
+                request.timeout_ms.map(|ms| ms.min(MAX_SPAWN_CAP_MS)),
+                None,
+            )
+            .await;
+            Ok(probe.to_value())
         }
         // The shell's online monitor says it changed (D-17): the DXMT fetch and the boot update read it.
         "engine_set_online" => {
@@ -641,6 +671,24 @@ impl PrepareRequest {
     }
 }
 
+/// The argument of `engine_cx_resolve_bin_dir`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct ResolveBinDirRequest {
+    #[serde(default)]
+    hint_wine_bins: Vec<String>,
+}
+
+/// The argument of `engine_cx_demo_status`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct DemoStatusRequest {
+    bin_dir: String,
+    bottle_name: String,
+    #[serde(default)]
+    timeout_ms: Option<u64>,
+}
+
 /// The argument of `engine_set_online`: the monitor's answer.
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -786,6 +834,8 @@ mod tests {
             "engine_bottle_record_crossover",
             "engine_bottle_record_pinned",
             "engine_bottle_remove_created",
+            "engine_cx_demo_status",
+            "engine_cx_resolve_bin_dir",
             "engine_default_engine",
             "engine_ledger_mark_running",
             "engine_ledger_mark_stopped",
@@ -797,6 +847,58 @@ mod tests {
         ] {
             assert!(OPS.contains(&op), "{op}");
         }
+    }
+
+    #[tokio::test]
+    async fn the_crossover_ops_take_strict_arguments_and_probe_through_the_spawn_seam() {
+        let home = FakeHome::new("engine-lib-");
+        let runner = std::sync::Arc::new(testing::ScriptedSpecRunner::new(Vec::new()).on_program(
+            "/cx/bin/wine",
+            gamelib_core::process::SpecOutput {
+                code: Some(0),
+                stdout: "Demo version (4 days remaining)\n".to_string(),
+                ..Default::default()
+            },
+        ));
+        let ctx = ctx(&home).with_proc(runner.clone());
+        for (op, bad) in [
+            (
+                "engine_cx_demo_status",
+                json!({"binDir": "bin", "bottleName": "b"}),
+            ),
+            (
+                "engine_cx_demo_status",
+                json!({"binDir": "/cx/bin", "bottleName": "b", "x": 1}),
+            ),
+            (
+                "engine_cx_resolve_bin_dir",
+                json!({"hintWineBins": "not-a-list"}),
+            ),
+        ] {
+            assert_eq!(
+                dispatch(op, &[bad], &ctx).await,
+                Err(format!("{op}:bad-args"))
+            );
+        }
+        let answer = dispatch(
+            "engine_cx_demo_status",
+            &[json!({"binDir": "/cx/bin", "bottleName": "GameLib-gog-1"})],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(answer["kind"], "ok");
+        assert_eq!(
+            answer["status"],
+            json!({"kind": "trial", "daysRemaining": 4})
+        );
+        // The production call inherits the real profile: nothing replaces the environment.
+        let spawn = &runner.spawns()[0];
+        assert!(!spawn.replace_env);
+        assert_eq!(
+            spawn.env_set.get("CX_BOTTLE").map(String::as_str),
+            Some("GameLib-gog-1")
+        );
     }
 
     #[tokio::test]

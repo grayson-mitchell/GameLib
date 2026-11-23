@@ -18,6 +18,7 @@ use crate::bottles::ledger::Ledger;
 use crate::bottles::per_game::PerGameFlights;
 use crate::bottles::registry::Registry;
 use crate::bottles::switch::InFlightSwitches;
+use crate::crossover::locate::{CrossoverDiscovery, CrossoverLocator, NoCrossoverDiscovery};
 use crate::dxvk::{DxvkInstaller, NoDxvk};
 use crate::fetch::{Fetch, ReqwestFetch};
 use crate::sinks::{EngineLog, EngineUi, NullEmitter};
@@ -124,6 +125,11 @@ pub struct EngineCtx {
     /// The bottle switches running or waiting, by bottle name (the TS `inFlightSwitches`, WR-02): one
     /// switch per bottle at a time. In memory only: empty at construction.
     pub in_flight: InFlightSwitches,
+    /// The CrossOver search (D-22): `gamelib-wine`'s discovery, implemented and injected by the shell.
+    /// Finds nothing until then.
+    pub crossover_discovery: Arc<dyn CrossoverDiscovery>,
+    /// The CrossOver bin directory resolver and its memo (D-04). In memory only.
+    pub crossover_locator: CrossoverLocator,
 }
 
 impl EngineCtx {
@@ -151,6 +157,8 @@ impl EngineCtx {
             registry: Registry::new(),
             flights: PerGameFlights::new(),
             in_flight: InFlightSwitches::new(),
+            crossover_discovery: Arc::new(NoCrossoverDiscovery),
+            crossover_locator: CrossoverLocator::new(),
             host,
             clock,
             platform,
@@ -206,6 +214,14 @@ impl EngineCtx {
 
     pub fn with_crossover_bin_dir(mut self, crossover_bin_dir: CrossoverBinDirHook) -> EngineCtx {
         self.crossover_bin_dir = crossover_bin_dir;
+        self
+    }
+
+    pub fn with_crossover_discovery(
+        mut self,
+        crossover_discovery: Arc<dyn CrossoverDiscovery>,
+    ) -> EngineCtx {
+        self.crossover_discovery = crossover_discovery;
         self
     }
 
