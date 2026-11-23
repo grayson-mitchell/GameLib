@@ -14,6 +14,7 @@
 //!   version and the archive are removed through `gamelib-safety`, inside `<tools>/<tool>` only.
 //! - [`dxvk`]: `installRemove`, the strict restore and the Linux release lookups.
 //! - [`state`]: the single-flight slot and the caches.
+//! - [`call_tool`] (87-33): `callTool`'s `winecfg` and `runExe`, over `run_wine_command_for_game`.
 //! - [`dxmt`] and [`macho`] (87-30): DXMT's release fetch, its install into a wine-manager version
 //!   behind the winemac export gate, the bounded boot update and the releases handler. Also crate-only:
 //!   87-31 switches the manager's hooks, the releases event and the boot task from the TS in one commit.
@@ -22,6 +23,7 @@
 //! sinks arrive in [`WineCtx`]; the facts only the shell knows (the public directory holding the
 //! Vulkan helper, whether the app is online, the wine host facts) arrive in [`ToolsHost`].
 
+pub mod call_tool;
 pub mod dxmt;
 pub mod dxvk;
 pub mod install_tool;

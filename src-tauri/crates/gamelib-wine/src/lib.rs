@@ -46,8 +46,10 @@ pub const OPS: &[&str] = &[
     "wine_manager_remove",
     "wine_releases_info_ready",
     "wine_run_command",
+    "wine_run_command_for_game",
     "wine_runtime_download",
     "wine_runtime_is_installed",
+    "wine_tool_call",
     "wine_valid",
     "wine_winetricks_apply",
     "wine_winetricks_available",
@@ -159,6 +161,23 @@ async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String>
             Ok(wine_cmd::command::run_wine_command(ctx, command, &host)
                 .await
                 .to_json())
+        }
+        // `runWineCommandOnGame` and `runWineCommandForPendingInstall` (87-33): the Steam, native and
+        // command-shape guards, then `run_wine_command`. A refusal answers the empty result and logs
+        // one line; a `commandParts` that fails the shape guard is a fixed error and starts nothing.
+        "wine_run_command_for_game" => {
+            let (command, host) = for_game_args(op, args)?;
+            match wine_cmd::command::run_wine_command_for_game(ctx, command, &host).await {
+                Ok(result) => Ok(result.to_json()),
+                Err(error) => Err(for_game_error(op, &error)),
+            }
+        }
+        // `callTool`'s `winecfg` and `runExe`: one `wine_run_command_for_game` each, wait false.
+        "wine_tool_call" => {
+            let (call, host) = tool_call_args(op, args)?;
+            tools::call_tool::call_tool(ctx, call, &host)
+                .await
+                .map_err(|error| for_game_error(op, &error))
         }
         "wine_valid" => {
             let (wine, host) = wine_valid_args(op, args)?;
@@ -354,6 +373,52 @@ fn wine_run_command_args(
         Some(host) => serde_json::from_value(host.clone()).map_err(|_| bad())?,
     };
     Ok((command, host))
+}
+
+/// The fixed error of a for-game command that could not even be judged: no argument text in it.
+fn for_game_error(op: &str, error: &wine_cmd::command::ForGameError) -> String {
+    match error {
+        wine_cmd::command::ForGameError::CommandShape(_) => format!("{op}:bad-command-parts"),
+        wine_cmd::command::ForGameError::Ambiguous => format!("{op}:bad-args"),
+    }
+}
+
+/// `wine_run_command_for_game`'s arguments: the [`wine_cmd::command::ForGameArgs`] object and,
+/// optionally, the [`wine_cmd::WineHost`] facts the shell read. A bad shape is a fixed
+/// `<op>:bad-args`.
+fn for_game_args(
+    op: &str,
+    args: &[Value],
+) -> Result<(wine_cmd::command::ForGameArgs, wine_cmd::WineHost), String> {
+    object_and_host(op, args)
+}
+
+/// `wine_tool_call`'s arguments: the [`tools::call_tool::CallToolArgs`] object and, optionally, the
+/// [`wine_cmd::WineHost`] facts.
+fn tool_call_args(
+    op: &str,
+    args: &[Value],
+) -> Result<(tools::call_tool::CallToolArgs, wine_cmd::WineHost), String> {
+    object_and_host(op, args)
+}
+
+/// An op's one strict object argument and, optionally, the host facts.
+fn object_and_host<T: serde::de::DeserializeOwned>(
+    op: &str,
+    args: &[Value],
+) -> Result<(T, wine_cmd::WineHost), String> {
+    let bad = || format!("{op}:bad-args");
+    let (object, host) = match args {
+        [object @ Value::Object(_)] => (object, None),
+        [object @ Value::Object(_), host] => (object, Some(host)),
+        _ => return Err(bad()),
+    };
+    let object = serde_json::from_value(object.clone()).map_err(|_| bad())?;
+    let host = match host {
+        None | Some(Value::Null) => wine_cmd::WineHost::default(),
+        Some(host) => serde_json::from_value(host.clone()).map_err(|_| bad())?,
+    };
+    Ok((object, host))
 }
 
 /// A winetricks op's arguments: the [`winetricks::TargetArg`] object and, optionally, the
