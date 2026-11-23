@@ -1,0 +1,78 @@
+[
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/.gamelib-engine.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "8ae39323ec4f76eeb30c746e871cfb82935490db1ca5ed07dd12fc4cd8f58844"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "eddec8c9bb2bd30a1aadd2959cb1012161f7655c133cced2e1300cc758a37b94"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/drive_c/windows/system32/kernel32.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "956a3615c1e615c13593cd08f7dd94b93331e9dcaa8043d80495931d454fb3c5"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6f75f7d3616288f992c354f641fa6498cd5be0ec4abafa16a61651f1092f4316"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1f576a80193e7c1f3ab0be525289d4925f26f00efd1790573c62068939c851c9"
+  }
+]

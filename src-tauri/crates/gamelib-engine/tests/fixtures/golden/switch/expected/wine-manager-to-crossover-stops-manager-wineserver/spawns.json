@@ -1,0 +1,23 @@
+[
+  {
+    "program": "<TOOLS>/wine/Wine-Staging-10.5/bin/wineserver",
+    "argv": [
+      "-k"
+    ],
+    "envDiff": {
+      "set": {
+        "USER": "crossover",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-wine-manager"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

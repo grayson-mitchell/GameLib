@@ -91,7 +91,7 @@ import {
 const CRATE = 'gamelib-engine'
 const SLICE = 'switch'
 /** The case count this plan commits; a later edit may raise it, never lower it. */
-const FLOOR = 4
+const FLOOR = 73
 
 const MARKER_FILE = '.gamelib-engine.json'
 const WM_VERSION = 'Wine-Staging-10.5'
@@ -657,6 +657,16 @@ describeSkipOnWindows('engine switch oracle (87-16)', () => {
     const newer = cases.filter((c) => c.id.includes('newer-marker'))
     expect(newer.length).toBeGreaterThanOrEqual(1)
     for (const c of newer) expect(c.markerUnchanged?.length).toBeGreaterThan(0)
+  })
+
+  it('records the WR-02 interleave with the marker writes counted', () => {
+    const wr02 = cases.filter((c) => c.id.startsWith('concurrent-'))
+    expect(wr02.length).toBeGreaterThanOrEqual(3)
+    for (const c of wr02) {
+      expect(c.args.mode).toBe('concurrent')
+      expect(c.args.calls.length).toBeGreaterThanOrEqual(2)
+      expect(c.markerWrites).toBeDefined()
+    }
   })
 
   it('pins the ids of the build under oracle', () => {

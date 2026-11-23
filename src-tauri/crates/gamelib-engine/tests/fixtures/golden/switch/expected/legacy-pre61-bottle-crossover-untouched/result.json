@@ -1,0 +1,282 @@
+{
+  "bottles": [
+    "fx-nomarker-nodxvk-ts"
+  ],
+  "engines": "installed",
+  "gate": null,
+  "args": {
+    "calls": [
+      {
+        "bottle": "fx-nomarker-nodxvk-ts",
+        "next": "crossover"
+      }
+    ]
+  },
+  "before": [
+    {
+      "path": ".config",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/.gamelib-pin.json",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "455dbb12bb179adec6ea58c77f744de9b7971e4e570cecd4afe3310ac51a4ae2"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x32",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x32/d3d9.dll",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "6a0eac80a786c1caf2c67f37306bd8813d58f123313f179aca4c883a10cbe19d"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x64",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x64/d3d9.dll",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "3d3221513e348f5a8a24ed5aaea15a0a20980caa080f938c2d6adbfa6f0d1d29"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/.gamelib-pin.json",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "d738620fcb7ccff0885fd4e92faf2c8d4f745ea78e45e20b33f05c11c486d43b"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+      "kind": "file",
+      "mode": "0755",
+      "sha256": "7bbc056677f5b5795928f93ab04429fc383bdcc67d5675fd94f9e5b1dce71afb"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+      "kind": "file",
+      "mode": "0755",
+      "sha256": "fe952e394afb47cfee6547ed1e641377b2c40e21909bdd38c007027ca0db7992"
+    },
+    {
+      "path": "Library",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/cxbottle.conf",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "41373f3da7cb0555c580a666c3eeeb6007d3ef1676020cc88af8b9d6a5083e91"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/Games",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/Games/game-legacy",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/Games/game-legacy/save.dat",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "87fdbf64fe0dfdbb88292de1318cf9cdf03434f0f6b4d0b892d0855cf9438f28"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/Games/other-game.sav",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "d9298a10d1b0735837dc4bd85dac641b0f3cef27a47e5d53a54f2f3f5b2fcffa"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/Games/shared.cfg",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "9fed5bdb131fc79c12bd56737c7f52e766c3eedf3816445f6605c480b9101163"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/users",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/users/crossover",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/windows",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/windows/system32",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/windows/system32/kernel32.dll",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/system.reg",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "956a3615c1e615c13593cd08f7dd94b93331e9dcaa8043d80495931d454fb3c5"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/user.reg",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "6f75f7d3616288f992c354f641fa6498cd5be0ec4abafa16a61651f1092f4316"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/userdef.reg",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "1f576a80193e7c1f3ab0be525289d4925f26f00efd1790573c62068939c851c9"
+    }
+  ],
+  "outcomes": [
+    {
+      "call": 0,
+      "result": {
+        "ok": true,
+        "changed": false
+      }
+    }
+  ],
+  "timeline": [
+    {
+      "ev": "start",
+      "call": 0,
+      "bottle": "fx-nomarker-nodxvk-ts",
+      "next": "crossover"
+    },
+    {
+      "ev": "gate-ask",
+      "channel": "store_version_gate"
+    },
+    {
+      "ev": "marker-write",
+      "bottle": "fx-nomarker-nodxvk-ts",
+      "bytes": "{\"kind\":\"crossover\",\"id\":\"crossover\",\"wineserverBin\":\"/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver\",\"version\":1}"
+    },
+    {
+      "ev": "result",
+      "call": 0,
+      "result": {
+        "ok": true,
+        "changed": false
+      }
+    }
+  ],
+  "markersBefore": {},
+  "markers": {
+    "fx-nomarker-nodxvk-ts": "{\"kind\":\"crossover\",\"id\":\"crossover\",\"wineserverBin\":\"/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver\",\"version\":1}"
+  },
+  "treeDiff": {
+    "added": [
+      "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/.gamelib-engine.json"
+    ],
+    "removed": [],
+    "changed": [],
+    "onlyMarkersDiffer": true
+  },
+  "logs": [],
+  "gateCalls": [
+    {
+      "channel": "store_version_gate",
+      "args": [
+        {
+          "path": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/.gamelib-engine.json",
+          "chain": "engine/gamelib-engine-marker"
+        }
+      ]
+    }
+  ],
+  "spawnLimits": [],
+  "installRemove": [],
+  "pinFetches": []
+}

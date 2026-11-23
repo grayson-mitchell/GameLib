@@ -1,0 +1,44 @@
+[
+  {
+    "program": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+    "argv": [
+      "-k"
+    ],
+    "envDiff": {
+      "set": {
+        "USER": "crossover",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-dxvk-failed"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+    "argv": [
+      "-k"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_ROOT": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-dxvk-failed"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

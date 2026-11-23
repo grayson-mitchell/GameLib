@@ -1,0 +1,23 @@
+[
+  {
+    "program": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+    "argv": [
+      "-k"
+    ],
+    "envDiff": {
+      "set": {
+        "USER": "crossover",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-marker-bad-id"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

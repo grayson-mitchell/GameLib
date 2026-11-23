@@ -75,5 +75,1423 @@
       "fx-crossover-marker"
     ],
     "markerWrites": 0
+  },
+  {
+    "id": "pin-to-crossover-healthy-restored",
+    "note": "pinned:<current> with a DXVK copy switched back to a healthy CrossOver: the pin wineserver is stopped, DXVK is restored through the CrossOver settings, the CrossOver wineserver is stopped once afterwards (G30), the marker becomes crossover",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-current",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "pin-to-crossover-healthy-restore-fails",
+    "note": "the DXVK restore returns false: the bottle is marked dxvk: \"failed\" on the pin marker and the result is dxvk-failed; the CrossOver wineserver is still stopped",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-current",
+          "next": "crossover"
+        }
+      ],
+      "installer": {
+        "restore": "fails"
+      }
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "pin-to-crossover-healthy-restore-leaves-dxvk-file",
+    "note": "the restore says true but current_dxvk-macOS is still there: treated as failed (CR-03), marker dxvk: \"failed\"",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-current",
+          "next": "crossover"
+        }
+      ],
+      "installer": {
+        "restore": "left"
+      }
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "pin-to-crossover-healthy-restore-throws",
+    "note": "the DXVK restore rejects: the switch rejects, the pin wineserver was already stopped and the marker is not rewritten",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-current",
+          "next": "crossover"
+        }
+      ],
+      "installer": {
+        "restore": "throws"
+      }
+    },
+    "markerWrites": 0
+  },
+  {
+    "id": "pin-to-crossover-healthy-no-crossover-found",
+    "note": "no CrossOver can be found: the pin wineserver is stopped, the restore runs, the post-restore CrossOver stop is skipped with a warning",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-current",
+          "next": "crossover"
+        }
+      ],
+      "binDir": "absent"
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "pin-to-crossover-unhealthy-built-in-restore",
+    "note": "CrossOver unhealthy (expired): the restore runs through the built-in engine settings with the bottle as prefix and the built-in wineserver is stopped afterwards (G10), the marker becomes crossover",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-current",
+          "next": "crossover",
+          "crossoverHealthy": false
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "pin-to-crossover-unhealthy-restore-fails",
+    "note": "CrossOver unhealthy and the built-in restore fails: dxvk-failed, marker dxvk: \"failed\", built-in wineserver stopped",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-current",
+          "next": "crossover",
+          "crossoverHealthy": false
+        }
+      ],
+      "installer": {
+        "restore": "fails"
+      }
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "pin-to-crossover-unhealthy-source-fetched",
+    "note": "CrossOver unhealthy and the pin is not installed: the pin is fetched before anything is stopped (WR-05), then the restore runs on it; the recorded pin wineserver is absent so there is nothing to stop first",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-current",
+          "next": "crossover",
+          "crossoverHealthy": false
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "pin-to-crossover-healthy-restore-from-marker-copy-pin-absent",
+    "note": "a healthy CrossOver and only the DXVK directory on disk (no Wine): the restore takes its DLL list from the marker copy, no download",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "dxvk-only",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-current",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "pin-to-crossover-restore-source-unavailable",
+    "note": "no DXVK source on disk and the pin download fails: dxvk-failed (no DXVK source), nothing stopped, marker and bottle exactly as they were",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-current",
+          "next": "crossover"
+        }
+      ],
+      "pinFetch": "fails"
+    },
+    "markerUnchanged": [
+      "fx-pinned-current"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "pin-to-crossover-no-dxvk-recorded",
+    "note": "a pinned bottle with no DXVK recorded and no current_dxvk-macOS: no restore, the pin wineserver is stopped and the marker becomes crossover",
+    "bottles": [
+      "fx-pinned-no-dxvk-field"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-no-dxvk-field",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "pin-to-crossover-retired-pin-restores-from-current",
+    "note": "pinned:<retired id>: the retired pin is unknown, its DXVK copy is gone, so the restore source is the current pin; the retired wineserver is not on disk so nothing is stopped first",
+    "bottles": [
+      "fx-pinned-retired"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-retired",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "pin-to-crossover-wineserver-outside-roots",
+    "note": "a hand-edited pinned marker naming a wineserver outside every engine root that is not on disk: the existence check comes first (nothing to stop, no outside-roots warning), no process is stopped, the switch still completes",
+    "bottles": [
+      "fx-pinned-wineserver-outside"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-wineserver-outside",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "pin-to-crossover-wineserver-misnamed",
+    "note": "a pinned marker whose recorded binary inside the pin root is `wine`, not `wineserver`: it is run with -k anyway (only the root is checked)",
+    "bottles": [
+      "fx-pinned-wineserver-misnamed"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-wineserver-misnamed",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "dxvk-failed-to-crossover-restores",
+    "note": "a marker with dxvk: \"failed\" and no current_dxvk-macOS: the restore still runs (the marker field says DXVK may be half there) from the installed pin",
+    "bottles": [
+      "fx-dxvk-failed"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-dxvk-failed",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "nomarker-dxvk-pin-installed-to-crossover",
+    "note": "no marker, current_dxvk-macOS present: inferred as the pin (with its wineserver), then switched to CrossOver with the DXVK restore",
+    "bottles": [
+      "fx-nomarker-dxvk-nots"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-nomarker-dxvk-nots",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "nomarker-dxvk-pin-absent-to-crossover",
+    "note": "no marker, DXVK-macOS present and the pin not installed: the inferred pin carries no wineserver (empty path: not allowed, the outside-engine-roots warning), the restore fetches the pin",
+    "bottles": [
+      "fx-nomarker-dxvk-nots"
+    ],
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-nomarker-dxvk-nots",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "crossover-contradicted-to-crossover",
+    "note": "a crossover marker contradicted by current_dxvk-macOS (76 CR-01): not trusted (warning), inferred as the pin, so asking for CrossOver is a real switch with a DXVK restore",
+    "bottles": [
+      "fx-crossover-contradicted"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-contradicted",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "crossover-contradicted-to-pin-rewrites-marker",
+    "note": "the same contradicted marker with the pin asked for: the inferred pin is the same engine, no kill and no install, the marker is rewritten as pinned without a dxvk field",
+    "bottles": [
+      "fx-crossover-contradicted"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-contradicted",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "marker-bad-id-to-crossover",
+    "note": "a marker whose id fails the grammar reads as no marker: inferred (the pin, GameLib conf, no DXVK) and switched",
+    "bottles": [
+      "fx-marker-bad-id"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-marker-bad-id",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "marker-wrong-kind-to-pin-rewrites-marker",
+    "note": "a marker of a kind no build wrote reads as no marker: inferred as the pin, same engine as asked, so the marker is rewritten and nothing else changes",
+    "bottles": [
+      "fx-marker-wrong-kind"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-marker-wrong-kind",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "marker-legacy-noversion-to-crossover",
+    "note": "a pinned marker with no version key (version 0) is writable: switched to CrossOver with the DXVK restore and the marker rewritten at version 1",
+    "bottles": [
+      "fx-marker-legacy-noversion"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-marker-legacy-noversion",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "unreadable-marker-rewritten-to-crossover",
+    "note": "an unreadable marker with a real change asked: inferred as the pin, its wineserver stopped, the marker rewritten as crossover",
+    "bottles": [
+      "fx-marker-unreadable"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-marker-unreadable",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "crossover-to-pin-dxvk-install-fails",
+    "note": "the DXVK install returns false: the bottle already belongs to the pin, so the marker is written with dxvk: \"failed\" and the result is dxvk-failed (WR-09)",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ],
+      "installer": {
+        "backup": "fails"
+      }
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "crossover-to-pin-dxvk-installer-no-marker-file",
+    "note": "the installer says true but writes no current_dxvk-macOS: treated as failed, marker dxvk: \"failed\"",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ],
+      "installer": {
+        "backup": "no-marker"
+      }
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "crossover-to-pin-dxvk-installer-throws",
+    "note": "the installer rejects: the switch rejects after the CrossOver wineserver was stopped and the marker is left crossover",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ],
+      "installer": {
+        "backup": "throws"
+      }
+    },
+    "markerWrites": 0
+  },
+  {
+    "id": "crossover-to-pin-without-dxvk",
+    "note": "a pinned engine handed over with no DXVK: no installer call, the marker is written without a dxvk field",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned",
+          "nextDxvk": "none"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "crossover-to-pin-no-crossover-found",
+    "note": "a crossover marker and no CrossOver on the machine: the stop is skipped with a warning, the switch continues",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ],
+      "binDir": "absent"
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "crossover-to-pin-kill-times-out",
+    "note": "wineserver -k is cut by its 15 s limit: the switch carries on and writes the marker",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ],
+      "kill": "timeout"
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "crossover-to-pin-kill-spawn-fails",
+    "note": "wineserver -k cannot be spawned: the failure is swallowed (warning), the switch continues",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ],
+      "kill": "throws"
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "nomarker-crossover-timestamp-to-pin",
+    "note": "no marker, no DXVK, a conf with a Timestamp: inferred as CrossOver, then switched to the pin",
+    "bottles": [
+      "fx-nomarker-nodxvk-ts"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-nomarker-nodxvk-ts",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "retired-pin-to-current-pin",
+    "note": "pinned:<retired id> asked for the current pin: a different identity, so a real switch: the retired wineserver is not on disk (nothing to stop), DXVK is installed, the marker becomes pinned:<current>",
+    "bottles": [
+      "fx-pinned-retired"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-retired",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "pin-to-wine-manager",
+    "note": "pinned:<current> switched to a Wine Manager engine with no DXVK: the pin wineserver is stopped, no installer call, the marker becomes wine-manager:<version> and current_dxvk-macOS is left behind",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-current",
+          "next": "wine-manager"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "crossover-to-wine-manager",
+    "note": "a CrossOver bottle switched to a Wine Manager engine: the CrossOver wineserver is stopped, the marker becomes wine-manager:<version>",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "wine-manager"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "wine-manager-to-crossover-stops-manager-wineserver",
+    "note": "wine-manager:<version> to CrossOver with the manager wineserver on disk: it is allowed (inside the tools wine directory) and stopped; no DXVK so no restore",
+    "bottles": [
+      "fx-wine-manager"
+    ],
+    "engines": "installed",
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-10.5/bin/wineserver",
+        "text": "#!/bin/sh\n# synthetic wine manager wineserver\n",
+        "mode": "0755"
+      }
+    ],
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-wine-manager",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "wine-manager-to-crossover-wineserver-absent",
+    "note": "the same switch with the manager wineserver not on disk: nothing to stop, the switch completes",
+    "bottles": [
+      "fx-wine-manager"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-wine-manager",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "wine-manager-to-pin",
+    "note": "wine-manager:<version> to the pin with DXVK: the manager wineserver is stopped, DXVK installed, the marker becomes pinned:<current>",
+    "bottles": [
+      "fx-wine-manager"
+    ],
+    "engines": "installed",
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-10.5/bin/wineserver",
+        "text": "#!/bin/sh\n# synthetic wine manager wineserver\n",
+        "mode": "0755"
+      }
+    ],
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-wine-manager",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "same-engine-wine-manager-no-change",
+    "note": "the marker already names the Wine Manager version asked for: changed false, nothing stopped, marker untouched",
+    "bottles": [
+      "fx-wine-manager"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-wine-manager",
+          "next": "wine-manager"
+        }
+      ]
+    },
+    "markerUnchanged": [
+      "fx-wine-manager"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "same-engine-pinned-no-change",
+    "note": "pinned:<current> asked for the pin again: changed false, nothing stopped or installed, marker untouched",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-current",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerUnchanged": [
+      "fx-pinned-current"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "same-engine-crossover-no-change",
+    "note": "a crossover marker asked for CrossOver: changed false, marker untouched",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerUnchanged": [
+      "fx-crossover-marker"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "same-engine-nomarker-crossover-writes-marker",
+    "note": "no marker, a Timestamp conf, CrossOver asked: inferred crossover, same engine, only the marker is added",
+    "bottles": [
+      "fx-nomarker-nodxvk-ts"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-nomarker-nodxvk-ts",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "dxvk-failed-retry-same-engine",
+    "note": "dxvk: \"failed\" on the pin and the pin asked for again: DXVK is retried with no wineserver stop and the marker rewritten with the DXVK copy",
+    "bottles": [
+      "fx-dxvk-failed"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-dxvk-failed",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "dxvk-failed-retry-fails-again",
+    "note": "the retry returns false: dxvk-failed again, marker rewritten dxvk: \"failed\"",
+    "bottles": [
+      "fx-dxvk-failed"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-dxvk-failed",
+          "next": "pinned"
+        }
+      ],
+      "installer": {
+        "backup": "fails"
+      }
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "dxvk-failed-retry-bottle-busy",
+    "note": "the DXVK retry is refused while another game runs in the bottle: bottle-busy, nothing installed",
+    "bottles": [
+      "fx-dxvk-failed"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-dxvk-failed",
+          "next": "pinned"
+        }
+      ],
+      "ledger": [
+        {
+          "bottle": "fx-dxvk-failed",
+          "key": "gog:1"
+        }
+      ]
+    },
+    "markerUnchanged": [
+      "fx-dxvk-failed"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "shared-bottle-refused",
+    "note": "a Steam title in the legacy shared bottle: its own bottle is a different name, so the engine change is refused (shared-bottle) before any stop",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned",
+          "key": "620"
+        }
+      ],
+      "ownBottle": "GameLibSteamBridge-620"
+    },
+    "markerUnchanged": [
+      "fx-crossover-marker"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "shared-bottle-own-bottle-switches",
+    "note": "the same Steam title in its own bottle switches",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned",
+          "key": "620"
+        }
+      ],
+      "ownBottle": "self"
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "bottle-busy-refused",
+    "note": "another game runs in the bottle: an engine change is refused (bottle-busy), nothing stopped, marker untouched",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ],
+      "ledger": [
+        {
+          "bottle": "fx-crossover-marker",
+          "key": "gog:1"
+        }
+      ]
+    },
+    "markerUnchanged": [
+      "fx-crossover-marker"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "bottle-busy-same-engine-proceeds",
+    "note": "another game runs in the bottle and the engine is the same one: changed false, no refusal",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-current",
+          "next": "pinned"
+        }
+      ],
+      "ledger": [
+        {
+          "bottle": "fx-pinned-current",
+          "key": "gog:1"
+        }
+      ]
+    },
+    "markerUnchanged": [
+      "fx-pinned-current"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "bottle-busy-ignores-the-callers-own-key",
+    "note": "the only running game in the bottle is the caller itself: not busy, the switch proceeds",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ],
+      "ledger": [
+        {
+          "bottle": "fx-crossover-marker",
+          "key": "gog:1207658924"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "game-running-starting-refused",
+    "note": "the title is starting: refused (game-running) before the marker is read, so the gate is never asked",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ],
+      "monitor": "starting"
+    },
+    "markerUnchanged": [
+      "fx-crossover-marker"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "game-running-running-refused",
+    "note": "the title is running: refused (game-running)",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ],
+      "monitor": "running"
+    },
+    "markerUnchanged": [
+      "fx-crossover-marker"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "game-running-refused-even-for-same-engine",
+    "note": "a running title with the same engine asked: still game-running, the phase check comes before the marker is read",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-pinned-current",
+          "next": "pinned"
+        }
+      ],
+      "monitor": "running"
+    },
+    "markerUnchanged": [
+      "fx-pinned-current"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "invalid-bottle-unsafe-name",
+    "note": "a bottle name that does not survive sanitising: invalid-bottle, nothing touched",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "../escape",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerUnchanged": [
+      "fx-crossover-marker"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "invalid-bottle-absent",
+    "note": "a well-formed name with no bottle directory: invalid-bottle",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-missing",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerUnchanged": [
+      "fx-crossover-marker"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "newer-marker-same-engine-proceeds",
+    "note": "a version: 2 marker naming the engine asked for: changed false (same-engine launches proceed), bytes unchanged",
+    "bottles": [
+      "fx-marker-newer"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-marker-newer",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerUnchanged": [
+      "fx-marker-newer"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "newer-marker-forced-gate-refuses-change",
+    "note": "the gate answers newer for a marker that reads fine: a real change is refused and the bytes stay",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "gate": {
+      "answer": "newer"
+    },
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerUnchanged": [
+      "fx-crossover-marker"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "newer-marker-refused-to-wine-manager",
+    "note": "a version: 2 marker and a Wine Manager engine asked: refused as marker-newer, bytes unchanged",
+    "bottles": [
+      "fx-marker-newer"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-marker-newer",
+          "next": "wine-manager"
+        }
+      ]
+    },
+    "markerUnchanged": [
+      "fx-marker-newer"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "concurrent-same-target-wr02",
+    "note": "two switches of one bottle to the pin started together (WR-02): the second waits (logged), re-reads the marker the first wrote and returns changed false; one kill, one installer call, one marker write",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "mode": "concurrent",
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        },
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "concurrent-three-same-target-wr02",
+    "note": "three switches of one bottle started together: they chain in order, only the first changes anything",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "mode": "concurrent",
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        },
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        },
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "concurrent-opposite-targets-wr02",
+    "note": "a switch to the pin and a switch back to CrossOver started together: the second runs after the first finished, sees pinned:<current> with its DXVK copy and restores; the marker is written twice, in call order",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "mode": "concurrent",
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        },
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 2
+  },
+  {
+    "id": "concurrent-first-rejects-wr02",
+    "note": "the first switch rejects (installer throws once): the second still runs after it and does the whole switch itself; a rejection never blocks the chain",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "mode": "concurrent",
+      "installer": {
+        "backup": "throws-once"
+      },
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        },
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "concurrent-different-bottles-independent-wr02",
+    "note": "two bottles switched together: neither waits for the other (no waiting log), each kills and installs for itself",
+    "bottles": [
+      "fx-crossover-marker",
+      "fx-nomarker-nodxvk-ts"
+    ],
+    "engines": "installed",
+    "args": {
+      "mode": "concurrent",
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        },
+        {
+          "bottle": "fx-nomarker-nodxvk-ts",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 2
+  },
+  {
+    "id": "concurrent-second-refused-busy-wr02",
+    "note": "two switches started together while another game holds the bottle: both are refused bottle-busy, in order",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "mode": "concurrent",
+      "ledger": [
+        {
+          "bottle": "fx-crossover-marker",
+          "key": "gog:1"
+        }
+      ],
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        },
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerUnchanged": [
+      "fx-crossover-marker"
+    ],
+    "markerWrites": 0
+  },
+  {
+    "id": "sequential-twice-second-no-change",
+    "note": "the same switch twice one after the other: the second finds the marker and returns changed false with nothing stopped",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        },
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "sequential-round-trip-pin-crossover-pin",
+    "note": "crossover to the pin, back to CrossOver (a DXVK restore from the marker copy) and to the pin again (a fresh install)",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        },
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "crossover"
+        },
+        {
+          "bottle": "fx-crossover-marker",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 3
+  },
+  {
+    "id": "legacy-pre61-bottle-crossover-untouched",
+    "note": "a bottle from before engine markers (a Timestamp conf, game data, a second title's files) launched on CrossOver: byte-identical except the new marker (D-02, D-05)",
+    "bottles": [
+      "fx-nomarker-nodxvk-ts"
+    ],
+    "engines": "installed",
+    "seed": [
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/users/crossover",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/Games/game-legacy/save.dat",
+        "base64": "AAECA/oG"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/Games/other-game.sav",
+        "text": "other"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/Games/shared.cfg",
+        "text": "written by another game"
+      }
+    ],
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-nomarker-nodxvk-ts",
+          "next": "crossover"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "legacy-pre61-bottle-pin-untouched",
+    "note": "a GameLib-written pre-marker bottle (no Timestamp) launched on the pin: inferred as the pin, byte-identical except the new marker",
+    "bottles": [
+      "fx-nomarker-nodxvk-nots"
+    ],
+    "engines": "installed",
+    "seed": [
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-nots/drive_c/users/crossover",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-nots/drive_c/Games/game-legacy/save.dat",
+        "base64": "AAECA/oG"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-nots/drive_c/Games/other-game.sav",
+        "text": "other"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-nots/drive_c/Games/shared.cfg",
+        "text": "written by another game"
+      }
+    ],
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-nomarker-nodxvk-nots",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 1
+  },
+  {
+    "id": "legacy-pre61-bottle-refused-while-busy-untouched",
+    "note": "the same legacy bottle with another game running and a real change asked: refused, not even a marker is written",
+    "bottles": [
+      "fx-nomarker-nodxvk-ts"
+    ],
+    "engines": "installed",
+    "seed": [
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/users/crossover",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/Games/game-legacy/save.dat",
+        "base64": "AAECA/oG"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/Games/other-game.sav",
+        "text": "other"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/Games/shared.cfg",
+        "text": "written by another game"
+      }
+    ],
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-nomarker-nodxvk-ts",
+          "next": "pinned"
+        }
+      ],
+      "ledger": [
+        {
+          "bottle": "fx-nomarker-nodxvk-ts",
+          "key": "gog:1"
+        }
+      ]
+    },
+    "markerWrites": 0
+  },
+  {
+    "id": "legacy-pre61-conf-less-prefix-pin",
+    "note": "a pre-61 wine prefix with no cxbottle.conf and no marker: inferred as the pin, same engine, only the marker is added",
+    "bottles": [
+      "fx-nomarker-noconf"
+    ],
+    "engines": "installed",
+    "args": {
+      "calls": [
+        {
+          "bottle": "fx-nomarker-noconf",
+          "next": "pinned"
+        }
+      ]
+    },
+    "markerWrites": 1
   }
 ]

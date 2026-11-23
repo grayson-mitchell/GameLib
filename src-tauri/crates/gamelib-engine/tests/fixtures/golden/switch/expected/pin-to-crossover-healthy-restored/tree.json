@@ -1,0 +1,174 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/.gamelib-pin.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "455dbb12bb179adec6ea58c77f744de9b7971e4e570cecd4afe3310ac51a4ae2"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x32/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6a0eac80a786c1caf2c67f37306bd8813d58f123313f179aca4c883a10cbe19d"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x64/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3d3221513e348f5a8a24ed5aaea15a0a20980caa080f938c2d6adbfa6f0d1d29"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/.gamelib-pin.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "d738620fcb7ccff0885fd4e92faf2c8d4f745ea78e45e20b33f05c11c486d43b"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "7bbc056677f5b5795928f93ab04429fc383bdcc67d5675fd94f9e5b1dce71afb"
+  },
+  {
+    "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "fe952e394afb47cfee6547ed1e641377b2c40e21909bdd38c007027ca0db7992"
+  },
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/.gamelib-engine.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "8ae39323ec4f76eeb30c746e871cfb82935490db1ca5ed07dd12fc4cd8f58844"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "eddec8c9bb2bd30a1aadd2959cb1012161f7655c133cced2e1300cc758a37b94"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/drive_c/windows/system32/kernel32.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "956a3615c1e615c13593cd08f7dd94b93331e9dcaa8043d80495931d454fb3c5"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6f75f7d3616288f992c354f641fa6498cd5be0ec4abafa16a61651f1092f4316"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1f576a80193e7c1f3ab0be525289d4925f26f00efd1790573c62068939c851c9"
+  }
+]
