@@ -1,0 +1,1025 @@
+{
+  "op": "launch",
+  "args": {
+    "base": {
+      "setting": "automatic"
+    },
+    "items": [
+      {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": false
+      },
+      {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": true
+      },
+      {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": false
+      },
+      {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": true
+      },
+      {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": false
+      },
+      {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": true
+      },
+      {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": false
+      },
+      {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": true
+      },
+      {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": false
+      },
+      {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": true
+      },
+      {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": false
+      },
+      {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": true
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > killCrossoverWineserver GameLib-gog-1207658924 <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=licensed elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > killCrossoverWineserver GameLib-gog-1207658924 <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=licensed elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > killCrossoverWineserver GameLib-gog-1207658924 <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=licensed elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > killCrossoverWineserver GameLib-gog-1207658924 <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=licensed elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > killCrossoverWineserver GameLib-gog-1207658924 <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=licensed elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > killCrossoverWineserver GameLib-gog-1207658924 <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=licensed elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > probe GameLib-gog-1207658924 timeoutMs=undefined",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=licensed elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > probe GameLib-gog-1207658924 timeoutMs=undefined",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=licensed elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > probe GameLib-gog-1207658924 timeoutMs=undefined",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=licensed elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > probe GameLib-gog-1207658924 timeoutMs=undefined",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=licensed elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > probe GameLib-gog-1207658924 timeoutMs=undefined",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=licensed elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Standard version\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > probe GameLib-gog-1207658924 timeoutMs=undefined",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=licensed elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true,
+  "pins": {
+    "current": "wine-staging-11.20",
+    "retired": "wine-staging-11.1"
+  }
+}

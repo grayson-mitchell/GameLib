@@ -1,0 +1,500 @@
+{
+  "op": "launch",
+  "args": {
+    "base": {
+      "cx": "missing",
+      "setting": "crossover",
+      "offline": false,
+      "bottle": "busy"
+    },
+    "items": [
+      {
+        "pins": "current",
+        "marker": "none"
+      },
+      {
+        "pins": "current",
+        "marker": "crossover"
+      },
+      {
+        "pins": "current",
+        "marker": "pinned"
+      },
+      {
+        "pins": "current",
+        "marker": "wine-manager"
+      },
+      {
+        "pins": "current",
+        "marker": "null-pin-id"
+      },
+      {
+        "pins": "retired",
+        "marker": "none"
+      },
+      {
+        "pins": "retired",
+        "marker": "crossover"
+      },
+      {
+        "pins": "retired",
+        "marker": "pinned"
+      },
+      {
+        "pins": "retired",
+        "marker": "wine-manager"
+      },
+      {
+        "pins": "retired",
+        "marker": "null-pin-id"
+      },
+      {
+        "pins": "none",
+        "marker": "none"
+      },
+      {
+        "pins": "none",
+        "marker": "crossover"
+      },
+      {
+        "pins": "none",
+        "marker": "pinned"
+      },
+      {
+        "pins": "none",
+        "marker": "wine-manager"
+      },
+      {
+        "pins": "none",
+        "marker": "null-pin-id"
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "pins": "current",
+        "marker": "none"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "current",
+        "marker": "crossover"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "current",
+        "marker": "pinned"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "current",
+        "marker": "wine-manager"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "current",
+        "marker": "null-pin-id"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "retired",
+        "marker": "none"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "retired",
+        "marker": "crossover"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "retired",
+        "marker": "pinned"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "retired",
+        "marker": "wine-manager"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "retired",
+        "marker": "null-pin-id"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "none",
+        "marker": "none"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "none",
+        "marker": "crossover"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "none",
+        "marker": "pinned"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "none",
+        "marker": "wine-manager"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "none",
+        "marker": "null-pin-id"
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "crossover",
+          "crossoverMissing": true,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": true
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "crossover",
+        "detail": "CrossOver override is not usable: CrossOver is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir",
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true,
+  "pins": {
+    "current": "wine-staging-11.20",
+    "retired": "wine-staging-11.1"
+  }
+}

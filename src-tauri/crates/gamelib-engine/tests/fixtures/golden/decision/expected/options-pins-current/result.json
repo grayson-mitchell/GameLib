@@ -1,0 +1,601 @@
+{
+  "op": "options",
+  "args": {
+    "base": {
+      "pins": "current"
+    },
+    "items": [
+      {
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "installed"
+      },
+      {
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "not-installed"
+      },
+      {
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "none"
+      },
+      {
+        "cx": {
+          "bin": "absent",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "installed"
+      },
+      {
+        "cx": {
+          "bin": "absent",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "not-installed"
+      },
+      {
+        "cx": {
+          "bin": "absent",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "none"
+      },
+      {
+        "cx": {
+          "bin": "wine-missing",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "installed"
+      },
+      {
+        "cx": {
+          "bin": "wine-missing",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "not-installed"
+      },
+      {
+        "cx": {
+          "bin": "wine-missing",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "none"
+      },
+      {
+        "cx": {
+          "bin": "not-executable",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "installed"
+      },
+      {
+        "cx": {
+          "bin": "not-executable",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "not-installed"
+      },
+      {
+        "cx": {
+          "bin": "not-executable",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "none"
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "installed"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "wine-manager:Wine-Staging-10.5",
+          "kind": "wine-manager",
+          "label": "Wine Manager: Wine-Staging-10.5",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ],
+      "calls": "resolveCrossoverBinDir > isPinInstalled wine-staging-11.20 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "not-installed"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ],
+      "calls": "resolveCrossoverBinDir > isPinInstalled wine-staging-11.20 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "none"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ],
+      "calls": "resolveCrossoverBinDir > isPinInstalled wine-staging-11.20 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": {
+          "bin": "absent",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "installed"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": false,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "wine-manager:Wine-Staging-10.5",
+          "kind": "wine-manager",
+          "label": "Wine Manager: Wine-Staging-10.5",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ],
+      "calls": "resolveCrossoverBinDir > isPinInstalled wine-staging-11.20 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": {
+          "bin": "absent",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "not-installed"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": false,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ],
+      "calls": "resolveCrossoverBinDir > isPinInstalled wine-staging-11.20 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": {
+          "bin": "absent",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "none"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": false,
+          "installed": false,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ],
+      "calls": "resolveCrossoverBinDir > isPinInstalled wine-staging-11.20 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": {
+          "bin": "wine-missing",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "installed"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "wine-manager:Wine-Staging-10.5",
+          "kind": "wine-manager",
+          "label": "Wine Manager: Wine-Staging-10.5",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ],
+      "calls": "resolveCrossoverBinDir > isPinInstalled wine-staging-11.20 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": {
+          "bin": "wine-missing",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "not-installed"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ],
+      "calls": "resolveCrossoverBinDir > isPinInstalled wine-staging-11.20 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": {
+          "bin": "wine-missing",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "none"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ],
+      "calls": "resolveCrossoverBinDir > isPinInstalled wine-staging-11.20 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": {
+          "bin": "not-executable",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "installed"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "wine-manager:Wine-Staging-10.5",
+          "kind": "wine-manager",
+          "label": "Wine Manager: Wine-Staging-10.5",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ],
+      "calls": "resolveCrossoverBinDir > isPinInstalled wine-staging-11.20 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": {
+          "bin": "not-executable",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "not-installed"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ],
+      "calls": "resolveCrossoverBinDir > isPinInstalled wine-staging-11.20 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": {
+          "bin": "not-executable",
+          "build": "26.3.0.39832",
+          "probe": []
+        },
+        "releases": "none"
+      },
+      "options": [
+        {
+          "id": "automatic",
+          "kind": "automatic",
+          "label": "Automatic",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "crossover",
+          "kind": "crossover",
+          "label": "CrossOver",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        },
+        {
+          "id": "pinned:wine-staging-11.20",
+          "kind": "pinned",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "available": true,
+          "installed": true,
+          "isPreviousPin": false
+        }
+      ],
+      "calls": "resolveCrossoverBinDir > isPinInstalled wine-staging-11.20 > wineManagerReleases",
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true,
+  "pins": {
+    "current": "wine-staging-11.20",
+    "retired": "wine-staging-11.1"
+  }
+}

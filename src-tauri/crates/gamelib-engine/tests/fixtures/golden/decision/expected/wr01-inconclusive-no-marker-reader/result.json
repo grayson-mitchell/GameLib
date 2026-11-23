@@ -1,0 +1,341 @@
+{
+  "op": "launch",
+  "args": {
+    "base": {
+      "cx": {
+        "bin": "present",
+        "build": "26.3.0.39832",
+        "probe": [
+          {
+            "code": null,
+            "timedOut": true
+          }
+        ]
+      },
+      "setting": "automatic",
+      "bottle": "busy",
+      "markerReader": "absent"
+    },
+    "items": [
+      {
+        "pins": "current",
+        "offline": false
+      },
+      {
+        "pins": "current",
+        "offline": true
+      },
+      {
+        "pins": "retired",
+        "offline": false
+      },
+      {
+        "pins": "retired",
+        "offline": true
+      },
+      {
+        "pins": "none",
+        "offline": false
+      },
+      {
+        "pins": "none",
+        "offline": true
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "pins": "current",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-inconclusive",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "broken",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "inconclusive": true,
+          "detail": "--demo-status timeout (not retried: game running): no result within 15000 ms"
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-inconclusive",
+          "Engine: CrossOver pre-flight inconclusive (--demo-status timeout (not retried: game running): no result within 15000 ms); launching on CrossOver"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=timeout no result within 15000 ms elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "pins": "current",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-inconclusive",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "broken",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "inconclusive": true,
+          "detail": "--demo-status timeout (not retried: game running): no result within 15000 ms"
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-inconclusive",
+          "Engine: CrossOver pre-flight inconclusive (--demo-status timeout (not retried: game running): no result within 15000 ms); launching on CrossOver"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=timeout no result within 15000 ms elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "pins": "retired",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-inconclusive",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "broken",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "inconclusive": true,
+          "detail": "--demo-status timeout (not retried: game running): no result within 15000 ms"
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-inconclusive",
+          "Engine: CrossOver pre-flight inconclusive (--demo-status timeout (not retried: game running): no result within 15000 ms); launching on CrossOver"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=timeout no result within 15000 ms elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "pins": "retired",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-inconclusive",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "broken",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "inconclusive": true,
+          "detail": "--demo-status timeout (not retried: game running): no result within 15000 ms"
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-inconclusive",
+          "Engine: CrossOver pre-flight inconclusive (--demo-status timeout (not retried: game running): no result within 15000 ms); launching on CrossOver"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=timeout no result within 15000 ms elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "pins": "none",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-inconclusive",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "broken",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "inconclusive": true,
+          "detail": "--demo-status timeout (not retried: game running): no result within 15000 ms"
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-inconclusive",
+          "Engine: CrossOver pre-flight inconclusive (--demo-status timeout (not retried: game running): no result within 15000 ms); launching on CrossOver"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=timeout no result within 15000 ms elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "pins": "none",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-inconclusive",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "preflight": {
+          "kind": "broken",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "inconclusive": true,
+          "detail": "--demo-status timeout (not retried: game running): no result within 15000 ms"
+        },
+        "pin": null,
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=crossover build=26.3.0.39832 reason=cx-inconclusive",
+          "Engine: CrossOver pre-flight inconclusive (--demo-status timeout (not retried: game running): no result within 15000 ms); launching on CrossOver"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=timeout no result within 15000 ms elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true,
+  "pins": {
+    "current": "wine-staging-11.20",
+    "retired": "wine-staging-11.1"
+  }
+}

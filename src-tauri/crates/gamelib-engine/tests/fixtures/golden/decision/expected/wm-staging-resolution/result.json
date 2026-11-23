@@ -1,0 +1,560 @@
+{
+  "op": "wm-staging",
+  "args": {
+    "items": [
+      {
+        "version": "Wine-Staging-10.5",
+        "releases": "installed",
+        "wmFiles": "present"
+      },
+      {
+        "version": "Wine-Staging-10.5",
+        "releases": "installed",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "Wine-Staging-10.5",
+        "releases": "not-installed",
+        "wmFiles": "present"
+      },
+      {
+        "version": "Wine-Staging-10.5",
+        "releases": "not-installed",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "Wine-Staging-10.5",
+        "releases": "none",
+        "wmFiles": "present"
+      },
+      {
+        "version": "Wine-Staging-10.5",
+        "releases": "none",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "Wine-Staging-9.0",
+        "releases": "installed",
+        "wmFiles": "present"
+      },
+      {
+        "version": "Wine-Staging-9.0",
+        "releases": "installed",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "Wine-Staging-9.0",
+        "releases": "not-installed",
+        "wmFiles": "present"
+      },
+      {
+        "version": "Wine-Staging-9.0",
+        "releases": "not-installed",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "Wine-Staging-9.0",
+        "releases": "none",
+        "wmFiles": "present"
+      },
+      {
+        "version": "Wine-Staging-9.0",
+        "releases": "none",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "Wine-Staging-10.5-DXMT",
+        "releases": "installed",
+        "wmFiles": "present"
+      },
+      {
+        "version": "Wine-Staging-10.5-DXMT",
+        "releases": "installed",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "Wine-Staging-10.5-DXMT",
+        "releases": "not-installed",
+        "wmFiles": "present"
+      },
+      {
+        "version": "Wine-Staging-10.5-DXMT",
+        "releases": "not-installed",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "Wine-Staging-10.5-DXMT",
+        "releases": "none",
+        "wmFiles": "present"
+      },
+      {
+        "version": "Wine-Staging-10.5-DXMT",
+        "releases": "none",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "Unlisted-1.0",
+        "releases": "installed",
+        "wmFiles": "present"
+      },
+      {
+        "version": "Unlisted-1.0",
+        "releases": "installed",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "Unlisted-1.0",
+        "releases": "not-installed",
+        "wmFiles": "present"
+      },
+      {
+        "version": "Unlisted-1.0",
+        "releases": "not-installed",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "Unlisted-1.0",
+        "releases": "none",
+        "wmFiles": "present"
+      },
+      {
+        "version": "Unlisted-1.0",
+        "releases": "none",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "",
+        "releases": "installed",
+        "wmFiles": "present"
+      },
+      {
+        "version": "",
+        "releases": "installed",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "",
+        "releases": "not-installed",
+        "wmFiles": "present"
+      },
+      {
+        "version": "",
+        "releases": "not-installed",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "",
+        "releases": "none",
+        "wmFiles": "present"
+      },
+      {
+        "version": "",
+        "releases": "none",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "../escape",
+        "releases": "installed",
+        "wmFiles": "present"
+      },
+      {
+        "version": "../escape",
+        "releases": "installed",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "../escape",
+        "releases": "not-installed",
+        "wmFiles": "present"
+      },
+      {
+        "version": "../escape",
+        "releases": "not-installed",
+        "wmFiles": "absent"
+      },
+      {
+        "version": "../escape",
+        "releases": "none",
+        "wmFiles": "present"
+      },
+      {
+        "version": "../escape",
+        "releases": "none",
+        "wmFiles": "absent"
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "version": "Wine-Staging-10.5",
+        "releases": "installed",
+        "wmFiles": "present"
+      },
+      "engine": {
+        "wineBin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+        "wineserverBin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver",
+        "label": "Wine Manager: Wine-Staging-10.5",
+        "version": "Wine-Staging-10.5",
+        "dxvk": null
+      },
+      "calls": "wineManagerReleases > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-10.5",
+        "releases": "installed",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-10.5",
+        "releases": "not-installed",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-10.5",
+        "releases": "not-installed",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-10.5",
+        "releases": "none",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-10.5",
+        "releases": "none",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-9.0",
+        "releases": "installed",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-9.0",
+        "releases": "installed",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-9.0",
+        "releases": "not-installed",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-9.0",
+        "releases": "not-installed",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-9.0",
+        "releases": "none",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-9.0",
+        "releases": "none",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-10.5-DXMT",
+        "releases": "installed",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-10.5-DXMT",
+        "releases": "installed",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-10.5-DXMT",
+        "releases": "not-installed",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-10.5-DXMT",
+        "releases": "not-installed",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-10.5-DXMT",
+        "releases": "none",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Wine-Staging-10.5-DXMT",
+        "releases": "none",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Unlisted-1.0",
+        "releases": "installed",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Unlisted-1.0",
+        "releases": "installed",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Unlisted-1.0",
+        "releases": "not-installed",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Unlisted-1.0",
+        "releases": "not-installed",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Unlisted-1.0",
+        "releases": "none",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "Unlisted-1.0",
+        "releases": "none",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "",
+        "releases": "installed",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "",
+        "releases": "installed",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "",
+        "releases": "not-installed",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "",
+        "releases": "not-installed",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "",
+        "releases": "none",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "",
+        "releases": "none",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "../escape",
+        "releases": "installed",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "../escape",
+        "releases": "installed",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "../escape",
+        "releases": "not-installed",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "../escape",
+        "releases": "not-installed",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "../escape",
+        "releases": "none",
+        "wmFiles": "present"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "version": "../escape",
+        "releases": "none",
+        "wmFiles": "absent"
+      },
+      "engine": null,
+      "calls": "wineManagerReleases",
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true,
+  "pins": {
+    "current": "wine-staging-11.20",
+    "retired": "wine-staging-11.1"
+  }
+}

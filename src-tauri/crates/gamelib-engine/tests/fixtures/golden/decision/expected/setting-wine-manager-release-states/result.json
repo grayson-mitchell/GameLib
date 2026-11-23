@@ -1,0 +1,1414 @@
+{
+  "op": "launch",
+  "args": {
+    "base": {
+      "cx": "healthy",
+      "setting": "wine-manager:Wine-Staging-10.5"
+    },
+    "items": [
+      {
+        "releases": "installed",
+        "wmFiles": "present",
+        "pins": "current",
+        "offline": false
+      },
+      {
+        "releases": "installed",
+        "wmFiles": "present",
+        "pins": "current",
+        "offline": true
+      },
+      {
+        "releases": "installed",
+        "wmFiles": "present",
+        "pins": "retired",
+        "offline": false
+      },
+      {
+        "releases": "installed",
+        "wmFiles": "present",
+        "pins": "retired",
+        "offline": true
+      },
+      {
+        "releases": "installed",
+        "wmFiles": "present",
+        "pins": "none",
+        "offline": false
+      },
+      {
+        "releases": "installed",
+        "wmFiles": "present",
+        "pins": "none",
+        "offline": true
+      },
+      {
+        "releases": "installed",
+        "wmFiles": "absent",
+        "pins": "current",
+        "offline": false
+      },
+      {
+        "releases": "installed",
+        "wmFiles": "absent",
+        "pins": "current",
+        "offline": true
+      },
+      {
+        "releases": "installed",
+        "wmFiles": "absent",
+        "pins": "retired",
+        "offline": false
+      },
+      {
+        "releases": "installed",
+        "wmFiles": "absent",
+        "pins": "retired",
+        "offline": true
+      },
+      {
+        "releases": "installed",
+        "wmFiles": "absent",
+        "pins": "none",
+        "offline": false
+      },
+      {
+        "releases": "installed",
+        "wmFiles": "absent",
+        "pins": "none",
+        "offline": true
+      },
+      {
+        "releases": "not-installed",
+        "wmFiles": "present",
+        "pins": "current",
+        "offline": false
+      },
+      {
+        "releases": "not-installed",
+        "wmFiles": "present",
+        "pins": "current",
+        "offline": true
+      },
+      {
+        "releases": "not-installed",
+        "wmFiles": "present",
+        "pins": "retired",
+        "offline": false
+      },
+      {
+        "releases": "not-installed",
+        "wmFiles": "present",
+        "pins": "retired",
+        "offline": true
+      },
+      {
+        "releases": "not-installed",
+        "wmFiles": "present",
+        "pins": "none",
+        "offline": false
+      },
+      {
+        "releases": "not-installed",
+        "wmFiles": "present",
+        "pins": "none",
+        "offline": true
+      },
+      {
+        "releases": "not-installed",
+        "wmFiles": "absent",
+        "pins": "current",
+        "offline": false
+      },
+      {
+        "releases": "not-installed",
+        "wmFiles": "absent",
+        "pins": "current",
+        "offline": true
+      },
+      {
+        "releases": "not-installed",
+        "wmFiles": "absent",
+        "pins": "retired",
+        "offline": false
+      },
+      {
+        "releases": "not-installed",
+        "wmFiles": "absent",
+        "pins": "retired",
+        "offline": true
+      },
+      {
+        "releases": "not-installed",
+        "wmFiles": "absent",
+        "pins": "none",
+        "offline": false
+      },
+      {
+        "releases": "not-installed",
+        "wmFiles": "absent",
+        "pins": "none",
+        "offline": true
+      },
+      {
+        "releases": "none",
+        "wmFiles": "present",
+        "pins": "current",
+        "offline": false
+      },
+      {
+        "releases": "none",
+        "wmFiles": "present",
+        "pins": "current",
+        "offline": true
+      },
+      {
+        "releases": "none",
+        "wmFiles": "present",
+        "pins": "retired",
+        "offline": false
+      },
+      {
+        "releases": "none",
+        "wmFiles": "present",
+        "pins": "retired",
+        "offline": true
+      },
+      {
+        "releases": "none",
+        "wmFiles": "present",
+        "pins": "none",
+        "offline": false
+      },
+      {
+        "releases": "none",
+        "wmFiles": "present",
+        "pins": "none",
+        "offline": true
+      },
+      {
+        "releases": "none",
+        "wmFiles": "absent",
+        "pins": "current",
+        "offline": false
+      },
+      {
+        "releases": "none",
+        "wmFiles": "absent",
+        "pins": "current",
+        "offline": true
+      },
+      {
+        "releases": "none",
+        "wmFiles": "absent",
+        "pins": "retired",
+        "offline": false
+      },
+      {
+        "releases": "none",
+        "wmFiles": "absent",
+        "pins": "retired",
+        "offline": true
+      },
+      {
+        "releases": "none",
+        "wmFiles": "absent",
+        "pins": "none",
+        "offline": false
+      },
+      {
+        "releases": "none",
+        "wmFiles": "absent",
+        "pins": "none",
+        "offline": true
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "releases": "installed",
+        "wmFiles": "present",
+        "pins": "current",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "wine-manager",
+          "managerVersion": "Wine-Staging-10.5",
+          "reason": "override",
+          "wineBin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine Manager: Wine-Staging-10.5",
+          "version": "Wine-Staging-10.5",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": null,
+        "pin": null,
+        "needsDownload": false,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "logLines": [
+          "engine=wine-manager name=\"Wine Manager: Wine-Staging-10.5\" version=Wine-Staging-10.5 reason=override"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver > isPinInstalled wine-staging-11.20 > pinPaths wine-staging-11.20",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "installed",
+        "wmFiles": "present",
+        "pins": "current",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "wine-manager",
+          "managerVersion": "Wine-Staging-10.5",
+          "reason": "override",
+          "wineBin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine Manager: Wine-Staging-10.5",
+          "version": "Wine-Staging-10.5",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": null,
+        "pin": null,
+        "needsDownload": false,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "logLines": [
+          "engine=wine-manager name=\"Wine Manager: Wine-Staging-10.5\" version=Wine-Staging-10.5 reason=override"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver > isPinInstalled wine-staging-11.20 > pinPaths wine-staging-11.20",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "installed",
+        "wmFiles": "present",
+        "pins": "retired",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "wine-manager",
+          "managerVersion": "Wine-Staging-10.5",
+          "reason": "override",
+          "wineBin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine Manager: Wine-Staging-10.5",
+          "version": "Wine-Staging-10.5",
+          "dxvk": null
+        },
+        "preflight": null,
+        "pin": null,
+        "needsDownload": false,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "logLines": [
+          "engine=wine-manager name=\"Wine Manager: Wine-Staging-10.5\" version=Wine-Staging-10.5 reason=override",
+          "Engine: built-in DXVK is not installed; running the Wine Manager build without DXVK"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver > isPinInstalled wine-staging-11.20",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "installed",
+        "wmFiles": "present",
+        "pins": "retired",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "wine-manager",
+          "managerVersion": "Wine-Staging-10.5",
+          "reason": "override",
+          "wineBin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine Manager: Wine-Staging-10.5",
+          "version": "Wine-Staging-10.5",
+          "dxvk": null
+        },
+        "preflight": null,
+        "pin": null,
+        "needsDownload": false,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "logLines": [
+          "engine=wine-manager name=\"Wine Manager: Wine-Staging-10.5\" version=Wine-Staging-10.5 reason=override",
+          "Engine: built-in DXVK is not installed; running the Wine Manager build without DXVK"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver > isPinInstalled wine-staging-11.20",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "installed",
+        "wmFiles": "present",
+        "pins": "none",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "wine-manager",
+          "managerVersion": "Wine-Staging-10.5",
+          "reason": "override",
+          "wineBin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine Manager: Wine-Staging-10.5",
+          "version": "Wine-Staging-10.5",
+          "dxvk": null
+        },
+        "preflight": null,
+        "pin": null,
+        "needsDownload": false,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "logLines": [
+          "engine=wine-manager name=\"Wine Manager: Wine-Staging-10.5\" version=Wine-Staging-10.5 reason=override",
+          "Engine: built-in DXVK is not installed; running the Wine Manager build without DXVK"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver > isPinInstalled wine-staging-11.20",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "installed",
+        "wmFiles": "present",
+        "pins": "none",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "wine-manager",
+          "managerVersion": "Wine-Staging-10.5",
+          "reason": "override",
+          "wineBin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine Manager: Wine-Staging-10.5",
+          "version": "Wine-Staging-10.5",
+          "dxvk": null
+        },
+        "preflight": null,
+        "pin": null,
+        "needsDownload": false,
+        "override": "wine-manager:Wine-Staging-10.5",
+        "logLines": [
+          "engine=wine-manager name=\"Wine Manager: Wine-Staging-10.5\" version=Wine-Staging-10.5 reason=override",
+          "Engine: built-in DXVK is not installed; running the Wine Manager build without DXVK"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wineserver > isPinInstalled wine-staging-11.20",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "installed",
+        "wmFiles": "absent",
+        "pins": "current",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "installed",
+        "wmFiles": "absent",
+        "pins": "current",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "installed",
+        "wmFiles": "absent",
+        "pins": "retired",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "installed",
+        "wmFiles": "absent",
+        "pins": "retired",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "installed",
+        "wmFiles": "absent",
+        "pins": "none",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "installed",
+        "wmFiles": "absent",
+        "pins": "none",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases > fileExists <TOOLS>/wine/Wine-Staging-10.5/Contents/Resources/wine/bin/wine",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "not-installed",
+        "wmFiles": "present",
+        "pins": "current",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "not-installed",
+        "wmFiles": "present",
+        "pins": "current",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "not-installed",
+        "wmFiles": "present",
+        "pins": "retired",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "not-installed",
+        "wmFiles": "present",
+        "pins": "retired",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "not-installed",
+        "wmFiles": "present",
+        "pins": "none",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "not-installed",
+        "wmFiles": "present",
+        "pins": "none",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "not-installed",
+        "wmFiles": "absent",
+        "pins": "current",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "not-installed",
+        "wmFiles": "absent",
+        "pins": "current",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "not-installed",
+        "wmFiles": "absent",
+        "pins": "retired",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "not-installed",
+        "wmFiles": "absent",
+        "pins": "retired",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "not-installed",
+        "wmFiles": "absent",
+        "pins": "none",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "not-installed",
+        "wmFiles": "absent",
+        "pins": "none",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "none",
+        "wmFiles": "present",
+        "pins": "current",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "none",
+        "wmFiles": "present",
+        "pins": "current",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "none",
+        "wmFiles": "present",
+        "pins": "retired",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "none",
+        "wmFiles": "present",
+        "pins": "retired",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "none",
+        "wmFiles": "present",
+        "pins": "none",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "none",
+        "wmFiles": "present",
+        "pins": "none",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "none",
+        "wmFiles": "absent",
+        "pins": "current",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "none",
+        "wmFiles": "absent",
+        "pins": "current",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "none",
+        "wmFiles": "absent",
+        "pins": "retired",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "none",
+        "wmFiles": "absent",
+        "pins": "retired",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "none",
+        "wmFiles": "absent",
+        "pins": "none",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    },
+    {
+      "input": {
+        "releases": "none",
+        "wmFiles": "absent",
+        "pins": "none",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "wine-manager:Wine-Staging-10.5",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "unavailable",
+        "override": "wine-manager:Wine-Staging-10.5",
+        "detail": "Wine Manager build Wine-Staging-10.5 is not installed"
+      },
+      "calls": "readOverride gog:1207658924 > wineManagerReleases",
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true,
+  "pins": {
+    "current": "wine-staging-11.20",
+    "retired": "wine-staging-11.1"
+  }
+}

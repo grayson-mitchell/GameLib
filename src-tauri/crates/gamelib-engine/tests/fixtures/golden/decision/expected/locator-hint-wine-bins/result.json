@@ -1,0 +1,71 @@
+{
+  "op": "locator",
+  "args": {
+    "items": [
+      {
+        "seedBins": [
+          "<HOME>/Elsewhere/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        ],
+        "hintWineBins": [
+          "<HOME>/Elsewhere/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+        ]
+      },
+      {
+        "seedBins": [
+          "<HOME>/First/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "<HOME>/Second/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        ],
+        "hintWineBins": [
+          "<HOME>/Second/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+          "<HOME>/First/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+        ]
+      },
+      {
+        "seedBins": [
+          "<HOME>/Second/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        ],
+        "hintWineBins": [
+          "<HOME>/First/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+          "<HOME>/Second/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+        ]
+      },
+      {
+        "seedBins": [
+          "<HOME>/Elsewhere/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        ],
+        "hintWineBins": [
+          "<HOME>/not-a-crossover/bin/wine",
+          "wine"
+        ]
+      },
+      {
+        "seedBins": [],
+        "hintWineBins": [
+          "<HOME>/Absent/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+        ]
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "threw": "unknown"
+    },
+    {
+      "threw": "unknown"
+    },
+    {
+      "threw": "unknown"
+    },
+    {
+      "threw": "unknown"
+    },
+    {
+      "threw": "unknown"
+    }
+  ],
+  "treeUnchanged": false,
+  "pins": {
+    "current": "wine-staging-11.20",
+    "retired": "wine-staging-11.1"
+  }
+}

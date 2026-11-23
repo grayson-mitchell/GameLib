@@ -1,0 +1,212 @@
+[
+  {
+    "item": 0,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "item": 1,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "item": 2,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "hello\n",
+      "stderr": ""
+    }
+  },
+  {
+    "item": 3,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "hello\n",
+      "stderr": ""
+    }
+  },
+  {
+    "item": 4,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "Demo version (1 day remaining)\n",
+      "stderr": ""
+    }
+  },
+  {
+    "item": 5,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "Demo version (1 day remaining)\n",
+      "stderr": ""
+    }
+  },
+  {
+    "item": 6,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "standard version\n",
+      "stderr": ""
+    }
+  },
+  {
+    "item": 7,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "standard version\n",
+      "stderr": ""
+    }
+  },
+  {
+    "item": 8,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "Standard version trailing\n",
+      "stderr": ""
+    }
+  },
+  {
+    "item": 9,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "Standard version trailing\n",
+      "stderr": ""
+    }
+  }
+]

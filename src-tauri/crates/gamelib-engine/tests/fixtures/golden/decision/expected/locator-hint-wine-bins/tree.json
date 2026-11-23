@@ -1,0 +1,110 @@
+[
+  {
+    "path": "Elsewhere",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Elsewhere/CrossOver.app",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Elsewhere/CrossOver.app/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Elsewhere/CrossOver.app/Contents/SharedSupport",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Elsewhere/CrossOver.app/Contents/SharedSupport/CrossOver",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Elsewhere/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Elsewhere/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "First",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "First/CrossOver.app",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "First/CrossOver.app/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "First/CrossOver.app/Contents/SharedSupport",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "First/CrossOver.app/Contents/SharedSupport/CrossOver",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "First/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "First/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Second",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Second/CrossOver.app",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Second/CrossOver.app/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Second/CrossOver.app/Contents/SharedSupport",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Second/CrossOver.app/Contents/SharedSupport/CrossOver",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Second/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Second/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

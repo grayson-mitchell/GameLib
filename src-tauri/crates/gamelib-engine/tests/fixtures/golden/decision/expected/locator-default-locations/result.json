@@ -1,0 +1,60 @@
+{
+  "op": "locator",
+  "args": {
+    "items": [
+      {
+        "applications": []
+      },
+      {
+        "applications": [
+          "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        ]
+      },
+      {
+        "applications": [
+          "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        ],
+        "seedBins": [
+          "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        ]
+      },
+      {
+        "applications": [],
+        "seedBins": [
+          "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        ]
+      },
+      {
+        "applications": [],
+        "seedBins": [
+          "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        ],
+        "hintWineBins": [
+          "<HOME>/Elsewhere/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+        ]
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "threw": "unknown"
+    },
+    {
+      "threw": "unknown"
+    },
+    {
+      "threw": "unknown"
+    },
+    {
+      "threw": "unknown"
+    },
+    {
+      "threw": "unknown"
+    }
+  ],
+  "treeUnchanged": false,
+  "pins": {
+    "current": "wine-staging-11.20",
+    "retired": "wine-staging-11.1"
+  }
+}

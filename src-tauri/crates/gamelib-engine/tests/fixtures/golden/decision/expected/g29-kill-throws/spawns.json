@@ -1,0 +1,344 @@
+[
+  {
+    "item": 0,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 1,
+      "stdout": "",
+      "stderr": "cxwine: bottle wrapper failed"
+    }
+  },
+  {
+    "item": 0,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "Standard version\n",
+      "stderr": ""
+    }
+  },
+  {
+    "item": 1,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 1,
+      "stdout": "",
+      "stderr": "cxwine: bottle wrapper failed"
+    }
+  },
+  {
+    "item": 1,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "Standard version\n",
+      "stderr": ""
+    }
+  },
+  {
+    "item": 2,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": null,
+      "stdout": "",
+      "stderr": "",
+      "timedOut": true
+    }
+  },
+  {
+    "item": 2,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "Standard version\n",
+      "stderr": ""
+    }
+  },
+  {
+    "item": 3,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": null,
+      "stdout": "",
+      "stderr": "",
+      "timedOut": true
+    }
+  },
+  {
+    "item": 3,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "Standard version\n",
+      "stderr": ""
+    }
+  },
+  {
+    "item": 4,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 1,
+      "stdout": "",
+      "stderr": "cxwine: bottle wrapper failed"
+    }
+  },
+  {
+    "item": 4,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 1,
+      "stdout": "",
+      "stderr": "cxwine: bottle wrapper failed"
+    }
+  },
+  {
+    "item": 5,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 1,
+      "stdout": "",
+      "stderr": "cxwine: bottle wrapper failed"
+    }
+  },
+  {
+    "item": 5,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 1,
+      "stdout": "",
+      "stderr": "cxwine: bottle wrapper failed"
+    }
+  },
+  {
+    "item": 6,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": null,
+      "stdout": "",
+      "stderr": "",
+      "timedOut": true
+    }
+  },
+  {
+    "item": 6,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": null,
+      "stdout": "",
+      "stderr": "",
+      "timedOut": true
+    }
+  },
+  {
+    "item": 7,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": null,
+      "stdout": "",
+      "stderr": "",
+      "timedOut": true
+    }
+  },
+  {
+    "item": 7,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": null,
+      "stdout": "",
+      "stderr": "",
+      "timedOut": true
+    }
+  }
+]

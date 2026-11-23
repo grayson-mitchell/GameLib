@@ -1,0 +1,420 @@
+{
+  "op": "launch",
+  "args": {
+    "base": {
+      "cx": "broken",
+      "setting": "pinned:wine-staging-11.20"
+    },
+    "items": [
+      {
+        "pins": "current",
+        "offline": false
+      },
+      {
+        "pins": "current",
+        "offline": true
+      },
+      {
+        "pins": "retired",
+        "offline": false
+      },
+      {
+        "pins": "retired",
+        "offline": true
+      },
+      {
+        "pins": "none",
+        "offline": false
+      },
+      {
+        "pins": "none",
+        "offline": true
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "pins": "current",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": null,
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": false,
+        "override": "pinned:wine-staging-11.20",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=override"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "current",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": null,
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": false,
+        "override": "pinned:wine-staging-11.20",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=override"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "retired",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": null,
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": true,
+        "override": "pinned:wine-staging-11.20",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=override"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "retired",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": null,
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": true,
+        "override": "pinned:wine-staging-11.20",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=override"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "none",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": null,
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": true,
+        "override": "pinned:wine-staging-11.20",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=override"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": []
+    },
+    {
+      "input": {
+        "pins": "none",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "pinned:wine-staging-11.20",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": false,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": null,
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": true,
+        "override": "pinned:wine-staging-11.20",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=override"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true,
+  "pins": {
+    "current": "wine-staging-11.20",
+    "retired": "wine-staging-11.1"
+  }
+}

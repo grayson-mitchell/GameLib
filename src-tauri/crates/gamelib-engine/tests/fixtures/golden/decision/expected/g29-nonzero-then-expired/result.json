@@ -1,0 +1,1313 @@
+{
+  "op": "launch",
+  "args": {
+    "base": {
+      "setting": "automatic"
+    },
+    "items": [
+      {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": false
+      },
+      {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": true
+      },
+      {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": false
+      },
+      {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": true
+      },
+      {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": false
+      },
+      {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": true
+      },
+      {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": false
+      },
+      {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": true
+      },
+      {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": false
+      },
+      {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": true
+      },
+      {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": false
+      },
+      {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": true
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-expired",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": {
+          "kind": "expired",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "daysAgo": 3
+        },
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > killCrossoverWineserver GameLib-gog-1207658924 <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=expired elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-expired",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": {
+          "kind": "expired",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "daysAgo": 3
+        },
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > killCrossoverWineserver GameLib-gog-1207658924 <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=expired elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-expired",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": {
+          "kind": "expired",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "daysAgo": 3
+        },
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > killCrossoverWineserver GameLib-gog-1207658924 <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=expired elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-expired",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": {
+          "kind": "expired",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "daysAgo": 3
+        },
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > killCrossoverWineserver GameLib-gog-1207658924 <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=expired elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-expired",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": {
+          "kind": "expired",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "daysAgo": 3
+        },
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > killCrossoverWineserver GameLib-gog-1207658924 <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=expired elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "idle",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-expired",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": {
+          "kind": "expired",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "daysAgo": 3
+        },
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > killCrossoverWineserver GameLib-gog-1207658924 <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=expired elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-expired",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": {
+          "kind": "expired",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "daysAgo": 3
+        },
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > probe GameLib-gog-1207658924 timeoutMs=undefined > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=expired elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "none",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": null,
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-expired",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": {
+          "kind": "expired",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "daysAgo": 3
+        },
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > probe GameLib-gog-1207658924 timeoutMs=undefined > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=expired elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-expired",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": {
+          "kind": "expired",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "daysAgo": 3
+        },
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > probe GameLib-gog-1207658924 timeoutMs=undefined > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=expired elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "pinned",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-expired",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": {
+          "kind": "expired",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "daysAgo": 3
+        },
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > probe GameLib-gog-1207658924 timeoutMs=undefined > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=expired elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": false
+      },
+      "gate": {
+        "input": {
+          "offline": false,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-expired",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": {
+          "kind": "expired",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "daysAgo": 3
+        },
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > probe GameLib-gog-1207658924 timeoutMs=undefined > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=expired elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "marker": "wine-manager",
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": [
+            {
+              "code": 1,
+              "stdout": "",
+              "stderr": "cxwine: bottle wrapper failed"
+            },
+            {
+              "code": 0,
+              "stdout": "Demo version (expired 3 days ago)\n"
+            }
+          ]
+        },
+        "bottle": "busy",
+        "offline": true
+      },
+      "gate": {
+        "input": {
+          "offline": true,
+          "override": "automatic",
+          "crossoverMissing": false,
+          "markerKind": "non-crossover",
+          "currentPinInstalled": true,
+          "restoreNeedsAbsentPin": false
+        },
+        "verdict": {
+          "blocked": false
+        },
+        "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "launch": "proceeds",
+      "decision": {
+        "kind": "use",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-expired",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "preflight": {
+          "kind": "expired",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "build": "26.3.0.39832",
+          "daysAgo": 3
+        },
+        "pin": {
+          "id": "wine-staging-11.20",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wine": {
+            "version": "11.20",
+            "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+            "size": 227975304,
+            "sha256": "4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952",
+            "archiveName": "wine-staging-11.20-osx64.tar.xz"
+          },
+          "dxvk": {
+            "version": "v1.10.3-20230507-repack",
+            "url": "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+            "size": 2793443,
+            "sha256": "acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477",
+            "archiveName": "dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+          }
+        },
+        "needsDownload": false,
+        "override": "automatic",
+        "logLines": [
+          "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+        ]
+      },
+      "calls": "readOverride gog:1207658924 > resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > isExecutable <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine > readBuild <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin > probe GameLib-gog-1207658924 timeoutMs=undefined > monitorPhase gog:1207658924 > bottleBusy GameLib-gog-1207658924 gog:1207658924 > probe GameLib-gog-1207658924 timeoutMs=undefined > pinPaths wine-staging-11.20 > isPinInstalled wine-staging-11.20",
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: bottle wrapper failed stdout= elapsedMs=0",
+        "WARNING Engine: --demo-status nonzero-exit for bottle GameLib-gog-1207658924 (attempt 1/2); inconclusive, retrying once",
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=expired elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true,
+  "pins": {
+    "current": "wine-staging-11.20",
+    "retired": "wine-staging-11.1"
+  }
+}

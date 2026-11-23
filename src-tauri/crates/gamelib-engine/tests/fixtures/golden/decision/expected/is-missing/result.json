@@ -1,0 +1,103 @@
+{
+  "op": "is-missing",
+  "args": {
+    "items": [
+      {
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": []
+        }
+      },
+      {
+        "cx": {
+          "bin": "absent",
+          "build": "26.3.0.39832",
+          "probe": []
+        }
+      },
+      {
+        "cx": {
+          "bin": "wine-missing",
+          "build": "26.3.0.39832",
+          "probe": []
+        }
+      },
+      {
+        "cx": {
+          "bin": "not-executable",
+          "build": "26.3.0.39832",
+          "probe": []
+        }
+      },
+      {
+        "cx": "healthy",
+        "resolverRejects": true
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "cx": {
+          "bin": "present",
+          "build": "26.3.0.39832",
+          "probe": []
+        }
+      },
+      "missing": false,
+      "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": {
+          "bin": "absent",
+          "build": "26.3.0.39832",
+          "probe": []
+        }
+      },
+      "missing": true,
+      "calls": "resolveCrossoverBinDir",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": {
+          "bin": "wine-missing",
+          "build": "26.3.0.39832",
+          "probe": []
+        }
+      },
+      "missing": true,
+      "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": {
+          "bin": "not-executable",
+          "build": "26.3.0.39832",
+          "probe": []
+        }
+      },
+      "missing": false,
+      "calls": "resolveCrossoverBinDir > fileExists <HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "logs": []
+    },
+    {
+      "input": {
+        "cx": "healthy",
+        "resolverRejects": true
+      },
+      "missing": false,
+      "calls": "resolveCrossoverBinDir",
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true,
+  "pins": {
+    "current": "wine-staging-11.20",
+    "retired": "wine-staging-11.1"
+  }
+}
