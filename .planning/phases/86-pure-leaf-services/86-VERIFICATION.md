@@ -1,6 +1,6 @@
 ---
 phase: 86-pure-leaf-services
-verified: 2026-11-23T00:00:00Z
+verified: 2026-11-23T12:00:00Z
 status: passed
 score: 5/5 must-haves verified
 covered_files:
@@ -82,14 +82,13 @@ covered_files:
   - "src/backend/storeManagers/storeManagerCommon/__tests__/umuGameId.test.ts"
   - "src/backend/storeManagers/storeManagerCommon/umuGameId.ts"
   - "src/backend/utils.ts"
-covered_digest: "v4:sha256:b818916b3055cd5cc35aae063e555b56fd0086017e132f124387be636ae8c9ca"
+covered_digest: "v4:sha256:efe65fa9c8f500f5a67523a18b3c3fc6a52ad536b589bbd8340debb9d5001ac5"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
-  previous_status: gaps_found
-  previous_score: 4/5
-  gaps_closed:
-    - "The ported services behave as before, including on the launch, game-page and shortcut paths that call them through the rustInvoke shims (CR-41, WR-41, WR-42, sign-out wiki-cache clear; plan 86-27)"
+  previous_status: passed
+  previous_score: 5/5
+  gaps_closed: []
   gaps_remaining: []
   regressions: []
 deferred: []
@@ -105,7 +104,32 @@ human_verification: []
 **Requirement:** SVC-01 (declared by all 27 PLAN files, including gap plan 86-27; the milestone requirements file maps only SVC-01 to Phase 86; no orphans)
 **Verified:** 2026-11-23
 **Status:** passed
-**Re-verification:** Yes, after gap closure plan 86-27 (prior status `gaps_found`, 4/5)
+**Re-verification:** Yes, on main at `ff56f13d4` after the gap-closure merge (prior report was written on the gap branch at `361397ba1`, status `passed`, 5/5; it went stale because Phase 87 commits landed in the merge)
+
+## Merge re-verification (main `ff56f13d4`)
+
+The prior report went stale because `verification status` saw covered files change: main carries Phase 87 commits (`2782da4f8`
+wine-manager shims, `ebdc4f2a9` validWine shim) that touch `src/backend/utils.ts` and `src/backend/sidecar/handlers.ts`, merged with
+the 86-27 changes. I re-read every 86-27 fix at the merged HEAD and re-ran the gates. Nothing regressed.
+
+| 86-27 fix | At HEAD `ff56f13d4` (read by me) | Survived merge |
+|-----------|----------------------------------|----------------|
+| CR-41 | `launcher.ts:473-478` `try { await addRecentGame(deps, gameInfo) } catch ... logWarning(['Recording recent game failed:', error])`, before the save-sync block | yes |
+| WR-41 | `resolveLaunchUmuId` in `storeManagerCommon/umuGameId.ts:20` (try/catch around the `getUmuId` shim at :26); called at `gog/games.ts:747`, `legendary/games.ts:1073`, `nile/games.ts:459`; no direct shim call in the managers | yes |
+| WR-42 game page | `gamedetails/dispatch.ts:112-125` `attachOverrides` in try/catch, warns and returns `tempGameInfo` | yes |
+| WR-42 shortcut | `nonesteamgame.ts:260-272` `getWikiGameInfo(...).catch(...)` warns at `LogPrefix.Shortcuts`, yields `null` | yes |
+| Sign-out wiki-cache clear | `handlers.ts:358-373` `registerRunnerAuthFlows({... requestRustInvoke: deps.services.host.requestRustInvoke})`; `runnerAuthFlowRegistration.ts:101` declares it and `:139` `userDeps()` forwards it | yes |
+
+Interaction with Phase 87 in `utils.ts` and `handlers.ts`: `git diff 409463f5e HEAD -- src/backend/utils.ts` shows the 87 hunks are
+confined to the wine imports (`enginewine/wineCore`, `enginewine/wineManager`), `downloadDefaultWine` and `checkWineBeforeLaunch` deps
+and bodies. `ClearCacheDeps`, `canClearWikiCache` and `clearCache` are untouched except the 86-27 comment refresh. In `handlers.ts` the
+87 commits add `requestRustInvoke` to other registrations (app-shell, wine tools) and none touches the `registerRunnerAuthFlows` call. The
+`clearCacheWiki`, `runnerAuthFlows` and `registrationOncePerBoot` suites pass at HEAD. `git diff 409463f5e HEAD -- src-tauri/crates/gamelib-info
+src-tauri/src/info_dispatch.rs src/backend/info` is empty; the `src-tauri` changes since the base are Phase 87's `wine_dispatch.rs` and one
+`rust_dispatch.rs` wine channel. Caller sweep of the five shims over `src/backend` was repeated at HEAD: every non-test caller still guarded.
+
+Gates at HEAD (run by me): the 13 suites in the 86-27 plan `<verification>`: `Test Suites: 13 passed, 13 total; Tests: 459 passed, 459
+total`. `pnpm -s codecheck`: exit 0, no output (the working tree has no modified source files, so no in-flight Phase 87 file affects it).
 
 ## Verdict in one paragraph
 
@@ -189,7 +213,7 @@ Treated as pre-existing and not attributable to Phase 86 goal achievement; recor
 
 | Requirement | Source Plans | Description | Status | Evidence |
 |-------------|--------------|-------------|--------|----------|
-| SVC-01 | 86-01 .. 86-27 (all 27 declare `[SVC-01]`) | Wiki game info, the CrossOver index, store search and discounts, anti-cheat info, recent games, per-game overrides and the artwork caches work as before | SATISFIED | SC1-SC4 and the failure-path closure (G). Note: in this worktree `.planning/REQUIREMENTS-v0.11.md` still reads `SVC-01 | Phase 86 | Pending` with the checkbox unticked (the prior report saw it Complete on the main checkout); updating that tracker is the orchestrator's close-out step, not a code gap. No other ID maps to Phase 86: no orphans. |
+| SVC-01 | 86-01 .. 86-27 (all 27 declare `[SVC-01]`) | Wiki game info, the CrossOver index, store search and discounts, anti-cheat info, recent games, per-game overrides and the artwork caches work as before | SATISFIED | SC1-SC4 and the failure-path closure (G). Note: on main at HEAD the requirements file still reads `SVC-01 | Phase 86 | Pending` (line 77) with the checkbox unticked (line 25); updating that tracker is the orchestrator's close-out step, not a code gap. No other ID maps to Phase 86: no orphans. |
 
 ### Anti-Patterns Found
 
