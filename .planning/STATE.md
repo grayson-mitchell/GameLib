@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-54-PLAN.md
-last_updated: "2026-11-23T18:01:51.311Z"
+stopped_at: Completed 87-55-PLAN.md
+last_updated: "2026-11-23T18:24:49.540Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 027199e5da357e6df596b39921b04adca41fe979
+state_head: 6cc9e5d6bd295f66090b83a98590d91c0bbda39e
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 55 of 59
+Plan: 56 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -464,6 +464,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P52 | 60 min | 3 tasks | 38 files |
 | Phase 87 P53 | 30 min | 2 tasks | 20 files |
 | Phase 87 P54 | 100 min | 2 tasks | 36 files |
+| Phase 87 P55 | 19 min | 2 tasks | 62 files |
 
 ## Accumulated Context
 
@@ -990,6 +991,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-52: getEngineState sends {identity, facts?} with a null identity for an ineligible game, so the resolver keeps the consts-then-one-call shape; Steam facts are steamEngineStateFacts
 - [Phase 87]: 87-53: an engine: ack id is forwarded to Rust and not acknowledged in the TS table; the forward catches and logs its rejection
 - [Phase 87]: 87-54: the bridge's callbacks became values (steamEngineFacts) and the deadline's callback map stays in TS (bridgeDeadlines, sanctioned module state) until 96; armBridgeDeadline takes {key} and cancelBridgeDeadline {key, reason}; engine_decide_launch and engine_preflight_crossover are unbounded in the sidecar
+- [Phase 87]: 87-55: rustRunTool and cancelRunTool are one-call shims; the RunTool closure (cancel id per run, engine_cancel on abort, never rejects) is createRustRunTool in steam/engine/rustRunTool.ts
+- [Phase 87]: 87-55: the async CrossOver bin-dir lookup is Rust's through crossoverBinDir (folds a failed call into 'not installed'); the sync fast path bottle.ts reads inline stays the TS locator, which 87-56 must replace with a sync twin before deleting createCrossoverLocator
+- [Phase 87]: 87-55: isNonCrossover and engineLogLabel are twins pinned to Rust by selection_twin.json (EngineSelection::engine and log_label); the engine types live in common/types/engine
 
 ### Pending Todos
 
@@ -1271,8 +1275,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T18:01:48.632Z
-Stopped at: Completed 87-54-PLAN.md
+Last session: 2026-11-23T18:24:46.795Z
+Stopped at: Completed 87-55-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
