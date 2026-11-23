@@ -1,0 +1,166 @@
+{
+  "input": {
+    "about": "A cached id and a miss under 7 days old at the current term version make no request; a miss over 7 days old and a pre-term-version miss are asked again",
+    "seed": {
+      "fake cached game": {
+        "appId": "111",
+        "checkedAt": 1792929600000,
+        "termVersion": 2
+      },
+      "fake fresh miss": {
+        "appId": null,
+        "checkedAt": 1795003200000,
+        "termVersion": 2
+      },
+      "fake expired miss": {
+        "appId": null,
+        "checkedAt": 1794830400000,
+        "termVersion": 2
+      },
+      "fake legacy miss": {
+        "appId": null,
+        "checkedAt": 1795435200000
+      }
+    }
+  },
+  "trace": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "kind": "request",
+      "params": {
+        "term": "Fake Expired Miss",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 1,
+      "atMs": 0,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 2,
+      "atMs": 350,
+      "kind": "request",
+      "params": {
+        "term": "Fake Legacy Miss",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    }
+  ],
+  "runs": [
+    {
+      "titles": [
+        "Fake Cached Game",
+        "Fake Fresh Miss",
+        "Fake Expired Miss",
+        "Fake Legacy Miss"
+      ],
+      "summary": {
+        "requested": 2,
+        "resolved": 2,
+        "cached": 2,
+        "misses": 2,
+        "errors": 0,
+        "deferred": 0
+      },
+      "lookups": [
+        {
+          "title": "Fake Cached Game",
+          "cached": "111"
+        },
+        {
+          "title": "Fake Fresh Miss",
+          "cached": null
+        },
+        {
+          "title": "Fake Expired Miss",
+          "cached": "21"
+        },
+        {
+          "title": "Fake Legacy Miss",
+          "cached": null
+        }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Expired+Miss&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Legacy+Miss&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    }
+  ],
+  "logs": [
+    {
+      "seq": 3,
+      "atMs": 350,
+      "level": "info",
+      "message": "Humble: resolved 2/4 Steam app ids (2 cached, 2 misses, 0 errors, 0 deferred)"
+    }
+  ],
+  "stateBefore": {
+    "store_cache/humble_steam_appid.json": {
+      "utf8": "{\n\t\"fake cached game\": {\n\t\t\"appId\": \"111\",\n\t\t\"checkedAt\": 1792929600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake cached game\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake fresh miss\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake expired miss\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake legacy miss\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake fresh miss\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795003200000,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake expired miss\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1794830400000,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake legacy miss\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795435200000\n\t}\n}"
+    }
+  },
+  "stateAfter": {
+    "store_cache/humble_steam_appid.json": {
+      "utf8": "{\n\t\"fake cached game\": {\n\t\t\"appId\": \"111\",\n\t\t\"checkedAt\": 1792929600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake cached game\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake fresh miss\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake expired miss\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake legacy miss\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake fresh miss\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795003200000,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake expired miss\": {\n\t\t\"appId\": \"21\",\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake legacy miss\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600350,\n\t\t\"termVersion\": 2\n\t}\n}"
+    }
+  }
+}

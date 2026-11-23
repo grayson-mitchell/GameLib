@@ -1,0 +1,58 @@
+{
+  "input": {
+    "about": "One already-notified key and one new: count 1, so the single copy names only the new key",
+    "locale": "en",
+    "dateLocale": "en-US (pinned, the host default is not recorded)",
+    "steamDeckGameMode": false
+  },
+  "runs": [
+    {
+      "keys": [
+        {
+          "gamekey": "fake-gamekey-0001",
+          "machineName": "fake_game_1_steam",
+          "title": "Fake Game One",
+          "expiration": "2027-01-02T00:00:00.000Z"
+        },
+        {
+          "gamekey": "fake-gamekey-0002",
+          "machineName": "fake_game_2_steam",
+          "title": "Fake Game Two",
+          "expiration": "2027-12-31T00:00:00.000Z"
+        }
+      ],
+      "suppressNotifications": false,
+      "notifyHumbleExpirations": true,
+      "i18nCalls": [
+        [
+          "humble.notification.expiringTitleSingle",
+          "Humble key expiring"
+        ],
+        [
+          "humble.notification.expiringBodySingle",
+          "{{title}}'s Humble key now expires on {{date}}",
+          {
+            "title": "Fake Game Two",
+            "date": "12/31/2027"
+          }
+        ]
+      ],
+      "notifications": [
+        {
+          "title": "Humble key expiring",
+          "body": "Fake Game Two's Humble key now expires on 12&#x2F;31&#x2F;2027"
+        }
+      ]
+    }
+  ],
+  "stateBefore": {
+    "store_cache/humble_notified_expiration.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:fake_game_1_steam\": {\n\t\t\"expiration\": \"2027-01-02T00:00:00.000Z\"\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:fake_game_1_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    }
+  },
+  "stateAfter": {
+    "store_cache/humble_notified_expiration.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:fake_game_1_steam\": {\n\t\t\"expiration\": \"2027-01-02T00:00:00.000Z\"\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:fake_game_1_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0002:fake_game_2_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake-gamekey-0002:fake_game_2_steam\": {\n\t\t\"expiration\": \"2027-12-31T00:00:00.000Z\"\n\t}\n}"
+    }
+  }
+}

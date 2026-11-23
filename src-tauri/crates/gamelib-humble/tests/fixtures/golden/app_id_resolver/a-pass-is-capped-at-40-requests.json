@@ -1,0 +1,2019 @@
+{
+  "input": {
+    "about": "45 uncached titles: 40 are requested, the other 5 stay deferred and are not cached",
+    "seed": {}
+  },
+  "trace": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 01",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 1,
+      "atMs": 0,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 2,
+      "atMs": 350,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 02",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 3,
+      "atMs": 350,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 4,
+      "atMs": 700,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 03",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 5,
+      "atMs": 700,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 6,
+      "atMs": 1050,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 04",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 7,
+      "atMs": 1050,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 8,
+      "atMs": 1400,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 05",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 9,
+      "atMs": 1400,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 10,
+      "atMs": 1750,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 06",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 11,
+      "atMs": 1750,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 12,
+      "atMs": 2100,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 07",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 13,
+      "atMs": 2100,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 14,
+      "atMs": 2450,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 08",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 15,
+      "atMs": 2450,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 16,
+      "atMs": 2800,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 09",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 17,
+      "atMs": 2800,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 18,
+      "atMs": 3150,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 10",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 19,
+      "atMs": 3150,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 20,
+      "atMs": 3500,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 11",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 21,
+      "atMs": 3500,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 22,
+      "atMs": 3850,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 12",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 23,
+      "atMs": 3850,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 24,
+      "atMs": 4200,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 13",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 25,
+      "atMs": 4200,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 26,
+      "atMs": 4550,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 14",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 27,
+      "atMs": 4550,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 28,
+      "atMs": 4900,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 15",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 29,
+      "atMs": 4900,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 30,
+      "atMs": 5250,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 16",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 31,
+      "atMs": 5250,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 32,
+      "atMs": 5600,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 17",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 33,
+      "atMs": 5600,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 34,
+      "atMs": 5950,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 18",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 35,
+      "atMs": 5950,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 36,
+      "atMs": 6300,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 19",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 37,
+      "atMs": 6300,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 38,
+      "atMs": 6650,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 20",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 39,
+      "atMs": 6650,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 40,
+      "atMs": 7000,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 21",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 41,
+      "atMs": 7000,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 42,
+      "atMs": 7350,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 22",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 43,
+      "atMs": 7350,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 44,
+      "atMs": 7700,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 23",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 45,
+      "atMs": 7700,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 46,
+      "atMs": 8050,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 24",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 47,
+      "atMs": 8050,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 48,
+      "atMs": 8400,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 25",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 49,
+      "atMs": 8400,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 50,
+      "atMs": 8750,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 26",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 51,
+      "atMs": 8750,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 52,
+      "atMs": 9100,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 27",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 53,
+      "atMs": 9100,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 54,
+      "atMs": 9450,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 28",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 55,
+      "atMs": 9450,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 56,
+      "atMs": 9800,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 29",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 57,
+      "atMs": 9800,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 58,
+      "atMs": 10150,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 30",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 59,
+      "atMs": 10150,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 60,
+      "atMs": 10500,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 31",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 61,
+      "atMs": 10500,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 62,
+      "atMs": 10850,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 32",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 63,
+      "atMs": 10850,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 64,
+      "atMs": 11200,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 33",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 65,
+      "atMs": 11200,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 66,
+      "atMs": 11550,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 34",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 67,
+      "atMs": 11550,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 68,
+      "atMs": 11900,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 35",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 69,
+      "atMs": 11900,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 70,
+      "atMs": 12250,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 36",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 71,
+      "atMs": 12250,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 72,
+      "atMs": 12600,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 37",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 73,
+      "atMs": 12600,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 74,
+      "atMs": 12950,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 38",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 75,
+      "atMs": 12950,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 76,
+      "atMs": 13300,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 39",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 77,
+      "atMs": 13300,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 78,
+      "atMs": 13650,
+      "kind": "request",
+      "params": {
+        "term": "Fake Capped Game 40",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    }
+  ],
+  "runs": [
+    {
+      "titles": [
+        "Fake Capped Game 01",
+        "Fake Capped Game 02",
+        "Fake Capped Game 03",
+        "Fake Capped Game 04",
+        "Fake Capped Game 05",
+        "Fake Capped Game 06",
+        "Fake Capped Game 07",
+        "Fake Capped Game 08",
+        "Fake Capped Game 09",
+        "Fake Capped Game 10",
+        "Fake Capped Game 11",
+        "Fake Capped Game 12",
+        "Fake Capped Game 13",
+        "Fake Capped Game 14",
+        "Fake Capped Game 15",
+        "Fake Capped Game 16",
+        "Fake Capped Game 17",
+        "Fake Capped Game 18",
+        "Fake Capped Game 19",
+        "Fake Capped Game 20",
+        "Fake Capped Game 21",
+        "Fake Capped Game 22",
+        "Fake Capped Game 23",
+        "Fake Capped Game 24",
+        "Fake Capped Game 25",
+        "Fake Capped Game 26",
+        "Fake Capped Game 27",
+        "Fake Capped Game 28",
+        "Fake Capped Game 29",
+        "Fake Capped Game 30",
+        "Fake Capped Game 31",
+        "Fake Capped Game 32",
+        "Fake Capped Game 33",
+        "Fake Capped Game 34",
+        "Fake Capped Game 35",
+        "Fake Capped Game 36",
+        "Fake Capped Game 37",
+        "Fake Capped Game 38",
+        "Fake Capped Game 39",
+        "Fake Capped Game 40",
+        "Fake Capped Game 41",
+        "Fake Capped Game 42",
+        "Fake Capped Game 43",
+        "Fake Capped Game 44",
+        "Fake Capped Game 45"
+      ],
+      "summary": {
+        "requested": 40,
+        "resolved": 0,
+        "cached": 0,
+        "misses": 40,
+        "errors": 0,
+        "deferred": 5
+      },
+      "lookups": [
+        {
+          "title": "Fake Capped Game 01",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 02",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 03",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 04",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 05",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 06",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 07",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 08",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 09",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 10",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 11",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 12",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 13",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 14",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 15",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 16",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 17",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 18",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 19",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 20",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 21",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 22",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 23",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 24",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 25",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 26",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 27",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 28",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 29",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 30",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 31",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 32",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 33",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 34",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 35",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 36",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 37",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 38",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 39",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 40",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 41",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 42",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 43",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 44",
+          "cached": null
+        },
+        {
+          "title": "Fake Capped Game 45",
+          "cached": null
+        }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+01&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+02&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+03&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+04&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+05&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+06&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+07&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+08&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+09&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+10&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+11&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+12&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+13&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+14&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+15&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+16&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+17&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+18&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+19&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+20&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+21&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+22&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+23&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+24&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+25&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+26&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+27&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+28&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+29&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+30&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+31&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+32&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+33&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+34&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+35&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+36&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+37&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+38&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+39&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Capped+Game+40&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    }
+  ],
+  "logs": [
+    {
+      "seq": 79,
+      "atMs": 13650,
+      "level": "info",
+      "message": "Humble: resolved 0/45 Steam app ids (0 cached, 40 misses, 0 errors, 5 deferred)"
+    }
+  ],
+  "stateBefore": {},
+  "stateAfter": {
+    "store_cache/humble_steam_appid.json": {
+      "utf8": "{\n\t\"fake capped game 01\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake capped game 01\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 02\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 03\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 04\": \"Tue Nov 24 2026 12:00:01 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 05\": \"Tue Nov 24 2026 12:00:01 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 06\": \"Tue Nov 24 2026 12:00:01 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 07\": \"Tue Nov 24 2026 12:00:02 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 08\": \"Tue Nov 24 2026 12:00:02 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 09\": \"Tue Nov 24 2026 12:00:02 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 10\": \"Tue Nov 24 2026 12:00:03 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 11\": \"Tue Nov 24 2026 12:00:03 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 12\": \"Tue Nov 24 2026 12:00:03 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 13\": \"Tue Nov 24 2026 12:00:04 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 14\": \"Tue Nov 24 2026 12:00:04 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 15\": \"Tue Nov 24 2026 12:00:04 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 16\": \"Tue Nov 24 2026 12:00:05 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 17\": \"Tue Nov 24 2026 12:00:05 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 18\": \"Tue Nov 24 2026 12:00:05 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 19\": \"Tue Nov 24 2026 12:00:06 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 20\": \"Tue Nov 24 2026 12:00:06 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 21\": \"Tue Nov 24 2026 12:00:07 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 22\": \"Tue Nov 24 2026 12:00:07 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 23\": \"Tue Nov 24 2026 12:00:07 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 24\": \"Tue Nov 24 2026 12:00:08 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 25\": \"Tue Nov 24 2026 12:00:08 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 26\": \"Tue Nov 24 2026 12:00:08 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 27\": \"Tue Nov 24 2026 12:00:09 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 28\": \"Tue Nov 24 2026 12:00:09 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 29\": \"Tue Nov 24 2026 12:00:09 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 30\": \"Tue Nov 24 2026 12:00:10 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 31\": \"Tue Nov 24 2026 12:00:10 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 32\": \"Tue Nov 24 2026 12:00:10 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 33\": \"Tue Nov 24 2026 12:00:11 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 34\": \"Tue Nov 24 2026 12:00:11 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 35\": \"Tue Nov 24 2026 12:00:11 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 36\": \"Tue Nov 24 2026 12:00:12 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 37\": \"Tue Nov 24 2026 12:00:12 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 38\": \"Tue Nov 24 2026 12:00:12 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 39\": \"Tue Nov 24 2026 12:00:13 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake capped game 40\": \"Tue Nov 24 2026 12:00:13 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake capped game 02\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600350,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 03\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600700,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 04\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521601050,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 05\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521601400,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 06\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521601750,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 07\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521602100,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 08\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521602450,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 09\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521602800,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 10\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521603150,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 11\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521603500,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 12\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521603850,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 13\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521604200,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 14\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521604550,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 15\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521604900,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 16\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521605250,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 17\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521605600,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 18\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521605950,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 19\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521606300,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 20\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521606650,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 21\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521607000,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 22\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521607350,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 23\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521607700,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 24\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521608050,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 25\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521608400,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 26\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521608750,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 27\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521609100,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 28\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521609450,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 29\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521609800,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 30\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521610150,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 31\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521610500,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 32\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521610850,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 33\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521611200,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 34\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521611550,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 35\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521611900,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 36\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521612250,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 37\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521612600,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 38\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521612950,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 39\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521613300,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake capped game 40\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521613650,\n\t\t\"termVersion\": 2\n\t}\n}"
+    }
+  }
+}

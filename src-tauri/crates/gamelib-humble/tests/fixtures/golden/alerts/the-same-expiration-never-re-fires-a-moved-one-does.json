@@ -1,0 +1,94 @@
+{
+  "input": {
+    "about": "D-92 dedupe: the same date on the next sync is silent; a moved date fires again with the new date",
+    "locale": "en",
+    "dateLocale": "en-US (pinned, the host default is not recorded)",
+    "steamDeckGameMode": false
+  },
+  "runs": [
+    {
+      "keys": [
+        {
+          "gamekey": "fake-gamekey-0001",
+          "machineName": "fake_game_1_steam",
+          "title": "Fake Game One",
+          "expiration": "2027-01-02T00:00:00.000Z"
+        }
+      ],
+      "suppressNotifications": false,
+      "notifyHumbleExpirations": true,
+      "i18nCalls": [
+        [
+          "humble.notification.expiringTitleSingle",
+          "Humble key expiring"
+        ],
+        [
+          "humble.notification.expiringBodySingle",
+          "{{title}}'s Humble key now expires on {{date}}",
+          {
+            "title": "Fake Game One",
+            "date": "1/2/2027"
+          }
+        ]
+      ],
+      "notifications": [
+        {
+          "title": "Humble key expiring",
+          "body": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+        }
+      ]
+    },
+    {
+      "keys": [
+        {
+          "gamekey": "fake-gamekey-0001",
+          "machineName": "fake_game_1_steam",
+          "title": "Fake Game One",
+          "expiration": "2027-01-02T00:00:00.000Z"
+        }
+      ],
+      "suppressNotifications": false,
+      "notifyHumbleExpirations": true,
+      "i18nCalls": [],
+      "notifications": []
+    },
+    {
+      "keys": [
+        {
+          "gamekey": "fake-gamekey-0001",
+          "machineName": "fake_game_1_steam",
+          "title": "Fake Game One",
+          "expiration": "2028-03-05T00:00:00.000Z"
+        }
+      ],
+      "suppressNotifications": false,
+      "notifyHumbleExpirations": true,
+      "i18nCalls": [
+        [
+          "humble.notification.expiringTitleSingle",
+          "Humble key expiring"
+        ],
+        [
+          "humble.notification.expiringBodySingle",
+          "{{title}}'s Humble key now expires on {{date}}",
+          {
+            "title": "Fake Game One",
+            "date": "3/5/2028"
+          }
+        ]
+      ],
+      "notifications": [
+        {
+          "title": "Humble key expiring",
+          "body": "Fake Game One's Humble key now expires on 3&#x2F;5&#x2F;2028"
+        }
+      ]
+    }
+  ],
+  "stateBefore": {},
+  "stateAfter": {
+    "store_cache/humble_notified_expiration.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:fake_game_1_steam\": {\n\t\t\"expiration\": \"2028-03-05T00:00:00.000Z\"\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:fake_game_1_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    }
+  }
+}

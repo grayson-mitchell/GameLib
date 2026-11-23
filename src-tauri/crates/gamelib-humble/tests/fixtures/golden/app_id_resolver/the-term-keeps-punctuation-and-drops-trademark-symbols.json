@@ -1,0 +1,132 @@
+{
+  "input": {
+    "about": "The search term is the title minus trademark symbols and the Steam suffix, punctuation and case kept; the match normalises fully",
+    "seed": {}
+  },
+  "trace": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "kind": "request",
+      "params": {
+        "term": "Tom & Jerry: Chase",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 1,
+      "atMs": 0,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 2,
+      "atMs": 350,
+      "kind": "request",
+      "params": {
+        "term": "Café Racer",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    }
+  ],
+  "runs": [
+    {
+      "titles": [
+        "Tom & Jerry™: Chase (Steam Key)",
+        "Café Racer - Steam Key"
+      ],
+      "summary": {
+        "requested": 2,
+        "resolved": 2,
+        "cached": 0,
+        "misses": 0,
+        "errors": 0,
+        "deferred": 0
+      },
+      "lookups": [
+        {
+          "title": "Tom & Jerry™: Chase (Steam Key)",
+          "cached": "31"
+        },
+        {
+          "title": "Café Racer - Steam Key",
+          "cached": "32"
+        }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Tom+%26+Jerry:+Chase&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Caf%C3%A9+Racer&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    }
+  ],
+  "logs": [
+    {
+      "seq": 3,
+      "atMs": 350,
+      "level": "info",
+      "message": "Humble: resolved 2/2 Steam app ids (0 cached, 0 misses, 0 errors, 0 deferred)"
+    }
+  ],
+  "stateBefore": {},
+  "stateAfter": {
+    "store_cache/humble_steam_appid.json": {
+      "utf8": "{\n\t\"tom jerry chase\": {\n\t\t\"appId\": \"31\",\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"tom jerry chase\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"cafe racer\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"cafe racer\": {\n\t\t\"appId\": \"32\",\n\t\t\"checkedAt\": 1795521600350,\n\t\t\"termVersion\": 2\n\t}\n}"
+    }
+  }
+}

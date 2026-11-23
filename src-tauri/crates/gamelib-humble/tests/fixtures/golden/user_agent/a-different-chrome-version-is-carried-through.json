@@ -1,0 +1,7 @@
+{
+  "about": "The Chrome token follows the fallback, never a hardcoded version",
+  "input": {
+    "userAgentFallback": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.1.2 Safari/537.36"
+  },
+  "output": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.1.2 Safari/537.36"
+}

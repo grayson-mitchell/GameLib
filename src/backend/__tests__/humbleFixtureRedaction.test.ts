@@ -40,9 +40,9 @@ const FIXTURES_ROOT = join(
  * The files committed so far: the three recorded wire cases of 94-06 Task 1 (6 files), the 492 classify
  * goldens and the 61 dedup goldens of Task 2 with their two MANIFEST.json (561 in all), and 94-08's
  * adapter (89 goldens, 65 recorded cases with their body files), library (51 goldens and their
- * recordings) and state (9 goldens) slices: 1533 in all; 94-09's user slice (70 goldens and 60 recorded cases) brings it to 1711. A half-scanned tree fails. Later plans raise it.
+ * recordings) and state (9 goldens) slices: 1533 in all; 94-09's user (70 goldens, 60 recorded cases), secrets (23), alerts (11), app_id_resolver (11 goldens, 11 recorded cases) and user_agent (8) slices bring it to 1836. A half-scanned tree fails. Later plans raise it.
  */
-const FILE_FLOOR = 1705
+const FILE_FLOOR = 1830
 
 /** Account names that name a role, never a person. */
 const SYNTHETIC_ACCOUNTS: readonly string[] = ['shared', 'public', 'default']

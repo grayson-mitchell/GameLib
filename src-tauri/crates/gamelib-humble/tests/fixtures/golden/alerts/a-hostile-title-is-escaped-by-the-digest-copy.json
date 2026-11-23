@@ -1,0 +1,48 @@
+{
+  "input": {
+    "about": "The single body interpolates the title through the default escaping of i18next",
+    "locale": "en",
+    "dateLocale": "en-US (pinned, the host default is not recorded)",
+    "steamDeckGameMode": false
+  },
+  "runs": [
+    {
+      "keys": [
+        {
+          "gamekey": "fake-gamekey-0001",
+          "machineName": "fake_game_1_steam",
+          "title": "Tom & Jerry's <b>\"Cheese\"</b>",
+          "expiration": "2027-01-02T00:00:00.000Z"
+        }
+      ],
+      "suppressNotifications": false,
+      "notifyHumbleExpirations": true,
+      "i18nCalls": [
+        [
+          "humble.notification.expiringTitleSingle",
+          "Humble key expiring"
+        ],
+        [
+          "humble.notification.expiringBodySingle",
+          "{{title}}'s Humble key now expires on {{date}}",
+          {
+            "title": "Tom & Jerry's <b>\"Cheese\"</b>",
+            "date": "1/2/2027"
+          }
+        ]
+      ],
+      "notifications": [
+        {
+          "title": "Humble key expiring",
+          "body": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;'s Humble key now expires on 1&#x2F;2&#x2F;2027"
+        }
+      ]
+    }
+  ],
+  "stateBefore": {},
+  "stateAfter": {
+    "store_cache/humble_notified_expiration.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:fake_game_1_steam\": {\n\t\t\"expiration\": \"2027-01-02T00:00:00.000Z\"\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:fake_game_1_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    }
+  }
+}
