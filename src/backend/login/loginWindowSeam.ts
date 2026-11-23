@@ -1,4 +1,8 @@
 /**
+ * Phase 94 D-03: moved here unchanged from `backend/humble/` -- a scheduled survivor, deleted by Phase 92.
+ * `oauthLoginCapture.ts` and the GOG, Epic and Amazon `user.ts` sign-in flows still drive this seam
+ * until the last OAuth flows port in 92, so it must outlive the Humble TypeScript (deleted by 94).
+ *
  * Login-window seam (Phase 34.4.1 Plan 02, D-01/D-02, REQ-34.4.1-02/REQ-34.4.1-13; header rewritten
  * Phase 39 Plan 02, REQ-39-03, once the single-shell reality replaced the dual-build one this header
  * used to describe).
@@ -13,7 +17,7 @@
  * NOTHING platform-specific in it. `user.ts` must never import sidecar RPC directly --
  * `backend/sidecar/sidecarRpc` runs a Node `readline`/stdio loop that only exists inside the
  * sidecar process, so importing it from this shared module would pull sidecar transport machinery
- * into code that does not need to know about it. Instead, `backend/sidecar/humbleLoginFlowRegistration.ts`
+ * into code that does not need to know about it. Instead, `backend/sidecar/loginSeamRegistration.ts`
  * (imported from the sidecar's own curated module graph) constructs a `rustInvoke`-backed
  * implementation and installs it here via `setLoginWindowSeam()` unconditionally at sidecar
  * startup, before any IPC handler can be reached. `getLoginWindowSeamOrThrow()` is the accessor
@@ -118,7 +122,7 @@ export interface LoginWindowStorageClearResult {
  * runtime implementation exists per build: Electron's untouched `session.fromPartition` path needs
  * no implementation of this interface at all (the holder stays `null`); the Tauri sidecar installs
  * a `rustInvoke`-backed implementation (`createRustLoginWindowSeam()` in
- * `backend/sidecar/humbleLoginFlowRegistration.ts`).
+ * `backend/sidecar/loginSeamRegistration.ts`).
  */
 export interface LoginWindowSeam {
   /** Opens a login window on `url`. Resolves the window's generated label. */
@@ -204,7 +208,7 @@ export interface LoginWindowSeam {
 
 /**
  * The boot's one login-window seam holder (D-05, C-WR-2): `null` until
- * `registerHumbleLoginFlows()` installs the rustInvoke-backed seam at sidecar startup, and
+ * `registerLoginWindowSeam()` installs the rustInvoke-backed seam at sidecar startup, and
  * whenever a test explicitly clears it via `install(null)`. One slot per boot, shared by every
  * consumer by slice.
  */
@@ -215,7 +219,7 @@ export interface LoginWindowSeamSlot {
    * Returns the active login-window seam implementation, or `null` if none is installed.
    *
    * Survives only for `install(null)`-driven tests and for the deliberately-kept
-   * smoke-test guard in `humbleLoginFlowRegistration.ts` (gated behind
+   * smoke-test guard in `loginSeamRegistration.ts` (gated behind
    * `process.env.GAMELIB_LOGIN_SEAM_SMOKE === '1'`). Every production call site should use
    * `getOrThrow()` instead.
    */
@@ -223,8 +227,8 @@ export interface LoginWindowSeamSlot {
   /**
    * Returns the active login-window seam implementation, throwing instead of returning `null`.
    *
-   * This is the accessor every production call site uses. `registerHumbleLoginFlows()`
-   * (`src/backend/sidecar/humbleLoginFlowRegistration.ts`) installs the seam unconditionally at
+   * This is the accessor every production call site uses. `registerLoginWindowSeam()`
+   * (`src/backend/sidecar/loginSeamRegistration.ts`) installs the seam unconditionally at
    * sidecar startup, before any IPC handler can be reached -- so by the time any handler-reachable
    * code runs, a seam is always installed. Reaching this accessor before that happens is a wiring
    * bug, not a supported state, so it fails loudly here rather than at whichever seam member a
@@ -244,7 +248,7 @@ export function createLoginWindowSeamSlot(): LoginWindowSeamSlot {
       if (installed === null) {
         throw new Error(
           'getLoginWindowSeamOrThrow(): no login-window seam is installed. ' +
-            'registerHumbleLoginFlows() (src/backend/sidecar/humbleLoginFlowRegistration.ts) installs ' +
+            'registerLoginWindowSeam() (src/backend/sidecar/loginSeamRegistration.ts) installs ' +
             'the seam at sidecar startup -- reaching this accessor before that has run is a wiring bug, ' +
             'not a supported state.'
         )

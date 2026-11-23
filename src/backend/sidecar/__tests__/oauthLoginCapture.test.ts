@@ -49,7 +49,7 @@ import {
 import {
   createLoginWindowSeamSlot,
   type LoginWindowSeam
-} from '../../humble/loginWindowSeam'
+} from '../../login/loginWindowSeam'
 
 // The capture reads the seam through its injected deps (66.3-17): one slot per test file.
 const seamSlot = createLoginWindowSeamSlot()

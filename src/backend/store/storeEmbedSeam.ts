@@ -8,7 +8,7 @@
  * constructed once, at sidecar startup, and installed here.
  *
  * This module is the seam: a plain interface + a module-scoped holder, with NOTHING
- * platform-specific in it, mirroring `src/backend/humble/loginWindowSeam.ts` exactly.
+ * platform-specific in it, mirroring `src/backend/login/loginWindowSeam.ts` exactly.
  * `storeEmbedFlowRegistration.ts` (imported from the sidecar's own curated module graph)
  * constructs the `rustInvoke`-backed implementation and installs it here via
  * `StoreEmbedSeamHolder.set()` — the ONLY call site (T-40-05-seam) — unconditionally at sidecar

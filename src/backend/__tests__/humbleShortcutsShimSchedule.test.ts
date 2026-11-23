@@ -115,11 +115,11 @@ interface ScheduleRow {
  * name, shape and callers; shims and resolvers a channel; twins and views a vectors test.
  */
 export const SCHEDULE: readonly ScheduleRow[] = [
-  // The Phase 91 login-window seam implementation (D-03). 94-04 moves the factory verbatim to
-  // `src/backend/sidecar/loginSeamRegistration.ts` and repoints this row at the new file, deletedBy 92.
+  // The Phase 91 login-window seam implementation (D-03). 94-04 moved the factory verbatim to
+  // `src/backend/sidecar/loginSeamRegistration.ts` and repointed this row at the new file, deletedBy 92.
   {
     name: 'createRustLoginWindowSeam',
-    file: 'src/backend/sidecar/humbleLoginFlowRegistration.ts',
+    file: 'src/backend/sidecar/loginSeamRegistration.ts',
     shape: 'relocated',
     callers: ['src/backend/sidecar/handlers.ts'],
     deletedBy: 92

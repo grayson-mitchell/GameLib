@@ -483,7 +483,7 @@ const IN_SCOPE_SUITES = [
  * `electronUntouched.test.ts`'s convention) -- it never touches `electron`,
  * `electron-store`, `pathShim`, or `../bootstrap`'s `init()` at all, because
  * `oauthLoginCapture.ts`/`oauthLoginFlowRegistration.ts` import nothing from
- * any of those (their only dependencies are `../humble/loginWindowSeam`,
+ * any of those (their only dependencies are `../login/loginWindowSeam`,
  * pure types with no I/O, and `./platformApi`'s `ipcMain` recorder). No new
  * containment surface.
  *

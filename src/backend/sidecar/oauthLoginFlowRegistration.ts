@@ -23,7 +23,7 @@
  * This channel is Tauri-only by construction: it is registered in the sidecar's curated module
  * graph only — the module that installs it (`registerOAuthLoginFlows`, below) never runs anywhere
  * else. `captureOAuthLogin()` calls the seam slot's `getOrThrow()`, which is always satisfied here
- * because `registerHumbleLoginFlows()` installs the seam unconditionally at sidecar startup,
+ * because `registerLoginWindowSeam()` installs the seam unconditionally at sidecar startup,
  * before any IPC handler can be reached.
  *
  * D-04/REQ-34.4.1-08 boundary (do not blur this): this channel captures a redirect code — it does
@@ -34,7 +34,7 @@
 
 import type { IpcRegistry } from './ipcRegistry'
 import { captureOAuthLogin } from './oauthLoginCapture'
-import type { LoginWindowSeamSlot } from '../humble/loginWindowSeam'
+import type { LoginWindowSeamSlot } from '../login/loginWindowSeam'
 import type {
   OAuthRunner,
   OAuthCaptureOutcome
@@ -71,7 +71,7 @@ function isHttpsUrl(value: unknown): value is string {
  */
 export function registerOAuthLoginFlows(deps: {
   ipc: Pick<IpcRegistry, 'handle'>
-  /** The boot's login-window seam slot (D-66.3-17), installed by `registerHumbleLoginFlows`. */
+  /** The boot's login-window seam slot (D-66.3-17), installed by `registerLoginWindowSeam`. */
   loginWindowSeam: Pick<LoginWindowSeamSlot, 'getOrThrow'>
 }): void {
   deps.ipc.handle(

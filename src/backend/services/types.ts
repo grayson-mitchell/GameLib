@@ -53,7 +53,7 @@ import type {
 import type { AnonymousClient } from 'backend/storeManagers/steam/anonymousClient'
 import type { SteamUser } from 'backend/storeManagers/steam/user'
 import type { HumbleServices } from 'backend/humble'
-import type { LoginWindowSeamSlot } from 'backend/humble/loginWindowSeam'
+import type { LoginWindowSeamSlot } from 'backend/login/loginWindowSeam'
 import type { SteamBottle } from 'backend/storeManagers/steam/bottle'
 import type { SteamSignInState } from 'backend/storeManagers/steam/userSignInState'
 import type { SteamAuthTriggerState } from 'backend/storeManagers/steam/authTrigger'
@@ -368,8 +368,15 @@ export interface BootServices {
    */
   itadSecrets?: undefined
   /**
+   * Built by the 'humble-services' boot step, before the Humble services (94-04, D-03): the one
+   * login-window seam slot of this boot, installed by `registerLoginWindowSeam` and read by the
+   * Humble user and library and by the GOG, Epic and Amazon sign-in flows. A scheduled survivor,
+   * deleted by Phase 92.
+   */
+  loginWindowSeam: LoginWindowSeamSlot
+  /**
    * Built by the 'humble-services' boot step, after 'steam-user' and before 'store-managers'
-   * (D-66.3-17): the Humble user/library/fence/login-window seam of this boot.
+   * (D-66.3-17): the Humble user/library/fence of this boot.
    */
   humble: HumbleServices
 }

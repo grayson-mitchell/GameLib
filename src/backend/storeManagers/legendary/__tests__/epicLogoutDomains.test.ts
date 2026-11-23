@@ -37,7 +37,7 @@
  * broken `stop`).
  *
  * Mock boundaries mirror `user.test.ts`'s exactly — see that file's header for
- * why each one is needed. `../../../humble/loginWindowSeam` is deliberately NOT
+ * why each one is needed. `../../../login/loginWindowSeam` is deliberately NOT
  * mocked: it is a plain module-scoped holder, driven here the same way
  * production drives it.
  */
@@ -135,7 +135,7 @@ import { logError, logInfo, logWarning } from 'backend/logger'
 import {
   createLoginWindowSeamSlot,
   type LoginWindowSeam
-} from '../../../humble/loginWindowSeam'
+} from '../../../login/loginWindowSeam'
 
 // The boot's one login-window seam slot, per test file (66.3-17): the user modules read it through deps.
 const seamSlot = createLoginWindowSeamSlot()

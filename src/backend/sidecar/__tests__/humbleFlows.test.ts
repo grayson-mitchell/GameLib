@@ -81,7 +81,7 @@ import { createIpcRegistry } from '../ipcRegistry'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
-import { createLoginWindowSeamSlot } from '../../humble/loginWindowSeam'
+import { createLoginWindowSeamSlot } from '../../login/loginWindowSeam'
 import type { HumbleUser as HumbleUserType } from '../../humble/user'
 import type { HumbleLibrary as HumbleLibraryType } from '../../humble/library'
 
@@ -1135,9 +1135,9 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         require('../../humble/user') as typeof import('../../humble/user')
       const {
         createLoginWindowSeamSlot: createFreshSeamSlot
-      }: typeof import('../../humble/loginWindowSeam') =
+      }: typeof import('../../login/loginWindowSeam') =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('../../humble/loginWindowSeam')
+        require('../../login/loginWindowSeam')
       const seamSlot = createFreshSeamSlot()
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const realStores = require('../../humble/stores').createHumbleStores({

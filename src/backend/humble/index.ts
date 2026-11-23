@@ -8,10 +8,7 @@ import {
   type HumbleActionIdCache
 } from './actionIdCache'
 import { createHumbleLibrary, type HumbleLibrary } from './library'
-import {
-  createLoginWindowSeamSlot,
-  type LoginWindowSeamSlot
-} from './loginWindowSeam'
+import type { LoginWindowSeamSlot } from '../login/loginWindowSeam'
 import type { HumbleSecretStore } from './secretStore'
 import { createSteamAppIdResolver } from './steamAppIdResolver'
 import { createHumbleSyncFence, type HumbleSyncFence } from './syncFence'
@@ -31,20 +28,22 @@ export interface HumbleServicesDeps {
   signInOutcomes: ManagerDeps['signIn']['outcomes']
   appInfo: Pick<AppInfo, 'userAgentFallback'>
   sendFrontendMessage: SendFrontendMessage
+  /** The boot-owned login-window seam slot (94-04, D-03), shared with the OAuth sign-in flows. */
+  loginWindowSeam: LoginWindowSeamSlot
 }
 
 /**
  * The boot's Humble services: one set per boot, passed to every consumer by slice. The user, the
- * library and the registrations share the one sync fence and the one login-window seam slot, so a
- * disconnect invalidates exactly the syncs of this boot and a seam installed at registration is
- * the seam every consumer reads. The library and the dev validation run share the one action-id
+ * library and the registrations share the one sync fence, so a disconnect invalidates exactly the
+ * syncs of this boot. The login-window seam slot is the boot's own (`BootServices.loginWindowSeam`,
+ * handed in as a dependency), so a seam installed at registration is the seam every consumer reads.
+ * The library and the dev validation run share the one action-id
  * owner, so a cached server-action id never outlives its boot.
  */
 export interface HumbleServices {
   user: HumbleUser
   library: HumbleLibrary
   syncFence: HumbleSyncFence
-  loginWindowSeam: LoginWindowSeamSlot
   /** The boot's Humble server-action id owner (66.4-REVIEW CR-01). */
   actionIds: HumbleActionIdCache
   secretStore: HumbleSecretStore
@@ -53,7 +52,7 @@ export interface HumbleServices {
 
 export function createHumbleServices(deps: HumbleServicesDeps): HumbleServices {
   const syncFence = createHumbleSyncFence()
-  const loginWindowSeam = createLoginWindowSeamSlot()
+  const { loginWindowSeam } = deps
   const actionIds = createHumbleActionIdCache()
   const user = new HumbleUser({
     stores: deps.stores,
@@ -81,7 +80,6 @@ export function createHumbleServices(deps: HumbleServicesDeps): HumbleServices {
     user,
     library,
     syncFence,
-    loginWindowSeam,
     actionIds,
     secretStore: deps.secretStore,
     appInfo: deps.appInfo

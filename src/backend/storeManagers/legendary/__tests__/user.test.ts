@@ -25,7 +25,7 @@
  *  - '..' (storeManagers/index)        -> libraryManagerMap['legendary'].runRunnerCommand
  *  - ../../../humble/userAgent         -> standardBrowserUserAgent (fixed string)
  *
- * `../../../humble/loginWindowSeam` is NOT mocked — it is a plain module-scoped holder +
+ * `../../../login/loginWindowSeam` is NOT mocked — it is a plain module-scoped holder +
  * pure classifier (no platform imports), so tests drive it directly via
  * `seamSlot.install(seam | null)`/`getLoginWindowSeam()`, exactly as production code does.
  */
@@ -116,7 +116,7 @@ import { logError, logInfo, logWarning } from 'backend/logger'
 import {
   createLoginWindowSeamSlot,
   type LoginWindowSeam
-} from '../../../humble/loginWindowSeam'
+} from '../../../login/loginWindowSeam'
 
 // The boot's one login-window seam slot, per test file (66.3-17): the user modules read it through deps.
 const seamSlot = createLoginWindowSeamSlot()

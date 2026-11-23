@@ -8,7 +8,7 @@ import { clearCache } from 'backend/utils'
 import type { ClearCacheDeps } from 'backend/utils'
 import { deriveGogPaths } from './constants'
 import { isMac } from 'backend/constants/environment'
-import type { LoginWindowSeamSlot } from '../../humble/loginWindowSeam'
+import type { LoginWindowSeamSlot } from '../../login/loginWindowSeam'
 import type { SignInProbeOutcome } from 'common/signInState'
 import {
   classifyGogdlAuth,

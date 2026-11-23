@@ -84,6 +84,7 @@ import { registerShellFilesFlows } from './shellFilesFlowRegistration'
 import { registerClipboardFlows } from './clipboardFlowRegistration'
 import { registerHumbleFlows } from './humbleFlowRegistration'
 import { registerHumbleLoginFlows } from './humbleLoginFlowRegistration'
+import { registerLoginWindowSeam } from './loginSeamRegistration'
 import { registerOAuthLoginFlows } from './oauthLoginFlowRegistration'
 import { registerRunnerAuthFlows } from './runnerAuthFlowRegistration'
 import { registerEngineWineResolvers } from './engineWineResolvers'
@@ -144,6 +145,16 @@ export function registerHandlers(deps: {
   const ipc = deps.services.host.ipc
   ipc.handle('health', async () => 'ok')
 
+  // Phase 94 Plan 04 (D-03, T-94-07): install the rustInvoke-backed login-window seam FIRST, before
+  // any registration that reads the slot (the dev Epic sweep, the Humble login, the OAuth capture
+  // and the runner auth flows below). A scheduled survivor, deleted by Phase 92: the GOG, Epic and
+  // Amazon sign-in flows still drive it, so it does not live with the Humble registration.
+  registerLoginWindowSeam(
+    deps.services.loginWindowSeam,
+    deps.services.host.requestRustInvoke,
+    deps.services.appInfo
+  )
+
   registerSteamFlows({
     ipc,
     appRuntime: deps.services.appRuntime,
@@ -181,7 +192,7 @@ export function registerHandlers(deps: {
   registerDevEpicCookieSweepFlow({
     ipc,
     appInfo: deps.services.appInfo,
-    loginWindowSeam: deps.services.humble.loginWindowSeam
+    loginWindowSeam: deps.services.loginWindowSeam
   })
   // WR-02: without this, plan 30-03's native picker chain was unreachable — `openDialog`
   // is the only backend channel that reaches `dialog.showOpenDialog`, and its sole other
@@ -323,26 +334,25 @@ export function registerHandlers(deps: {
     config: deps.services.config,
     notifications: deps.services.host.notifications
   })
-  // Phase 34.4.1 Plan 02 (REQ-34.4.1-02/-03/-04/-05/-13): the browser-auth channels,
-  // plus installing the rustInvoke-backed login-window seam (setLoginWindowSeam)
+  // Phase 34.4.1 Plan 02 (REQ-34.4.1-02/-03/-04/-05/-13): the browser-auth channels (the
+  // login-window seam they drive is installed by registerLoginWindowSeam, above)
   // — no ordering constraint relative to the
   // other calls above (own channel names, no cross-module runtime dependency at
   // registration time), placed alongside them, before `registerStoreWriteHandlers()`.
   registerHumbleLoginFlows({
     ipc,
-    humble: deps.services.humble,
-    requestRustInvoke: deps.services.host.requestRustInvoke
+    humble: deps.services.humble
   })
   // Phase 34.4.1 Plan 09 (REQ-34.4.1-08): the `oauthCaptureLogin` handle channel, which
   // drives the four OAuth runners' (legendary/gog/nile) redirect capture through the SAME
-  // login-window seam Humble already installed above -- a completely separate concern from
+  // login-window seam registerLoginWindowSeam installed above -- a completely separate concern from
   // Humble's own browser-auth channels (this captures a redirect code, it does not
   // authenticate). No ordering constraint relative to the other calls above (own channel name,
   // no cross-module runtime dependency at registration time), placed alongside them, before
   // `registerStoreWriteHandlers()`.
   registerOAuthLoginFlows({
     ipc,
-    loginWindowSeam: deps.services.humble.loginWindowSeam
+    loginWindowSeam: deps.services.loginWindowSeam
   })
   // Phase 34.5 Plan 04 (REQ-34.5-13): the four slice-34.5 clusters — runner auth/sign-out,
   // Wine tools, shortcuts, runner misc. Declared here as EMPTY seams by plan 34.5-04 and
@@ -360,7 +370,7 @@ export function registerHandlers(deps: {
     notifications: deps.services.host.notifications,
     onlineMonitor: deps.services.onlineMonitor,
     signIn: deps.services.signInProbe,
-    loginWindowSeam: deps.services.humble.loginWindowSeam,
+    loginWindowSeam: deps.services.loginWindowSeam,
     gogRuntime: deps.services.gogRuntime,
     nileRuntime: deps.services.nileRuntime,
     paths: deps.services.paths,

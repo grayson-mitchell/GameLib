@@ -142,7 +142,7 @@ const flowDeps = {
   sendFrontendMessage: jest.fn(),
   ...services,
   signIn: services.signInProbe,
-  loginWindowSeam: services.humble.loginWindowSeam,
+  loginWindowSeam: services.loginWindowSeam,
   ipc: testIpc,
   dialogs: services.host.dialogs,
   appState: services.host.appState,

@@ -369,7 +369,7 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     'src/backend/storeManagers/steam/bottle.ts',
     'src/backend/humble/classify.ts',
     'src/backend/humble/library.ts',
-    'src/backend/humble/loginWindowSeam.ts',
+    'src/backend/login/loginWindowSeam.ts',
     'src/backend/humble/secretStore.ts',
     'src/backend/humble/syncFence.ts',
     'src/backend/humble/user.ts'

@@ -17,7 +17,7 @@ import {
   classifyCookieRead,
   type CookieReadVerdict,
   type LoginWindowSeamSlot
-} from '../../humble/loginWindowSeam'
+} from '../../login/loginWindowSeam'
 import { standardBrowserUserAgent } from '../../humble/userAgent'
 import type { AppInfo } from 'backend/process/context'
 
