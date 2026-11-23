@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 87-29-PLAN.md
-last_updated: "2026-11-23T07:58:02.890Z"
+last_updated: "2026-11-23T09:02:48.362Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 6c4f3553625b84bd807c0a7829390be2aa53109b
+state_head: a1c5f9a21612a060ec6effa2d07988a226fbb427
 progress:
   total_phases: 20
   completed_phases: 23
@@ -989,6 +989,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261123-bax | Cap the stored recent-games list at 50, trimming on add | 2026-11-23 | cf1ec2291 | — | [261123-bax-cap-the-stored-recent-games-list-at-50-t](./quick/261123-bax-cap-the-stored-recent-games-list-at-50-t/) |
 | 261123-bbi | Refresh buttons spin at least 1 s per click via useMinimumSpin (Humble Keys acceptance; Library header, Wine Manager, error screen, wiki refresh/Retry) | 2026-11-23 | 17cf992c2 | — | [261123-bbi-refresh-buttons-spin-at-least-1s-per-cli](./quick/261123-bbi-refresh-buttons-spin-at-least-1s-per-cli/) |
 | 261123-pnl | GameLib Light clean retheme: light chrome, single accent, neutral greys | 2026-11-23 | 3d588119a | — | [261123-pnl-gamelib-light-clean-retheme-light-chrome](./quick/261123-pnl-gamelib-light-clean-retheme-light-chrome/) |
+| 261123-txk | Ranged five-connection download for wine and fallback-engine archives | 2026-11-23 | a1c5f9a21 | — | [261123-txk-ranged-five-connection-download-for-wine](./quick/261123-txk-ranged-five-connection-download-for-wine/) |
 
 ## Deferred Items
 
