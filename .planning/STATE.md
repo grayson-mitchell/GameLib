@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-43-PLAN.md
-last_updated: "2026-11-23T14:21:20.298Z"
+stopped_at: Completed 87-44-PLAN.md
+last_updated: "2026-11-23T14:38:31.373Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: f67436d756e386b25e37fe6a895d7058059c551c
+state_head: e1aca7d6389589cecf46d2ae2f4c9ad23900585a
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 44 of 59
+Plan: 45 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -453,6 +453,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P41 | 10 min | 2 tasks | 5 files |
 | Phase 87 P42 | not timed | 2 tasks | 61 files |
 | Phase 87 P43 | 24 min | 3 tasks | 83 files |
+| Phase 87 P44 | 20 min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -959,6 +960,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-42: the sync selection reads use engineSelectionView (D-24), a write-through mirror fed by prepare replies, the clear and Rust's engineSelectionChanged frame (shell to sidecar only); ledger and selection writes land in the TS mirror at once and in Rust through engineSync; a TS AbortSignal on a fallback creation is a cancel id (engine_bottle_cancel_create)
 - [Phase 87]: 87-43: bottleLedger, engineRegistry, perGameBottle and gamePrefix stay until 87-56; only bottlePrimitives, engineSwitch and adoptBottle (no live caller) are deleted, so bottlesPortComplete names those and the todo/SUMMARY record the rest
 - [Phase 87]: 87-43: the pin download the still-TS launch asks Rust's switch for is engine/pinEngine.ts; EnginePin/PinnedArtifact live in common/types/engine; the bottle fake records and scripts Rust ops and runs no TS reference
+- [Phase 87]: The CrossOver search stays gamelib-wine's: the engine crate owns the locator and its memo and asks an engine-owned CrossoverDiscovery trait the shell implements (D-04, D-22).
+- [Phase 87]: Demo-status is the one real-profile spawn (replace_env false, CX_BOTTLE added, spike 060 reason in code); run_tool is the isolated arm (five programs, eight variables at a fresh 0700 dir); a SpecRunner cannot tell a failed spawn from a killed child so spawn-error reads as nonzero-exit (87-44).
 
 ### Pending Todos
 
@@ -1239,8 +1242,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T14:21:08.570Z
-Stopped at: Completed 87-43-PLAN.md
+Last session: 2026-11-23T14:38:28.917Z
+Stopped at: Completed 87-44-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
