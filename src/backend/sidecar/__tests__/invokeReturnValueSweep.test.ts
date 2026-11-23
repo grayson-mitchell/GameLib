@@ -7,7 +7,7 @@
  * the 40 put the channel name on the following line — a single-line-only regex finds fewer),
  * and asserts:
  *
- *   1. The extracted channel count is exactly 37, with the exact per-module tally 10/9/6/12.
+ *   1. The extracted channel count is exactly 35, with the exact per-module tally 10/7/6/12.
  *   2. Every channel classified RETURNS (declared non-void in `AsyncIPCFunctions`, NOT on the
  *      explicit VOID-PARITY allow-list below) has a `return` statement inside its own handler
  *      body -- so a future edit that silently drops a `return` is caught here, not live.
@@ -49,9 +49,9 @@ const MODULES: ModuleSpec[] = [
     // `removeWineVersion` are native `wine` channels.
     // Phase 87 Plan 24 (D-14): 12 -> 11. `wine.isValidVersion` is a native `wine` channel.
     // Phase 87 Plan 26 (D-14): 11 -> 10. `getAlternativeWine` is a native `wine` channel.
-    // Phase 87 Plan 34 (D-23): 10 -> 9. `toggleDXVK` is a scheduled resolver (`engineWineResolvers.ts`).
+    // Phase 87 Plan 34 (D-23): 10 -> 7. The three DXVK toggles are scheduled resolvers (`engineWineResolvers.ts`).
     path: join(__dirname, '../wineToolsFlowRegistration.ts'),
-    expectedCount: 9
+    expectedCount: 7
   },
   {
     name: 'shortcuts',
@@ -190,9 +190,9 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
   // Phase 87 Plan 20 (D-14): 43 -> 40, the three wine-manager channels are native `wine` channels.
   // Phase 87 Plan 24 (D-14): 40 -> 39, `wine.isValidVersion` is a native `wine` channel.
   // Phase 87 Plan 26 (D-14): 39 -> 38, `getAlternativeWine` is a native `wine` channel.
-  // Phase 87 Plan 34 (D-23): 38 -> 37, `toggleDXVK` is a scheduled resolver, not one of the modules' handles.
-  it('extracts exactly 37 channels total', () => {
-    expect(allChannels).toHaveLength(37)
+  // Phase 87 Plan 34 (D-23): 38 -> 35, the three DXVK toggles are scheduled resolvers, not the modules' handles.
+  it('extracts exactly 35 channels total', () => {
+    expect(allChannels).toHaveLength(35)
   })
 
   it.each(MODULES)('$name has exactly $expectedCount channels', (spec) => {

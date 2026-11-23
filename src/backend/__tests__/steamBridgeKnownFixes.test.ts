@@ -17,7 +17,7 @@ import {
 } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import * as engineServices from 'backend/services/engineServices'
+import * as toolsFromModule from 'backend/services/toolsFrom'
 import type { Tools } from 'backend/tools'
 
 jest.mock('os', () => {
@@ -139,7 +139,7 @@ beforeEach(() => {
   rmSync(bundledFixesPath, { recursive: true, force: true })
   // The tools instance the known-fix applier builds from its deps (66.1-22f): the Winetricks
   // seam is observed by spying the builder, not by mocking a module.
-  jest.spyOn(engineServices, 'toolsFrom').mockReturnValue({
+  jest.spyOn(toolsFromModule, 'toolsFrom').mockReturnValue({
     Winetricks: {
       install: (...args: unknown[]) => mockWinetricksInstall(...args)
     }

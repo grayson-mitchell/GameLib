@@ -228,7 +228,7 @@ export async function applySteamBridgeKnownFixes(
   try {
     // Lazy, mirroring games.ts's lazy launcher import: avoids the cycle.
     const { Winetricks } = (
-      await import('backend/services/engineServices')
+      await import('backend/services/toolsFrom')
     ).toolsFrom(deps)
     const { runWineCommand } = deps.commandRunner
 

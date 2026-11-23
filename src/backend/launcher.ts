@@ -46,9 +46,9 @@ import {
 import type { EngineStateService } from './engine/engineState'
 import {
   engineServicesFrom,
-  toolsFrom,
   type EngineServicesSource
 } from './services/engineServices'
+import { toolsFrom } from './services/toolsFrom'
 import type {
   CommandRunner,
   InfoCaches,
@@ -64,6 +64,7 @@ import { showDialogBoxModalAuto, type DialogBoxDeps } from './dialog/dialog'
 import { readFileSync, writeFileSync } from 'fs'
 import { searchForExecutableOnPath } from './utils/os/path'
 import { downloadRuntime, isRuntimeInstalled } from './enginewine/runtimes'
+import { dxvkInstallRemove } from './enginewine/tools'
 import { validWine } from './enginewine/wineCore'
 import { recordPlaySession } from './runsForMe'
 import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
@@ -1118,16 +1119,28 @@ async function prepareWineLaunch(
   }
 
   // If DXVK/VKD3D installation is enabled, install it
+  // Phase 87 (87-34): the install runs in Rust (`wine_dxvk_install_remove`), with the settings this step holds.
   if (gameSettings.wineVersion.type === 'wine') {
-    const tools = toolsFrom(engineSource(deps))
     if (gameSettings.autoInstallDxvk) {
-      await tools.DXVK.installRemove(gameSettings, 'dxvk', 'backup')
+      await dxvkInstallRemove(deps, {
+        settings: gameSettings,
+        tool: 'dxvk',
+        action: 'backup'
+      })
     }
     if (isLinux && gameSettings.autoInstallDxvkNvapi) {
-      await tools.DXVK.installRemove(gameSettings, 'dxvk-nvapi', 'backup')
+      await dxvkInstallRemove(deps, {
+        settings: gameSettings,
+        tool: 'dxvk-nvapi',
+        action: 'backup'
+      })
     }
     if (isLinux && gameSettings.autoInstallVkd3d) {
-      await tools.DXVK.installRemove(gameSettings, 'vkd3d', 'backup')
+      await dxvkInstallRemove(deps, {
+        settings: gameSettings,
+        tool: 'vkd3d',
+        action: 'backup'
+      })
     }
   }
 

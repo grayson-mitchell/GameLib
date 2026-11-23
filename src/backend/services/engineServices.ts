@@ -1,11 +1,12 @@
 /**
- * Builds the engine's injected `EngineServices` (and the matching `Tools`) from slices a caller
- * already holds (66.1-22d). Value-imports backend/tools, so steam modules reach it lazily.
+ * Builds the engine's injected `EngineServices` from slices a caller already holds (66.1-22d). It holds
+ * no value import of `backend/tools` (87-34): `installRemove` reaches Rust through the `dxvkInstallRemove`
+ * shim, so steam modules can reach it without the tools module (`toolsFrom` lives in `./toolsFrom`).
  */
 import type { EngineServices } from 'backend/engine/engineServices'
 import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
-import { createTools } from 'backend/tools'
-import type { Tools, ToolsDeps } from 'backend/tools'
+import { dxvkInstallRemove } from 'backend/enginewine/tools'
+import type { ToolsDeps } from '../tools'
 import type { SteamEngineBottle } from 'backend/storeManagers/steam/bottle'
 import type { AppPaths } from 'backend/process/context'
 import type { Launcher, ManagerDeps } from './types'
@@ -41,38 +42,10 @@ export type EngineServicesSource = Pick<
       Pick<AppPaths, 'defaultUmuPath' | 'publicDir' | 'runtimePath'>
     /** The probes the engine spawns (66.2-03): only `run`, so the launcher's slice qualifies. */
     runner: Pick<ManagerDeps['runner'], 'run'>
-    /** The members createTools reads; a launcher still being built can supply just these. */
+    /** The members the tools (`toolsFrom`) read; a launcher still being built can supply just these. */
     launcher: Pick<Launcher, 'setupEnvVars' | 'setupWineEnvVars' | 'validWine'>
     stores: Pick<ManagerDeps['stores'], 'wineManager'>
   }
-
-export function toolsFrom(deps: EngineServicesSource): Tools {
-  return createTools({
-    managers: { library: deps.libraryManagers },
-    commandRunner: deps.commandRunner,
-    launcher: deps.launcher,
-    spawnAsync: deps.spawnAsync,
-    runner: deps.runner,
-    aborts: deps.aborts,
-    toolsState: deps.toolsState,
-    stores: deps.stores,
-    steamBottle: deps.steamBottle,
-    steamLaunchRuntime: deps.steamLaunchRuntime,
-    config: deps.config,
-    gameConfigs: deps.gameConfigs,
-    appInfo: deps.appInfo,
-    dialogs: deps.dialogs,
-    appState: deps.appState,
-    notifications: deps.notifications,
-    sendFrontendMessage: deps.sendFrontendMessage,
-    onlineMonitor: deps.onlineMonitor,
-    engineState: deps.engineState,
-    engineRuntime: deps.engineRuntime,
-    storeRoot: deps.storeRoot,
-    appRuntime: deps.appRuntime,
-    paths: deps.paths
-  })
-}
 
 export function engineServicesFrom(deps: EngineServicesSource): EngineServices {
   return {
@@ -83,7 +56,12 @@ export function engineServicesFrom(deps: EngineServicesSource): EngineServices {
     engineRuntime: deps.engineRuntime,
     storeRoot: deps.storeRoot,
     paths: deps.paths,
-    installRemove: (...a) => toolsFrom(deps).DXVK.installRemove(...a),
+    // The TS `installRemove` resolved a boolean; the Rust op does too, and anything else is a failure.
+    installRemove: async (settings, tool, action, source) =>
+      (await dxvkInstallRemove(
+        { requestRustInvoke: deps.engineRuntime.requestRustInvoke },
+        { settings, tool, action, source }
+      )) === true,
     wineManagerReleases: wineManagerReleasesFrom(deps),
     globalSettings: () =>
       deps.config.getSettings() as unknown as Record<string, unknown>,

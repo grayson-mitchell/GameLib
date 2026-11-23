@@ -12,12 +12,14 @@ import { createIpcRegistry, type IpcRegistry } from '../ipcRegistry'
 import {
   registerEngineWineResolvers,
   toggleDXVK,
+  toggleDXVKNVAPI,
+  toggleVKD3D,
   type EngineWineResolverDeps
 } from '../engineWineResolvers'
 
 const SETTINGS = { winePrefix: '/prefix', marker: 'merged-game-settings' }
 
-function makeDeps(answer: unknown | Error = true): EngineWineResolverDeps & {
+function makeDeps(answer: unknown = true): EngineWineResolverDeps & {
   registry: IpcRegistry
   calls: Array<[string, unknown[]]>
   settingsFor: string[]
@@ -81,19 +83,70 @@ describe('toggleDXVK', () => {
   })
 })
 
+// T-34.5-31: the three toggle bodies differ by one string literal, so a copy-paste that swapped it would
+// install the wrong component with no other failure. Each is proven to send its own tool and no neighbour's.
+describe.each([
+  ['toggleDXVKNVAPI', toggleDXVKNVAPI, 'dxvk-nvapi'],
+  ['toggleVKD3D', toggleVKD3D, 'vkd3d']
+] as const)('%s', (_name, resolver, tool) => {
+  it(`reads the game settings once and sends the ${tool} tool in the one typed call`, async () => {
+    const deps = makeDeps(true)
+    expect(await resolver(deps, { appName: 'game-3', action: 'backup' })).toBe(
+      true
+    )
+    expect(deps.settingsFor).toEqual(['game-3'])
+    expect(deps.calls).toEqual([
+      [
+        RUST_WINE_DXVK_INSTALL_REMOVE,
+        [{ settings: SETTINGS, tool, action: 'backup' }]
+      ]
+    ])
+  })
+
+  it('forwards a restore as a restore and lets a Rust refusal reach the renderer', async () => {
+    const deps = makeDeps(false)
+    expect(await resolver(deps, { appName: 'game-3', action: 'restore' })).toBe(
+      false
+    )
+    expect(deps.calls[0]?.[1]).toEqual([
+      { settings: SETTINGS, tool, action: 'restore' }
+    ])
+    const refusing = makeDeps(new Error('wine_dxvk_install_remove:download'))
+    await expect(
+      resolver(refusing, { appName: 'game-3', action: 'backup' })
+    ).rejects.toThrow('wine_dxvk_install_remove:download')
+  })
+})
+
 describe('registerEngineWineResolvers', () => {
-  it('registers toggleDXVK as an invoke handle that resolves the first argument', async () => {
+  it('registers the three DXVK toggles once each as invoke handles that resolve the first argument', async () => {
     const deps = makeDeps(true)
     registerEngineWineResolvers(deps)
-    const handler = defined(
-      deps.registry.handlerMap().get('toggleDXVK'),
-      'toggleDXVK handle'
+    const tools: Record<string, string> = {
+      toggleDXVK: 'dxvk',
+      toggleDXVKNVAPI: 'dxvk-nvapi',
+      toggleVKD3D: 'vkd3d'
+    }
+    for (const [channel, tool] of Object.entries(tools)) {
+      const handler = defined(
+        deps.registry.handlerMap().get(channel),
+        `${channel} handle`
+      )
+      deps.calls.length = 0
+      expect(
+        await handler(undefined, { appName: 'game-2', action: 'backup' })
+      ).toBe(true)
+      expect(deps.calls).toEqual([
+        [
+          RUST_WINE_DXVK_INSTALL_REMOVE,
+          [{ settings: SETTINGS, tool, action: 'backup' }]
+        ]
+      ])
+      expect(deps.registry.listenerMap().has(channel)).toBe(false)
+    }
+    // Nothing else is registered here: a channel has one owner (D-06).
+    expect([...deps.registry.handlerMap().keys()].sort()).toEqual(
+      Object.keys(tools).sort()
     )
-    expect(
-      await handler(undefined, { appName: 'game-2', action: 'backup' })
-    ).toBe(true)
-    expect(deps.settingsFor).toEqual(['game-2'])
-    expect(deps.calls).toHaveLength(1)
-    expect(deps.registry.listenerMap().has('toggleDXVK')).toBe(false)
   })
 })

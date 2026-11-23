@@ -252,6 +252,38 @@ const SCHEDULE: readonly ScheduleRow[] = [
     callers: ['src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
+  {
+    name: 'toggleDXVKNVAPI',
+    file: 'src/backend/sidecar/engineWineResolvers.ts',
+    shape: 'resolver',
+    inputs: ['gameSettings'],
+    channel: 'RUST_WINE_DXVK_INSTALL_REMOVE',
+    callers: ['src/backend/sidecar/handlers.ts'],
+    deletedBy: 98
+  },
+  {
+    name: 'toggleVKD3D',
+    file: 'src/backend/sidecar/engineWineResolvers.ts',
+    shape: 'resolver',
+    inputs: ['gameSettings'],
+    channel: 'RUST_WINE_DXVK_INSTALL_REMOVE',
+    callers: ['src/backend/sidecar/handlers.ts'],
+    deletedBy: 98
+  },
+  // 87-34 (D-15): the DXVK shim. The launcher's DXVK step and the still-TS engine's `installRemove`
+  // (`services/engineServices.ts`, which 87-56 deletes with the engine TS) reach the Rust op through it; Phase 88
+  // moves launch into Rust and deletes it.
+  {
+    name: 'dxvkInstallRemove',
+    file: 'src/backend/enginewine/tools.ts',
+    shape: 'shim',
+    channel: 'RUST_WINE_DXVK_INSTALL_REMOVE',
+    callers: [
+      'src/backend/launcher.ts',
+      'src/backend/services/engineServices.ts'
+    ],
+    deletedBy: 88
+  },
   // 87-26 (D-22 deviation, for the checker and the operator): `getDefaultWineBinary` is read synchronously by
   // `getFactoryDefaults` in config.ts before any rustInvoke transport exists, so it cannot become an async shim over
   // the Rust `default_wine_from_path`; it stays as a twin pinned to the shared `default_wine.json` vectors that

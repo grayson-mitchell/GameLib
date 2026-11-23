@@ -39,9 +39,9 @@
  *     - `runWineCommand`         -> main.ts:766
  *     - `getAlternativeWine`     -> native `wine` slice since Phase 87 (87-26, D-14); no handle here
  *     - `wine.isValidVersion`    -> native `wine` slice since Phase 87 (87-24, D-14); no handle here
- *     - `toggleDXVK`             -> main.ts:999
- *     - `toggleDXVKNVAPI`        -> main.ts:1007
- *     - `toggleVKD3D`            -> main.ts:1015
+ *     - `toggleDXVK`             -> scheduled resolver since Phase 87 (87-34, D-23); no handle here
+ *     - `toggleDXVKNVAPI`        -> scheduled resolver since Phase 87 (87-34, D-23); no handle here
+ *     - `toggleVKD3D`            -> scheduled resolver since Phase 87 (87-34, D-23); no handle here
  *     - `installWineVersion`     -> native `wine` slice since Phase 87 (87-20, D-14); no handle here
  *     - `refreshWineVersionInfo` -> native `wine` slice since Phase 87 (87-20, D-14); no handle here
  *     - `removeWineVersion`      -> native `wine` slice since Phase 87 (87-20, D-14); no handle here
@@ -128,8 +128,8 @@ export interface WineToolsFlowDeps
 }
 
 /**
- * Registers this cluster's 9 channels (9 invoke, 0 send — `toggleDXVK` moved to the scheduled resolvers of
- * `engineWineResolvers.ts`, Phase 87 Plan 34, D-23; `winetricksInstall` retired, Phase 45
+ * Registers this cluster's 7 channels (7 invoke, 0 send — the three DXVK toggles moved to the scheduled resolvers
+ * of `engineWineResolvers.ts`, Phase 87 Plan 34, D-23; `winetricksInstall` retired, Phase 45
  * Plan 02, D-11 promote; `installWineVersion`, `refreshWineVersionInfo` and `removeWineVersion` moved to
  * the Rust native `wine` slice, Phase 87 Plan 20, D-14; so did `wine.isValidVersion`, Plan 24, and `getAlternativeWine`, Plan 26). As of Phase 45 Plan 01 (2026-10-10), the count was 12 invoke + 1 send
  * from Phase 34.6 Plan 07 plus the 3 new winetricks-queue invoke channels (`winetricksApply`,
@@ -141,12 +141,8 @@ export interface WineToolsFlowDeps
  * `registrationOncePerBoot.test.ts`; a second boot in one process throws in `bootSidecar()`.
  */
 export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
-  const {
-    DXVK,
-    Winetricks,
-    runWineCommandOnGame,
-    runWineCommandForPendingInstall
-  } = createTools(deps)
+  const { Winetricks, runWineCommandOnGame, runWineCommandForPendingInstall } =
+    createTools(deps)
 
   // ── D-14 seam 3: `runWineCommand` (main.ts:766) ─────────────────────────────────────────────
   //
@@ -218,52 +214,12 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
     )
   })
 
-  // ── DXVK/VKD3D toggle trio (main.ts:999,1007,1015) — the cluster's final 3 channels ─────────
+  // ── DXVK/VKD3D toggle trio (main.ts:999,1007,1015) ──────────────────────────────────────────
   //
-  // Ported verbatim: unpack `{ appName, action }`, resolve the per-game config's `getSettings()`,
-  // and delegate to `DXVK.installRemove(gameSettings, <tool>, action)`. `DXVK` is imported by name
-  // from `../tools` (never `tools/ipc_handler.ts`, which also registers `runWineCommandForGame` and
-  // the DEFERRED winetricks trio).
-  //
-  // T-34.5-30 / D-15 (verified, not assumed — see 34.5-09-SUMMARY.md for the full file:line trace):
-  // the one dialog these three channels can reach is `showDialogBoxModalAuto`
-  // (`tools/index.ts:137`, via `DXVK.installRemove` -> `DXVK.getLatest()` -> `installOrUpdateTool`
-  // on a download failure). Its primary path is the fire-and-forget
-  // `sendFrontendMessage('showDialog', ...)` push; its `catch` fallback lands on
-  // `platformApi.dialog.showErrorBox`/`showMessageBox`, both async and non-throwing by
-  // construction (each has its own internal try/catch that never rethrows). No fix was built here
-  // — the existing wiring already satisfies the concern this plan set out to verify.
-  // Phase 87 (87-34, D-23): `toggleDXVK` is a scheduled resolver (`engineWineResolvers.ts`); this module
-  // registers no handle for it (one owner, D-06).
-
-  deps.ipc.handle(
-    'toggleDXVKNVAPI',
-    async (_event: unknown, ...args: unknown[]) => {
-      const { appName, action } = args[0] as {
-        appName: string
-        action: 'backup' | 'restore'
-      }
-      const gameSettings = await deps.gameConfigs.get(appName).getSettings()
-      return DXVK.installRemove(gameSettings, 'dxvk-nvapi', action)
-    }
-  )
-
-  // D-13: on macOS, `tools/index.ts:228` (`if (isMac && tool !== 'dxvk') return true`) already
-  // permits `dxvk` only and already excludes `vkd3d` before any file I/O runs — VKD3D is therefore
-  // registered unconditionally here too, and the platform decision stays exactly where upstream
-  // Heroic made it. No `process.platform`/`isMac`/`isLinux` branch is introduced in this
-  // registration module — that would duplicate and eventually diverge from the guard.
-  deps.ipc.handle(
-    'toggleVKD3D',
-    async (_event: unknown, ...args: unknown[]) => {
-      const { appName, action } = args[0] as {
-        appName: string
-        action: 'backup' | 'restore'
-      }
-      const gameSettings = await deps.gameConfigs.get(appName).getSettings()
-      return DXVK.installRemove(gameSettings, 'vkd3d', action)
-    }
-  )
+  // Phase 87 (87-34, D-23): `toggleDXVK`, `toggleDXVKNVAPI` and `toggleVKD3D` are scheduled resolvers
+  // (`sidecar/engineWineResolvers.ts`) over the Rust `wine_dxvk_install_remove` op; this module registers no
+  // handle for any of them (one owner, D-06). The platform decisions the TS made in `DXVK.installRemove`
+  // (macOS permits `dxvk` only, the toolkit and DXMT skips) are the crate's now, ahead of any file I/O.
 
   // D-13: the platform guards inherited from `tools/index.ts` — `tool.os !== process.platform`
   // (:73), the `-DXMT` flag (:219), macOS permitting only `dxvk` (VKD3D already excluded, :228),

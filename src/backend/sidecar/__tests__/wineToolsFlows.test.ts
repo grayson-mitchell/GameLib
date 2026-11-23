@@ -54,17 +54,10 @@
 // discord RPC, etc.) with no bearing on this test's proof of registration kind / pass-through
 // forwarding -- factory-mocked so this suite never drives its real filesystem/child_process
 // side effects.
-// `../../game_config`'s `gameConfigs.get(appName).getSettings()` would otherwise exercise real
-// config-file I/O for a fake `appName` -- factory-mocked so the tool-literal proof test (Describe
-// 5) controls exactly what `getSettings()` resolves to, without touching disk.
-const mockGameConfigGet = jest.fn()
-
-// `../../tools`'s `DXVK.installRemove` is the curated import target for the three toggle
-// handlers -- factory-mocked so Describe 5 can prove each toggle forwards its own tool literal
-// without running the real download/prefix-inspection logic. `Winetricks`/`runWineCommandOnGame`
-// are also provided here (Phase 34.6 Plan 11) so Describe 7's `runWineCommandForGame` hardening
-// tests can invoke the already-registered (top-level, non-Windows-branch) handler without it
-// crashing on an undefined import.
+// `../../tools` is factory-mocked so this suite never runs the real download/prefix-inspection logic.
+// `Winetricks`/`runWineCommandOnGame` are provided here (Phase 34.6 Plan 11) so Describe 7's
+// `runWineCommandForGame` hardening tests can invoke the already-registered (top-level, non-Windows-branch)
+// handler without it crashing on an undefined import. (The DXVK toggles left this module in Phase 87 Plan 34.)
 jest.mock('../../tools', () => {
   // One tools object for the whole file: `createTools(deps)` hands the same mocks out every time.
   const tools = {
@@ -127,8 +120,9 @@ const listenerCountsBefore = new Map(
     listeners.length
   ])
 )
-const { DXVK, runWineCommandOnGame, runWineCommandForPendingInstall } =
-  createTools({} as unknown as Parameters<typeof createTools>[0])
+const { runWineCommandOnGame, runWineCommandForPendingInstall } = createTools(
+  {} as unknown as Parameters<typeof createTools>[0]
+)
 const runWineCommand = jest.fn()
 const toolsSlices = createTestToolsSlices()
 toolsSlices.config.getSettings = () =>
@@ -150,7 +144,7 @@ registerWineToolsFlows({
   stores: createTestStores(),
   runner: createTestServices().runner,
   ...toolsSlices,
-  gameConfigs: { get: (...a: unknown[]) => mockGameConfigGet(...a) } as never
+  gameConfigs: { get: jest.fn() } as never
 })
 const registeredSendChannels = [...ipc.listenerMap()]
   .filter(
@@ -162,12 +156,11 @@ const registeredSendChannels = [...ipc.listenerMap()]
 // ── Describe 1: Registration kind ──────────────────────────────────────────────────────────────
 describe('registration kind — all 9 Wine channels are registered with the correct kind, both directions', () => {
   const HANDLE_CHANNELS = [
-    'runWineCommand',
+    'runWineCommand'
     // Phase 87 Plan 26 (D-14): `getAlternativeWine` is a native `wine` channel.
     // Phase 87 Plan 24 (D-14): `wine.isValidVersion` is a native `wine` channel.
-    // Phase 87 Plan 34 (D-23): `toggleDXVK` is a scheduled resolver (`engineWineResolvers.ts`), proved there.
-    'toggleDXVKNVAPI',
-    'toggleVKD3D'
+    // Phase 87 Plan 34 (D-23): `toggleDXVK`, `toggleDXVKNVAPI` and `toggleVKD3D` are scheduled resolvers
+    // (`engineWineResolvers.ts`), proved in `engineWineResolvers.test.ts`.
   ]
 
   it.each(HANDLE_CHANNELS)(
@@ -360,49 +353,9 @@ describe('D-15/T-34.5-30 dialog safety pin — showDialogBoxModalAuto never prop
 })
 
 // ── Describe 5: Tool-literal proof ────────────────────────────────────────────────────────────
-//
-// The three toggle bodies (`toggleDXVK`/`toggleDXVKNVAPI`/`toggleVKD3D`) are near-identical except
-// for one string literal. A copy-paste error swapping that literal (e.g. `toggleVKD3D` forwarding
-// `'dxvk'` instead of `'vkd3d'`) is otherwise completely silent -- it would install the wrong
-// component with no test failure and no runtime error (T-34.5-31). This proves `toggleVKD3D`
-// forwards its own literal, not a neighbour's.
-describe("tool-literal proof — toggleVKD3D forwards the literal 'vkd3d', not 'dxvk'", () => {
-  it("T-34.5-31 the registered 'toggleVKD3D' handler forwards gameSettings and the literal 'vkd3d' to DXVK.installRemove", async () => {
-    const fakeGameSettings = {
-      marker: 'fake-game-settings-for-toggleVKD3D-test'
-    }
-    const mockGetSettings = jest.fn().mockResolvedValue(fakeGameSettings)
-    mockGameConfigGet.mockReturnValue({
-      getSettings: mockGetSettings
-    })
-
-    const mockInstallRemove = DXVK.installRemove as jest.MockedFunction<
-      typeof DXVK.installRemove
-    >
-    mockInstallRemove.mockClear()
-    mockInstallRemove.mockResolvedValue(true)
-
-    const handler = handlerRegistry.get('toggleVKD3D') as IpcHandler
-    expect(handler).toBeDefined()
-
-    await handler({} as never, { appName: 'test-app', action: 'backup' })
-
-    expect(mockGameConfigGet).toHaveBeenCalledWith('test-app')
-    expect(mockGetSettings).toHaveBeenCalledTimes(1)
-    expect(mockInstallRemove).toHaveBeenCalledTimes(1)
-
-    const [forwardedSettings, forwardedTool, forwardedAction] = defined(
-      mockInstallRemove.mock.calls[0],
-      'first call'
-    )
-    // Identity, not just deep-equality -- proves the handler forwards the resolved settings
-    // object rather than reshaping it.
-    expect(forwardedSettings).toBe(fakeGameSettings)
-    expect(forwardedTool).toBe('vkd3d')
-    expect(forwardedTool).not.toBe('dxvk')
-    expect(forwardedAction).toBe('backup')
-  })
-})
+// Phase 87 Plan 34 (D-23): the three DXVK toggles are scheduled resolvers (`engineWineResolvers.ts`); the
+// tool-literal proof (T-34.5-31) lives in `engineWineResolvers.test.ts`, over the one typed Rust call each
+// makes, and this module registers no handle for them.
 
 // ── Describe 6: Platform-branch absence gate (T-34.5-17, T-34.5-32 — root cause R2) ───────────
 // Both rows in `34.5-SECURITY.md` declared, verbatim: "grep asserts no process.platform/isMac/

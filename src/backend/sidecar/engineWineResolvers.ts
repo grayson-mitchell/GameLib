@@ -12,7 +12,7 @@ import type { IpcRegistry } from './ipcRegistry'
  * returns it. `engineWineShimSchedule.test.ts` pins that shape, its channel and the phase that deletes each
  * resolver (Phase 98, with the config and the stores it reads), so none can grow a second call or a branch.
  *
- * 87-34 lands the DXVK family: the renderer's three toggles (`toggleDXVK` first, as the tracer). Every writer of a prefix's DXVK DLLs now runs
+ * 87-34 lands the DXVK family: the renderer's three toggles. Every writer of a prefix's DXVK DLLs now runs
  * the one Rust op (`wine_dxvk_install_remove`): these toggles, the launcher's DXVK step and the still-TS
  * engine's `installRemove`, the last two through the `dxvkInstallRemove` shim (`enginewine/tools.ts`). The
  * Winetricks resolvers (87-35) and the wine-command resolvers (87-36) join this file as their families
@@ -49,6 +49,35 @@ export async function toggleDXVK(
 }
 
 /**
+ * The `toggleDXVKNVAPI` channel: DXVK-NVAPI in the game's prefix. macOS refuses it before any file is
+ * touched (the crate keeps the TS platform guard).
+ */
+export async function toggleDXVKNVAPI(
+  deps: EngineWineResolverDeps,
+  { appName, action }: DxvkToggleArgs
+): Promise<unknown> {
+  const gameSettings = await deps.gameConfigs.get(appName).getSettings()
+  return deps.requestRustInvoke(RUST_WINE_DXVK_INSTALL_REMOVE, [
+    { settings: gameSettings, tool: 'dxvk-nvapi', action }
+  ])
+}
+
+/**
+ * The `toggleVKD3D` channel: vkd3d-proton in the game's prefix. macOS permits `dxvk` only and the crate
+ * excludes vkd3d there before any file I/O, as the TS did, so this registers on every platform and no
+ * platform branch lives here.
+ */
+export async function toggleVKD3D(
+  deps: EngineWineResolverDeps,
+  { appName, action }: DxvkToggleArgs
+): Promise<unknown> {
+  const gameSettings = await deps.gameConfigs.get(appName).getSettings()
+  return deps.requestRustInvoke(RUST_WINE_DXVK_INSTALL_REMOVE, [
+    { settings: gameSettings, tool: 'vkd3d', action }
+  ])
+}
+
+/**
  * Registers every channel this file resolves, once per boot, from `handlers.ts` (pinned by
  * `registrationOncePerBoot.test.ts`). A channel is registered here or in `wineToolsFlowRegistration.ts`,
  * never both: the family moves in one commit.
@@ -58,5 +87,11 @@ export function registerEngineWineResolvers(
 ): void {
   deps.ipc.handle('toggleDXVK', (_event: unknown, ...args: unknown[]) =>
     toggleDXVK(deps, args[0] as DxvkToggleArgs)
+  )
+  deps.ipc.handle('toggleDXVKNVAPI', (_event: unknown, ...args: unknown[]) =>
+    toggleDXVKNVAPI(deps, args[0] as DxvkToggleArgs)
+  )
+  deps.ipc.handle('toggleVKD3D', (_event: unknown, ...args: unknown[]) =>
+    toggleVKD3D(deps, args[0] as DxvkToggleArgs)
   )
 }
