@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-53-PLAN.md
-last_updated: "2026-11-23T17:35:55.639Z"
+stopped_at: Completed 87-54-PLAN.md
+last_updated: "2026-11-23T18:01:51.311Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: de33de9b2c558009d1fe28d8ec762799d469b89d
+state_head: 027199e5da357e6df596b39921b04adca41fe979
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 54 of 59
+Plan: 55 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -463,6 +463,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P51 | 17 min | 2 tasks | 11 files |
 | Phase 87 P52 | 60 min | 3 tasks | 38 files |
 | Phase 87 P53 | 30 min | 2 tasks | 20 files |
+| Phase 87 P54 | 100 min | 2 tasks | 36 files |
 
 ## Accumulated Context
 
@@ -988,6 +989,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-52: the Rust launch step's reply is narrowed and its log lines written in launchEngineStep.ts (not in the shim), and getLaunchSettings reads go through launchSettingsFor; arm and end are awaited with a logged catch
 - [Phase 87]: 87-52: getEngineState sends {identity, facts?} with a null identity for an ineligible game, so the resolver keeps the consts-then-one-call shape; Steam facts are steamEngineStateFacts
 - [Phase 87]: 87-53: an engine: ack id is forwarded to Rust and not acknowledged in the TS table; the forward catches and logs its rejection
+- [Phase 87]: 87-54: the bridge's callbacks became values (steamEngineFacts) and the deadline's callback map stays in TS (bridgeDeadlines, sanctioned module state) until 96; armBridgeDeadline takes {key} and cancelBridgeDeadline {key, reason}; engine_decide_launch and engine_preflight_crossover are unbounded in the sidecar
 
 ### Pending Todos
 
@@ -1269,8 +1271,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T17:24:44.289Z
-Stopped at: Completed 87-53-PLAN.md
+Last session: 2026-11-23T18:01:48.632Z
+Stopped at: Completed 87-54-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
