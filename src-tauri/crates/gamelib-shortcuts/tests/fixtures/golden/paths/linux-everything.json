@@ -1,0 +1,26 @@
+{
+  "platform": "linux",
+  "windowsRegistry": null,
+  "input": {
+    "title": "$(a);`b`'\"&|<>",
+    "units": [
+      36,
+      40,
+      97,
+      41,
+      59,
+      96,
+      98,
+      96,
+      39,
+      34,
+      38,
+      124,
+      60,
+      62
+    ]
+  },
+  "sanitized": "$(a);`b`'&",
+  "desktop": "<DESKTOP>/$(a);`b`'&.desktop",
+  "menu": "<HOME>/.local/share/applications/$(a);`b`'&.desktop"
+}

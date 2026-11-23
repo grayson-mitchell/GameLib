@@ -29,8 +29,8 @@ const FIXTURES_ROOT = join(
   'fixtures'
 )
 
-/** The files 94-05 commits (the text, sanitize, paths and exists goldens with their manifests); a half-scanned tree fails. */
-const FILE_FLOOR = 133
+/** The files 94-05 commits (the text, sanitize, paths and exists goldens with their manifests: 132 + 72 + 84 + 58 cases and four MANIFEST.json); a half-scanned tree fails. */
+const FILE_FLOOR = 350
 
 /** Account names that name a role, never a person. */
 const SYNTHETIC_ACCOUNTS: readonly string[] = ['shared', 'public', 'default']

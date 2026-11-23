@@ -1,0 +1,24 @@
+{
+  "platform": "linux",
+  "windowsRegistry": null,
+  "input": {
+    "title": "100% #1 ?q=1",
+    "units": [
+      49,
+      48,
+      48,
+      37,
+      32,
+      35,
+      49,
+      32,
+      63,
+      113,
+      61,
+      49
+    ]
+  },
+  "sanitized": "100% #1 q=1",
+  "desktop": "<DESKTOP>/100% #1 q=1.desktop",
+  "menu": "<HOME>/.local/share/applications/100% #1 q=1.desktop"
+}

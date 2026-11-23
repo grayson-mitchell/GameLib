@@ -1,0 +1,12 @@
+{
+  "platform": "linux",
+  "windowsRegistry": null,
+  "input": {
+    "title": "",
+    "desktop": "file",
+    "menu": "present"
+  },
+  "exists": false,
+  "macDesktopShortcutPresent": false,
+  "macDesktopShortcutWanted": false
+}

@@ -1,0 +1,26 @@
+{
+  "platform": "win32",
+  "windowsRegistry": false,
+  "input": {
+    "title": "Game; rm -rf ~",
+    "units": [
+      71,
+      97,
+      109,
+      101,
+      59,
+      32,
+      114,
+      109,
+      32,
+      45,
+      114,
+      102,
+      32,
+      126
+    ]
+  },
+  "sanitized": "Game; rm -rf ~",
+  "desktop": null,
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\Game; rm -rf ~.lnk"
+}

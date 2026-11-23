@@ -1,0 +1,16 @@
+{
+  "input": {
+    "text": "COM1",
+    "units": [
+      67,
+      79,
+      77,
+      49
+    ]
+  },
+  "output": {
+    "text": "",
+    "units": [],
+    "utf8Bytes": 0
+  }
+}

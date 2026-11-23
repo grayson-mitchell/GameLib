@@ -320,6 +320,13 @@ describe('shortcuts oracle harness', () => {
       })
     })
 
+    it('compare mode fails on two case ids that differ only by case', async () => {
+      await withScratchGoldens(() => {
+        syncManifest('s', ['a', 'A'], 2, 'write')
+        expect(() => assertManifest('s', ['a', 'A'], 2, 'compare')).toThrow()
+      })
+    })
+
     it('write mode removes goldens no case produces any more', async () => {
       await withScratchGoldens(() => {
         writeOrCompareGolden('s', 'keep', 1, 'write')

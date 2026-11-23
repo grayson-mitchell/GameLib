@@ -1,0 +1,15 @@
+{
+  "input": {
+    "text": "CON",
+    "units": [
+      67,
+      79,
+      78
+    ]
+  },
+  "output": {
+    "text": "",
+    "units": [],
+    "utf8Bytes": 0
+  }
+}

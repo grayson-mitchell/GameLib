@@ -1,0 +1,29 @@
+{
+  "platform": "darwin",
+  "windowsRegistry": null,
+  "input": {
+    "title": "Ünïcödé 日本語 Ωmega",
+    "units": [
+      220,
+      110,
+      239,
+      99,
+      246,
+      100,
+      233,
+      32,
+      26085,
+      26412,
+      35486,
+      32,
+      937,
+      109,
+      101,
+      103,
+      97
+    ]
+  },
+  "sanitized": "Ünïcödé 日本語 Ωmega",
+  "desktop": "<DESKTOP>/Ünïcödé 日本語 Ωmega.app",
+  "menu": "<HOME>/Applications/Ünïcödé 日本語 Ωmega.app"
+}

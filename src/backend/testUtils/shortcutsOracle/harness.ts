@@ -568,6 +568,10 @@ export function assertManifest(
   expect(manifest.count).toBe(caseIds.length)
   assertAtOrAboveFloor(`${slice} oracle cases`, caseIds.length, manifest.floor)
   expect(new Set(caseIds).size).toBe(caseIds.length)
+  // A case-insensitive disk (Windows, default macOS) would fold two such goldens into one file.
+  expect(new Set(caseIds.map((id) => id.toLowerCase())).size).toBe(
+    caseIds.length
+  )
   expect(committedCaseIds(slice)).toEqual([...caseIds].sort())
 }
 

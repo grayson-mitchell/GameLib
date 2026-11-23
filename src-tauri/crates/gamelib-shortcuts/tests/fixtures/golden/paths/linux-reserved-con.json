@@ -1,0 +1,15 @@
+{
+  "platform": "linux",
+  "windowsRegistry": null,
+  "input": {
+    "title": "CON",
+    "units": [
+      67,
+      79,
+      78
+    ]
+  },
+  "sanitized": "",
+  "desktop": "<DESKTOP>/.desktop",
+  "menu": "<HOME>/.local/share/applications/.desktop"
+}

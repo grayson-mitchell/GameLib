@@ -1,0 +1,21 @@
+{
+  "platform": "win32",
+  "windowsRegistry": true,
+  "input": {
+    "title": "Tab\tTitle",
+    "units": [
+      84,
+      97,
+      98,
+      9,
+      84,
+      105,
+      116,
+      108,
+      101
+    ]
+  },
+  "sanitized": "TabTitle",
+  "desktop": "Z:\\GameLibOracle\\Desktop\\TabTitle.lnk",
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\TabTitle.lnk"
+}

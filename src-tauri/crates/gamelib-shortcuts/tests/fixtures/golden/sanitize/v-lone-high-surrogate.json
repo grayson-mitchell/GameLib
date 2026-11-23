@@ -1,0 +1,19 @@
+{
+  "input": {
+    "text": "a\ud83cb",
+    "units": [
+      97,
+      55356,
+      98
+    ]
+  },
+  "output": {
+    "text": "a\ud83cb",
+    "units": [
+      97,
+      55356,
+      98
+    ],
+    "utf8Bytes": 5
+  }
+}

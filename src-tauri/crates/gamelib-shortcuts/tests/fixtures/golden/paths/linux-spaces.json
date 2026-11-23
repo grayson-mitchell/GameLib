@@ -1,0 +1,28 @@
+{
+  "platform": "linux",
+  "windowsRegistry": null,
+  "input": {
+    "title": "  spaced   out  ",
+    "units": [
+      32,
+      32,
+      115,
+      112,
+      97,
+      99,
+      101,
+      100,
+      32,
+      32,
+      32,
+      111,
+      117,
+      116,
+      32,
+      32
+    ]
+  },
+  "sanitized": "  spaced   out",
+  "desktop": "<DESKTOP>/  spaced   out.desktop",
+  "menu": "<HOME>/.local/share/applications/  spaced   out.desktop"
+}

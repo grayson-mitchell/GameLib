@@ -1,0 +1,26 @@
+{
+  "platform": "win32",
+  "windowsRegistry": false,
+  "input": {
+    "title": "\"Quoted\" Title",
+    "units": [
+      34,
+      81,
+      117,
+      111,
+      116,
+      101,
+      100,
+      34,
+      32,
+      84,
+      105,
+      116,
+      108,
+      101
+    ]
+  },
+  "sanitized": "Quoted Title",
+  "desktop": null,
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\Quoted Title.lnk"
+}

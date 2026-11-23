@@ -1,0 +1,31 @@
+{
+  "platform": "darwin",
+  "windowsRegistry": null,
+  "input": {
+    "title": "A/B\\C:D*E?F\"G<H>I|J",
+    "units": [
+      65,
+      47,
+      66,
+      92,
+      67,
+      58,
+      68,
+      42,
+      69,
+      63,
+      70,
+      34,
+      71,
+      60,
+      72,
+      62,
+      73,
+      124,
+      74
+    ]
+  },
+  "sanitized": "ABCDEFGHIJ",
+  "desktop": "<DESKTOP>/ABCDEFGHIJ.app",
+  "menu": "<HOME>/Applications/ABCDEFGHIJ.app"
+}

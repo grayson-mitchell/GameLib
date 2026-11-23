@@ -197,7 +197,7 @@ export const SANITIZE_VECTORS: readonly { id: string; input: string }[] = [
   { id: 'del', input: 'a\u007fb' },
   { id: 'tab-newline', input: 'a\tb\nc\rd' },
   { id: 'reserved-con', input: 'con' },
-  { id: 'reserved-CON', input: 'CON' },
+  { id: 'reserved-upper-con', input: 'CON' },
   { id: 'reserved-prn', input: 'prn' },
   { id: 'reserved-aux', input: 'AUX' },
   { id: 'reserved-nul', input: 'nul' },

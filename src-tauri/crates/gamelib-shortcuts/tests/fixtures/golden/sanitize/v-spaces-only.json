@@ -1,0 +1,15 @@
+{
+  "input": {
+    "text": "   ",
+    "units": [
+      32,
+      32,
+      32
+    ]
+  },
+  "output": {
+    "text": "",
+    "units": [],
+    "utf8Bytes": 0
+  }
+}

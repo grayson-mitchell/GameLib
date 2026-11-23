@@ -1,0 +1,16 @@
+{
+  "input": {
+    "text": "LPT1",
+    "units": [
+      76,
+      80,
+      84,
+      49
+    ]
+  },
+  "output": {
+    "text": "",
+    "units": [],
+    "utf8Bytes": 0
+  }
+}

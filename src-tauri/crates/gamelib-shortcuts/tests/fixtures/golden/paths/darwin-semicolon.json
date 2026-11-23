@@ -1,0 +1,26 @@
+{
+  "platform": "darwin",
+  "windowsRegistry": null,
+  "input": {
+    "title": "Game; rm -rf ~",
+    "units": [
+      71,
+      97,
+      109,
+      101,
+      59,
+      32,
+      114,
+      109,
+      32,
+      45,
+      114,
+      102,
+      32,
+      126
+    ]
+  },
+  "sanitized": "Game; rm -rf ~",
+  "desktop": "<DESKTOP>/Game; rm -rf ~.app",
+  "menu": "<HOME>/Applications/Game; rm -rf ~.app"
+}

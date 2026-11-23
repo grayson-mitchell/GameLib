@@ -1,0 +1,23 @@
+{
+  "platform": "win32",
+  "windowsRegistry": true,
+  "input": {
+    "title": "Rock'n'Roll",
+    "units": [
+      82,
+      111,
+      99,
+      107,
+      39,
+      110,
+      39,
+      82,
+      111,
+      108,
+      108
+    ]
+  },
+  "sanitized": "Rock'n'Roll",
+  "desktop": "Z:\\GameLibOracle\\Desktop\\Rock'n'Roll.lnk",
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\Rock'n'Roll.lnk"
+}

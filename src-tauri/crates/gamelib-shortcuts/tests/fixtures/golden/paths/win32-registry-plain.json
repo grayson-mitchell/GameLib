@@ -1,0 +1,22 @@
+{
+  "platform": "win32",
+  "windowsRegistry": true,
+  "input": {
+    "title": "Plain Game",
+    "units": [
+      80,
+      108,
+      97,
+      105,
+      110,
+      32,
+      71,
+      97,
+      109,
+      101
+    ]
+  },
+  "sanitized": "Plain Game",
+  "desktop": "Z:\\GameLibOracle\\Desktop\\Plain Game.lnk",
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\Plain Game.lnk"
+}

@@ -1,0 +1,15 @@
+{
+  "platform": "win32",
+  "windowsRegistry": true,
+  "input": {
+    "title": "CON",
+    "units": [
+      67,
+      79,
+      78
+    ]
+  },
+  "sanitized": "",
+  "desktop": "Z:\\GameLibOracle\\Desktop\\.lnk",
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\.lnk"
+}

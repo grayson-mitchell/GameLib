@@ -1,0 +1,19 @@
+{
+  "input": {
+    "text": "ab",
+    "units": [
+      97,
+      127,
+      98
+    ]
+  },
+  "output": {
+    "text": "ab",
+    "units": [
+      97,
+      127,
+      98
+    ],
+    "utf8Bytes": 3
+  }
+}

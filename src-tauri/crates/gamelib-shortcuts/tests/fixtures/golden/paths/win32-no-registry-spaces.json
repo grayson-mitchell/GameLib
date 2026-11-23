@@ -1,0 +1,28 @@
+{
+  "platform": "win32",
+  "windowsRegistry": false,
+  "input": {
+    "title": "  spaced   out  ",
+    "units": [
+      32,
+      32,
+      115,
+      112,
+      97,
+      99,
+      101,
+      100,
+      32,
+      32,
+      32,
+      111,
+      117,
+      116,
+      32,
+      32
+    ]
+  },
+  "sanitized": "  spaced   out",
+  "desktop": null,
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\  spaced   out.lnk"
+}

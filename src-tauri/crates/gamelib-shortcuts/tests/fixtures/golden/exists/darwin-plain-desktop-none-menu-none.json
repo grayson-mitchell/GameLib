@@ -1,0 +1,12 @@
+{
+  "platform": "darwin",
+  "windowsRegistry": null,
+  "input": {
+    "title": "Plain Game",
+    "desktop": "none",
+    "menu": "none"
+  },
+  "exists": false,
+  "macDesktopShortcutPresent": false,
+  "macDesktopShortcutWanted": true
+}
