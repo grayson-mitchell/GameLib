@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-25-PLAN.md
-last_updated: "2026-11-23T06:45:51.531Z"
+stopped_at: Completed 87-26-PLAN.md
+last_updated: "2026-11-23T07:08:31.929Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: ea1e6dce730f9e8923e69fce9c68e4025f9b8ef7
+state_head: a98b3cbf4d505884fdf2f8d75583d9fe644c21cb
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 26 of 59
+Plan: 27 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -435,6 +435,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P23 | 35min | 2 tasks | 11 files |
 | Phase 87 P24 | 30min | 2 tasks | 21 files |
 | Phase 87 P25 | 17 min | 2 tasks | 13 files |
+| Phase 87 P26 | 35 min | 2 tasks | 25 files |
 
 ## Accumulated Context
 
@@ -895,6 +896,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-23: default_wine_from_path takes two probes (executable for wine, exists for the wineserver); plist (already locked via tauri) reads bundle plists
 - [Phase 87]: 87-24: the wine_valid rustInvoke arm keeps the six declared installation keys and answers false for a non-installation (legacy key, Windows {}), the renderer's native wine.isValidVersion stays strict; Launcher keeps a deps-bound validWine member; setupEnvVars, setupWineEnvVars and createCommandRunner are scheduled twins (D-22 deviation) pinned by the wineCore oracle goldens
 - [Phase 87]: 87-25: EngineCtx.default_wine and EngineCtx.crossover_bin_dir hooks keep gamelib-engine independent of gamelib-wine; tool settings are generic over a ToolSettingsDeps seam whose live registry and bottle flight arrive with 87-38/87-39
+- [Phase 87]: 87-26: the discovery host's settings (customWinePaths, showValveProton, defaultSteamPath) come from the shell's own read of config.json, never from the sidecar; the rustInvoke arm for wine_discover_alternatives takes one boolean (scanCustom) and is unbounded in the sidecar because an empty release list is refreshed first (T-87-71).
+- [Phase 87]: 87-26: createCrossoverLocator holds the boot's rustInvoke transport (discoverCrossover, an intra-phase shim deletedBy 87, removed with the engine TS in 87-56) so resolveCrossoverBinDirAsync keeps its signature; getDefaultWineBinary stays a twin pinned to default_wine.json (deletedBy 98).
 
 ### Pending Todos
 
@@ -1174,8 +1177,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T06:45:49.505Z
-Stopped at: Completed 87-25-PLAN.md
+Last session: 2026-11-23T07:08:29.978Z
+Stopped at: Completed 87-26-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
