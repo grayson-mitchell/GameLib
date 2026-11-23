@@ -1,0 +1,57 @@
+{
+  "op": "resolve-prefix",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "inputs": [
+      {
+        "runner": "legendary",
+        "appName": "Sugar",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "wine"
+          },
+          "wineCrossoverBottle": "GameLib-legendary-Sugar"
+        },
+        "effective": {
+          "kind": "override",
+          "id": "automatic",
+          "source": "stored"
+        }
+      }
+    ]
+  },
+  "before": [],
+  "outcome": [
+    {
+      "input": {
+        "runner": "legendary",
+        "appName": "Sugar",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "wine"
+          },
+          "wineCrossoverBottle": "GameLib-legendary-Sugar"
+        },
+        "effective": {
+          "kind": "override",
+          "id": "automatic",
+          "source": "stored"
+        }
+      },
+      "returned": {
+        "kind": "bottle",
+        "bottleName": "GameLib-legendary-Sugar",
+        "origin": "per-game"
+      }
+    }
+  ],
+  "markers": {},
+  "logs": [],
+  "gateCalls": [],
+  "spawnLimits": [],
+  "installRemove": []
+}

@@ -1,0 +1,46 @@
+{
+  "op": "create-crossover",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "bottle": "GameLib-gog-1207658924",
+    "cxbottle": {
+      "code": 0,
+      "writes": "fx-nomarker-nodxvk-ts"
+    }
+  },
+  "before": [],
+  "outcome": {
+    "status": "done",
+    "createdHere": true
+  },
+  "markers": {},
+  "logs": [],
+  "gateCalls": [],
+  "spawnLimits": [
+    {
+      "program": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+      "argv": [
+        "--create",
+        "--bottle",
+        "GameLib-gog-1207658924",
+        "--template",
+        "win10_64"
+      ],
+      "timeoutMs": 120000,
+      "unbounded": false,
+      "signal": true
+    },
+    {
+      "program": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+      "argv": [
+        "-k"
+      ],
+      "timeoutMs": 15000,
+      "unbounded": false,
+      "signal": false
+    }
+  ],
+  "installRemove": []
+}

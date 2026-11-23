@@ -1,0 +1,79 @@
+{
+  "op": "conf-write",
+  "bottles": [
+    "fx-no-system-reg"
+  ],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "bottle": "fx-no-system-reg"
+  },
+  "before": [
+    {
+      "path": "Library",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg/drive_c",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg/drive_c/windows",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg/drive_c/windows/system32",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg/drive_c/windows/system32/kernel32.dll",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+    }
+  ],
+  "outcome": {
+    "built": "[Bottle]\n\"BottleID\" = \"AAAAAAAA-0000-4000-8000-000000000003\"\n\"Encoding\" = \"UTF-8\"\n\"Template\" = \"win10_64\"\n\"MenuMode\" = \"ignore\"\n\"AssocMode\" = \"ignore\"\n\"WineArch\" = \"win64\"\n",
+    "calls": [
+      {
+        "returned": false,
+        "conf": null
+      }
+    ]
+  },
+  "markers": {},
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "cxbottle.conf not written: <HOME>/Library/Application Support/CrossOver/Bottles/fx-no-system-reg has no system.reg"
+    }
+  ],
+  "gateCalls": [],
+  "spawnLimits": [],
+  "installRemove": []
+}

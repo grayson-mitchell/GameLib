@@ -1,0 +1,2511 @@
+[
+  {
+    "id": "views-crossover-marker",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-crossover-marker with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-crossover-marker"
+      ]
+    }
+  },
+  {
+    "id": "views-pinned-current",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-pinned-current with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-pinned-current"
+      ]
+    }
+  },
+  {
+    "id": "views-pinned-retired",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-pinned-retired with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-pinned-retired"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-pinned-retired"
+      ]
+    }
+  },
+  {
+    "id": "views-wine-manager",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-wine-manager with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-wine-manager"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-wine-manager"
+      ]
+    }
+  },
+  {
+    "id": "views-pinned-no-dxvk-field",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-pinned-no-dxvk-field with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-pinned-no-dxvk-field"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-pinned-no-dxvk-field"
+      ]
+    }
+  },
+  {
+    "id": "views-dxvk-failed",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-dxvk-failed with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-dxvk-failed"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-dxvk-failed"
+      ]
+    }
+  },
+  {
+    "id": "views-marker-newer",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-marker-newer with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-marker-newer"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-marker-newer"
+      ]
+    }
+  },
+  {
+    "id": "views-marker-unreadable",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-marker-unreadable with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-marker-unreadable"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-marker-unreadable"
+      ]
+    }
+  },
+  {
+    "id": "views-crossover-contradicted",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-crossover-contradicted with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-crossover-contradicted"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-crossover-contradicted"
+      ]
+    }
+  },
+  {
+    "id": "views-nomarker-dxvk-ts",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-nomarker-dxvk-ts with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-nomarker-dxvk-ts"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-nomarker-dxvk-ts"
+      ]
+    }
+  },
+  {
+    "id": "views-nomarker-dxvk-nots",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-nomarker-dxvk-nots with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-nomarker-dxvk-nots"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-nomarker-dxvk-nots"
+      ]
+    }
+  },
+  {
+    "id": "views-nomarker-nodxvk-ts",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-nomarker-nodxvk-ts with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-nomarker-nodxvk-ts"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-nomarker-nodxvk-ts"
+      ]
+    }
+  },
+  {
+    "id": "views-nomarker-nodxvk-nots",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-nomarker-nodxvk-nots with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-nomarker-nodxvk-nots"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-nomarker-nodxvk-nots"
+      ]
+    }
+  },
+  {
+    "id": "views-nomarker-noconf",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-nomarker-noconf with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-nomarker-noconf"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-nomarker-noconf"
+      ]
+    }
+  },
+  {
+    "id": "views-no-system-reg",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-no-system-reg with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-no-system-reg"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-no-system-reg"
+      ]
+    }
+  },
+  {
+    "id": "views-pinned-wineserver-outside",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-pinned-wineserver-outside with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-pinned-wineserver-outside"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-pinned-wineserver-outside"
+      ]
+    }
+  },
+  {
+    "id": "views-pinned-wineserver-misnamed",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-pinned-wineserver-misnamed with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-pinned-wineserver-misnamed"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-pinned-wineserver-misnamed"
+      ]
+    }
+  },
+  {
+    "id": "views-marker-bad-id",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-marker-bad-id with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-marker-bad-id"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-marker-bad-id"
+      ]
+    }
+  },
+  {
+    "id": "views-pinned-dxvk-outside-root",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-pinned-dxvk-outside-root with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-pinned-dxvk-outside-root"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-pinned-dxvk-outside-root"
+      ]
+    }
+  },
+  {
+    "id": "views-marker-wrong-kind",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-marker-wrong-kind with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-marker-wrong-kind"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-marker-wrong-kind"
+      ]
+    }
+  },
+  {
+    "id": "views-marker-legacy-noversion",
+    "op": "views",
+    "note": "readBottleEngineMarkerKind, readBottleEngineMarkerSummary and restoreNeedsAbsentPin over fx-marker-legacy-noversion with the current pin installed; nothing is written",
+    "bottles": [
+      "fx-marker-legacy-noversion"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-marker-legacy-noversion"
+      ]
+    }
+  },
+  {
+    "id": "views-pinned-current-engine-wine-only",
+    "op": "views",
+    "note": "a pinned marker with a recorded DXVK copy while the pinned engine directory is \"wine-only\": restoreNeedsAbsentPin follows isPinnedEngineInstalled",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "wine-only",
+    "args": {
+      "names": [
+        "fx-pinned-current"
+      ]
+    }
+  },
+  {
+    "id": "views-pinned-current-engine-dxvk-only",
+    "op": "views",
+    "note": "a pinned marker with a recorded DXVK copy while the pinned engine directory is \"dxvk-only\": restoreNeedsAbsentPin follows isPinnedEngineInstalled",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "dxvk-only",
+    "args": {
+      "names": [
+        "fx-pinned-current"
+      ]
+    }
+  },
+  {
+    "id": "views-pinned-current-engine-wineserver-missing",
+    "op": "views",
+    "note": "a pinned marker with a recorded DXVK copy while the pinned engine directory is \"wineserver-missing\": restoreNeedsAbsentPin follows isPinnedEngineInstalled",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "wineserver-missing",
+    "args": {
+      "names": [
+        "fx-pinned-current"
+      ]
+    }
+  },
+  {
+    "id": "views-pinned-current-engine-wine-wrong-sha",
+    "op": "views",
+    "note": "a pinned marker with a recorded DXVK copy while the pinned engine directory is \"wine-wrong-sha\": restoreNeedsAbsentPin follows isPinnedEngineInstalled",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "wine-wrong-sha",
+    "args": {
+      "names": [
+        "fx-pinned-current"
+      ]
+    }
+  },
+  {
+    "id": "views-engine-not-installed",
+    "op": "views",
+    "note": "every marker shape with no pinned engine on disk: only a pinned or wine-manager marker with DXVK to restore and no copy of its own asks for a pin download",
+    "bottles": [
+      "fx-pinned-current",
+      "fx-pinned-retired",
+      "fx-wine-manager",
+      "fx-pinned-no-dxvk-field",
+      "fx-dxvk-failed",
+      "fx-crossover-contradicted",
+      "fx-crossover-marker",
+      "fx-marker-newer",
+      "fx-pinned-dxvk-outside-root",
+      "fx-marker-legacy-noversion"
+    ],
+    "args": {
+      "names": [
+        "fx-pinned-current",
+        "fx-pinned-retired",
+        "fx-wine-manager",
+        "fx-pinned-no-dxvk-field",
+        "fx-dxvk-failed",
+        "fx-crossover-contradicted",
+        "fx-crossover-marker",
+        "fx-marker-newer",
+        "fx-pinned-dxvk-outside-root",
+        "fx-marker-legacy-noversion"
+      ]
+    }
+  },
+  {
+    "id": "views-unsafe-and-absent-names",
+    "op": "views",
+    "note": "a name that fails the sanitiser (separator, parent, empty, padded, NUL), an absent bottle and a bottle with no marker all read null / false",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "a/b",
+        "..",
+        "",
+        "  fx-pinned-current  ",
+        "no-such-bottle",
+        "x\u0000y"
+      ]
+    }
+  },
+  {
+    "id": "reconcile-crossover-marker",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-crossover-marker with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-crossover-marker"
+    }
+  },
+  {
+    "id": "reconcile-pinned-current",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-pinned-current with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-pinned-current"
+    }
+  },
+  {
+    "id": "reconcile-pinned-retired",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-pinned-retired with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-pinned-retired"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-pinned-retired"
+    }
+  },
+  {
+    "id": "reconcile-wine-manager",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-wine-manager with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-wine-manager"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-wine-manager"
+    }
+  },
+  {
+    "id": "reconcile-pinned-no-dxvk-field",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-pinned-no-dxvk-field with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-pinned-no-dxvk-field"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-pinned-no-dxvk-field"
+    }
+  },
+  {
+    "id": "reconcile-dxvk-failed",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-dxvk-failed with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-dxvk-failed"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-dxvk-failed"
+    }
+  },
+  {
+    "id": "reconcile-marker-newer",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-marker-newer with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-marker-newer"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-marker-newer"
+    }
+  },
+  {
+    "id": "reconcile-marker-unreadable",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-marker-unreadable with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-marker-unreadable"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-marker-unreadable"
+    }
+  },
+  {
+    "id": "reconcile-crossover-contradicted",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-crossover-contradicted with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-crossover-contradicted"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-crossover-contradicted"
+    }
+  },
+  {
+    "id": "reconcile-nomarker-dxvk-ts",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-nomarker-dxvk-ts with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-nomarker-dxvk-ts"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-nomarker-dxvk-ts"
+    }
+  },
+  {
+    "id": "reconcile-nomarker-dxvk-nots",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-nomarker-dxvk-nots with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-nomarker-dxvk-nots"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-nomarker-dxvk-nots"
+    }
+  },
+  {
+    "id": "reconcile-nomarker-nodxvk-ts",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-nomarker-nodxvk-ts with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-nomarker-nodxvk-ts"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-ts"
+    }
+  },
+  {
+    "id": "reconcile-nomarker-nodxvk-nots",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-nomarker-nodxvk-nots with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-nomarker-nodxvk-nots"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-nots"
+    }
+  },
+  {
+    "id": "reconcile-nomarker-noconf",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-nomarker-noconf with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-nomarker-noconf"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-nomarker-noconf"
+    }
+  },
+  {
+    "id": "reconcile-no-system-reg",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-no-system-reg with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-no-system-reg"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-no-system-reg"
+    }
+  },
+  {
+    "id": "reconcile-pinned-wineserver-outside",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-pinned-wineserver-outside with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-pinned-wineserver-outside"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-pinned-wineserver-outside"
+    }
+  },
+  {
+    "id": "reconcile-pinned-wineserver-misnamed",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-pinned-wineserver-misnamed with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-pinned-wineserver-misnamed"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-pinned-wineserver-misnamed"
+    }
+  },
+  {
+    "id": "reconcile-marker-bad-id",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-marker-bad-id with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-marker-bad-id"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-marker-bad-id"
+    }
+  },
+  {
+    "id": "reconcile-pinned-dxvk-outside-root",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-pinned-dxvk-outside-root with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-pinned-dxvk-outside-root"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-pinned-dxvk-outside-root"
+    }
+  },
+  {
+    "id": "reconcile-marker-wrong-kind",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-marker-wrong-kind with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-marker-wrong-kind"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-marker-wrong-kind"
+    }
+  },
+  {
+    "id": "reconcile-marker-legacy-noversion",
+    "op": "reconcile",
+    "note": "reconcileBottleEngineMarker over fx-marker-legacy-noversion with the current pin installed: writes an inferred marker only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS",
+    "bottles": [
+      "fx-marker-legacy-noversion"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-marker-legacy-noversion"
+    }
+  },
+  {
+    "id": "reconcile-nomarker-dxvk-ts-pin-absent",
+    "op": "reconcile",
+    "note": "the same inference with the pin not installed: the inferred pinned marker carries an empty wineserver (fx-nomarker-dxvk-ts)",
+    "bottles": [
+      "fx-nomarker-dxvk-ts"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-dxvk-ts"
+    }
+  },
+  {
+    "id": "reconcile-nomarker-dxvk-nots-pin-absent",
+    "op": "reconcile",
+    "note": "the same inference with the pin not installed: the inferred pinned marker carries an empty wineserver (fx-nomarker-dxvk-nots)",
+    "bottles": [
+      "fx-nomarker-dxvk-nots"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-dxvk-nots"
+    }
+  },
+  {
+    "id": "reconcile-nomarker-nodxvk-nots-pin-absent",
+    "op": "reconcile",
+    "note": "the same inference with the pin not installed: the inferred pinned marker carries an empty wineserver (fx-nomarker-nodxvk-nots)",
+    "bottles": [
+      "fx-nomarker-nodxvk-nots"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-nots"
+    }
+  },
+  {
+    "id": "reconcile-crossover-contradicted-pin-absent",
+    "op": "reconcile",
+    "note": "the same inference with the pin not installed: the inferred pinned marker carries an empty wineserver (fx-crossover-contradicted)",
+    "bottles": [
+      "fx-crossover-contradicted"
+    ],
+    "args": {
+      "bottle": "fx-crossover-contradicted"
+    }
+  },
+  {
+    "id": "reconcile-nomarker-twice-idempotent",
+    "op": "reconcile",
+    "note": "reconciling twice: the second call finds a trusted marker and writes nothing, so the tree and bytes are identical",
+    "bottles": [
+      "fx-nomarker-dxvk-nots"
+    ],
+    "engines": "installed",
+    "args": {
+      "bottle": "fx-nomarker-dxvk-nots",
+      "times": 2
+    }
+  },
+  {
+    "id": "reconcile-gate-rejected",
+    "op": "reconcile",
+    "note": "the gate cannot be asked: the inferred marker is not written",
+    "bottles": [
+      "fx-nomarker-dxvk-nots"
+    ],
+    "engines": "installed",
+    "gate": {
+      "reject": true
+    },
+    "args": {
+      "bottle": "fx-nomarker-dxvk-nots"
+    }
+  },
+  {
+    "id": "reconcile-unsafe-name",
+    "op": "reconcile",
+    "note": "an unsafe bottle name is refused before any read",
+    "bottles": [
+      "fx-nomarker-dxvk-nots"
+    ],
+    "args": {
+      "bottle": "a/b"
+    }
+  },
+  {
+    "id": "record-pinned-fresh-no-dxvk-in-bottle",
+    "op": "record-pinned",
+    "note": "a bottle with no current_dxvk-macOS: the pinned marker is written without a dxvk field even though the engine has one",
+    "engines": "installed",
+    "bottles": [
+      "fx-nomarker-nodxvk-nots"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-nots",
+      "engine": "with-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-fresh-with-dxvk",
+    "op": "record-pinned",
+    "note": "a bottle that has current_dxvk-macOS: the marker records the engine DXVK dir and version",
+    "engines": "installed",
+    "bottles": [
+      "fx-nomarker-dxvk-nots"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-dxvk-nots",
+      "engine": "with-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-engine-without-dxvk",
+    "op": "record-pinned",
+    "note": "the engine has no DXVK: no dxvk field even though the bottle has current_dxvk-macOS",
+    "engines": "installed",
+    "bottles": [
+      "fx-nomarker-dxvk-nots"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-dxvk-nots",
+      "engine": "no-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-twice-identical",
+    "op": "record-pinned",
+    "note": "SVC-02 idempotency: recording the same marker twice leaves identical bytes and an identical tree",
+    "engines": "installed",
+    "bottles": [
+      "fx-nomarker-dxvk-nots"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-dxvk-nots",
+      "engine": "with-dxvk",
+      "times": 2
+    }
+  },
+  {
+    "id": "record-pinned-over-identical-marker",
+    "op": "record-pinned",
+    "note": "SVC-02 idempotency: recording over a marker that already says the same leaves the bytes unchanged",
+    "engines": "installed",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "args": {
+      "bottle": "fx-pinned-current",
+      "engine": "with-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-over-newer-refused",
+    "op": "record-pinned",
+    "note": "a marker written by a newer build (version 2) is never overwritten: the call returns false and the bytes stay",
+    "engines": "installed",
+    "bottles": [
+      "fx-marker-newer"
+    ],
+    "args": {
+      "bottle": "fx-marker-newer",
+      "engine": "with-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-over-unreadable-overwritten",
+    "op": "record-pinned",
+    "note": "an unreadable marker is writable (gate state unreadable): it is replaced by a valid one",
+    "engines": "installed",
+    "bottles": [
+      "fx-marker-unreadable"
+    ],
+    "args": {
+      "bottle": "fx-marker-unreadable",
+      "engine": "with-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-over-crossover-marker",
+    "op": "record-pinned",
+    "note": "a crossover marker is replaced by the pinned one",
+    "engines": "installed",
+    "bottles": [
+      "fx-crossover-marker"
+    ],
+    "args": {
+      "bottle": "fx-crossover-marker",
+      "engine": "with-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-over-legacy-noversion",
+    "op": "record-pinned",
+    "note": "a marker with no version key reads as version 0 and is rewritten at version 1",
+    "engines": "installed",
+    "bottles": [
+      "fx-marker-legacy-noversion"
+    ],
+    "args": {
+      "bottle": "fx-marker-legacy-noversion",
+      "engine": "with-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-over-dxvk-failed",
+    "op": "record-pinned",
+    "note": "a dxvk: \"failed\" marker is replaced by the recorded DXVK once the bottle has current_dxvk-macOS",
+    "engines": "installed",
+    "bottles": [
+      "fx-dxvk-failed"
+    ],
+    "args": {
+      "bottle": "fx-dxvk-failed",
+      "engine": "with-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-retired-pin-id",
+    "op": "record-pinned",
+    "note": "a pin id no build ships is accepted as long as it matches the id grammar",
+    "engines": "installed",
+    "bottles": [
+      "fx-nomarker-nodxvk-nots"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-nots",
+      "pinId": "wine-staging-11.1",
+      "engine": "no-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-bad-pin-id",
+    "op": "record-pinned",
+    "note": "a pin id with a separator fails the id grammar: false, nothing written, no gate call",
+    "engines": "installed",
+    "bottles": [
+      "fx-nomarker-nodxvk-nots"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-nots",
+      "pinId": "bad/id",
+      "engine": "no-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-pin-id-too-long",
+    "op": "record-pinned",
+    "note": "a 65 character pin id fails the id grammar (1 to 64 characters)",
+    "engines": "installed",
+    "bottles": [
+      "fx-nomarker-nodxvk-nots"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-nots",
+      "pinId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "engine": "no-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-absent-bottle",
+    "op": "record-pinned",
+    "note": "the bottle directory does not exist: false and nothing is created",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "no-such-bottle",
+      "engine": "with-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-unsafe-name",
+    "op": "record-pinned",
+    "note": "a bottle name with a separator is refused",
+    "engines": "installed",
+    "bottles": [
+      "fx-nomarker-nodxvk-nots"
+    ],
+    "args": {
+      "bottle": "a/b",
+      "engine": "with-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-gate-rejected",
+    "op": "record-pinned",
+    "note": "Rust cannot be asked: the marker is not written",
+    "engines": "installed",
+    "bottles": [
+      "fx-nomarker-nodxvk-nots"
+    ],
+    "gate": {
+      "reject": true
+    },
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-nots",
+      "engine": "no-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-gate-answers-newer",
+    "op": "record-pinned",
+    "note": "the gate answers newer for a bottle with no marker: the write is refused",
+    "engines": "installed",
+    "bottles": [
+      "fx-nomarker-nodxvk-nots"
+    ],
+    "gate": {
+      "answer": "newer"
+    },
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-nots",
+      "engine": "no-dxvk"
+    }
+  },
+  {
+    "id": "record-pinned-bottle-without-system-reg",
+    "op": "record-pinned",
+    "note": "only the directory is required: a marker is written into a bottle that is not yet a wine prefix",
+    "engines": "installed",
+    "bottles": [
+      "fx-no-system-reg"
+    ],
+    "args": {
+      "bottle": "fx-no-system-reg",
+      "engine": "no-dxvk"
+    }
+  },
+  {
+    "id": "record-crossover-fresh",
+    "op": "record-crossover",
+    "note": "the crossover marker names the CrossOver wineserver under the given bin dir",
+    "bottles": [
+      "fx-nomarker-nodxvk-ts"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-ts"
+    }
+  },
+  {
+    "id": "record-crossover-twice-identical",
+    "op": "record-crossover",
+    "note": "SVC-02 idempotency: the same crossover marker twice leaves identical bytes",
+    "bottles": [
+      "fx-nomarker-nodxvk-ts"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-ts",
+      "times": 2
+    }
+  },
+  {
+    "id": "record-crossover-over-pinned-marker",
+    "op": "record-crossover",
+    "note": "a pinned marker is replaced by the crossover one",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "args": {
+      "bottle": "fx-pinned-current"
+    }
+  },
+  {
+    "id": "record-crossover-over-newer-refused",
+    "op": "record-crossover",
+    "note": "a newer marker is never overwritten",
+    "bottles": [
+      "fx-marker-newer"
+    ],
+    "args": {
+      "bottle": "fx-marker-newer"
+    }
+  },
+  {
+    "id": "record-crossover-absent-bottle",
+    "op": "record-crossover",
+    "note": "no bottle directory: false",
+    "bottles": [],
+    "args": {
+      "bottle": "no-such-bottle"
+    }
+  },
+  {
+    "id": "record-crossover-gate-rejected",
+    "op": "record-crossover",
+    "note": "Rust cannot be asked: nothing is written",
+    "bottles": [
+      "fx-nomarker-nodxvk-ts"
+    ],
+    "gate": {
+      "reject": true
+    },
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-ts"
+    }
+  },
+  {
+    "id": "provisioned-every-fixture",
+    "op": "provisioned",
+    "note": "isBottleProvisioned is true only when <bottle>/cxbottle.conf exists: every fixture, an absent bottle and unsafe names",
+    "bottles": [
+      "fx-crossover-marker",
+      "fx-pinned-current",
+      "fx-pinned-retired",
+      "fx-wine-manager",
+      "fx-pinned-no-dxvk-field",
+      "fx-dxvk-failed",
+      "fx-marker-newer",
+      "fx-marker-unreadable",
+      "fx-crossover-contradicted",
+      "fx-nomarker-dxvk-ts",
+      "fx-nomarker-dxvk-nots",
+      "fx-nomarker-nodxvk-ts",
+      "fx-nomarker-nodxvk-nots",
+      "fx-nomarker-noconf",
+      "fx-no-system-reg",
+      "fx-pinned-wineserver-outside",
+      "fx-pinned-wineserver-misnamed",
+      "fx-marker-bad-id",
+      "fx-pinned-dxvk-outside-root",
+      "fx-marker-wrong-kind",
+      "fx-marker-legacy-noversion"
+    ],
+    "args": {
+      "names": [
+        "fx-crossover-marker",
+        "fx-pinned-current",
+        "fx-pinned-retired",
+        "fx-wine-manager",
+        "fx-pinned-no-dxvk-field",
+        "fx-dxvk-failed",
+        "fx-marker-newer",
+        "fx-marker-unreadable",
+        "fx-crossover-contradicted",
+        "fx-nomarker-dxvk-ts",
+        "fx-nomarker-dxvk-nots",
+        "fx-nomarker-nodxvk-ts",
+        "fx-nomarker-nodxvk-nots",
+        "fx-nomarker-noconf",
+        "fx-no-system-reg",
+        "fx-pinned-wineserver-outside",
+        "fx-pinned-wineserver-misnamed",
+        "fx-marker-bad-id",
+        "fx-pinned-dxvk-outside-root",
+        "fx-marker-wrong-kind",
+        "fx-marker-legacy-noversion",
+        "no-such-bottle",
+        "a/b",
+        "",
+        "  fx-pinned-current"
+      ]
+    }
+  },
+  {
+    "id": "provisioned-parent-traversal-name",
+    "op": "provisioned",
+    "note": "the predicate does not sanitise: \"..\", \".\" and a nested path resolve through path.join, so a conf in the CrossOver directory makes \"..\" read as provisioned (recorded as is; the callers sanitise first)",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "seed": [
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/cxbottle.conf",
+        "text": "[Bottle]\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/nested/inner/cxbottle.conf",
+        "text": "[Bottle]\n"
+      }
+    ],
+    "args": {
+      "names": [
+        "..",
+        ".",
+        "nested/inner",
+        "fx-pinned-current/../fx-pinned-current"
+      ]
+    }
+  },
+  {
+    "id": "conf-write-half-created",
+    "op": "conf-write",
+    "note": "a wine prefix with system.reg and no conf: the minimal conf is written (0644, tmp then rename, BottleID uppercased)",
+    "bottles": [
+      "fx-nomarker-noconf"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-noconf"
+    }
+  },
+  {
+    "id": "conf-write-twice-idempotent",
+    "op": "conf-write",
+    "note": "SVC-02 idempotency: the second write finds the conf and leaves it untouched",
+    "bottles": [
+      "fx-nomarker-noconf"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-noconf",
+      "times": 2
+    }
+  },
+  {
+    "id": "conf-write-existing-untouched",
+    "op": "conf-write",
+    "note": "an existing conf (a different BottleID) is never overwritten",
+    "bottles": [
+      "fx-nomarker-nodxvk-nots"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-nots"
+    }
+  },
+  {
+    "id": "conf-write-no-system-reg",
+    "op": "conf-write",
+    "note": "no system.reg: not a wine prefix, nothing written",
+    "bottles": [
+      "fx-no-system-reg"
+    ],
+    "args": {
+      "bottle": "fx-no-system-reg"
+    }
+  },
+  {
+    "id": "conf-write-absent-bottle",
+    "op": "conf-write",
+    "note": "no bottle directory: false and nothing created",
+    "bottles": [],
+    "args": {
+      "bottle": "no-such-bottle"
+    }
+  },
+  {
+    "id": "kill-ok",
+    "op": "kill",
+    "note": "wineserver -k with WINEPREFIX set to the bottle, the extra env spread before it, the 15 s cap and an inherited base env",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-pinned-current"
+      ],
+      "script": "ok",
+      "extraEnv": {
+        "USER": "crossover"
+      }
+    }
+  },
+  {
+    "id": "kill-timeout-false",
+    "op": "kill",
+    "note": "the run is cut by its timeout (code null): a warning and false",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-pinned-current"
+      ],
+      "script": "timeout",
+      "timeoutMs": 1000
+    }
+  },
+  {
+    "id": "kill-spawn-throws-false",
+    "op": "kill",
+    "note": "the spawn fails: never throws, a warning and false",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-pinned-current"
+      ],
+      "script": "throws"
+    }
+  },
+  {
+    "id": "kill-unsafe-names-no-spawn",
+    "op": "kill",
+    "note": "separator, parent, empty, padded, NUL and \".\" names are refused with a warning and no process starts (\".\" is refused by the containment check, not the sanitiser)",
+    "bottles": [],
+    "args": {
+      "names": [
+        "a/b",
+        "..",
+        "../escape",
+        "",
+        " padded ",
+        "x\u0000y",
+        "."
+      ],
+      "script": "ok"
+    }
+  },
+  {
+    "id": "kill-extra-env-cannot-override-prefix",
+    "op": "kill",
+    "note": "WINEPREFIX is spread last: extra env cannot steer it away from the bottle",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "engines": "installed",
+    "args": {
+      "names": [
+        "fx-pinned-current"
+      ],
+      "script": "ok",
+      "extraEnv": {
+        "WINEPREFIX": "<HOME>/evil",
+        "USER": "crossover",
+        "CX_ROOT": "/x"
+      }
+    }
+  },
+  {
+    "id": "remove-created-inside-root-sibling-untouched",
+    "op": "remove-created",
+    "note": "a bottle directly under the Bottles root is removed; a sibling bottle, a sibling directory of the root and a directory whose name starts with the root name are untouched",
+    "bottles": [
+      "fx-nomarker-noconf",
+      "fx-pinned-current"
+    ],
+    "seed": [
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Sibling/keep.txt",
+        "text": "keep\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles-keep/keep.txt",
+        "text": "keep\n"
+      }
+    ],
+    "args": {
+      "names": [
+        "fx-nomarker-noconf"
+      ]
+    }
+  },
+  {
+    "id": "remove-created-refused-names",
+    "op": "remove-created",
+    "note": "names that are not a single safe segment under the root are refused with a warning: a parent path, separators, \"..\", \".\", empty, padded and a trailing slash; every directory survives",
+    "bottles": [
+      "fx-pinned-current",
+      "fx-nomarker-noconf"
+    ],
+    "seed": [
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Sibling/keep.txt",
+        "text": "keep\n"
+      }
+    ],
+    "args": {
+      "names": [
+        "../Sibling",
+        "a/b",
+        "..",
+        ".",
+        "",
+        " fx-pinned-current",
+        "fx-pinned-current/",
+        "fx-pinned-current\u0000"
+      ]
+    }
+  },
+  {
+    "id": "remove-created-absent-bottle",
+    "op": "remove-created",
+    "note": "a bottle that is not there: rm with force is a no-op, no warning",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "args": {
+      "names": [
+        "no-such-bottle"
+      ]
+    }
+  },
+  {
+    "id": "remove-created-symlinked-bottle",
+    "op": "remove-created",
+    "note": "a bottle that is a symlink: the link is removed and its target outside the root survives",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "seed": [
+      {
+        "path": "<HOME>/outside/keep.txt",
+        "text": "keep\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/CrossOver/Bottles/fx-link",
+        "symlink": "<HOME>/outside"
+      }
+    ],
+    "args": {
+      "names": [
+        "fx-link"
+      ]
+    }
+  },
+  {
+    "id": "create-crossover-ok-fresh",
+    "op": "create-crossover",
+    "note": "cxbottle --create with the capped timeout and the abort signal; the bottle appears with a CrossOver conf; a best-effort wineserver -k with CX_ROOT follows",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "cxbottle": {
+        "code": 0,
+        "writes": "fx-nomarker-nodxvk-ts"
+      }
+    }
+  },
+  {
+    "id": "create-crossover-ok-custom-timeout",
+    "op": "create-crossover",
+    "note": "the create cap is the caller's createTimeoutMs",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "createTimeoutMs": 5000,
+      "cxbottle": {
+        "code": 0,
+        "writes": "fx-nomarker-nodxvk-ts"
+      }
+    }
+  },
+  {
+    "id": "create-crossover-ok-existing-provisioned",
+    "op": "create-crossover",
+    "note": "an already-provisioned bottle: cxbottle runs, createdHere is false, the bottle is untouched (SVC-02)",
+    "bottles": [
+      "fx-nomarker-nodxvk-ts"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-ts",
+      "cxbottle": {
+        "code": 0
+      }
+    }
+  },
+  {
+    "id": "create-crossover-timeout-cleans-created",
+    "op": "create-crossover",
+    "note": "the create hits its cap (code null) leaving a partial bottle: a wineserver -k, then the bottle this call created is removed; errorCode crossover-create-timeout",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "cxbottle": {
+        "code": null,
+        "writes": "fx-nomarker-noconf"
+      }
+    }
+  },
+  {
+    "id": "create-crossover-no-conf-cleans-created",
+    "op": "create-crossover",
+    "note": "cxbottle exits 1 and leaves a prefix with no conf: error crossover-create-failed, the partial bottle removed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "cxbottle": {
+        "code": 1,
+        "stderr": "cxbottle: template error",
+        "writes": "fx-nomarker-noconf"
+      }
+    }
+  },
+  {
+    "id": "create-crossover-no-conf-keeps-existing-dir",
+    "op": "create-crossover",
+    "note": "the same failure on a directory that was already there: it is not removed (createdHere false)",
+    "bottles": [
+      "fx-no-system-reg"
+    ],
+    "args": {
+      "bottle": "fx-no-system-reg",
+      "cxbottle": {
+        "code": 1,
+        "stderr": "cxbottle: template error"
+      }
+    }
+  },
+  {
+    "id": "create-crossover-exit-zero-nothing-created",
+    "op": "create-crossover",
+    "note": "cxbottle exits 0 and creates nothing: not provisioned, error crossover-create-failed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "cxbottle": {
+        "code": 0
+      }
+    }
+  },
+  {
+    "id": "create-crossover-spawn-throws-cleans-created",
+    "op": "create-crossover",
+    "note": "the spawn itself fails: error text carries the failure, the partial bottle removed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "cxbottle": {
+        "throws": "spawn cxbottle ENOENT"
+      }
+    }
+  },
+  {
+    "id": "create-crossover-invalid-name",
+    "op": "create-crossover",
+    "note": "a name with a separator is refused before any spawn",
+    "bottles": [],
+    "args": {
+      "bottle": "a/b",
+      "cxbottle": {
+        "code": 0
+      }
+    }
+  },
+  {
+    "id": "create-crossover-padded-name",
+    "op": "create-crossover",
+    "note": "a padded name is not the sanitised name: refused",
+    "bottles": [],
+    "args": {
+      "bottle": " GameLib-x ",
+      "cxbottle": {
+        "code": 0
+      }
+    }
+  },
+  {
+    "id": "create-crossover-aborted-before",
+    "op": "create-crossover",
+    "note": "the signal is already aborted: no cxbottle process, the kill and removal still run, errorCode provision-aborted",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "abort": "before",
+      "cxbottle": {
+        "code": 0
+      }
+    }
+  },
+  {
+    "id": "create-crossover-aborted-during",
+    "op": "create-crossover",
+    "note": "the signal aborts while cxbottle runs: the partial bottle is cleaned and the result is provision-aborted",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "abort": "during",
+      "cxbottle": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      }
+    }
+  },
+  {
+    "id": "create-fallback-ok-with-dxvk",
+    "op": "create-fallback",
+    "note": "wineboot -i (180 s cap, WINEDLLOVERRIDES=mshtml=, USER=crossover, WINEDEBUG=-all), wineserver -w (60 s), the DXVK installer through the fallback settings, the conf last, then wineserver -k",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      },
+      "installer": "ok"
+    }
+  },
+  {
+    "id": "create-fallback-ok-without-dxvk",
+    "op": "create-fallback",
+    "note": "an engine with no DXVK: no installer call, the conf is written after the wait",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "dxvk": false,
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      }
+    }
+  },
+  {
+    "id": "create-fallback-existing-half-created-ok",
+    "op": "create-fallback",
+    "note": "a half-created bottle (system.reg, no conf) is completed: createdHere is false",
+    "engines": "installed",
+    "bottles": [
+      "fx-nomarker-noconf"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-noconf",
+      "dxvk": false,
+      "boot": {
+        "code": 0
+      }
+    }
+  },
+  {
+    "id": "create-fallback-existing-provisioned-conf-left-untouched",
+    "op": "create-fallback",
+    "note": "SVC-02: running creation over a provisioned bottle never overwrites its conf, so the final conf write reports not written and the call fails without removing the bottle",
+    "engines": "installed",
+    "bottles": [
+      "fx-nomarker-nodxvk-nots"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-nots",
+      "dxvk": false,
+      "boot": {
+        "code": 0
+      }
+    }
+  },
+  {
+    "id": "create-fallback-boot-fails-cleans-created",
+    "op": "create-fallback",
+    "note": "wineboot exits non-zero: stderr in the error text, wineserver -k, the bottle this call created removed",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "boot": {
+        "code": 1,
+        "stderr": "wine: cannot find the engine",
+        "writes": "fx-nomarker-noconf"
+      }
+    }
+  },
+  {
+    "id": "create-fallback-boot-fails-keeps-existing",
+    "op": "create-fallback",
+    "note": "wineboot fails on a bottle that was already there: the directory stays",
+    "engines": "installed",
+    "bottles": [
+      "fx-nomarker-noconf"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-noconf",
+      "boot": {
+        "code": 2,
+        "stderr": "wine: failed"
+      }
+    }
+  },
+  {
+    "id": "create-fallback-boot-spawn-throws",
+    "op": "create-fallback",
+    "note": "the wineboot spawn fails: the error carries \"fallback bottle creation threw\"",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "boot": {
+        "throws": "spawn wine ENOENT"
+      }
+    }
+  },
+  {
+    "id": "create-fallback-wait-times-out",
+    "op": "create-fallback",
+    "note": "wineserver -w is cut by its cap (code null): \"wineserver -w timed out\", cleaned",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "wait": "timeout",
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      }
+    }
+  },
+  {
+    "id": "create-fallback-installer-fails",
+    "op": "create-fallback",
+    "note": "the DXVK installer returns false: \"DXVK install failed\", cleaned",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      },
+      "installer": "fails"
+    }
+  },
+  {
+    "id": "create-fallback-installer-no-marker",
+    "op": "create-fallback",
+    "note": "the installer returns true but current_dxvk-macOS is absent: still a DXVK failure",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      },
+      "installer": "no-marker"
+    }
+  },
+  {
+    "id": "create-fallback-installer-throws",
+    "op": "create-fallback",
+    "note": "the installer throws: caught and reported as \"fallback bottle creation threw\"",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      },
+      "installer": "throws"
+    }
+  },
+  {
+    "id": "create-fallback-no-system-reg-after-boot",
+    "op": "create-fallback",
+    "note": "wineboot leaves no system.reg: the conf is not written and the call fails after the wait",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "dxvk": false,
+      "boot": {
+        "code": 0
+      }
+    }
+  },
+  {
+    "id": "create-fallback-aborted-before",
+    "op": "create-fallback",
+    "note": "the signal is already aborted: wineboot still starts, then the abort is noticed before the wait; provision-aborted",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "abort": "before",
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      }
+    }
+  },
+  {
+    "id": "create-fallback-aborted-after-boot",
+    "op": "create-fallback",
+    "note": "the signal aborts while wineboot runs: cancelled, cleaned",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "abort": "after-boot",
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      }
+    }
+  },
+  {
+    "id": "create-fallback-aborted-after-installer",
+    "op": "create-fallback",
+    "note": "the signal aborts during the DXVK step: cancelled, cleaned (checked before the marker test)",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "abort": "after-installer",
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      },
+      "installer": "ok"
+    }
+  },
+  {
+    "id": "ensure-existing-provisioned",
+    "op": "ensure",
+    "note": "a provisioned bottle is reused: engine existing, createdHere false, no process starts, nothing changes (SVC-02)",
+    "engines": "installed",
+    "bottles": [
+      "fx-nomarker-nodxvk-ts"
+    ],
+    "args": {
+      "bottle": "fx-nomarker-nodxvk-ts",
+      "decision": "crossover",
+      "cxbottle": {
+        "code": 0,
+        "writes": "fx-nomarker-nodxvk-ts"
+      }
+    }
+  },
+  {
+    "id": "ensure-crossover-fresh",
+    "op": "ensure",
+    "note": "the decision is CrossOver with a bin dir: cxbottle --create with the decision cap",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "decision": "crossover",
+      "cxbottle": {
+        "code": 0,
+        "writes": "fx-nomarker-nodxvk-ts"
+      }
+    }
+  },
+  {
+    "id": "ensure-crossover-then-existing-idempotent",
+    "op": "ensure",
+    "note": "SVC-02: ensuring the same bottle twice creates it once and reuses it the second time; the tree after the second call equals the first",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "decision": "crossover",
+      "cxbottle": {
+        "code": 0,
+        "writes": "fx-nomarker-nodxvk-ts"
+      },
+      "mode": "twice"
+    }
+  },
+  {
+    "id": "ensure-pinned-decision",
+    "op": "ensure",
+    "note": "the decision is the pinned engine: ensurePin, then the fallback creation",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "decision": "pinned",
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      },
+      "installer": "ok"
+    }
+  },
+  {
+    "id": "ensure-no-bin-dir-uses-pinned",
+    "op": "ensure",
+    "note": "CrossOver decided but no bin dir resolves: the current pin creates the bottle",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "decision": "crossover",
+      "binDirPresent": false,
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      },
+      "installer": "ok"
+    }
+  },
+  {
+    "id": "ensure-crossover-failure-falls-back-to-pinned",
+    "op": "ensure",
+    "note": "cxbottle fails to produce a conf: a warning and the current pin creates the bottle",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "decision": "crossover",
+      "cxbottle": {
+        "code": 1,
+        "stderr": "cxbottle: error",
+        "writes": "fx-nomarker-noconf"
+      },
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      },
+      "installer": "ok"
+    }
+  },
+  {
+    "id": "ensure-pin-download-failed",
+    "op": "ensure",
+    "note": "the pin cannot be made available: engine-download-failed with the download error",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "decision": "pinned",
+      "pin": "offline",
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      }
+    }
+  },
+  {
+    "id": "ensure-pin-download-aborted",
+    "op": "ensure",
+    "note": "the download is cancelled: provision-aborted, not a download failure",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "decision": "pinned",
+      "pin": "aborted",
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      }
+    }
+  },
+  {
+    "id": "ensure-crossover-aborted-no-fallback",
+    "op": "ensure",
+    "note": "a cancelled CrossOver create is final: provision-aborted, no fallback creation",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "decision": "crossover",
+      "abort": "during",
+      "cxbottle": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      },
+      "boot": {
+        "code": 0,
+        "writes": "fx-nomarker-noconf"
+      }
+    }
+  },
+  {
+    "id": "ensure-invalid-name",
+    "op": "ensure",
+    "note": "an unsafe name returns an error before the flight starts",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "a/b",
+      "decision": "crossover",
+      "cxbottle": {
+        "code": 0,
+        "writes": "fx-nomarker-nodxvk-ts"
+      }
+    }
+  },
+  {
+    "id": "ensure-concurrent-callers-share-one-creation",
+    "op": "ensure",
+    "note": "two callers at once share one flight: one cxbottle process, equal results",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-gog-1207658924",
+      "decision": "crossover",
+      "cxbottle": {
+        "code": 0,
+        "writes": "fx-nomarker-nodxvk-ts"
+      },
+      "mode": "concurrent"
+    }
+  },
+  {
+    "id": "ensure-steam-key-bare-app-id",
+    "op": "ensure",
+    "note": "a Steam title keys the flight by its bare app id",
+    "engines": "installed",
+    "bottles": [],
+    "args": {
+      "bottle": "GameLib-steam-620",
+      "runner": "steam",
+      "appName": "620",
+      "decision": "crossover",
+      "cxbottle": {
+        "code": 0,
+        "writes": "fx-nomarker-nodxvk-ts"
+      }
+    }
+  },
+  {
+    "id": "ledger-mark-and-query",
+    "op": "ledger",
+    "note": "markGameRunning records a key per bottle; gamesRunningIn and otherGamesRunning exclude nothing or the caller; markGameStopped drops the empty bottle (size)",
+    "args": {
+      "steps": [
+        {
+          "call": "markGameRunning",
+          "bottle": "GameLib-gog-1",
+          "key": "gog:1"
+        },
+        {
+          "call": "markGameRunning",
+          "bottle": "GameLib-gog-1",
+          "key": "620"
+        },
+        {
+          "call": "markGameRunning",
+          "bottle": "GameLib-gog-1",
+          "key": "gog:1"
+        },
+        {
+          "call": "gamesRunningIn",
+          "bottle": "GameLib-gog-1",
+          "key": ""
+        },
+        {
+          "call": "otherGamesRunning",
+          "bottle": "GameLib-gog-1",
+          "key": "gog:1"
+        },
+        {
+          "call": "otherGamesRunning",
+          "bottle": "GameLib-gog-1",
+          "key": "620"
+        },
+        {
+          "call": "size"
+        },
+        {
+          "call": "markGameStopped",
+          "bottle": "GameLib-gog-1",
+          "key": "gog:1"
+        },
+        {
+          "call": "gamesRunningIn",
+          "bottle": "GameLib-gog-1",
+          "key": ""
+        },
+        {
+          "call": "markGameStopped",
+          "bottle": "GameLib-gog-1",
+          "key": "620"
+        },
+        {
+          "call": "size"
+        },
+        {
+          "call": "markGameStopped",
+          "bottle": "never-marked",
+          "key": "620"
+        }
+      ]
+    }
+  },
+  {
+    "id": "ledger-invalid-inputs",
+    "op": "ledger",
+    "note": "an unsafe bottle name or a key that is not an engine key is refused (false) and never recorded; queries on an unsafe name are empty",
+    "args": {
+      "steps": [
+        {
+          "call": "markGameRunning",
+          "bottle": "a/b",
+          "key": "gog:1"
+        },
+        {
+          "call": "markGameRunning",
+          "bottle": "..",
+          "key": "gog:1"
+        },
+        {
+          "call": "markGameRunning",
+          "bottle": "GameLib-x",
+          "key": "bad key"
+        },
+        {
+          "call": "markGameRunning",
+          "bottle": "GameLib-x",
+          "key": "steam:620"
+        },
+        {
+          "call": "markGameRunning",
+          "bottle": "GameLib-x",
+          "key": "unknown:1"
+        },
+        {
+          "call": "markGameRunning",
+          "bottle": " padded ",
+          "key": "gog:1"
+        },
+        {
+          "call": "gamesRunningIn",
+          "bottle": "a/b",
+          "key": ""
+        },
+        {
+          "call": "size"
+        }
+      ]
+    }
+  },
+  {
+    "id": "registry-set-get-clear",
+    "op": "registry",
+    "note": "a crossover and a pinned selection are stored per engine key; get returns what was stored, a later set replaces it, clear removes it and a repeat clear is harmless",
+    "engines": "installed",
+    "args": {
+      "steps": [
+        {
+          "call": "get",
+          "key": "gog:1"
+        },
+        {
+          "call": "set",
+          "key": "gog:1",
+          "selection": {
+            "kind": "crossover",
+            "reason": "cx-healthy",
+            "crossoverBuild": "26.3",
+            "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+          }
+        },
+        {
+          "call": "get",
+          "key": "gog:1"
+        },
+        {
+          "call": "set",
+          "key": "620",
+          "selection": {
+            "kind": "pinned",
+            "pinId": "wine-staging-11.20",
+            "reason": "cx-missing",
+            "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+            "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+            "label": "Pinned",
+            "version": "11.20",
+            "dxvk": {
+              "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+              "version": "v1.10.3-20230507-repack"
+            }
+          }
+        },
+        {
+          "call": "get",
+          "key": "620"
+        },
+        {
+          "call": "set",
+          "key": "620",
+          "selection": {
+            "kind": "crossover",
+            "reason": "cx-healthy",
+            "crossoverBuild": "26.3",
+            "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+          }
+        },
+        {
+          "call": "get",
+          "key": "620"
+        },
+        {
+          "call": "clear",
+          "key": "620"
+        },
+        {
+          "call": "get",
+          "key": "620"
+        },
+        {
+          "call": "clear",
+          "key": "620"
+        },
+        {
+          "call": "get",
+          "key": "gog:1"
+        }
+      ]
+    }
+  },
+  {
+    "id": "registry-pinned-missing-binaries-refused",
+    "op": "registry",
+    "note": "a non-CrossOver selection whose wine or wineserver is not on disk is refused (false) and never stored",
+    "args": {
+      "steps": [
+        {
+          "call": "set",
+          "key": "gog:1",
+          "selection": {
+            "kind": "pinned",
+            "pinId": "wine-staging-11.20",
+            "reason": "cx-missing",
+            "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+            "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+            "label": "Pinned",
+            "version": "11.20",
+            "dxvk": {
+              "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+              "version": "v1.10.3-20230507-repack"
+            }
+          }
+        },
+        {
+          "call": "get",
+          "key": "gog:1"
+        },
+        {
+          "call": "set",
+          "key": "gog:1",
+          "selection": {
+            "kind": "crossover",
+            "reason": "cx-healthy",
+            "crossoverBuild": "26.3",
+            "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+          }
+        },
+        {
+          "call": "get",
+          "key": "gog:1"
+        }
+      ]
+    }
+  },
+  {
+    "id": "registry-invalid-keys-refused",
+    "op": "registry",
+    "note": "a key that is not an engine key is refused for every selection kind: not a number, a prefixed steam id, an unknown runner, a path",
+    "engines": "installed",
+    "args": {
+      "steps": [
+        {
+          "call": "set",
+          "key": "abc",
+          "selection": {
+            "kind": "crossover",
+            "reason": "cx-healthy",
+            "crossoverBuild": "26.3",
+            "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+          }
+        },
+        {
+          "call": "set",
+          "key": "steam:620",
+          "selection": {
+            "kind": "crossover",
+            "reason": "cx-healthy",
+            "crossoverBuild": "26.3",
+            "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+          }
+        },
+        {
+          "call": "set",
+          "key": "unknown:1",
+          "selection": {
+            "kind": "crossover",
+            "reason": "cx-healthy",
+            "crossoverBuild": "26.3",
+            "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+          }
+        },
+        {
+          "call": "set",
+          "key": "gog:../x",
+          "selection": {
+            "kind": "crossover",
+            "reason": "cx-healthy",
+            "crossoverBuild": "26.3",
+            "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+          }
+        },
+        {
+          "call": "set",
+          "key": "",
+          "selection": {
+            "kind": "crossover",
+            "reason": "cx-healthy",
+            "crossoverBuild": "26.3",
+            "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+          }
+        },
+        {
+          "call": "get",
+          "key": "abc"
+        }
+      ]
+    }
+  },
+  {
+    "id": "registry-stores-a-copy",
+    "op": "registry",
+    "note": "the stored selection is a copy: changing the input object (and its dxvk) after set does not change what get returns",
+    "engines": "installed",
+    "args": {
+      "steps": [
+        {
+          "call": "set",
+          "key": "gog:1",
+          "selection": {
+            "kind": "pinned",
+            "pinId": "wine-staging-11.20",
+            "reason": "cx-missing",
+            "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+            "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+            "label": "Pinned",
+            "version": "11.20",
+            "dxvk": {
+              "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+              "version": "v1.10.3-20230507-repack"
+            }
+          },
+          "mutateInput": true
+        },
+        {
+          "call": "get",
+          "key": "gog:1"
+        }
+      ]
+    }
+  },
+  {
+    "id": "resolve-prefix-legacy",
+    "op": "resolve-prefix",
+    "note": "a legacy effective engine launches exactly as before, whatever the settings",
+    "args": {
+      "inputs": [
+        {
+          "runner": "gog",
+          "appName": "1207658924",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g"
+          },
+          "effective": {
+            "kind": "legacy",
+            "label": "Wine-GE"
+          }
+        },
+        {
+          "runner": "bad",
+          "appName": "1",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g"
+          },
+          "effective": {
+            "kind": "legacy",
+            "label": "x"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "resolve-prefix-crossover-keeps-its-bottle",
+    "op": "resolve-prefix",
+    "note": "a CrossOver game keeps the bottle it names (per-game, legacy, padded or unsafe falls back to GameLib)",
+    "args": {
+      "inputs": [
+        {
+          "runner": "gog",
+          "appName": "1207658924",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g",
+            "wineVersion": {
+              "type": "crossover"
+            },
+            "wineCrossoverBottle": "GameLib-gog-1207658924"
+          },
+          "effective": {
+            "kind": "override",
+            "id": "crossover",
+            "source": "stored"
+          }
+        },
+        {
+          "runner": "gog",
+          "appName": "1207658924",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g",
+            "wineVersion": {
+              "type": "crossover"
+            },
+            "wineCrossoverBottle": "Shared"
+          },
+          "effective": {
+            "kind": "override",
+            "id": "crossover",
+            "source": "stored"
+          }
+        },
+        {
+          "runner": "gog",
+          "appName": "1207658924",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g",
+            "wineVersion": {
+              "type": "crossover"
+            },
+            "wineCrossoverBottle": "a/b"
+          },
+          "effective": {
+            "kind": "override",
+            "id": "crossover",
+            "source": "stored"
+          }
+        },
+        {
+          "runner": "gog",
+          "appName": "1207658924",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g",
+            "wineVersion": {
+              "type": "crossover"
+            }
+          },
+          "effective": {
+            "kind": "override",
+            "id": "crossover",
+            "source": "derived"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "resolve-prefix-per-game-bottle",
+    "op": "resolve-prefix",
+    "note": "a non-CrossOver game whose stored bottle is its per-game name stays on it",
+    "args": {
+      "inputs": [
+        {
+          "runner": "legendary",
+          "appName": "Sugar",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g",
+            "wineVersion": {
+              "type": "wine"
+            },
+            "wineCrossoverBottle": "GameLib-legendary-Sugar"
+          },
+          "effective": {
+            "kind": "override",
+            "id": "automatic",
+            "source": "stored"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "resolve-prefix-switched-from-plain",
+    "op": "resolve-prefix",
+    "note": "a plain-prefix game switched to Automatic or CrossOver gets a fresh per-game bottle and reports the old prefix",
+    "args": {
+      "inputs": [
+        {
+          "runner": "gog",
+          "appName": "1207658924",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g",
+            "wineVersion": {
+              "type": "wine"
+            }
+          },
+          "effective": {
+            "kind": "override",
+            "id": "automatic",
+            "source": "stored"
+          }
+        },
+        {
+          "runner": "gog",
+          "appName": "1207658924",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g",
+            "wineVersion": {
+              "type": "wine"
+            }
+          },
+          "effective": {
+            "kind": "override",
+            "id": "crossover",
+            "source": "stored"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "resolve-prefix-plain-stays",
+    "op": "resolve-prefix",
+    "note": "any other override keeps the plain prefix",
+    "args": {
+      "inputs": [
+        {
+          "runner": "gog",
+          "appName": "1207658924",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g",
+            "wineVersion": {
+              "type": "wine"
+            }
+          },
+          "effective": {
+            "kind": "override",
+            "id": "wine-manager:Wine-Staging-10.5",
+            "source": "stored"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "resolve-prefix-invalid-runner-or-app-name",
+    "op": "resolve-prefix",
+    "note": "an unknown runner or an unclean app name is invalid",
+    "args": {
+      "inputs": [
+        {
+          "runner": "nope",
+          "appName": "x",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g"
+          },
+          "effective": {
+            "kind": "override",
+            "id": "automatic",
+            "source": "stored"
+          }
+        },
+        {
+          "runner": "gog",
+          "appName": "../x",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g"
+          },
+          "effective": {
+            "kind": "override",
+            "id": "automatic",
+            "source": "stored"
+          }
+        },
+        {
+          "runner": "steam",
+          "appName": "abc",
+          "settings": {
+            "winePrefix": "<HOME>/Games/Prefixes/g"
+          },
+          "effective": {
+            "kind": "override",
+            "id": "automatic",
+            "source": "stored"
+          }
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,40 @@
+{
+  "op": "create-crossover",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "bottle": "GameLib-gog-1207658924",
+    "abort": "before",
+    "cxbottle": {
+      "code": 0
+    }
+  },
+  "before": [],
+  "outcome": {
+    "status": "error",
+    "errorCode": "provision-aborted",
+    "error": "bottle creation cancelled"
+  },
+  "markers": {},
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "createCrossoverBottle: creation cancelled for \"GameLib-gog-1207658924\""
+    }
+  ],
+  "gateCalls": [],
+  "spawnLimits": [
+    {
+      "program": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+      "argv": [
+        "-k"
+      ],
+      "timeoutMs": 15000,
+      "unbounded": false,
+      "signal": false
+    }
+  ],
+  "installRemove": []
+}

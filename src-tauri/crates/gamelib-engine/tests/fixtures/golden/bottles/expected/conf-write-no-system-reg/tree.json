@@ -1,0 +1,48 @@
+[
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg/drive_c/windows/system32/kernel32.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+  }
+]

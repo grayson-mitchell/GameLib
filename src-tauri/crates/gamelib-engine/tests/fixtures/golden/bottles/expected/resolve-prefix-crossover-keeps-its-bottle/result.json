@@ -1,0 +1,172 @@
+{
+  "op": "resolve-prefix",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "inputs": [
+      {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "crossover"
+          },
+          "wineCrossoverBottle": "GameLib-gog-1207658924"
+        },
+        "effective": {
+          "kind": "override",
+          "id": "crossover",
+          "source": "stored"
+        }
+      },
+      {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "crossover"
+          },
+          "wineCrossoverBottle": "Shared"
+        },
+        "effective": {
+          "kind": "override",
+          "id": "crossover",
+          "source": "stored"
+        }
+      },
+      {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "crossover"
+          },
+          "wineCrossoverBottle": "a/b"
+        },
+        "effective": {
+          "kind": "override",
+          "id": "crossover",
+          "source": "stored"
+        }
+      },
+      {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "crossover"
+          }
+        },
+        "effective": {
+          "kind": "override",
+          "id": "crossover",
+          "source": "derived"
+        }
+      }
+    ]
+  },
+  "before": [],
+  "outcome": [
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "crossover"
+          },
+          "wineCrossoverBottle": "GameLib-gog-1207658924"
+        },
+        "effective": {
+          "kind": "override",
+          "id": "crossover",
+          "source": "stored"
+        }
+      },
+      "returned": {
+        "kind": "bottle",
+        "bottleName": "GameLib-gog-1207658924",
+        "origin": "per-game"
+      }
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "crossover"
+          },
+          "wineCrossoverBottle": "Shared"
+        },
+        "effective": {
+          "kind": "override",
+          "id": "crossover",
+          "source": "stored"
+        }
+      },
+      "returned": {
+        "kind": "bottle",
+        "bottleName": "Shared",
+        "origin": "legacy-crossover"
+      }
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "crossover"
+          },
+          "wineCrossoverBottle": "a/b"
+        },
+        "effective": {
+          "kind": "override",
+          "id": "crossover",
+          "source": "stored"
+        }
+      },
+      "returned": {
+        "kind": "bottle",
+        "bottleName": "GameLib",
+        "origin": "legacy-crossover"
+      }
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "crossover"
+          }
+        },
+        "effective": {
+          "kind": "override",
+          "id": "crossover",
+          "source": "derived"
+        }
+      },
+      "returned": {
+        "kind": "bottle",
+        "bottleName": "GameLib",
+        "origin": "legacy-crossover"
+      }
+    }
+  ],
+  "markers": {},
+  "logs": [],
+  "gateCalls": [],
+  "spawnLimits": [],
+  "installRemove": []
+}

@@ -1,0 +1,28 @@
+{
+  "op": "create-crossover",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "bottle": " GameLib-x ",
+    "cxbottle": {
+      "code": 0
+    }
+  },
+  "before": [],
+  "outcome": {
+    "status": "error",
+    "error": "Invalid bottle name: \" GameLib-x \""
+  },
+  "markers": {},
+  "logs": [
+    {
+      "level": "ERROR",
+      "prefix": "Backend",
+      "message": "createCrossoverBottle: rejected unsafe bottle name \" GameLib-x \""
+    }
+  ],
+  "gateCalls": [],
+  "spawnLimits": [],
+  "installRemove": []
+}

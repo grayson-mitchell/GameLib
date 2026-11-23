@@ -1,0 +1,105 @@
+{
+  "op": "resolve-prefix",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "inputs": [
+      {
+        "runner": "nope",
+        "appName": "x",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g"
+        },
+        "effective": {
+          "kind": "override",
+          "id": "automatic",
+          "source": "stored"
+        }
+      },
+      {
+        "runner": "gog",
+        "appName": "../x",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g"
+        },
+        "effective": {
+          "kind": "override",
+          "id": "automatic",
+          "source": "stored"
+        }
+      },
+      {
+        "runner": "steam",
+        "appName": "abc",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g"
+        },
+        "effective": {
+          "kind": "override",
+          "id": "automatic",
+          "source": "stored"
+        }
+      }
+    ]
+  },
+  "before": [],
+  "outcome": [
+    {
+      "input": {
+        "runner": "nope",
+        "appName": "x",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g"
+        },
+        "effective": {
+          "kind": "override",
+          "id": "automatic",
+          "source": "stored"
+        }
+      },
+      "returned": {
+        "kind": "invalid"
+      }
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "../x",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g"
+        },
+        "effective": {
+          "kind": "override",
+          "id": "automatic",
+          "source": "stored"
+        }
+      },
+      "returned": {
+        "kind": "invalid"
+      }
+    },
+    {
+      "input": {
+        "runner": "steam",
+        "appName": "abc",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g"
+        },
+        "effective": {
+          "kind": "override",
+          "id": "automatic",
+          "source": "stored"
+        }
+      },
+      "returned": {
+        "kind": "invalid"
+      }
+    }
+  ],
+  "markers": {},
+  "logs": [],
+  "gateCalls": [],
+  "spawnLimits": [],
+  "installRemove": []
+}

@@ -1,0 +1,197 @@
+{
+  "op": "create-fallback",
+  "bottles": [],
+  "engines": "installed",
+  "gate": null,
+  "args": {
+    "bottle": "GameLib-gog-1207658924",
+    "boot": {
+      "code": 0,
+      "writes": "fx-nomarker-noconf"
+    },
+    "installer": "fails"
+  },
+  "before": [
+    {
+      "path": ".config",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/.gamelib-pin.json",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "455dbb12bb179adec6ea58c77f744de9b7971e4e570cecd4afe3310ac51a4ae2"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x32",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x32/d3d9.dll",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "6a0eac80a786c1caf2c67f37306bd8813d58f123313f179aca4c883a10cbe19d"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x64",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/dxvk-macOS-v1.10.3-20230507-repack/x64/d3d9.dll",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "3d3221513e348f5a8a24ed5aaea15a0a20980caa080f938c2d6adbfa6f0d1d29"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/.gamelib-pin.json",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "d738620fcb7ccff0885fd4e92faf2c8d4f745ea78e45e20b33f05c11c486d43b"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+      "kind": "file",
+      "mode": "0755",
+      "sha256": "7bbc056677f5b5795928f93ab04429fc383bdcc67d5675fd94f9e5b1dce71afb"
+    },
+    {
+      "path": ".config/GameLib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+      "kind": "file",
+      "mode": "0755",
+      "sha256": "fe952e394afb47cfee6547ed1e641377b2c40e21909bdd38c007027ca0db7992"
+    }
+  ],
+  "outcome": {
+    "status": "error",
+    "error": "DXVK install failed for bottle \"GameLib-gog-1207658924\""
+  },
+  "markers": {},
+  "logs": [
+    {
+      "level": "ERROR",
+      "prefix": "Backend",
+      "message": "provisionBridgeBottle: DXVK install failed for bottle \"GameLib-gog-1207658924\""
+    }
+  ],
+  "gateCalls": [],
+  "spawnLimits": [
+    {
+      "program": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+      "argv": [
+        "wineboot",
+        "-i"
+      ],
+      "timeoutMs": 180000,
+      "unbounded": false,
+      "signal": true
+    },
+    {
+      "program": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+      "argv": [
+        "-w"
+      ],
+      "timeoutMs": 60000,
+      "unbounded": false,
+      "signal": true
+    },
+    {
+      "program": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+      "argv": [
+        "-k"
+      ],
+      "timeoutMs": 15000,
+      "unbounded": false,
+      "signal": false
+    }
+  ],
+  "installRemove": [
+    {
+      "tool": "dxvk",
+      "action": "backup",
+      "source": {
+        "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+        "version": "v1.10.3-20230507-repack"
+      },
+      "settings": {
+        "enviromentOptions": [
+          {
+            "key": "FOO",
+            "value": "bar"
+          },
+          {
+            "key": "USER",
+            "value": "crossover"
+          },
+          {
+            "key": "WINEDEBUG",
+            "value": "-all"
+          },
+          {
+            "key": "MVK_CONFIG_LOG_LEVEL",
+            "value": "0"
+          }
+        ],
+        "autoInstallDxvk": false,
+        "launcherArgs": "-skip",
+        "wineCrossoverBottle": "GameLib-gog-1207658924",
+        "winePrefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1207658924",
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver"
+        },
+        "autoInstallDxvkNvapi": false,
+        "autoInstallVkd3d": false
+      }
+    }
+  ]
+}

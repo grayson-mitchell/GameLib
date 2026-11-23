@@ -1,0 +1,72 @@
+[
+  {
+    "program": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+    "argv": [
+      "wineboot",
+      "-i"
+    ],
+    "envDiff": {
+      "set": {
+        "MVK_CONFIG_LOG_LEVEL": "0",
+        "USER": "crossover",
+        "WINEDEBUG": "-all",
+        "WINEDLLOVERRIDES": "mshtml=",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+    "argv": [
+      "-w"
+    ],
+    "envDiff": {
+      "set": {
+        "MVK_CONFIG_LOG_LEVEL": "0",
+        "USER": "crossover",
+        "WINEDEBUG": "-all",
+        "WINEDLLOVERRIDES": "mshtml=",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": null,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+    "argv": [
+      "-k"
+    ],
+    "envDiff": {
+      "set": {
+        "USER": "crossover",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

@@ -1,0 +1,90 @@
+{
+  "op": "kill",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "names": [
+      "a/b",
+      "..",
+      "../escape",
+      "",
+      " padded ",
+      "x\u0000y",
+      "."
+    ],
+    "script": "ok"
+  },
+  "before": [],
+  "outcome": [
+    {
+      "name": "a/b",
+      "returned": false
+    },
+    {
+      "name": "..",
+      "returned": false
+    },
+    {
+      "name": "../escape",
+      "returned": false
+    },
+    {
+      "name": "",
+      "returned": false
+    },
+    {
+      "name": " padded ",
+      "returned": false
+    },
+    {
+      "name": "x\u0000y",
+      "returned": false
+    },
+    {
+      "name": ".",
+      "returned": false
+    }
+  ],
+  "markers": {},
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "killBottleWineServerWith: refusing unsafe bottle \"a/b\""
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "killBottleWineServerWith: refusing unsafe bottle \"..\""
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "killBottleWineServerWith: refusing unsafe bottle \"../escape\""
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "killBottleWineServerWith: refusing unsafe bottle \"\""
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "killBottleWineServerWith: refusing unsafe bottle \" padded \""
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "killBottleWineServerWith: refusing unsafe bottle \"x\u0000y\""
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "killBottleWineServerWith: refusing unsafe bottle \".\""
+    }
+  ],
+  "gateCalls": [],
+  "spawnLimits": [],
+  "installRemove": []
+}

@@ -1,0 +1,78 @@
+[
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/.gamelib-engine.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "8ae39323ec4f76eeb30c746e871cfb82935490db1ca5ed07dd12fc4cd8f58844"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "41373f3da7cb0555c580a666c3eeeb6007d3ef1676020cc88af8b9d6a5083e91"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/drive_c/windows/system32/kernel32.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "956a3615c1e615c13593cd08f7dd94b93331e9dcaa8043d80495931d454fb3c5"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6f75f7d3616288f992c354f641fa6498cd5be0ec4abafa16a61651f1092f4316"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-nomarker-nodxvk-ts/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1f576a80193e7c1f3ab0be525289d4925f26f00efd1790573c62068939c851c9"
+  }
+]

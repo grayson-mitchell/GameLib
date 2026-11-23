@@ -1,0 +1,21 @@
+{
+  "op": "record-crossover",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "bottle": "no-such-bottle"
+  },
+  "before": [],
+  "outcome": [
+    {
+      "returned": false,
+      "markerSha256": null
+    }
+  ],
+  "markers": {},
+  "logs": [],
+  "gateCalls": [],
+  "spawnLimits": [],
+  "installRemove": []
+}

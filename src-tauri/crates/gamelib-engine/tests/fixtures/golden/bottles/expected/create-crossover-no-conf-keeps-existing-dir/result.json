@@ -1,0 +1,102 @@
+{
+  "op": "create-crossover",
+  "bottles": [
+    "fx-no-system-reg"
+  ],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "bottle": "fx-no-system-reg",
+    "cxbottle": {
+      "code": 1,
+      "stderr": "cxbottle: template error"
+    }
+  },
+  "before": [
+    {
+      "path": "Library",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg/drive_c",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg/drive_c/windows",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg/drive_c/windows/system32",
+      "kind": "dir",
+      "mode": "0755"
+    },
+    {
+      "path": "Library/Application Support/CrossOver/Bottles/fx-no-system-reg/drive_c/windows/system32/kernel32.dll",
+      "kind": "file",
+      "mode": "0644",
+      "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+    }
+  ],
+  "outcome": {
+    "status": "error",
+    "errorCode": "crossover-create-failed",
+    "error": "Failed to create CrossOver bottle \"fx-no-system-reg\""
+  },
+  "markers": {},
+  "logs": [
+    {
+      "level": "ERROR",
+      "prefix": "Backend",
+      "message": "createCrossoverBottle: cxbottle create did not produce cxbottle.conf for fx-no-system-reg (code=1): cxbottle: template error"
+    }
+  ],
+  "gateCalls": [],
+  "spawnLimits": [
+    {
+      "program": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+      "argv": [
+        "--create",
+        "--bottle",
+        "fx-no-system-reg",
+        "--template",
+        "win10_64"
+      ],
+      "timeoutMs": 120000,
+      "unbounded": false,
+      "signal": true
+    },
+    {
+      "program": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+      "argv": [
+        "-k"
+      ],
+      "timeoutMs": 15000,
+      "unbounded": false,
+      "signal": false
+    }
+  ],
+  "installRemove": []
+}

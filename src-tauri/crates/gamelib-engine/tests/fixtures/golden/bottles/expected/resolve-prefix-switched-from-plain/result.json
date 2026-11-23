@@ -1,0 +1,94 @@
+{
+  "op": "resolve-prefix",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "inputs": [
+      {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "wine"
+          }
+        },
+        "effective": {
+          "kind": "override",
+          "id": "automatic",
+          "source": "stored"
+        }
+      },
+      {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "wine"
+          }
+        },
+        "effective": {
+          "kind": "override",
+          "id": "crossover",
+          "source": "stored"
+        }
+      }
+    ]
+  },
+  "before": [],
+  "outcome": [
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "wine"
+          }
+        },
+        "effective": {
+          "kind": "override",
+          "id": "automatic",
+          "source": "stored"
+        }
+      },
+      "returned": {
+        "kind": "bottle",
+        "bottleName": "GameLib-gog-1207658924",
+        "origin": "switched-from-plain",
+        "previousPrefix": "<HOME>/Games/Prefixes/g"
+      }
+    },
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "wine"
+          }
+        },
+        "effective": {
+          "kind": "override",
+          "id": "crossover",
+          "source": "stored"
+        }
+      },
+      "returned": {
+        "kind": "bottle",
+        "bottleName": "GameLib-gog-1207658924",
+        "origin": "switched-from-plain",
+        "previousPrefix": "<HOME>/Games/Prefixes/g"
+      }
+    }
+  ],
+  "markers": {},
+  "logs": [],
+  "gateCalls": [],
+  "spawnLimits": [],
+  "installRemove": []
+}

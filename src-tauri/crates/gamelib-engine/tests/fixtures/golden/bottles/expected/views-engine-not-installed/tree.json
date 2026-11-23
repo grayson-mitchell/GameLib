@@ -1,0 +1,618 @@
+[
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-contradicted",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-contradicted/.gamelib-engine.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "8ae39323ec4f76eeb30c746e871cfb82935490db1ca5ed07dd12fc4cd8f58844"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-contradicted/current_dxvk-macOS",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "b77f9d71fce9c370ef8621843ed79ff6b7dbdaa17fdc831d4ab2baf2ea9d21eb"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-contradicted/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "41373f3da7cb0555c580a666c3eeeb6007d3ef1676020cc88af8b9d6a5083e91"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-contradicted/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-contradicted/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-contradicted/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-contradicted/drive_c/windows/system32/kernel32.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-contradicted/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "956a3615c1e615c13593cd08f7dd94b93331e9dcaa8043d80495931d454fb3c5"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-contradicted/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6f75f7d3616288f992c354f641fa6498cd5be0ec4abafa16a61651f1092f4316"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-contradicted/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1f576a80193e7c1f3ab0be525289d4925f26f00efd1790573c62068939c851c9"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-marker",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-marker/.gamelib-engine.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "8ae39323ec4f76eeb30c746e871cfb82935490db1ca5ed07dd12fc4cd8f58844"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-marker/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "41373f3da7cb0555c580a666c3eeeb6007d3ef1676020cc88af8b9d6a5083e91"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-marker/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-marker/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-marker/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-marker/drive_c/windows/system32/kernel32.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-marker/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "956a3615c1e615c13593cd08f7dd94b93331e9dcaa8043d80495931d454fb3c5"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-marker/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6f75f7d3616288f992c354f641fa6498cd5be0ec4abafa16a61651f1092f4316"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-crossover-marker/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1f576a80193e7c1f3ab0be525289d4925f26f00efd1790573c62068939c851c9"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-dxvk-failed",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-dxvk-failed/.gamelib-engine.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "054fb2e91646e013158579fb92841822018858bd146bbab431ef3cc5c61e5736"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-dxvk-failed/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "eddec8c9bb2bd30a1aadd2959cb1012161f7655c133cced2e1300cc758a37b94"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-dxvk-failed/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-dxvk-failed/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-dxvk-failed/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-dxvk-failed/drive_c/windows/system32/kernel32.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-dxvk-failed/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "956a3615c1e615c13593cd08f7dd94b93331e9dcaa8043d80495931d454fb3c5"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-dxvk-failed/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6f75f7d3616288f992c354f641fa6498cd5be0ec4abafa16a61651f1092f4316"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-dxvk-failed/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1f576a80193e7c1f3ab0be525289d4925f26f00efd1790573c62068939c851c9"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-legacy-noversion",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-legacy-noversion/.gamelib-engine.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "be0b5a2a174f1447c284e2bfd5324e1fa6477cf5ccfe101f14a84578ee163587"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-legacy-noversion/current_dxvk-macOS",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "b77f9d71fce9c370ef8621843ed79ff6b7dbdaa17fdc831d4ab2baf2ea9d21eb"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-legacy-noversion/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "eddec8c9bb2bd30a1aadd2959cb1012161f7655c133cced2e1300cc758a37b94"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-legacy-noversion/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-legacy-noversion/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-legacy-noversion/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-legacy-noversion/drive_c/windows/system32/kernel32.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-legacy-noversion/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "956a3615c1e615c13593cd08f7dd94b93331e9dcaa8043d80495931d454fb3c5"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-legacy-noversion/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6f75f7d3616288f992c354f641fa6498cd5be0ec4abafa16a61651f1092f4316"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-legacy-noversion/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1f576a80193e7c1f3ab0be525289d4925f26f00efd1790573c62068939c851c9"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-newer",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-newer/.gamelib-engine.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "7b3aab958b122bd19cb1fdeca2406e2e1d0f38f4722f5eaed114d2df2544e339"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-newer/current_dxvk-macOS",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "b77f9d71fce9c370ef8621843ed79ff6b7dbdaa17fdc831d4ab2baf2ea9d21eb"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-newer/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "eddec8c9bb2bd30a1aadd2959cb1012161f7655c133cced2e1300cc758a37b94"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-newer/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-newer/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-newer/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-newer/drive_c/windows/system32/kernel32.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-newer/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "956a3615c1e615c13593cd08f7dd94b93331e9dcaa8043d80495931d454fb3c5"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-newer/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6f75f7d3616288f992c354f641fa6498cd5be0ec4abafa16a61651f1092f4316"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-marker-newer/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1f576a80193e7c1f3ab0be525289d4925f26f00efd1790573c62068939c851c9"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/.gamelib-engine.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e1b6921083cffb7c12c3958106a3f5d5bbf030c149a3b147756dd2a89f8e24f0"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/current_dxvk-macOS",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "b77f9d71fce9c370ef8621843ed79ff6b7dbdaa17fdc831d4ab2baf2ea9d21eb"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "eddec8c9bb2bd30a1aadd2959cb1012161f7655c133cced2e1300cc758a37b94"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/drive_c/windows/system32/kernel32.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "956a3615c1e615c13593cd08f7dd94b93331e9dcaa8043d80495931d454fb3c5"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6f75f7d3616288f992c354f641fa6498cd5be0ec4abafa16a61651f1092f4316"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-current/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1f576a80193e7c1f3ab0be525289d4925f26f00efd1790573c62068939c851c9"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-dxvk-outside-root",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-dxvk-outside-root/.gamelib-engine.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "ce5e588408c2f2778a5cc20828306bc905d38ce92e9e055b1dd7294233d579a6"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-dxvk-outside-root/current_dxvk-macOS",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "b77f9d71fce9c370ef8621843ed79ff6b7dbdaa17fdc831d4ab2baf2ea9d21eb"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-dxvk-outside-root/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "eddec8c9bb2bd30a1aadd2959cb1012161f7655c133cced2e1300cc758a37b94"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-dxvk-outside-root/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-dxvk-outside-root/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-dxvk-outside-root/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-dxvk-outside-root/drive_c/windows/system32/kernel32.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-dxvk-outside-root/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "956a3615c1e615c13593cd08f7dd94b93331e9dcaa8043d80495931d454fb3c5"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-dxvk-outside-root/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6f75f7d3616288f992c354f641fa6498cd5be0ec4abafa16a61651f1092f4316"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-dxvk-outside-root/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1f576a80193e7c1f3ab0be525289d4925f26f00efd1790573c62068939c851c9"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-no-dxvk-field",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-no-dxvk-field/.gamelib-engine.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "4fe77af724d7bea9f86390c078e46a241d2842ec5d140722780ef30dc26f35e1"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-no-dxvk-field/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "eddec8c9bb2bd30a1aadd2959cb1012161f7655c133cced2e1300cc758a37b94"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-no-dxvk-field/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-no-dxvk-field/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-no-dxvk-field/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-no-dxvk-field/drive_c/windows/system32/kernel32.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-no-dxvk-field/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "956a3615c1e615c13593cd08f7dd94b93331e9dcaa8043d80495931d454fb3c5"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-no-dxvk-field/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6f75f7d3616288f992c354f641fa6498cd5be0ec4abafa16a61651f1092f4316"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-no-dxvk-field/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1f576a80193e7c1f3ab0be525289d4925f26f00efd1790573c62068939c851c9"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-retired",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-retired/.gamelib-engine.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "0e66766a2fa0d729b81631e24d50f4293ac4070228c9de7f470cf4a1c0af3358"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-retired/current_dxvk-macOS",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "b77f9d71fce9c370ef8621843ed79ff6b7dbdaa17fdc831d4ab2baf2ea9d21eb"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-retired/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "eddec8c9bb2bd30a1aadd2959cb1012161f7655c133cced2e1300cc758a37b94"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-retired/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-retired/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-retired/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-retired/drive_c/windows/system32/kernel32.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-retired/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "956a3615c1e615c13593cd08f7dd94b93331e9dcaa8043d80495931d454fb3c5"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-retired/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6f75f7d3616288f992c354f641fa6498cd5be0ec4abafa16a61651f1092f4316"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-pinned-retired/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1f576a80193e7c1f3ab0be525289d4925f26f00efd1790573c62068939c851c9"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-wine-manager",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-wine-manager/.gamelib-engine.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "614bb55210249411002f38381a54cc8a258f321d9ea3090999ec8134a75fa70a"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-wine-manager/cxbottle.conf",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "0376de0d72550abf7ce996b8156b956ef0a0c1ecc77bf9fb774b08cb72bd4592"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-wine-manager/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-wine-manager/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-wine-manager/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-wine-manager/drive_c/windows/system32/kernel32.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e1f21de9af04769134febec6a8b981685f8580b8bdbf5eb0d5ce738cb14584d"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-wine-manager/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "956a3615c1e615c13593cd08f7dd94b93331e9dcaa8043d80495931d454fb3c5"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-wine-manager/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6f75f7d3616288f992c354f641fa6498cd5be0ec4abafa16a61651f1092f4316"
+  },
+  {
+    "path": "Library/Application Support/CrossOver/Bottles/fx-wine-manager/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1f576a80193e7c1f3ab0be525289d4925f26f00efd1790573c62068939c851c9"
+  }
+]

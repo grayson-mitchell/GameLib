@@ -1,0 +1,167 @@
+{
+  "op": "ledger",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "steps": [
+      {
+        "call": "markGameRunning",
+        "bottle": "GameLib-gog-1",
+        "key": "gog:1"
+      },
+      {
+        "call": "markGameRunning",
+        "bottle": "GameLib-gog-1",
+        "key": "620"
+      },
+      {
+        "call": "markGameRunning",
+        "bottle": "GameLib-gog-1",
+        "key": "gog:1"
+      },
+      {
+        "call": "gamesRunningIn",
+        "bottle": "GameLib-gog-1",
+        "key": ""
+      },
+      {
+        "call": "otherGamesRunning",
+        "bottle": "GameLib-gog-1",
+        "key": "gog:1"
+      },
+      {
+        "call": "otherGamesRunning",
+        "bottle": "GameLib-gog-1",
+        "key": "620"
+      },
+      {
+        "call": "size"
+      },
+      {
+        "call": "markGameStopped",
+        "bottle": "GameLib-gog-1",
+        "key": "gog:1"
+      },
+      {
+        "call": "gamesRunningIn",
+        "bottle": "GameLib-gog-1",
+        "key": ""
+      },
+      {
+        "call": "markGameStopped",
+        "bottle": "GameLib-gog-1",
+        "key": "620"
+      },
+      {
+        "call": "size"
+      },
+      {
+        "call": "markGameStopped",
+        "bottle": "never-marked",
+        "key": "620"
+      }
+    ]
+  },
+  "before": [],
+  "outcome": [
+    {
+      "call": "markGameRunning",
+      "bottle": "GameLib-gog-1",
+      "key": "gog:1",
+      "returned": true
+    },
+    {
+      "call": "markGameRunning",
+      "bottle": "GameLib-gog-1",
+      "key": "620",
+      "returned": true
+    },
+    {
+      "call": "markGameRunning",
+      "bottle": "GameLib-gog-1",
+      "key": "gog:1",
+      "returned": true
+    },
+    {
+      "call": "gamesRunningIn",
+      "bottle": "GameLib-gog-1",
+      "key": "",
+      "returned": [
+        "gog:1",
+        "620"
+      ]
+    },
+    {
+      "call": "otherGamesRunning",
+      "bottle": "GameLib-gog-1",
+      "key": "gog:1",
+      "returned": [
+        "620"
+      ]
+    },
+    {
+      "call": "otherGamesRunning",
+      "bottle": "GameLib-gog-1",
+      "key": "620",
+      "returned": [
+        "gog:1"
+      ]
+    },
+    {
+      "call": "size",
+      "returned": 1
+    },
+    {
+      "call": "markGameStopped",
+      "bottle": "GameLib-gog-1",
+      "key": "gog:1",
+      "returned": null
+    },
+    {
+      "call": "gamesRunningIn",
+      "bottle": "GameLib-gog-1",
+      "key": "",
+      "returned": [
+        "620"
+      ]
+    },
+    {
+      "call": "markGameStopped",
+      "bottle": "GameLib-gog-1",
+      "key": "620",
+      "returned": null
+    },
+    {
+      "call": "size",
+      "returned": 0
+    },
+    {
+      "call": "markGameStopped",
+      "bottle": "never-marked",
+      "key": "620",
+      "returned": null
+    }
+  ],
+  "markers": {},
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "BottleLedger: gog:1 running in GameLib-gog-1"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "BottleLedger: 620 running in GameLib-gog-1"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "BottleLedger: gog:1 running in GameLib-gog-1"
+    }
+  ],
+  "gateCalls": [],
+  "spawnLimits": [],
+  "installRemove": []
+}

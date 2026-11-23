@@ -1,0 +1,45 @@
+[
+  {
+    "program": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+    "argv": [
+      "--create",
+      "--bottle",
+      "GameLib-gog-1207658924",
+      "--template",
+      "win10_64"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 1,
+      "stdout": "",
+      "stderr": "cxbottle: template error"
+    }
+  },
+  {
+    "program": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+    "argv": [
+      "-k"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_ROOT": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver",
+        "WINEPREFIX": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

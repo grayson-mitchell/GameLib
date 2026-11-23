@@ -1,0 +1,102 @@
+{
+  "op": "ledger",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "steps": [
+      {
+        "call": "markGameRunning",
+        "bottle": "a/b",
+        "key": "gog:1"
+      },
+      {
+        "call": "markGameRunning",
+        "bottle": "..",
+        "key": "gog:1"
+      },
+      {
+        "call": "markGameRunning",
+        "bottle": "GameLib-x",
+        "key": "bad key"
+      },
+      {
+        "call": "markGameRunning",
+        "bottle": "GameLib-x",
+        "key": "steam:620"
+      },
+      {
+        "call": "markGameRunning",
+        "bottle": "GameLib-x",
+        "key": "unknown:1"
+      },
+      {
+        "call": "markGameRunning",
+        "bottle": " padded ",
+        "key": "gog:1"
+      },
+      {
+        "call": "gamesRunningIn",
+        "bottle": "a/b",
+        "key": ""
+      },
+      {
+        "call": "size"
+      }
+    ]
+  },
+  "before": [],
+  "outcome": [
+    {
+      "call": "markGameRunning",
+      "bottle": "a/b",
+      "key": "gog:1",
+      "returned": false
+    },
+    {
+      "call": "markGameRunning",
+      "bottle": "..",
+      "key": "gog:1",
+      "returned": false
+    },
+    {
+      "call": "markGameRunning",
+      "bottle": "GameLib-x",
+      "key": "bad key",
+      "returned": false
+    },
+    {
+      "call": "markGameRunning",
+      "bottle": "GameLib-x",
+      "key": "steam:620",
+      "returned": false
+    },
+    {
+      "call": "markGameRunning",
+      "bottle": "GameLib-x",
+      "key": "unknown:1",
+      "returned": false
+    },
+    {
+      "call": "markGameRunning",
+      "bottle": " padded ",
+      "key": "gog:1",
+      "returned": false
+    },
+    {
+      "call": "gamesRunningIn",
+      "bottle": "a/b",
+      "key": "",
+      "returned": []
+    },
+    {
+      "call": "size",
+      "returned": 0
+    }
+  ],
+  "markers": {},
+  "logs": [],
+  "gateCalls": [],
+  "spawnLimits": [],
+  "installRemove": []
+}

@@ -1,0 +1,28 @@
+{
+  "op": "create-crossover",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "bottle": "a/b",
+    "cxbottle": {
+      "code": 0
+    }
+  },
+  "before": [],
+  "outcome": {
+    "status": "error",
+    "error": "Invalid bottle name: \"a/b\""
+  },
+  "markers": {},
+  "logs": [
+    {
+      "level": "ERROR",
+      "prefix": "Backend",
+      "message": "createCrossoverBottle: rejected unsafe bottle name \"a/b\""
+    }
+  ],
+  "gateCalls": [],
+  "spawnLimits": [],
+  "installRemove": []
+}

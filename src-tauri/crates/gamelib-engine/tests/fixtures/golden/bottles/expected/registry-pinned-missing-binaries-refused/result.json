@@ -1,0 +1,84 @@
+{
+  "op": "registry",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "steps": [
+      {
+        "call": "set",
+        "key": "gog:1",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-missing",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Pinned",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        }
+      },
+      {
+        "call": "get",
+        "key": "gog:1"
+      },
+      {
+        "call": "set",
+        "key": "gog:1",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3",
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        }
+      },
+      {
+        "call": "get",
+        "key": "gog:1"
+      }
+    ]
+  },
+  "before": [],
+  "outcome": [
+    {
+      "call": "set",
+      "key": "gog:1",
+      "returned": false
+    },
+    {
+      "call": "get",
+      "key": "gog:1",
+      "returned": null
+    },
+    {
+      "call": "set",
+      "key": "gog:1",
+      "returned": true
+    },
+    {
+      "call": "get",
+      "key": "gog:1",
+      "returned": {
+        "kind": "crossover",
+        "reason": "cx-healthy",
+        "crossoverBuild": "26.3",
+        "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+      }
+    }
+  ],
+  "markers": {},
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: gog:1 uses engine=crossover build=26.3 reason=cx-healthy"
+    }
+  ],
+  "gateCalls": [],
+  "spawnLimits": [],
+  "installRemove": []
+}

@@ -1,0 +1,54 @@
+{
+  "op": "create-crossover",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "bottle": "GameLib-gog-1207658924",
+    "cxbottle": {
+      "code": 1,
+      "stderr": "cxbottle: template error",
+      "writes": "fx-nomarker-noconf"
+    }
+  },
+  "before": [],
+  "outcome": {
+    "status": "error",
+    "errorCode": "crossover-create-failed",
+    "error": "Failed to create CrossOver bottle \"GameLib-gog-1207658924\""
+  },
+  "markers": {},
+  "logs": [
+    {
+      "level": "ERROR",
+      "prefix": "Backend",
+      "message": "createCrossoverBottle: cxbottle create did not produce cxbottle.conf for GameLib-gog-1207658924 (code=1): cxbottle: template error"
+    }
+  ],
+  "gateCalls": [],
+  "spawnLimits": [
+    {
+      "program": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle",
+      "argv": [
+        "--create",
+        "--bottle",
+        "GameLib-gog-1207658924",
+        "--template",
+        "win10_64"
+      ],
+      "timeoutMs": 120000,
+      "unbounded": false,
+      "signal": true
+    },
+    {
+      "program": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+      "argv": [
+        "-k"
+      ],
+      "timeoutMs": 15000,
+      "unbounded": false,
+      "signal": false
+    }
+  ],
+  "installRemove": []
+}

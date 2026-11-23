@@ -1,0 +1,72 @@
+{
+  "op": "resolve-prefix",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "inputs": [
+      {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g"
+        },
+        "effective": {
+          "kind": "legacy",
+          "label": "Wine-GE"
+        }
+      },
+      {
+        "runner": "bad",
+        "appName": "1",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g"
+        },
+        "effective": {
+          "kind": "legacy",
+          "label": "x"
+        }
+      }
+    ]
+  },
+  "before": [],
+  "outcome": [
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g"
+        },
+        "effective": {
+          "kind": "legacy",
+          "label": "Wine-GE"
+        }
+      },
+      "returned": {
+        "kind": "legacy"
+      }
+    },
+    {
+      "input": {
+        "runner": "bad",
+        "appName": "1",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g"
+        },
+        "effective": {
+          "kind": "legacy",
+          "label": "x"
+        }
+      },
+      "returned": {
+        "kind": "legacy"
+      }
+    }
+  ],
+  "markers": {},
+  "logs": [],
+  "gateCalls": [],
+  "spawnLimits": [],
+  "installRemove": []
+}

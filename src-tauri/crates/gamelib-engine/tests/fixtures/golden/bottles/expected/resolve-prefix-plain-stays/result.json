@@ -1,0 +1,54 @@
+{
+  "op": "resolve-prefix",
+  "bottles": [],
+  "engines": "none",
+  "gate": null,
+  "args": {
+    "inputs": [
+      {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "wine"
+          }
+        },
+        "effective": {
+          "kind": "override",
+          "id": "wine-manager:Wine-Staging-10.5",
+          "source": "stored"
+        }
+      }
+    ]
+  },
+  "before": [],
+  "outcome": [
+    {
+      "input": {
+        "runner": "gog",
+        "appName": "1207658924",
+        "settings": {
+          "winePrefix": "<HOME>/Games/Prefixes/g",
+          "wineVersion": {
+            "type": "wine"
+          }
+        },
+        "effective": {
+          "kind": "override",
+          "id": "wine-manager:Wine-Staging-10.5",
+          "source": "stored"
+        }
+      },
+      "returned": {
+        "kind": "plain",
+        "winePrefix": "<HOME>/Games/Prefixes/g"
+      }
+    }
+  ],
+  "markers": {},
+  "logs": [],
+  "gateCalls": [],
+  "spawnLimits": [],
+  "installRemove": []
+}
