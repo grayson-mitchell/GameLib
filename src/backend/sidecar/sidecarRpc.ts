@@ -59,6 +59,7 @@ import {
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_SAFETY_REMOVE_TREE,
   RUST_WINE_RUNTIME_DOWNLOAD,
+  RUST_WINE_DISCOVER_ALTERNATIVES,
   RUST_WINE_MANAGER_INSTALL,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -164,6 +165,10 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * Seventh (Phase 87, 87-24): `wine_run_command` runs a wine command with no time limit of its own (a
  * winetricks component or an installer runs for minutes) and ends on its own exit, a cancel or the app
  * shutdown. The existence check `wine_valid` stays bounded.
+ *
+ * Eighth (Phase 87, 87-26): `wine_discover_alternatives` refreshes an empty wine release list first (up to
+ * seven feeds in turn, as `wine_manager_refresh` does) before it looks at the disk, so it joins them.
+ * `wine_discover_crossover` is one `mdfind` with its own 10 s limit and stays bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -194,7 +199,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_WINE_MANAGER_INSTALL,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
-  RUST_WINE_RUN_COMMAND
+  RUST_WINE_RUN_COMMAND,
+  RUST_WINE_DISCOVER_ALTERNATIVES
 ]
 
 function isValidRequest(value: unknown): value is SidecarRpcRequest {

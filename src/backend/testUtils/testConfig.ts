@@ -32,8 +32,7 @@ export function createTestGlobalConfig(
       current = {} as AppSettings
     },
     getFactoryDefaults: () => ({}) as AppSettings,
-    getAlternativeWine: () => Promise.resolve([]),
-    getMacOsWineSet: () => Promise.resolve(new Set())
+    getAlternativeWine: () => Promise.resolve([])
   }
   return fake as GlobalConfigSlice
 }

@@ -86,6 +86,17 @@ const LAUNCHER_IMPORTERS: readonly string[] = [
   'src/backend/sidecar/bootstrap.ts',
   'src/backend/storeManagers/index.ts'
 ]
+/** Every non-test importer of `utils/compatibility_layers.ts` (the twin check is per file). */
+const COMPATIBILITY_LAYERS_IMPORTERS: readonly string[] = [
+  'src/backend/config.ts',
+  'src/backend/launcher.ts',
+  'src/backend/sidecar/bootstrap.ts',
+  'src/backend/storeManagers/gog/games.ts',
+  'src/backend/storeManagers/legendary/games.ts',
+  'src/backend/storeManagers/nile/games.ts',
+  'src/backend/tools/index.ts',
+  'src/backend/utils.ts'
+]
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
   'src/backend/services/types.ts',
   'src/backend/sidecar/bootstrap.ts',
@@ -116,15 +127,15 @@ const SCHEDULE: readonly ScheduleRow[] = [
   },
   // 87-20 (D-15): the wine manager. utils.ts's default-wine download (checkWineBeforeLaunch, reached from the
   // launch path and the bottle provisioning) and the `releasesInfoReady` listener go with Phase 88's launch
-  // port; config.ts's `getAlternativeWine` refresh goes with the config in Phase 98. `callers` lists every
-  // importer of the file (the check is per file), so each of the four rows names all three.
+  // port; the sidecar's refresh at the `releasesInfoReady` listener goes with the config in Phase 98. `callers`
+  // lists every importer of the file (the check is per file), so each of the four rows names both (87-26: config.ts
+  // no longer imports it, the empty-list refresh inside `getAlternativeWine` is Rust's own).
   {
     name: 'updateWineVersionInfos',
     file: 'src/backend/enginewine/wineManager.ts',
     shape: 'shim',
     channel: 'RUST_WINE_MANAGER_REFRESH',
     callers: [
-      'src/backend/config.ts',
       'src/backend/sidecar/wineToolsFlowRegistration.ts',
       'src/backend/utils.ts'
     ],
@@ -136,7 +147,6 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_WINE_MANAGER_INSTALL',
     callers: [
-      'src/backend/config.ts',
       'src/backend/sidecar/wineToolsFlowRegistration.ts',
       'src/backend/utils.ts'
     ],
@@ -148,7 +158,6 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_WINE_MANAGER_LIST',
     callers: [
-      'src/backend/config.ts',
       'src/backend/sidecar/wineToolsFlowRegistration.ts',
       'src/backend/utils.ts'
     ],
@@ -160,7 +169,6 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_WINE_RELEASES_INFO_READY',
     callers: [
-      'src/backend/config.ts',
       'src/backend/sidecar/wineToolsFlowRegistration.ts',
       'src/backend/utils.ts'
     ],
@@ -179,6 +187,38 @@ const SCHEDULE: readonly ScheduleRow[] = [
       'src/backend/utils.ts'
     ],
     deletedBy: 88
+  },
+  // 87-26 (D-15, D-22): wine discovery. `discoverAlternativeWine` is the one async TS reach into the Rust discovery
+  // (config.ts's `getAlternativeWine`, which utils.ts and the Steam install form call), deleted with the config in
+  // Phase 98. `discoverCrossover` is an intra-phase shim for the still-TS engine's CrossOver locator
+  // (`engine/crossoverLocation.ts`); 87-56 deletes the engine TS and removes the row (`deletedBy` 87).
+  {
+    name: 'discoverAlternativeWine',
+    file: 'src/backend/enginewine/wineDiscovery.ts',
+    shape: 'shim',
+    channel: 'RUST_WINE_DISCOVER_ALTERNATIVES',
+    callers: ['src/backend/config.ts'],
+    deletedBy: 98
+  },
+  {
+    name: 'discoverCrossover',
+    file: 'src/backend/enginewine/intraPhase.ts',
+    shape: 'shim',
+    channel: 'RUST_WINE_DISCOVER_CROSSOVER',
+    callers: ['src/backend/engine/crossoverLocation.ts'],
+    deletedBy: 87
+  },
+  // 87-26 (D-22 deviation, for the checker and the operator): `getDefaultWineBinary` is read synchronously by
+  // `getFactoryDefaults` in config.ts before any rustInvoke transport exists, so it cannot become an async shim over
+  // the Rust `default_wine_from_path`; it stays as a twin pinned to the shared `default_wine.json` vectors that
+  // `golden_discovery.rs` replays against the Rust side, and goes with the config in Phase 98.
+  {
+    name: 'getDefaultWineBinary',
+    file: 'src/backend/utils/compatibility_layers.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/defaultWineTwin.test.ts',
+    callers: COMPATIBILITY_LAYERS_IMPORTERS,
+    deletedBy: 98
   },
   // 87-24 (D-22 deviation, for the checker and the operator): the sync `setupEnvVars` and `setupWineEnvVars` (called
   // synchronously from the launch paths) and the command runner's `runWineCommand` (its `onSpawn` hands callers a live

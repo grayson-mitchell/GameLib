@@ -64,7 +64,10 @@ export function createEngineRuntime(deps: EngineRuntimeDeps): EngineRuntime {
   const registry = createEngineRegistry()
   return {
     ledger: createBottleLedger(),
-    crossover: createCrossoverLocator({ paths: deps.paths }),
+    crossover: createCrossoverLocator({
+      paths: deps.paths,
+      requestRustInvoke: deps.requestRustInvoke
+    }),
     registry,
     switcher: createEngineSwitcher(),
     fallback: createFallbackEngine({ paths: deps.paths, aborts: deps.aborts }),

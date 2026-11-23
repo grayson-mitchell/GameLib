@@ -1075,8 +1075,8 @@ export const RUST_WINE_RUNTIME_DOWNLOAD = 'wine_runtime_download' as const
 
 /**
  * Phase 87 (SVC-02, 87-20): the Rust wine-manager ops, pass-throughs to `gamelib-wine`. The sidecar's
- * callers (the default-wine download in `utils.ts`, `getAlternativeWine` in `config.ts` and the
- * `releasesInfoReady` listener) reach them only through the `backend/enginewine/wineManager.ts` shims;
+ * callers (the default-wine download in `utils.ts` and the `releasesInfoReady` listener) reach them only
+ * through the `backend/enginewine/wineManager.ts` shims;
  * the renderer's `refreshWineVersionInfo`, `installWineVersion` and `removeWineVersion` are native
  * channels over the same ops, so the wine-downloader-info store and `<tools>/wine` have one writer.
  *
@@ -1140,6 +1140,31 @@ export const RUST_WINE_VALID = 'wine_valid' as const
  * installer runs for minutes, ended by its own exit or the app shutdown).
  */
 export const RUST_WINE_RUN_COMMAND = 'wine_run_command' as const
+
+/**
+ * Phase 87 (SVC-02, 87-26): `wine_discover_alternatives` is `getAlternativeWine`'s body: the wines
+ * installed on this machine (CrossOver, wine on the Mac, Wineskin, GPTK and Whisky on a Mac; the tools and
+ * Lutris wines, Proton and the custom paths on Linux). Args: one boolean, `scanCustom` (`getAlternativeWine`
+ * defaults it to `true`). The shell builds everything else itself (its home, config.json, `/usr/share/steam`,
+ * its `PATH`, `customWinePaths` and `showValveProton` from the global config, the `libraryfolders.vdf` read),
+ * so no path the sidecar sent reaches the crate (T-87-71). With no wine release list stored it refreshes it
+ * first, which pushes `wineVersionsUpdated` and can take up to seven feeds in turn: listed in the sidecar's
+ * `UNBOUNDED_RUST_CHANNELS` like `wine_manager_refresh`. Resolves the `WineInstallation[]`. The sidecar's
+ * `discoverAlternativeWine` shim in `enginewine/wineDiscovery.ts` (config.ts's `getAlternativeWine`, which
+ * `utils.ts` and the Steam install form call) is its one caller; the renderer's `getAlternativeWine` is a
+ * native channel over the same op.
+ */
+export const RUST_WINE_DISCOVER_ALTERNATIVES =
+  'wine_discover_alternatives' as const
+
+/**
+ * Phase 87 (SVC-02, 87-26): `wine_discover_crossover` is `getCrossover`'s body: the CrossOver installs
+ * Spotlight knows (a short labelled `mdfind`), in the order it lists them; an empty list off macOS. Args:
+ * none. Resolves the `WineInstallation[]`. The still-TS engine's `resolveCrossoverBinDirAsync`
+ * (`engine/crossoverLocation.ts`) reaches it through `enginewine/intraPhase.ts`, an intra-phase shim that
+ * 87-56 removes with the engine TS. Bounded (an `mdfind` has a 10 s limit of its own).
+ */
+export const RUST_WINE_DISCOVER_CROSSOVER = 'wine_discover_crossover' as const
 
 /**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
@@ -1483,7 +1508,9 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_VALID,
-  RUST_WINE_RUN_COMMAND
+  RUST_WINE_RUN_COMMAND,
+  RUST_WINE_DISCOVER_ALTERNATIVES,
+  RUST_WINE_DISCOVER_CROSSOVER
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

@@ -17,22 +17,13 @@ import {
   type SettingsDocRoot
 } from './stores/settingsDocs'
 import type { RustInvokeDeps } from './host/rustInvokeDeps'
-import {
-  getCrossover,
-  getDefaultWineBinary,
-  getGamePortingToolkitWine,
-  getLinuxWineSet,
-  getSystemGamePortingToolkitWine,
-  getWhisky,
-  getWineOnMac,
-  getWineskinWine
-} from './utils/compatibility_layers'
+import { getDefaultWineBinary } from './utils/compatibility_layers'
 import type { BackendEvents } from './backend_events'
 import { isFlatpak, isLinux, isMac, isWindows } from './constants/environment'
 import { join } from 'path'
 import type { ProcessRunner } from './process/types'
 import type { AppPaths } from './process/context'
-import { updateWineVersionInfos } from './enginewine/wineManager'
+import { discoverAlternativeWine } from './enginewine/wineDiscovery'
 import type { Stores } from './services/types'
 
 /**
@@ -109,41 +100,14 @@ abstract class GlobalConfig {
   }
 
   /**
-   * Detects Wine on Mac
-   * @returns Promise<Set<WineInstallation>>
-   * @memberof GlobalConfig
-   **/
-  public async getMacOsWineSet(deps: {
-    runner: Pick<ProcessRunner, 'run'>
-    paths: Pick<AppPaths, 'toolsPath' | 'userHome'>
-  }): Promise<Set<WineInstallation>> {
-    if (!isMac) {
-      return new Set<WineInstallation>()
-    }
-
-    const discovery = { runner: deps.runner }
-    const getGPTKWine = await getGamePortingToolkitWine(deps)
-    const getSystemGPTK = await getSystemGamePortingToolkitWine(discovery)
-    const crossover = await getCrossover(discovery)
-    const wineOnMac = await getWineOnMac({ ...discovery, paths: deps.paths })
-    const wineskinWine = await getWineskinWine({
-      ...discovery,
-      paths: deps.paths
-    })
-    const whiskyWine = await getWhisky(deps)
-
-    return new Set([
-      ...getGPTKWine,
-      ...getSystemGPTK,
-      ...crossover,
-      ...wineOnMac,
-      ...wineskinWine,
-      ...whiskyWine
-    ])
-  }
-
-  /**
    * Detects Wine/Proton on the user's system.
+   *
+   * Discovery is Rust's (Phase 87, `gamelib-wine` `wine_discover_alternatives`): the macOS set on a Mac, the
+   * Linux set on Linux, an empty list on Windows; with no wine release list stored it refreshes it first and
+   * pushes `wineVersionsUpdated`. This method is the one scheduled shim through
+   * `enginewine/wineDiscovery.ts` (D-22, deleted with the config in Phase 98). `deps` is what the TS
+   * discovery read; Rust reads its own roots, `PATH` and settings, so only `scanCustom` is sent, and the
+   * parameter stays so `utils.ts` and the Steam install form call it unchanged.
    *
    * @returns An Array of Wine/Proton installations.
    */
@@ -156,25 +120,10 @@ abstract class GlobalConfig {
     },
     scanCustom = true
   ): Promise<WineInstallation[]> {
-    if (deps.wineDownloaderInfoStore.get('wine-releases', []).length === 0) {
-      await updateWineVersionInfos(this.deps, true)
-    }
-
-    if (isMac) {
-      const macOsWineSet = await this.getMacOsWineSet(deps)
-      return [...macOsWineSet]
-    }
-
-    const linuxWineSet = await getLinuxWineSet(
-      {
-        ...deps,
-        config: this,
-        requestRustInvoke: this.deps.requestRustInvoke
-      },
+    return (await discoverAlternativeWine(
+      this.deps,
       scanCustom
-    )
-
-    return [...linuxWineSet]
+    )) as WineInstallation[]
   }
 
   /**
@@ -411,7 +360,6 @@ export type GlobalConfigSlice = Pick<
   | 'getFactoryDefaults'
   | 'resetToDefaults'
   | 'getAlternativeWine'
-  | 'getMacOsWineSet'
 >
 
 /**

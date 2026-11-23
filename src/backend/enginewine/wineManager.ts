@@ -11,8 +11,9 @@ import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
  * The wine manager lives in Rust (Phase 87, `gamelib-wine` `manager`): the seven release feeds, the
  * `wine-downloader-info` store, the sha512-checked install with its progress and notifications, and the
  * guarded removal. These four shims are the only TS path to it, kept so the default-wine download in
- * `utils.ts`, `getAlternativeWine` in `config.ts` and the `releasesInfoReady` listener keep their call
- * shape until the phases that own them move into Rust (88 for launch, 98 for the config). Each body is one
+ * `utils.ts` and the `releasesInfoReady` listener keep their call shape until the phases that own them
+ * move into Rust (88 for launch, 98 for the config). (`getAlternativeWine` no longer calls the refresh
+ * from TS: the Rust discovery refreshes an empty release list itself, 87-26.) Each body is one
  * typed call (D-06); the shim schedule in `engineWineShimSchedule.test.ts` pins that and the phase that
  * deletes them. The renderer's `refreshWineVersionInfo`, `installWineVersion` and `removeWineVersion` are
  * native channels that run the same ops, so the store and `<tools>/wine` have one writer.

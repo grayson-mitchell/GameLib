@@ -9,20 +9,24 @@ import {
   crossoverBinDirFromWineBin
 } from '../crossoverLocation'
 import type { CrossoverLocator } from '../crossoverLocation'
-import { getCrossover } from 'backend/utils/compatibility_layers'
+import { RUST_WINE_DISCOVER_CROSSOVER } from 'common/types/sidecarTransport'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 jest.mock('graceful-fs', () => ({ existsSync: jest.fn() }))
-jest.mock('backend/utils/compatibility_layers', () => ({
-  getCrossover: jest.fn()
-}))
 jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
 
 const mockedExists = existsSync as jest.Mock
-const mockedGetCrossover = getCrossover as jest.Mock
+// The Spotlight probe is Rust's: the locator reaches it through `discoverCrossover` over the boot's
+// rustInvoke transport, scripted here.
+const mockedRustInvoke = jest.fn()
+const newLocator = () =>
+  createCrossoverLocator({
+    paths: { userHome: '/Users/test' },
+    requestRustInvoke: mockedRustInvoke
+  })
 
 const SUB = 'Contents/SharedSupport/CrossOver/bin'
 const sys = `/Applications/CrossOver.app/${SUB}`
@@ -44,10 +48,10 @@ describe('crossoverLocation', () => {
   let resolveCrossoverBinDir: CrossoverLocator['resolveCrossoverBinDir']
   let resolveCrossoverBinDirAsync: CrossoverLocator['resolveCrossoverBinDirAsync']
   beforeEach(() => {
-    locator = createCrossoverLocator({ paths: { userHome: '/Users/test' } })
+    locator = newLocator()
     ;({ resolveCrossoverBinDir, resolveCrossoverBinDirAsync } = locator)
     mockedExists.mockReset()
-    mockedGetCrossover.mockReset()
+    mockedRustInvoke.mockReset()
   })
 
   test('crossoverBinDirFromWineBin accepts only the CrossOver wine path', () => {
@@ -88,14 +92,18 @@ describe('crossoverLocation', () => {
     expect(resolveCrossoverBinDir()).toBeUndefined()
   })
 
-  test('async resolves via getCrossover and memoises', async () => {
+  test('async resolves via the Rust CrossOver discovery and memoises', async () => {
     const present = only(vol)
-    mockedGetCrossover.mockResolvedValue(
-      new Set([{ bin: `${vol}/wine`, name: 'CX', type: 'crossover' }])
-    )
+    mockedRustInvoke.mockResolvedValue([
+      { bin: `${vol}/wine`, name: 'CX', type: 'crossover' }
+    ])
     expect(
       await resolveCrossoverBinDirAsync({ runner: createScriptedRunner([]) })
     ).toBe(vol)
+    expect(mockedRustInvoke).toHaveBeenCalledWith(
+      RUST_WINE_DISCOVER_CROSSOVER,
+      []
+    )
     expect(resolveCrossoverBinDir()).toBe(vol)
     present.clear()
     expect(resolveCrossoverBinDir()).toBeUndefined()
@@ -103,23 +111,23 @@ describe('crossoverLocation', () => {
 
   test('a second locator probes again (the memo is per instance)', async () => {
     const present = only(vol)
-    mockedGetCrossover.mockResolvedValue(
-      new Set([{ bin: `${vol}/wine`, name: 'CX', type: 'crossover' }])
-    )
+    mockedRustInvoke.mockResolvedValue([
+      { bin: `${vol}/wine`, name: 'CX', type: 'crossover' }
+    ])
     await resolveCrossoverBinDirAsync({ runner: createScriptedRunner([]) })
     present.clear()
-    const other = createCrossoverLocator({ paths: { userHome: '/Users/test' } })
+    const other = newLocator()
     expect(other.resolveCrossoverBinDir()).toBeUndefined()
     expect(resolveCrossoverBinDir()).toBeUndefined()
   })
 
-  test('async never throws when getCrossover rejects or is empty', async () => {
+  test('async never throws when the Rust discovery rejects or is empty', async () => {
     only()
-    mockedGetCrossover.mockRejectedValue(new Error('mdfind boom'))
+    mockedRustInvoke.mockRejectedValue(new Error('mdfind boom'))
     expect(
       await resolveCrossoverBinDirAsync({ runner: createScriptedRunner([]) })
     ).toBeUndefined()
-    mockedGetCrossover.mockResolvedValue(new Set())
+    mockedRustInvoke.mockResolvedValue([])
     expect(
       await resolveCrossoverBinDirAsync({ runner: createScriptedRunner([]) })
     ).toBeUndefined()

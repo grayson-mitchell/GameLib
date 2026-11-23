@@ -168,6 +168,8 @@ pub(crate) enum RustInvokeChannel {
     WineReleasesInfoReady,
     WineValid,
     WineRunCommand,
+    WineDiscoverAlternatives,
+    WineDiscoverCrossover,
 }
 
 impl RustInvokeChannel {
@@ -317,6 +319,8 @@ impl RustInvokeChannel {
         RustInvokeChannel::WineReleasesInfoReady,
         RustInvokeChannel::WineValid,
         RustInvokeChannel::WineRunCommand,
+        RustInvokeChannel::WineDiscoverAlternatives,
+        RustInvokeChannel::WineDiscoverCrossover,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -466,6 +470,8 @@ impl RustInvokeChannel {
             "wine_releases_info_ready" => Some(RustInvokeChannel::WineReleasesInfoReady),
             "wine_valid" => Some(RustInvokeChannel::WineValid),
             "wine_run_command" => Some(RustInvokeChannel::WineRunCommand),
+            "wine_discover_alternatives" => Some(RustInvokeChannel::WineDiscoverAlternatives),
+            "wine_discover_crossover" => Some(RustInvokeChannel::WineDiscoverCrossover),
             _ => None,
         }
     }
@@ -617,6 +623,8 @@ impl RustInvokeChannel {
             RustInvokeChannel::WineReleasesInfoReady => "wine_releases_info_ready",
             RustInvokeChannel::WineValid => "wine_valid",
             RustInvokeChannel::WineRunCommand => "wine_run_command",
+            RustInvokeChannel::WineDiscoverAlternatives => "wine_discover_alternatives",
+            RustInvokeChannel::WineDiscoverCrossover => "wine_discover_crossover",
         }
     }
 }
@@ -3238,5 +3246,26 @@ impl WineRunCommandArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let command = serde_json::from_value(args.first().ok_or_else(|| "wine_run_command:bad-args".to_string())?.clone()).map_err(|_| "wine_run_command:bad-args".to_string())?;
         Ok(Self { command })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WineDiscoverAlternativesArgs {
+    pub(crate) scan_custom: bool,
+}
+
+impl WineDiscoverAlternativesArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let scan_custom = serde_json::from_value(args.first().ok_or_else(|| "wine_discover_alternatives:bad-args".to_string())?.clone()).map_err(|_| "wine_discover_alternatives:bad-args".to_string())?;
+        Ok(Self { scan_custom })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct WineDiscoverCrossoverArgs;
+
+impl WineDiscoverCrossoverArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
     }
 }

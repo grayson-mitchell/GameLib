@@ -864,6 +864,32 @@ pub(crate) fn rpc_wine_run_command(args: &[Value]) -> Result<Value, String> {
     )
 }
 
+/// The `wine_discover_alternatives` `rustInvoke` arm (the `discoverAlternativeWine` shim, 87-26): exactly one
+/// boolean, `scanCustom`, and nothing else from the sidecar. The shell builds the crate's whole
+/// `DiscoveryHost` itself ([`discovery_host`]: its roots, `PATH`, settings and the Steam libraries), so no
+/// path the sidecar holds reaches discovery (T-87-71). Runs on the dispatcher's worker thread until the
+/// list is ready (a refresh of an empty release list first); unbounded in the sidecar.
+pub(crate) fn rpc_wine_discover_alternatives(args: &[Value]) -> Result<Value, String> {
+    const BAD: &str = "wine_discover_alternatives:bad-args";
+    let decoded = WineDiscoverAlternativesArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err(BAD.to_string());
+    }
+    let wine = wine_ctx().ok_or_else(|| "wine_discover_alternatives:not-ready".to_string())?;
+    let host = discovery_host(wine, std::env::var("PATH").ok(), Some(decoded.scan_custom));
+    gamelib_wine::dispatch_sync("wine_discover_alternatives", &[host], wine)
+}
+
+/// The `wine_discover_crossover` `rustInvoke` arm (the `discoverCrossover` intra-phase shim, 87-26): no
+/// argument. One `mdfind` through the crate's labelled Helper spawn, with its own 10 s limit.
+pub(crate) fn rpc_wine_discover_crossover(args: &[Value]) -> Result<Value, String> {
+    WineDiscoverCrossoverArgs::from_args(args)?;
+    if !args.is_empty() {
+        return Err("wine_discover_crossover:bad-args".to_string());
+    }
+    rpc_wine_op(wine_ctx(), "wine_discover_crossover", args)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1820,6 +1846,36 @@ mod tests {
             .collect();
         assert!(names.contains(&"Wine-Test"), "{answer}");
         assert!(!answer.to_string().contains("SECRET"));
+    }
+
+    #[test]
+    fn the_discovery_arms_take_a_boolean_or_nothing_and_answer_not_ready_before_install() {
+        assert!(wine_ctx().is_none());
+        assert_eq!(
+            rpc_wine_discover_alternatives(&[json!(true)]),
+            Err("wine_discover_alternatives:not-ready".to_string())
+        );
+        assert_eq!(
+            rpc_wine_discover_crossover(&[]),
+            Err("wine_discover_crossover:not-ready".to_string())
+        );
+        for bad in [
+            vec![],
+            vec![json!("/SECRET-PATH")],
+            vec![json!(null)],
+            vec![json!({ "path": "/SECRET-PATH" })],
+            vec![json!(true), json!(false)],
+        ] {
+            let error = rpc_wine_discover_alternatives(&bad).unwrap_err();
+            assert_eq!(error, "wine_discover_alternatives:bad-args", "{bad:?}");
+        }
+        for bad in [vec![json!(true)], vec![json!("/SECRET-PATH")]] {
+            assert_eq!(
+                rpc_wine_discover_crossover(&bad),
+                Err("wine_discover_crossover:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
     }
 
     #[test]

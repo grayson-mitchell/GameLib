@@ -481,7 +481,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 145 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 147 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
     // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
@@ -494,7 +494,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 87 plan 18: 137 -> 139, wine_runtime_is_installed and wine_runtime_download.
     // Phase 87 plan 20: 139 -> 143, the four wine-manager ops.
     // Phase 87 plan 24: 143 -> 145, wine_valid and wine_run_command.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(145)
+    // Phase 87 plan 26: 145 -> 147, wine_discover_alternatives and wine_discover_crossover.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(147)
     expect(router).not.toContain('_ =>')
   })
 
@@ -927,7 +928,15 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // `validWine` shim (enginewine/wineCore.ts); `wine_run_command` has none until Phase 88 (the
       // sync-callback runWineCommand stays a scheduled twin).
       'wine_valid',
-      'wine_run_command'
+      'wine_run_command',
+
+      // Phase 87 plan 26 -- the two wine-discovery ops. PROVEN: `golden_discovery.rs` replays the 87-08 TS goldens
+      // (33 macOS, 18 Linux) and the default-wine vectors against the crate, and `wine_dispatch::tests` drives the
+      // arms' validation (one boolean or nothing, a fixed bad-args literal, not-ready before install) and the
+      // shell's own DiscoveryHost. The callers are the `discoverAlternativeWine` shim (enginewine/wineDiscovery.ts)
+      // and the `discoverCrossover` intra-phase shim (enginewine/intraPhase.ts).
+      'wine_discover_alternatives',
+      'wine_discover_crossover'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

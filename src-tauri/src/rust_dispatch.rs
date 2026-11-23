@@ -208,5 +208,11 @@ pub(crate) fn dispatch_rust_channel(
         }
         RustInvokeChannel::WineValid => wine_dispatch::rpc_wine_valid(args),
         RustInvokeChannel::WineRunCommand => wine_dispatch::rpc_wine_run_command(args),
+        RustInvokeChannel::WineDiscoverAlternatives => {
+            wine_dispatch::rpc_wine_discover_alternatives(args)
+        }
+        RustInvokeChannel::WineDiscoverCrossover => {
+            wine_dispatch::rpc_wine_discover_crossover(args)
+        }
     }
 }

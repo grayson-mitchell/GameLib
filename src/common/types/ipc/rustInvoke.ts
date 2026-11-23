@@ -102,6 +102,8 @@ import {
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_STEAM_API_PIN_RESOLVE,
   RUST_WINE_MANAGER_INSTALL,
+  RUST_WINE_DISCOVER_ALTERNATIVES,
+  RUST_WINE_DISCOVER_CROSSOVER,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -845,7 +847,14 @@ export const rustInvokeArgs = {
   [RUST_WINE_VALID]: z.tuple([wineInstallation]),
   [RUST_WINE_RUN_COMMAND]: z.tuple([
     z.unknown().meta({ title: 'command', 'x-rust-value': true })
-  ])
+  ]),
+  // Phase 87 (SVC-02, 87-26): wine discovery. `wine_discover_alternatives` takes one boolean (`scanCustom`);
+  // the shell builds the rest of the crate's DiscoveryHost itself (T-87-71), so no path travels from the
+  // sidecar. `wine_discover_crossover` takes nothing.
+  [RUST_WINE_DISCOVER_ALTERNATIVES]: z.tuple([
+    z.boolean().meta({ title: 'scanCustom' })
+  ]),
+  [RUST_WINE_DISCOVER_CROSSOVER]: empty
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

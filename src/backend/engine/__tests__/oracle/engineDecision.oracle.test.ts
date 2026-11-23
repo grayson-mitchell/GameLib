@@ -1284,8 +1284,10 @@ function runLocatorItem(
         : realExists(String(path))
     )
   try {
+    // Only the sync resolver is recorded here; the async Spotlight probe is Rust's and never called.
     const locator = createCrossoverLocator({
-      paths: { userHome: profile.home }
+      paths: { userHome: profile.home },
+      requestRustInvoke: () => Promise.resolve([])
     })
     const found = locator.resolveCrossoverBinDir({
       wineVersion: item.wineVersion

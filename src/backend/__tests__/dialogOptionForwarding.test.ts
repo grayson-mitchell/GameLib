@@ -232,7 +232,11 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // Phase 87 plan 24: wine_run_command runs a wine command with no time limit of its own (winetricks,
     // an installer), ended by its own exit, a cancel or the shutdown. The existence check wine_valid stays
     // bounded. Not a dialog channel either.
-    'RUST_WINE_RUN_COMMAND'
+    'RUST_WINE_RUN_COMMAND',
+    // Phase 87 plan 26: wine_discover_alternatives refreshes an empty wine release list first (up to seven feeds
+    // in turn, like wine_manager_refresh) before it looks at the disk. wine_discover_crossover is one mdfind with
+    // its own 10 s limit and stays bounded. Not a dialog channel either.
+    'RUST_WINE_DISCOVER_ALTERNATIVES'
   ]
 
   test('contains exactly the dialog, depot, Rust CM, safety remove, wine runtime download and wine manager channels', () => {

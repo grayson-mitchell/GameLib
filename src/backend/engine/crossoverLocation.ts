@@ -2,7 +2,8 @@
  * Single resolver for the CrossOver `bin` directory (quick 261024-cjq).
  *
  * CrossOver may live in /Applications, in ~/Applications, or anywhere
- * Spotlight finds the bundle id (getCrossover() runs mdfind). Nothing under
+ * Spotlight finds the bundle id (the Rust `wine_discover_crossover` runs mdfind,
+ * reached through `enginewine/intraPhase.ts`). Nothing under
  * src/ may hard-code one of those; every cxbottle / wineserver / wine spawn
  * resolves through here.
  */
@@ -12,6 +13,8 @@ import type { AppPaths } from 'backend/process/context'
 import { logWarning, LogPrefix } from 'backend/logger'
 import type { WineInstallation } from 'common/types'
 import type { ProcessRunner } from 'backend/process/types'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { discoverCrossover } from 'backend/enginewine/intraPhase'
 
 const CROSSOVER_BIN_SUBPATH = 'Contents/SharedSupport/CrossOver/bin'
 const WINE_BIN_SUFFIX = '/SharedSupport/CrossOver/bin/wine'
@@ -43,10 +46,15 @@ export interface CrossoverLocator {
   ) => Promise<string | undefined>
 }
 
-/** One locator per boot: the memoised bin dir is closure state, probed on first use, never at construction. */
-export function createCrossoverLocator(deps: {
-  paths: Pick<AppPaths, 'userHome'>
-}): CrossoverLocator {
+/**
+ * One locator per boot: the memoised bin dir is closure state, probed on first use, never at construction.
+ * The Spotlight probe is Rust's (`discoverCrossover`), so the locator holds the boot's rustInvoke transport.
+ */
+export function createCrossoverLocator(
+  deps: {
+    paths: Pick<AppPaths, 'userHome'>
+  } & RustInvokeDeps
+): CrossoverLocator {
   let memoisedBinDir: string | undefined
 
   function resolveCrossoverBinDir(opts?: {
@@ -83,9 +91,10 @@ export function createCrossoverLocator(deps: {
     const sync = resolveCrossoverBinDir(opts)
     if (sync) return sync
     try {
-      const { getCrossover } =
-        await import('backend/utils/compatibility_layers')
-      const found = await getCrossover({ runner: asyncDeps.runner })
+      const found = (await discoverCrossover(deps)) as
+        | WineInstallation[]
+        | null
+        | undefined
       for (const entry of found ?? []) {
         const dir = crossoverBinDirFromWineBin(entry.bin)
         if (hasCxbottle(dir)) {
@@ -95,7 +104,7 @@ export function createCrossoverLocator(deps: {
       }
     } catch (error) {
       logWarning(
-        ['resolveCrossoverBinDirAsync: getCrossover failed', error],
+        ['resolveCrossoverBinDirAsync: discoverCrossover failed', error],
         LogPrefix.Backend
       )
     }

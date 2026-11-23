@@ -172,6 +172,74 @@ describe('wineCorePortComplete', () => {
   })
 })
 
+/**
+ * 87-26, D-06, D-14, D-15 and D-22: wine discovery is Rust's (87-23 ported it, 87-26 switched its callers).
+ * The renderer's `getAlternativeWine` is a native `wine` channel; `config.ts`'s `getAlternativeWine` is one
+ * scheduled shim (`enginewine/wineDiscovery.ts`, `discoverAlternativeWine`); the still-TS engine's CrossOver
+ * locator reaches `wine_discover_crossover` through one intra-phase shim (`enginewine/intraPhase.ts`,
+ * `discoverCrossover`, removed with the engine TS in 87-56). The TS discovery functions in
+ * `utils/compatibility_layers.ts` and the discovery oracle test are deleted; the goldens and vectors stay for
+ * the Rust replay (`golden_discovery.rs`), and `getDefaultWineBinary` stays as a scheduled twin pinned to
+ * `default_wine.json` (`enginewine/__tests__/defaultWineTwin.test.ts`), so it is not a forbidden identifier.
+ */
+const WINE_DISCOVERY: SliceSpec = {
+  deleted: ['src/backend/wine/__tests__/oracle/wineDiscovery.oracle.test.ts'],
+  kept: [
+    'src-tauri/crates/gamelib-wine/tests/fixtures/golden/discovery',
+    'src-tauri/crates/gamelib-wine/tests/fixtures/vectors/default_wine.json',
+    'src/backend/enginewine/__tests__/defaultWineTwin.test.ts'
+  ],
+  forbiddenIdentifiers: [
+    'getLinuxWineSet',
+    'getWineOnMac',
+    'getWineskinWine',
+    'getCrossover',
+    'getGamePortingToolkitWine',
+    'getSystemGamePortingToolkitWine',
+    'getWhisky',
+    'getCustomWinePaths',
+    'getWineLibs',
+    'getMacOsWineSet',
+    'WineDiscoveryDeps',
+    'LinuxWineDiscoveryDeps'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_WINE',
+  manifestSlice: 'wine',
+  channelsFloor: 7
+}
+
+describe('wineDiscoveryPortComplete', () => {
+  runSlice(WINE_DISCOVERY)
+
+  const exportsOf = (path: string): string[] => {
+    const file = tsWalk.files.find((f) => f.path === path)
+    expect(file).toBeDefined()
+    return findExportedValues(file?.path ?? '', file?.code ?? '')
+  }
+
+  it('the discovery shims exist and the default-wine twin survives next to the deleted functions', () => {
+    expect(exportsOf('src/backend/enginewine/wineDiscovery.ts')).toContain(
+      'discoverAlternativeWine'
+    )
+    expect(exportsOf('src/backend/enginewine/intraPhase.ts')).toContain(
+      'discoverCrossover'
+    )
+    const layers = exportsOf('src/backend/utils/compatibility_layers.ts')
+    expect(layers).toContain('getDefaultWineBinary')
+    expect(layers).toContain('getWineExecs')
+  })
+
+  it('the renderer getAlternativeWine is native: the sidecar registers no handle for it', () => {
+    const registered = tsWalk.files.filter(
+      (f) =>
+        f.path.startsWith('src/backend/sidecar/') &&
+        /ipc\.handle\(\s*'getAlternativeWine'/.test(f.code)
+    )
+    expect(registered.map((f) => f.path)).toEqual([])
+  })
+})
+
 describe('noRollbackFlag', () => {
   it('anti-vacuity: the walks read real trees', () => {
     assertAtOrAboveFloor(
