@@ -1,0 +1,46 @@
+[
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "delete",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "d3d12",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "Wine-Oracle-9"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "delete",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "d3d12core",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "Wine-Oracle-9"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "wineboot",
+      "-u"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "Wine-Oracle-9"
+  }
+]

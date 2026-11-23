@@ -1,0 +1,72 @@
+{
+  "op": "installRemove",
+  "platform": "linux",
+  "tool": "dxvk",
+  "action": "backup",
+  "source": null,
+  "outcome": {
+    "returned": true
+  },
+  "downloads": [
+    "https://github.com/Heroic-Games-Launcher/vkd3d-proton/releases/download/v3.1/vkd3d-proton-3.1.tar.xz",
+    "https://github.com/doitsujin/dxvk/releases/download/v3.1.1/dxvk-3.1.1.tar.gz",
+    "https://github.com/jp7677/dxvk-nvapi/releases/download/v0.9.3/dxvk-nvapi-v0.9.3.tar.gz"
+  ],
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "ToolInstaller",
+      "message": "dxvk not found!"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Updating vkd3d to: vkd3d-proton-3.1"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Updating dxvk to: dxvk-3.1.1"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Updating dxvk-nvapi to: dxvk-nvapi-v0.9.3"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Downloaded vkd3d, extracting..."
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Downloaded dxvk, extracting..."
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Downloaded dxvk-nvapi, extracting..."
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "vkd3d updated!"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "dxvk updated!"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "dxvk-nvapi updated!"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "installing dxvk on... <HOME>/prefix"
+    }
+  ]
+}

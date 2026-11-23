@@ -1,0 +1,173 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/jp7677/dxvk-nvapi/releases/latest",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "etag": "\"af0db7531fddd8b02dc18b9d0502c062acf5d45aaac521bbc29616e6bd45acde\"",
+        "last-modified": "Fri, 30 Oct 2026 18:44:14 GMT",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "bodyFile": "body-1.json"
+    }
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "HEAD",
+      "url": "https://github.com/jp7677/dxvk-nvapi/releases/download/v0.9.3/dxvk-nvapi-v0.9.3.tar.gz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "146"
+      }
+    },
+    "synthetic": true
+  },
+  {
+    "id": "ex-3",
+    "request": {
+      "method": "GET",
+      "url": "https://github.com/jp7677/dxvk-nvapi/releases/download/v0.9.3/dxvk-nvapi-v0.9.3.tar.gz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/gzip"
+      },
+      "bodyFile": "body-3.bin"
+    },
+    "synthetic": true
+  },
+  {
+    "id": "ex-4",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/doitsujin/dxvk/releases/latest",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "etag": "\"c336421443f50ee0cc1ade1f06b680dfa2749255144bbe281b11419390e279e9\"",
+        "last-modified": "Sat, 19 Sep 2026 11:33:46 GMT",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "bodyFile": "body-4.json"
+    }
+  },
+  {
+    "id": "ex-5",
+    "request": {
+      "method": "HEAD",
+      "url": "https://github.com/doitsujin/dxvk/releases/download/v3.1.1/dxvk-3.1.1.tar.gz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "204"
+      }
+    },
+    "synthetic": true
+  },
+  {
+    "id": "ex-6",
+    "request": {
+      "method": "GET",
+      "url": "https://github.com/doitsujin/dxvk/releases/download/v3.1.1/dxvk-3.1.1.tar.gz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/gzip"
+      },
+      "bodyFile": "body-6.bin"
+    },
+    "synthetic": true
+  },
+  {
+    "id": "ex-7",
+    "request": {
+      "method": "GET",
+      "url": "https://api.github.com/repos/Heroic-Games-Launcher/vkd3d-proton/releases/latest",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "etag": "\"1601e4826807edb2753b1ffa6b56aff99f383018e4d53e99c885282016a6a3bb\"",
+        "last-modified": "Wed, 18 Nov 2026 00:28:50 GMT",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "bodyFile": "body-7.json"
+    }
+  },
+  {
+    "id": "ex-8",
+    "request": {
+      "method": "HEAD",
+      "url": "https://github.com/Heroic-Games-Launcher/vkd3d-proton/releases/download/v3.1/vkd3d-proton-3.1.tar.xz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-length": "187"
+      }
+    },
+    "synthetic": true
+  },
+  {
+    "id": "ex-9",
+    "request": {
+      "method": "GET",
+      "url": "https://github.com/Heroic-Games-Launcher/vkd3d-proton/releases/download/v3.1/vkd3d-proton-3.1.tar.xz",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/gzip"
+      },
+      "bodyFile": "body-9.bin"
+    },
+    "synthetic": true
+  }
+]

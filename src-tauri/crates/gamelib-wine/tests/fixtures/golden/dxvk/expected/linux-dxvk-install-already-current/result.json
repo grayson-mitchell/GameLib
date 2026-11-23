@@ -1,0 +1,23 @@
+{
+  "op": "installRemove",
+  "platform": "linux",
+  "tool": "dxvk",
+  "action": "backup",
+  "source": null,
+  "outcome": {
+    "returned": true
+  },
+  "downloads": [],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "installing dxvk on... <HOME>/prefix"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "dxvk already installed!"
+    }
+  ]
+}

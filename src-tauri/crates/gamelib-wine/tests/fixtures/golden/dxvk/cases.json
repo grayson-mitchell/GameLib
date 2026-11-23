@@ -1,0 +1,2557 @@
+[
+  {
+    "id": "linux-dxvk-install-fresh",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "No latest_dxvk: getLatest asks the three Linux feeds (recorded live once), downloads and extracts all three tools, then installs DXVK into the prefix.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "live": true,
+    "gpu": "1.3",
+    "seed": [
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-install-already-current",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "The prefix already holds the tools-dir version: no copy, no wine command, no request.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk/latest_dxvk",
+        "text": "dxvk-2.9"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/current_dxvk",
+        "text": "dxvk-2.9"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-install-update-from-tools",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "The tools dir is newer than the prefix: the DLLs are copied, one reg add per DLL name, current_dxvk rewritten. Nothing is downloaded.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk/latest_dxvk",
+        "text": "dxvk-2.9"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/current_dxvk",
+        "text": "dxvk-2.8"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-install-32bit-prefix",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "A prefix with no syswow64: only the x32 DLLs are copied, into system32, and registered once each.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk/latest_dxvk",
+        "text": "dxvk-2.9"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-install-tilde-prefix",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "A winePrefix of ~/prefix is expanded against the user home before any path is used.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "prefix": "~/prefix",
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk/latest_dxvk",
+        "text": "dxvk-2.9"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-install-gpu-vulkan-1-2",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "A GPU that only supports Vulkan 1.2: getLatest asks the pinned DXVK v1.10.3 and VKD3D v2.6 tags, and dxvk-nvapi latest.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "gpu": "1.2",
+    "seed": [
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-install-gpu-none",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "No Vulkan device at all: the warning is logged and the latest feeds are asked anyway.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "gpu": "none",
+    "seed": [
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-install-download-fails",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "The DXVK archive answers 500: showDialog ERROR is sent, nothing is extracted, and installRemove then rejects reading the missing latest_dxvk.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "gpu": "1.3",
+    "fail": "dxvk",
+    "seed": [
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-install-offline",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "Offline with no tools dir: getLatest is skipped (warning), no request is made, and installRemove rejects reading the missing latest_dxvk.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "online": false,
+    "seed": [
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-install-invalid-prefix",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "No .update-timestamp: warning, returns true, nothing touched (the toggle must not stay stuck).",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk/latest_dxvk",
+        "text": "dxvk-2.9"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-install-toolkit-skip",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "A wine binary whose path contains \"toolkit\" (Game Porting Toolkit): returns true before looking at the prefix.",
+    "wineVersion": {
+      "name": "GPTK",
+      "bin": "<HOME>/gptk/toolkit/bin/wine64",
+      "type": "toolkit"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk/latest_dxvk",
+        "text": "dxvk-2.9"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-remove",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "restore",
+    "note": "Toggle remove: current_dxvk removed, one reg delete per DLL name, the tool DLLs deleted, then wineboot -u. TS keeps no backup of the stock DLLs: wineboot -u is what restores them.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk/latest_dxvk",
+        "text": "dxvk-2.9"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/current_dxvk",
+        "text": "dxvk-2.9"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-remove-no-backup",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "restore",
+    "note": "Remove on a prefix that holds neither the DLLs nor current_dxvk: the same reg delete and wineboot calls run, the missing DLLs are logged as errors.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk/latest_dxvk",
+        "text": "dxvk-2.9"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x32/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk/dxvk-2.9/x64/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      }
+    ]
+  },
+  {
+    "id": "linux-nvapi-install-with-nvngx",
+    "platform": "linux",
+    "tool": "dxvk-nvapi",
+    "action": "backup",
+    "note": "dxvk-nvapi install: copy, reg add per name, then nvngx.dll and _nvngx.dll are copied from the vulkan-helper nvapi-path and NGXCore FullPath is written.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "nvngx": true,
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk-nvapi/latest_dxvk-nvapi",
+        "text": "dxvk-nvapi-v0.9.1"
+      },
+      {
+        "path": "<TOOLS>/dxvk-nvapi/dxvk-nvapi-v0.9.1/x32/nvapi.dll",
+        "text": "seeded dxvk-nvapi x32 nvapi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-nvapi/dxvk-nvapi-v0.9.1/x64/nvapi64.dll",
+        "text": "seeded dxvk-nvapi x64 nvapi64.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/nvapi.dll",
+        "text": "builtin nvapi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/nvapi64.dll",
+        "text": "builtin nvapi64.dll"
+      },
+      {
+        "path": "<HOME>/nvidia-libs/nvidia/wine/nvngx.dll",
+        "text": "synthetic nvngx"
+      },
+      {
+        "path": "<HOME>/nvidia-libs/nvidia/wine/_nvngx.dll",
+        "text": "synthetic _nvngx"
+      }
+    ]
+  },
+  {
+    "id": "linux-nvapi-install-no-nvngx",
+    "platform": "linux",
+    "tool": "dxvk-nvapi",
+    "action": "backup",
+    "note": "dxvk-nvapi install where the helper finds no nvngx path: warning, no NGXCore reg add.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "nvngx": false,
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk-nvapi/latest_dxvk-nvapi",
+        "text": "dxvk-nvapi-v0.9.1"
+      },
+      {
+        "path": "<TOOLS>/dxvk-nvapi/dxvk-nvapi-v0.9.1/x32/nvapi.dll",
+        "text": "seeded dxvk-nvapi x32 nvapi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-nvapi/dxvk-nvapi-v0.9.1/x64/nvapi64.dll",
+        "text": "seeded dxvk-nvapi x64 nvapi64.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/nvapi.dll",
+        "text": "builtin nvapi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/nvapi64.dll",
+        "text": "builtin nvapi64.dll"
+      }
+    ]
+  },
+  {
+    "id": "linux-nvapi-remove",
+    "platform": "linux",
+    "tool": "dxvk-nvapi",
+    "action": "restore",
+    "note": "dxvk-nvapi remove: reg delete nvapi and nvapi64, both DLLs deleted, wineboot -u.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk-nvapi/latest_dxvk-nvapi",
+        "text": "dxvk-nvapi-v0.9.1"
+      },
+      {
+        "path": "<TOOLS>/dxvk-nvapi/dxvk-nvapi-v0.9.1/x32/nvapi.dll",
+        "text": "seeded dxvk-nvapi x32 nvapi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-nvapi/dxvk-nvapi-v0.9.1/x64/nvapi64.dll",
+        "text": "seeded dxvk-nvapi x64 nvapi64.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/nvapi.dll",
+        "text": "seeded dxvk-nvapi x32 nvapi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/nvapi64.dll",
+        "text": "seeded dxvk-nvapi x64 nvapi64.dll"
+      },
+      {
+        "path": "<HOME>/prefix/current_dxvk-nvapi",
+        "text": "dxvk-nvapi-v0.9.1"
+      }
+    ]
+  },
+  {
+    "id": "linux-vkd3d-install",
+    "platform": "linux",
+    "tool": "vkd3d",
+    "action": "backup",
+    "note": "vkd3d install: the 32-bit DLLs come from x86 (not x32), the 64-bit ones from x64.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/vkd3d/latest_vkd3d",
+        "text": "vkd3d-proton-3.0"
+      },
+      {
+        "path": "<TOOLS>/vkd3d/vkd3d-proton-3.0/x86/d3d12.dll",
+        "text": "seeded vkd3d x86 d3d12.dll"
+      },
+      {
+        "path": "<TOOLS>/vkd3d/vkd3d-proton-3.0/x86/d3d12core.dll",
+        "text": "seeded vkd3d x86 d3d12core.dll"
+      },
+      {
+        "path": "<TOOLS>/vkd3d/vkd3d-proton-3.0/x64/d3d12.dll",
+        "text": "seeded vkd3d x64 d3d12.dll"
+      },
+      {
+        "path": "<TOOLS>/vkd3d/vkd3d-proton-3.0/x64/d3d12core.dll",
+        "text": "seeded vkd3d x64 d3d12core.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d12.dll",
+        "text": "builtin d3d12.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d12core.dll",
+        "text": "builtin d3d12core.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d12.dll",
+        "text": "builtin d3d12.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d12core.dll",
+        "text": "builtin d3d12core.dll"
+      }
+    ]
+  },
+  {
+    "id": "linux-vkd3d-remove",
+    "platform": "linux",
+    "tool": "vkd3d",
+    "action": "restore",
+    "note": "vkd3d remove.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/vkd3d/latest_vkd3d",
+        "text": "vkd3d-proton-3.0"
+      },
+      {
+        "path": "<TOOLS>/vkd3d/vkd3d-proton-3.0/x86/d3d12.dll",
+        "text": "seeded vkd3d x86 d3d12.dll"
+      },
+      {
+        "path": "<TOOLS>/vkd3d/vkd3d-proton-3.0/x86/d3d12core.dll",
+        "text": "seeded vkd3d x86 d3d12core.dll"
+      },
+      {
+        "path": "<TOOLS>/vkd3d/vkd3d-proton-3.0/x64/d3d12.dll",
+        "text": "seeded vkd3d x64 d3d12.dll"
+      },
+      {
+        "path": "<TOOLS>/vkd3d/vkd3d-proton-3.0/x64/d3d12core.dll",
+        "text": "seeded vkd3d x64 d3d12core.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d12.dll",
+        "text": "seeded vkd3d x86 d3d12.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d12core.dll",
+        "text": "seeded vkd3d x86 d3d12core.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d12.dll",
+        "text": "seeded vkd3d x64 d3d12.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d12core.dll",
+        "text": "seeded vkd3d x64 d3d12core.dll"
+      },
+      {
+        "path": "<HOME>/prefix/current_vkd3d",
+        "text": "vkd3d-proton-3.0"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-source-pinned-install",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "A GameLib-pinned DXVK (Steam fallback engine): copy is synchronous, system.reg is the prefix check, the tools dir is never read, the version file is written before it resolves.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "source": {
+      "dir": "<HOME>/pinned",
+      "version": "pinned-1.10.3"
+    },
+    "seed": [
+      {
+        "path": "<HOME>/pinned/x32/d3d9.dll",
+        "text": "pinned dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/d3d11.dll",
+        "text": "pinned dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/dxgi.dll",
+        "text": "pinned dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d9.dll",
+        "text": "pinned dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d11.dll",
+        "text": "pinned dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/dxgi.dll",
+        "text": "pinned dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/system.reg",
+        "text": "WINE REGISTRY Version 2"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-source-pinned-install-recopies",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "CR-03: a source-pinned install recopies even when the version file already matches.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "source": {
+      "dir": "<HOME>/pinned",
+      "version": "pinned-1.10.3"
+    },
+    "seed": [
+      {
+        "path": "<HOME>/pinned/x32/d3d9.dll",
+        "text": "pinned dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/d3d11.dll",
+        "text": "pinned dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/dxgi.dll",
+        "text": "pinned dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d9.dll",
+        "text": "pinned dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d11.dll",
+        "text": "pinned dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/dxgi.dll",
+        "text": "pinned dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/system.reg",
+        "text": "WINE REGISTRY Version 2"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/current_dxvk",
+        "text": "pinned-1.10.3"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-source-pinned-restore",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "restore",
+    "note": "Strict restore: DLLs removed first, ONE reg import (CRLF reg file under drive_c), one reg query per override judged by exit code, wineboot -u because the stock DLLs are missing, version file removed last. Every step wait:false, resolveOnExit.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "source": {
+      "dir": "<HOME>/pinned",
+      "version": "pinned-1.10.3"
+    },
+    "seed": [
+      {
+        "path": "<HOME>/pinned/x32/d3d9.dll",
+        "text": "pinned dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/d3d11.dll",
+        "text": "pinned dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/dxgi.dll",
+        "text": "pinned dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d9.dll",
+        "text": "pinned dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d11.dll",
+        "text": "pinned dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/dxgi.dll",
+        "text": "pinned dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/system.reg",
+        "text": "WINE REGISTRY Version 2"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/current_dxvk",
+        "text": "pinned-1.10.3"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-source-pinned-restore-restocked",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "restore",
+    "note": "The first wine process (the import) runs the prefix update that puts the stock DLLs back: wineboot -u is skipped.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "source": {
+      "dir": "<HOME>/pinned",
+      "version": "pinned-1.10.3"
+    },
+    "wine": {
+      "restock": [
+        "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "<HOME>/prefix/drive_c/windows/system32/dxgi.dll"
+      ]
+    },
+    "seed": [
+      {
+        "path": "<HOME>/pinned/x32/d3d9.dll",
+        "text": "pinned dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/d3d11.dll",
+        "text": "pinned dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/dxgi.dll",
+        "text": "pinned dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d9.dll",
+        "text": "pinned dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d11.dll",
+        "text": "pinned dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/dxgi.dll",
+        "text": "pinned dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/system.reg",
+        "text": "WINE REGISTRY Version 2"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/current_dxvk",
+        "text": "pinned-1.10.3"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-source-pinned-restore-import-fails",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "restore",
+    "note": "reg import exits 1: no /v query runs (code 1 is trusted only after a good import), returns false, the version file is kept.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "source": {
+      "dir": "<HOME>/pinned",
+      "version": "pinned-1.10.3"
+    },
+    "wine": {
+      "import": 1
+    },
+    "seed": [
+      {
+        "path": "<HOME>/pinned/x32/d3d9.dll",
+        "text": "pinned dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/d3d11.dll",
+        "text": "pinned dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/dxgi.dll",
+        "text": "pinned dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d9.dll",
+        "text": "pinned dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d11.dll",
+        "text": "pinned dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/dxgi.dll",
+        "text": "pinned dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/system.reg",
+        "text": "WINE REGISTRY Version 2"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/current_dxvk",
+        "text": "pinned-1.10.3"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-source-pinned-restore-override-survives",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "restore",
+    "note": "reg query d3d11 exits 0 (the override is still there): returns false, the version file is kept.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "source": {
+      "dir": "<HOME>/pinned",
+      "version": "pinned-1.10.3"
+    },
+    "wine": {
+      "left": [
+        "d3d11"
+      ]
+    },
+    "seed": [
+      {
+        "path": "<HOME>/pinned/x32/d3d9.dll",
+        "text": "pinned dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/d3d11.dll",
+        "text": "pinned dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/dxgi.dll",
+        "text": "pinned dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d9.dll",
+        "text": "pinned dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d11.dll",
+        "text": "pinned dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/dxgi.dll",
+        "text": "pinned dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/system.reg",
+        "text": "WINE REGISTRY Version 2"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/current_dxvk",
+        "text": "pinned-1.10.3"
+      }
+    ]
+  },
+  {
+    "id": "linux-dxvk-source-pinned-restore-boot-fails",
+    "platform": "linux",
+    "tool": "dxvk",
+    "action": "restore",
+    "note": "wineboot -u exits 3: returns false, the version file is kept.",
+    "wineVersion": {
+      "name": "Wine-Oracle-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "wine"
+    },
+    "source": {
+      "dir": "<HOME>/pinned",
+      "version": "pinned-1.10.3"
+    },
+    "wine": {
+      "boot": 3
+    },
+    "seed": [
+      {
+        "path": "<HOME>/pinned/x32/d3d9.dll",
+        "text": "pinned dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/d3d11.dll",
+        "text": "pinned dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/dxgi.dll",
+        "text": "pinned dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d9.dll",
+        "text": "pinned dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d11.dll",
+        "text": "pinned dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/dxgi.dll",
+        "text": "pinned dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/system.reg",
+        "text": "WINE REGISTRY Version 2"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "seeded dxvk x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "seeded dxvk x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "seeded dxvk x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "seeded dxvk x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "seeded dxvk x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "seeded dxvk x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/current_dxvk",
+        "text": "pinned-1.10.3"
+      }
+    ]
+  },
+  {
+    "id": "mac-dxvk-install-crossover-pinned-tag",
+    "platform": "mac",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "On macOS the tool becomes dxvk-macOS and getLatest asks only the pinned Gcenx v1.10.3-20230507-repack tag (recorded live once); current_dxvk-macOS is written into the CrossOver bottle.",
+    "wineVersion": {
+      "name": "CrossOver-26",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "type": "crossover"
+    },
+    "live": true,
+    "seed": [
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "mac-dxvk-install-builtin-asset-skipped",
+    "platform": "mac",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "The feed lists a -builtin asset first: it is skipped for the repack.tar.gz asset.",
+    "wineVersion": {
+      "name": "CrossOver-26",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "type": "crossover"
+    },
+    "macBuiltinFirst": true,
+    "seed": [
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "mac-dxvk-install-already-current",
+    "platform": "mac",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "The bottle already holds the tools-dir dxvk-macOS version: nothing runs.",
+    "wineVersion": {
+      "name": "CrossOver-26",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "type": "crossover"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk-macOS/latest_dxvk-macOS",
+        "text": "dxvk-macOS-async-v1.10.3-20230507-repack"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/d3d9.dll",
+        "text": "seeded dxvk-macOS x32 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/d3d11.dll",
+        "text": "seeded dxvk-macOS x32 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/dxgi.dll",
+        "text": "seeded dxvk-macOS x32 dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/d3d9.dll",
+        "text": "seeded dxvk-macOS x64 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/d3d11.dll",
+        "text": "seeded dxvk-macOS x64 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/dxgi.dll",
+        "text": "seeded dxvk-macOS x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "seeded dxvk-macOS x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "seeded dxvk-macOS x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "seeded dxvk-macOS x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "seeded dxvk-macOS x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "seeded dxvk-macOS x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "seeded dxvk-macOS x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/current_dxvk-macOS",
+        "text": "dxvk-macOS-async-v1.10.3-20230507-repack"
+      }
+    ]
+  },
+  {
+    "id": "mac-dxvk-install-download-fails",
+    "platform": "mac",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "The dxvk-macOS archive answers 500: showDialog ERROR, then installRemove rejects reading the missing latest_dxvk-macOS.",
+    "wineVersion": {
+      "name": "CrossOver-26",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "type": "crossover"
+    },
+    "fail": "dxvk-macOS",
+    "seed": [
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "mac-dxvk-install-offline",
+    "platform": "mac",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "Offline on macOS with no tools dir: no request, installRemove rejects.",
+    "wineVersion": {
+      "name": "CrossOver-26",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "type": "crossover"
+    },
+    "online": false,
+    "seed": [
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "mac-dxvk-install-from-tools",
+    "platform": "mac",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "Tools dir present, bottle without current_dxvk-macOS: copy, reg add, current_dxvk-macOS written.",
+    "wineVersion": {
+      "name": "CrossOver-26",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "type": "crossover"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk-macOS/latest_dxvk-macOS",
+        "text": "dxvk-macOS-async-v1.10.3-20230507-repack"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/d3d9.dll",
+        "text": "seeded dxvk-macOS x32 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/d3d11.dll",
+        "text": "seeded dxvk-macOS x32 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/dxgi.dll",
+        "text": "seeded dxvk-macOS x32 dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/d3d9.dll",
+        "text": "seeded dxvk-macOS x64 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/d3d11.dll",
+        "text": "seeded dxvk-macOS x64 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/dxgi.dll",
+        "text": "seeded dxvk-macOS x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "mac-dxvk-remove-crossover",
+    "platform": "mac",
+    "tool": "dxvk",
+    "action": "restore",
+    "note": "Toggle remove on the CrossOver bottle (current_dxvk-macOS removed).",
+    "wineVersion": {
+      "name": "CrossOver-26",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "type": "crossover"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk-macOS/latest_dxvk-macOS",
+        "text": "dxvk-macOS-async-v1.10.3-20230507-repack"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/d3d9.dll",
+        "text": "seeded dxvk-macOS x32 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/d3d11.dll",
+        "text": "seeded dxvk-macOS x32 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/dxgi.dll",
+        "text": "seeded dxvk-macOS x32 dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/d3d9.dll",
+        "text": "seeded dxvk-macOS x64 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/d3d11.dll",
+        "text": "seeded dxvk-macOS x64 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/dxgi.dll",
+        "text": "seeded dxvk-macOS x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "seeded dxvk-macOS x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "seeded dxvk-macOS x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "seeded dxvk-macOS x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "seeded dxvk-macOS x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "seeded dxvk-macOS x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "seeded dxvk-macOS x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/current_dxvk-macOS",
+        "text": "dxvk-macOS-async-v1.10.3-20230507-repack"
+      }
+    ]
+  },
+  {
+    "id": "mac-nvapi-noop",
+    "platform": "mac",
+    "tool": "dxvk-nvapi",
+    "action": "backup",
+    "note": "Only DXVK exists on macOS: any other tool returns true without touching the bottle.",
+    "wineVersion": {
+      "name": "CrossOver-26",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "type": "crossover"
+    },
+    "seed": [
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "mac-vkd3d-noop",
+    "platform": "mac",
+    "tool": "vkd3d",
+    "action": "restore",
+    "note": "Only DXVK exists on macOS: vkd3d restore returns true without touching the bottle.",
+    "wineVersion": {
+      "name": "CrossOver-26",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "type": "crossover"
+    },
+    "seed": [
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "seeded dxvk-macOS x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "seeded dxvk-macOS x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "seeded dxvk-macOS x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "seeded dxvk-macOS x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "seeded dxvk-macOS x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "seeded dxvk-macOS x64 dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "mac-dxvk-dxmt-skip",
+    "platform": "mac",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "A wine whose name ends in -DXMT never gets DXVK.",
+    "wineVersion": {
+      "name": "Wine-Staging-macOS-9-DXMT",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "Wine-Staging-macOS"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk-macOS/latest_dxvk-macOS",
+        "text": "dxvk-macOS-async-v1.10.3-20230507-repack"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/d3d9.dll",
+        "text": "seeded dxvk-macOS x32 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/d3d11.dll",
+        "text": "seeded dxvk-macOS x32 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/dxgi.dll",
+        "text": "seeded dxvk-macOS x32 dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/d3d9.dll",
+        "text": "seeded dxvk-macOS x64 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/d3d11.dll",
+        "text": "seeded dxvk-macOS x64 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/dxgi.dll",
+        "text": "seeded dxvk-macOS x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "mac-dxvk-toolkit-skip",
+    "platform": "mac",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "The Game Porting Toolkit wine never gets DXVK.",
+    "wineVersion": {
+      "name": "GPTK",
+      "bin": "<HOME>/gptk/toolkit/bin/wine64",
+      "type": "toolkit"
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/dxvk-macOS/latest_dxvk-macOS",
+        "text": "dxvk-macOS-async-v1.10.3-20230507-repack"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/d3d9.dll",
+        "text": "seeded dxvk-macOS x32 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/d3d11.dll",
+        "text": "seeded dxvk-macOS x32 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/dxgi.dll",
+        "text": "seeded dxvk-macOS x32 dxgi.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/d3d9.dll",
+        "text": "seeded dxvk-macOS x64 d3d9.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/d3d11.dll",
+        "text": "seeded dxvk-macOS x64 d3d11.dll"
+      },
+      {
+        "path": "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/dxgi.dll",
+        "text": "seeded dxvk-macOS x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/.update-timestamp",
+        "text": "1700000000"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "mac-dxvk-source-pinned-install",
+    "platform": "mac",
+    "tool": "dxvk",
+    "action": "backup",
+    "note": "A pinned-engine (Wine Staging) bottle: the pinned source is copied synchronously and current_dxvk-macOS records its version.",
+    "wineVersion": {
+      "name": "Wine-Staging-macOS-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "Wine-Staging-macOS"
+    },
+    "source": {
+      "dir": "<HOME>/pinned",
+      "version": "pinned-1.10.3"
+    },
+    "seed": [
+      {
+        "path": "<HOME>/pinned/x32/d3d9.dll",
+        "text": "pinned dxvk-macOS x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/d3d11.dll",
+        "text": "pinned dxvk-macOS x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/dxgi.dll",
+        "text": "pinned dxvk-macOS x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d9.dll",
+        "text": "pinned dxvk-macOS x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d11.dll",
+        "text": "pinned dxvk-macOS x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/dxgi.dll",
+        "text": "pinned dxvk-macOS x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/system.reg",
+        "text": "WINE REGISTRY Version 2"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "builtin d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "builtin d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "builtin dxgi.dll"
+      }
+    ]
+  },
+  {
+    "id": "mac-dxvk-source-pinned-restore",
+    "platform": "mac",
+    "tool": "dxvk",
+    "action": "restore",
+    "note": "Strict restore on a pinned-engine bottle (engine switch back to CrossOver): reg import, queries, wineboot -u, current_dxvk-macOS removed last.",
+    "wineVersion": {
+      "name": "Wine-Staging-macOS-9",
+      "bin": "<HOME>/wine/bin/wine",
+      "type": "Wine-Staging-macOS"
+    },
+    "source": {
+      "dir": "<HOME>/pinned",
+      "version": "pinned-1.10.3"
+    },
+    "seed": [
+      {
+        "path": "<HOME>/pinned/x32/d3d9.dll",
+        "text": "pinned dxvk-macOS x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/d3d11.dll",
+        "text": "pinned dxvk-macOS x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x32/dxgi.dll",
+        "text": "pinned dxvk-macOS x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d9.dll",
+        "text": "pinned dxvk-macOS x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/d3d11.dll",
+        "text": "pinned dxvk-macOS x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/pinned/x64/dxgi.dll",
+        "text": "pinned dxvk-macOS x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/system.reg",
+        "text": "WINE REGISTRY Version 2"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d9.dll",
+        "text": "seeded dxvk-macOS x32 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/d3d11.dll",
+        "text": "seeded dxvk-macOS x32 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/syswow64/dxgi.dll",
+        "text": "seeded dxvk-macOS x32 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d9.dll",
+        "text": "seeded dxvk-macOS x64 d3d9.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/d3d11.dll",
+        "text": "seeded dxvk-macOS x64 d3d11.dll"
+      },
+      {
+        "path": "<HOME>/prefix/drive_c/windows/system32/dxgi.dll",
+        "text": "seeded dxvk-macOS x64 dxgi.dll"
+      },
+      {
+        "path": "<HOME>/prefix/current_dxvk-macOS",
+        "text": "pinned-1.10.3"
+      }
+    ]
+  }
+]

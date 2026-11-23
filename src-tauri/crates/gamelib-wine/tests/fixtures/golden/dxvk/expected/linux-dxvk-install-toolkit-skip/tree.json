@@ -1,0 +1,146 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk/dxvk-2.9",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk/dxvk-2.9/x32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk/dxvk-2.9/x32/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "55120b4967df096731bf5875f93cdec0d6c5d17e1eff1d3da26a74d08facb6df"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk/dxvk-2.9/x32/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "fb9fa3c63cf1831d6e0431aeed6f858a91babd7864ed0bb5d72e369de1cb290c"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk/dxvk-2.9/x32/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "d8b5ae1ef589f4fdeb6e68fc9d5bbd1235cb77e4492139d8f8d5d90ef1bddde3"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk/dxvk-2.9/x64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk/dxvk-2.9/x64/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "bda01e5b22303c18b592a73cb4128ee8361637b73beaa6bcbb40c24ad49216f6"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk/dxvk-2.9/x64/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "f8e05c664959e909a78ecece4af54a412c23e3a9ec1f97b922f221fa490e2dac"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk/dxvk-2.9/x64/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "5aa146211043e2cdcf61312fecdd15e7beaa11ef10f7dabd43a2b9405c300f90"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk/latest_dxvk",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "685ff8a33ce7ea553fd872fa3ed98cf225000004cf6b134215231d2f4aef7f34"
+  },
+  {
+    "path": "prefix",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/.update-timestamp",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3f3b4313e71a7e1cbfbc359314fc3de34eab90a3d441761cae10fcb2a6aba1ff"
+  },
+  {
+    "path": "prefix/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "db6910f29d44c2b2fad2f07f357aea480550627ad06eaeeccaf6c446eb592592"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "8c86298fee317f30adb8b2e75fa6c1b15fcbb2be902854e84499bfb4f99821c6"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "de35e0deddcbe2dd5a710bd7fce3f1f0aaf72be10f0e57d20d6342327e6e5d17"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "db6910f29d44c2b2fad2f07f357aea480550627ad06eaeeccaf6c446eb592592"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "8c86298fee317f30adb8b2e75fa6c1b15fcbb2be902854e84499bfb4f99821c6"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "de35e0deddcbe2dd5a710bd7fce3f1f0aaf72be10f0e57d20d6342327e6e5d17"
+  }
+]

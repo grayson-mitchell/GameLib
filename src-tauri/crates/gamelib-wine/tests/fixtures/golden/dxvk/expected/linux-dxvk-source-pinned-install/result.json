@@ -1,0 +1,21 @@
+{
+  "op": "installRemove",
+  "platform": "linux",
+  "tool": "dxvk",
+  "action": "backup",
+  "source": {
+    "dir": "<HOME>/pinned",
+    "version": "pinned-1.10.3"
+  },
+  "outcome": {
+    "returned": true
+  },
+  "downloads": [],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "installing dxvk on... <HOME>/prefix"
+    }
+  ]
+}

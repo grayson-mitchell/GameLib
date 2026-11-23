@@ -1,0 +1,110 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "0de8e61a2c94ec895efb767413a7cc8ff4a0e6b8aae970b2af052049a5fe3c1e"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "ace7c6e4330d823cab6b798eb98d5a233219ca04988cfded251e757e9c2c3251"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "51e4f732ffbd869d094d8d97356a0731f59bedb59473f6069fc2fb95e744d07d"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "295f78d6b4b58c51171415444bf83a333d3c853ce0db553000fc2ed59e474287"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "7e2f8fffdf7a708cf2fd773f2ceee42a1932452f63815f24f55605e97f449bb0"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "2e6a91664460b7d68327d89962c1ff895b0491fcda235dacb4cbad709cd0e016"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/latest_dxvk-macOS",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "47f1e1725a4efc76ce7e7a9f8de81fe2effe714800fcb79542263f44995dcf37"
+  },
+  {
+    "path": "prefix",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/.update-timestamp",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3f3b4313e71a7e1cbfbc359314fc3de34eab90a3d441761cae10fcb2a6aba1ff"
+  },
+  {
+    "path": "prefix/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64",
+    "kind": "dir",
+    "mode": "0755"
+  }
+]

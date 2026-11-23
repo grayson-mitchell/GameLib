@@ -1,0 +1,143 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-nvapi",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-nvapi/dxvk-nvapi-v0.9.1",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-nvapi/dxvk-nvapi-v0.9.1/x32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-nvapi/dxvk-nvapi-v0.9.1/x32/nvapi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "df7b81f7744b2390ec75b4b4ada6d551347d745e577043cbff1d98341b9e692f"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-nvapi/dxvk-nvapi-v0.9.1/x64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-nvapi/dxvk-nvapi-v0.9.1/x64/nvapi64.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "312998c5ee303e2cbb38eca04acdf0cbb9cab33d6d238bdde381a08a781aa091"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-nvapi/latest_dxvk-nvapi",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "ef0c5b2eba272f413180d6c6dea7acc5dedb0cccfd3eb30913350ad8d107c2f2"
+  },
+  {
+    "path": "nvidia-libs",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "nvidia-libs/nvidia",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "nvidia-libs/nvidia/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "nvidia-libs/nvidia/wine/_nvngx.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "619d615577a2a99945852acb7181af18b1d5d9a8cc8af0bb40bd0716f204c58a"
+  },
+  {
+    "path": "nvidia-libs/nvidia/wine/nvngx.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "50e3cce2053d9233208308b7a02916fcd1ddf9590927bf13ee0e66428a306e11"
+  },
+  {
+    "path": "prefix",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/.update-timestamp",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3f3b4313e71a7e1cbfbc359314fc3de34eab90a3d441761cae10fcb2a6aba1ff"
+  },
+  {
+    "path": "prefix/current_dxvk-nvapi",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "ef0c5b2eba272f413180d6c6dea7acc5dedb0cccfd3eb30913350ad8d107c2f2"
+  },
+  {
+    "path": "prefix/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/_nvngx.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "619d615577a2a99945852acb7181af18b1d5d9a8cc8af0bb40bd0716f204c58a"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/nvapi64.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "312998c5ee303e2cbb38eca04acdf0cbb9cab33d6d238bdde381a08a781aa091"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/nvngx.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "50e3cce2053d9233208308b7a02916fcd1ddf9590927bf13ee0e66428a306e11"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64/nvapi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "df7b81f7744b2390ec75b4b4ada6d551347d745e577043cbff1d98341b9e692f"
+  }
+]

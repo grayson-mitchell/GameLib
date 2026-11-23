@@ -1,0 +1,82 @@
+[
+  {
+    "program": "<HOME>/public/bin/x64/linux/vulkan-helper",
+    "argv": [
+      "physical-versions"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "[{\"name\":\"Oracle GPU\",\"major\":1,\"minor\":3,\"patch\":250}]",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<HOME>/public/bin/x64/linux/vulkan-helper",
+    "argv": [
+      "instance-version"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "[1,3,280]",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "tar",
+    "argv": [
+      "-xf",
+      "<TOOLS>/vkd3d/vkd3d-proton-3.0.tar.gz",
+      "-C",
+      "<TOOLS>/vkd3d/vkd3d-proton-3.0",
+      "--strip-components=1"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "tar",
+    "argv": [
+      "-xf",
+      "<TOOLS>/dxvk-nvapi/dxvk-nvapi-v0.9.1.tar.gz",
+      "-C",
+      "<TOOLS>/dxvk-nvapi/dxvk-nvapi-v0.9.1",
+      "--strip-components=0"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

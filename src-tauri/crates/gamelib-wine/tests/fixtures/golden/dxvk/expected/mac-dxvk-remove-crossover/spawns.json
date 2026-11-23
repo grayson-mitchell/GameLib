@@ -1,0 +1,62 @@
+[
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "delete",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "d3d11",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "CrossOver-26"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "delete",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "d3d9",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "CrossOver-26"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "delete",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "dxgi",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "CrossOver-26"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "wineboot",
+      "-u"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "CrossOver-26"
+  }
+]

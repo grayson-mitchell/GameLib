@@ -1,0 +1,56 @@
+[
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "d3d11",
+      "/d",
+      "native,builtin",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "CrossOver-26"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "d3d9",
+      "/d",
+      "native,builtin",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "CrossOver-26"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "dxgi",
+      "/d",
+      "native,builtin",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "CrossOver-26"
+  }
+]

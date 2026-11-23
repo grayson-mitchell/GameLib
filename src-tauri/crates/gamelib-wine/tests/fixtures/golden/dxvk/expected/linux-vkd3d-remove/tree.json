@@ -1,0 +1,98 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/vkd3d",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/vkd3d/latest_vkd3d",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "c53b88e5558cc48283f61cc2a8e08a64f0ad95dd1bb0ca1be849913b82a8e3e5"
+  },
+  {
+    "path": ".config/GameLib/tools/vkd3d/vkd3d-proton-3.0",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/vkd3d/vkd3d-proton-3.0/x64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/vkd3d/vkd3d-proton-3.0/x64/d3d12.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "67b28111b00987c76c023c68d689604afebb0dfa0eacb5abcd70fbcd8483fb70"
+  },
+  {
+    "path": ".config/GameLib/tools/vkd3d/vkd3d-proton-3.0/x64/d3d12core.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "a80ef95c267d91887cc21ea5bbf34eb002db73b69b8b76afaf9665c71cb0ffad"
+  },
+  {
+    "path": ".config/GameLib/tools/vkd3d/vkd3d-proton-3.0/x86",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/vkd3d/vkd3d-proton-3.0/x86/d3d12.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e5007c623df4c5da6c704035140ef1c8b1086ce6b0d35d1958afb169bcf2671e"
+  },
+  {
+    "path": ".config/GameLib/tools/vkd3d/vkd3d-proton-3.0/x86/d3d12core.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "f6df61ee8d18b9038bfe25e8c30271ada135e3fcd55dc56ed2b0d1e7980832e5"
+  },
+  {
+    "path": "prefix",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/.update-timestamp",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3f3b4313e71a7e1cbfbc359314fc3de34eab90a3d441761cae10fcb2a6aba1ff"
+  },
+  {
+    "path": "prefix/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64",
+    "kind": "dir",
+    "mode": "0755"
+  }
+]

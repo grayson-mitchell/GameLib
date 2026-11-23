@@ -1,0 +1,12 @@
+[
+  {
+    "channel": "showDialog",
+    "args": [
+      "box.error.dxvk.title",
+      "box.error.dxvk.message",
+      "ERROR",
+      null,
+      null
+    ]
+  }
+]

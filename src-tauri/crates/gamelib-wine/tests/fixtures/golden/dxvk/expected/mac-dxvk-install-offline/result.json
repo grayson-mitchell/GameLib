@@ -1,0 +1,23 @@
+{
+  "op": "installRemove",
+  "platform": "mac",
+  "tool": "dxvk",
+  "action": "backup",
+  "source": null,
+  "outcome": {
+    "thrown": "Error: ENOENT: no such file or directory, open '<TOOLS>/dxvk-macOS/latest_dxvk-macOS'"
+  },
+  "downloads": [],
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "ToolInstaller",
+      "message": "dxvk not found!"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "ToolInstaller",
+      "message": "App offline, skipping possible DXVK update."
+    }
+  ]
+}

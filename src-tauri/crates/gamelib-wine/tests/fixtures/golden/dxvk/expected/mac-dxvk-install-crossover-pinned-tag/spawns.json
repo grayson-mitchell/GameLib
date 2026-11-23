@@ -1,0 +1,78 @@
+[
+  {
+    "program": "tar",
+    "argv": [
+      "-xf",
+      "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz",
+      "-C",
+      "<TOOLS>/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack",
+      "--strip-components=1"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "d3d11",
+      "/d",
+      "native,builtin",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "CrossOver-26"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "d3d9",
+      "/d",
+      "native,builtin",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "CrossOver-26"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "dxgi",
+      "/d",
+      "native,builtin",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "CrossOver-26"
+  }
+]

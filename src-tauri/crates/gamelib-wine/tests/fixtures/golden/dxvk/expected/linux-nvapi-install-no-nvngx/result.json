@@ -1,0 +1,23 @@
+{
+  "op": "installRemove",
+  "platform": "linux",
+  "tool": "dxvk-nvapi",
+  "action": "backup",
+  "source": null,
+  "outcome": {
+    "returned": true
+  },
+  "downloads": [],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "installing dxvk-nvapi on... <HOME>/prefix"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "ToolInstaller",
+      "message": "Could not find nvngx.dll for DLSS!"
+    }
+  ]
+}

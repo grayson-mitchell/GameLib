@@ -1,0 +1,40 @@
+{
+  "op": "installRemove",
+  "platform": "mac",
+  "tool": "dxvk",
+  "action": "backup",
+  "source": null,
+  "outcome": {
+    "returned": true
+  },
+  "downloads": [
+    "https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
+  ],
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "ToolInstaller",
+      "message": "dxvk not found!"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Updating dxvk-macOS to: dxvk-macOS-async-v1.10.3-20230507-repack"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Downloaded dxvk-macOS, extracting..."
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "dxvk-macOS updated!"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "installing dxvk-macOS on... <HOME>/prefix"
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+[
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "import",
+      "C:\\gamelib-dxvk-restore.reg"
+    ],
+    "wait": false,
+    "resolveOnExit": true,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "Wine-Oracle-9",
+    "importedFile": "Windows Registry Editor Version 5.00\r\n\r\n[HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides]\r\n\"d3d11\"=-\r\n\"d3d9\"=-\r\n\"dxgi\"=-\r\n"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "query",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "d3d11"
+    ],
+    "wait": false,
+    "resolveOnExit": true,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "Wine-Oracle-9"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "query",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "d3d9"
+    ],
+    "wait": false,
+    "resolveOnExit": true,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "Wine-Oracle-9"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "query",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "dxgi"
+    ],
+    "wait": false,
+    "resolveOnExit": true,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "Wine-Oracle-9"
+  }
+]

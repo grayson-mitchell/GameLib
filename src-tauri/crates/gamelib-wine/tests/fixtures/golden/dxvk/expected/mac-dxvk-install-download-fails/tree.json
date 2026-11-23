@@ -1,0 +1,89 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/.update-timestamp",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3f3b4313e71a7e1cbfbc359314fc3de34eab90a3d441761cae10fcb2a6aba1ff"
+  },
+  {
+    "path": "prefix/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "db6910f29d44c2b2fad2f07f357aea480550627ad06eaeeccaf6c446eb592592"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "8c86298fee317f30adb8b2e75fa6c1b15fcbb2be902854e84499bfb4f99821c6"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "de35e0deddcbe2dd5a710bd7fce3f1f0aaf72be10f0e57d20d6342327e6e5d17"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "db6910f29d44c2b2fad2f07f357aea480550627ad06eaeeccaf6c446eb592592"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "8c86298fee317f30adb8b2e75fa6c1b15fcbb2be902854e84499bfb4f99821c6"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "de35e0deddcbe2dd5a710bd7fce3f1f0aaf72be10f0e57d20d6342327e6e5d17"
+  }
+]

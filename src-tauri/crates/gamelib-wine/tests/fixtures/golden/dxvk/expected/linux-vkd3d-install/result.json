@@ -1,0 +1,18 @@
+{
+  "op": "installRemove",
+  "platform": "linux",
+  "tool": "vkd3d",
+  "action": "backup",
+  "source": null,
+  "outcome": {
+    "returned": true
+  },
+  "downloads": [],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "installing vkd3d on... <HOME>/prefix"
+    }
+  ]
+}

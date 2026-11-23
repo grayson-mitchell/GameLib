@@ -1,0 +1,11 @@
+[
+  "GET https://api.github.com/repos/Heroic-Games-Launcher/vkd3d-proton/releases/tags/v2.6",
+  "GET https://api.github.com/repos/doitsujin/dxvk/releases/tags/v1.10.3",
+  "GET https://api.github.com/repos/jp7677/dxvk-nvapi/releases/latest",
+  "HEAD https://github.com/Heroic-Games-Launcher/vkd3d-proton/releases/download/v2.6/vkd3d-proton-2.6.tar.gz",
+  "HEAD https://github.com/doitsujin/dxvk/releases/download/v1.10.3/dxvk-1.10.3.tar.gz",
+  "HEAD https://github.com/jp7677/dxvk-nvapi/releases/download/v0.9.1/dxvk-nvapi-v0.9.1.tar.gz",
+  "GET https://github.com/Heroic-Games-Launcher/vkd3d-proton/releases/download/v2.6/vkd3d-proton-2.6.tar.gz",
+  "GET https://github.com/doitsujin/dxvk/releases/download/v1.10.3/dxvk-1.10.3.tar.gz",
+  "GET https://github.com/jp7677/dxvk-nvapi/releases/download/v0.9.1/dxvk-nvapi-v0.9.1.tar.gz"
+]

@@ -1,0 +1,18 @@
+{
+  "op": "installRemove",
+  "platform": "mac",
+  "tool": "dxvk",
+  "action": "backup",
+  "source": null,
+  "outcome": {
+    "returned": true
+  },
+  "downloads": [],
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "ToolInstaller",
+      "message": "Skipping DXVK install on Wine Staging with DXMT!"
+    }
+  ]
+}

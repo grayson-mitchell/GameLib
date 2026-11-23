@@ -1,0 +1,126 @@
+[
+  {
+    "path": "pinned",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "pinned/x32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "pinned/x32/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "15c2e4994b520cef61964eb3be8099cf1758630a63a70f6c9b6939b7dc735579"
+  },
+  {
+    "path": "pinned/x32/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "920700c5afbe716a5d933f75a3e35a182dcea6e7e619652086959556ae293d67"
+  },
+  {
+    "path": "pinned/x32/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "99564231e0938ed189aff119cf79530b2f63d368af9dab357355b98ba30fee78"
+  },
+  {
+    "path": "pinned/x64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "pinned/x64/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "c83a6f7247a804e7c771401ac2e30dacc9a99083f759f2062779a1188406c5d0"
+  },
+  {
+    "path": "pinned/x64/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3e4db5efb196bf7fdd221b050f0ceda17e2ef46389f37ec6a9e98c5c0f2fe1f5"
+  },
+  {
+    "path": "pinned/x64/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "49e3686658c02a70fcc7eb61353547ec7f90b7e7c7756058fd5322c3c1a5dc49"
+  },
+  {
+    "path": "prefix",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/current_dxvk-macOS",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "696480852232ad0ba9699f0c132088d48e13136be6da6fb958700f5b1d42c07f"
+  },
+  {
+    "path": "prefix/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "c83a6f7247a804e7c771401ac2e30dacc9a99083f759f2062779a1188406c5d0"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3e4db5efb196bf7fdd221b050f0ceda17e2ef46389f37ec6a9e98c5c0f2fe1f5"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "49e3686658c02a70fcc7eb61353547ec7f90b7e7c7756058fd5322c3c1a5dc49"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "15c2e4994b520cef61964eb3be8099cf1758630a63a70f6c9b6939b7dc735579"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "920700c5afbe716a5d933f75a3e35a182dcea6e7e619652086959556ae293d67"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "99564231e0938ed189aff119cf79530b2f63d368af9dab357355b98ba30fee78"
+  },
+  {
+    "path": "prefix/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "04154df6974c9cb1398c0d8ac9c0b4b961c354083d6441910883f66a5a95739d"
+  }
+]

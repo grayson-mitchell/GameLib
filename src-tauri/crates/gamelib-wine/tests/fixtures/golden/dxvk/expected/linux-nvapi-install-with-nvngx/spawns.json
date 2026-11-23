@@ -1,0 +1,74 @@
+[
+  {
+    "program": "<HOME>/public/bin/x64/linux/vulkan-helper",
+    "argv": [
+      "nvapi-path"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "<HOME>/nvidia-libs\n",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "nvapi64",
+      "/d",
+      "native,builtin",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "Wine-Oracle-9"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "nvapi",
+      "/d",
+      "native,builtin",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "Wine-Oracle-9"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKEY_LOCAL_MACHINE\\SOFTWARE\\NVIDIA Corporation\\Global\\NGXCore",
+      "/v",
+      "FullPath",
+      "/d",
+      "C:\\windows\\system32",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "Wine-Oracle-9"
+  }
+]

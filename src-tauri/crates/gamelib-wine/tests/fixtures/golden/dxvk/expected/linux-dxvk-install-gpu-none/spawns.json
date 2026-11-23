@@ -1,0 +1,140 @@
+[
+  {
+    "program": "<HOME>/public/bin/x64/linux/vulkan-helper",
+    "argv": [
+      "physical-versions"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "[]",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "tar",
+    "argv": [
+      "-xf",
+      "<TOOLS>/vkd3d/vkd3d-proton-3.0.tar.gz",
+      "-C",
+      "<TOOLS>/vkd3d/vkd3d-proton-3.0",
+      "--strip-components=1"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "tar",
+    "argv": [
+      "-xf",
+      "<TOOLS>/dxvk/dxvk-2.9.tar.gz",
+      "-C",
+      "<TOOLS>/dxvk/dxvk-2.9",
+      "--strip-components=1"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "tar",
+    "argv": [
+      "-xf",
+      "<TOOLS>/dxvk-nvapi/dxvk-nvapi-v0.9.1.tar.gz",
+      "-C",
+      "<TOOLS>/dxvk-nvapi/dxvk-nvapi-v0.9.1",
+      "--strip-components=0"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "d3d11",
+      "/d",
+      "native,builtin",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "Wine-Oracle-9"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "d3d9",
+      "/d",
+      "native,builtin",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "Wine-Oracle-9"
+  },
+  {
+    "program": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides",
+      "/v",
+      "dxgi",
+      "/d",
+      "native,builtin",
+      "/f"
+    ],
+    "wait": true,
+    "resolveOnExit": null,
+    "protonVerb": "run",
+    "winePrefix": "<HOME>/prefix",
+    "wineVersion": "Wine-Oracle-9"
+  }
+]

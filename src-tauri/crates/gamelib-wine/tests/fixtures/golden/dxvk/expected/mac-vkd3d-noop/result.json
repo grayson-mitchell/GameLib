@@ -1,0 +1,12 @@
+{
+  "op": "installRemove",
+  "platform": "mac",
+  "tool": "vkd3d",
+  "action": "restore",
+  "source": null,
+  "outcome": {
+    "returned": true
+  },
+  "downloads": [],
+  "logs": []
+}

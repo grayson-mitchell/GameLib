@@ -1,0 +1,36 @@
+{
+  "op": "installRemove",
+  "platform": "linux",
+  "tool": "dxvk",
+  "action": "restore",
+  "source": {
+    "dir": "<HOME>/pinned",
+    "version": "pinned-1.10.3"
+  },
+  "outcome": {
+    "returned": true
+  },
+  "downloads": [],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Removing DXVK DLLs"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Removing DLL overrides"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Restoring Wine stock DLLs"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Removing dxvk version information"
+    }
+  ]
+}

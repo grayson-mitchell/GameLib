@@ -1,0 +1,33 @@
+{
+  "op": "installRemove",
+  "platform": "mac",
+  "tool": "dxvk",
+  "action": "restore",
+  "source": null,
+  "outcome": {
+    "returned": true
+  },
+  "downloads": [],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Removing dxvk-macOS version information"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Removing DLL overrides"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Removing DXVK DLLs"
+    },
+    {
+      "level": "INFO",
+      "prefix": "ToolInstaller",
+      "message": "Restoring Wine stock DLLs"
+    }
+  ]
+}

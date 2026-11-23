@@ -1,0 +1,152 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6c52be4276b932dcb64cac004173b595cff6a34a3881257ecd16b5e193566aa0"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "db791d3d7ea452fdf9240fce52316959f179e9c9c51434df0381a73f2635f053"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x32/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "0bee1a87a34964096991affcb8a662359fa57de9c4596834587fcc33e586b2c0"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "5b67982f1b3002bb9c5182d96fc15c1de49777c7d5fb1906251aa2116ea34136"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e747471cd878468a8370280ca2d1fd77f71dbd298d785d70adb7752ab6f67036"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/dxvk-macOS-async-v1.10.3-20230507-repack/x64/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3a10b556812b150db463fa8fe520711ebc2e8f9b601b5e4c8c527fa480e90d5d"
+  },
+  {
+    "path": ".config/GameLib/tools/dxvk-macOS/latest_dxvk-macOS",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "47f1e1725a4efc76ce7e7a9f8de81fe2effe714800fcb79542263f44995dcf37"
+  },
+  {
+    "path": "prefix",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/.update-timestamp",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3f3b4313e71a7e1cbfbc359314fc3de34eab90a3d441761cae10fcb2a6aba1ff"
+  },
+  {
+    "path": "prefix/current_dxvk-macOS",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "47f1e1725a4efc76ce7e7a9f8de81fe2effe714800fcb79542263f44995dcf37"
+  },
+  {
+    "path": "prefix/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "5b67982f1b3002bb9c5182d96fc15c1de49777c7d5fb1906251aa2116ea34136"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e747471cd878468a8370280ca2d1fd77f71dbd298d785d70adb7752ab6f67036"
+  },
+  {
+    "path": "prefix/drive_c/windows/system32/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3a10b556812b150db463fa8fe520711ebc2e8f9b601b5e4c8c527fa480e90d5d"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64/d3d11.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "6c52be4276b932dcb64cac004173b595cff6a34a3881257ecd16b5e193566aa0"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64/d3d9.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "db791d3d7ea452fdf9240fce52316959f179e9c9c51434df0381a73f2635f053"
+  },
+  {
+    "path": "prefix/drive_c/windows/syswow64/dxgi.dll",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "0bee1a87a34964096991affcb8a662359fa57de9c4596834587fcc33e586b2c0"
+  }
+]
