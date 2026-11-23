@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-26-PLAN.md
-last_updated: "2026-11-23T07:08:31.929Z"
+stopped_at: Completed 87-27-PLAN.md
+last_updated: "2026-11-23T07:29:58.305Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: a98b3cbf4d505884fdf2f8d75583d9fe644c21cb
+state_head: 8b8e8356cf595a34ed3fb8ad053a593cdc3cc524
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 27 of 59
+Plan: 28 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -436,6 +436,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P24 | 30min | 2 tasks | 21 files |
 | Phase 87 P25 | 17 min | 2 tasks | 13 files |
 | Phase 87 P26 | 35 min | 2 tasks | 25 files |
+| Phase 87 P27 | 20 min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -898,6 +899,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-25: EngineCtx.default_wine and EngineCtx.crossover_bin_dir hooks keep gamelib-engine independent of gamelib-wine; tool settings are generic over a ToolSettingsDeps seam whose live registry and bottle flight arrive with 87-38/87-39
 - [Phase 87]: 87-26: the discovery host's settings (customWinePaths, showValveProton, defaultSteamPath) come from the shell's own read of config.json, never from the sidecar; the rustInvoke arm for wine_discover_alternatives takes one boolean (scanCustom) and is unbounded in the sidecar because an empty release list is refreshed first (T-87-71).
 - [Phase 87]: 87-26: createCrossoverLocator holds the boot's rustInvoke transport (discoverCrossover, an intra-phase shim deletedBy 87, removed with the engine TS in 87-56) so resolveCrossoverBinDirAsync keeps its signature; getDefaultWineBinary stays a twin pinned to default_wine.json (deletedBy 98).
+- [Phase 87]: 87-27: DXVK tools ask the wine core through a WineRunner seam (HostWineRunner over run_wine_command in production), because the 87-09 goldens record runWineCommand calls, not wine spawns
+- [Phase 87]: 87-27: install_remove returns Result<bool, DxvkError>; a missing latest_<tool> after getLatest is Err(MissingLatest) (the TS rejection); 87-29's DxvkInstaller impl maps Err to false
+- [Phase 87]: 87-27: get_latest runs the tools one after another in TS list order; the replay groups the concurrent log block by tool and compares requests as a set (deltas.json concurrent-tools)
+- [Phase 87]: 87-27: install_or_update_tool removes the replaced version and archive through gamelib-safety (trust root <tools>/<tool>), refuses non-plain asset or version names and non-https URLs, and cleans a failed extraction
 
 ### Pending Todos
 
@@ -1177,8 +1182,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T07:08:29.978Z
-Stopped at: Completed 87-26-PLAN.md
+Last session: 2026-11-23T07:29:56.454Z
+Stopped at: Completed 87-27-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
