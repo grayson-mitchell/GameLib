@@ -128,6 +128,7 @@ import {
   RUST_ENGINE_LAUNCH_ARM_DEADLINE,
   RUST_ENGINE_LAUNCH_END,
   RUST_ENGINE_LAUNCH_SETTINGS_GET,
+  RUST_ENGINE_STATE_GET,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -946,7 +947,10 @@ export const rustInvokeArgs = {
   [RUST_ENGINE_LAUNCH_SELECT]: engineOpRequest,
   [RUST_ENGINE_LAUNCH_ARM_DEADLINE]: engineOpRequest,
   [RUST_ENGINE_LAUNCH_END]: engineOpRequest,
-  [RUST_ENGINE_LAUNCH_SETTINGS_GET]: engineOpRequest
+  [RUST_ENGINE_LAUNCH_SETTINGS_GET]: engineOpRequest,
+  // Phase 87 (87-52, D-23): `getEngineState`. `{identity, facts?}`, decoded strictly by the crate; the identity is
+  // validated there (an unknown runner or a path-shaped app name answers null) and the facts are values only.
+  [RUST_ENGINE_STATE_GET]: engineOpRequest
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

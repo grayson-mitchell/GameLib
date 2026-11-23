@@ -1323,6 +1323,16 @@ export const RUST_ENGINE_LAUNCH_END = 'engine_launch_end' as const
  */
 export const RUST_ENGINE_LAUNCH_SETTINGS_GET =
   'engine_launch_settings_get' as const
+/**
+ * Phase 87 (87-52, D-23): the renderer's `getEngineState`, one typed call from the resolver in
+ * `sidecar/engineWineResolvers.ts`. The argument is `{identity, facts?}`: `identity` is the game (`{runner, appName}`)
+ * or `null` when TypeScript found the game ineligible (a native game, a Browser install, an unknown runner, a failing
+ * library lookup), which answers `null`; `facts` is present only for a bottle-runtime (Steam) title, whose bridge
+ * bottle, eligibility and bottle name TypeScript holds, and absent for every other game, whose facts Rust derives from
+ * the stored settings. Resolves the engine state the game page and the badge read, or `null`. Bounded: the CrossOver
+ * pre-flight it may run carries its own probe timeouts, well under the sidecar's 60 s.
+ */
+export const RUST_ENGINE_STATE_GET = 'engine_state_get' as const
 
 /**
  * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
@@ -1692,7 +1702,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_LAUNCH_SELECT,
   RUST_ENGINE_LAUNCH_ARM_DEADLINE,
   RUST_ENGINE_LAUNCH_END,
-  RUST_ENGINE_LAUNCH_SETTINGS_GET
+  RUST_ENGINE_LAUNCH_SETTINGS_GET,
+  RUST_ENGINE_STATE_GET
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

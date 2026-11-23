@@ -6,6 +6,7 @@
  * which arguments, what the renderer gets back, and that a Rust refusal reaches the renderer.
  */
 import {
+  RUST_ENGINE_STATE_GET,
   RUST_WINE_DXVK_INSTALL_REMOVE,
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_RUN_COMMAND,
@@ -21,6 +22,7 @@ import { EventEmitter } from 'events'
 import { createIpcRegistry, type IpcRegistry } from '../ipcRegistry'
 import {
   callTool,
+  getEngineState,
   registerEngineWineResolvers,
   runWineCommand,
   runWineCommandForGame,
@@ -35,6 +37,14 @@ import {
 
 const GLOBAL_SETTINGS = { winePrefix: '/global/prefix', enableEsync: false }
 const SETTINGS = { winePrefix: '/prefix', marker: 'merged-game-settings' }
+const STEAM_FACTS = {
+  bottle: 'steam-220',
+  overrideEligible: true,
+  overlayEligible: true,
+  wineToolsEligible: true,
+  prefixKind: 'bottle' as const,
+  perGameBottleName: 'steam-220'
+}
 const TOOL_SETTINGS = {
   winePrefix: '/bottle',
   marker: 'resolved-tool-settings'
@@ -51,6 +61,10 @@ function makeDeps(answer: unknown = true): EngineWineResolverDeps & {
   sent: Array<[string, unknown]>
   events: EventEmitter
   gog: { gameInfo: unknown }
+  /** The game a library lookup answers, or the error it throws; every lookup is logged in `lookups`. */
+  library: { game: unknown; error?: Error }
+  lookups: Array<[string, string]>
+  steamFactsFor: string[]
 } {
   const calls: Array<[string, unknown[]]> = []
   const settingsFor: string[] = []
@@ -62,6 +76,16 @@ function makeDeps(answer: unknown = true): EngineWineResolverDeps & {
   const sent: Array<[string, unknown]> = []
   const events = new EventEmitter()
   const gog = { gameInfo: undefined as unknown }
+  const library: { game: unknown; error?: Error } = {
+    game: { isNative: () => false, getGameInfo: () => ({ install: {} }) }
+  }
+  const lookups: Array<[string, string]> = []
+  const steamFactsFor: string[] = []
+  const lookupFor = (runner: string) => (appName: string) => {
+    lookups.push([runner, appName])
+    if (library.error) throw library.error
+    return library.game
+  }
   const requestRustInvoke = ((channel: string, args: unknown[]) => {
     calls.push([channel, args])
     log.push(`rust:${channel}`)
@@ -86,9 +110,15 @@ function makeDeps(answer: unknown = true): EngineWineResolverDeps & {
       log.push(`push:${channel}`)
     }) as EngineWineResolverDeps['sendFrontendMessage'],
     appRuntime: { events } as unknown as EngineWineResolverDeps['appRuntime'],
+    steamEngineFacts: (appId: string) => {
+      steamFactsFor.push(appId)
+      return Promise.resolve(STEAM_FACTS)
+    },
     managers: {
       library: {
+        legendary: { getGame: lookupFor('legendary') },
         gog: {
+          getGame: lookupFor('gog'),
           checkForOfflineInstallerChanges: (appName: string) => {
             log.push(`gog:check:${appName}`)
             return Promise.resolve()
@@ -127,7 +157,10 @@ function makeDeps(answer: unknown = true): EngineWineResolverDeps & {
     log,
     sent,
     events,
-    gog
+    gog,
+    library,
+    lookups,
+    steamFactsFor
   }
 }
 
@@ -237,7 +270,8 @@ describe('registerEngineWineResolvers', () => {
         'winetricksInstalled',
         'runWineCommandForGame',
         'runWineCommand',
-        'callTool'
+        'callTool',
+        'getEngineState'
       ].sort()
     )
   })
@@ -686,6 +720,119 @@ describe('callTool', () => {
 })
 
 // The wine releases check used to live beside the wine tools handles; its listener is registered once, here.
+describe('getEngineState', () => {
+  const ask = (deps: ReturnType<typeof makeDeps>, arg: unknown) =>
+    getEngineState(deps, arg)
+
+  it('sends a non-Steam Windows game as its identity alone, so Rust derives the facts from the stored settings', async () => {
+    const answer = { kind: 'state' }
+    const deps = makeDeps(answer)
+    expect(await ask(deps, { runner: 'legendary', appName: 'abc' })).toBe(
+      answer
+    )
+    expect(deps.calls).toEqual([
+      [
+        RUST_ENGINE_STATE_GET,
+        [{ identity: { runner: 'legendary', appName: 'abc' } }]
+      ]
+    ])
+    expect(deps.lookups).toEqual([['legendary', 'abc']])
+    expect(deps.steamFactsFor).toEqual([])
+  })
+
+  it('sends a bottle-runtime title with the facts the Steam adapter gathered, and never looks the game up', async () => {
+    const deps = makeDeps(null)
+    expect(await ask(deps, { runner: 'steam', appName: '220' })).toBeNull()
+    expect(deps.calls).toEqual([
+      [
+        RUST_ENGINE_STATE_GET,
+        [
+          {
+            identity: { runner: 'steam', appName: '220' },
+            facts: STEAM_FACTS
+          }
+        ]
+      ]
+    ])
+    expect(deps.steamFactsFor).toEqual(['220'])
+    expect(deps.lookups).toEqual([])
+  })
+
+  it.each([
+    ['null', null],
+    ['a string', 'x'],
+    ['an empty object', {}],
+    ['a numeric runner', { runner: 5, appName: 'a' }],
+    ['a numeric app name', { runner: 'legendary', appName: 5 }],
+    ['an unknown runner', { runner: 'nope', appName: 'a' }],
+    ['a path-shaped app name', { runner: 'legendary', appName: '../x' }],
+    [
+      'a Steam id that is not digits',
+      { runner: 'steam', appName: 'notanumber' }
+    ]
+  ])(
+    'sends a null identity for %s, with no game lookup and no Steam facts',
+    async (_name, bad) => {
+      const deps = makeDeps(null)
+      expect(await ask(deps, bad)).toBeNull()
+      expect(deps.calls).toEqual([
+        [RUST_ENGINE_STATE_GET, [{ identity: null }]]
+      ])
+      expect(deps.lookups).toEqual([])
+      expect(deps.steamFactsFor).toEqual([])
+    }
+  )
+
+  it.each([
+    ['a native game', { isNative: () => true, getGameInfo: () => ({}) }],
+    [
+      'a Browser install',
+      {
+        isNative: () => false,
+        getGameInfo: () => ({ install: { platform: 'Browser' } })
+      }
+    ]
+  ])('sends a null identity for %s', async (_name, game) => {
+    const deps = makeDeps(null)
+    deps.library.game = game
+    await ask(deps, { runner: 'gog', appName: 'abc' })
+    expect(deps.calls).toEqual([[RUST_ENGINE_STATE_GET, [{ identity: null }]]])
+    expect(deps.lookups).toEqual([['gog', 'abc']])
+  })
+
+  it('sends a null identity when the library lookup throws', async () => {
+    const deps = makeDeps(null)
+    deps.library.error = new Error('boom')
+    await ask(deps, { runner: 'gog', appName: 'abc' })
+    expect(deps.calls).toEqual([[RUST_ENGINE_STATE_GET, [{ identity: null }]]])
+  })
+
+  it('lets a Rust refusal reach the renderer', async () => {
+    const deps = makeDeps(new Error('engine_state_get:failed'))
+    await expect(
+      ask(deps, { runner: 'legendary', appName: 'abc' })
+    ).rejects.toThrow('engine_state_get:failed')
+  })
+
+  it('is registered once as the getEngineState handle, carrying the renderer argument uncast', async () => {
+    const deps = makeDeps({ kind: 'state' })
+    registerEngineWineResolvers(deps)
+    const handler = defined(
+      deps.registry.handlerMap().get('getEngineState'),
+      'getEngineState handle'
+    )
+    expect(
+      await handler(undefined, { runner: 'legendary', appName: 'abc' })
+    ).toEqual({ kind: 'state' })
+    expect(deps.calls).toEqual([
+      [
+        RUST_ENGINE_STATE_GET,
+        [{ identity: { runner: 'legendary', appName: 'abc' } }]
+      ]
+    ])
+  })
+})
+
 describe('the releasesInfoReady listener', () => {
   it('sends the releases to the Rust check once per event', () => {
     const deps = makeDeps(null)

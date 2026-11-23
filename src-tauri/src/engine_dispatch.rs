@@ -726,6 +726,7 @@ engine_op_arms! {
     rpc_launch_arm_deadline => "engine_launch_arm_deadline",
     rpc_launch_end => "engine_launch_end",
     rpc_launch_settings_get => "engine_launch_settings_get",
+    rpc_state_get => "engine_state_get",
 }
 
 #[cfg(test)]
@@ -1202,6 +1203,7 @@ mod tests {
             (rpc_launch_arm_deadline, "engine_launch_arm_deadline"),
             (rpc_launch_end, "engine_launch_end"),
             (rpc_launch_settings_get, "engine_launch_settings_get"),
+            (rpc_state_get, "engine_state_get"),
         ] {
             for bad in [
                 vec![],
