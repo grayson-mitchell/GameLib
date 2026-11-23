@@ -4,7 +4,10 @@
 //!
 //! - [`mac`]: CrossOver (by `mdfind`), wine on the Mac, Wineskin, the Game Porting Toolkit, the system
 //!   GPTK and Whisky;
+//! - [`linux`]: the Linux set (the tools directory, Lutris, Proton directories, the default wine and
+//!   custom paths);
 //! - [`custom`]: the `customWinePaths` of `config.json`;
+//! - [`default_wine`]: the first `wine` on `PATH`.
 //!
 //! Crate-only (D-06): ops `wine_discover_alternatives`, `wine_discover_crossover` and
 //! `wine_default_wine` exist with no channel, shim or caller; 87-26 serves `getAlternativeWine`
@@ -23,6 +26,8 @@
 //! and created `tools/wine`); a failing release refresh is logged and discovery goes on.
 
 pub mod custom;
+pub mod default_wine;
+pub mod linux;
 pub mod mac;
 
 use std::path::{Path, PathBuf};
@@ -112,11 +117,8 @@ pub async fn discover_alternatives(ctx: &WineCtx, host: &DiscoveryHost) -> Vec<W
     refresh_when_empty(ctx).await;
     match ctx.engine.platform {
         Platform::Mac => mac::mac_wine_set(ctx).await,
-        // The Linux set lands in this plan's second task.
-        Platform::Linux | Platform::Windows => {
-            let _ = host;
-            Vec::new()
-        }
+        Platform::Linux => linux::linux_wine_set(ctx, host, host.scan_custom.unwrap_or(true)).await,
+        Platform::Windows => Vec::new(),
     }
 }
 

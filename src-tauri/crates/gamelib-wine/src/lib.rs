@@ -29,6 +29,7 @@ use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
 pub const OPS: &[&str] = &[
+    "wine_default_wine",
     "wine_discover_alternatives",
     "wine_discover_crossover",
     "wine_manager_install",
@@ -54,6 +55,15 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, 
 /// Each plan adds its arms here, in step with `OPS`.
 async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String> {
     match op {
+        "wine_default_wine" => {
+            let path = default_wine_path_arg(op, args)?;
+            let wine = discovery::default_wine::default_wine_from_path(
+                path,
+                &discovery::default_wine::is_executable_file,
+                &|p| p.exists(),
+            );
+            serde_json::to_value(wine).map_err(|_| format!("{op}:bad-result"))
+        }
         "wine_discover_alternatives" => {
             let host = discovery_host_arg(op, args)?;
             let found = discovery::discover_alternatives(ctx, &host).await;
@@ -131,6 +141,16 @@ async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String>
             Ok(Value::Bool(runtimes::is_installed(ctx, name).await))
         }
         _ => Err(format!("unknown op: {op}")),
+    }
+}
+
+/// `wine_default_wine`'s argument: the process `PATH` the shell read, as a string, or nothing / `null`
+/// when it is unset. Anything else is a fixed `<op>:bad-args`.
+fn default_wine_path_arg<'a>(op: &str, args: &'a [Value]) -> Result<Option<&'a str>, String> {
+    match args {
+        [] | [Value::Null] => Ok(None),
+        [Value::String(path)] => Ok(Some(path)),
+        _ => Err(format!("{op}:bad-args")),
     }
 }
 

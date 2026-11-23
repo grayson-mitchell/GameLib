@@ -20,8 +20,10 @@ use gamelib_engine::testing::{RecordingEmitter, ScriptedSpecRunner};
 use gamelib_store::host::StoreHost;
 use gamelib_testutil::FakeHome;
 use gamelib_wine::ctx::WineCtx;
+use gamelib_wine::discovery::default_wine::{default_wine_from_path, is_executable_file};
 use gamelib_wine::discovery::{
-    discover_alternatives, mac, DiscoveryHost, DiscoveryRoots, DiscoverySettings, SteamLibraries,
+    discover_alternatives, linux, mac, DiscoveryHost, DiscoveryRoots, DiscoverySettings,
+    SteamLibraries,
 };
 use gamelib_wine::wine_cmd::WineInstallation;
 use serde_json::{json, Value};
@@ -30,6 +32,8 @@ use sha2::{Digest, Sha256};
 /// `golden/discovery` holds 51 cases (33 macOS, 18 Linux); a later edit may raise these, never lower.
 const CASE_FLOOR: usize = 51;
 const MAC_FLOOR: usize = 33;
+/// `vectors/default_wine.json` holds 8 vectors.
+const DEFAULT_FLOOR: usize = 8;
 
 fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
@@ -517,8 +521,10 @@ async fn replay(case: &Value) {
         "system-gptk" => mac::system_gptk(&ctx).await,
         "whisky" => mac::whisky(&ctx),
         "mac-set" => mac::mac_wine_set(&ctx).await,
+        // `getLinuxWineSet(deps, scanCustom)`: an absent `scanCustom` is `undefined`, falsy.
+        "linux-set" => linux::linux_wine_set(&ctx, &host, host.scan_custom.unwrap_or(false)).await,
         "alternative" => discover_alternatives(&ctx, &host).await,
-        other => panic!("{id}: the {other} op is replayed by the Linux half"),
+        other => panic!("{id}: unknown op {other}"),
     };
 
     let golden = |name: &str| read_json(&golden_dir().join("expected").join(id).join(name));
@@ -569,6 +575,21 @@ async fn every_mac_discovery_golden_gives_the_recorded_list_spawns_and_tree() {
     let mac: Vec<Value> = cases().into_iter().filter(is_mac_case).collect();
     check_floor("macOS discovery cases", mac.len(), MAC_FLOOR).unwrap();
     for case in &mac {
+        replay(case).await;
+    }
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn every_linux_discovery_golden_gives_the_recorded_list_spawns_and_tree() {
+    let linux_cases: Vec<Value> = cases().into_iter().filter(|c| !is_mac_case(c)).collect();
+    check_floor(
+        "Linux discovery cases",
+        linux_cases.len(),
+        CASE_FLOOR - MAC_FLOOR,
+    )
+    .unwrap();
+    for case in &linux_cases {
         replay(case).await;
     }
 }
@@ -688,5 +709,101 @@ async fn the_alternatives_op_takes_one_strict_host_object_and_answers_the_list()
             .await
             .unwrap_err();
         assert_eq!(err, "wine_discover_alternatives:bad-args", "{bad:?}");
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The default wine from PATH (vectors/default_wine.json)
+// ---------------------------------------------------------------------------------------------
+
+fn default_vectors() -> Vec<Value> {
+    read_json(&fixtures().join("vectors/default_wine.json"))
+        .as_array()
+        .unwrap()
+        .clone()
+}
+
+/// One vector replayed on a fresh fake HOME with the vector's `PATH` (`null` leaves it unset).
+fn replay_default(vector: &Value) -> Value {
+    let profile = Profile::new();
+    profile.seed(&vector["seed"]);
+    let path = vector["path"].as_array().map(|dirs| {
+        let dirs: Vec<String> = dirs
+            .iter()
+            .map(|d| profile.expand(d.as_str().unwrap()))
+            .collect();
+        std::env::join_paths(dirs)
+            .unwrap()
+            .to_string_lossy()
+            .into_owned()
+    });
+    let wine = default_wine_from_path(path.as_deref(), &is_executable_file, &|p| p.exists());
+    profile.normalise(serde_json::to_value(wine).unwrap())
+}
+
+#[cfg(unix)]
+#[test]
+fn every_default_wine_vector_gives_the_recorded_installation() {
+    let all = default_vectors();
+    check_floor("default_wine vectors", all.len(), DEFAULT_FLOOR).unwrap();
+    for vector in &all {
+        assert_eq!(
+            replay_default(vector),
+            vector["expected"],
+            "{}",
+            vector["id"]
+        );
+    }
+}
+
+#[test]
+fn an_empty_default_vector_list_fails_the_floor_and_both_outcomes_are_present() {
+    assert!(check_floor("default_wine vectors", 0, DEFAULT_FLOOR).is_err());
+    let names: Vec<String> = default_vectors()
+        .iter()
+        .map(|v| v["expected"]["name"].as_str().unwrap().to_string())
+        .collect();
+    // A function that always finds, or never finds, wine cannot pass.
+    assert!(names.contains(&"Default Wine - Not Found".to_string()));
+    assert!(names.contains(&"wine".to_string()));
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn the_default_wine_op_answers_the_installation_and_refuses_a_bad_argument() {
+    let vector = default_vectors()
+        .into_iter()
+        .find(|v| v["id"] == "wine-with-wineserver")
+        .unwrap();
+    let profile = Profile::new();
+    profile.seed(&vector["seed"]);
+    let store_home = FakeHome::new("wine-disc-store-");
+    let (ctx, _) = profile_ctx(
+        &profile,
+        &store_home,
+        Platform::Linux,
+        Arc::new(ScriptedSpecRunner::new(Vec::new())),
+    );
+
+    let path = profile.expand(vector["path"][0].as_str().unwrap());
+    let answer = gamelib_wine::dispatch("wine_default_wine", &[json!(path)], &ctx)
+        .await
+        .unwrap();
+    assert_eq!(profile.normalise(answer), vector["expected"]);
+    // No PATH is "not found", as an unset PATH is.
+    let unset = gamelib_wine::dispatch("wine_default_wine", &[], &ctx)
+        .await
+        .unwrap();
+    assert_eq!(unset["name"], "Default Wine - Not Found");
+
+    for bad in [
+        vec![json!(1)],
+        vec![json!("a"), json!("b")],
+        vec![json!({})],
+    ] {
+        let err = gamelib_wine::dispatch("wine_default_wine", &bad, &ctx)
+            .await
+            .unwrap_err();
+        assert_eq!(err, "wine_default_wine:bad-args", "{bad:?}");
     }
 }
