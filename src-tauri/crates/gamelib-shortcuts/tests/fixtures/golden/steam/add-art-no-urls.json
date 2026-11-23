@@ -1,0 +1,158 @@
+{
+  "platform": "linux",
+  "environment": {
+    "flatpak": false,
+    "appImage": false,
+    "portable": false
+  },
+  "input": {
+    "op": "add",
+    "title": "Oracle Game",
+    "appName": "oracle-app",
+    "runner": "legendary",
+    "art": {
+      "square": "",
+      "cover": ""
+    },
+    "users": {
+      "1001": {}
+    },
+    "userdataExists": true,
+    "strayFile": false,
+    "quotedSteamPath": false,
+    "lastPlayed": {
+      "present": true,
+      "value": "2023-11-14T22:13:20.000Z"
+    },
+    "wiki": {
+      "value": null
+    },
+    "apply": "ok",
+    "download": "ok",
+    "iconExists": false,
+    "seedRemovedGrid": [],
+    "frozenNow": "2024-02-03T04:05:06.000Z"
+  },
+  "returned": true,
+  "wiki": [
+    {
+      "title": "Oracle Game",
+      "appName": "oracle-app",
+      "runner": "legendary"
+    }
+  ],
+  "steamfiles": [
+    {
+      "channel": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "<HOME>/Steam/userdata/1001/config/shortcuts.vdf"
+      }
+    },
+    {
+      "channel": "steamfiles_shortcuts_apply",
+      "args": {
+        "path": "<HOME>/Steam/userdata/1001/config/shortcuts.vdf",
+        "mutation": {
+          "op": "add",
+          "entry": [
+            {
+              "kind": "string",
+              "key": "AppName",
+              "value": "Oracle Game"
+            },
+            {
+              "kind": "string",
+              "key": "Exe",
+              "value": "\"/opt/GameLibOracle/GameLib\""
+            },
+            {
+              "kind": "string",
+              "key": "StartDir",
+              "value": "\"<CWD>\""
+            },
+            {
+              "kind": "int32",
+              "key": "appid",
+              "value": -530905163
+            },
+            {
+              "kind": "string",
+              "key": "LaunchOptions",
+              "value": "--no-gui --no-sandbox \"gamelib://launch?appName=oracle-app&runner=legendary\""
+            },
+            {
+              "kind": "int32",
+              "key": "IsHidden",
+              "value": 0
+            },
+            {
+              "kind": "int32",
+              "key": "AllowDesktopConfig",
+              "value": 1
+            },
+            {
+              "kind": "int32",
+              "key": "AllowOverlay",
+              "value": 1
+            },
+            {
+              "kind": "int32",
+              "key": "OpenVR",
+              "value": 0
+            },
+            {
+              "kind": "int32",
+              "key": "Devkit",
+              "value": 0
+            },
+            {
+              "kind": "int32",
+              "key": "DevkitOverrideAppID",
+              "value": 0
+            },
+            {
+              "kind": "int32",
+              "key": "LastPlayTime",
+              "value": 1700000000
+            }
+          ],
+          "createIfMissing": true
+        }
+      }
+    }
+  ],
+  "aborts": [],
+  "downloads": [],
+  "dataUrlConversions": [],
+  "i18n": [
+    {
+      "key": "notify.finished.add.steam.success",
+      "defaultValue": "{{game}} was successfully added to Steam. A restart of Steam is required for changes to take effect.",
+      "params": {
+        "game": "Oracle Game"
+      }
+    },
+    {
+      "key": "notify.finished.add.steam.title",
+      "defaultValue": "Added to Steam",
+      "params": {}
+    }
+  ],
+  "dialogs": [],
+  "raisedMainWindow": 0,
+  "notifications": [
+    {
+      "title": "Added to Steam",
+      "body": "Oracle Game was successfully added to Steam. A restart of Steam is required for changes to take effect."
+    }
+  ],
+  "tree": {
+    "steam": [
+      {
+        "path": "userdata/1001/config/grid/3764062133_logo.jpg",
+        "size": 68
+      }
+    ],
+    "icons": []
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "platform": "linux",
+  "environment": {
+    "flatpak": false,
+    "appImage": false,
+    "portable": false
+  },
+  "input": {
+    "op": "add",
+    "title": "Oracle Game",
+    "appName": "oracle-app",
+    "runner": "legendary",
+    "art": {
+      "square": "https://art.example.test/square 1.{ext}",
+      "cover": "https://art.example.test/cover.jpg"
+    },
+    "users": {
+      "1001": {
+        "vdf": {
+          "garbage": true
+        }
+      }
+    },
+    "userdataExists": true,
+    "strayFile": false,
+    "quotedSteamPath": false,
+    "lastPlayed": {
+      "present": true,
+      "value": "2023-11-14T22:13:20.000Z"
+    },
+    "wiki": {
+      "value": null
+    },
+    "apply": "ok",
+    "download": "ok",
+    "iconExists": false,
+    "seedRemovedGrid": [],
+    "frozenNow": "2024-02-03T04:05:06.000Z"
+  },
+  "returned": false,
+  "wiki": [
+    {
+      "title": "Oracle Game",
+      "appName": "oracle-app",
+      "runner": "legendary"
+    }
+  ],
+  "steamfiles": [
+    {
+      "channel": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "<HOME>/Steam/userdata/1001/config/shortcuts.vdf"
+      }
+    }
+  ],
+  "aborts": [],
+  "downloads": [],
+  "dataUrlConversions": [],
+  "i18n": [
+    {
+      "key": "box.error.add.steam.body",
+      "defaultValue": "Adding {{game}} to Steam failed with:{{newLine}} {{error}}",
+      "params": {
+        "game": "Oracle Game",
+        "newLine": "\n",
+        "error": "Can't add \"Oracle Game\" to Steam user \"1001\". \"<HOME>/Steam/userdata/1001/config/shortcuts.vdf\" is corrupted!\nparse: BinError { kind: Truncated, offset: 1 }",
+        "interpolation": {
+          "escapeValue": false
+        }
+      }
+    },
+    {
+      "key": "box.error.add.steam.title",
+      "defaultValue": "Error Adding Game to Steam",
+      "params": {}
+    }
+  ],
+  "dialogs": [
+    [
+      "showDialog",
+      "Error Adding Game to Steam",
+      "Adding Oracle Game to Steam failed with:\n Can't add \"Oracle Game\" to Steam user \"1001\". \"<HOME>/Steam/userdata/1001/config/shortcuts.vdf\" is corrupted!\nparse: BinError { kind: Truncated, offset: 1 }",
+      "ERROR",
+      null,
+      null
+    ]
+  ],
+  "raisedMainWindow": 1,
+  "notifications": [],
+  "tree": {
+    "steam": [
+      {
+        "path": "userdata/1001/config/shortcuts.vdf",
+        "size": 28,
+        "utf8": "this is not a shortcuts file"
+      }
+    ],
+    "icons": []
+  }
+}

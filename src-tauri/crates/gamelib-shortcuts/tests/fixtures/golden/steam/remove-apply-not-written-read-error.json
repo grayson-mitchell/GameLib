@@ -1,0 +1,94 @@
+{
+  "platform": "linux",
+  "environment": {
+    "flatpak": false,
+    "appImage": false,
+    "portable": false
+  },
+  "input": {
+    "op": "remove",
+    "title": "Discord",
+    "appName": "oracle-app",
+    "runner": "legendary",
+    "art": {
+      "square": "https://art.example.test/square 1.{ext}",
+      "cover": "https://art.example.test/cover.jpg"
+    },
+    "users": {
+      "1001": {
+        "vdf": {
+          "file": "shortcuts_valid.vdf"
+        }
+      }
+    },
+    "userdataExists": true,
+    "strayFile": false,
+    "quotedSteamPath": false,
+    "lastPlayed": {
+      "present": true,
+      "value": "2023-11-14T22:13:20.000Z"
+    },
+    "wiki": {
+      "value": null
+    },
+    "apply": "not-written-read-error",
+    "download": "ok",
+    "iconExists": false,
+    "seedRemovedGrid": [],
+    "frozenNow": "2024-02-03T04:05:06.000Z"
+  },
+  "returned": null,
+  "wiki": [],
+  "steamfiles": [
+    {
+      "channel": "steamfiles_shortcuts_read",
+      "args": {
+        "path": "<HOME>/Steam/userdata/1001/config/shortcuts.vdf"
+      }
+    },
+    {
+      "channel": "steamfiles_shortcuts_apply",
+      "args": {
+        "path": "<HOME>/Steam/userdata/1001/config/shortcuts.vdf",
+        "mutation": {
+          "op": "remove",
+          "appName": "Discord"
+        }
+      }
+    }
+  ],
+  "aborts": [],
+  "downloads": [],
+  "dataUrlConversions": [],
+  "i18n": [
+    {
+      "key": "notify.finished.remove.steam.corrupt",
+      "defaultValue": "{{game}} could not be removed from all found Steam users. See logs for more info. A restart of Steam is required for changes to take effect.",
+      "params": {
+        "game": "Discord"
+      }
+    },
+    {
+      "key": "notify.finished.remove.steam.title",
+      "defaultValue": "Removed from Steam",
+      "params": {}
+    }
+  ],
+  "dialogs": [],
+  "raisedMainWindow": 0,
+  "notifications": [
+    {
+      "title": "Removed from Steam",
+      "body": "Discord could not be removed from all found Steam users. See logs for more info. A restart of Steam is required for changes to take effect."
+    }
+  ],
+  "tree": {
+    "steam": [
+      {
+        "path": "userdata/1001/config/shortcuts.vdf",
+        "size": 348
+      }
+    ],
+    "icons": []
+  }
+}
