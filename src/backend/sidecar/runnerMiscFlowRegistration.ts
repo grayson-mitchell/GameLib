@@ -9,8 +9,8 @@
  * the two saves-sync channels (`syncSaves`, `syncGOGSaves`) to complete it at 11/11. Phase 34.6
  * Plan 10 adds the last three of the phase's 24 late-discovered/deferred channels
  * (`getAchievements`, `getDefaultSavePath`, `getPlaytimeFromRunner`), bringing this module to
- * 14/14 — the phase's final port. Phase 87 Plan 17 (D-14) moved `isRuntimeInstalled` to the Rust
- * native router: 13 channels remain.
+ * 14/14 — the phase's final port. Phase 87 Plan 17 (D-14) moved `isRuntimeInstalled` and Plan 18 `downloadRuntime` to
+ * the Rust native router: 12 channels remain.
  *
  * D-14 ordering constraint (Phase 34.6 CONTEXT.md): `getDefaultSavePath` MUST be ported before the
  * inherited legendary save-sync live-verification leg runs (live-gate step 7), or path resolution
@@ -25,12 +25,12 @@
  * `getCometVersion` is GOG's channel. `comet` is the GOG Galaxy Communication replacement,
  * gated on `gameInfo.runner === 'gog'` at `launcher.ts:973`.
  *
- * Declared channel list (13 total, all invoke — verified against `main.ts`,
+ * Declared channel list (12 total, all invoke — verified against `main.ts`,
  * `utils/ipc_handler.ts`, `tools/ipc_handler.ts`, and `wine/runtimes/ipc_handler.ts` by
  * 34.5-RESEARCH.md and this plan's own `<interfaces>` block; no send-kind channels in this
  * cluster):
  *
- *   invoke (deps.ipc.handle, 13):
+ *   invoke (deps.ipc.handle, 12):
  *     - `getLegendaryVersion`         -> utils/ipc_handler.ts:18 (DONE — plan 34.5-07)
  *     - `getGogdlVersion`             -> utils/ipc_handler.ts:19 (DONE — plan 34.5-07)
  *     - `getCometVersion`             -> utils/ipc_handler.ts:20 (DONE — plan 34.5-07; D-04's channel)
@@ -40,7 +40,7 @@
  *     - `getGOGLinuxInstallersLangs`  -> main.ts:840 (DONE — plan 34.5-12 Task 1)
  *     - `syncSaves`                   -> main.ts:1263 (DONE — plan 34.5-12 Task 2)
  *     - `syncGOGSaves`                -> main.ts:1255 (DONE — plan 34.5-12 Task 2)
- *     - `downloadRuntime`             -> wine/runtimes/ipc_handler.ts:4 (DONE — plan 34.5-07)
+ *     - `downloadRuntime`             -> native `wine` slice since Phase 87 (87-18, D-14); no handle here
  *     - `isRuntimeInstalled`          -> native `wine` slice since Phase 87 (87-17, D-14); no handle here
  *     - `getAchievements`             -> main.ts:822-827 (DONE — Phase 34.6 Plan 10)
  *     - `getDefaultSavePath`          -> main.ts:1286-1290, delegates to save_sync.ts (DONE — Phase 34.6 Plan 10; D-14)
@@ -87,8 +87,7 @@ import {
   getLegendaryVersion,
   getNileVersion
 } from '../utils/helperBinaries'
-import { download } from '../wine/runtimes/runtimes'
-import type { RuntimeName, Runner } from 'common/types'
+import type { Runner } from 'common/types'
 import type { GOGCloudSavesLocation } from 'common/types/gog'
 import type { Game } from 'common/types/game_manager'
 import path from 'path'
@@ -100,12 +99,12 @@ import { getDefaultSavePath } from '../save_sync'
 import type { SaveSyncDeps } from '../save_sync'
 
 /**
- * Registers this cluster's 13 invoke-kind channels. Called once from `handlers.ts` — this module
+ * Registers this cluster's 12 invoke-kind channels. Called once from `handlers.ts` — this module
  * owns no side effects at import time; the caller decides when registration onto the handler
  * registry happens.
  *
- * The module is complete at 13 (14 before Phase 87 Plan 17 moved `isRuntimeInstalled` to the native
- * `wine` slice): the four runner-CLI-version probes and `downloadRuntime`
+ * The module is complete at 12 (14 before Phase 87 Plans 17 and 18 moved `isRuntimeInstalled` and
+ * `downloadRuntime` to the native `wine` slice): the four runner-CLI-version probes
  * (plan 34.5-07), the three "other" channels and two saves-sync channels
  * (plan 34.5-12), plus the three late-discovered channels `getAchievements`,
  * `getDefaultSavePath` and `getPlaytimeFromRunner` (Phase 34.6 Plan 10, D-14).
@@ -138,15 +137,9 @@ export function registerRunnerMiscFlows(
   // No wave-1 precondition: `runtimePath` (`process/appPaths.ts`) resolves from
   // `toolsPath`, which in turn resolves through `appPaths`'s ALREADY-implemented `userData` case
   // — a reader should not add a spurious dependency on plan 34.5-01 for this cluster.
-  deps.ipc.handle(
-    'downloadRuntime',
-    async (_event: unknown, ...args: unknown[]) =>
-      download(deps, args[0] as RuntimeName)
-  )
-  // Phase 87 (87-17, D-14): `isRuntimeInstalled` is a native `wine` channel now (the Rust
-  // `wine_runtime_is_installed`). The launcher keeps its own TS read of the same `current_version`
-  // file (`wine/runtimes/runtimes.ts` `isInstalled`), and `downloadRuntime` stays here, until 87-18
-  // flips both with the TS deletion (D-06).
+  // Phase 87 (87-17, 87-18, D-14): `isRuntimeInstalled` and `downloadRuntime` are native `wine`
+  // channels now (the Rust `wine_runtime_is_installed` and `wine_runtime_download`); the sidecar
+  // registers neither.
 
   // ── "Other" channels (tools/ipc_handler.ts:25, main.ts:840,1251) ──────────
   // Plan 34.5-12. `callTool` reassigned here from Phase 34.1 by REQ-34.1-10 / 34.1 D-14 — it is

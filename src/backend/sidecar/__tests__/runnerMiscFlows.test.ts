@@ -5,7 +5,7 @@
  *
  * Five describe blocks:
  *   1. Registration kind — all 13 channels (`getLegendaryVersion`, `getGogdlVersion`,
- *      `getCometVersion`, `getNileVersion`, `downloadRuntime` from plan
+ *      `getCometVersion`, `getNileVersion` from plan
  *      34.5-07; `callTool`, `egsSync`, `getGOGLinuxInstallersLangs`, `syncSaves`, `syncGOGSaves`
  *      from plan 34.5-12; `getAchievements`, `getDefaultSavePath`, `getPlaytimeFromRunner` from
  *      Phase 34.6 Plan 10) are `ipcMain.handle`, never `ipcMain.on`, asserted in both directions
@@ -18,8 +18,9 @@
  *      `winetricks` branch (Phase 45 D-17 deleted its `Winetricks.run()` GUI call; an unknown
  *      `tool` value is a no-op dispatch, see Describe 4) being confused with registering the
  *      winetricks IPC channels themselves (Pitfall 4), would be caught here. Module completeness
- *      (13 handle, 0 send, `listenerRegistry` untouched) is asserted explicitly. Phase 87 Plan 17
- *      (D-14) moved `isRuntimeInstalled` to the native `wine` slice, so it is not registered here.
+ *      (12 handle, 0 send, `listenerRegistry` untouched) is asserted explicitly. Phase 87 Plans 17
+ *      and 18 (D-14) moved `isRuntimeInstalled` and `downloadRuntime` to the native `wine` slice, so
+ *      neither is registered here.
  *   2. Curated-import guard — `runnerMiscFlowRegistration.ts` never imports `utils/ipc_handler.ts`
  *      or `wine/runtimes/ipc_handler.ts` (comment-stripped via the shared `stripSourceComments`
  *      util, so a docblock merely NAMING either file cannot trip the gate).
@@ -231,8 +232,8 @@ describe('registration kind — all 11 channels are registered with the correct 
     'getCometVersion',
     'getNileVersion'
   ]
-  // Phase 87 Plan 17 (D-14): `isRuntimeInstalled` is a native `wine` channel; only the download stays.
-  const RUNTIME_CHANNELS = ['downloadRuntime']
+  // Phase 87 Plans 17 and 18 (D-14): `isRuntimeInstalled` and `downloadRuntime` are native `wine`
+  // channels, so this module registers neither.
   const OTHER_CHANNELS = ['callTool', 'egsSync', 'getGOGLinuxInstallersLangs']
   const SAVES_SYNC_CHANNELS = ['syncGOGSaves', 'syncSaves']
   // Phase 34.6 Plan 10 (REQ-34.6-04/08/09): the last 3 of the phase's 24 late-discovered/deferred
@@ -251,10 +252,10 @@ describe('registration kind — all 11 channels are registered with the correct 
     }
   )
 
-  it.each(RUNTIME_CHANNELS)(
-    'REQ-34.5-09 %s is registered as ipcMain.handle, and NOT as ipcMain.on',
+  it.each(['isRuntimeInstalled', 'downloadRuntime'])(
+    'Phase 87 (D-14) %s is a native `wine` channel: this module registers no handle for it',
     (channel) => {
-      expect(handlerRegistry.has(channel)).toBe(true)
+      expect(handlerRegistry.has(channel)).toBe(false)
       expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
     }
   )
@@ -283,16 +284,15 @@ describe('registration kind — all 11 channels are registered with the correct 
     }
   )
 
-  it('the module is complete: exactly these 13 channels are handle-kind, and no channel from this module is send-kind', () => {
-    const allThirteen = [
+  it('the module is complete: exactly these 12 channels are handle-kind, and no channel from this module is send-kind', () => {
+    const allTwelve = [
       ...VERSION_CHANNELS,
-      ...RUNTIME_CHANNELS,
       ...OTHER_CHANNELS,
       ...SAVES_SYNC_CHANNELS,
       ...LATE_DISCOVERED_CHANNELS
     ]
-    expect(allThirteen).toHaveLength(13)
-    for (const channel of allThirteen) {
+    expect(allTwelve).toHaveLength(12)
+    for (const channel of allTwelve) {
       expect(handlerRegistry.has(channel)).toBe(true)
       expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
     }

@@ -923,23 +923,19 @@
     {
       "channel": "downloadRuntime",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "enum": [
-              "eac_runtime",
-              "battleye_runtime",
-              "umu"
-            ]
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "name",
+          "type": "string",
+          "enum": [
+            "eac_runtime",
+            "battleye_runtime",
+            "umu"
+          ]
+        }
+      ],
+      "returns": "boolean"
     },
     {
       "channel": "egsSync",

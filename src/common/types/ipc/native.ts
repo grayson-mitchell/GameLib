@@ -131,9 +131,14 @@ export interface NativeAsync {
   // Phase 87 (87-17, D-14): whether a Wine runtime (EAC, BattlEye or umu) is installed and current,
   // answered by the Rust `wine` slice (`gamelib-wine`'s `wine_runtime_is_installed`) from the lutris
   // list and `<tools>/runtimes/<name>/current_version`. The name is exactly one of the three; any
-  // other value rejects with the invalid-args marker. `downloadRuntime` stays with the sidecar until
-  // 87-18 flips it together with the TypeScript deletion (D-06).
+  // other value rejects with the invalid-args marker.
   isRuntimeInstalled: (name: RuntimeName) => Promise<boolean>
+  // Phase 87 (87-18, D-14): download and extract one Wine runtime (EAC, BattlEye or umu), answered by the
+  // Rust `wine` slice (`wine_runtime_download`): `true` when it is installed after the call, `false` on a
+  // failed download or extraction (the TypeScript reported a failed `tar` as installed; Rust does not).
+  // The same one-of-three decode as `isRuntimeInstalled`. It runs with no wall-clock bound, so it is not
+  // among the sidecar's long-running invoke channels any more.
+  downloadRuntime: (name: RuntimeName) => Promise<boolean>
 }
 
 export interface NativeSync {

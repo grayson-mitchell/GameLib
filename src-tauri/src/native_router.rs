@@ -478,8 +478,11 @@ impl NativeRouter {
         invoke.insert("itad.setApiKey", info_dispatch::itad_set_api_key);
         // Phase 87 (87-17, D-14): the renderer's runtime check, run by the `wine` slice over the lutris
         // list and `<tools>/runtimes/<name>/current_version`. The sidecar no longer registers
-        // `isRuntimeInstalled`; `downloadRuntime` stays with the sidecar until 87-18 (D-06).
+        // `isRuntimeInstalled`.
         invoke.insert("isRuntimeInstalled", wine_dispatch::is_runtime_installed);
+        // Phase 87 (87-18, D-14): the renderer's runtime download, the same slice and decode. The
+        // sidecar no longer registers `downloadRuntime` (one owner, D-06).
+        invoke.insert("downloadRuntime", wine_dispatch::download_runtime);
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -873,6 +876,7 @@ mod tests {
             .map(|(name, _)| name.as_str())
             .collect();
         assert!(wine.contains(&"isRuntimeInstalled"), "{wine:?}");
+        assert!(wine.contains(&"downloadRuntime"), "{wine:?}");
         for name in wine {
             // The wine slice is invoke-only: no send queue exists for it.
             assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");

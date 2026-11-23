@@ -795,6 +795,29 @@
         ["UMU"],
         [{ "name": "umu" }]
       ]
+    },
+    "downloadRuntime": {
+      "kind": "invoke",
+      "slice": "wine",
+      "args": [
+        {
+          "name": "name",
+          "type": "string",
+          "enum": ["eac_runtime", "battleye_runtime", "umu"]
+        }
+      ],
+      "returns": "boolean",
+      "valid": [["umu"], ["eac_runtime"], ["battleye_runtime"]],
+      "invalid": [
+        [],
+        [1],
+        ["x"],
+        ["umu", "umu"],
+        [null],
+        [""],
+        ["UMU"],
+        [{ "name": "umu" }]
+      ]
     }
   }
 }

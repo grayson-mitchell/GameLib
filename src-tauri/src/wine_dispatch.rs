@@ -7,13 +7,12 @@
 //! wrapper (a shutdown registrant raced against the token). Until [`install`] has run, an op answers
 //! `<channel>: not-ready`.
 //!
-//! D-06: the runtime download is wired to no caller here. The renderer's `downloadRuntime` channel and
-//! the launcher keep the TypeScript download until 87-18 flips them together with the TS deletion, so a
-//! runtime download never has a TS and a Rust writer at once. The one channel switched in this plan is
-//! the read-only `isRuntimeInstalled`.
+//! D-06: the runtime download is Rust's alone (87-18): the renderer's `downloadRuntime` channel is
+//! native here and the launcher reaches `wine_runtime_download` through the `rustInvoke` arms, so a runtime
+//! download never has a TS and a Rust writer at once.
 //!
-//! T-87-17: the runtime name is the renderer's. It is decoded against the three names and a rejection
-//! is a fixed literal that never echoes the input.
+//! T-87-17, T-87-65: the runtime name is the renderer's (or the sidecar's). It is decoded against the
+//! three names and a rejection is a fixed literal that never echoes the input.
 
 use super::*;
 
@@ -43,7 +42,7 @@ pub(crate) fn install() {
 /// only, never the renderer's value (T-87-17).
 type Rejection = (&'static str, &'static str);
 
-/// Decodes the one `name` argument of `isRuntimeInstalled`: exactly one string, one of
+/// Decodes the one `name` argument of `isRuntimeInstalled` and `downloadRuntime`: exactly one string, one of
 /// `eac_runtime`, `battleye_runtime`, `umu`.
 fn parse_runtime_name(args: &[Value]) -> Result<RuntimeName, Rejection> {
     let [arg] = args else {
@@ -71,24 +70,52 @@ async fn run_wine_op(
     .map_err(|_| failed.to_string())?
 }
 
-/// The native `isRuntimeInstalled` handler (slice `wine`, D-14): whether the EAC, BattlEye or umu
-/// runtime is installed and current, answered by `wine_runtime_is_installed`. Validated before the
-/// context is looked at, so a bad call is rejected the same way before and after the install. An
-/// error is a fixed literal (the crate's `<op>:<category>` or the invalid-args marker), never the
-/// renderer's string.
-pub(crate) fn is_runtime_installed(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+/// The shared body of the two runtime channels: validates `args` before the context is looked at (a
+/// bad call is rejected the same way before and after the install), then runs `op` over the one decoded
+/// name. An error is a fixed literal (the crate's `<op>:<category>` or the invalid-args marker),
+/// never the renderer's string.
+fn runtime_channel(
+    channel: &'static str,
+    op: &'static str,
+    failed: &'static str,
+    args: Vec<Value>,
+) -> NativeFuture {
     Box::pin(async move {
         let name = parse_runtime_name(&args)
-            .map_err(|(path, code)| invalid_args("isRuntimeInstalled", &[path], &[code]))?;
-        let wine = wine_ctx().ok_or_else(|| "isRuntimeInstalled: not ready".to_string())?;
+            .map_err(|(path, code)| invalid_args(channel, &[path], &[code]))?;
+        let wine = wine_ctx().ok_or_else(|| format!("{channel}: not ready"))?;
         run_wine_op(
             Arc::clone(wine),
-            "wine_runtime_is_installed",
+            op,
             vec![Value::String(name.as_str().to_string())],
-            "isRuntimeInstalled: the check did not finish",
+            failed,
         )
         .await
     })
+}
+
+/// The native `isRuntimeInstalled` handler (slice `wine`, D-14): whether the EAC, BattlEye or umu
+/// runtime is installed and current, answered by `wine_runtime_is_installed`.
+pub(crate) fn is_runtime_installed(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    runtime_channel(
+        "isRuntimeInstalled",
+        "wine_runtime_is_installed",
+        "isRuntimeInstalled: the check did not finish",
+        args,
+    )
+}
+
+/// The native `downloadRuntime` handler (slice `wine`, D-14): downloads and extracts the EAC, BattlEye
+/// or umu runtime, answered by `wine_runtime_download` (`true` when the runtime is installed after it).
+/// It has no deadline of its own: the crate op holds a shutdown registrant and is cancelled by the
+/// token, so a download outlasting the sidecar's 60 s invoke bound is not cut short.
+pub(crate) fn download_runtime(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    runtime_channel(
+        "downloadRuntime",
+        "wine_runtime_download",
+        "downloadRuntime: the download did not finish",
+        args,
+    )
 }
 
 #[cfg(test)]
@@ -131,13 +158,27 @@ mod tests {
             vec![json!("umu")],
         ));
         assert_eq!(not_ready, Err("isRuntimeInstalled: not ready".to_string()));
+        let not_ready = tauri::async_runtime::block_on(download_runtime(
+            Arc::clone(&router_ctx),
+            vec![json!("umu")],
+        ));
+        assert_eq!(not_ready, Err("downloadRuntime: not ready".to_string()));
         let secret = "SECRET-RUNTIME-".repeat(80);
         for bad in [
             tauri::async_runtime::block_on(is_runtime_installed(
                 Arc::clone(&router_ctx),
                 vec![json!(secret)],
             )),
-            tauri::async_runtime::block_on(is_runtime_installed(router_ctx, vec![])),
+            tauri::async_runtime::block_on(is_runtime_installed(Arc::clone(&router_ctx), vec![])),
+            tauri::async_runtime::block_on(download_runtime(
+                Arc::clone(&router_ctx),
+                vec![json!(secret)],
+            )),
+            tauri::async_runtime::block_on(download_runtime(
+                Arc::clone(&router_ctx),
+                vec![json!("umu"), json!("umu")],
+            )),
+            tauri::async_runtime::block_on(download_runtime(router_ctx, vec![])),
         ] {
             let error = bad.unwrap_err();
             assert!(
@@ -148,7 +189,7 @@ mod tests {
         }
     }
 
-    /// A host that does nothing: `is_runtime_installed` never reaches the native host.
+    /// A host that does nothing: the runtime handlers never reach the native host.
     struct NoHost;
     impl crate::native_router::NativeHost for NoHost {
         fn open_url(&self, _url: String) {}

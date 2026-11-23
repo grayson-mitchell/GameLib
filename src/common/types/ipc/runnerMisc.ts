@@ -1,6 +1,5 @@
 import { z } from 'zod'
 
-import type { RuntimeName } from '../../types'
 import type { GameAchievement, GOGCloudSavesLocation } from '../gog'
 import {
   nonEmptyString,
@@ -20,17 +19,6 @@ const pathString = z
 
 // The tool names the callTool handler dispatches on (its switch), nothing else.
 const toolName = z.enum(['winecfg', 'runExe'])
-
-// RuntimeName, listed so a rename fails the call-site type check (drift guard below).
-const RUNTIMES = ['eac_runtime', 'battleye_runtime', 'umu'] as const
-const runtimeName = z.enum(RUNTIMES)
-type RuntimeListMatchesUnion = RuntimeName extends (typeof RUNTIMES)[number]
-  ? (typeof RUNTIMES)[number] extends RuntimeName
-    ? true
-    : never
-  : never
-const runtimeListMatchesUnion: RuntimeListMatchesUnion = true
-void runtimeListMatchesUnion
 
 const gogSaveLocation = z.strictObject({
   name: z.string().max(4096),
@@ -71,9 +59,8 @@ export const runnerMiscAsyncArgs = {
       runner: runnerArg()
     })
   ]),
-  downloadRuntime: z.tuple([runtimeName]),
-  // Phase 87 (87-17, D-14): `isRuntimeInstalled` is a native `wine` channel (`nativeChannels.json`);
-  // its enum bound lives in the Rust decode. `downloadRuntime` stays here until 87-18 (D-06).
+  // Phase 87 (87-17, 87-18, D-14): `isRuntimeInstalled` and `downloadRuntime` are native `wine`
+  // channels (`nativeChannels.json`); their enum bound lives in the Rust decode.
   getDefaultSavePath: z.tuple([
     nonEmptyString(),
     runnerArg(),
@@ -93,7 +80,6 @@ interface RunnerMiscAsyncReturns {
   egsSync: Promise<string>
   syncGOGSaves: Promise<string>
   syncSaves: Promise<string>
-  downloadRuntime: Promise<boolean>
   getDefaultSavePath: Promise<string | GOGCloudSavesLocation[]>
   getPlaytimeFromRunner: Promise<number | undefined>
 }

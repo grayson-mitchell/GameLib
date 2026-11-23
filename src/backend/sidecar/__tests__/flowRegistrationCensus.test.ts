@@ -126,7 +126,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Phase 34.6 Plan 10 (2026-08-24): invoke 11 -> 14 -- getAchievements/getDefaultSavePath/
   // getPlaytimeFromRunner ported byte-equivalently from main.ts (D-14); send count unchanged.
   // Phase 87 Plan 17 (D-14): invoke 14 -> 13 -- `isRuntimeInstalled` is a native `wine` channel.
-  'runnerMiscFlowRegistration.ts': { invoke: 13, send: 0 },
+  // Phase 87 Plan 18 (D-14): invoke 13 -> 12 -- `downloadRuntime` is a native `wine` channel too.
+  'runnerMiscFlowRegistration.ts': { invoke: 12, send: 0 },
   // Phase 84 Plan 05 / 84-05 (2026-11-21): invoke 11 -> 10 -- `getLogContent` is served by the Rust
   // native router (`nativeChannels.json`, slice `logger`); its registration is deleted here.
   'settingsFlowRegistration.ts': { invoke: 10, send: 1 },
