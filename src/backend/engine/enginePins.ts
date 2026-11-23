@@ -1,3 +1,5 @@
+import { ENGINE_PINS } from 'backend/enginewine/twin'
+
 /**
  * The pinned fallback engine table (phase 59, D-08 release lever).
  *
@@ -9,7 +11,12 @@
  * rollback target yet. The next release that bumps the pin moves this `current`
  * into `previous` (and writes the new build into `current`); retention keeps
  * both on disk (see fallbackEngine.pruneUnpinnedEngines).
+ *
+ * Phase 87 (87-39, D-24): the table itself and `pinById` live once in `enginewine/twin.ts`, which reads
+ * `common/enginePins.json` (the file the Rust crate reads too). They are re-exported here so every caller keeps
+ * its import until 87-43 repoints them and deletes this module; the types stay here.
  */
+export { ENGINE_PINS, pinById } from 'backend/enginewine/twin'
 
 export type PinnedArtifact = {
   version: string
@@ -26,33 +33,6 @@ export type EnginePin = {
   dxvk: PinnedArtifact
 }
 
-export const ENGINE_PINS: Readonly<{
-  current: EnginePin
-  previous: EnginePin | null
-}> = {
-  current: {
-    id: 'wine-staging-11.20',
-    label: 'Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)',
-    wine: {
-      version: '11.20',
-      url: 'https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz',
-      size: 227975304,
-      sha256:
-        '4df858c5e72920deaf123cbc29fa2b9e64c23bcf2dea59e0a7047b879b9cd952',
-      archiveName: 'wine-staging-11.20-osx64.tar.xz'
-    },
-    dxvk: {
-      version: 'v1.10.3-20230507-repack',
-      url: 'https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz',
-      size: 2793443,
-      sha256:
-        'acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477',
-      archiveName: 'dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz'
-    }
-  },
-  previous: null
-}
-
 export function pinnedEngineIdsFrom(pins: {
   current: EnginePin
   previous: EnginePin | null
@@ -62,12 +42,4 @@ export function pinnedEngineIdsFrom(pins: {
 
 export function pinnedEngineIds(): string[] {
   return pinnedEngineIdsFrom(ENGINE_PINS)
-}
-
-export function pinById(id: string): EnginePin | null {
-  if (typeof id !== 'string') return null
-  if (id === ENGINE_PINS.current.id) return ENGINE_PINS.current
-  if (ENGINE_PINS.previous && id === ENGINE_PINS.previous.id)
-    return ENGINE_PINS.previous
-  return null
 }

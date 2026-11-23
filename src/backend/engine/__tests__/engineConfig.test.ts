@@ -9,16 +9,24 @@ import {
 import { tmpdir } from 'os'
 import { join } from 'path'
 
+// The table moved into the D-24 twin (87-39) and `enginePins.ts` re-exports it, so the mock is built from the
+// shared JSON the table reads, not from `requireActual('../enginePins')` (which would load the twin, which loads
+// `engineIds`, which loads this very mock mid-factory).
 jest.mock('../enginePins', () => {
-  const actual = jest.requireActual('../enginePins')
+  const table = jest.requireActual('common/enginePins.json')
   const previous = {
-    ...actual.ENGINE_PINS.current,
+    ...table.current,
     id: 'wine-staging-11.10'
   }
-  const pins = { current: actual.ENGINE_PINS.current, previous }
+  const pins = { current: table.current, previous }
+  const pinnedEngineIdsFrom = (p: {
+    current: { id: string }
+    previous: { id: string } | null
+  }) => (p.previous ? [p.current.id, p.previous.id] : [p.current.id])
   return {
-    ...actual,
     ENGINE_PINS: pins,
+    pinnedEngineIdsFrom,
+    pinnedEngineIds: () => pinnedEngineIdsFrom(table),
     pinById: (id: string) =>
       id === pins.current.id
         ? pins.current

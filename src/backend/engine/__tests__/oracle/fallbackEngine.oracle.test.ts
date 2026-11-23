@@ -73,7 +73,9 @@ import {
   type FallbackDownloadProgress,
   type FallbackEngine
 } from '../../fallbackEngine'
-import * as enginePins from '../../enginePins'
+// The pin table lives in the D-24 twin since 87-39 (`engine/enginePins.ts` re-exports it through a getter, which
+// `jest.replaceProperty` cannot replace), so the per-case table is replaced on the twin's own export.
+import * as enginePins from '../../../enginewine/twin'
 import type { EnginePin, PinnedArtifact } from '../../enginePins'
 import { ensurePinnedEngineReportingStatus } from '../../pinnedEngineProgress'
 

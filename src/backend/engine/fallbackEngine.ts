@@ -15,7 +15,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
-  readFileSync,
   readlinkSync,
   realpathSync,
   renameSync,
@@ -23,13 +22,18 @@ import {
   statSync,
   writeFileSync
 } from 'fs'
-import { dirname, isAbsolute, join, relative, resolve } from 'path'
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import type { AppPaths } from 'backend/process/context'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { OnlineMonitor } from 'backend/online_monitor'
 import { calculateEta, downloadFile, extractFiles } from 'backend/utils'
 import { ENGINE_PINS, type EnginePin, type PinnedArtifact } from './enginePins'
+import {
+  isPinnedEngineInstalled as isPinnedEngineInstalledAt,
+  pinMarkerMatches,
+  pinnedEnginePaths as pinnedEnginePathsAt
+} from 'backend/enginewine/twin'
 
 const MARKER = '.gamelib-pin.json'
 
@@ -59,24 +63,6 @@ type EnsureResult =
         | 'aborted'
       detail: string
     }
-
-function wineDirName(pin: EnginePin): string {
-  return pin.id
-}
-function dxvkDirName(pin: EnginePin): string {
-  return `dxvk-macOS-${pin.dxvk.version}`
-}
-
-function markerMatches(dir: string, artifact: PinnedArtifact): boolean {
-  try {
-    const m = JSON.parse(readFileSync(join(dir, MARKER), 'utf8')) as {
-      sha256?: string
-    }
-    return m.sha256 === artifact.sha256
-  } catch {
-    return false
-  }
-}
 
 export async function sha256OfFile(path: string): Promise<string> {
   const hash = createHash('sha256')
@@ -176,16 +162,10 @@ export function createFallbackEngine(deps: {
     return join(deps.paths.toolsPath, 'steam-engines')
   }
 
+  // The layout and the installed check are the D-24 twin's (`enginewine/twin.ts`, 87-39): one copy, pinned to
+  // the Rust `engines::pinned_engine_paths` and `is_pinned_engine_installed` by the shared vectors.
   function pinnedEnginePaths(pin: EnginePin): EnginePaths {
-    const root = pinnedEngineRoot()
-    const wineDir = join(root, wineDirName(pin))
-    const wineBinDir = join(wineDir, 'Contents', 'Resources', 'wine', 'bin')
-    return {
-      wineDir,
-      wineBin: join(wineBinDir, 'wine'),
-      wineserverBin: join(wineBinDir, 'wineserver'),
-      dxvkDir: join(root, dxvkDirName(pin))
-    }
+    return pinnedEnginePathsAt(pinnedEngineRoot(), pin)
   }
 
   function wineInstalled(pin: EnginePin): boolean {
@@ -193,7 +173,7 @@ export function createFallbackEngine(deps: {
     return (
       existsSync(p.wineBin) &&
       existsSync(p.wineserverBin) &&
-      markerMatches(p.wineDir, pin.wine)
+      pinMarkerMatches(p.wineDir, pin.wine)
     )
   }
 
@@ -202,12 +182,12 @@ export function createFallbackEngine(deps: {
     return (
       existsSync(join(p.dxvkDir, 'x32')) &&
       existsSync(join(p.dxvkDir, 'x64')) &&
-      markerMatches(p.dxvkDir, pin.dxvk)
+      pinMarkerMatches(p.dxvkDir, pin.dxvk)
     )
   }
 
   function isPinnedEngineInstalled(pin: EnginePin): boolean {
-    return wineInstalled(pin) && dxvkInstalled(pin)
+    return isPinnedEngineInstalledAt(pinnedEngineRoot(), pin)
   }
 
   async function installArtifact(
@@ -438,8 +418,9 @@ export function createFallbackEngine(deps: {
       const keep = new Set<string>()
       for (const pin of [ENGINE_PINS.current, ENGINE_PINS.previous]) {
         if (!pin) continue
-        keep.add(wineDirName(pin))
-        keep.add(dxvkDirName(pin))
+        const kept = pinnedEnginePaths(pin)
+        keep.add(basename(kept.wineDir))
+        keep.add(basename(kept.dxvkDir))
       }
       for (const name of readdirSync(root)) {
         if (keep.has(name)) continue

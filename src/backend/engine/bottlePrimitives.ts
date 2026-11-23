@@ -5,13 +5,30 @@
  */
 import { dirname, join, relative, resolve } from 'path'
 import { existsSync, mkdirSync, rmSync } from 'graceful-fs'
-import type { GameSettings } from 'common/types'
 import type { AppPaths } from 'backend/process/context'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { SpawnAsync } from 'backend/spawnAsync'
+import {
+  buildFallbackGameSettings,
+  getBottleDir,
+  isBottleProvisioned,
+  sanitizeBottleName
+} from 'backend/enginewine/twin'
 import { writeCxbottleConf } from './adoptBottle'
 import type { NonCrossoverEngine } from './engineTypes'
 import type { EngineServices } from './engineServices'
+
+/**
+ * The sync pure helpers live once in the D-24 twin `enginewine/twin.ts` (Phase 87, 87-39), pinned to the Rust
+ * `gamelib-engine` owners by the shared `bottle_twin.json` vectors. Re-exported so every caller keeps its
+ * import until 87-43 repoints them and deletes this module.
+ */
+export {
+  buildFallbackGameSettings,
+  getBottleDir,
+  isBottleProvisioned,
+  sanitizeBottleName
+}
 
 /** Same string as PROVISION_ABORTED in steam/bottle.ts (a structural match, not a re-export). */
 const PROVISION_ABORTED_CODE = 'provision-aborted' as const
@@ -23,63 +40,6 @@ export type FallbackBottleResult = {
   errorCode?: typeof PROVISION_ABORTED_CODE
   /** True only when this call created the bottle dir (absent at entry). */
   createdHere?: boolean
-}
-
-/**
- * Directory of a named CrossOver bottle.
- * `<userHome>/Library/Application Support/CrossOver/Bottles/<bottleName>`
- */
-export function getBottleDir(
-  paths: Pick<AppPaths, 'userHome'>,
-  bottleName: string
-): string {
-  return join(
-    paths.userHome,
-    'Library/Application Support/CrossOver/Bottles',
-    bottleName
-  )
-}
-
-/**
- * T-17-01 mitigation chokepoint: every bottle-name -> path/argv site must
- * pass the name through this guard first. Mirrors buildSteamProtocolUrl's
- * numeric-guard precedent (T-03-01). Rejects any name containing a path
- * separator, a parent-directory traversal sequence, a NUL byte, or an
- * empty/whitespace-only name. Returns the trimmed name when clean.
- */
-export function sanitizeBottleName(name: string | null): string | null {
-  if (typeof name !== 'string') return null
-  const trimmed = name.trim()
-  if (!trimmed) return null
-  if (
-    trimmed.includes('/') ||
-    trimmed.includes('\\') ||
-    trimmed.includes('..') ||
-    trimmed.includes('\0')
-  ) {
-    return null
-  }
-  return trimmed
-}
-
-/**
- * Reuses the launcher.ts:828-836 cxbottle.conf existence predicate (the
- * existing CrossOver bottle-exists gate) as the provisioned-state signal.
- * `bottleName` is required; the Steam stored-name default lives in
- * isSteamBottleProvisioned (steam/bottle.ts).
- *
- * NOTE: this retains its narrow, original meaning — "the bottle directory
- * has been created" — NOT "the bottle is ready to use". A bottle can have
- * cxbottle.conf on disk while the bottled Steam.exe install never completed
- * (half-provisioned, e.g. the SteamSetup.exe download failed). Used by
- * provisionBottle() to decide whether `cxbottle --create` needs to run again
- * (re-entrancy check). For the REAL completion signal, use isBottleReady().
- */
-export function isBottleProvisioned(
-  paths: Pick<AppPaths, 'userHome'>,
-  bottleName: string
-): boolean {
-  return existsSync(join(getBottleDir(paths, bottleName), 'cxbottle.conf'))
 }
 
 /** The one capability the bottle helpers need (66.1 R3). */
@@ -141,59 +101,6 @@ export async function killBottleWineServerWith(
       LogPrefix.Backend
     )
     return false
-  }
-}
-
-const FALLBACK_STRIPPED_ENV_KEYS: readonly string[] = Object.freeze([
-  'USER',
-  'WINEPREFIX',
-  'CX_BOTTLE',
-  'CX_ROOT',
-  'WINELOADER',
-  'WINESERVER',
-  'WINEDEBUG',
-  'MVK_CONFIG_LOG_LEVEL'
-])
-
-/**
- * Phase 59 (D-01): GameSettings that run a bottle on a non-CrossOver engine
- * (pinned fallback or Wine Manager override). Takes a bottle name, not an
- * appId, so bottle creation (59-06) can use it too. DXVK is managed by the
- * engine switch, never by the generic auto-install.
- */
-export function buildFallbackGameSettings(
-  paths: Pick<AppPaths, 'userHome'>,
-  bottleName: string,
-  engine: NonCrossoverEngine,
-  base: GameSettings
-): GameSettings {
-  // Phase 61: a non-Steam launch passes the game's own stored settings so its launcher args,
-  // target exe and environment survive; Steam passes the global settings (66.3-06: the caller
-  // reads them from its config slice).
-  const globalSettings = base
-  const kept = (globalSettings.enviromentOptions ?? []).filter(
-    (e) => !FALLBACK_STRIPPED_ENV_KEYS.includes(String(e.key).toUpperCase())
-  )
-  return {
-    ...globalSettings,
-    wineCrossoverBottle: bottleName,
-    winePrefix: getBottleDir(paths, bottleName),
-    wineVersion: {
-      type: 'wine',
-      bin: engine.wineBin,
-      name: engine.label,
-      wineserver: engine.wineserverBin
-    },
-    autoInstallDxvk: false,
-    autoInstallDxvkNvapi: false,
-    autoInstallVkd3d: false,
-    enviromentOptions: [
-      ...kept,
-      // Wine-Staging takes its profile name from USER; USER keeps C:\users\crossover.
-      { key: 'USER', value: 'crossover' },
-      { key: 'WINEDEBUG', value: '-all' },
-      { key: 'MVK_CONFIG_LOG_LEVEL', value: '0' }
-    ]
   }
 }
 

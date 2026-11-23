@@ -99,11 +99,17 @@ const COMPATIBILITY_LAYERS_IMPORTERS: readonly string[] = [
 /**
  * Every non-test importer of `enginewine/twin.ts` (the check is per file, so every twin row lists them all):
  * the launcher and the five `games.ts` (`engineKeyFor`), the settings and install flows (the override
- * validation and the import settings), the engine flows, and the engine TS alive until 87-56.
+ * validation and the import settings), the engine flows, and the engine TS alive until 87-56 (87-39 adds the four
+ * modules that re-export the bridge's bottle helpers: `bottlePrimitives`, `engineSwitch`, `fallbackEngine`,
+ * `enginePins`; 87-43 repoints their callers and deletes them).
  */
 const ENGINE_TWIN_IMPORTERS: readonly string[] = [
+  'src/backend/engine/bottlePrimitives.ts',
   'src/backend/engine/engineEligibility.ts',
   'src/backend/engine/engineState.ts',
+  'src/backend/engine/engineSwitch.ts',
+  'src/backend/engine/enginePins.ts',
+  'src/backend/engine/fallbackEngine.ts',
   'src/backend/engine/gameEngineState.ts',
   'src/backend/engine/perGameBottle.ts',
   'src/backend/engine/toolSettings.ts',
@@ -459,6 +465,142 @@ const SCHEDULE: readonly ScheduleRow[] = [
   },
   {
     name: 'perGameBottleName',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 87
+  },
+  // 87-39 (D-24): the bridge's sync pure bottle helpers, moved out of `bottlePrimitives`, `engineSwitch` and
+  // `fallbackEngine` into `enginewine/twin.ts` and pinned to the Rust `bottles::paths`, `bottles::marker`,
+  // `bottles::pin_marker`, `engines` and `tool_settings` by the shared `bottle_twin.json` vectors that
+  // `twinVectors.test.ts` and `twin_vectors.rs` both replay. The launch path and the bridge call them inline, so
+  // they stay synchronous until Phase 96 moves the Steam bridge; `ENGINE_PINS` and `pinById` read the
+  // `common/enginePins.json` the Rust crate reads. The six `deletedBy: 87` rows are the helpers the still-TS marker
+  // writers and pinned-engine installer share with the readers: intra-phase, 87-56 deletes their callers and makes
+  // them private (the plan named ten rows).
+  {
+    name: 'getBottleDir',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'sanitizeBottleName',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'isBottleProvisioned',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'buildFallbackGameSettings',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'readBottleEngineMarkerKind',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'readBottleEngineMarkerSummary',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'restoreNeedsAbsentPin',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'isPinnedEngineInstalled',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'ENGINE_PINS',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'pinById',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'isInside',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 87
+  },
+  {
+    name: 'readEngineMarker',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 87
+  },
+  {
+    name: 'hasStagingDxvk',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 87
+  },
+  {
+    name: 'isContradictedCrossover',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 87
+  },
+  {
+    name: 'pinMarkerMatches',
+    file: 'src/backend/enginewine/twin.ts',
+    shape: 'twin',
+    vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
+    callers: ENGINE_TWIN_IMPORTERS,
+    deletedBy: 87
+  },
+  {
+    name: 'pinnedEnginePaths',
     file: 'src/backend/enginewine/twin.ts',
     shape: 'twin',
     vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',

@@ -12,20 +12,24 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import type { GameSettings } from 'common/types'
 
-const mockState = { root: '', engines: '/tools/steam-engines' }
+// `home` is the fake profile; `root` is its Bottles directory, where the twin's real `getBottleDir` puts every
+// bottle (the read-only marker views moved into `enginewine/twin.ts` in 87-39, so they no longer see a mock).
+const mockState = { home: '', root: '', engines: '/tools/steam-engines' }
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
-jest.mock('backend/engine/bottlePrimitives', () => ({
-  getBottleDir: (_paths: unknown, name: string) => `${mockState.root}/${name}`,
-  sanitizeBottleName: (name: string) =>
-    /^[A-Za-z0-9_-]+$/.test(name) ? name : '',
-  buildFallbackGameSettings: jest.fn(),
-  killBottleWineServerWith: jest.fn()
-}))
+jest.mock('backend/engine/bottlePrimitives', () => {
+  const twin = jest.requireActual('backend/enginewine/twin')
+  return {
+    getBottleDir: twin.getBottleDir,
+    sanitizeBottleName: twin.sanitizeBottleName,
+    buildFallbackGameSettings: jest.fn(),
+    killBottleWineServerWith: jest.fn()
+  }
+})
 import {
   ENGINE_MARKER_FILE,
   createEngineSwitcher,
@@ -94,13 +98,17 @@ const seedMarker = (m: object) =>
 
 beforeEach(() => {
   mockState.engines = '/tools/steam-engines'
-  mockState.root = mkdtempSync(join(tmpdir(), 'gamelib-switch-'))
+  mockState.home = mkdtempSync(join(tmpdir(), 'gamelib-switch-'))
+  mockState.root = join(
+    mockState.home,
+    'Library/Application Support/CrossOver/Bottles'
+  )
   dir = join(mockState.root, NAME)
-  mkdirSync(dir)
+  mkdirSync(dir, { recursive: true })
   ledger = createBottleLedger()
   gateRust = createFakeBottleGateRust()
   ctx = {
-    paths: { userHome: '/home', toolsPath: '/tools' },
+    paths: { userHome: mockState.home, toolsPath: '/tools' },
     fallback: {
       pinnedEngineRoot: () => mockState.engines,
       pinnedEnginePaths: jest.fn(),
@@ -140,7 +148,7 @@ beforeEach(() => {
     ownBottleName: jest.fn((id: string) => `GameLibSteamBridge-${id}`)
   } as unknown as jest.Mocked<EngineSwitchDeps>
 })
-afterEach(() => rmSync(mockState.root, { recursive: true, force: true }))
+afterEach(() => rmSync(mockState.home, { recursive: true, force: true }))
 
 const run = (next: EngineSelection) =>
   prepareBottleForEngine({ key: '620', bottleName: NAME, next, deps })
