@@ -6,11 +6,12 @@ use std::sync::Arc;
 
 use gamelib_core::clock::Clock;
 use gamelib_core::emitter::FrontendEmitter;
-use gamelib_core::process::SpecRunner;
+use gamelib_core::process::{BoxFuture, SpecRunner};
 use gamelib_core::shutdown::Shutdown;
 use gamelib_i18n::Catalog;
 use gamelib_proc::spec::SpecProcRunner;
 use gamelib_store::host::StoreHost;
+use serde::{Deserialize, Serialize};
 
 use crate::dxvk::{DxvkInstaller, NoDxvk};
 use crate::fetch::{Fetch, ReqwestFetch};
@@ -39,6 +40,31 @@ pub struct EnginePaths {
     pub user_home: PathBuf,
     pub temp: PathBuf,
 }
+
+/// A Wine installation as the shell's discovery reports it (the TS `WineInstallation`): the default
+/// Wine a fresh profile's global settings name. `kind` is `wine`, `proton`, `crossover` or `toolkit`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WineInstallationView {
+    pub bin: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lib: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lib32: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wineserver: Option<String>,
+}
+
+/// The default Wine (D-25 (b), D-04): the shell fills it from `gamelib-wine`'s
+/// `default_wine_from_path`, so this crate never depends on that one. `None` is "no Wine on PATH
+/// that the shell found", which is also what a headless context reports.
+pub type DefaultWineHook = Arc<dyn Fn() -> Option<WineInstallationView> + Send + Sync>;
+
+/// The CrossOver `bin` directory (D-25, same direction as the default Wine): the shell fills it from
+/// `gamelib-wine`'s CrossOver discovery. `None` is "CrossOver is not installed".
+pub type CrossoverBinDirHook = Arc<dyn Fn() -> BoxFuture<Option<String>> + Send + Sync>;
 
 /// Everything an op needs from outside the crate. Fields are public so the shell can fill the ones
 /// a later slice adds; [`EngineCtx::new`] gives each a neutral default, and the `with_*` methods
@@ -74,6 +100,10 @@ pub struct EngineCtx {
     pub dxvk: Arc<dyn DxvkInstaller>,
     /// The app's version, the `User-Agent` of every request (`fetch::user_agent`).
     pub app_version: String,
+    /// The default Wine for the global settings (D-25 (b)). Reports none until the shell's is set.
+    pub default_wine: DefaultWineHook,
+    /// The CrossOver bin directory (D-25). Reports none until the shell's is set.
+    pub crossover_bin_dir: CrossoverBinDirHook,
 }
 
 impl EngineCtx {
@@ -94,6 +124,8 @@ impl EngineCtx {
             i18n: Arc::new(Catalog::default()),
             dxvk: Arc::new(NoDxvk),
             app_version: DEFAULT_APP_VERSION.to_string(),
+            default_wine: Arc::new(|| None),
+            crossover_bin_dir: Arc::new(|| Box::pin(async { None })),
             host,
             clock,
             platform,
@@ -139,6 +171,16 @@ impl EngineCtx {
 
     pub fn with_app_version(mut self, app_version: impl Into<String>) -> EngineCtx {
         self.app_version = app_version.into();
+        self
+    }
+
+    pub fn with_default_wine(mut self, default_wine: DefaultWineHook) -> EngineCtx {
+        self.default_wine = default_wine;
+        self
+    }
+
+    pub fn with_crossover_bin_dir(mut self, crossover_bin_dir: CrossoverBinDirHook) -> EngineCtx {
+        self.crossover_bin_dir = crossover_bin_dir;
         self
     }
 }
@@ -188,6 +230,8 @@ mod tests {
         let ctx = ctx(&home);
         assert!(ctx.ui.is_none() && ctx.log.is_none());
         assert_eq!(ctx.app_version, DEFAULT_APP_VERSION);
+        assert!((ctx.default_wine)().is_none());
+        assert!((ctx.crossover_bin_dir)().await.is_none());
         // NoDxvk installs nothing; the null emitter swallows a push; the empty catalog answers the
         // inline default.
         assert!(!ctx.dxvk.install_remove(request()).await);
@@ -235,6 +279,34 @@ mod tests {
         assert_eq!(dxvk.requests().len(), 1);
         assert_eq!(run.code, Some(0));
         assert_eq!(ctx.app_version, "0.11.0");
+    }
+
+    #[tokio::test]
+    async fn the_wine_and_crossover_hooks_are_replaced_by_the_shells() {
+        let home = FakeHome::new("engine-ctx-");
+        let ctx = ctx(&home)
+            .with_default_wine(Arc::new(|| {
+                Some(WineInstallationView {
+                    bin: "/usr/bin/wine".to_string(),
+                    name: "wine".to_string(),
+                    kind: "wine".to_string(),
+                    lib: None,
+                    lib32: None,
+                    wineserver: Some("/usr/bin/wineserver".to_string()),
+                })
+            }))
+            .with_crossover_bin_dir(Arc::new(|| Box::pin(async { Some("/cx/bin".to_string()) })));
+        let wine = (ctx.default_wine)().unwrap();
+        assert_eq!(
+            serde_json::to_value(&wine).unwrap(),
+            serde_json::json!({
+                "bin": "/usr/bin/wine",
+                "name": "wine",
+                "type": "wine",
+                "wineserver": "/usr/bin/wineserver"
+            })
+        );
+        assert_eq!((ctx.crossover_bin_dir)().await.as_deref(), Some("/cx/bin"));
     }
 
     #[tokio::test]

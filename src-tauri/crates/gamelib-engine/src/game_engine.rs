@@ -6,11 +6,22 @@
 //! Steam answers through its own adapter, so every function answers `None` for a bottle-runtime
 //! store.
 
-use serde_json::Value;
+use serde::Serialize;
+use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-use crate::jsutil::js_trim;
+use crate::config::{
+    engine_id_of, global_settings, read_engine_for_game, resolve_global_engine, EffectiveEngine,
+    EngineSource,
+};
+use crate::ctx::EngineCtx;
+use crate::engines::{
+    is_installed_macos_release, is_pinned_engine_installed, wine_manager_releases,
+};
+use crate::ids::parse_engine_override_str;
+use crate::jsutil::{js_to_string, js_trim, prop};
 use crate::key::{engine_key_for, uses_bottle_runtime};
+use crate::pins::pins;
 
 /// The longest per-game bottle name (spike 068 accepted 120; 64 leaves every real store id whole).
 pub const PER_GAME_BOTTLE_NAME_MAX: usize = 64;
@@ -82,6 +93,195 @@ pub fn as_non_steam_identity(args: &Value) -> Option<(String, String)> {
 pub fn per_game_bottle_name_for(args: &Value) -> Option<String> {
     let (runner, app_name) = as_non_steam_identity(args)?;
     per_game_bottle_name(&runner, &app_name)
+}
+
+/// One row of the engine picker (`EngineOption`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EngineOption {
+    pub id: String,
+    pub kind: &'static str,
+    pub label: String,
+    pub available: bool,
+    pub installed: bool,
+    pub is_previous_pin: bool,
+}
+
+fn option(
+    id: String,
+    kind: &'static str,
+    label: String,
+    available: bool,
+    installed: bool,
+    is_previous_pin: bool,
+) -> EngineOption {
+    EngineOption {
+        id,
+        kind,
+        label,
+        available,
+        installed,
+        is_previous_pin,
+    }
+}
+
+/// `/-DXMT$|gptk|toolkit/i`.
+fn is_unusable_release_name(version: &str) -> bool {
+    let lower = version.to_lowercase();
+    lower.ends_with("-dxmt") || lower.contains("gptk") || lower.contains("toolkit")
+}
+
+/// `listEngineOverrideOptions`: Automatic, CrossOver (installed or not), the current pin and the
+/// previous one when there is one, then every installed Wine Manager macOS build the grammar
+/// accepts. GPTK, toolkit and DXMT builds and custom paths are never offered (D-11).
+pub async fn list_engine_override_options(ctx: &EngineCtx) -> Vec<EngineOption> {
+    let mut out = vec![option(
+        "automatic".to_string(),
+        "automatic",
+        "Automatic".to_string(),
+        true,
+        true,
+        false,
+    )];
+    let crossover = (ctx.crossover_bin_dir)().await.is_some();
+    out.push(option(
+        "crossover".to_string(),
+        "crossover",
+        "CrossOver".to_string(),
+        crossover,
+        crossover,
+        false,
+    ));
+    if let Ok(table) = pins() {
+        for (pin, previous) in std::iter::once((&table.current, false))
+            .chain(table.previous.as_ref().map(|p| (p, true)))
+        {
+            out.push(option(
+                format!("pinned:{}", pin.id),
+                "pinned",
+                pin.label.clone(),
+                true,
+                is_pinned_engine_installed(ctx, pin),
+                previous,
+            ));
+        }
+    }
+    for release in wine_manager_releases(ctx) {
+        if !is_installed_macos_release(&release) {
+            continue;
+        }
+        let version = prop(&release, "version").map_or("undefined".to_string(), js_to_string);
+        if is_unusable_release_name(&version) {
+            continue;
+        }
+        let id = format!("wine-manager:{version}");
+        if parse_engine_override_str(&id) == "automatic" {
+            continue;
+        }
+        out.push(option(
+            id,
+            "wine-manager",
+            format!("Wine Manager: {version}"),
+            true,
+            true,
+            false,
+        ));
+    }
+    out
+}
+
+/// A read-only `Legacy: <name>` row while the game (or the global default) is on Legacy. The id is
+/// display only: the write guard rejects it, so it can never be saved (D-07).
+fn legacy_entry(effective: &EffectiveEngine) -> Option<EngineOption> {
+    let EffectiveEngine::Legacy { label } = effective else {
+        return None;
+    };
+    Some(option(
+        engine_id_of(effective),
+        "legacy",
+        format!(
+            "Legacy: {}",
+            label.as_ref().map_or("undefined".to_string(), js_to_string)
+        ),
+        false,
+        true,
+        false,
+    ))
+}
+
+/// `listGameEngineOptions`: the picker's rows, plus the Legacy row when `args` names a game (or
+/// `{appName: 'default'}`, the global default) that is on Legacy. Any other argument shape answers
+/// the plain list.
+pub async fn list_game_engine_options(ctx: &EngineCtx, args: &Value) -> Vec<EngineOption> {
+    let mut options = list_engine_override_options(ctx).await;
+    let effective = match args.as_object() {
+        None => None,
+        Some(object) => {
+            if !object.contains_key("runner")
+                && object.get("appName").and_then(Value::as_str) == Some("default")
+            {
+                Some(resolve_global_engine(ctx, &global_settings(ctx)))
+            } else {
+                as_non_steam_identity(args)
+                    .map(|(runner, app_name)| read_engine_for_game(ctx, &runner, &app_name))
+            }
+        }
+    };
+    if let Some(legacy) = effective.as_ref().and_then(legacy_entry) {
+        options.push(legacy);
+    }
+    options
+}
+
+/// `getDefaultEngine` (D-09): the global default engine, derived or stored, Legacy included.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DefaultEngine {
+    pub effective_engine_id: String,
+    pub stored: bool,
+    /// The Legacy Wine's label; `None` when the default is not Legacy (and when a Legacy Wine named
+    /// nothing, which the TS payload leaves out).
+    pub legacy_label: Option<Value>,
+    pub is_legacy: bool,
+}
+
+impl DefaultEngine {
+    /// The JSON payload of `getDefaultEngine`.
+    pub fn to_value(&self) -> Value {
+        let mut out = serde_json::Map::new();
+        out.insert(
+            "effectiveEngineId".to_string(),
+            json!(self.effective_engine_id),
+        );
+        out.insert(
+            "engineSource".to_string(),
+            json!(if self.stored { "stored" } else { "derived" }),
+        );
+        if !self.is_legacy {
+            out.insert("legacyLabel".to_string(), Value::Null);
+        } else if let Some(label) = &self.legacy_label {
+            out.insert("legacyLabel".to_string(), label.clone());
+        }
+        Value::Object(out)
+    }
+}
+
+pub fn default_engine(ctx: &EngineCtx) -> DefaultEngine {
+    let effective = resolve_global_engine(ctx, &global_settings(ctx));
+    DefaultEngine {
+        effective_engine_id: engine_id_of(&effective),
+        stored: matches!(
+            effective,
+            EffectiveEngine::Override {
+                source: EngineSource::Stored,
+                ..
+            }
+        ),
+        is_legacy: matches!(effective, EffectiveEngine::Legacy { .. }),
+        legacy_label: match effective {
+            EffectiveEngine::Legacy { label } => label,
+            EffectiveEngine::Override { .. } => None,
+        },
+    }
 }
 
 #[cfg(test)]

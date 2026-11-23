@@ -9,11 +9,35 @@
 //! floor lives here next to the replay, so editing the JSON alone cannot lower the bar, and an empty
 //! case list fails. The replays are POSIX only, as the TS oracle's are (`describeSkipOnWindows`).
 
+use std::future::Future;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
-use gamelib_engine::game_engine::per_game_bottle_name_for;
+use gamelib_core::clock::SystemClock;
+use gamelib_core::process::BoxFuture;
+use gamelib_core::shutdown::Shutdown;
+use gamelib_engine::config::{
+    derive_engine_from_wine, engine_id_of, engine_id_of_value, read_engine_for_game,
+    read_stored_game_config, resolve_effective_engine, resolve_global_engine, ResolveOptions,
+};
+use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
+use gamelib_engine::engines::NonCrossoverEngine;
+use gamelib_engine::game_engine::{
+    default_engine, list_game_engine_options, per_game_bottle_name_for,
+};
 use gamelib_engine::ids::parse_engine_override;
-use gamelib_engine::key::{app_name_of, engine_key_if_eligible, is_engine_key, GameIdentity};
+use gamelib_engine::key::{
+    app_name_of, engine_key_for, engine_key_if_eligible, is_engine_key, GameIdentity,
+};
+use gamelib_engine::offline::{
+    offline_launch_certainly_blocked, verdict_value, MarkerKind, OfflineRefusalInput,
+};
+use gamelib_engine::tool_settings::{
+    build_crossover_game_settings, build_fallback_game_settings, build_plain_prefix_settings,
+    resolve_tool_settings, resolve_tool_settings_for_id, CtxToolSettingsDeps, EnsureBottleRequest,
+    ToolGameId, ToolSettingsDeps,
+};
+use gamelib_store::host::StoreHost;
 use gamelib_testutil::FakeHome;
 use serde_json::{json, Value};
 
@@ -40,8 +64,20 @@ fn cases() -> Vec<Value> {
         .clone()
 }
 
+/// The golden's outcome, with the one documented delta applied (`deltas.json`,
+/// `unplain-game-config-name-reads-as-no-entry`): a GamesConfig name the store host refuses reads as
+/// no entry, where the TS read the hand-placed file.
 fn expected_outcome(id: &str) -> Value {
-    read_json(&golden_dir().join("expected").join(id).join("result.json"))["outcome"].clone()
+    let mut outcome =
+        read_json(&golden_dir().join("expected").join(id).join("result.json"))["outcome"].clone();
+    if id == "read-stored-name-guards" {
+        for item in outcome.as_array_mut().unwrap() {
+            if item["input"]["appName"] == "dots..in" {
+                item["entry"] = Value::Null;
+            }
+        }
+    }
+    outcome
 }
 
 /// A list is usable only at or above its floor: an empty or shrunken list is an error, so a replay
@@ -255,6 +291,56 @@ impl Profile {
         copy_tree(&source, &self.tools);
     }
 
+    /// The engine context over this profile: the case's platform, and CrossOver where the case
+    /// scripts it (the real locator probes `/Applications` and Spotlight, the operator's machine).
+    fn ctx(&self, case: &Value) -> EngineCtx {
+        let platform = match case["platform"].as_str() {
+            Some("linux") => Platform::Linux,
+            Some("windows") => Platform::Windows,
+            _ => Platform::Mac,
+        };
+        let paths = EnginePaths {
+            app_folder: self.app_folder.clone(),
+            user_data: self.user_data.clone(),
+            tools_path: self.tools.clone(),
+            user_home: self.root().to_path_buf(),
+            temp: self.root().join("tmp"),
+        };
+        let ctx = EngineCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            platform,
+            paths,
+            Shutdown::new(),
+        );
+        if case["crossover"].as_str() == Some("present") {
+            let bin_dir = self
+                .expand("<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin");
+            return ctx.with_crossover_bin_dir(Arc::new(move || {
+                let bin_dir = bin_dir.clone();
+                Box::pin(async move { Some(bin_dir) })
+            }));
+        }
+        ctx
+    }
+
+    /// What the shell's boot sweep does to the settings documents: opens each through the host.
+    fn boot_sweep(&self, ctx: &EngineCtx) {
+        let global = self.app_folder.join("config.json");
+        if global.exists() {
+            let _ = ctx.host.open_doc("settings/global", global);
+        }
+        let games = self.app_folder.join("GamesConfig");
+        for entry in std::fs::read_dir(&games).into_iter().flatten().flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if let Some(app) = name.strip_suffix(".json") {
+                let _ = ctx
+                    .host
+                    .open_doc(&format!("GamesConfig/{app}"), entry.path());
+            }
+        }
+    }
+
     /// Every file under the profile with its bytes, sorted: two snapshots are equal only when no
     /// file was created, edited or removed (reading engine state never writes, 59-UAT G11).
     fn snapshot(&self) -> Vec<(String, Vec<u8>)> {
@@ -321,6 +407,164 @@ fn materialise(value: &Value) -> Value {
     }
 }
 
+fn block_on<F: Future>(future: F) -> F::Output {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(future)
+}
+
+/// The in-memory half the tool-settings golden scripts: the engine registry's live selection and
+/// its launch overlay (`setEngineSelection`, `getLaunchSettings`), and the bottle flight, which
+/// records its arguments. Everything else is the crate's own reads over the fake profile.
+struct ScriptedDeps<'a> {
+    ctx: &'a EngineCtx,
+    base: CtxToolSettingsDeps<'a>,
+    selection: Option<Value>,
+    context: Option<Value>,
+    ensure_error: bool,
+    ensure_calls: Mutex<Vec<Value>>,
+}
+
+impl ScriptedDeps<'_> {
+    fn engine_of(selection: &Value) -> NonCrossoverEngine {
+        let text = |key: &str| selection[key].as_str().unwrap_or_default().to_string();
+        NonCrossoverEngine {
+            wine_bin: text("wineBin"),
+            wineserver_bin: text("wineserverBin"),
+            label: text("label"),
+            version: text("version"),
+            dxvk: None,
+        }
+    }
+}
+
+impl ToolSettingsDeps for ScriptedDeps<'_> {
+    fn has_live_selection(&self, _key: &str) -> bool {
+        self.selection.is_some()
+    }
+
+    fn overlay(&self, _key: &str, stored: &Value) -> Value {
+        let (Some(selection), Some(context)) = (&self.selection, &self.context) else {
+            return stored.clone();
+        };
+        let bottle = (context["prefix"]["kind"] == "bottle")
+            .then(|| context["prefix"]["bottleName"].as_str().unwrap_or_default());
+        if selection["kind"] == "crossover" {
+            let Some(bottle) = bottle else {
+                return stored.clone();
+            };
+            let bin_dir = context["binDir"]
+                .as_str()
+                .or_else(|| selection["binDir"].as_str())
+                .unwrap_or_default();
+            return build_crossover_game_settings(
+                stored,
+                bottle,
+                bin_dir,
+                selection["crossoverBuild"].as_str(),
+            );
+        }
+        let engine = Self::engine_of(selection);
+        match bottle {
+            Some(bottle) => build_fallback_game_settings(self.ctx, bottle, &engine, stored),
+            None => build_plain_prefix_settings(stored, &engine),
+        }
+    }
+
+    fn is_provisioned(&self, bottle_name: &str) -> bool {
+        self.base.is_provisioned(bottle_name)
+    }
+
+    fn ensure_game_bottle(&self, request: EnsureBottleRequest) -> BoxFuture<bool> {
+        self.ensure_calls.lock().unwrap().push(json!({
+            "key": request.key,
+            "bottleName": request.bottle_name,
+            "appName": request.app_name,
+            "runner": request.runner,
+        }));
+        let ok = !self.ensure_error;
+        Box::pin(async move { ok })
+    }
+
+    fn marker_kind(&self, bottle_name: &str) -> Option<MarkerKind> {
+        self.base.marker_kind(bottle_name)
+    }
+
+    fn crossover_bin_dir(&self) -> BoxFuture<Option<String>> {
+        self.base.crossover_bin_dir()
+    }
+
+    fn non_crossover_engine(&self, engine_id: &str) -> Option<NonCrossoverEngine> {
+        self.base.non_crossover_engine(engine_id)
+    }
+}
+
+/// One tool-settings item: `setEngineSelection` (refusing a bad key or missing binaries), then the
+/// resolver through the game or the id entry point.
+fn tool_settings_item(ctx: &EngineCtx, item: Value) -> Value {
+    let spec = &item["game"];
+    let runner = spec["runner"].as_str().unwrap_or_default();
+    let app_name = spec["appName"].as_str().unwrap_or_default();
+    let key = engine_key_for(runner, app_name);
+    let live = item.get("live");
+    let mut live_set = Value::Null;
+    let mut selection = None;
+    if let (Some(live), Some(key)) = (live, key.as_deref()) {
+        let candidate = live["selection"].clone();
+        let accepted = is_engine_key(key)
+            && (candidate["kind"] == "crossover"
+                || (Path::new(candidate["wineBin"].as_str().unwrap_or("")).exists()
+                    && Path::new(candidate["wineserverBin"].as_str().unwrap_or("")).exists()));
+        live_set = json!(accepted);
+        if accepted {
+            selection = Some(candidate);
+        }
+    }
+    let deps = ScriptedDeps {
+        ctx,
+        base: CtxToolSettingsDeps::new(ctx),
+        selection,
+        context: live.and_then(|l| l.get("context")).cloned(),
+        ensure_error: item["ensure"] == "error",
+        ensure_calls: Mutex::new(Vec::new()),
+    };
+    let stored = item["stored"].clone();
+    let ensure_bottle = item["ensureBottle"].as_bool().unwrap_or(false);
+    let platform = spec["platform"].as_str();
+    let result = if item["via"] == "id" {
+        let id = ToolGameId {
+            runner,
+            app_name,
+            platform,
+        };
+        block_on(resolve_tool_settings_for_id(
+            ctx,
+            &deps,
+            &id,
+            &stored,
+            ensure_bottle,
+        ))
+    } else {
+        let game = GameIdentity {
+            runner,
+            app_name,
+            native: spec["native"].as_bool() == Some(true),
+            install_platform: platform,
+        };
+        block_on(resolve_tool_settings(
+            ctx,
+            &deps,
+            &game,
+            &stored,
+            ensure_bottle,
+        ))
+    };
+    let calls = deps.ensure_calls.lock().unwrap().clone();
+    json!({"input": item, "liveSet": live_set, "result": result.to_value(), "ensureCalls": calls})
+}
+
 fn items_of(args: &Value) -> Vec<Value> {
     args["items"].as_array().cloned().unwrap_or_default()
 }
@@ -338,6 +582,11 @@ fn run_case(case: &Value) -> Value {
         profile.build_engines(variant);
     }
     profile.seed(&case["seed"]);
+    let ctx = profile.ctx(case);
+    // The shell opens (and migrates) every settings document at boot, before any engine read: the
+    // seeds are the oldest shape, so the sweep stands in for that boot. After it, a read writes
+    // nothing.
+    profile.boot_sweep(&ctx);
     let before = profile.snapshot();
     let args = profile.expand_value(&materialise(&case["args"]));
 
@@ -382,6 +631,100 @@ fn run_case(case: &Value) -> Value {
                 })
                 .collect(),
         ),
+        "derive" => Value::Array(
+            items_of(&args)
+                .into_iter()
+                .map(|item| {
+                    let effective = derive_engine_from_wine(&ctx, item.get("wine"));
+                    json!({"input": item, "effective": effective.to_value(), "id": engine_id_of(&effective)})
+                })
+                .collect(),
+        ),
+        "effective" => Value::Array(
+            items_of(&args)
+                .into_iter()
+                .map(|item| {
+                    let effective = resolve_effective_engine(
+                        &ctx,
+                        item.get("entry").and_then(Value::as_object),
+                        item.get("inherited"),
+                        &ResolveOptions {
+                            legacy_key: item.get("legacyKey").and_then(Value::as_str),
+                            derive: item["derive"].as_bool().unwrap_or(false),
+                        },
+                    );
+                    json!({"input": item, "effective": effective.to_value(), "id": engine_id_of(&effective)})
+                })
+                .collect(),
+        ),
+        "read-for-game" => Value::Array(
+            items_of(&args)
+                .into_iter()
+                .map(|item| {
+                    let runner = item["runner"].as_str().unwrap();
+                    let effective =
+                        read_engine_for_game(&ctx, runner, item["appName"].as_str().unwrap());
+                    json!({
+                        "input": item,
+                        "steamStore": gamelib_engine::key::uses_bottle_runtime(runner),
+                        "effective": effective.to_value(),
+                        "id": engine_id_of(&effective),
+                    })
+                })
+                .collect(),
+        ),
+        "read-stored" => Value::Array(
+            items_of(&args)
+                .into_iter()
+                .map(|item| {
+                    let entry = item["appName"]
+                        .as_str()
+                        .and_then(|name| read_stored_game_config(&ctx, name));
+                    json!({"input": item, "entry": entry.map_or(Value::Null, Value::Object)})
+                })
+                .collect(),
+        ),
+        "global" => Value::Array(
+            items_of(&args)
+                .into_iter()
+                .map(|item| {
+                    let settings = item.as_object().cloned().unwrap_or_default();
+                    let effective = resolve_global_engine(&ctx, &settings);
+                    json!({"input": item, "effective": effective.to_value(), "id": engine_id_of(&effective)})
+                })
+                .collect(),
+        ),
+        "engine-id" => Value::Array(
+            items_of(&args)
+                .into_iter()
+                .map(|item| json!({"id": engine_id_of_value(&item), "input": item}))
+                .collect(),
+        ),
+        "options" => Value::Array(
+            items_of(&args)
+                .into_iter()
+                .map(|item| {
+                    let options = block_on(list_game_engine_options(&ctx, &item));
+                    json!({"input": item, "options": options})
+                })
+                .collect(),
+        ),
+        "default-engine" => default_engine(&ctx).to_value(),
+        "offline" => Value::Array(
+            items_of(&args)
+                .into_iter()
+                .map(|item| {
+                    let input = OfflineRefusalInput::from_value(&item);
+                    json!({"input": item, "verdict": verdict_value(offline_launch_certainly_blocked(&input))})
+                })
+                .collect(),
+        ),
+        "tool-settings" => Value::Array(
+            items_of(&args)
+                .into_iter()
+                .map(|item| tool_settings_item(&ctx, item))
+                .collect(),
+        ),
         other => panic!("op {other} is not ported by this build"),
     };
 
@@ -406,12 +749,12 @@ fn eligibility_key(item: &Value) -> Option<String> {
     engine_key_if_eligible(&identity, item["mac"].as_bool() == Some(true))
 }
 
-fn replay(ops: &[&str]) {
+fn replay(ops: &[&str], floor: usize) {
     let selected: Vec<Value> = cases()
         .into_iter()
         .filter(|c| ops.contains(&c["op"].as_str().unwrap()))
         .collect();
-    check_floor("replayed config cases", selected.len(), 1).unwrap();
+    check_floor("replayed config cases", selected.len(), floor).unwrap();
     let mut failures = Vec::new();
     for case in &selected {
         let id = case["id"].as_str().unwrap();
@@ -429,8 +772,32 @@ fn replay(ops: &[&str]) {
 }
 
 #[test]
+fn the_documented_deltas_are_exactly_the_three_this_replay_treats_differently() {
+    let deltas = read_json(&golden_dir().join("deltas.json"));
+    let mut keys: Vec<&str> = deltas
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect();
+    keys.sort_unstable();
+    assert_eq!(
+        keys,
+        [
+            "registry-log-lines-and-tree-hashes-are-not-replayed",
+            "settings-documents-are-the-hosts-view",
+            "unplain-game-config-name-reads-as-no-entry",
+        ]
+    );
+    // Each is explained, not just named.
+    for (key, why) in deltas.as_object().unwrap() {
+        assert!(why.as_str().unwrap().len() > 200, "{key}");
+    }
+}
+
+#[test]
 fn the_tracer_goldens_replay() {
-    replay(&TRACER_OPS);
+    replay(&TRACER_OPS, 7);
 }
 
 /// Every config golden, the 87-25 contract: `MANIFEST count >= 20` and all of them pass.
@@ -453,7 +820,7 @@ const ALL_OPS: [&str; 14] = [
 
 #[test]
 fn every_config_golden_replays() {
-    replay(&ALL_OPS);
+    replay(&ALL_OPS, CASE_FLOOR);
 }
 
 #[test]
