@@ -10,6 +10,9 @@
 //! test scripts. The prefix and tools trees are real directories on a fake HOME, so a removal is
 //! observed on disk. The guarded replacement of a tool version, which the TS never had, is tested
 //! here too, over a replayed feed and the real `tar`.
+//!
+//! POSIX only: the prefix trees, the macOS golden tree and the real `tar` are unix fixtures, as the engine crate's incident suites are.
+#![cfg(unix)]
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
