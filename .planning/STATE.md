@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-31-PLAN.md
-last_updated: "2026-11-23T09:46:52.520Z"
+stopped_at: Completed 87-32-PLAN.md
+last_updated: "2026-11-23T10:15:29.217Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: ce69925d11a1f7d544950e27b12dd254621abac4
+state_head: b5ac62800475630444dba695d7da049454a023b4
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 32 of 59
+Plan: 33 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -441,6 +441,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P29 | 25min | 2 tasks | 5 files |
 | Phase 87 P30 | 14 min | 2 tasks | 9 files |
 | Phase 87 P31 | 13 min | 2 tasks | 18 files |
+| Phase 87 P32 | 28 min | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -913,6 +914,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-30: on_releases_info keeps the TS offline quirk its golden pins; boot_update (the bounded task body) returns early offline; both take the DXMT releases payload
 - [Phase 87]: 87-30: EngineCtx.online starts false (monitor's first reading); DXMT_BOOT_BOUND is 60 s; store-supplied -DXMT paths are written only strictly inside <tools>/wine
 - [Phase 87]: 87-31: the DXMT boot task starts from the first wine_releases_info_ready of a run (the feed's DXMT tag is only in that payload); later calls run on_releases_info through op wine_dxmt_releases_info
+- [Phase 87]: Winetricks streams through a new raw-chunk SpecRunner::run_streamed (both pipes), not the stdout-only line callback, because winetricks' progress and curl's bare-CR meter are on stderr
+- [Phase 87]: The caller resolves the game and passes Target with ToolSettings::Resolved or Unavailable(reason); the Launcher trait backs setupEnvVars, setupWineEnvVars and validWine (HostLauncher in production)
+- [Phase 87]: The dependency and wine-version probes run beside the child and are joined, so every environment report is final when a run returns
+- [Phase 87]: The install op checks the verb shape before any spawn; the full apply guard (100 maximum, catalog membership, hidden-verb recheck) is ported for the queue in 87-33
 
 ### Pending Todos
 
@@ -1193,8 +1198,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T09:46:50.635Z
-Stopped at: Completed 87-31-PLAN.md
+Last session: 2026-11-23T10:15:27.315Z
+Stopped at: Completed 87-32-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
