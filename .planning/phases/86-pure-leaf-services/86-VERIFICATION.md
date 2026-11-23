@@ -1,6 +1,6 @@
 ---
 phase: 86-pure-leaf-services
-verified: 2026-11-23T18:00:00Z
+verified: 2026-11-23T09:12:32Z
 status: passed
 score: 5/5 must-haves verified
 covered_files:
@@ -99,7 +99,7 @@ covered_files:
   - "src/backend/storeManagers/storeManagerCommon/__tests__/umuGameId.test.ts"
   - "src/backend/storeManagers/storeManagerCommon/umuGameId.ts"
   - "src/backend/utils.ts"
-covered_digest: "v4:sha256:20f25ed2eff9432b8ec174370a3c3c281da0d898d92b873afd56b94dae4f78e2"
+covered_digest: "v4:sha256:debdeb870d7e1753b0555cc1d1a7edbf540155ff9984828cb7630e74ba17d683"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
@@ -110,14 +110,10 @@ re_verification:
   regressions: []
 deferred: []
 advisory:
-  - finding: "WR-65: spawn_blocking Keychain call in SlotOwner::set_async/get_async holds no shutdown Registrant"
+  - finding: "Live Force Quit with a Keychain prompt open was never exercised against the WR-65 registrant (the fix report marks WR-65 and WR-66 'requires human verification')"
     category: other
-    reason: "Round-3 review, open in ledger; affects exit-time only, no phase truth; fix by moving a registrant into the blocking closure"
-    evidence_status: "read at HEAD, no failing test"
-  - finding: "WR-66: SlotOwner::set_async does not serialise writers; overlapping saves can leave cache != Keychain"
-    category: other
-    reason: "Round-3 review, open in ledger; double save behind a Keychain prompt only; no phase truth"
-    evidence_status: "read at HEAD, no failing test"
+    reason: "The registrant and the drain are exercised by a passing in-process test on a real Shutdown with a parked blocking call; only the OS-level prompt-then-quit path is unobserved, and the worst case is bounded by the 5 s exit budget. Not a phase truth, so it is not a human_needed item."
+    evidence_status: "unit test passes (run by me); no live run"
 behavior_unverified_items: []
 coincidental_reliance_items: []
 human_verification: []
@@ -126,118 +122,84 @@ human_verification: []
 # Phase 86: Pure leaf services Verification Report
 
 **Phase Goal:** The self-contained information and cache services run in Rust and behave as before.
-**Requirement:** SVC-01 (declared by all 27 PLAN files, including gap plan 86-27; the milestone requirements file maps only SVC-01 to Phase 86; no orphans)
-**Verified:** 2026-11-23 (re-verified on main `4348051f5` after the review-fix merge)
+**Requirement:** SVC-01 (declared by all 27 PLAN files, including gap plan 86-27; `.planning/REQUIREMENTS-v0.11.md` maps only SVC-01 to Phase 86 (line 77, now `Complete`, checkbox ticked at line 25); no orphans)
+**Verified:** 2026-11-23T09:12:32Z on main `0a9a8a08d`
 **Status:** passed
-**Re-verification:** Yes, on main at `ff56f13d4` after the gap-closure merge (prior report was written on the gap branch at `361397ba1`, status `passed`, 5/5; it went stale because Phase 87 commits landed in the merge)
+**Re-verification:** Yes, after the round-3 review fixes (prior report: `passed`, 5/5, committed `e4271faac`; it went stale because `verification.status` reports `src-tauri/crates/gamelib-info/src/secrets.rs` and `tests/secrets.rs` moved)
 
-## Re-verification after the review fixes (main `4348051f5`)
+## Re-verification after the round-3 review fixes (main `0a9a8a08d`)
 
-The report below went stale because merge `6bee3d20b` (branch `phase/86-review-fix`: WR-01..04, WR-21, WR-22, WR-61..64) changed
-covered files: 21 files under `src-tauri/crates/gamelib-info`, `src-tauri/src/info_dispatch.rs`, `src-tauri/src/info_secrets.rs`,
-`src/backend/utils.ts`, `src/backend/storeManagers/legendary/user.ts` and four test files
-(`git diff c8d55b0ed HEAD --stat -- src src-tauri meta`: 21 files, 772 insertions, 125 deletions). I read the diffs, not 86-REVIEW-FIX.md,
-and re-ran the gates. SC1-SC4 and G still hold. Status stays `passed`, 5/5.
+`git diff e4271faac HEAD --name-only -- src-tauri/crates/gamelib-info src/backend/info` names exactly two files: `secrets.rs` and
+`tests/secrets.rs`. Everything else that changed under `src-tauri`, `src` and `meta` since then belongs to quick task 261123-txk
+(`gamelib-engine/src/fetch.rs` ranged download, `gamelib-wine` golden suites) and the R5 i18n scope refresh
+(`meta/i18nGateScope.json`, `meta/i18nForkTouchedFiles.json`, `meta/__tests__/genI18nGateScope.test.ts`); none is a covered Phase 86
+file and neither crate is imported by `gamelib-info`. I read `secrets.rs` at HEAD, not 86-REVIEW-FIX-ROUND3.md.
 
-### What each fix does to "behave as before" (read at HEAD by me)
+### WR-65 (`6f9464397`): shutdown contract, read at HEAD
 
-| Fix | Behavior change | Phase-truth impact |
-|-----|-----------------|--------------------|
-| WR-03 (`wiki/mod.rs:131` `is_numeric_id`, used in `protondb.rs:37`, `deck.rs:36`, `pcgw.rs:211`, `agw.rs:111`; `encode_uri_component` in `gog_ctx.rs`, `pcgw.rs:188`) | ProtonDB and Deck answer `None` with no request for a Steam id that is not all digits; PCGW and AGW skip a non-digit page id; GOG id, store and id are percent-encoded. | None for real callers. The only source of a Steam id is `wiki/mod.rs:339-345`: the app name when `app_name_is_steam_app_id` (runner `steam` only, `runner_caps.rs`; `gamelib-engine/src/key.rs:56` already requires a Steam app name to be 1 to 10 ASCII digits), GamesDB's `steam` `external_id`, or PCGW's `steam appid` capture `([0-9]+)` (`regexes.rs:79`). The page ids come from the PCGW/AGW search and cargoquery answers (numeric). Epic, Amazon and GOG ids passed to `gamesdb_release`/`gog_store_url` are alphanumerics, `.` and `-`, which `encodeURIComponent` leaves unchanged. Digit-only ids produce byte-identical URLs, so the 86-06 goldens are unchanged: `golden_wiki_sources` and the rest pass (below). |
-| WR-04 (`secrets.rs` `get_async`/`set_async`/`effective_async`; `resolve_key`, `key_status`, `set_key`, `stored_key`, `has_api_key`, `set_api_key` now async) | Same answers, same cache and failure memo (shared `finish_read`/`finish_write`); the Keychain call now runs on `spawn_blocking` so a guarded op can answer `<op>:shutdown`. The sync forms remain for the boot migration. | None on results. Every async caller compiles (`pnpm -s codecheck` exit 0, `cargo test -p gamelib-shell` info_ filter passes) and the secrets suite passes. See WR-65/WR-66 below. |
-| WR-21 (`info_secrets.rs`) | Dev vault: `O_NOFOLLOW` reads, temp-file + `rename` writes at mode 0600; a vault that does not parse now makes a write refuse with `corrupt` instead of rebuilding from one slot. | Departure from the old TS rebuild-on-corrupt, but dev-only: reachable only when `GAMELIB_DEV_SECRET_VAULT=1` AND `tauri::is_dev()` (`use_dev_vault`), never in a packaged build, and it protects the Steam and Humble slots that share the file. A read still treats a bad vault as empty. No fixture or data-file contract involved. Not a phase truth. |
-| WR-22 (`info_dispatch.rs`) | `getGameMetadataOverride` appName bound 256 -> `APP_NAME_MAX_UTF16` (1024), the bound the sibling override ops already use. | Loosens a bound to match the crate; no recorded fixture depends on the 256 edge. Parser test updated and passes. |
-| WR-64 (`utils.ts`, `legendary/user.ts`) | `ClearCacheDeps` and `LegendaryUserDeps` now require `requestRustInvoke`; `canClearWikiCache` removed; `clearCache` always clears the wiki cache. | Strengthens truth G: the 86-27 sign-out wiki-cache clear can no longer be silently skipped. Codecheck exit 0 proves every production construction supplies it; `clearCacheWiki.test.ts` carries two `@ts-expect-error` compile assertions. The key link `handlers.ts` -> `registerRunnerAuthFlows` with `requestRustInvoke` is unchanged (`runnerAuthFlows.test.ts` passes). |
-| WR-01, WR-02 | Epoch bump on write; module-level price-index lock. | Internal ordering fixes; the on-disk files are unchanged in shape. Tests pass. |
-| WR-61, WR-62, WR-63 | Test-gate floors and rules only (no product code). | Strengthen the redaction and "bakes nothing" gates; both suites pass. |
+`keychain_call` (`secrets.rs:159-199`) is the only place an async Keychain call starts. It:
 
-### Gates run by me
+1. refuses with `<op>:shutdown` when `ctx.shutdown.token().is_cancelled()` (no new call after shutdown begins);
+2. registers `ctx.shutdown.register("info-keychain")` and moves the `Registrant` into the `spawn_blocking` closure
+   (`let _registrant = registrant;`), so it is dropped when the Keychain call really returns, or when the closure is dropped unrun.
+   There is no `await` between `register` and the `spawn_blocking` call, so a cancelled future cannot leak the registrant.
+
+Checks against the Rust shutdown contract (CLAUDE.md):
+
+| Rule | Evidence | Status |
+|------|----------|--------|
+| Hold a `gamelib_core::shutdown::global()` Registrant for in-flight work | `info_dispatch.rs:184` builds the info context with `gamelib_core::shutdown::global().clone()`; `ctx.shutdown` is that instance; the registrant is created per call | Met |
+| Registrant held only while the work is in flight | Registered immediately before the blocking call, dropped when `call()` returns; not held across the lock wait, the cache update or an idle period | Met |
+| Fits the one 5 s exit budget | `Shutdown::drain(budget)` returns the held names at the deadline (`gamelib-core/src/shutdown.rs:85-112`); a parked Keychain call costs at most the budget and never blocks exit past it | Met |
+| Bound boot work | Not a boot path: `get_async`/`set_async` run only from guarded ops. The boot migration keeps its own `info-sgdb-migrate` registrant and bound, unchanged | Met |
+| Spawn through `gamelib-proc` | Not a child process: a Keychain call on tokio's blocking pool, not a spawn | Not applicable |
+
+Behavioral proof (I ran the one named test): `cargo test -p gamelib-info --features testing --test secrets -- a_parked_keychain_call_does_not_hold_an_op_past_shutdown`
+passed. For the four ops it parks the source, cancels, asserts `<op>:shutdown`, asserts `drain(200ms) == ["info-keychain"]` (so the op's own
+`info` registrant is gone and the Keychain call still holds its own), releases the source, then asserts `drain(2s)` is empty. That is the
+"held only while in flight" invariant, both edges. The old assertion (`drain(500ms).is_empty()` while parked) is replaced, so the test no
+longer pins the deviation.
+
+### WR-66 (`589e5635b`): serialised writers, read at HEAD
+
+`fetch_async` is now `Arc<tokio::sync::Mutex<()>>`. `set_async` (`secrets.rs:338-356`) takes it with `lock_owned().await` before
+`invalidate()` and passes the owned guard into `keychain_call` as `hold`; the guard rides in the blocking closure and comes back with the
+answer, so it is held through `finish_write` (bound to `_writing`, not `_`, so it is not dropped early). On the shutdown-refusal path the
+guard is dropped with the function. If the op is cancelled while the Keychain call runs, the guard is dropped only when the call returns,
+so the next call on the slot cannot overlap an abandoned one. `get_async` uses the same path, so a read cannot interleave with a write
+either. Lock order: the only lock taken under `fetch_async` is the short `cache` std mutex; the blocking `get`/`set` use the separate
+`fetch` std mutex and only the boot migration calls them. No re-entry, no lock-order inversion. The wait on the lock is cancellable by
+shutdown (tokio's `lock_owned` is cancel-safe and `guarded`'s `select!` polls the token).
+
+Behavioral proof (I ran the one named test): `overlapping_async_sets_leave_the_cache_holding_what_the_keychain_holds` passed. Its source
+lands each write at once and parks the call on a per-value gate; the test releases B then A and asserts the source holds `b`, that
+`get_async` returns what the source holds, and that B never reached the source while A was still in it (without the fix: `left: Some("a"),
+right: Some("b")` per the fix report).
+
+### "Same Keychain keys, same behaviour" is preserved
+
+- The Keychain service and account names live in `src-tauri/src/info_secrets.rs` (`KEYRING_SERVICE`, one `Entry::new(KEYRING_SERVICE, account)` per get/set/delete). That file is byte-unchanged since `e4271faac`, as is the `SecretSource` trait and the `Slot` mapping; the round-3 diff to `secrets.rs` adds one private async fn (`keychain_call`) and changes only private `SlotOwner` internals. No `pub` item changed, so `gamelib-shell` is unaffected: `cargo test -p gamelib-shell --bin gamelib-shell info_` passed (70 passed, 0 failed), run by me.
+- `set_async` is behaviour-equal to the sync `set`: it trims, an empty value deletes the slot, a non-empty value writes it, the cache is dropped first and holds the written value only after a successful write, and a failed write answers `<op>:secret-<reason>` and leaves the cache empty. Reads keep the epoch rule (a read in flight across a write does not cache its stale answer) and the 120 s failure memo.
+- The only new observable behaviours are the intended ones: a second save of the same slot waits for the first (previously both ran and could leave the cache and the Keychain disagreeing), and no new Keychain call starts once shutdown has begun.
+
+### Gates
+
+Facts established earlier in this session (recorded, not re-run, apart from the checks marked "run by me"):
 
 | Check | Command | Result |
 |-------|---------|--------|
-| Crate suite incl. goldens | `cargo test -p gamelib-info --features testing` (from `src-tauri`) | exit 0; 19 result lines, 374 passed, 0 failed |
-| Shell info ops | `cargo test -p gamelib-shell --bin gamelib-shell info_` | 70 passed, 0 failed (covers `info_dispatch` and `info_secrets` incl. the WR-21 and WR-22 tests) |
-| Backend jest (15 suites) | `pnpm exec jest --selectProjects Backend --runTestsByPath` the 7 `src/backend/info` suites (anticheat, crossover, discounts, fixtureRedaction, gameOverrides, recentGames, wiki), `clearCacheWiki`, `infoShimSchedule`, `infoPortComplete`, plus the 86-27 suites `umuGameId`, `runnerAuthFlows`, `launcher_launchSingleFlight`, `gameDetailsModules`, `nonesteamgame` | `Test Suites: 15 passed, 15 total; Tests: 367 passed, 367 total` |
-| Release key gate | `pnpm exec jest --runTestsByPath meta/__tests__/releaseItadKey.test.ts` | 13 passed, 13 total |
-| Types | `pnpm -s codecheck` | exit 0, no output |
+| Crate suites, scoped to the code changed since `e4271faac` | `cargo test -p gamelib-info -p gamelib-engine -p gamelib-wine` | all green: gamelib-info `tests/secrets.rs` 39 passed, lib 129 passed, every golden suite passed |
+| i18n gate scope (the prior report's known A-17 / R5 red) | `pnpm exec jest meta/__tests__/genI18nGateScope.test.ts` | 26 passed, 1 skipped; green after `2b1d7ce01` |
+| WR-65 test | `cargo test -p gamelib-info --features testing --test secrets -- a_parked_keychain_call_does_not_hold_an_op_past_shutdown` | passed (run by me) |
+| WR-66 test | same, `overlapping_async_sets_leave_the_cache_holding_what_the_keychain_holds` | passed (run by me); the two ran together: 2 passed, 0 failed |
+| Shell info ops against the changed crate | `cargo test -p gamelib-shell --bin gamelib-shell info_` | 70 passed, 0 failed (run by me) |
+| Delete gate and shim schedule | `pnpm exec jest --selectProjects Backend --runTestsByPath src/backend/__tests__/infoPortComplete.test.ts src/backend/__tests__/infoShimSchedule.test.ts` | 2 suites, 237 tests passed (run by me) |
+| Live gate | `86-HUMAN-UAT.md` | status `complete`, 4/4 pass (`0a9a8a08d`) |
+| Security | `86-SECURITY.md` | `status: verified`, `threats_open: 0` |
+| Code review | round 3 covered the ten review-fix commits; the operator skipped a round 4. Round-3 fix report: WR-65 and WR-66 fixed, `all_fixed`, no IN item touched | |
 
-Not repeated by me: the orchestrator's full jest run (1139 passed, 2 failed). The two reds are `genI18nGateScope` A-17 (R5, operator-deferred stale
-`meta/i18nForkTouchedFiles.json`) and `steamLoginPollLifecycle` (5 s timeout under full-suite load, passes alone 23/23, not in the fix diff
-and nothing it imports is in the diff). Neither touches Phase 86.
-
-### WR-65 and WR-66 (round-3 review, open): non-blocking for the phase truths
-
-I read `secrets.rs` `set_async` and `get_async` at HEAD and confirm both findings are real:
-
-- **WR-65**: the `spawn_blocking` Keychain call carries no shutdown Registrant, so a write abandoned by shutdown can be cut off by the 5 s exit
-  budget. This departs from the Rust shutdown convention (discipline-only, the new test codifies the deviation). Effect: at process exit only; an
-  interrupted `SecItemAdd`/`SecItemDelete` is atomic at the OS level and the renderer is gone. It does not change any fixture result, data
-  file, or the delete gate, so SC1-SC4 and G are untouched.
-- **WR-66**: `set_async` takes no writer lock (`get_async` takes `fetch_async`), so two overlapping saves of the same API key could leave the
-  in-memory cache disagreeing with the Keychain for the session. Requires a double save while the first is parked behind a Keychain prompt; the
-  sync `set` had the same hole across threads before WR-04. It is an edge in the ITAD/SteamGridDB key slot, not in any recorded-fixture behavior.
-
-Decision: both are WARNINGs for the follow-up queue (ledger rows exist), not blockers. IN-71..74 are informational (stale `native.ts:69` comment,
-dev-vault doc and recovery edges, three under-asserting tests, PCGW GOG id encoded but not digit-checked). Recommend fixing WR-65 first because
-it is a stated repo convention.
-
-### Anti-pattern scan over the fix diff
-
-No `TBD`/`FIXME`/`XXX` added in the covered source files (scanned the 21 changed files). No new blocker.
-
-### Updated truth table
-
-| # | Truth | Status | Evidence |
-|---|-------|--------|----------|
-| SC1 | Same results for recorded fixtures (wiki, CrossOver, store search, discounts, anti-cheat) | VERIFIED | `cargo test -p gamelib-info --features testing` 374 passed incl. goldens; WR-03 leaves digit ids byte-identical |
-| SC2 | Recent games, overrides, artwork caches read and write the existing files unchanged | VERIFIED | Crate and shell `info_` suites pass; WR-02 adds a lock only; no format change |
-| SC3 | Fixtures recorded before each port | VERIFIED | Fixture tree unchanged apart from the redaction scan that now covers 992 files |
-| SC4 | TS and sidecar registrations deleted (delete gate) | VERIFIED | `infoPortComplete` and `infoShimSchedule` pass at HEAD |
-| G | Ported services behave as before on launch, game page and shortcut paths | VERIFIED | The five 86-27 suites pass; WR-64 makes the sign-out transport compile-time required |
-
-**Score:** 5/5 (0 present-but-behavior-unverified). Advisory: WR-65, WR-66 (open, non-blocking).
-
----
-
-## Merge re-verification (main `ff56f13d4`)
-
-The prior report went stale because `verification status` saw covered files change: main carries Phase 87 commits (`2782da4f8`
-wine-manager shims, `ebdc4f2a9` validWine shim) that touch `src/backend/utils.ts` and `src/backend/sidecar/handlers.ts`, merged with
-the 86-27 changes. I re-read every 86-27 fix at the merged HEAD and re-ran the gates. Nothing regressed.
-
-| 86-27 fix | At HEAD `ff56f13d4` (read by me) | Survived merge |
-|-----------|----------------------------------|----------------|
-| CR-41 | `launcher.ts:473-478` `try { await addRecentGame(deps, gameInfo) } catch ... logWarning(['Recording recent game failed:', error])`, before the save-sync block | yes |
-| WR-41 | `resolveLaunchUmuId` in `storeManagerCommon/umuGameId.ts:20` (try/catch around the `getUmuId` shim at :26); called at `gog/games.ts:747`, `legendary/games.ts:1073`, `nile/games.ts:459`; no direct shim call in the managers | yes |
-| WR-42 game page | `gamedetails/dispatch.ts:112-125` `attachOverrides` in try/catch, warns and returns `tempGameInfo` | yes |
-| WR-42 shortcut | `nonesteamgame.ts:260-272` `getWikiGameInfo(...).catch(...)` warns at `LogPrefix.Shortcuts`, yields `null` | yes |
-| Sign-out wiki-cache clear | `handlers.ts:358-373` `registerRunnerAuthFlows({... requestRustInvoke: deps.services.host.requestRustInvoke})`; `runnerAuthFlowRegistration.ts:101` declares it and `:139` `userDeps()` forwards it | yes |
-
-Interaction with Phase 87 in `utils.ts` and `handlers.ts`: `git diff 409463f5e HEAD -- src/backend/utils.ts` shows the 87 hunks are
-confined to the wine imports (`enginewine/wineCore`, `enginewine/wineManager`), `downloadDefaultWine` and `checkWineBeforeLaunch` deps
-and bodies. `ClearCacheDeps`, `canClearWikiCache` and `clearCache` are untouched except the 86-27 comment refresh. In `handlers.ts` the
-87 commits add `requestRustInvoke` to other registrations (app-shell, wine tools) and none touches the `registerRunnerAuthFlows` call. The
-`clearCacheWiki`, `runnerAuthFlows` and `registrationOncePerBoot` suites pass at HEAD. `git diff 409463f5e HEAD -- src-tauri/crates/gamelib-info
-src-tauri/src/info_dispatch.rs src/backend/info` is empty; the `src-tauri` changes since the base are Phase 87's `wine_dispatch.rs` and one
-`rust_dispatch.rs` wine channel. Caller sweep of the five shims over `src/backend` was repeated at HEAD: every non-test caller still guarded.
-
-Gates at HEAD (run by me): the 13 suites in the 86-27 plan `<verification>`: `Test Suites: 13 passed, 13 total; Tests: 459 passed, 459
-total`. `pnpm -s codecheck`: exit 0, no output (the working tree has no modified source files, so no in-flight Phase 87 file affects it).
-
-## Verdict in one paragraph
-
-The one open gap (truth G, failure-path parity on the shim callers) is closed. I read each call site at HEAD, not the SUMMARY:
-`launcher.ts:474-478` guards the recent-games write, the three store-manager `launch()` bodies call the new best-effort
-`resolveLaunchUmuId`, `dispatch.ts:113-125` falls back to `tempGameInfo`, `nonesteamgame.ts:261-272` catches the wiki lookup, and the
-runner sign-outs now carry `requestRustInvoke`. A grep of every non-test caller of the five shims finds no unguarded call left.
-SC1-SC4 were verified in the prior report and nothing they rest on changed: the 86-27 diff (`git diff 409463f5e HEAD`) touches 17
-files, all TypeScript under `src/backend`, plus the review disposition; no Rust, no `src/backend/info/*`. Score 5/5, no human items.
-
-## Re-verification scope
-
-Prior gaps (Step 0): truth G only, status partial. SC1-SC4 were VERIFIED. Regression check on those: `git diff 409463f5e HEAD --
-src-tauri` is empty and `src/backend/info/` is byte-unchanged, so the Rust goldens, data-file parity and delete gate they rest on
-are untouched; I re-ran `infoPortComplete` and `infoShimSchedule` (below) as the sanity check. Truth G got the full three-level check.
+The ledger `86-REVIEW-DISPOSITION.md` now reads 15 fixed (CR-41, WR-01..04, WR-21, WR-22, WR-41, WR-42, WR-61..66) and 36 open, all `info`
+severity. Every critical and warning finding in the phase is closed.
 
 ## Goal Achievement
 
@@ -245,100 +207,115 @@ are untouched; I re-ran `infoPortComplete` and `infoShimSchedule` (below) as the
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| SC1 | Wiki game info, CrossOver index, store search and discounts, anti-cheat return the same results for the recorded fixtures as the TS did | VERIFIED (regression-checked) | Unchanged since the prior report: no file under `src-tauri` is in the 86-27 diff, so the `gamelib-info` goldens (CI 364/363/364 incl. 118 golden tests on three OSes, and my own run in the prior verification) still stand. |
-| SC2 | Recent games, overrides and the artwork caches read and write the existing files with no data change after upgrade | VERIFIED (regression-checked) | Live gate item 3 and 4 evidence unchanged; 86-27 adds no store write and changes no file format. |
-| SC3 | Recorded fixtures exist for each previously untested slice before it is ported | VERIFIED (regression-checked) | Commit order and fixture dirs unchanged. |
-| SC4 | Each ported slice's TS and sidecar registrations are deleted (delete gate passes) | VERIFIED | `infoPortComplete.test.ts` and `infoShimSchedule.test.ts` pass at HEAD (part of the 13-suite run below). `src/backend/info/*` byte-unchanged by 86-27, so D-06/D-24 (shim and resolver bodies are one typed call) hold. |
-| G | The ported services behave as before, including on the launch, game-page and shortcut paths that call them through the rustInvoke shims | VERIFIED | See "Gap closure evidence" below: all four unguarded callers fixed, each with a test that makes the Rust call reject; no unguarded caller remains. |
+| SC1 | Wiki game info, CrossOver index, store search and discounts, anti-cheat return the same results for the recorded fixtures as the TS did | VERIFIED | `cargo test -p gamelib-info` all green including the golden suites (lib 129; every golden suite); `src/backend/info` and every `wiki/*`, `itad/*` source file are unchanged since the prior report, so the goldens it passed on are untouched. WR-03's id validation leaves digit ids byte-identical |
+| SC2 | Recent games, overrides and the artwork caches read and write the existing files with no data change after upgrade | VERIFIED | Crate and shell `info_` suites pass; live gate item 4 (launch 1) found `games.recent` and `store/game-overrides.json` byte-equal to the P4 record and zero SecurityAgent prompts with both keys read; item 3 shows a recent-game write landing; the round-3 fixes touch only the Keychain slot code, no data file |
+| SC3 | Recorded fixtures exist for each previously untested slice before it is ported | VERIFIED | Fixture tree unchanged apart from quick task 261123-txk's own engine/wine fixtures; `fixtureRedaction` covers the info fixtures (992 files) |
+| SC4 | Each ported slice's TS and sidecar registrations are deleted (delete gate passes) | VERIFIED | `infoPortComplete` and `infoShimSchedule` pass at HEAD (run by me, 237 tests) |
+| G | The ported services behave as before, including on the launch, game-page and shortcut paths that call them through the rustInvoke shims | VERIFIED | `git diff e4271faac HEAD` shows no change under `src/backend` outside the quick task's i18n scope files; the five 86-27 suites and the caller sweep were last run at `4348051f5`-era HEAD and every file they cover is byte-unchanged since (`launcher.ts`, `dispatch.ts`, `nonesteamgame.ts`, `umuGameId.ts`, `handlers.ts`, `runnerAuthFlowRegistration.ts`, `utils.ts`, `legendary/user.ts` are not in the `e4271faac..HEAD` name list) |
+| S | (round-3 addition) `secrets.rs` follows the Rust shutdown contract: an `info-keychain` registrant held only while a Keychain call is in flight | VERIFIED | `keychain_call` read at HEAD; behavioral test passes (both edges: held while parked, released on return) |
+| K | (round-3 addition) The Keychain keys and slot behaviour are the same after WR-65/WR-66 | VERIFIED | `info_secrets.rs` unchanged; no `pub` item changed; `gamelib-shell` `info_` 70 passed; `secrets.rs` suite 39 passed including the pre-existing slot, trim, failure-memo and migration tests; WR-66 test proves the cache equals the Keychain under overlapping saves |
 
-**Score:** 5/5 truths verified (0 present-but-behavior-unverified).
+**Score:** 5/5 roadmap truths verified (SC1-SC4, G), plus the two round-3 truths S and K; 0 present-but-behavior-unverified.
 
-### Gap closure evidence (truth G)
+Behavior-dependent truths (S, K) each have a behavioral test that exercises the invariant and that I ran; none rests on symbol presence.
+Reliance check: no truth holds only through an undeclared precondition, an unenforced ordering or a fixture-only setup. S and K hold
+by code the production path enforces (the `Arc` lock, the moved registrant, the awaited blocking join).
 
-| Finding | Fix at HEAD (read by me) | Behavioral proof |
-|---------|--------------------------|------------------|
-| CR-41 | `src/backend/launcher.ts:474-478`: `try { await addRecentGame(deps, gameInfo) } catch (error) { logWarning(['Recording recent game failed:', error], LogPrefix.Backend) }`, positioned before the save-upload block, so the 'done' status, the save sync and the CLI exit all follow. | `launcher_launchSingleFlight.test.ts` CR-41 cases (lines 154-196): `addRecentGame` made to reject with `info_recent_add:write-failed`; offline case asserts `{status:'done'}`, one 'done' update and one `logWarning` carrying that error; online case asserts `syncSaves('--skip-download','/saves',[])` ran and two 'done' updates. Both pass. SUMMARY records the RED run (callback rejected). |
-| WR-41 | New `storeManagerCommon/umuGameId.ts`: `resolveLaunchUmuId` awaits the `getUmuId` shim in try/catch, warns, returns `null`. `gog/games.ts:747`, `legendary/games.ts:1073`, `nile/games.ts:459` call it; none imports `info/wiki` or calls the shim directly. | `umuGameId.test.ts` (rejection with `:store-unavailable` and with the 60 s transport text both resolve null and warn once; source gate over the three managers with a vacuous-pass self-test). `infoShimSchedule` `WIKI_CALLERS` now names the helper; the `getUmuId` row is unchanged (shape shim, deletedBy 92). Passes. |
-| WR-42 (game page) | `gamedetails/dispatch.ts:113-125`: `attachOverrides` in try/catch, returns `tempGameInfo` after a warning. The round-2 review confirms Rust `attach` returns the game unchanged when no override applies, so this equals the old result. | `gameDetailsModules.test.ts` WR-42 case (rejects `info_overrides_attach:not-ready`, expects the raw object and one warning). Passes. |
-| WR-42 (shortcut) | `nonesteamgame.ts:260-272`: `getWikiGameInfo(deps, game).catch(...)` logs a warning at `LogPrefix.Shortcuts` and yields `null`, so `steamID` is `undefined` and the shortcut is still written. | `nonesteamgame.test.ts` WR-42 case (rejects `info_wiki_get:not-ready`, still sends the add mutation and the success log). Passes. |
-| Sign-out wiki-cache clear | `handlers.ts` passes `requestRustInvoke: deps.services.host.requestRustInvoke` to `registerRunnerAuthFlows`; `RunnerAuthFlowDeps` declares it and `userDeps()` forwards it; `logoutLegendary` (L176), `logoutAmazon` (L260) and `logoutGOG` (L276) all build deps with `userDeps()`, and each user module's `logout` calls `clearCache(deps, ...)` (legendary/user.ts:710, nile/user.ts:287, gog/user.ts:425). `utils.ts` stale OWED doc refreshed (comment only). | `runnerAuthFlows.test.ts` extended pass-through case plus the "86-27" case assert the three sign-outs receive the registered `requestRustInvoke`. Passes. The prior report's "NOT WIRED" key link is now WIRED. |
+### Gap-closure evidence for truth G (86-27, unchanged)
 
-Exhaustive caller sweep (`grep -rnE '\b(addRecentGame|getUmuId|attachOverrides|getWikiGameInfo|removeRecentGame)\(' src/backend`, non-test, outside
-`src/backend/info/`): `launcher.ts:475` guarded; `dispatch.ts:114` guarded; `nonesteamgame.ts:261` guarded; `steam/launchDispatch.ts:105` and `:176`
-guarded (try/catch, read by me); `umuGameId.ts:26` is the guard itself; `sideload/games.ts:234` `.catch`-guarded. No unguarded caller.
+Re-read from the previous report and re-checked as byte-unchanged at HEAD:
+
+| Finding | Fix at HEAD | Behavioral proof |
+|---------|-------------|------------------|
+| CR-41 | `launcher.ts` guards `addRecentGame` with try/catch and `logWarning` before the save-sync block | `launcher_launchSingleFlight.test.ts` CR-41 cases |
+| WR-41 | `storeManagerCommon/umuGameId.ts` `resolveLaunchUmuId`, called by `gog`, `legendary`, `nile` `games.ts` | `umuGameId.test.ts` |
+| WR-42 game page | `gamedetails/dispatch.ts` `attachOverrides` in try/catch, falls back to `tempGameInfo` | `gameDetailsModules.test.ts` |
+| WR-42 shortcut | `nonesteamgame.ts` `getWikiGameInfo(...).catch(...)` warns and yields `null` | `nonesteamgame.test.ts` |
+| Sign-out wiki-cache clear | `handlers.ts` passes `requestRustInvoke` to `registerRunnerAuthFlows`; WR-64 made it a required field of `ClearCacheDeps` and `LegendaryUserDeps` | `runnerAuthFlows.test.ts`, `clearCacheWiki.test.ts` (compile-time `@ts-expect-error` assertions) |
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `src/backend/storeManagers/storeManagerCommon/umuGameId.ts` | `resolveLaunchUmuId` best-effort lookup | VERIFIED | 34 lines, substantive, imported and called by gog, legendary and nile `games.ts`; FLOWING (returns the Rust answer or null) |
-| `.../storeManagerCommon/__tests__/umuGameId.test.ts` | WR-41 rejection cases and source gate | VERIFIED | 131 lines, passes |
-| `src/backend/launcher.ts` | guarded recent-games write | VERIFIED | L474-478 |
-| `src/backend/__tests__/launcher_launchSingleFlight.test.ts` | CR-41 cases | VERIFIED | 2 cases, pass |
-| `src/backend/gamedetails/dispatch.ts` | attachOverrides fallback | VERIFIED | L113-125 |
-| `src/backend/shortcuts/nonesteamgame/nonesteamgame.ts` | tolerant wiki lookup | VERIFIED | L260-272 |
+| `src-tauri/crates/gamelib-info/src/secrets.rs` | Slot owner with async Keychain calls under a registrant and a writer lock | VERIFIED | `keychain_call`, `get_async`, `set_async` substantive and wired: callers `resolve_key`, `key_status`, `set_key`, `stored_key`, `has_api_key`, `set_api_key` via `info_dispatch.rs`; data flows to the real `KeyringSecretSource` |
+| `src-tauri/crates/gamelib-info/tests/secrets.rs` | Regression tests for WR-65 and WR-66 | VERIFIED | 39 tests, both new/changed tests pass |
+| `src-tauri/src/info_secrets.rs` | Keychain-backed `SecretSource`, same service and accounts | VERIFIED | byte-unchanged, 70 shell `info_` tests pass |
+| `src/backend/storeManagers/storeManagerCommon/umuGameId.ts` and the other 86-27 files | Failure-path guards | VERIFIED | byte-unchanged since the prior report |
 
-Key links from the 86-27 plan (`resolveLaunchUmuId` imported and called in each of the three managers; helper imports `backend/info/wiki`;
-`launcher.ts` to `recentGames`; `handlers.ts` to `registerRunnerAuthFlows` with `requestRustInvoke`): all WIRED by grep at HEAD.
+### Key Link Verification
+
+| From | To | Via | Status | Details |
+|------|----|-----|--------|---------|
+| `set_async` / `get_async` | `keychain_call` | one shared helper | WIRED | grep: only call sites at `secrets.rs` lines in both methods |
+| `keychain_call` | `gamelib_core::shutdown::global()` | `ctx.shutdown` from `info_dispatch.rs:184` | WIRED | the same instance `run_exit` drains |
+| `handlers.ts` | `registerRunnerAuthFlows` with `requestRustInvoke` | `deps.services.host.requestRustInvoke` | WIRED | unchanged |
+
+### Data-Flow Trace (Level 4)
+
+| Artifact | Data Variable | Source | Produces Real Data | Status |
+|----------|---------------|--------|--------------------|--------|
+| `SlotOwner::get_async` | the key answer | `ctx.secrets` (`KeyringSecretSource` in production, `MemorySecretSource` in tests) | Yes | FLOWING |
+| `SlotOwner::set_async` | the written value | the renderer's `set_key` payload to the same source | Yes | FLOWING |
 
 ### Behavioral Spot-Checks (run by me)
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Gap-closure suites plus the D-06 schedule and delete gate | `pnpm exec jest --selectProjects Backend --runTestsByPath <the 13 suites listed in the 86-27 plan verification>` | `Test Suites: 13 passed, 13 total; Tests: 459 passed, 459 total` | PASS |
-| Type check | `pnpm -s codecheck` | exit 0, no output | PASS |
-| `git diff 409463f5e HEAD -- src-tauri src/backend/info` | empty | no Rust, no shim body changed | PASS |
-| Caller sweep (above) | `grep -rnE ...` | every caller guarded | PASS |
+| Registrant held only while in flight (WR-65) | `cargo test -p gamelib-info --features testing --test secrets -- a_parked_keychain_call_does_not_hold_an_op_past_shutdown` | passed (run together with the WR-66 test) | PASS |
+| Writers serialised, cache equals Keychain (WR-66) | same filter, `overlapping_async_sets_leave_the_cache_holding_what_the_keychain_holds` | passed (2 passed, 0 failed, 37 filtered) | PASS |
+| Shell consumers of the changed crate | `cargo test -p gamelib-shell --bin gamelib-shell info_` | 70 passed, 0 failed | PASS |
+| Delete gate and shim schedule | jest `infoPortComplete`, `infoShimSchedule` | 237 passed | PASS |
 
 Probe execution: none declared by the phase (Step 7c not applicable).
-
-### Regression gate
-
-The orchestrator reports a full jest run in this worktree: 1142 suites passed, 3 failed. I did not repeat it. I checked the claim that
-the three failures are outside the 86-27 diff: the diff's 17 files are the ones listed in the plan frontmatter, and none is
-`meta/__tests__/shimAbiGate.test.ts`, `meta/__tests__/genI18nGateScope.test.ts` or
-`src/backend/wine/__tests__/oracle/wineManager.oracle.test.ts` (nor anything they import from this diff beyond the listed backend files; the
-wine oracle failure is Phase 87-20's native `installWineVersion` at base `409463f5e`). `shimAbiGate` is a spawn error (-88) from a
-cross-compiler unavailable in the environment; `genI18nGateScope` A-17 is R5, the operator-deferred stale `meta/i18nForkTouchedFiles.json`.
-Treated as pre-existing and not attributable to Phase 86 goal achievement; recorded as known reds.
 
 ### Requirements Coverage
 
 | Requirement | Source Plans | Description | Status | Evidence |
 |-------------|--------------|-------------|--------|----------|
-| SVC-01 | 86-01 .. 86-27 (all 27 declare `[SVC-01]`) | Wiki game info, the CrossOver index, store search and discounts, anti-cheat info, recent games, per-game overrides and the artwork caches work as before | SATISFIED | SC1-SC4 and the failure-path closure (G). Note: on main at HEAD the requirements file still reads `SVC-01 | Phase 86 | Pending` (line 77) with the checkbox unticked (line 25); updating that tracker is the orchestrator's close-out step, not a code gap. No other ID maps to Phase 86: no orphans. |
+| SVC-01 | 86-01 .. 86-27 (all 27 declare `[SVC-01]`) | Wiki game info, the CrossOver index, store search and discounts, anti-cheat info, recent games, per-game overrides and the artwork caches work as before | SATISFIED | SC1-SC4 and G; live gate 4/4. The tracker in `.planning/REQUIREMENTS-v0.11.md` already reads `SVC-01 | Phase 86 | Complete` (line 77) with the box ticked (line 25). No other ID maps to Phase 86: no orphans |
 
 ### Anti-Patterns Found
 
-None blocking. Debt-marker scan (TBD/FIXME/XXX/TODO/HACK) over the files 86-27 changed or created: none added. The catch blocks all log
-(no silent swallow, T-86-68).
+None blocking. `grep TBD|FIXME|XXX` over `secrets.rs` and `tests/secrets.rs`: no match. The earlier debt-marker scans over the 86-27 and
+review-fix files stand. `git status` shows no modified files under `src-tauri`, `src` or `meta`.
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| `src/backend/utils.ts` / `storeManagers/legendary/user.ts` | 334-349 / 122-132 | `ClearCacheDeps.requestRustInvoke` still optional (WR-64) | Warning | Not a goal failure; every production construction now passes it. Type hole could let the regression recur. Recorded open in 86-REVIEW-DISPOSITION.md. |
 | `launcher.ts`, `dispatch.ts` | 475-477, 113-125 | warning lines omit the app name (IN-69) | Info | Log diagnosability only |
 | `umuGameId.test.ts` | 78-125 | `launch()` bodies covered by a source gate, not a driven launch (IN-70) | Info | Helper behaviour is tested directly |
+| `src/common/types/ipc/native.ts` | 69 | comment still says 256 UTF-16 units (IN-71) | Info | Stale comment |
+| `info_secrets.rs` | 20-24, 244-262 | dev-vault doc overstates link replacement; a vault that does not parse refuses writes with no hint; temp files not swept (IN-72) | Info | Dev vault only (`GAMELIB_DEV_SECRET_VAULT=1` and `tauri::is_dev()`) |
+| `wiki/pcgw.rs` and friends | | three under-asserting tests; PCGW GOG id percent-encoded but not digit-checked (IN-73, IN-74) | Info | No real caller regresses |
 
 ### Human Verification Required
 
-None. Every behavior-dependent truth in G has a passing behavioral test that makes the Rust call reject. The live gate (86-HUMAN-UAT.md) was
-run earlier; item 1's `issue` was adjudicated not-a-gap in the prior report and is unchanged.
+None. Every behavior-dependent truth has a passing behavioral test, and the live macOS gate is complete 4/4 (item 1 re-scored `pass` by the
+operator in `/gsd-verify-work 86`: the GOG page's missing PCGamingWiki and HowLongToBeat info is the pre-existing PCGW `cargoquery`
+`permissiondenied` answer the 85 build shares, golden `live-gog-linux`, todo
+`.planning/todos/pending/2026-11-22-pcgw-cargoquery-permissiondenied-gog-lookup.md`).
+
+One optional observation, not a gate: the round-3 fix report marks WR-65 "requires human verification" because a live Force Quit with a
+Keychain prompt open was not run. The registrant contract is exercised in-process on a real `Shutdown`; the OS-level prompt path adds no
+truth, and the worst case is bounded by the 5 s exit budget. Recorded under `advisory`, not routed to `human_needed`.
 
 ## Warnings (non-blocking, track)
 
-- **WR-64** (round-2 review, open): make `requestRustInvoke` required on `ClearCacheDeps` and `LegendaryUserDeps` and drop `canClearWikiCache`, so a missing transport is a compile error. IN-69 and IN-70 open. All three are in `86-REVIEW-DISPOSITION.md` (open count 42: 39 round-1 plus these 3).
-- R5 stale `meta/i18nForkTouchedFiles.json` (local A-17 red), operator-deferred.
-- The round-1 review ledger still lists 39 findings `open`; they need owners but none contradicts a success criterion.
-- Items from the prior report that stand: item 4's artwork-file half was vacuous (URL-only override); item 2's ownership badges were not separately observed.
-- `shimAbiGate` (environment) and the wine oracle test (Phase 87 work) are red in the full run and outside Phase 86.
+- **No open WARNING-level finding remains.** WR-64, WR-65 and WR-66 are fixed (`a85189b85`, `6f9464397`, `589e5635b`); the earlier report listed them open.
+- **IN-69, IN-70** (round 2) and **IN-71, IN-72, IN-73, IN-74** (round 3) are open, informational. They sit in `86-REVIEW-DISPOSITION.md` with the 30 round-1 to round-2 `info` items (IN-01..06, IN-21..29, IN-41..47, IN-61..68): 36 open in all, none above `info`, none contradicting a success criterion.
+- No round-4 review was run (operator choice). The two round-3 fixes were verified here by reading the code and running their tests rather than by a fresh review.
+- R5 (stale `meta/i18nForkTouchedFiles.json`, the old A-17 red) is closed by `2b1d7ce01`.
+- From the live gate: item 4's artwork-file half was vacuous (the seeded override stores URLs, so no image file existed to compare); item 2's ownership badges were not separately observed. Both were accepted at the gate.
+- Out of Phase 86 and recorded earlier: `shimAbiGate` (environment cross-compiler spawn error) and the wine oracle test (Phase 87 work) were red in an earlier full run and are not attributable to this phase.
 
 ## Gaps Summary
 
-None. Truth G moved from partial to VERIFIED: the four rejection-hazard callers and the sign-out wiring are fixed in the code, each with a
-test that forces the Rust call to reject, and a sweep finds no remaining unguarded caller. Phase 86 goal ("run in Rust and behave as before")
-holds on the happy path (SC1-SC4) and the failure path (G).
+None. SC1-SC4 and G hold at HEAD, and the two round-3 fixes preserve them: WR-65 makes `secrets.rs` follow the Rust shutdown contract
+(a registrant moved into the blocking closure, held exactly while the Keychain call runs, bounded by the 5 s exit budget), and WR-66 makes
+overlapping saves land and cache in one order, with a deterministic test for each. The Keychain service, accounts and slot behaviour are
+unchanged (`info_secrets.rs` byte-identical, no `pub` signature changed, 70 shell `info_` tests and the 39-test secrets suite green). Phase
+86 goal ("run in Rust and behave as before") is achieved.
 
 ---
 
-_Verified: 2026-11-23_
+_Verified: 2026-11-23T09:12:32Z_
 _Verifier: Claude (gsd-verifier)_
