@@ -1,0 +1,88 @@
+{
+  "note": "CrossOver is not installed: the no-CrossOver note is shown; after dismissing it is hidden and noCrossoverNoteDismissed is stored",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "state",
+        "bin": "absent",
+        "preflight": "unscripted"
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "builtin",
+        "reason": "cx-missing",
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": false,
+        "showNoCrossoverNote": true,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "dismiss",
+        "args": {
+          "kind": "no-crossover"
+        }
+      },
+      "returned": {
+        "ok": true
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "bin": "absent",
+        "preflight": "unscripted"
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "builtin",
+        "reason": "cx-missing",
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": false,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": "{\n\t\"noCrossoverNoteDismissed\": true,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"noCrossoverNoteDismissed\": \"Mon Nov 23 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}",
+  "logs": []
+}

@@ -1,0 +1,104 @@
+{
+  "note": "every refused argument shape returns ok false and writes nothing: no store file is created",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "dismiss",
+        "args": null
+      },
+      "returned": {
+        "ok": false
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "dismiss",
+        "args": "no-crossover"
+      },
+      "returned": {
+        "ok": false
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "dismiss",
+        "args": {
+          "kind": "other"
+        }
+      },
+      "returned": {
+        "ok": false
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "dismiss",
+        "args": {
+          "kind": "untested-crossover"
+        }
+      },
+      "returned": {
+        "ok": false
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "dismiss",
+        "args": {
+          "kind": "untested-crossover",
+          "build": 5
+        }
+      },
+      "returned": {
+        "ok": false
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "dismiss",
+        "args": {
+          "kind": "untested-crossover",
+          "build": "1.2.3"
+        }
+      },
+      "returned": {
+        "ok": false
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "dismiss",
+        "args": {
+          "kind": "untested-crossover",
+          "build": "1.2.3.4.5"
+        }
+      },
+      "returned": {
+        "ok": false
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "dismiss",
+        "args": {
+          "kind": "untested-crossover",
+          "build": "a.b.c.d"
+        }
+      },
+      "returned": {
+        "ok": false
+      },
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

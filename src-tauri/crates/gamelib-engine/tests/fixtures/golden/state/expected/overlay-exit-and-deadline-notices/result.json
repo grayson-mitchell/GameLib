@@ -1,0 +1,68 @@
+{
+  "note": "the exit notice and the launch deadline notice: false before a published state, then true with the shared seq; a 300 character title is cut to 200",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "overlay-exit"
+      },
+      "returned": false,
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "deadline",
+        "title": "Oracle Game",
+        "seconds": 90
+      },
+      "returned": false,
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "launch",
+        "selection": "crossover:cx-healthy",
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "$BIN",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        }
+      },
+      "published": 1,
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "overlay-exit"
+      },
+      "returned": true,
+      "eventsSoFar": 2
+    },
+    {
+      "step": {
+        "op": "deadline",
+        "title": "Oracle Game",
+        "seconds": 90
+      },
+      "returned": true,
+      "eventsSoFar": 3
+    },
+    {
+      "step": {
+        "op": "deadline",
+        "title": {
+          "repeat": {
+            "char": "T",
+            "count": 300
+          }
+        },
+        "seconds": 5
+      },
+      "returned": true,
+      "eventsSoFar": 4
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

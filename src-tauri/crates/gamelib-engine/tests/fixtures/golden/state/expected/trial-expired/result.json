@@ -1,0 +1,48 @@
+{
+  "note": "an expired trial: the built-in engine with reason cx-expired, no days, no trial notice",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "state",
+        "preflight": {
+          "kind": "expired",
+          "binDir": "$BIN",
+          "build": "26.3.0.39832",
+          "daysAgo": 3
+        }
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "builtin",
+        "reason": "cx-expired",
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [
+        "oracle-bottle"
+      ],
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

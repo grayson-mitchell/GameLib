@@ -1,0 +1,54 @@
+{
+  "note": "an unavailable decision records and publishes nothing",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "launch",
+        "kind": "unavailable",
+        "override": "pinned:wine-staging-11.20"
+      },
+      "published": 0,
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "preflight": {
+          "kind": "missing",
+          "detail": "CrossOver is not installed"
+        },
+        "bin": "absent"
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "builtin",
+        "reason": "cx-missing",
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": false,
+        "showNoCrossoverNote": true,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

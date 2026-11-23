@@ -1,0 +1,68 @@
+{
+  "note": "getGameEngineState answers null for a bridge Steam game (it has its own adapter), an unknown runner, a bad app name, a non-object and a non-macOS host",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "game-state",
+        "runner": "steam",
+        "game": "220",
+        "globalSettings": {},
+        "preflight": "unscripted"
+      },
+      "state": null,
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "game-state",
+        "runner": "nonesuch",
+        "game": "x",
+        "globalSettings": {},
+        "preflight": "unscripted"
+      },
+      "state": null,
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "game-state",
+        "runner": "legendary",
+        "game": "a/b",
+        "globalSettings": {},
+        "preflight": "unscripted"
+      },
+      "state": null,
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "game-state",
+        "identity": 7,
+        "globalSettings": {},
+        "preflight": "unscripted"
+      },
+      "state": null,
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "game-state",
+        "runner": "legendary",
+        "game": "oracle-epic",
+        "isMac": false,
+        "globalSettings": {},
+        "preflight": "unscripted"
+      },
+      "state": null,
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

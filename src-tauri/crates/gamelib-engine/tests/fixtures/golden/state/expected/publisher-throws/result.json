@@ -1,0 +1,114 @@
+{
+  "note": "the renderer push throws: a launch logs the failure and still records the decision, and the three notices return false; once the push works again the notices publish",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "publisher",
+        "mode": "throw"
+      },
+      "mode": "throw",
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "launch",
+        "selection": "pinned:cx-missing",
+        "preflight": {
+          "kind": "missing",
+          "detail": "CrossOver is not installed"
+        }
+      },
+      "published": 0,
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "overlay",
+        "step": "shim"
+      },
+      "returned": false,
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "publisher",
+        "mode": "ok"
+      },
+      "mode": "ok",
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "launch",
+        "selection": "pinned:cx-missing",
+        "preflight": {
+          "kind": "missing",
+          "detail": "CrossOver is not installed"
+        }
+      },
+      "published": 1,
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "publisher",
+        "mode": "throw"
+      },
+      "mode": "throw",
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "overlay",
+        "step": "env"
+      },
+      "returned": false,
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "overlay-exit"
+      },
+      "returned": false,
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "deadline",
+        "title": "Oracle Game",
+        "seconds": 1
+      },
+      "returned": false,
+      "eventsSoFar": 1
+    }
+  ],
+  "storeFile": null,
+  "logs": [
+    {
+      "level": "ERROR",
+      "prefix": "Backend",
+      "message": "Engine: engine state publisher failed: Error: renderer push failed"
+    },
+    {
+      "level": "ERROR",
+      "prefix": "Backend",
+      "message": "Engine: overlay notice publisher failed: Error: renderer push failed"
+    },
+    {
+      "level": "ERROR",
+      "prefix": "Backend",
+      "message": "Engine: overlay notice publisher failed: Error: renderer push failed"
+    },
+    {
+      "level": "ERROR",
+      "prefix": "Backend",
+      "message": "Engine: overlay exit notice publisher failed: Error: renderer push failed"
+    },
+    {
+      "level": "ERROR",
+      "prefix": "Backend",
+      "message": "Engine: launch deadline notice publisher failed: Error: renderer push failed"
+    }
+  ]
+}

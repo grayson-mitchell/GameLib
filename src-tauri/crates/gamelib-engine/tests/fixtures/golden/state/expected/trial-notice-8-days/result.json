@@ -1,0 +1,48 @@
+{
+  "note": "a healthy CrossOver with 8 trial days left: the trial notice is not shown yet",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "state",
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "$BIN",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": 8
+        }
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "crossover",
+        "reason": "cx-healthy",
+        "engineLabel": null,
+        "trialDaysRemaining": 8,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [
+        "oracle-bottle"
+      ],
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

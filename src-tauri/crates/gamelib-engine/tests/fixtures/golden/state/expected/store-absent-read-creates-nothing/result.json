@@ -1,0 +1,48 @@
+{
+  "note": "no store file: reading states creates no file (the store directory stays absent)",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "state",
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "$BIN",
+          "build": "27.0.0.1",
+          "trialDaysRemaining": 3
+        }
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "crossover",
+        "reason": "cx-healthy",
+        "engineLabel": null,
+        "trialDaysRemaining": 3,
+        "showTrialNotice": true,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": "27.0.0.1",
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [
+        "oracle-bottle"
+      ],
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

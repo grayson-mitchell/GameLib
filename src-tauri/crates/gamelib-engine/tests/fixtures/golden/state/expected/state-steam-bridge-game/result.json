@@ -1,0 +1,64 @@
+{
+  "note": "a bridge Steam game through the owner with the adapter's facts as values (its own bottle, overlay eligible, override eligible): the key is the bare app id",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "state",
+        "runner": "steam",
+        "game": "220",
+        "bottle": "Steam-bridge",
+        "overlayEligible": true,
+        "wineTools": true,
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "$BIN",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": 6
+        }
+      },
+      "state": {
+        "runner": "steam",
+        "appName": "220",
+        "engine": "crossover",
+        "reason": "cx-healthy",
+        "engineLabel": null,
+        "trialDaysRemaining": 6,
+        "showTrialNotice": true,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": true,
+        "overlayEligible": true,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [
+        "Steam-bridge"
+      ],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "runner": "steam",
+        "game": "not-an-app-id",
+        "preflight": "unscripted"
+      },
+      "state": null,
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

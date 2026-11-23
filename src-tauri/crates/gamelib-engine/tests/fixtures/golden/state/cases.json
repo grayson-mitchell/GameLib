@@ -1,0 +1,364 @@
+[
+  {
+    "id": "trial-notice-8-days",
+    "note": "a healthy CrossOver with 8 trial days left: the trial notice is not shown yet",
+    "steps": [
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": 8 } }
+    ]
+  },
+  {
+    "id": "trial-notice-7-days",
+    "note": "7 days left is the threshold: the notice is shown",
+    "steps": [
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": 7 } }
+    ]
+  },
+  {
+    "id": "trial-notice-0-days",
+    "note": "0 days left (the trial ends today): the notice is shown with 0 days",
+    "steps": [
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": 0 } }
+    ]
+  },
+  {
+    "id": "trial-licensed-no-days",
+    "note": "a healthy CrossOver with no trial days (licensed): no days, no notice",
+    "steps": [
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": null } }
+    ]
+  },
+  {
+    "id": "trial-expired",
+    "note": "an expired trial: the built-in engine with reason cx-expired, no days, no trial notice",
+    "steps": [
+      { "op": "state", "preflight": { "kind": "expired", "binDir": "$BIN", "build": "26.3.0.39832", "daysAgo": 3 } }
+    ]
+  },
+  {
+    "id": "untested-build-shown",
+    "note": "a CrossOver build the tested list does not hold, nothing dismissed: the build is reported in the state",
+    "steps": [
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "27.0.0.1", "trialDaysRemaining": null } }
+    ]
+  },
+  {
+    "id": "untested-build-tested-never-shown",
+    "note": "the tested build: no untested notice",
+    "steps": [
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": null } }
+    ]
+  },
+  {
+    "id": "untested-build-unreadable",
+    "note": "a healthy CrossOver whose build could not be read (null): no untested notice",
+    "steps": [
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": null, "trialDaysRemaining": null } }
+    ]
+  },
+  {
+    "id": "untested-build-dismissed",
+    "note": "shown, dismissed, shown again: the dismissal is stored as dismissedUntestedCrossoverBuilds with its __timestamp pair and the notice is gone; the second state reuses the cached preflight",
+    "steps": [
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "27.0.0.1", "trialDaysRemaining": null } },
+      { "op": "dismiss", "args": { "kind": "untested-crossover", "build": "27.0.0.1" } },
+      { "op": "state", "preflight": "unscripted" }
+    ]
+  },
+  {
+    "id": "untested-dismiss-twice-keeps-one",
+    "note": "dismissing the same build twice stores it once; the timestamp is rewritten at the later time",
+    "steps": [
+      { "op": "dismiss", "args": { "kind": "untested-crossover", "build": "27.0.0.1" } },
+      { "op": "advance", "ms": 60000 },
+      { "op": "dismiss", "args": { "kind": "untested-crossover", "build": "27.0.0.1" } }
+    ]
+  },
+  {
+    "id": "untested-dismissal-cap-50",
+    "note": "the store holds 50 dismissed builds; a 51st is appended and the list is cut to the last 50 (MAX_DISMISSED), the oldest dropped",
+    "store": { "builds": 50 },
+    "steps": [
+      { "op": "dismiss", "args": { "kind": "untested-crossover", "build": "27.0.0.51" } }
+    ]
+  },
+  {
+    "id": "untested-dismissal-store-over-cap",
+    "note": "a store written with 60 dismissed builds: one new dismissal cuts it to the last 50, so a store that was already over the cap is trimmed on the next write",
+    "store": { "builds": 60 },
+    "steps": [
+      { "op": "dismiss", "args": { "kind": "untested-crossover", "build": "27.0.0.61" } }
+    ]
+  },
+  {
+    "id": "untested-dismissed-list-with-bad-entries",
+    "note": "a stored list holding non-string entries and a non-array value: non-strings are dropped on read, a non-array reads as empty",
+    "store": { "raw": { "dismissedUntestedCrossoverBuilds": ["27.0.0.1", 5, null, { "a": 1 }, "27.0.0.2"] } },
+    "steps": [
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "27.0.0.1", "trialDaysRemaining": null } },
+      { "op": "dismiss", "args": { "kind": "untested-crossover", "build": "27.0.0.3" } }
+    ]
+  },
+  {
+    "id": "untested-store-not-an-array",
+    "note": "the dismissed key holds a string: read as an empty list, and the next dismissal replaces it with a list",
+    "store": { "raw": { "dismissedUntestedCrossoverBuilds": "27.0.0.1" } },
+    "steps": [
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "27.0.0.1", "trialDaysRemaining": null } },
+      { "op": "dismiss", "args": { "kind": "untested-crossover", "build": "27.0.0.1" } }
+    ]
+  },
+  {
+    "id": "dismiss-no-crossover",
+    "note": "CrossOver is not installed: the no-CrossOver note is shown; after dismissing it is hidden and noCrossoverNoteDismissed is stored",
+    "steps": [
+      { "op": "state", "bin": "absent", "preflight": "unscripted" },
+      { "op": "dismiss", "args": { "kind": "no-crossover" } },
+      { "op": "state", "bin": "absent", "preflight": "unscripted" }
+    ]
+  },
+  {
+    "id": "dismiss-no-crossover-with-populated-store",
+    "note": "the store already holds unrelated keys and a dismissed build: the no-CrossOver dismissal adds its key and keeps the rest byte for byte in place",
+    "store": { "raw": { "dismissedUntestedCrossoverBuilds": ["27.0.0.1"], "someOtherKey": { "a": 1 } } },
+    "steps": [
+      { "op": "dismiss", "args": { "kind": "no-crossover" } }
+    ]
+  },
+  {
+    "id": "dismiss-refused-shapes",
+    "note": "every refused argument shape returns ok false and writes nothing: no store file is created",
+    "steps": [
+      { "op": "dismiss", "args": null },
+      { "op": "dismiss", "args": "no-crossover" },
+      { "op": "dismiss", "args": { "kind": "other" } },
+      { "op": "dismiss", "args": { "kind": "untested-crossover" } },
+      { "op": "dismiss", "args": { "kind": "untested-crossover", "build": 5 } },
+      { "op": "dismiss", "args": { "kind": "untested-crossover", "build": "1.2.3" } },
+      { "op": "dismiss", "args": { "kind": "untested-crossover", "build": "1.2.3.4.5" } },
+      { "op": "dismiss", "args": { "kind": "untested-crossover", "build": "a.b.c.d" } }
+    ]
+  },
+  {
+    "id": "store-corrupt-read-keeps-file",
+    "note": "FND-06: a notices file that is not JSON is only read (states with the untested and no-CrossOver notices): the file is kept byte for byte and the notices read as not dismissed",
+    "store": { "corrupt": true },
+    "steps": [
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "27.0.0.1", "trialDaysRemaining": null } },
+      { "op": "state", "bin": "absent", "preflight": "unscripted" }
+    ]
+  },
+  {
+    "id": "store-corrupt-dismiss-overwrites-as-shipped",
+    "note": "FND-06 delta: the TS store does not keep a corrupt file on a write. The first dismissal replaces it with a fresh document holding only the new key, with no copy of the corrupt bytes; the Rust port must keep it (see the summary)",
+    "store": { "corrupt": true },
+    "steps": [
+      { "op": "dismiss", "args": { "kind": "untested-crossover", "build": "27.0.0.1" } }
+    ]
+  },
+  {
+    "id": "store-absent-read-creates-nothing",
+    "note": "no store file: reading states creates no file (the store directory stays absent)",
+    "steps": [
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "27.0.0.1", "trialDaysRemaining": 3 } }
+    ]
+  },
+  {
+    "id": "launch-crossover-healthy",
+    "note": "a launch that used a healthy CrossOver: the state is published (engineStateChanged) with no launch notice, the preflight is cached so the next state asks nothing",
+    "steps": [
+      { "op": "launch", "selection": "crossover:cx-healthy", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": 5 } },
+      { "op": "state", "preflight": "unscripted" }
+    ]
+  },
+  {
+    "id": "launch-fallback-notice-seq",
+    "note": "automatic launches on the built-in engine: the launch notice carries the fallback reason and a seq counting 1, 2; a forced CrossOver or a cx-inconclusive launch carries none; the counter is shared",
+    "steps": [
+      { "op": "launch", "selection": "pinned:cx-missing", "preflight": { "kind": "missing", "detail": "CrossOver is not installed" } },
+      { "op": "launch", "selection": "pinned:cx-expired", "preflight": { "kind": "expired", "binDir": "$BIN", "build": "26.3.0.39832", "daysAgo": 1 } },
+      { "op": "launch", "selection": "crossover:override", "override": "crossover", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": null } },
+      { "op": "launch", "selection": "pinned:cx-broken", "preflight": { "kind": "broken", "binDir": "$BIN", "build": null, "detail": "wine exited 1" } },
+      { "op": "launch", "selection": "pinned:override", "override": "pinned:wine-staging-11.20", "preflight": null }
+    ]
+  },
+  {
+    "id": "launch-unavailable-publishes-nothing",
+    "note": "an unavailable decision records and publishes nothing",
+    "steps": [
+      { "op": "launch", "kind": "unavailable", "override": "pinned:wine-staging-11.20" },
+      { "op": "state", "preflight": { "kind": "missing", "detail": "CrossOver is not installed" }, "bin": "absent" }
+    ]
+  },
+  {
+    "id": "launch-inconclusive-no-badge",
+    "note": "a launch whose probe was inconclusive (cx-inconclusive on a kept pin): no launch notice, the inconclusive result is not cached, the published state has no badge",
+    "steps": [
+      { "op": "launch", "selection": "pinned:cx-inconclusive", "preflight": { "kind": "broken", "binDir": "$BIN", "build": null, "detail": "timed out", "inconclusive": true } },
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": null } }
+    ]
+  },
+  {
+    "id": "launch-label-follows-selection",
+    "note": "the engine label in a later state is CrossOver after a CrossOver launch, and the pin's label after a built-in launch",
+    "steps": [
+      { "op": "launch", "selection": "pinned:cx-missing", "preflight": { "kind": "missing", "detail": "CrossOver is not installed" } },
+      { "op": "state", "bin": "absent", "preflight": "unscripted" },
+      { "op": "launch", "selection": "crossover:cx-healthy", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": null } },
+      { "op": "state", "preflight": "unscripted" }
+    ]
+  },
+  {
+    "id": "overlay-notice-needs-published-state",
+    "note": "an overlay notice before any state was published returns false and publishes nothing; after a launch it returns true, re-pushing the last state with the notice and the next shared seq each time",
+    "steps": [
+      { "op": "overlay", "step": "shim" },
+      { "op": "launch", "selection": "pinned:cx-missing", "preflight": { "kind": "missing", "detail": "CrossOver is not installed" } },
+      { "op": "overlay", "step": "shim" },
+      { "op": "overlay", "step": "env" },
+      { "op": "overlay", "step": "resign", "game": "other-game" }
+    ]
+  },
+  {
+    "id": "overlay-exit-and-deadline-notices",
+    "note": "the exit notice and the launch deadline notice: false before a published state, then true with the shared seq; a 300 character title is cut to 200",
+    "steps": [
+      { "op": "overlay-exit" },
+      { "op": "deadline", "title": "Oracle Game", "seconds": 90 },
+      { "op": "launch", "selection": "crossover:cx-healthy", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": null } },
+      { "op": "overlay-exit" },
+      { "op": "deadline", "title": "Oracle Game", "seconds": 90 },
+      { "op": "deadline", "title": { "repeat": { "char": "T", "count": 300 } }, "seconds": 5 }
+    ]
+  },
+  {
+    "id": "publisher-throws",
+    "note": "the renderer push throws: a launch logs the failure and still records the decision, and the three notices return false; once the push works again the notices publish",
+    "steps": [
+      { "op": "publisher", "mode": "throw" },
+      { "op": "launch", "selection": "pinned:cx-missing", "preflight": { "kind": "missing", "detail": "CrossOver is not installed" } },
+      { "op": "overlay", "step": "shim" },
+      { "op": "publisher", "mode": "ok" },
+      { "op": "launch", "selection": "pinned:cx-missing", "preflight": { "kind": "missing", "detail": "CrossOver is not installed" } },
+      { "op": "publisher", "mode": "throw" },
+      { "op": "overlay", "step": "env" },
+      { "op": "overlay-exit" },
+      { "op": "deadline", "title": "Oracle Game", "seconds": 1 }
+    ]
+  },
+  {
+    "id": "preflight-unhealthy-ttl",
+    "note": "an unhealthy preflight is cached for 60 s: a state at +30 s asks nothing, a state at +61 s probes again; a healthy one never expires",
+    "steps": [
+      { "op": "state", "preflight": { "kind": "broken", "binDir": "$BIN", "build": null, "detail": "wine exited 1" } },
+      { "op": "advance", "ms": 30000 },
+      { "op": "state", "preflight": "unscripted" },
+      { "op": "advance", "ms": 31000 },
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": null } },
+      { "op": "advance", "ms": 3600000 },
+      { "op": "state", "preflight": "unscripted" }
+    ]
+  },
+  {
+    "id": "preflight-single-flight",
+    "note": "three concurrent states for one bottle share one probe",
+    "steps": [
+      { "op": "state", "concurrent": 3, "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": 2 } }
+    ]
+  },
+  {
+    "id": "preflight-inconclusive-not-cached",
+    "note": "an inconclusive probe gives no badge and is not cached: the next state probes again",
+    "steps": [
+      { "op": "state", "preflight": { "kind": "broken", "binDir": "$BIN", "build": null, "detail": "timed out", "inconclusive": true } },
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": null } }
+    ]
+  },
+  {
+    "id": "preflight-throws-releases-flight",
+    "note": "a probe that throws rejects the state and releases the in-flight slot: the next state probes again",
+    "steps": [
+      { "op": "state", "preflight": "throws" },
+      { "op": "state", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": null } }
+    ]
+  },
+  {
+    "id": "state-crossover-missing-no-probe",
+    "note": "CrossOver is not installed: the state reports the built-in engine with reason cx-missing without running a probe, and shows the no-CrossOver note",
+    "steps": [
+      { "op": "state", "bin": "absent", "preflight": "unscripted" }
+    ]
+  },
+  {
+    "id": "state-bottle-not-ready-no-probe",
+    "note": "CrossOver is installed but the bottle is not provisioned: no probe and no badge, crossoverInstalled true",
+    "steps": [
+      { "op": "state", "ready": false, "preflight": "unscripted" }
+    ]
+  },
+  {
+    "id": "state-forced-crossover-warnings",
+    "note": "a forced CrossOver: engine crossover with reason override; an expired probe sets the cx-expired warning, a broken one cx-broken, an inconclusive broken one none",
+    "steps": [
+      { "op": "state", "effective": "crossover", "game": "g1", "bottle": "b1", "preflight": { "kind": "expired", "binDir": "$BIN", "build": "26.3.0.39832", "daysAgo": 2 } },
+      { "op": "state", "effective": "crossover", "game": "g2", "bottle": "b2", "preflight": { "kind": "broken", "binDir": "$BIN", "build": null, "detail": "wine exited 1" } },
+      { "op": "state", "effective": "crossover", "game": "g3", "bottle": "b3", "preflight": { "kind": "broken", "binDir": "$BIN", "build": null, "detail": "timed out", "inconclusive": true } },
+      { "op": "state", "effective": "crossover", "game": "g4", "bottle": "b4", "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": 4 } }
+    ]
+  },
+  {
+    "id": "state-unsupported-overrides",
+    "note": "a forced pin or Wine Manager build and a Legacy engine: engine unsupported with reason override, no probe, the Legacy label carried",
+    "steps": [
+      { "op": "state", "effective": "pinned", "game": "g1", "preflight": "unscripted" },
+      { "op": "state", "effective": "wine-manager", "game": "g2", "preflight": "unscripted" },
+      { "op": "state", "effective": { "legacy": "Wine-Lutris 7" }, "game": "g3", "preflight": "unscripted" }
+    ]
+  },
+  {
+    "id": "state-no-bottle",
+    "note": "no bottle: null, unless the caller says state without a bottle (a plain prefix), then a state with only crossoverInstalled",
+    "steps": [
+      { "op": "state", "bottle": null, "preflight": "unscripted" },
+      { "op": "state", "bottle": null, "withoutBottle": true, "preflight": "unscripted" },
+      { "op": "state", "bottle": null, "withoutBottle": true, "bin": "absent", "preflight": "unscripted" }
+    ]
+  },
+  {
+    "id": "state-refused-inputs",
+    "note": "not macOS, an unknown runner, an unclean app name and a non-object identity all return null",
+    "steps": [
+      { "op": "state", "isMac": false, "preflight": "unscripted" },
+      { "op": "state", "runner": "nonesuch", "preflight": "unscripted" },
+      { "op": "state", "game": "../x", "preflight": "unscripted" },
+      { "op": "state", "identity": null, "preflight": "unscripted" },
+      { "op": "state", "identity": "legendary:game-a", "preflight": "unscripted" }
+    ]
+  },
+  {
+    "id": "state-steam-bridge-game",
+    "note": "a bridge Steam game through the owner with the adapter's facts as values (its own bottle, overlay eligible, override eligible): the key is the bare app id",
+    "steps": [
+      { "op": "state", "runner": "steam", "game": "220", "bottle": "Steam-bridge", "overlayEligible": true, "wineTools": true, "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": 6 } },
+      { "op": "state", "runner": "steam", "game": "not-an-app-id", "preflight": "unscripted" }
+    ]
+  },
+  {
+    "id": "game-state-non-steam",
+    "note": "getGameEngineState for an Epic game on a CrossOver default, with the settings and the probe supplied as values: the per-game bottle name, the prefix kind and the derived engine in the state",
+    "steps": [
+      { "op": "game-state", "runner": "legendary", "game": "oracle-epic", "globalSettings": { "wineVersion": { "type": "crossover", "name": "CrossOver", "bin": "$BIN/wine" }, "wineCrossoverBottle": "Heroic" }, "preflight": { "kind": "healthy", "binDir": "$BIN", "build": "26.3.0.39832", "trialDaysRemaining": 7 } },
+      { "op": "game-state", "runner": "gog", "game": "1207658924", "globalSettings": { "wineVersion": { "type": "wine", "name": "Wine-Lutris 7", "bin": "<HOME>/wine/bin/wine" }, "winePrefix": "<HOME>/Games/prefix" }, "preflight": "unscripted" }
+    ]
+  },
+  {
+    "id": "game-state-bridge-steam-and-refusals",
+    "note": "getGameEngineState answers null for a bridge Steam game (it has its own adapter), an unknown runner, a bad app name, a non-object and a non-macOS host",
+    "steps": [
+      { "op": "game-state", "runner": "steam", "game": "220", "globalSettings": {}, "preflight": "unscripted" },
+      { "op": "game-state", "runner": "nonesuch", "game": "x", "globalSettings": {}, "preflight": "unscripted" },
+      { "op": "game-state", "runner": "legendary", "game": "a/b", "globalSettings": {}, "preflight": "unscripted" },
+      { "op": "game-state", "identity": 7, "globalSettings": {}, "preflight": "unscripted" },
+      { "op": "game-state", "runner": "legendary", "game": "oracle-epic", "isMac": false, "globalSettings": {}, "preflight": "unscripted" }
+    ]
+  }
+]

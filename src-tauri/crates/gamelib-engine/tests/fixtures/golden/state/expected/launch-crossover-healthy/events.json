@@ -1,0 +1,32 @@
+[
+  {
+    "channel": "engineStateChanged",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "crossover",
+        "reason": "cx-healthy",
+        "engineLabel": "CrossOver",
+        "trialDaysRemaining": 5,
+        "showTrialNotice": true,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      }
+    ]
+  }
+]

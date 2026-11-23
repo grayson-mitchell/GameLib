@@ -1,0 +1,161 @@
+[
+  {
+    "channel": "engineStateChanged",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "builtin",
+        "reason": "cx-missing",
+        "engineLabel": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": false,
+        "showNoCrossoverNote": true,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": {
+          "reason": "cx-missing",
+          "seq": 1
+        },
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      }
+    ]
+  },
+  {
+    "channel": "engineStateChanged",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "builtin",
+        "reason": "cx-expired",
+        "engineLabel": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": {
+          "reason": "cx-expired",
+          "seq": 2
+        },
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      }
+    ]
+  },
+  {
+    "channel": "engineStateChanged",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "crossover",
+        "reason": "override",
+        "engineLabel": "CrossOver",
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "crossover",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      }
+    ]
+  },
+  {
+    "channel": "engineStateChanged",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "builtin",
+        "reason": "cx-broken",
+        "engineLabel": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": {
+          "reason": "cx-broken",
+          "seq": 3
+        },
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      }
+    ]
+  },
+  {
+    "channel": "engineStateChanged",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "unsupported",
+        "reason": "override",
+        "engineLabel": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "pinned:wine-staging-11.20",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      }
+    ]
+  }
+]

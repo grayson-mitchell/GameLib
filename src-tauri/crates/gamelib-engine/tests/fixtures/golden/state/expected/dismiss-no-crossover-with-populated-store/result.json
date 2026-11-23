@@ -1,0 +1,36 @@
+{
+  "note": "the store already holds unrelated keys and a dismissed build: the no-CrossOver dismissal adds its key and keeps the rest byte for byte in place",
+  "seeded": {
+    "dismissedUntestedCrossoverBuilds": [
+      "27.0.0.1"
+    ],
+    "someOtherKey": {
+      "a": 1
+    },
+    "__internal__": {
+      "gamelib": {
+        "schemaVersion": 1
+      }
+    },
+    "__timestamp": {
+      "dismissedUntestedCrossoverBuilds": "Mon Nov 23 2026 11:00:00 GMT+0000 (Coordinated Universal Time)",
+      "someOtherKey": "Mon Nov 23 2026 11:00:00 GMT+0000 (Coordinated Universal Time)"
+    }
+  },
+  "steps": [
+    {
+      "step": {
+        "op": "dismiss",
+        "args": {
+          "kind": "no-crossover"
+        }
+      },
+      "returned": {
+        "ok": true
+      },
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": "{\n\t\"dismissedUntestedCrossoverBuilds\": [\n\t\t\"27.0.0.1\"\n\t],\n\t\"someOtherKey\": {\n\t\t\"a\": 1\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"dismissedUntestedCrossoverBuilds\": \"Mon Nov 23 2026 11:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"someOtherKey\": \"Mon Nov 23 2026 11:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"noCrossoverNoteDismissed\": \"Mon Nov 23 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"noCrossoverNoteDismissed\": true\n}",
+  "logs": []
+}

@@ -1,0 +1,63 @@
+{
+  "note": "a launch whose probe was inconclusive (cx-inconclusive on a kept pin): no launch notice, the inconclusive result is not cached, the published state has no badge",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "launch",
+        "selection": "pinned:cx-inconclusive",
+        "preflight": {
+          "kind": "broken",
+          "binDir": "$BIN",
+          "build": null,
+          "detail": "timed out",
+          "inconclusive": true
+        }
+      },
+      "published": 1,
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "state",
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "$BIN",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        }
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "crossover",
+        "reason": "cx-healthy",
+        "engineLabel": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [
+        "oracle-bottle"
+      ],
+      "eventsSoFar": 1
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

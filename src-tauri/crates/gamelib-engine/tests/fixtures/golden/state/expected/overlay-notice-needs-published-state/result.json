@@ -1,0 +1,53 @@
+{
+  "note": "an overlay notice before any state was published returns false and publishes nothing; after a launch it returns true, re-pushing the last state with the notice and the next shared seq each time",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "overlay",
+        "step": "shim"
+      },
+      "returned": false,
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "launch",
+        "selection": "pinned:cx-missing",
+        "preflight": {
+          "kind": "missing",
+          "detail": "CrossOver is not installed"
+        }
+      },
+      "published": 1,
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "overlay",
+        "step": "shim"
+      },
+      "returned": true,
+      "eventsSoFar": 2
+    },
+    {
+      "step": {
+        "op": "overlay",
+        "step": "env"
+      },
+      "returned": true,
+      "eventsSoFar": 3
+    },
+    {
+      "step": {
+        "op": "overlay",
+        "step": "resign",
+        "game": "other-game"
+      },
+      "returned": false,
+      "eventsSoFar": 3
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

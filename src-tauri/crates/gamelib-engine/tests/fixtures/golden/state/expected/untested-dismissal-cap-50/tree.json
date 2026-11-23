@@ -1,0 +1,28 @@
+[
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store_cache",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/GameLib/store_cache/steam_engine_notices.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e44e46c4d73e62872143272b8f0f69f6f57119ac631e2aba0552ae564984f208"
+  }
+]

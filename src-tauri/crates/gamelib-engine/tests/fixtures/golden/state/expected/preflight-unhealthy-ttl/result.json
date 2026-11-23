@@ -1,0 +1,178 @@
+{
+  "note": "an unhealthy preflight is cached for 60 s: a state at +30 s asks nothing, a state at +61 s probes again; a healthy one never expires",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "state",
+        "preflight": {
+          "kind": "broken",
+          "binDir": "$BIN",
+          "build": null,
+          "detail": "wine exited 1"
+        }
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "builtin",
+        "reason": "cx-broken",
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [
+        "oracle-bottle"
+      ],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "advance",
+        "ms": 30000
+      },
+      "now": 1795435230000,
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "preflight": "unscripted"
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "builtin",
+        "reason": "cx-broken",
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "advance",
+        "ms": 31000
+      },
+      "now": 1795435261000,
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "$BIN",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        }
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "crossover",
+        "reason": "cx-healthy",
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [
+        "oracle-bottle"
+      ],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "advance",
+        "ms": 3600000
+      },
+      "now": 1795438861000,
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "preflight": "unscripted"
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "crossover",
+        "reason": "cx-healthy",
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

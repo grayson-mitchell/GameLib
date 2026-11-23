@@ -1,0 +1,42 @@
+{
+  "note": "CrossOver is installed but the bottle is not provisioned: no probe and no badge, crossoverInstalled true",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "state",
+        "ready": false,
+        "preflight": "unscripted"
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": null,
+        "reason": null,
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

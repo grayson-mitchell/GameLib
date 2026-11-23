@@ -1,0 +1,79 @@
+{
+  "note": "a stored list holding non-string entries and a non-array value: non-strings are dropped on read, a non-array reads as empty",
+  "seeded": {
+    "dismissedUntestedCrossoverBuilds": [
+      "27.0.0.1",
+      5,
+      null,
+      {
+        "a": 1
+      },
+      "27.0.0.2"
+    ],
+    "__internal__": {
+      "gamelib": {
+        "schemaVersion": 1
+      }
+    },
+    "__timestamp": {
+      "dismissedUntestedCrossoverBuilds": "Mon Nov 23 2026 11:00:00 GMT+0000 (Coordinated Universal Time)"
+    }
+  },
+  "steps": [
+    {
+      "step": {
+        "op": "state",
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "$BIN",
+          "build": "27.0.0.1",
+          "trialDaysRemaining": null
+        }
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "crossover",
+        "reason": "cx-healthy",
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [
+        "oracle-bottle"
+      ],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "dismiss",
+        "args": {
+          "kind": "untested-crossover",
+          "build": "27.0.0.3"
+        }
+      },
+      "returned": {
+        "ok": true
+      },
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": "{\n\t\"dismissedUntestedCrossoverBuilds\": [\n\t\t\"27.0.0.1\",\n\t\t\"27.0.0.2\",\n\t\t\"27.0.0.3\"\n\t],\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"dismissedUntestedCrossoverBuilds\": \"Mon Nov 23 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}",
+  "logs": []
+}

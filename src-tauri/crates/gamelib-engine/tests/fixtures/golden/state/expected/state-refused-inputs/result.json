@@ -1,0 +1,58 @@
+{
+  "note": "not macOS, an unknown runner, an unclean app name and a non-object identity all return null",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "state",
+        "isMac": false,
+        "preflight": "unscripted"
+      },
+      "state": null,
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "runner": "nonesuch",
+        "preflight": "unscripted"
+      },
+      "state": null,
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "game": "../x",
+        "preflight": "unscripted"
+      },
+      "state": null,
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "identity": null,
+        "preflight": "unscripted"
+      },
+      "state": null,
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "identity": "legendary:game-a",
+        "preflight": "unscripted"
+      },
+      "state": null,
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

@@ -1,0 +1,115 @@
+{
+  "note": "a forced pin or Wine Manager build and a Legacy engine: engine unsupported with reason override, no probe, the Legacy label carried",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "state",
+        "effective": "pinned",
+        "game": "g1",
+        "preflight": "unscripted"
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "g1",
+        "engine": "unsupported",
+        "reason": "override",
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "pinned:wine-staging-11.20",
+        "engineSource": "stored",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "effective": "wine-manager",
+        "game": "g2",
+        "preflight": "unscripted"
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "g2",
+        "engine": "unsupported",
+        "reason": "override",
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "wine-manager:11.0-1",
+        "engineSource": "stored",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "effective": {
+          "legacy": "Wine-Lutris 7"
+        },
+        "game": "g3",
+        "preflight": "unscripted"
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "g3",
+        "engine": "unsupported",
+        "reason": "override",
+        "engineLabel": "Legacy: Wine-Lutris 7",
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "legacy:Wine-Lutris 7",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": "Wine-Lutris 7"
+      },
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

@@ -1,0 +1,101 @@
+{
+  "note": "getGameEngineState for an Epic game on a CrossOver default, with the settings and the probe supplied as values: the per-game bottle name, the prefix kind and the derived engine in the state",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "game-state",
+        "runner": "legendary",
+        "game": "oracle-epic",
+        "globalSettings": {
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver",
+            "bin": "$BIN/wine"
+          },
+          "wineCrossoverBottle": "Heroic"
+        },
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "$BIN",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": 7
+        }
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "oracle-epic",
+        "engine": "crossover",
+        "reason": "cx-healthy",
+        "engineLabel": null,
+        "trialDaysRemaining": 7,
+        "showTrialNotice": true,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": "bottle",
+        "perGameBottleName": "GameLib-legendary-oracle-epic",
+        "legacyLabel": null
+      },
+      "preflightCalls": [
+        "Heroic"
+      ],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "game-state",
+        "runner": "gog",
+        "game": "1207658924",
+        "globalSettings": {
+          "wineVersion": {
+            "type": "wine",
+            "name": "Wine-Lutris 7",
+            "bin": "<HOME>/wine/bin/wine"
+          },
+          "winePrefix": "<HOME>/Games/prefix"
+        },
+        "preflight": "unscripted"
+      },
+      "state": {
+        "runner": "gog",
+        "appName": "1207658924",
+        "engine": "unsupported",
+        "reason": "override",
+        "engineLabel": "Legacy: Wine-Lutris 7",
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "legacy:Wine-Lutris 7",
+        "engineSource": "derived",
+        "prefixKind": "legacy",
+        "perGameBottleName": "GameLib-gog-1207658924",
+        "legacyLabel": "Wine-Lutris 7"
+      },
+      "preflightCalls": [],
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

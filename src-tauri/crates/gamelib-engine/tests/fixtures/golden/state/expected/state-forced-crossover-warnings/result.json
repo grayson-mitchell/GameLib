@@ -1,0 +1,181 @@
+{
+  "note": "a forced CrossOver: engine crossover with reason override; an expired probe sets the cx-expired warning, a broken one cx-broken, an inconclusive broken one none",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "state",
+        "effective": "crossover",
+        "game": "g1",
+        "bottle": "b1",
+        "preflight": {
+          "kind": "expired",
+          "binDir": "$BIN",
+          "build": "26.3.0.39832",
+          "daysAgo": 2
+        }
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "g1",
+        "engine": "crossover",
+        "reason": "override",
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": "cx-expired",
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "crossover",
+        "engineSource": "stored",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [
+        "b1"
+      ],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "effective": "crossover",
+        "game": "g2",
+        "bottle": "b2",
+        "preflight": {
+          "kind": "broken",
+          "binDir": "$BIN",
+          "build": null,
+          "detail": "wine exited 1"
+        }
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "g2",
+        "engine": "crossover",
+        "reason": "override",
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": "cx-broken",
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "crossover",
+        "engineSource": "stored",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [
+        "b2"
+      ],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "effective": "crossover",
+        "game": "g3",
+        "bottle": "b3",
+        "preflight": {
+          "kind": "broken",
+          "binDir": "$BIN",
+          "build": null,
+          "detail": "timed out",
+          "inconclusive": true
+        }
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "g3",
+        "engine": "crossover",
+        "reason": "override",
+        "engineLabel": null,
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "crossover",
+        "engineSource": "stored",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [
+        "b3"
+      ],
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "state",
+        "effective": "crossover",
+        "game": "g4",
+        "bottle": "b4",
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "$BIN",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": 4
+        }
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "g4",
+        "engine": "crossover",
+        "reason": "override",
+        "engineLabel": null,
+        "trialDaysRemaining": 4,
+        "showTrialNotice": true,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "crossover",
+        "engineSource": "stored",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [
+        "b4"
+      ],
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

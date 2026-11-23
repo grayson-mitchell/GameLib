@@ -1,0 +1,101 @@
+{
+  "note": "the engine label in a later state is CrossOver after a CrossOver launch, and the pin's label after a built-in launch",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "launch",
+        "selection": "pinned:cx-missing",
+        "preflight": {
+          "kind": "missing",
+          "detail": "CrossOver is not installed"
+        }
+      },
+      "published": 1,
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "state",
+        "bin": "absent",
+        "preflight": "unscripted"
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "builtin",
+        "reason": "cx-missing",
+        "engineLabel": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": false,
+        "showNoCrossoverNote": true,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [],
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "launch",
+        "selection": "crossover:cx-healthy",
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "$BIN",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        }
+      },
+      "published": 1,
+      "eventsSoFar": 2
+    },
+    {
+      "step": {
+        "op": "state",
+        "preflight": "unscripted"
+      },
+      "state": {
+        "runner": "legendary",
+        "appName": "game-a",
+        "engine": "crossover",
+        "reason": "cx-healthy",
+        "engineLabel": "CrossOver",
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": null,
+        "perGameBottleName": null,
+        "legacyLabel": null
+      },
+      "preflightCalls": [],
+      "eventsSoFar": 2
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

@@ -1,0 +1,73 @@
+{
+  "note": "automatic launches on the built-in engine: the launch notice carries the fallback reason and a seq counting 1, 2; a forced CrossOver or a cx-inconclusive launch carries none; the counter is shared",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "launch",
+        "selection": "pinned:cx-missing",
+        "preflight": {
+          "kind": "missing",
+          "detail": "CrossOver is not installed"
+        }
+      },
+      "published": 1,
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "launch",
+        "selection": "pinned:cx-expired",
+        "preflight": {
+          "kind": "expired",
+          "binDir": "$BIN",
+          "build": "26.3.0.39832",
+          "daysAgo": 1
+        }
+      },
+      "published": 1,
+      "eventsSoFar": 2
+    },
+    {
+      "step": {
+        "op": "launch",
+        "selection": "crossover:override",
+        "override": "crossover",
+        "preflight": {
+          "kind": "healthy",
+          "binDir": "$BIN",
+          "build": "26.3.0.39832",
+          "trialDaysRemaining": null
+        }
+      },
+      "published": 1,
+      "eventsSoFar": 3
+    },
+    {
+      "step": {
+        "op": "launch",
+        "selection": "pinned:cx-broken",
+        "preflight": {
+          "kind": "broken",
+          "binDir": "$BIN",
+          "build": null,
+          "detail": "wine exited 1"
+        }
+      },
+      "published": 1,
+      "eventsSoFar": 4
+    },
+    {
+      "step": {
+        "op": "launch",
+        "selection": "pinned:override",
+        "override": "pinned:wine-staging-11.20",
+        "preflight": null
+      },
+      "published": 1,
+      "eventsSoFar": 5
+    }
+  ],
+  "storeFile": null,
+  "logs": []
+}

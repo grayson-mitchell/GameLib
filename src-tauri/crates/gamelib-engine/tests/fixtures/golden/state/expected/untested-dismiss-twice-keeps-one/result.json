@@ -1,0 +1,42 @@
+{
+  "note": "dismissing the same build twice stores it once; the timestamp is rewritten at the later time",
+  "seeded": null,
+  "steps": [
+    {
+      "step": {
+        "op": "dismiss",
+        "args": {
+          "kind": "untested-crossover",
+          "build": "27.0.0.1"
+        }
+      },
+      "returned": {
+        "ok": true
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "advance",
+        "ms": 60000
+      },
+      "now": 1795435260000,
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "dismiss",
+        "args": {
+          "kind": "untested-crossover",
+          "build": "27.0.0.1"
+        }
+      },
+      "returned": {
+        "ok": true
+      },
+      "eventsSoFar": 0
+    }
+  ],
+  "storeFile": "{\n\t\"dismissedUntestedCrossoverBuilds\": [\n\t\t\"27.0.0.1\"\n\t],\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"dismissedUntestedCrossoverBuilds\": \"Mon Nov 23 2026 12:01:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}",
+  "logs": []
+}
