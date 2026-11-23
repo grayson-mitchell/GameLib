@@ -30,6 +30,12 @@ impl LocalZone {
     fn east_ms(self) -> i64 {
         i64::from(self.east_secs) * 1000
     }
+
+    /// The offset in seconds east of UTC (the tests read a local calendar date off it).
+    #[cfg(test)]
+    pub(crate) fn east_secs_for_test(self) -> i64 {
+        i64::from(self.east_secs)
+    }
 }
 
 const MS_PER_DAY: i64 = 86_400_000;
