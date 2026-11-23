@@ -7,7 +7,7 @@
  * timers, no I/O (sidecar exit contract).
  */
 import { logInfo, LogPrefix } from 'backend/logger'
-import { sanitizeBottleName } from './bottlePrimitives'
+import { sanitizeBottleName } from 'backend/enginewine/twin'
 import { isEngineKey } from './gameKey'
 import type { EngineKey } from './gameKey'
 

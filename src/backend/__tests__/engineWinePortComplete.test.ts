@@ -310,6 +310,73 @@ describe('toolsPortComplete', () => {
   })
 })
 
+/**
+ * 87-43, D-06, D-08, D-16 and D-24: the bottle switch, the TS bottle primitives and the conf writer are Rust's
+ * (87-38..87-41 ported them, 87-42 switched every caller). `bottlePrimitives.ts` (the kill, the guarded removal and
+ * the fallback creation reference, plus the re-exports of the twin's helpers), `engineSwitch.ts` (the switcher, the
+ * marker writers and the switch context) and `adoptBottle.ts` (the cxbottle.conf writer) are deleted with their unit
+ * tests and the two bottle oracles. The fake that stood in for Rust's bottle ops no longer runs a TS reference. The
+ * goldens, the state bottles and the vectors stay for the Rust replay (`golden_bottles.rs`, `golden_switch.rs`,
+ * `switch_incidents.rs`, `twin_vectors.rs`).
+ *
+ * Four modules the plan named stay, because the still-TS launch step (`launchEngine.ts`, `toolSettings.ts`,
+ * `gameEngineState.ts`, `engineDecision.ts`) still calls them synchronously until 87-50..87-56 move it to Rust:
+ * `bottleLedger.ts` (the running-games mirror `engineDecision` reads), `engineRegistry.ts` (the validating selection
+ * registry over the view), `perGameBottle.ts` (`ensureGameBottle`) and `gamePrefix.ts` (`resolveGamePrefix`). The two
+ * identifiers of the gate that name them (`createBottleLedger`, `createEngineRegistry`, `createPerGameBottleFlights`,
+ * `resolveGamePrefix`) are therefore not forbidden here; the engine slice's own gate (87-56) forbids them.
+ */
+const BOTTLES: SliceSpec = {
+  deleted: [
+    'src/backend/engine/bottlePrimitives.ts',
+    'src/backend/engine/engineSwitch.ts',
+    'src/backend/engine/adoptBottle.ts',
+    'src/backend/engine/__tests__/bottlePrimitives.test.ts',
+    'src/backend/engine/__tests__/engineSwitch.test.ts',
+    'src/backend/engine/__tests__/adoptBottle.test.ts',
+    'src/backend/engine/__tests__/oracle/bottles.oracle.test.ts',
+    'src/backend/engine/__tests__/oracle/engineSwitch.oracle.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-engine/tests/fixtures/state/bottles',
+    'src-tauri/crates/gamelib-engine/tests/fixtures/golden/bottles',
+    'src-tauri/crates/gamelib-engine/tests/fixtures/golden/switch',
+    'src-tauri/crates/gamelib-engine/tests/fixtures/vectors/bottle_twin.json',
+    'src-tauri/crates/gamelib-engine/tests/fixtures/vectors/selection_registry.json'
+  ],
+  forbiddenIdentifiers: [
+    'createEngineSwitcher',
+    'EngineSwitcher',
+    'EngineSwitchDeps',
+    'EngineSwitchContext',
+    'buildCxbottleConf',
+    'writeCxbottleConf',
+    'switchServicesFrom',
+    'switchContextFrom'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_ENGINE',
+  manifestSlice: 'engine',
+  channelsFloor: 3
+}
+
+describe('bottlesPortComplete', () => {
+  runSlice(BOTTLES)
+
+  it('the engine runtime builds no switcher and the bottle fake runs no TS reference', () => {
+    const runtime = tsWalk.files.find(
+      (f) => f.path === 'src/backend/engine/engineRuntime.ts'
+    )
+    expect(runtime).toBeDefined()
+    expect(runtime?.code).not.toMatch(/switcher/)
+    const fake = tsWalk.files.find(
+      (f) => f.path === 'src/backend/testUtils/fakeBottleRust.ts'
+    )
+    expect(fake).toBeDefined()
+    expect(fake?.code).not.toMatch(/bottlePrimitives/)
+  })
+})
+
 describe('noRollbackFlag', () => {
   it('anti-vacuity: the walks read real trees', () => {
     assertAtOrAboveFloor(

@@ -647,11 +647,9 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     'src/backend/dialog/dialog.ts',
     'src/backend/dialog/displayAck.ts',
     'src/backend/engine/bottleLedger.ts',
-    'src/backend/engine/bottlePrimitives.ts',
     'src/backend/engine/crossoverLocation.ts',
     'src/backend/engine/engineNoticeStore.ts',
     'src/backend/engine/engineRegistry.ts',
-    'src/backend/engine/engineSwitch.ts',
     'src/backend/engine/fallbackEngine.ts',
     'src/backend/engine/launchDeadline.ts',
     'src/backend/engine/launchEngine.ts',
@@ -763,7 +761,8 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     // wiki_game_info/howlongtobeat/utils.ts with the TS wiki and CrossOver slices (D-13): 71 -> 68.
     // Phase 87 Plan 36 deleted sidecar/wineToolsFlowRegistration.ts with the wine tools cluster (D-06, D-23): 68 -> 67.
     // Phase 87 Plan 37 deleted tools/index.ts and tools/winetricksEnvironment.ts with the TS tools tree (D-06): 67 -> 65.
-    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 65)
+    // Phase 87 Plan 43 deleted engine/bottlePrimitives.ts and engine/engineSwitch.ts with the TS bottle switch (D-06): 65 -> 63.
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 63)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {

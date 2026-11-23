@@ -11,7 +11,6 @@
 import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
 import { createFakeBottleRust } from 'backend/testUtils/fakeBottleRust'
-import type { SpawnAsync } from 'backend/spawnAsync'
 import {
   existsSync,
   mkdirSync,
@@ -78,10 +77,6 @@ jest.mock('backend/utils', () => ({
   downloadFile: jest.fn()
 }))
 
-jest.mock('backend/engine/adoptBottle', () => ({
-  writeCxbottleConf: jest.fn()
-}))
-
 // GAP C (17-16): force isMac true so the macOS raise poll loop is exercised
 // deterministically on every host (the loop is dynamically imported by
 // bottle.ts). isSnap is provided for the environment consumers.
@@ -118,14 +113,7 @@ const crossover = {
 const engineRuntime = {
   crossover,
   registry: createEngineRegistry(engineSelectionView),
-  requestRustInvoke: createFakeBottleRust({
-    spawnAsync: (...a: Parameters<SpawnAsync>) => mockedSpawnAsync(...a),
-    paths: {
-      get userHome() {
-        return paths.userHome
-      }
-    }
-  }).requestRustInvoke
+  requestRustInvoke: createFakeBottleRust().requestRustInvoke
 }
 // One per-boot Steam launch runtime for this suite, on the global-timer clock so jest fake timers drive it (66.4-06).
 const steamLaunchRuntime = createTestSteamLaunchRuntime({

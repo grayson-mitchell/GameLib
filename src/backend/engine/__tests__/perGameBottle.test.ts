@@ -1,5 +1,9 @@
 import { execFile } from 'child_process'
 import { createFakeBottleRust } from 'backend/testUtils/fakeBottleRust'
+import {
+  RUST_ENGINE_BOTTLE_KILL_WINESERVER,
+  RUST_ENGINE_BOTTLE_REMOVE_CREATED
+} from 'common/types/sidecarTransport'
 import { chmodSync, existsSync, mkdirSync, copyFileSync } from 'fs'
 import { join } from 'path'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
@@ -60,11 +64,12 @@ const spawnAsync = (
       )
     }
   )
-// 87-42: the bottle kill and removal are Rust's; the fake runs the TS reference over the same spawn and paths.
+// The bottle kill and removal are Rust's; the fake records the calls and answers them (see fakeBottleRust).
+const bottleRust = createFakeBottleRust()
 const deps = {
   spawnAsync,
   paths,
-  engineRuntime: createFakeBottleRust({ spawnAsync, paths })
+  engineRuntime: bottleRust
 }
 
 afterAll(() => mockProfile.dispose())
@@ -125,7 +130,23 @@ describe('perGameBottleName', () => {
   })
 })
 
+/** The bottle names the code under test asked Rust to remove (`engine_bottle_remove_created`). */
+const removedBottles = () =>
+  bottleRust.calls
+    .filter((c) => c.channel === RUST_ENGINE_BOTTLE_REMOVE_CREATED)
+    .map((c) => (c.arg as { bottleName: string }).bottleName)
+const killedBottles = () =>
+  bottleRust.calls
+    .filter((c) => c.channel === RUST_ENGINE_BOTTLE_KILL_WINESERVER)
+    .map((c) => (c.arg as { bottleName: string }).bottleName)
+
+// The cleanup of a failed creation (the wineserver stop, then the guarded removal of what this call made) is Rust's
+// (`golden_bottles.rs`, `remove-created-*` and `kill-*` cases); these cases pin that the TS side asks for it, and only
+// for a bottle it created.
 describe('createCrossoverBottle (stub cxbottle under a fake HOME)', () => {
+  beforeEach(() => {
+    bottleRust.calls.length = 0
+  })
   const binDir = join(mockProfile.root, 'cx', 'bin')
   beforeAll(() => {
     mkdirSync(binDir, { recursive: true })
@@ -151,7 +172,8 @@ describe('createCrossoverBottle (stub cxbottle under a fake HOME)', () => {
       status: 'error',
       errorCode: 'crossover-create-failed'
     })
-    expect(existsSync(getBottleDir(paths, 'GameLib-gog-noconf'))).toBe(false)
+    expect(killedBottles()).toEqual(['GameLib-gog-noconf'])
+    expect(removedBottles()).toEqual(['GameLib-gog-noconf'])
   })
 
   it('reports the cap and removes the created dir on a hang', async () => {
@@ -162,7 +184,8 @@ describe('createCrossoverBottle (stub cxbottle under a fake HOME)', () => {
       status: 'error',
       errorCode: 'crossover-create-timeout'
     })
-    expect(existsSync(getBottleDir(paths, 'GameLib-gog-hang'))).toBe(false)
+    expect(killedBottles()).toEqual(['GameLib-gog-hang'])
+    expect(removedBottles()).toEqual(['GameLib-gog-hang'])
   })
 
   it('never removes a pre-existing dir', async () => {
@@ -171,6 +194,7 @@ describe('createCrossoverBottle (stub cxbottle under a fake HOME)', () => {
     const r = await createCrossoverBottle(deps, 'GameLib-gog-noconf', binDir)
     expect(r.status).toBe('error')
     expect(existsSync(pre)).toBe(true)
+    expect(removedBottles()).toEqual([])
   })
 
   it('rejects an unsafe name before spawning', async () => {

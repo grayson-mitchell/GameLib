@@ -15,7 +15,7 @@ import type { EnginePin } from 'common/types/engine'
  *
  * Phase 87 (87-39, D-24): the table itself and `pinById` live once in `enginewine/twin.ts`, which reads
  * `common/enginePins.json` (the file the Rust crate reads too). They are re-exported here so every caller keeps
- * its import until 87-43 repoints them and deletes this module; the types stay here.
+ * its import until 87-56 deletes this module (87-43 repointed the bridge and the modules that reached the bottle code); the types now live in `common/types/engine`.
  */
 export { ENGINE_PINS, pinById } from 'backend/enginewine/twin'
 

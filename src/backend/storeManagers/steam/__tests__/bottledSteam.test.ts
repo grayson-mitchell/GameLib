@@ -63,10 +63,6 @@ jest.mock('backend/utils', () => ({
   downloadFile: jest.fn()
 }))
 
-jest.mock('backend/engine/adoptBottle', () => ({
-  writeCxbottleConf: jest.fn()
-}))
-
 // GAP C (17-16): force isMac true so the macOS raise poll loop is exercised
 // deterministically on every host (the loop is dynamically imported by
 // bottle.ts). isSnap is provided for the environment consumers.

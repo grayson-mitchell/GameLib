@@ -26,9 +26,9 @@
  * the Rust crate reads too). The Rust owners are `bottles::paths`, `bottles::marker`, `bottles::pin_marker`,
  * `engines::is_pinned_engine_installed` and `tool_settings::build_fallback_game_settings`; the shared
  * `bottle_twin.json` vectors pin the two sides (`twinVectors.test.ts` here, `twin_vectors.rs` in Rust). They
- * stay synchronous because the launch path and the bridge still call them inline; `bottlePrimitives.ts`,
- * `engineSwitch.ts`, `fallbackEngine.ts` and `enginePins.ts` re-export them so no caller changes until 87-43
- * repoints them and deletes the re-exporting modules. The helpers the still-TS marker writers and the
+ * stay synchronous because the launch path and the bridge still call them inline. 87-43 repointed every caller
+ * here and deleted `bottlePrimitives.ts` and `engineSwitch.ts`; `enginePins.ts` still re-exports the pin table for
+ * the engine files that import it until 87-56. The helpers the still-TS marker writers and the
  * pinned-engine installer share with the readers (`readEngineMarker`, `hasStagingDxvk`,
  * `isContradictedCrossover`, `isInside`, `pinMarkerMatches`, `pinnedEnginePaths`) are intra-phase rows
  * (`deletedBy: 87`): 87-56 deletes their callers and makes them private, as with `perGameBottleName`.
@@ -280,7 +280,7 @@ export function buildFallbackGameSettings(
   }
 }
 
-/** `<bottle>/.gamelib-engine.json`: what the still-TS writer in `engineSwitch.ts` names `ENGINE_MARKER_FILE`. */
+/** `<bottle>/.gamelib-engine.json`: the marker file Rust's bottle switch writes. */
 const ENGINE_MARKER_FILE = '.gamelib-engine.json'
 const DXVK_VERSION_FILE = 'current_dxvk-macOS'
 const PIN_MARKER_FILE = '.gamelib-pin.json'

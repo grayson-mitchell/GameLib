@@ -2,7 +2,7 @@
   "jestMock": {
     "src/backend/storeManagers/steam/__tests__/anonymousClient.rustEngine.test.ts": 1,
     "src/backend/storeManagers/steam/__tests__/autoUpdateAttempts.test.ts": 1,
-    "src/backend/storeManagers/steam/__tests__/bridgeBottle.test.ts": 6,
+    "src/backend/storeManagers/steam/__tests__/bridgeBottle.test.ts": 5,
     "src/backend/storeManagers/steam/__tests__/bridgeRouteVerdict.test.ts": 13,
     "src/backend/storeManagers/steam/__tests__/cancelDelete.test.ts": 7,
     "src/backend/storeManagers/steam/__tests__/clientSetup.test.ts": 5,

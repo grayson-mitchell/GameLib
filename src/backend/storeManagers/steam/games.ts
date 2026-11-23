@@ -322,10 +322,10 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * engineSwitch's pin source: downloads with the same engine-download statuses as a launch.
+   * the engine switch's pin source: downloads with the same engine-download statuses as a launch.
    *
    * @internal Public only so lifted modules reach it via
-   * steamGame.restorePinEngine() (class-bound callback handed to engineSwitch
+   * steamGame.restorePinEngine() (class-bound callback handed to the engine switch
    * by gameInstall/gameLaunch); do not call from outside steam/.
    */
   restorePinEngine = async (

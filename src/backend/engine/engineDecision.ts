@@ -11,6 +11,7 @@
  * deps whose defaults are built lazily inside each function.
  */
 import { killBottleWineServerWith } from 'backend/enginewine/bottles'
+import { readBottleEngineMarkerSummary } from 'backend/enginewine/twin'
 import { accessSync, constants as fsConstants, existsSync } from 'fs'
 import { dirname, isAbsolute, join, relative } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -193,15 +194,11 @@ function baseEngineDecisionDeps(rt: RunnerDeps): NonSpawnDefaults {
     monitorPhase: () => null,
     bottleBusy: (bottleName, key) =>
       rt.engineRuntime.ledger.otherGamesRunning(bottleName, key).length > 0,
-    markerSummary(bottleName) {
-      const { readBottleEngineMarkerSummary } =
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('./engineSwitch') as typeof import('./engineSwitch')
-      return readBottleEngineMarkerSummary(
+    markerSummary: (bottleName) =>
+      readBottleEngineMarkerSummary(
         { paths: rt.paths, fallback: rt.engineRuntime.fallback },
         bottleName
-      )
-    },
+      ),
     isPinInstalled: (pin) =>
       rt.engineRuntime.fallback.isPinnedEngineInstalled(pin),
     pinPaths: (pin) => rt.engineRuntime.fallback.pinnedEnginePaths(pin),

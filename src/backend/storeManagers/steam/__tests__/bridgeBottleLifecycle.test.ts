@@ -11,8 +11,13 @@
 import { createEngineRegistry } from 'backend/engine/engineRegistry'
 import { engineSelectionView } from 'backend/enginewine/selectionView'
 import { createFakeBottleRust } from 'backend/testUtils/fakeBottleRust'
-import type { SpawnAsync } from 'backend/spawnAsync'
-import type { EngineServices } from 'backend/engine/engineServices'
+import {
+  RUST_ENGINE_BOTTLE_CANCEL_CREATE,
+  RUST_ENGINE_BOTTLE_CREATE_FALLBACK,
+  RUST_ENGINE_BOTTLE_KILL_WINESERVER,
+  RUST_ENGINE_BOTTLE_RECORD_PINNED,
+  RUST_ENGINE_BOTTLE_REMOVE_CREATED
+} from 'common/types/sidecarTransport'
 import {
   existsSync,
   mkdirSync,
@@ -25,18 +30,13 @@ import {
 // below. Distinct local name so it never collides with the mocked
 // `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
 import { readFileSync as readRealFile } from 'node:fs'
-import {
-  basename as basenameOf,
-  dirname as dirnameOf,
-  join as joinPath
-} from 'node:path'
+import { basename as basenameOf, join as joinPath } from 'node:path'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import * as engineServicesModule from 'backend/services/engineServices'
 import * as bottlesModule from 'backend/enginewine/bottles'
 import { ENGINE_PINS, getBottleDir } from 'backend/enginewine/twin'
 import type { EngineServicesSource } from 'backend/services/engineServices'
-import { writeCxbottleConf } from 'backend/engine/adoptBottle'
 import {
   createTestManagers,
   createTestStores
@@ -65,7 +65,6 @@ import {
   type BottleRemovalDeps
 } from '../bridgeBottleLifecycle'
 import { getBridgeBottleSettings } from '../bridgeBottle'
-import { killBottleWineServerWith } from 'backend/engine/bottlePrimitives'
 import type { DrmBridgeRunner } from '../bridgeBottle'
 import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
 import { createGlobalTimerClock } from 'backend/testUtils/globalTimerClock'
@@ -103,10 +102,6 @@ jest.mock('backend/utils', () => ({
   downloadFile: jest.fn()
 }))
 
-jest.mock('backend/engine/adoptBottle', () => ({
-  writeCxbottleConf: jest.fn()
-}))
-
 // GAP C (17-16): force isMac true so the macOS raise poll loop is exercised
 // deterministically on every host (the loop is dynamically imported by
 // bottle.ts). isSnap is provided for the environment consumers.
@@ -138,25 +133,31 @@ const crossover = {
   resolveCrossoverBinDir: () => cxState.binDir,
   resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir)
 }
-// 87-42: the selections the bridge reads are the process-wide view; the bottle kill and removal are Rust's, answered
-// here by the TS reference over this file's spawn and fs fakes (`fakeBottleRust`).
-// The DXVK installer the fallback creation runs, set by the cases that script one.
-const bottleRustHooks: { installRemove: EngineServices['installRemove'] } = {
-  installRemove: () => Promise.resolve(false)
-}
+// 87-42: the selections the bridge reads are the process-wide view. The bottle kill, removal, creation and markers are
+// Rust's, answered here by `fakeBottleRust`, which records the calls (a case that needs another answer scripts it).
+const bottleRustOthers: Record<string, (arg: unknown) => unknown> = {}
+const bottleRust = createFakeBottleRust({ others: bottleRustOthers })
+beforeEach(() => {
+  bottleRust.calls.length = 0
+  for (const key of Object.keys(bottleRustOthers)) delete bottleRustOthers[key]
+})
+/** The `engine_bottle_kill_wineserver` calls the code under test sent, in order. */
+const killCalls = () =>
+  bottleRust.calls
+    .filter((c) => c.channel === RUST_ENGINE_BOTTLE_KILL_WINESERVER)
+    .map(
+      (c) =>
+        c.arg as {
+          bottleName: string
+          wineserverBin: string
+          extraEnv: Record<string, string>
+          timeoutMs?: number
+        }
+    )
 const engineRuntime = {
   crossover,
   registry: createEngineRegistry(engineSelectionView),
-  requestRustInvoke: createFakeBottleRust({
-    spawnAsync: (...a: Parameters<SpawnAsync>) => mockedSpawnAsync(...a),
-    installRemove: (...a: Parameters<EngineServices['installRemove']>) =>
-      bottleRustHooks.installRemove(...a),
-    paths: {
-      get userHome() {
-        return paths.userHome
-      }
-    }
-  }).requestRustInvoke
+  requestRustInvoke: bottleRust.requestRustInvoke
 }
 // One per-boot Steam launch runtime for this suite, on the global-timer clock so jest fake timers drive it (66.4-06).
 const steamLaunchRuntime = createTestSteamLaunchRuntime({
@@ -871,8 +872,10 @@ describe('bottle.ts', () => {
 
       describe('H2: engine hint', () => {
         const HINT = '/abs/engine/bin/wineserver'
-        const spawnedBins = () =>
-          mockedSpawnAsync.mock.calls.map(([bin]) => String(bin))
+        const spawnedBins = () => [
+          ...mockedSpawnAsync.mock.calls.map(([bin]) => String(bin)),
+          ...killCalls().map((c) => c.wineserverBin)
+        ]
 
         test('H2: hint wineserver is spawned with -k, USER=crossover and the bottle WINEPREFIX', async () => {
           mockedExistsSync.mockImplementation(
@@ -886,12 +889,15 @@ describe('bottle.ts', () => {
             { wineserverBin: HINT }
           )
           expect(ok).toBe(true)
-          expect(mockedSpawnAsync).toHaveBeenCalledTimes(1)
-          const [bin, args, opts] = mockedSpawnAsync.mock.calls[0]
-          expect(bin).toBe(HINT)
-          expect(args).toEqual(['-k'])
-          expect(opts?.env?.USER).toBe('crossover')
-          expect(opts?.env?.WINEPREFIX).toBe(perGameDir)
+          // The hinted wineserver is a non-CrossOver one, so Rust runs the kill with the bottle's own WINEPREFIX.
+          expect(mockedSpawnAsync).not.toHaveBeenCalled()
+          expect(killCalls()).toEqual([
+            expect.objectContaining({
+              bottleName: perGameName,
+              wineserverBin: HINT,
+              extraEnv: expect.objectContaining({ USER: 'crossover' })
+            })
+          ])
         })
 
         test('H2: registered non-CrossOver engine wins over the hint', async () => {
@@ -1153,47 +1159,13 @@ describe('Phase 59 engine registry', () => {
   })
 
   describe('wineserver kill', () => {
-    test('killBottleWineServerWith spawns the given wineserver', async () => {
-      const ok = await killBottleWineServerWith(
-        spawnDeps,
-        bottle,
-        '/pins/wineserver',
-        { USER: 'crossover', WINEPREFIX: '/evil' },
-        5000
-      )
-      expect(ok).toBe(true)
-      const [bin, args, opts] = mockedSpawnAsync.mock.calls[0]
-      expect(bin).toBe('/pins/wineserver')
-      expect(args).toEqual(['-k'])
-      expect(opts.env.WINEPREFIX).toBe(getBottleDir(paths, bottle))
-      expect(opts.env.USER).toBe('crossover')
-      expect(opts.timeout).toBe(5000)
-    })
-
-    test('killBottleWineServerWith returns false on timeout', async () => {
-      mockedSpawnAsync.mockResolvedValue({ code: null })
-      expect(
-        await killBottleWineServerWith(spawnDeps, bottle, '/w', {}, 1)
-      ).toBe(false)
-    })
-
-    test.each(['../evil', 'a/b', ''])(
-      'killBottleWineServerWith refuses unsafe bottle %j',
-      async (name) => {
-        expect(
-          await killBottleWineServerWith(spawnDeps, name, '/w', {}, 1)
-        ).toBe(false)
-        expect(mockedSpawnAsync).not.toHaveBeenCalled()
-      }
-    )
-
     test('killBridgeBottleWineServer uses the registered engine wineserver', async () => {
       setEngineSelection('620', pinned)
       await killBridgeBottleWineServer(spawnDeps, '620', 5000)
-      const [bin, , opts] = mockedSpawnAsync.mock.calls[0]
-      expect(bin).toBe(pinned.wineserverBin)
-      expect(opts.env.USER).toBe('crossover')
-      expect(opts.env.CX_ROOT).toBeUndefined()
+      const [call] = killCalls()
+      expect(call?.wineserverBin).toBe(pinned.wineserverBin)
+      expect(call?.extraEnv.USER).toBe('crossover')
+      expect(call?.extraEnv.CX_ROOT).toBeUndefined()
     })
 
     test('killBridgeBottleWineServer uses CrossOver when nothing is registered', async () => {
@@ -1208,6 +1180,7 @@ describe('Phase 59 engine registry', () => {
         false
       )
       expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      expect(killCalls()).toEqual([])
     })
 
     test('stop/end per-game use the registered engine wineserver', async () => {
@@ -1215,7 +1188,7 @@ describe('Phase 59 engine registry', () => {
       mockedExistsSync.mockReturnValue(true)
       await stopPerGameBridgeBottle(spawnDeps, '620')
       await endPerGameBridgeBottleSession(spawnDeps, '620', bottle, 5000)
-      expect(mockedSpawnAsync.mock.calls.map((c) => c[0])).toEqual([
+      expect(killCalls().map((c) => c.wineserverBin)).toEqual([
         pinned.wineserverBin,
         pinned.wineserverBin
       ])
@@ -1236,14 +1209,12 @@ describe('Phase 59 engine registry', () => {
     const order: string[] = []
     const mockedInstallRemove = jest.fn()
     let servicesSpy: jest.SpyInstance
-    const mockedWriteConf = writeCxbottleConf as jest.Mock
     let dxvkMarker: boolean
 
     beforeEach(() => {
       order.length = 0
       dxvkMarker = false
       mockedInstallRemove.mockReset()
-      bottleRustHooks.installRemove = mockedInstallRemove
       servicesSpy = jest
         .spyOn(engineServicesModule, 'engineServicesFrom')
         .mockImplementation((d) => ({
@@ -1269,18 +1240,28 @@ describe('Phase 59 engine registry', () => {
           return { code: 0, stdout: '', stderr: '' }
         }
       )
-      mockedInstallRemove.mockImplementation(async () => {
-        order.push('dxvk')
-        dxvkMarker = true
-        return true
-      })
-      mockedWriteConf.mockImplementation(() => {
-        order.push('conf')
-        return true
-      })
     })
 
-    test('creates the bottle itself in the right order, never spawning cxbottle', async () => {
+    /** The `engine_bottle_create_fallback` calls the code under test sent, in order. */
+    const createCalls = () =>
+      bottleRust.calls
+        .filter((c) => c.channel === RUST_ENGINE_BOTTLE_CREATE_FALLBACK)
+        .map((c) => c.arg as { bottleName: string; engine: unknown })
+
+    /** The names the code under test asked Rust to remove (`engine_bottle_remove_created`), in order. */
+    const removeCalls = () =>
+      bottleRust.calls
+        .filter((c) => c.channel === RUST_ENGINE_BOTTLE_REMOVE_CREATED)
+        .map((c) => (c.arg as { bottleName: string }).bottleName)
+    /** The CrossOver arm's kill is the TS spawn of `wineserver -k`; a non-CrossOver one is Rust's. */
+    const killed = () =>
+      order.some((o) => o.startsWith('wineserver -k')) || killCalls().length > 0
+    const killIndex = () =>
+      order.findIndex((o) => o.startsWith('wineserver -k'))
+    // What the creation does (the wineboot, the DXVK step, the conf, the wineserver stop, the cleanup of a failed or
+    // cancelled one) is Rust's: gamelib-engine's `golden_bottles.rs` replays every branch. Here the TS side sends one
+    // call and uses the answer.
+    test('creates the bottle through one Rust call, never spawning cxbottle', async () => {
       cxState.binDir = undefined
       const result = await provisionBridgeBottle(spawnDeps, {
         bottleName: name,
@@ -1288,29 +1269,9 @@ describe('Phase 59 engine registry', () => {
       })
       cxState.binDir = CX_BIN_DIR
       expect(result).toEqual({ status: 'done', createdHere: true })
-      expect(order).toEqual([
-        'wine wineboot -i',
-        'wineserver -w',
-        'dxvk',
-        'conf',
-        'wineserver -k'
+      expect(createCalls()).toEqual([
+        expect.objectContaining({ bottleName: name, engine })
       ])
-      expect(mockedMkdirSync).toHaveBeenCalledWith(
-        dirnameOf(getBottleDir(paths, name)),
-        { recursive: true }
-      )
-      const [, , bootOpts] = mockedSpawnAsync.mock.calls[0]
-      expect(bootOpts.env).toMatchObject({
-        WINEPREFIX: getBottleDir(paths, name),
-        USER: 'crossover',
-        WINEDLLOVERRIDES: 'mshtml=',
-        WINEDEBUG: '-all'
-      })
-      expect(bootOpts.timeout).toBe(180_000)
-      expect(mockedSpawnAsync.mock.calls[1][2].timeout).toBe(60_000)
-      expect(mockedInstallRemove.mock.calls[0][1]).toBe('dxvk')
-      expect(mockedInstallRemove.mock.calls[0][2]).toBe('backup')
-      expect(mockedInstallRemove.mock.calls[0][3]).toBe(engine.dxvk)
       expect(
         mockedSpawnAsync.mock.calls.some((c) =>
           String(c[0]).includes('cxbottle')
@@ -1318,38 +1279,23 @@ describe('Phase 59 engine registry', () => {
       ).toBe(false)
     })
 
-    test.each([1, null])(
-      'wineboot exit code %p -> error, partial dir removed, no conf',
-      async (code) => {
-        mockedSpawnAsync.mockImplementation(async (bin: string) =>
-          bin === engine.wineBin
-            ? { code, stdout: '', stderr: 'boom' }
-            : { code: 0, stdout: '', stderr: '' }
-        )
-        const result = await provisionBridgeBottle(spawnDeps, {
-          bottleName: name,
-          fallbackEngine: engine
-        })
-        expect(result.status).toBe('error')
-        expect(mockedWriteConf).not.toHaveBeenCalled()
-        expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(paths, name), {
-          recursive: true,
-          force: true
-        })
-      }
-    )
-
-    test('does not remove a bottle dir that existed before the call', async () => {
-      mockedExistsSync.mockImplementation(
-        (p: string) => String(p) === getBottleDir(paths, name)
-      )
-      mockedSpawnAsync.mockResolvedValue({ code: 1, stdout: '', stderr: '' })
+    test('a creation Rust reports as failed is returned as an error and records no marker', async () => {
+      bottleRustOthers[RUST_ENGINE_BOTTLE_CREATE_FALLBACK] = () => ({
+        status: 'error',
+        error: 'boom'
+      })
+      cxState.binDir = undefined
       const result = await provisionBridgeBottle(spawnDeps, {
         bottleName: name,
         fallbackEngine: engine
       })
+      cxState.binDir = CX_BIN_DIR
       expect(result.status).toBe('error')
-      expect(mockedRmSync).not.toHaveBeenCalled()
+      expect(
+        bottleRust.calls.filter(
+          (c) => c.channel === RUST_ENGINE_BOTTLE_RECORD_PINNED
+        )
+      ).toEqual([])
     })
 
     test('an already ready bottle short-circuits with no spawn', async () => {
@@ -1410,12 +1356,11 @@ describe('Phase 59 engine registry', () => {
         )
       })
 
-      test('a failed wineboot records nothing', async () => {
-        mockedSpawnAsync.mockImplementation(async (bin: string) =>
-          bin === engine.wineBin
-            ? { code: 1, stdout: '', stderr: 'boom' }
-            : { code: 0, stdout: '', stderr: '' }
-        )
+      test('a failed creation records nothing', async () => {
+        bottleRustOthers[RUST_ENGINE_BOTTLE_CREATE_FALLBACK] = () => ({
+          status: 'error',
+          error: 'boom'
+        })
         const result = await provisionBridgeBottle(spawnDeps, {
           bottleName: name,
           fallbackEngine: engine
@@ -1540,11 +1485,8 @@ describe('Phase 59 engine registry', () => {
       expect(result.status).toBe('error')
       expect(result.errorCode).toBe(CROSSOVER_CREATE_TIMEOUT)
       expect(mockedSpawnAsync.mock.calls[0][2]).toEqual({ timeout: 1000 })
-      expect(order.some((o) => o.startsWith('wineserver -k'))).toBe(true)
-      expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(paths, name), {
-        recursive: true,
-        force: true
-      })
+      expect(killed()).toBe(true)
+      expect(removeCalls()).toEqual([name])
     })
 
     test('cxbottle --create exiting without a conf returns CROSSOVER_CREATE_FAILED and removes the new dir', async () => {
@@ -1554,10 +1496,7 @@ describe('Phase 59 engine registry', () => {
       })
       expect(result.status).toBe('error')
       expect(result.errorCode).toBe(CROSSOVER_CREATE_FAILED)
-      expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(paths, name), {
-        recursive: true,
-        force: true
-      })
+      expect(removeCalls()).toEqual([name])
     })
 
     test('CROSSOVER_CREATE_FAILED keeps a bottle dir that existed before the call', async () => {
@@ -1569,7 +1508,7 @@ describe('Phase 59 engine registry', () => {
         bottleName: name
       })
       expect(result.errorCode).toBe(CROSSOVER_CREATE_FAILED)
-      expect(mockedRmSync).not.toHaveBeenCalled()
+      expect(removeCalls()).toEqual([])
     })
 
     test('cxbottle --create throwing returns CROSSOVER_CREATE_FAILED and removes the new dir', async () => {
@@ -1578,32 +1517,22 @@ describe('Phase 59 engine registry', () => {
         bottleName: name
       })
       expect(result.errorCode).toBe(CROSSOVER_CREATE_FAILED)
-      expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(paths, name), {
-        recursive: true,
-        force: true
-      })
+      expect(removeCalls()).toEqual([name])
     })
 
-    const rmCall = () => [
-      getBottleDir(paths, name),
-      { recursive: true, force: true }
-    ]
-    const killed = () => order.some((o) => o.startsWith('wineserver -k'))
-
     test('WR-04: create-failed branches stop the wineserver before removing the dir', async () => {
+      bottleRustOthers[RUST_ENGINE_BOTTLE_REMOVE_CREATED] = () => {
+        order.push('rm')
+        return true
+      }
       mockedSpawnAsync.mockImplementation(
         async (bin: string, args: string[]) => {
           order.push(`${basenameOf(bin)} ${args.join(' ')}`)
           return { code: 1, stdout: '', stderr: 'x' }
         }
       )
-      mockedRmSync.mockImplementation(() => {
-        order.push('rm')
-      })
       await provisionBridgeBottle(spawnDeps, { bottleName: name })
-      expect(order.indexOf('rm')).toBeGreaterThan(
-        order.findIndex((o) => o.startsWith('wineserver -k'))
-      )
+      expect(order.indexOf('rm')).toBeGreaterThan(killIndex())
       expect(killed()).toBe(true)
       order.length = 0
       mockedSpawnAsync.mockImplementation(
@@ -1614,10 +1543,7 @@ describe('Phase 59 engine registry', () => {
         }
       )
       await provisionBridgeBottle(spawnDeps, { bottleName: name })
-      expect(order.indexOf('rm')).toBeGreaterThan(
-        order.findIndex((o) => o.startsWith('wineserver -k'))
-      )
-      mockedRmSync.mockReset()
+      expect(order.indexOf('rm')).toBeGreaterThan(killIndex())
     })
 
     test('an already-aborted signal returns PROVISION_ABORTED with no side effect', async () => {
@@ -1632,63 +1558,46 @@ describe('Phase 59 engine registry', () => {
         expect(result.errorCode).toBe(PROVISION_ABORTED)
       }
       expect(mockedSpawnAsync).not.toHaveBeenCalled()
-      expect(mockedRmSync).not.toHaveBeenCalled()
+      expect(bottleRust.calls).toEqual([])
       expect(mockedMkdirSync).not.toHaveBeenCalled()
     })
 
-    test('abort during wineboot removes the partly created bottle', async () => {
+    // The wineboot, the wineserver stop, the cleanup of what the creation made and the conf that is never written after
+    // a cancel are Rust's (`golden_bottles.rs`, the cancel cases); here the TS signal must reach Rust as the creation's
+    // cancel id and the answer must come back as PROVISION_ABORTED.
+    test('an abort during the Rust creation cancels it by its id and returns PROVISION_ABORTED', async () => {
       const ac = new AbortController()
-      mockedSpawnAsync.mockImplementation(
-        async (bin: string, args: string[]) => {
-          order.push(`${basenameOf(bin)} ${args.join(' ')}`)
-          if (bin === engine.wineBin) {
-            ac.abort()
-            throw Object.assign(new Error('aborted'), { name: 'AbortError' })
-          }
-          return { code: 0, stdout: '', stderr: '' }
-        }
-      )
-      const result = await provisionBridgeBottle(spawnDeps, {
+      let finish: (v: unknown) => void = () => undefined
+      bottleRustOthers[RUST_ENGINE_BOTTLE_CREATE_FALLBACK] = () =>
+        new Promise((resolve) => void (finish = resolve))
+      bottleRustOthers[RUST_ENGINE_BOTTLE_CANCEL_CREATE] = () => {
+        finish({
+          status: 'error',
+          errorCode: PROVISION_ABORTED,
+          error: 'cancelled'
+        })
+        return true
+      }
+      const pending = provisionBridgeBottle(spawnDeps, {
         bottleName: name,
         fallbackEngine: engine,
         signal: ac.signal
       })
+      for (let i = 0; i < 20; i++) await Promise.resolve()
+      ac.abort()
+      const result = await pending
       expect(result.errorCode).toBe(PROVISION_ABORTED)
-      expect(killed()).toBe(true)
-      expect(mockedRmSync).toHaveBeenCalledWith(...rmCall())
-      expect(mockedWriteConf).not.toHaveBeenCalled()
-      // 87-42: the TS signal reaches the creation as its cancel id, so the spawn's own signal is the one it ended.
-      expect(mockedSpawnAsync.mock.calls[0][2].signal.aborted).toBe(true)
+      const create = bottleRust.calls.find(
+        (c) => c.channel === RUST_ENGINE_BOTTLE_CREATE_FALLBACK
+      )?.arg as { cancelId?: string }
+      const cancels = bottleRust.calls.filter(
+        (c) => c.channel === RUST_ENGINE_BOTTLE_CANCEL_CREATE
+      )
+      expect(cancels).toHaveLength(1)
+      expect((cancels[0]?.arg as { cancelId: string }).cancelId).toBe(
+        create.cancelId
+      )
     })
-
-    test.each(['wineserver -w', 'dxvk'])(
-      'abort observed after %s cleans up and never writes the conf',
-      async (step) => {
-        const ac = new AbortController()
-        mockedSpawnAsync.mockImplementation(
-          async (bin: string, args: string[]) => {
-            order.push(`${basenameOf(bin)} ${args.join(' ')}`)
-            if (step === 'wineserver -w' && args[0] === '-w') ac.abort()
-            return { code: 0, stdout: '', stderr: '' }
-          }
-        )
-        mockedInstallRemove.mockImplementation(async () => {
-          dxvkMarker = true
-          if (step === 'dxvk') ac.abort()
-          return true
-        })
-        const result = await provisionBridgeBottle(spawnDeps, {
-          bottleName: name,
-          fallbackEngine: engine,
-          signal: ac.signal
-        })
-        expect(result.errorCode).toBe(PROVISION_ABORTED)
-        expect(mockedWriteConf).not.toHaveBeenCalled()
-        expect(mockedRmSync).toHaveBeenCalledWith(...rmCall())
-        // 87-42: the TS signal reaches the creation as its cancel id (see fakeBottleRust).
-        expect(mockedSpawnAsync.mock.calls[1][2].signal.aborted).toBe(true)
-      }
-    )
 
     test('abort during cxbottle --create stops the wineserver and removes the new dir, no fallback', async () => {
       const ac = new AbortController()
@@ -1708,35 +1617,16 @@ describe('Phase 59 engine registry', () => {
       })
       expect(result.errorCode).toBe(PROVISION_ABORTED)
       expect(killed()).toBe(true)
-      expect(mockedRmSync).toHaveBeenCalledWith(...rmCall())
+      expect(removeCalls()).toEqual([name])
       expect(mockedSpawnAsync.mock.calls[0][2].signal).toBe(ac.signal)
-      expect(order.some((o) => o.startsWith('wine wineboot'))).toBe(false)
+      expect(createCalls()).toEqual([])
     })
 
-    test('abort never removes a bottle dir that existed before the call', async () => {
-      const ac = new AbortController()
-      mockedExistsSync.mockImplementation(
-        (p: string) => String(p) === getBottleDir(paths, name)
-      )
-      mockedSpawnAsync.mockImplementation(async () => {
-        ac.abort()
-        throw new Error('aborted')
-      })
-      const result = await provisionBridgeBottle(spawnDeps, {
-        bottleName: name,
-        fallbackEngine: engine,
-        signal: ac.signal
-      })
-      expect(result.errorCode).toBe(PROVISION_ABORTED)
-      expect(mockedRmSync).not.toHaveBeenCalled()
-    })
-
-    test('discardNewBridgeBottle removes the dir and refuses an unsafe name', async () => {
+    // Which names the removal refuses and that a sibling bottle is never touched are Rust's (`golden_bottles.rs`,
+    // cases `remove-created-refused-names` and `remove-created-inside-root-sibling-untouched`).
+    test('discardNewBridgeBottle asks Rust to remove the bottle it created', async () => {
       await discardNewBridgeBottle(engineRuntime, name)
-      expect(mockedRmSync).toHaveBeenCalledWith(...rmCall())
-      mockedRmSync.mockClear()
-      await discardNewBridgeBottle(engineRuntime, 'a/../b')
-      expect(mockedRmSync).not.toHaveBeenCalled()
+      expect(removeCalls()).toEqual([name])
     })
 
     test('createdHere is true for a fresh CrossOver bottle', async () => {

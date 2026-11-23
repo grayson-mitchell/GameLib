@@ -103,12 +103,12 @@ const COMPATIBILITY_LAYERS_IMPORTERS: readonly string[] = [
  * and (87-43) every bridge file that used to reach the helpers through the re-exporting engine modules.
  */
 const ENGINE_TWIN_IMPORTERS: readonly string[] = [
-  'src/backend/engine/bottlePrimitives.ts',
+  'src/backend/engine/bottleLedger.ts',
   'src/backend/engine/demoStatus.ts',
+  'src/backend/engine/engineDecision.ts',
   'src/backend/engine/engineEligibility.ts',
   'src/backend/engine/enginePins.ts',
   'src/backend/engine/engineState.ts',
-  'src/backend/engine/engineSwitch.ts',
   'src/backend/engine/fallbackEngine.ts',
   'src/backend/engine/gameEngineState.ts',
   'src/backend/engine/gamePrefix.ts',

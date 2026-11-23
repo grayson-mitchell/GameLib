@@ -19,8 +19,6 @@ import type { CrossoverLocator } from './crossoverLocation'
 import { createEngineRegistry } from './engineRegistry'
 import type { SelectionStore } from './engineRegistry'
 import type { EngineRegistry } from './engineRegistry'
-import { createEngineSwitcher } from './engineSwitch'
-import type { EngineSwitcher } from './engineSwitch'
 import { createFallbackEngine } from './fallbackEngine'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { FallbackEngine } from './fallbackEngine'
@@ -40,7 +38,6 @@ export interface EngineRuntime {
   ledger: BottleLedger
   crossover: CrossoverLocator
   registry: EngineRegistry
-  switcher: EngineSwitcher
   fallback: FallbackEngine
   deadlines: LaunchDeadlines
   launchState: LaunchEngineState
@@ -75,7 +72,6 @@ export function createEngineRuntime(deps: EngineRuntimeDeps): EngineRuntime {
       requestRustInvoke: deps.requestRustInvoke
     }),
     registry,
-    switcher: createEngineSwitcher(),
     fallback: createFallbackEngine({ paths: deps.paths, aborts: deps.aborts }),
     deadlines: createLaunchDeadlines({ clock: deps.clock }),
     launchState: createLaunchEngineState(),
