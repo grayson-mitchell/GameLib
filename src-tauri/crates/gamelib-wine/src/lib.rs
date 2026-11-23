@@ -23,8 +23,10 @@ use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
 pub const OPS: &[&str] = &[
+    "wine_manager_install",
     "wine_manager_list",
     "wine_manager_refresh",
+    "wine_manager_remove",
     "wine_releases_info_ready",
     "wine_runtime_download",
     "wine_runtime_is_installed",
@@ -42,6 +44,20 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, 
 /// Each plan adds its arms here, in step with `OPS`.
 async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String> {
     match op {
+        "wine_manager_install" => {
+            let (release, settings) = install_args(op, args)?;
+            // Nothing cancels this token: through the op an install ends on its own or on the app
+            // shutdown. A caller that owns a cancel calls `manager::install::install` with it.
+            let cancel = tokio_util::sync::CancellationToken::new();
+            match manager::install::install(ctx, release, &settings, &cancel).await {
+                Ok(outcome) => Ok(Value::String(outcome.as_str().to_string())),
+                Err(_) => Err(format!("{op}:bad-args")),
+            }
+        }
+        "wine_manager_remove" => {
+            let version = remove_version_arg(op, args)?;
+            Ok(Value::Bool(manager::remove::remove(ctx, version).await))
+        }
         "wine_manager_list" => {
             if !args.is_empty() {
                 return Err(format!("{op}:bad-args"));
@@ -105,6 +121,54 @@ fn refresh_fetch_arg(op: &str, args: &[Value]) -> Result<bool, String> {
                 _ => Err(format!("{op}:bad-args")),
             }
         }
+        _ => Err(format!("{op}:bad-args")),
+    }
+}
+
+/// The Settings an install reads, as a second argument: both keys optional, no others.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct InstallSettingsArg {
+    #[serde(default)]
+    download_proton_to_steam: Option<bool>,
+    #[serde(default)]
+    default_steam_path: Option<String>,
+}
+
+/// `wine_manager_install`'s arguments: the `WineVersionInfo` object the renderer sent, and optionally
+/// the settings object (`downloadProtonToSteam`, `defaultSteamPath`) the shell resolved.
+fn install_args<'a>(
+    op: &str,
+    args: &'a [Value],
+) -> Result<(&'a Value, manager::install::InstallSettings), String> {
+    let bad = || format!("{op}:bad-args");
+    match args {
+        [release @ Value::Object(_)] => Ok((release, manager::install::InstallSettings::default())),
+        [release @ Value::Object(_), settings @ Value::Object(_)] => {
+            let parsed: InstallSettingsArg =
+                serde_json::from_value(settings.clone()).map_err(|_| bad())?;
+            Ok((
+                release,
+                manager::install::InstallSettings {
+                    download_proton_to_steam: parsed.download_proton_to_steam.unwrap_or(false),
+                    default_steam_path: parsed.default_steam_path.unwrap_or_default(),
+                },
+            ))
+        }
+        _ => Err(bad()),
+    }
+}
+
+/// `wine_manager_remove`'s one argument: the version to remove, bare or as the `version` of the
+/// `WineVersionInfo` object the renderer sent. Nothing else of that object is read: the directory
+/// removed is the stored one.
+fn remove_version_arg<'a>(op: &str, args: &'a [Value]) -> Result<&'a str, String> {
+    match args {
+        [Value::String(version)] => Ok(version),
+        [Value::Object(release)] => release
+            .get("version")
+            .and_then(Value::as_str)
+            .ok_or_else(|| format!("{op}:bad-args")),
         _ => Err(format!("{op}:bad-args")),
     }
 }
@@ -379,6 +443,62 @@ mod tests {
                 "{bad:?}"
             );
         }
+    }
+
+    #[test]
+    fn install_takes_the_release_and_optionally_the_settings_and_nothing_else() {
+        let release = json!({ "version": "GE-Proton9-27" });
+        let args = [release.clone()];
+        let (got, settings) = install_args("wine_manager_install", &args).unwrap();
+        assert_eq!(got, &release);
+        assert_eq!(settings, manager::install::InstallSettings::default());
+        let with = json!({ "downloadProtonToSteam": true, "defaultSteamPath": "/s" });
+        let (_, settings) = install_args("wine_manager_install", &[release.clone(), with]).unwrap();
+        assert!(settings.download_proton_to_steam && settings.default_steam_path == "/s");
+        for bad in [
+            vec![],
+            vec![json!("GE-Proton9-27")],
+            vec![release.clone(), json!("x")],
+            vec![release.clone(), json!({ "extra": 1 })],
+            vec![release.clone(), json!({}), json!({})],
+        ] {
+            assert_eq!(
+                install_args("wine_manager_install", &bad).map(|_| ()),
+                Err("wine_manager_install:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn remove_reads_only_the_version_of_what_it_is_given() {
+        let op = "wine_manager_remove";
+        assert_eq!(remove_version_arg(op, &[json!("v")]), Ok("v"));
+        assert_eq!(
+            remove_version_arg(op, &[json!({ "version": "v", "installDir": "/etc" })]),
+            Ok("v")
+        );
+        for bad in [
+            vec![],
+            vec![json!({})],
+            vec![json!(1)],
+            vec![json!("a"), json!("b")],
+        ] {
+            assert_eq!(
+                remove_version_arg(op, &bad),
+                Err("wine_manager_remove:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn a_removal_of_an_unknown_version_answers_false_through_the_op() {
+        let home = FakeHome::new("wine-lib-");
+        assert_eq!(
+            dispatch("wine_manager_remove", &[json!("nope")], &ctx(&home)).await,
+            Ok(Value::Bool(false))
+        );
     }
 
     #[tokio::test]
