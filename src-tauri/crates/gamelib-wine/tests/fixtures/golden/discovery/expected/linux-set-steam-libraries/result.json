@@ -1,0 +1,16 @@
+{
+  "op": "linux-set",
+  "note": "libraries from libraryfolders.vdf (a missing one is filtered): compatibilitytools.d only, as showValveProton is off",
+  "result": [
+    {
+      "bin": "<HOME>/SteamLib/root/compatibilitytools.d/GE-Proton8-1/proton",
+      "name": "GE-Proton8-1",
+      "type": "proton"
+    },
+    {
+      "bin": "<HOME>/SteamLib/compatibilitytools.d/GE-Proton8-2/proton",
+      "name": "GE-Proton8-2",
+      "type": "proton"
+    }
+  ]
+}

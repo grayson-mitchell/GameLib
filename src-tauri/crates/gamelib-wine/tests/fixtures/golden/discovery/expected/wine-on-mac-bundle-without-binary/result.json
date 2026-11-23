@@ -1,0 +1,5 @@
+{
+  "op": "wine-on-mac",
+  "note": "a plist with neither wine64 nor wine is skipped",
+  "result": []
+}

@@ -1,0 +1,30 @@
+{
+  "op": "linux-set",
+  "note": "every tools/wine entry is listed with lib/lib32 (here lib64 and lib) and wineserver only where present",
+  "result": [
+    {
+      "bin": "<TOOLS>/wine/Lutris-Wine-7/bin/wine",
+      "name": "Lutris-Wine-7",
+      "type": "wine",
+      "lib": "<TOOLS>/wine/Lutris-Wine-7/lib64",
+      "lib32": "<TOOLS>/wine/Lutris-Wine-7/lib",
+      "wineserver": ""
+    },
+    {
+      "bin": "<TOOLS>/wine/No-Libs/bin/wine",
+      "name": "No-Libs",
+      "type": "wine",
+      "lib": "",
+      "lib32": "",
+      "wineserver": "<TOOLS>/wine/No-Libs/bin/wineserver"
+    },
+    {
+      "bin": "<TOOLS>/wine/Wine-GE-8-26/bin/wine",
+      "name": "Wine-GE-8-26",
+      "type": "wine",
+      "lib": "<TOOLS>/wine/Wine-GE-8-26/lib64",
+      "lib32": "<TOOLS>/wine/Wine-GE-8-26/lib",
+      "wineserver": "<TOOLS>/wine/Wine-GE-8-26/bin/wineserver"
+    }
+  ]
+}

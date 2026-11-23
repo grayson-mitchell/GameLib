@@ -1,0 +1,14 @@
+{
+  "op": "whisky",
+  "note": "name from the plist version dict",
+  "result": [
+    {
+      "bin": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/bin/wine64",
+      "name": "Whisky - 2.5.0-",
+      "type": "toolkit",
+      "lib": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/lib",
+      "lib32": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/lib",
+      "wineserver": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/bin/wineserver"
+    }
+  ]
+}

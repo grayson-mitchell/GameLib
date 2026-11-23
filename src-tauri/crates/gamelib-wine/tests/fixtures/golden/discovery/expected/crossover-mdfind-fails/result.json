@@ -1,0 +1,5 @@
+{
+  "op": "crossover",
+  "note": "a failing mdfind is swallowed: an empty set",
+  "result": []
+}

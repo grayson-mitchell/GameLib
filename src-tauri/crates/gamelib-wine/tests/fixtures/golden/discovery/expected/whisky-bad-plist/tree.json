@@ -1,0 +1,44 @@
+[
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/com.isaacmarovitz.Whisky",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/com.isaacmarovitz.Whisky/Libraries",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/com.isaacmarovitz.Whisky/Libraries/WhiskyWineVersion.plist",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "fba59f45538be906a782d59ed26acc7bd6e5be256ee29c333fb5ffe255516ac8"
+  },
+  {
+    "path": "Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/bin/wine64",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

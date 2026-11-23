@@ -1,0 +1,12 @@
+{
+  "op": "crossover",
+  "note": "one CrossOver found by mdfind: name from the plist version, wine and wineserver beside the bundle",
+  "result": [
+    {
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "name": "CrossOver - 24.0.0",
+      "type": "crossover",
+      "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+    }
+  ]
+}

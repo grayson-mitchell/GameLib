@@ -1,0 +1,52 @@
+{
+  "op": "mac-set",
+  "note": "aggregate order: toolkit, system toolkit, CrossOver, wine on mac, Wineskin, Whisky",
+  "result": [
+    {
+      "wineserver": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+      "lib": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+      "lib32": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+      "bin": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+      "name": "GPTK-3",
+      "type": "toolkit"
+    },
+    {
+      "wineserver": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wineserver",
+      "name": "GPTK System (DX11/DX12 Only) - wine-7.7",
+      "type": "toolkit",
+      "lib": "<HOME>/Applications/game-porting-toolkit-1.1/lib",
+      "lib32": "<HOME>/Applications/game-porting-toolkit-1.1/lib",
+      "bin": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64"
+    },
+    {
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "name": "CrossOver - 24.0.0",
+      "type": "crossover",
+      "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+    },
+    {
+      "wineserver": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wineserver",
+      "lib": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/lib",
+      "lib32": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/lib",
+      "bin": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wine64",
+      "name": "Wine-Staging-9.0 - 9.0",
+      "type": "wine"
+    },
+    {
+      "wineserver": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/bin/wineserver",
+      "lib": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/lib",
+      "lib32": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/lib",
+      "name": "Wineskin - wine-8.0",
+      "type": "wine",
+      "bin": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/bin/wine64"
+    },
+    {
+      "bin": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/bin/wine64",
+      "name": "Whisky - 2.5.0-",
+      "type": "toolkit",
+      "lib": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/lib",
+      "lib32": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/lib",
+      "wineserver": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/bin/wineserver"
+    }
+  ]
+}

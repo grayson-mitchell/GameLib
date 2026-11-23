@@ -1,0 +1,97 @@
+[
+  {
+    "path": "Applications",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wineskin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wineskin/Game A.app",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wineskin/Game A.app/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wineskin/Game A.app/Contents/SharedSupport",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wineskin/Game A.app/Contents/SharedSupport/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/bin/wine64",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/bin/wineserver",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Applications/Wineskin/Game B.app",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wineskin/Game B.app/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wineskin/Game B.app/Contents/SharedSupport",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wineskin/Game B.app/Contents/SharedSupport/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wineskin/Game B.app/Contents/SharedSupport/wine/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wineskin/Game B.app/Contents/SharedSupport/wine/bin/wine64",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Applications/Wineskin/Game B.app/Contents/SharedSupport/wine/bin/wineserver",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Applications/Wineskin/Game C.app",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wineskin/notes.txt",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

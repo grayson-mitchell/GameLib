@@ -1,0 +1,118 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Not-A-Bundle",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-9.0",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-9.0/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-9.0/Contents/Info.plist",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "c639172bbb65245d82cfa3dafd5f8d1cf584e4e136b7b70cb02e2d73d57397a9"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-9.0/Contents/Resources",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-9.0/Contents/Resources/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-9.0/Contents/Resources/wine/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wine64",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wineserver",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Applications",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wine Stable.app",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wine Stable.app/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wine Stable.app/Contents/Info.plist",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "4ac839df128ab7916c3cc11568387bb26f16d85b30aef564c83804f3f4844713"
+  },
+  {
+    "path": "Applications/Wine Stable.app/Contents/Resources",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wine Stable.app/Contents/Resources/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wine Stable.app/Contents/Resources/wine/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/Wine Stable.app/Contents/Resources/wine/bin/wine64",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Applications/Wine Stable.app/Contents/Resources/wine/bin/wineserver",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

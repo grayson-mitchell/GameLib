@@ -1,0 +1,22 @@
+{
+  "op": "wine-on-mac",
+  "note": "tools/wine entries first, then Spotlight paths; a path found twice is listed once; a directory without Info.plist is skipped",
+  "result": [
+    {
+      "wineserver": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wineserver",
+      "lib": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/lib",
+      "lib32": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/lib",
+      "bin": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wine64",
+      "name": "Wine-Staging-9.0 - 9.0",
+      "type": "wine"
+    },
+    {
+      "wineserver": "<HOME>/Applications/Wine Stable.app/Contents/Resources/wine/bin/wineserver",
+      "lib": "<HOME>/Applications/Wine Stable.app/Contents/Resources/wine/lib",
+      "lib32": "<HOME>/Applications/Wine Stable.app/Contents/Resources/wine/lib",
+      "bin": "<HOME>/Applications/Wine Stable.app/Contents/Resources/wine/bin/wine64",
+      "name": "Wine Stable.app - 8.0.1",
+      "type": "wine"
+    }
+  ]
+}

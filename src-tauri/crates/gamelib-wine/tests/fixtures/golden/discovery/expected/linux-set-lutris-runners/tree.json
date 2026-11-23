@@ -1,0 +1,111 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-GE-8-26",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-GE-8-26/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-GE-8-26/bin/wine",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-GE-8-26/bin/wineserver",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-GE-8-26/lib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine/Wine-GE-8-26/lib64",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".local",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".local/share",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".local/share/lutris",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".local/share/lutris/runners",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".local/share/lutris/runners/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".local/share/lutris/runners/wine/lutris-9",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".local/share/lutris/runners/wine/lutris-9/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".local/share/lutris/runners/wine/lutris-9/bin/wine",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".local/share/lutris/runners/wine/lutris-9/bin/wineserver",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".local/share/lutris/runners/wine/lutris-9/lib",
+    "kind": "dir",
+    "mode": "0755"
+  }
+]

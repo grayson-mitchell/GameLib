@@ -1,0 +1,5 @@
+{
+  "op": "linux-set",
+  "note": "the config exists and lists no custom paths",
+  "result": []
+}

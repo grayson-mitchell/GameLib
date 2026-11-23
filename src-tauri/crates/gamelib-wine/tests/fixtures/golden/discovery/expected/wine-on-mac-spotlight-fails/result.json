@@ -1,0 +1,14 @@
+{
+  "op": "wine-on-mac",
+  "note": "mdfind fails: only the tools versions are listed",
+  "result": [
+    {
+      "wineserver": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wineserver",
+      "lib": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/lib",
+      "lib32": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/lib",
+      "bin": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wine64",
+      "name": "Wine-Staging-9.0 - 9.0",
+      "type": "wine"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "op": "gptk",
+  "note": "a toolkit directory with a plist and wine64 is listed by its directory name; the others are skipped",
+  "result": [
+    {
+      "wineserver": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+      "lib": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+      "lib32": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+      "bin": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+      "name": "GPTK-3",
+      "type": "toolkit"
+    }
+  ]
+}

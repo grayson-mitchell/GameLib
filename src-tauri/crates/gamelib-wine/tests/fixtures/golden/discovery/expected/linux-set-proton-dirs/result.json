@@ -1,0 +1,16 @@
+{
+  "op": "linux-set",
+  "note": "proton directories need a proton file; UMU-Latest* is skipped; readdir order decides the order",
+  "result": [
+    {
+      "bin": "<TOOLS>/proton/GE-Proton9-27/proton",
+      "name": "GE-Proton9-27",
+      "type": "proton"
+    },
+    {
+      "bin": "<TOOLS>/proton/Proton-10/proton",
+      "name": "Proton-10",
+      "type": "proton"
+    }
+  ]
+}

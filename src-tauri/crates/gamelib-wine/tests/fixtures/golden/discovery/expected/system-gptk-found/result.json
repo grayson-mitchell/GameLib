@@ -1,0 +1,14 @@
+{
+  "op": "system-gptk",
+  "note": "the first game-porting-toolkit wine64 is used; its name is the first line of --version and lib is the sibling lib folder",
+  "result": [
+    {
+      "wineserver": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wineserver",
+      "name": "GPTK System (DX11/DX12 Only) - wine-7.7 (GPTK)",
+      "type": "toolkit",
+      "lib": "<HOME>/Applications/game-porting-toolkit-1.1/lib",
+      "lib32": "<HOME>/Applications/game-porting-toolkit-1.1/lib",
+      "bin": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "op": "wine-on-mac",
+  "note": "wine64 absent: the bundle falls back to bin/wine",
+  "result": [
+    {
+      "wineserver": "<TOOLS>/wine/Old-Wine/Contents/Resources/wine/bin/wineserver",
+      "lib": "<TOOLS>/wine/Old-Wine/Contents/Resources/wine/lib",
+      "lib32": "<TOOLS>/wine/Old-Wine/Contents/Resources/wine/lib",
+      "bin": "<TOOLS>/wine/Old-Wine/Contents/Resources/wine/bin/wine",
+      "name": "Old-Wine - 7.0",
+      "type": "wine"
+    }
+  ]
+}

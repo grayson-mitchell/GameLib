@@ -1,0 +1,197 @@
+[
+  {
+    "id": "wine-with-wineserver",
+    "path": [
+      "<HOME>/bin-a"
+    ],
+    "seed": [
+      {
+        "path": "<HOME>/bin-a/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/bin-a/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "note": "wine on PATH with a sibling wineserver: the name is the binary name, wineserver is the sibling",
+    "expected": {
+      "bin": "<HOME>/bin-a/wine",
+      "name": "wine",
+      "type": "wine",
+      "wineserver": "<HOME>/bin-a/wineserver"
+    }
+  },
+  {
+    "id": "wine-without-wineserver",
+    "path": [
+      "<HOME>/bin-a"
+    ],
+    "seed": [
+      {
+        "path": "<HOME>/bin-a/wine",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "note": "no sibling wineserver: wineserver is \"\"",
+    "expected": {
+      "bin": "<HOME>/bin-a/wine",
+      "name": "wine",
+      "type": "wine",
+      "wineserver": ""
+    }
+  },
+  {
+    "id": "no-wine-on-path",
+    "path": [
+      "<HOME>/bin-a",
+      "<HOME>/bin-b"
+    ],
+    "seed": [
+      {
+        "path": "<HOME>/bin-a/other",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/bin-b",
+        "dir": true
+      }
+    ],
+    "note": "no wine anywhere on PATH: the Default Wine - Not Found record with an empty bin",
+    "expected": {
+      "bin": "",
+      "name": "Default Wine - Not Found",
+      "type": "wine"
+    }
+  },
+  {
+    "id": "path-unset",
+    "path": null,
+    "seed": [],
+    "note": "PATH unset: not found",
+    "expected": {
+      "bin": "",
+      "name": "Default Wine - Not Found",
+      "type": "wine"
+    }
+  },
+  {
+    "id": "wine-in-second-directory",
+    "path": [
+      "<HOME>/bin-a",
+      "<HOME>/bin-b"
+    ],
+    "seed": [
+      {
+        "path": "<HOME>/bin-a/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/bin-b/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/bin-b/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "note": "PATH order: the first directory has only a wineserver, so wine comes from the second and so does its wineserver",
+    "expected": {
+      "bin": "<HOME>/bin-b/wine",
+      "name": "wine",
+      "type": "wine",
+      "wineserver": "<HOME>/bin-b/wineserver"
+    }
+  },
+  {
+    "id": "wine-not-executable",
+    "path": [
+      "<HOME>/bin-a"
+    ],
+    "seed": [
+      {
+        "path": "<HOME>/bin-a/wine",
+        "text": "",
+        "mode": "0644"
+      }
+    ],
+    "note": "a wine file without the execute bit is not found",
+    "expected": {
+      "bin": "",
+      "name": "Default Wine - Not Found",
+      "type": "wine"
+    }
+  },
+  {
+    "id": "wine-first-match-wins",
+    "path": [
+      "<HOME>/bin-a",
+      "<HOME>/bin-b"
+    ],
+    "seed": [
+      {
+        "path": "<HOME>/bin-a/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/bin-b/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/bin-b/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "note": "two wines: the first on PATH is used and its (absent) sibling wineserver decides, not the second directory",
+    "expected": {
+      "bin": "<HOME>/bin-a/wine",
+      "name": "wine",
+      "type": "wine",
+      "wineserver": ""
+    }
+  },
+  {
+    "id": "wine-symlink-not-resolved",
+    "path": [
+      "<HOME>/bin-a"
+    ],
+    "seed": [
+      {
+        "path": "<HOME>/opt/wine-9/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/opt/wine-9/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/bin-a/wine",
+        "symlink": "<HOME>/opt/wine-9/bin/wine"
+      },
+      {
+        "path": "<HOME>/bin-a/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "note": "a wine symlink on PATH is reported as the link; the wineserver beside the link is used, not the target",
+    "expected": {
+      "bin": "<HOME>/bin-a/wine",
+      "name": "wine",
+      "type": "wine",
+      "wineserver": "<HOME>/bin-a/wineserver"
+    }
+  }
+]

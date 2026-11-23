@@ -1,0 +1,12 @@
+{
+  "op": "linux-set",
+  "note": "a failing --version keeps the binary name",
+  "result": [
+    {
+      "bin": "<HOME>/scripted-bin/wine",
+      "name": "wine",
+      "type": "wine",
+      "wineserver": "<HOME>/scripted-bin/wineserver"
+    }
+  ]
+}

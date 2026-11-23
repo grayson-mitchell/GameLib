@@ -1,0 +1,5 @@
+{
+  "op": "crossover",
+  "note": "mdfind prints nothing: an empty set",
+  "result": []
+}

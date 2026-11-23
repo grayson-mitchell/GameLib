@@ -1,0 +1,11 @@
+[
+  {
+    "kind": "rustInvoke",
+    "channel": "steamfiles_read_library_folders",
+    "args": [
+      {
+        "path": "<HOME>/.steam/steam/steamapps/libraryfolders.vdf"
+      }
+    ]
+  }
+]

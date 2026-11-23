@@ -1,0 +1,1840 @@
+[
+  {
+    "id": "crossover-one",
+    "op": "crossover",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>24.0.0</string>\n<key>CFBundleName</key>\n<string>CrossOver</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "com.codeweavers.CrossOver"
+        ],
+        "stdout": "<HOME>/Applications/CrossOver.app\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "one CrossOver found by mdfind: name from the plist version, wine and wineserver beside the bundle"
+  },
+  {
+    "id": "crossover-two-installs",
+    "op": "crossover",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>24.0.0</string>\n<key>CFBundleName</key>\n<string>CrossOver</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver-23.app/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>23.7.1</string>\n<key>CFBundleName</key>\n<string>CrossOver</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver-23.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver-23.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "com.codeweavers.CrossOver"
+        ],
+        "stdout": "<HOME>/Applications/CrossOver.app\n<HOME>/Applications/CrossOver-23.app\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "two CrossOvers, in the order mdfind lists them"
+  },
+  {
+    "id": "crossover-none-found",
+    "op": "crossover",
+    "platform": "mac",
+    "seed": [],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "com.codeweavers.CrossOver"
+        ],
+        "stdout": "",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "mdfind prints nothing: an empty set"
+  },
+  {
+    "id": "crossover-mdfind-fails",
+    "op": "crossover",
+    "platform": "mac",
+    "seed": [],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "com.codeweavers.CrossOver"
+        ],
+        "stdout": "",
+        "code": 1,
+        "stderr": ""
+      }
+    ],
+    "note": "a failing mdfind is swallowed: an empty set"
+  },
+  {
+    "id": "crossover-app-missing-wine",
+    "op": "crossover",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>24.0.0</string>\n<key>CFBundleName</key>\n<string>CrossOver</string>\n</dict>\n</plist>\n"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "com.codeweavers.CrossOver"
+        ],
+        "stdout": "<HOME>/Applications/CrossOver.app\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "the bundle has its plist but no wine binary: it is still listed, with wineserver \"\""
+  },
+  {
+    "id": "crossover-wine-without-wineserver",
+    "op": "crossover",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>24.0.0</string>\n<key>CFBundleName</key>\n<string>CrossOver</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "com.codeweavers.CrossOver"
+        ],
+        "stdout": "<HOME>/Applications/CrossOver.app\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "wine present, wineserver absent: wineserver \"\""
+  },
+  {
+    "id": "crossover-stale-spotlight-path",
+    "op": "crossover",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<HOME>/Applications/CrossOver-b.app/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>24.1.0</string>\n<key>CFBundleName</key>\n<string>CrossOver</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver-b.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver-b.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "com.codeweavers.CrossOver"
+        ],
+        "stdout": "<HOME>/Applications/CrossOver-gone.app\n<HOME>/Applications/CrossOver-b.app\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "a Spotlight path whose Info.plist is gone is skipped"
+  },
+  {
+    "id": "crossover-not-on-linux",
+    "op": "crossover",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>24.0.0</string>\n<key>CFBundleName</key>\n<string>CrossOver</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [],
+    "note": "off macOS nothing runs and the set is empty"
+  },
+  {
+    "id": "wine-on-mac-tools-and-spotlight",
+    "op": "wine-on-mac",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>9.0</string>\n<key>CFBundleName</key>\n<string>Wine-Staging-9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Not-A-Bundle",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Applications/Wine Stable.app/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>8.0.1</string>\n<key>CFBundleName</key>\n<string>Wine Stable.app</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<HOME>/Applications/Wine Stable.app/Contents/Resources/wine/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/Wine Stable.app/Contents/Resources/wine/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "*.wine"
+        ],
+        "stdout": "<HOME>/Applications/Wine Stable.app\n<TOOLS>/wine/Wine-Staging-9.0\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "tools/wine entries first, then Spotlight paths; a path found twice is listed once; a directory without Info.plist is skipped"
+  },
+  {
+    "id": "wine-on-mac-wine-fallback",
+    "op": "wine-on-mac",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Old-Wine/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>7.0</string>\n<key>CFBundleName</key>\n<string>Old-Wine</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Old-Wine/Contents/Resources/wine/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Old-Wine/Contents/Resources/wine/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "*.wine"
+        ],
+        "stdout": "",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "wine64 absent: the bundle falls back to bin/wine"
+  },
+  {
+    "id": "wine-on-mac-bundle-without-binary",
+    "op": "wine-on-mac",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Hollow/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>1.0</string>\n<key>CFBundleName</key>\n<string>Hollow</string>\n</dict>\n</plist>\n"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "*.wine"
+        ],
+        "stdout": "",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "a plist with neither wine64 nor wine is skipped"
+  },
+  {
+    "id": "wine-on-mac-spotlight-fails",
+    "op": "wine-on-mac",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>9.0</string>\n<key>CFBundleName</key>\n<string>Wine-Staging-9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "*.wine"
+        ],
+        "stdout": "",
+        "code": 1,
+        "stderr": ""
+      }
+    ],
+    "note": "mdfind fails: only the tools versions are listed"
+  },
+  {
+    "id": "wine-on-mac-nothing",
+    "op": "wine-on-mac",
+    "platform": "mac",
+    "seed": [],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "*.wine"
+        ],
+        "stdout": "",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "no tools/wine directory and no Spotlight hit"
+  },
+  {
+    "id": "wineskin-present",
+    "op": "wineskin",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/Wineskin/Game B.app/Contents/SharedSupport/wine/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/Wineskin/Game B.app/Contents/SharedSupport/wine/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/Wineskin/Game C.app",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Applications/Wineskin/notes.txt",
+        "text": ""
+      }
+    ],
+    "scripted": [
+      {
+        "program": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/bin/wine64",
+        "argv": [
+          "--version"
+        ],
+        "stdout": "wine-8.0 (Wineskin)\n",
+        "code": 0,
+        "stderr": ""
+      },
+      {
+        "program": "<HOME>/Applications/Wineskin/Game B.app/Contents/SharedSupport/wine/bin/wine64",
+        "argv": [
+          "--version"
+        ],
+        "stdout": "",
+        "code": 1,
+        "stderr": "boom"
+      }
+    ],
+    "note": "apps are the entries containing .app; a failing --version skips that app; an app without wine64 is ignored"
+  },
+  {
+    "id": "wineskin-absent",
+    "op": "wineskin",
+    "platform": "mac",
+    "seed": [],
+    "scripted": [],
+    "note": "no Wineskin directory"
+  },
+  {
+    "id": "gptk-present",
+    "op": "gptk",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>1.0</string>\n<key>CFBundleName</key>\n<string>GPTK-3</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/game-porting-toolkit/GPTK-Empty/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>1.0</string>\n<key>CFBundleName</key>\n<string>GPTK-Empty</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/game-porting-toolkit/no-plist",
+        "dir": true
+      }
+    ],
+    "scripted": [],
+    "note": "a toolkit directory with a plist and wine64 is listed by its directory name; the others are skipped"
+  },
+  {
+    "id": "gptk-absent",
+    "op": "gptk",
+    "platform": "mac",
+    "seed": [],
+    "scripted": [],
+    "note": "no game-porting-toolkit directory"
+  },
+  {
+    "id": "gptk-not-on-linux",
+    "op": "gptk",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>1.0</string>\n<key>CFBundleName</key>\n<string>GPTK-3</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [],
+    "note": "off macOS the set is empty"
+  },
+  {
+    "id": "system-gptk-found",
+    "op": "system-gptk",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "wine64"
+        ],
+        "stdout": "/usr/local/bin/wine64\n<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64\n",
+        "code": 0,
+        "stderr": ""
+      },
+      {
+        "program": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64",
+        "argv": [
+          "--version"
+        ],
+        "stdout": "wine-7.7 (GPTK)\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "the first game-porting-toolkit wine64 is used; its name is the first line of --version and lib is the sibling lib folder"
+  },
+  {
+    "id": "system-gptk-first-match-wins",
+    "op": "system-gptk",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "wine64"
+        ],
+        "stdout": "<HOME>/Applications/game-porting-toolkit-0.9/bin/wine64\n<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "only the first match is tried: it is not on disk, so the set is empty even though a later match exists"
+  },
+  {
+    "id": "system-gptk-skips-heroic-tools",
+    "op": "system-gptk",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "wine64"
+        ],
+        "stdout": "<HOME>/heroic/tools/game-porting-toolkit-x/bin/wine64\n<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64\n",
+        "code": 0,
+        "stderr": ""
+      },
+      {
+        "program": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64",
+        "argv": [
+          "--version"
+        ],
+        "stdout": "wine-7.7 (GPTK)\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "a path containing heroic/tools is excluded, the next match is used"
+  },
+  {
+    "id": "system-gptk-none",
+    "op": "system-gptk",
+    "platform": "mac",
+    "seed": [],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "wine64"
+        ],
+        "stdout": "/usr/local/bin/wine64\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "no game-porting-toolkit path: empty"
+  },
+  {
+    "id": "system-gptk-version-fails",
+    "op": "system-gptk",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "wine64"
+        ],
+        "stdout": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64\n",
+        "code": 0,
+        "stderr": ""
+      },
+      {
+        "program": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64",
+        "argv": [
+          "--version"
+        ],
+        "stdout": "",
+        "code": 1,
+        "stderr": ""
+      }
+    ],
+    "note": "a failing --version leaves the set empty"
+  },
+  {
+    "id": "system-gptk-match-not-on-disk",
+    "op": "system-gptk",
+    "platform": "mac",
+    "seed": [],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "wine64"
+        ],
+        "stdout": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "a Spotlight path that no longer exists is dropped before --version runs"
+  },
+  {
+    "id": "system-gptk-mdfind-fails",
+    "op": "system-gptk",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "wine64"
+        ],
+        "stdout": "",
+        "code": 1,
+        "stderr": ""
+      }
+    ],
+    "note": "a failed query finds nothing"
+  },
+  {
+    "id": "whisky-present",
+    "op": "whisky",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/WhiskyWineVersion.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>version</key>\n<dict>\n<key>build</key>\n<string></string>\n<key>major</key>\n<integer>2</integer>\n<key>minor</key>\n<integer>5</integer>\n<key>patch</key>\n<integer>0</integer>\n<key>preRelease</key>\n<string></string>\n</dict>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [],
+    "note": "name from the plist version dict"
+  },
+  {
+    "id": "whisky-no-wine-binary",
+    "op": "whisky",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/WhiskyWineVersion.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>version</key>\n<dict>\n<key>build</key>\n<string></string>\n<key>major</key>\n<integer>2</integer>\n<key>minor</key>\n<integer>5</integer>\n<key>patch</key>\n<integer>0</integer>\n<key>preRelease</key>\n<string></string>\n</dict>\n</dict>\n</plist>\n"
+      }
+    ],
+    "scripted": [],
+    "note": "plist without Wine/bin/wine64: empty"
+  },
+  {
+    "id": "whisky-absent",
+    "op": "whisky",
+    "platform": "mac",
+    "seed": [],
+    "scripted": [],
+    "note": "no Whisky libraries"
+  },
+  {
+    "id": "whisky-bad-plist",
+    "op": "whisky",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/WhiskyWineVersion.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>other</key>\n<string>x</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [],
+    "note": "a plist without the version dict throws inside the try and the set is empty"
+  },
+  {
+    "id": "mac-set-everything",
+    "op": "mac-set",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>1.0</string>\n<key>CFBundleName</key>\n<string>GPTK-3</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>24.0.0</string>\n<key>CFBundleName</key>\n<string>CrossOver</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>9.0</string>\n<key>CFBundleName</key>\n<string>Wine-Staging-9.0</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-Staging-9.0/Contents/Resources/wine/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/WhiskyWineVersion.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>version</key>\n<dict>\n<key>build</key>\n<string></string>\n<key>major</key>\n<integer>2</integer>\n<key>minor</key>\n<integer>5</integer>\n<key>patch</key>\n<integer>0</integer>\n<key>preRelease</key>\n<string></string>\n</dict>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "wine64"
+        ],
+        "stdout": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64\n",
+        "code": 0,
+        "stderr": ""
+      },
+      {
+        "program": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64",
+        "argv": [
+          "--version"
+        ],
+        "stdout": "wine-7.7\n",
+        "code": 0,
+        "stderr": ""
+      },
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "com.codeweavers.CrossOver"
+        ],
+        "stdout": "<HOME>/Applications/CrossOver.app\n",
+        "code": 0,
+        "stderr": ""
+      },
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "*.wine"
+        ],
+        "stdout": "",
+        "code": 0,
+        "stderr": ""
+      },
+      {
+        "program": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/bin/wine64",
+        "argv": [
+          "--version"
+        ],
+        "stdout": "wine-8.0\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "aggregate order: toolkit, system toolkit, CrossOver, wine on mac, Wineskin, Whisky"
+  },
+  {
+    "id": "mac-set-empty",
+    "op": "mac-set",
+    "platform": "mac",
+    "seed": [],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "wine64"
+        ],
+        "stdout": "",
+        "code": 0,
+        "stderr": ""
+      },
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "com.codeweavers.CrossOver"
+        ],
+        "stdout": "",
+        "code": 0,
+        "stderr": ""
+      },
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "*.wine"
+        ],
+        "stdout": "",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "note": "nothing installed: an empty list, three mdfind queries in order"
+  },
+  {
+    "id": "mac-set-not-on-linux",
+    "op": "mac-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>24.0.0</string>\n<key>CFBundleName</key>\n<string>CrossOver</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [],
+    "note": "off macOS the aggregate is empty without spawning"
+  },
+  {
+    "id": "linux-set-fresh-profile",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [],
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [],
+    "scanCustom": true,
+    "note": "an empty profile: tools/wine and tools/proton are created, nothing is listed"
+  },
+  {
+    "id": "linux-set-tools-wine",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/lib",
+        "dir": true
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/lib64",
+        "dir": true
+      },
+      {
+        "path": "<TOOLS>/wine/Lutris-Wine-7/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Lutris-Wine-7/lib",
+        "dir": true
+      },
+      {
+        "path": "<TOOLS>/wine/Lutris-Wine-7/lib64",
+        "dir": true
+      },
+      {
+        "path": "<TOOLS>/wine/No-Libs/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/No-Libs/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [],
+    "scanCustom": false,
+    "note": "every tools/wine entry is listed with lib/lib32 (here lib64 and lib) and wineserver only where present"
+  },
+  {
+    "id": "linux-set-lib-only",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Only-Lib/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Only-Lib/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Only-Lib/lib",
+        "dir": true
+      }
+    ],
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [],
+    "scanCustom": false,
+    "note": "the lib64 folder absent: lib is \"\" and lib32 is the ../lib folder"
+  },
+  {
+    "id": "linux-set-lutris-runners",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/lib",
+        "dir": true
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/lib64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/.local/share/lutris/runners/wine/lutris-9/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/.local/share/lutris/runners/wine/lutris-9/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/.local/share/lutris/runners/wine/lutris-9/lib",
+        "dir": true
+      }
+    ],
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [],
+    "scanCustom": false,
+    "note": "the Lutris runners directory under the home directory is read after tools/wine"
+  },
+  {
+    "id": "linux-set-proton-dirs",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/proton/Empty-Dir",
+        "dir": true
+      },
+      {
+        "path": "<TOOLS>/proton/UMU-Latest/proton",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/proton/Proton-10/proton",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [],
+    "scanCustom": false,
+    "note": "proton directories need a proton file; UMU-Latest* is skipped; readdir order decides the order"
+  },
+  {
+    "id": "linux-set-steam-libraries",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<HOME>/SteamLib/root/compatibilitytools.d/GE-Proton8-1/proton",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/SteamLib/compatibilitytools.d/GE-Proton8-2/proton",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/SteamLib/steamapps/common/Proton 8.0/proton",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/SteamLib/steam/steamapps/common/Proton 7.0/proton",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/SteamLib",
+        "dir": true
+      }
+    ],
+    "steamLibraries": {
+      "exists": true,
+      "parsed": true,
+      "paths": [
+        "<HOME>/SteamLib",
+        "<HOME>/MissingLib"
+      ]
+    },
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [],
+    "scanCustom": false,
+    "note": "libraries from libraryfolders.vdf (a missing one is filtered): compatibilitytools.d only, as showValveProton is off"
+  },
+  {
+    "id": "linux-set-valve-proton",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<HOME>/SteamLib/root/compatibilitytools.d/GE-Proton8-1/proton",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/SteamLib/steamapps/common/Proton 8.0/proton",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/SteamLib/steam/steamapps/common/Proton 7.0/proton",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/SteamLib",
+        "dir": true
+      }
+    ],
+    "steamLibraries": {
+      "exists": true,
+      "parsed": true,
+      "paths": [
+        "<HOME>/SteamLib"
+      ]
+    },
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [],
+      "showValveProton": true,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [],
+    "scanCustom": false,
+    "note": "showValveProton adds steam/steamapps/common and steamapps/common for each library"
+  },
+  {
+    "id": "linux-set-libraryfolders-missing",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "steamLibraries": {
+      "exists": false,
+      "parsed": false,
+      "paths": []
+    },
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [],
+    "scanCustom": false,
+    "note": "libraryfolders.vdf absent: only the fixed /usr/share/steam library is considered"
+  },
+  {
+    "id": "linux-set-libraryfolders-throws",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "steamLibraries": "throws",
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [],
+    "scanCustom": false,
+    "note": "a failing Rust read of libraryfolders.vdf falls back to /usr/share/steam only"
+  },
+  {
+    "id": "linux-set-system-wine",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<HOME>/scripted-bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/scripted-bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [
+      {
+        "program": "<HOME>/scripted-bin/wine",
+        "argv": [
+          "--version"
+        ],
+        "stdout": "wine-9.0 (Staging)\nignored second line\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "scanCustom": false,
+    "note": "wine on PATH is listed last-but-custom, named by the first line of --version"
+  },
+  {
+    "id": "linux-set-system-wine-version-fails",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<HOME>/scripted-bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/scripted-bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [
+      {
+        "program": "<HOME>/scripted-bin/wine",
+        "argv": [
+          "--version"
+        ],
+        "stdout": "",
+        "code": 127,
+        "stderr": ""
+      }
+    ],
+    "scanCustom": false,
+    "note": "a failing --version keeps the binary name"
+  },
+  {
+    "id": "linux-set-custom-paths",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{}"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/lib",
+        "dir": true
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/lib64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/custom/wine-a/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/custom/wine-a/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [
+        "<HOME>/custom/wine-a/bin/wine",
+        "<HOME>/custom/Proton-X/proton",
+        "<HOME>/custom/wine-gone/bin/wine"
+      ],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [],
+    "scanCustom": true,
+    "note": "custom paths last: a path ending in proton is Custom Proton (no wineserver), others are Custom Wine with wineserver beside them"
+  },
+  {
+    "id": "linux-set-custom-skipped-without-config",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/lib",
+        "dir": true
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/lib64",
+        "dir": true
+      }
+    ],
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [
+        "<HOME>/custom/wine-a/bin/wine"
+      ],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [],
+    "scanCustom": true,
+    "note": "with no config file (a new installation) the custom paths are skipped"
+  },
+  {
+    "id": "linux-set-custom-not-scanned",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{}"
+      }
+    ],
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [
+        "<HOME>/custom/wine-a/bin/wine"
+      ],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [],
+    "scanCustom": false,
+    "note": "scanCustom false: the custom paths are not read even when the config exists"
+  },
+  {
+    "id": "linux-set-empty-custom-list",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{}"
+      }
+    ],
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [],
+    "scanCustom": true,
+    "note": "the config exists and lists no custom paths"
+  },
+  {
+    "id": "linux-set-order-everything",
+    "op": "linux-set",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{}"
+      },
+      {
+        "path": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/lib",
+        "dir": true
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/lib64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/.local/share/lutris/runners/wine/lutris-9/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/scripted-bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/scripted-bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/custom/wine-a/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/SteamLib/compatibilitytools.d/GE-Proton8-2/proton",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/SteamLib",
+        "dir": true
+      }
+    ],
+    "steamLibraries": {
+      "exists": true,
+      "parsed": true,
+      "paths": [
+        "<HOME>/SteamLib"
+      ]
+    },
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [
+        "<HOME>/custom/wine-a/bin/wine"
+      ],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [
+      {
+        "program": "<HOME>/scripted-bin/wine",
+        "argv": [
+          "--version"
+        ],
+        "stdout": "wine-9.0\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "scanCustom": true,
+    "note": "result order: proton (tools, then Steam libraries), tools/wine, Lutris, system wine, custom"
+  },
+  {
+    "id": "alternative-wine-mac",
+    "op": "alternative",
+    "platform": "mac",
+    "seed": [
+      {
+        "path": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>1.0</string>\n<key>CFBundleName</key>\n<string>GPTK-3</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/Info.plist",
+        "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n<key>CFBundleShortVersionString</key>\n<string>24.0.0</string>\n<key>CFBundleName</key>\n<string>CrossOver</string>\n</dict>\n</plist>\n"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "scripted": [
+      {
+        "program": "mdfind",
+        "argv": [
+          "wine64"
+        ],
+        "stdout": "",
+        "code": 0,
+        "stderr": ""
+      },
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "com.codeweavers.CrossOver"
+        ],
+        "stdout": "<HOME>/Applications/CrossOver.app\n",
+        "code": 0,
+        "stderr": ""
+      },
+      {
+        "program": "mdfind",
+        "argv": [
+          "kMDItemCFBundleIdentifier",
+          "=",
+          "*.wine"
+        ],
+        "stdout": "",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "releasesStored": true,
+    "note": "on macOS the aggregate is the mac set (the store holds releases, so no refresh runs)"
+  },
+  {
+    "id": "alternative-wine-linux",
+    "op": "alternative",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{}"
+      },
+      {
+        "path": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/lib",
+        "dir": true
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/lib64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/scripted-bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/scripted-bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<HOME>/custom/wine-a/bin/wine",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [
+        "<HOME>/custom/wine-a/bin/wine"
+      ],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [
+      {
+        "program": "<HOME>/scripted-bin/wine",
+        "argv": [
+          "--version"
+        ],
+        "stdout": "wine-9.0\n",
+        "code": 0,
+        "stderr": ""
+      }
+    ],
+    "releasesStored": true,
+    "scanCustom": true,
+    "note": "on Linux the aggregate is the Linux set with custom paths scanned by default"
+  },
+  {
+    "id": "alternative-wine-linux-no-custom",
+    "op": "alternative",
+    "platform": "linux",
+    "seed": [
+      {
+        "path": "<APPFOLDER>/config.json",
+        "text": "{}"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/bin/wine",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/bin/wineserver",
+        "text": "",
+        "mode": "0755"
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/lib",
+        "dir": true
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-GE-8-26/lib64",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/custom/wine-a/bin/wine",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "settings": {
+      "customWinePaths": [
+        "<HOME>/custom/wine-a/bin/wine"
+      ],
+      "showValveProton": false,
+      "defaultSteamPath": "<HOME>/.steam/steam"
+    },
+    "scripted": [],
+    "releasesStored": true,
+    "scanCustom": false,
+    "note": "scanCustom false is passed through"
+  }
+]

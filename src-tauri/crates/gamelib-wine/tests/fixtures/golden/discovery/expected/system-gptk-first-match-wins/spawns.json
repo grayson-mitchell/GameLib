@@ -1,0 +1,20 @@
+[
+  {
+    "program": "mdfind",
+    "argv": [
+      "wine64"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "<HOME>/Applications/game-porting-toolkit-0.9/bin/wine64\n<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64\n",
+      "stderr": ""
+    }
+  }
+]

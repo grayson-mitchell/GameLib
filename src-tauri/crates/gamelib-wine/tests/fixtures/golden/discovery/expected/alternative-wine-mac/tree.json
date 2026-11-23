@@ -1,0 +1,113 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3/Contents/Info.plist",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "554980ca74edd39c0d4260a39a57a64819ff1ae141037d8ac59ebd5fa34a8dd5"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3/Contents/Resources",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3/Contents/Resources/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Applications",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents/Info.plist",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "24f28770df7f6dc226743d104cfca04810f019b8bbbb7ae0761554ea271ffccb"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents/SharedSupport",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents/SharedSupport/CrossOver",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

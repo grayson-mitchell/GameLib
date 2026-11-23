@@ -1,0 +1,38 @@
+[
+  {
+    "program": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/bin/wine64",
+    "argv": [
+      "--version"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "wine-8.0 (Wineskin)\n",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<HOME>/Applications/Wineskin/Game B.app/Contents/SharedSupport/wine/bin/wine64",
+    "argv": [
+      "--version"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 1,
+      "stdout": "",
+      "stderr": "boom"
+    }
+  }
+]

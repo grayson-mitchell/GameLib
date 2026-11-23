@@ -1,0 +1,14 @@
+{
+  "op": "wineskin",
+  "note": "apps are the entries containing .app; a failing --version skips that app; an app without wine64 is ignored",
+  "result": [
+    {
+      "wineserver": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/bin/wineserver",
+      "lib": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/lib",
+      "lib32": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/lib",
+      "name": "Wineskin - wine-8.0 (Wineskin)",
+      "type": "wine",
+      "bin": "<HOME>/Applications/Wineskin/Game A.app/Contents/SharedSupport/wine/bin/wine64"
+    }
+  ]
+}

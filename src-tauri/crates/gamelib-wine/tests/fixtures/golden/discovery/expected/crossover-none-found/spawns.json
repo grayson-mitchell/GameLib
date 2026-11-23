@@ -1,0 +1,22 @@
+[
+  {
+    "program": "mdfind",
+    "argv": [
+      "kMDItemCFBundleIdentifier",
+      "=",
+      "com.codeweavers.CrossOver"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

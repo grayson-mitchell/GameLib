@@ -1,0 +1,60 @@
+[
+  {
+    "program": "mdfind",
+    "argv": [
+      "wine64"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "mdfind",
+    "argv": [
+      "kMDItemCFBundleIdentifier",
+      "=",
+      "com.codeweavers.CrossOver"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "<HOME>/Applications/CrossOver.app\n",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "mdfind",
+    "argv": [
+      "kMDItemCFBundleIdentifier",
+      "=",
+      "*.wine"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

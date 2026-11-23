@@ -1,0 +1,12 @@
+{
+  "op": "crossover",
+  "note": "a Spotlight path whose Info.plist is gone is skipped",
+  "result": [
+    {
+      "bin": "<HOME>/Applications/CrossOver-b.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "name": "CrossOver - 24.1.0",
+      "type": "crossover",
+      "wineserver": "<HOME>/Applications/CrossOver-b.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "op": "linux-set",
+  "note": "the Lutris runners directory under the home directory is read after tools/wine",
+  "result": [
+    {
+      "bin": "<TOOLS>/wine/Wine-GE-8-26/bin/wine",
+      "name": "Wine-GE-8-26",
+      "type": "wine",
+      "lib": "<TOOLS>/wine/Wine-GE-8-26/lib64",
+      "lib32": "<TOOLS>/wine/Wine-GE-8-26/lib",
+      "wineserver": "<TOOLS>/wine/Wine-GE-8-26/bin/wineserver"
+    },
+    {
+      "bin": "<HOME>/.local/share/lutris/runners/wine/lutris-9/bin/wine",
+      "name": "lutris-9",
+      "type": "wine",
+      "lib": "",
+      "lib32": "<HOME>/.local/share/lutris/runners/wine/lutris-9/lib",
+      "wineserver": "<HOME>/.local/share/lutris/runners/wine/lutris-9/bin/wineserver"
+    }
+  ]
+}

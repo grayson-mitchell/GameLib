@@ -1,0 +1,21 @@
+{
+  "op": "linux-set",
+  "note": "showValveProton adds steam/steamapps/common and steamapps/common for each library",
+  "result": [
+    {
+      "bin": "<HOME>/SteamLib/steam/steamapps/common/Proton 7.0/proton",
+      "name": "Proton 7.0",
+      "type": "proton"
+    },
+    {
+      "bin": "<HOME>/SteamLib/steamapps/common/Proton 8.0/proton",
+      "name": "Proton 8.0",
+      "type": "proton"
+    },
+    {
+      "bin": "<HOME>/SteamLib/root/compatibilitytools.d/GE-Proton8-1/proton",
+      "name": "GE-Proton8-1",
+      "type": "proton"
+    }
+  ]
+}

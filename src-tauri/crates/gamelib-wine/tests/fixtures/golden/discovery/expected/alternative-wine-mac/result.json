@@ -1,0 +1,20 @@
+{
+  "op": "alternative",
+  "note": "on macOS the aggregate is the mac set (the store holds releases, so no refresh runs)",
+  "result": [
+    {
+      "wineserver": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+      "lib": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+      "lib32": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+      "bin": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+      "name": "GPTK-3",
+      "type": "toolkit"
+    },
+    {
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "name": "CrossOver - 24.0.0",
+      "type": "crossover",
+      "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "program": "mdfind",
+    "argv": [
+      "kMDItemCFBundleIdentifier",
+      "=",
+      "*.wine"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "<HOME>/Applications/Wine Stable.app\n<TOOLS>/wine/Wine-Staging-9.0\n",
+      "stderr": ""
+    }
+  }
+]

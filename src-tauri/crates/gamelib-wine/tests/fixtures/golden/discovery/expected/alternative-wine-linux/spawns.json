@@ -1,0 +1,20 @@
+[
+  {
+    "program": "<HOME>/scripted-bin/wine",
+    "argv": [
+      "--version"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "wine-9.0\n",
+      "stderr": ""
+    }
+  }
+]

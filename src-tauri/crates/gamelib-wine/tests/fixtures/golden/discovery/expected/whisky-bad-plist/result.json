@@ -1,0 +1,5 @@
+{
+  "op": "whisky",
+  "note": "a plist without the version dict throws inside the try and the set is empty",
+  "result": []
+}

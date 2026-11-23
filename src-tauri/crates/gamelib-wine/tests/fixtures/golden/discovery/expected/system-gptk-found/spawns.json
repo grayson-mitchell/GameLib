@@ -1,0 +1,38 @@
+[
+  {
+    "program": "mdfind",
+    "argv": [
+      "wine64"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "/usr/local/bin/wine64\n<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64\n",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<HOME>/Applications/game-porting-toolkit-1.1/bin/wine64",
+    "argv": [
+      "--version"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "wine-7.7 (GPTK)\n",
+      "stderr": ""
+    }
+  }
+]

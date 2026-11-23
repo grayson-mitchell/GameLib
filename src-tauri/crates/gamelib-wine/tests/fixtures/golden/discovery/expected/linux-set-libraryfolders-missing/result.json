@@ -1,0 +1,11 @@
+{
+  "op": "linux-set",
+  "note": "libraryfolders.vdf absent: only the fixed /usr/share/steam library is considered",
+  "result": [
+    {
+      "bin": "<TOOLS>/proton/GE-Proton9-27/proton",
+      "name": "GE-Proton9-27",
+      "type": "proton"
+    }
+  ]
+}

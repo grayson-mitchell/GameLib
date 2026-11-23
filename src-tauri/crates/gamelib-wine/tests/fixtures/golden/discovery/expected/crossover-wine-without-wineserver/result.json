@@ -1,0 +1,12 @@
+{
+  "op": "crossover",
+  "note": "wine present, wineserver absent: wineserver \"\"",
+  "result": [
+    {
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "name": "CrossOver - 24.0.0",
+      "type": "crossover",
+      "wineserver": ""
+    }
+  ]
+}

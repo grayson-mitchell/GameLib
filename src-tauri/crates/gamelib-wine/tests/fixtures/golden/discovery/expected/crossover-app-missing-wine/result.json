@@ -1,0 +1,12 @@
+{
+  "op": "crossover",
+  "note": "the bundle has its plist but no wine binary: it is still listed, with wineserver \"\"",
+  "result": [
+    {
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "name": "CrossOver - 24.0.0",
+      "type": "crossover",
+      "wineserver": ""
+    }
+  ]
+}

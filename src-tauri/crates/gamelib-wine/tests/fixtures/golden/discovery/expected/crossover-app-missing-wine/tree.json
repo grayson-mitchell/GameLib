@@ -1,0 +1,23 @@
+[
+  {
+    "path": "Applications",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents/Info.plist",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "24f28770df7f6dc226743d104cfca04810f019b8bbbb7ae0761554ea271ffccb"
+  }
+]

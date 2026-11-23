@@ -1,0 +1,28 @@
+[
+  {
+    "path": "Library",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/com.isaacmarovitz.Whisky",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/com.isaacmarovitz.Whisky/Libraries",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Library/Application Support/com.isaacmarovitz.Whisky/Libraries/WhiskyWineVersion.plist",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3c16a8cea72f8d6ce78892eacb823a9fd5f86763de4ad1dd2e10a6f066f3a8a2"
+  }
+]

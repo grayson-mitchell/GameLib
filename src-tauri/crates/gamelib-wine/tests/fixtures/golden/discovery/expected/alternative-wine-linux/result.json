@@ -1,0 +1,31 @@
+{
+  "op": "alternative",
+  "note": "on Linux the aggregate is the Linux set with custom paths scanned by default",
+  "result": [
+    {
+      "bin": "<TOOLS>/proton/GE-Proton9-27/proton",
+      "name": "GE-Proton9-27",
+      "type": "proton"
+    },
+    {
+      "bin": "<TOOLS>/wine/Wine-GE-8-26/bin/wine",
+      "name": "Wine-GE-8-26",
+      "type": "wine",
+      "lib": "<TOOLS>/wine/Wine-GE-8-26/lib64",
+      "lib32": "<TOOLS>/wine/Wine-GE-8-26/lib",
+      "wineserver": "<TOOLS>/wine/Wine-GE-8-26/bin/wineserver"
+    },
+    {
+      "bin": "<HOME>/scripted-bin/wine",
+      "name": "wine-9.0",
+      "type": "wine",
+      "wineserver": "<HOME>/scripted-bin/wineserver"
+    },
+    {
+      "bin": "<HOME>/custom/wine-a/bin/wine",
+      "name": "Custom Wine - <HOME>/custom/wine-a/bin/wine",
+      "type": "wine",
+      "wineserver": ""
+    }
+  ]
+}

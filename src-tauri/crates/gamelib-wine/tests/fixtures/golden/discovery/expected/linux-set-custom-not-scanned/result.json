@@ -1,0 +1,5 @@
+{
+  "op": "linux-set",
+  "note": "scanCustom false: the custom paths are not read even when the config exists",
+  "result": []
+}

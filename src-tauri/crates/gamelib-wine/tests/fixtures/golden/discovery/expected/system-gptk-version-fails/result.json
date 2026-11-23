@@ -1,0 +1,5 @@
+{
+  "op": "system-gptk",
+  "note": "a failing --version leaves the set empty",
+  "result": []
+}

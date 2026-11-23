@@ -1,0 +1,86 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3/Contents/Info.plist",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "554980ca74edd39c0d4260a39a57a64819ff1ae141037d8ac59ebd5fa34a8dd5"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3/Contents/Resources",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3/Contents/Resources/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-Empty",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-Empty/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/GPTK-Empty/Contents/Info.plist",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "88d99a9a60d8c40a74503040a148b2a1b77a51807f1ab5440fc0d0c20dbe076e"
+  },
+  {
+    "path": ".config/GameLib/tools/game-porting-toolkit/no-plist",
+    "kind": "dir",
+    "mode": "0755"
+  }
+]

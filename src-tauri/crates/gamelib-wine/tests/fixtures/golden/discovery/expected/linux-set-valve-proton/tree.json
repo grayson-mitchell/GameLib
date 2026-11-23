@@ -1,0 +1,100 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/wine",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "SteamLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "SteamLib/root",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "SteamLib/root/compatibilitytools.d",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "SteamLib/root/compatibilitytools.d/GE-Proton8-1",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "SteamLib/root/compatibilitytools.d/GE-Proton8-1/proton",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "SteamLib/steam",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "SteamLib/steam/steamapps",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "SteamLib/steam/steamapps/common",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "SteamLib/steam/steamapps/common/Proton 7.0",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "SteamLib/steam/steamapps/common/Proton 7.0/proton",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "SteamLib/steamapps",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "SteamLib/steamapps/common",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "SteamLib/steamapps/common/Proton 8.0",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "SteamLib/steamapps/common/Proton 8.0/proton",
+    "kind": "file",
+    "mode": "0755",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

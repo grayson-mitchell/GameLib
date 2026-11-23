@@ -1,0 +1,44 @@
+{
+  "op": "linux-set",
+  "note": "result order: proton (tools, then Steam libraries), tools/wine, Lutris, system wine, custom",
+  "result": [
+    {
+      "bin": "<TOOLS>/proton/GE-Proton9-27/proton",
+      "name": "GE-Proton9-27",
+      "type": "proton"
+    },
+    {
+      "bin": "<HOME>/SteamLib/compatibilitytools.d/GE-Proton8-2/proton",
+      "name": "GE-Proton8-2",
+      "type": "proton"
+    },
+    {
+      "bin": "<TOOLS>/wine/Wine-GE-8-26/bin/wine",
+      "name": "Wine-GE-8-26",
+      "type": "wine",
+      "lib": "<TOOLS>/wine/Wine-GE-8-26/lib64",
+      "lib32": "<TOOLS>/wine/Wine-GE-8-26/lib",
+      "wineserver": "<TOOLS>/wine/Wine-GE-8-26/bin/wineserver"
+    },
+    {
+      "bin": "<HOME>/.local/share/lutris/runners/wine/lutris-9/bin/wine",
+      "name": "lutris-9",
+      "type": "wine",
+      "lib": "",
+      "lib32": "",
+      "wineserver": ""
+    },
+    {
+      "bin": "<HOME>/scripted-bin/wine",
+      "name": "wine-9.0",
+      "type": "wine",
+      "wineserver": "<HOME>/scripted-bin/wineserver"
+    },
+    {
+      "bin": "<HOME>/custom/wine-a/bin/wine",
+      "name": "Custom Wine - <HOME>/custom/wine-a/bin/wine",
+      "type": "wine",
+      "wineserver": ""
+    }
+  ]
+}

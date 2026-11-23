@@ -1,0 +1,5 @@
+{
+  "op": "system-gptk",
+  "note": "a Spotlight path that no longer exists is dropped before --version runs",
+  "result": []
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "program": "mdfind",
+    "argv": [
+      "kMDItemCFBundleIdentifier",
+      "=",
+      "*.wine"
+    ],
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": 1,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

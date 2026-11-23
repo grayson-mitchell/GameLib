@@ -1,0 +1,5 @@
+{
+  "op": "mac-set",
+  "note": "off macOS the aggregate is empty without spawning",
+  "result": []
+}

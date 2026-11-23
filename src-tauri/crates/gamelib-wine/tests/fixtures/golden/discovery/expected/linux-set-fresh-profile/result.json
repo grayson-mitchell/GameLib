@@ -1,0 +1,5 @@
+{
+  "op": "linux-set",
+  "note": "an empty profile: tools/wine and tools/proton are created, nothing is listed",
+  "result": []
+}

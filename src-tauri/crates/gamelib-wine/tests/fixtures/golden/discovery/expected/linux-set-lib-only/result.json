@@ -1,0 +1,14 @@
+{
+  "op": "linux-set",
+  "note": "the lib64 folder absent: lib is \"\" and lib32 is the ../lib folder",
+  "result": [
+    {
+      "bin": "<TOOLS>/wine/Only-Lib/bin/wine",
+      "name": "Only-Lib",
+      "type": "wine",
+      "lib": "",
+      "lib32": "<TOOLS>/wine/Only-Lib/lib",
+      "wineserver": "<TOOLS>/wine/Only-Lib/bin/wineserver"
+    }
+  ]
+}
