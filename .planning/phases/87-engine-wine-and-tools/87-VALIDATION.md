@@ -31,7 +31,7 @@ created: "2026-11-23"
 
 - **After every task commit:** the touched crate's `cargo test -p <crate>` plus the touched Jest folder, and `npx prettier --check` over the exact written paths (`--file-info` first; omit over prettier-ignored paths such as `.planning`)
 - **After every plan wave:** full Rust set above, `pnpm test:ci`, `pnpm codecheck`, `pnpm lint`
-- **Before `/gsd-verify-work`:** full suite green, three-OS CI green, then `87-UAT.md` run on the signed Phase 87 build installed over a signed Phase 86 build (D-12)
+- **Before `/gsd-verify-work`:** full suite green, three-OS CI green, then `87-HUMAN-UAT.md` run on the signed Phase 87 build installed over a signed Phase 86 build (D-12)
 - **Max feedback latency:** 300 seconds
 
 ---
@@ -43,11 +43,11 @@ created: "2026-11-23"
 | SVC-02 / SC1 | decision matrix, CrossOver-first, fallback to pin | Rust golden replay | `cargo test -p gamelib-engine --test golden_decision` | ❌ W0 | ⬜ pending |
 | SVC-02 / SC1 | launch step, deadline, process watch | Rust unit + golden | `cargo test -p gamelib-engine --test golden_launch` | ❌ W0 | ⬜ pending |
 | SVC-02 / SC1 | fallback download/verify/extract + events | Rust replay | `cargo test -p gamelib-engine --test golden_fallback` | ❌ W0 | ⬜ pending |
-| SVC-02 / SC1 | live healthy/fallback/adopt, expired trial | live gate (operator, signed build) | `87-UAT.md` items 1–2 | ❌ W0 (authored before coding) | ⬜ pending |
+| SVC-02 / SC1 | live healthy/fallback/adopt, expired trial | live gate (operator, signed build) | `87-HUMAN-UAT.md` items 1–2 | ❌ W0 (authored before coding) | ⬜ pending |
 | SVC-02 / SC2 | bottle create/reuse/remove, sibling-safe, markers byte-equal, newer marker kept | Rust golden + safety table | `cargo test -p gamelib-engine --test golden_bottles` | ❌ W0 | ⬜ pending |
-| SVC-02 / SC2 | TS pure-helper twin == Rust vectors (D-24) | Jest + Rust shared JSON | `pnpm jest src/backend/engine/__tests__/bottlePathsVectors.test.ts` | ❌ W0 | ⬜ pending |
+| SVC-02 / SC2 | TS pure-helper twin == Rust vectors (D-24) | Jest + Rust shared JSON | `pnpm jest src/backend/enginewine/__tests__/twinVectors.test.ts` | ❌ W0 | ⬜ pending |
 | SVC-02 / SC3 | wine core, discovery, wine-manager, runtimes, winetricks, DXVK/DXMT/vkd3d goldens | Rust golden replay | `cargo test -p gamelib-wine` | ❌ W0 | ⬜ pending |
-| SVC-02 / SC3 | live tools and downloads | live gate item 4 | `87-UAT.md` | ❌ W0 | ⬜ pending |
+| SVC-02 / SC3 | live tools and downloads | live gate item 4 | `87-HUMAN-UAT.md` | ❌ W0 | ⬜ pending |
 | SVC-02 / SC4 | TS and registrations deleted; only scheduled shims/resolvers/twin remain | Jest gate | `pnpm jest src/backend/__tests__/engineWinePortComplete.test.ts src/backend/__tests__/engineWineShimSchedule.test.ts` | ❌ W0 | ⬜ pending |
 | FND-04 | no orphan winetricks/tar/wine helper after quit | `gamelib-proc` orphan harness arm | `cargo test -p gamelib-proc` | extend | ⬜ pending |
 | FND-06 | markers/notices/wine-downloader-info round trip, newer never overwritten, corrupt kept | Rust golden | `cargo test -p gamelib-engine --test roundtrip_state` | ❌ W0 | ⬜ pending |
@@ -64,7 +64,7 @@ created: "2026-11-23"
 - [ ] `tests/fixtures/{recorded,golden,state}/<slice>/` in both crates, with a redaction test
 - [ ] `ProcSpec` runner (env, cwd, stdin, abort, streaming) in `gamelib-core` / `gamelib-proc`, with its orphan arm
 - [ ] cross-language vector file for the bottle-path twin (D-24)
-- [ ] `87-UAT.md` (inline `expected:`, `result:` opens with a status word) with the Structural Reachability table
+- [ ] `87-HUMAN-UAT.md` (inline `expected:`, `result:` opens with a status word) with the Structural Reachability table
 
 ---
 
@@ -72,10 +72,10 @@ created: "2026-11-23"
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| CrossOver healthy → no-CrossOver fallback → re-adopt, incl. a D3D11 title and a bridge Steam title | SVC-02 / SC1 | real CrossOver, wineserver timing, CrossOver adopting a fallback bottle | `87-UAT.md` item 1 (`no-crossover.sb`) |
-| Expired trial routes to Staging; ≤7-day notice | SVC-02 / SC1 | trial licence read from the real HOME | `87-UAT.md` item 2 (`nolicence.sb`, `backdate.py`, operator approval) |
-| Bottle reuse and sibling-safe removal on real bottles | SVC-02 / SC2 | real bottles written by a signed 86 build | `87-UAT.md` item 3 |
-| Winetricks verb, DXVK/DXMT install/remove, wine-manager download with progress | SVC-02 / SC3 | real network, real winetricks | `87-UAT.md` item 4 |
+| CrossOver healthy → no-CrossOver fallback → re-adopt, incl. a D3D11 title and a bridge Steam title | SVC-02 / SC1 | real CrossOver, wineserver timing, CrossOver adopting a fallback bottle | `87-HUMAN-UAT.md` item 1 (`no-crossover.sb`) |
+| Expired trial routes to Staging; ≤7-day notice | SVC-02 / SC1 | trial licence read from the real HOME | `87-HUMAN-UAT.md` item 2 (`nolicence.sb`, `backdate.py`, operator approval) |
+| Bottle reuse and sibling-safe removal on real bottles | SVC-02 / SC2 | real bottles written by a signed 86 build | `87-HUMAN-UAT.md` item 3 |
+| Winetricks verb, DXVK/DXMT install/remove, wine-manager download with progress | SVC-02 / SC3 | real network, real winetricks | `87-HUMAN-UAT.md` item 4 |
 
 ---
 
