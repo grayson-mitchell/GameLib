@@ -114,7 +114,7 @@ ELECTRON_STUB_PATH = SRC_DIR / "backend" / "platform" / "index.ts"
 # not merely "contains", because "contains" alone would silently tolerate any of the seven deleted
 # predicates regrowing elsewhere in `src/` without ever being noticed by this check.
 EXPECTED_AXIS_A_SURVIVOR_SET = {
-    "src/backend/sidecar/humbleLoginFlowRegistration.ts:466",  # the deliberately-kept smoke guard (460 until 66.4-15 added the requestRustInvoke dep to registerHumbleLoginFlows; 454 until 66.3-17 moved it; 452 until 66.3-09)
+    "src/backend/sidecar/loginSeamRegistration.ts:331",  # the deliberately-kept smoke guard (331 since 94-04 moved it verbatim out of humbleLoginFlowRegistration.ts into loginSeamRegistration.ts; 460 until 66.4-15 added the requestRustInvoke dep to registerHumbleLoginFlows; 454 until 66.3-17 moved it; 452 until 66.3-09)
 }
 # Updated Phase 34.4.1 Plan 18 (first regeneration since Plan 10): Plan 12 (already committed,
 # F-1/S-10 closure) moved the safeStorage import OUT of humble/user.ts entirely, into a new
@@ -619,7 +619,7 @@ class Finding:
 # masquerading as coverage. Only the entry for the ONE surviving site
 # (`humbleLoginFlowRegistration.ts::smokeHook`, see EXPECTED_AXIS_A_SURVIVOR_SET above) remains.
 SITE_PROFILES = {
-    "src/backend/sidecar/humbleLoginFlowRegistration.ts::smokeHook": {
+    "src/backend/sidecar/loginSeamRegistration.ts::smokeHook": {
         # Line hint refreshed Phase 34.4.1 Plan 18 (first regeneration since Plan 10) — same site,
         # shifted by intervening plans' additions to this file.
         # Refreshed AGAIN in gap cycle 2 plan 28: 407 -> 436, shifted by plans 22-27's additions
@@ -647,7 +647,9 @@ SITE_PROFILES = {
         # +/-5 window (452 vs 460) is exceeded, so the hint moves with the site: same guard.
         # Refreshed AGAIN (66.4-15): 460 -> 466. `registerHumbleLoginFlows` gained a `requestRustInvoke` dep (a
         # 6-line addition above this guard) so the login-window seam is built over the boot transport.
-        "line_hint": 466,
+        # Moved (94-04): 466 in humbleLoginFlowRegistration.ts -> 331 in loginSeamRegistration.ts. 94-04
+        # relocated createRustLoginWindowSeam and this smoke guard verbatim behind registerLoginWindowSeam.
+        "line_hint": 331,
         "anchors": [
             "GAMELIB_LOGIN_SEAM_SMOKE",
             "this is a FAIL, not a skip",

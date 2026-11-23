@@ -7,3 +7,7 @@
   the mechanical tiers ... AND has no SITE_PROFILES entry`. 94-04 moved the login-window seam into that new file; the
   gate needs a `SITE_PROFILES` entry (or the gate's file list updated) for the relocated site. Owner: whichever 94 plan
   next touches the login seam (94-17, 94-29 or 94-30 per the 94-04 summary), or a quick task.
+
+  **Resolved 2026-11-24 (orchestrator, between 94-05 and 94-06):** the survivor set and the `SITE_PROFILES` entry
+  now name `src/backend/sidecar/loginSeamRegistration.ts:331` (the same smoke guard, moved verbatim by 94-04), and
+  `34.4.1-SEAM-PARITY-SWEEP.md` was regenerated with `--write`. `pnpm planning-gates` is 12/12 again.
