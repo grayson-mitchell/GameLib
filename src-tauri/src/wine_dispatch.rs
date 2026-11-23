@@ -17,7 +17,10 @@
 use super::*;
 
 use gamelib_wine::ctx::WineCtx;
+use gamelib_wine::manager::install::InstallSettings;
 use gamelib_wine::runtimes::RuntimeName;
+use gamelib_wine::CancellationToken;
+use serde_json::Map;
 
 /// The one context, set once by [`install`].
 static WINE_CTX: OnceLock<Arc<WineCtx>> = OnceLock::new();
@@ -153,6 +156,69 @@ pub(crate) fn refresh_wine_version_info(_ctx: Arc<NativeCtx>, args: Vec<Value>) 
         }
         Ok(Value::Null)
     })
+}
+
+/// The keys a `WineVersionInfo` carries, and which of them may be absent.
+const RELEASE_KEYS: &[&str] = &[
+    "version",
+    "type",
+    "date",
+    "download",
+    "downsize",
+    "disksize",
+    "checksum",
+    "release_notes_link",
+    "isInstalled",
+    "hasUpdate",
+    "installDir",
+];
+
+/// Decodes the one `WineVersionInfo` argument of `installWineVersion` and `removeWineVersion`.
+/// STUB (RED): accepts nothing yet.
+fn parse_wine_version(_args: &[Value]) -> Result<&Map<String, Value>, Rejection> {
+    let _ = RELEASE_KEYS;
+    Err(("0", "invalid_type"))
+}
+
+/// What a running install is cancelled through: the renderer's `abort(version)`.
+/// STUB (RED): registers nothing.
+fn register_install(_id: &str) -> (CancellationToken, InstallGuard) {
+    (CancellationToken::new(), InstallGuard)
+}
+
+struct InstallGuard;
+
+/// Cancels the install registered under `id`. STUB (RED).
+pub(crate) fn cancel_install(_id: &str) -> bool {
+    false
+}
+
+/// The renderer's `abort(id)`: STUB (RED).
+pub(crate) fn cancel_install_for_abort(_args: &[Value]) -> bool {
+    false
+}
+
+/// STUB (RED).
+async fn install_channel(_wine: Option<Arc<WineCtx>>, _args: Vec<Value>) -> Result<Value, String> {
+    Ok(Value::Null)
+}
+
+/// STUB (RED).
+async fn remove_channel(_wine: Option<Arc<WineCtx>>, _args: Vec<Value>) -> Result<Value, String> {
+    Ok(Value::Null)
+}
+
+/// The arguments `wine_manager_remove` is given: the version, and nothing else. STUB (RED).
+fn remove_op_args(_release: &Map<String, Value>) -> Vec<Value> {
+    Vec::new()
+}
+
+/// Reads the two install settings from a parsed `config.json`. STUB (RED).
+fn install_settings_from(
+    _config: Option<&Value>,
+    _steam_default: impl FnOnce() -> String,
+) -> InstallSettings {
+    InstallSettings::default()
 }
 
 /// Runs `op` over `args` for a `rustInvoke` arm. These arms run on the dispatcher's worker thread, never
@@ -394,6 +460,373 @@ mod tests {
                     ok
                 )),
                 Err("refreshWineVersionInfo: not ready".to_string())
+            );
+        }
+    }
+
+    /// A `WineVersionInfo` as the renderer sends it from the stored list.
+    fn release(version: &str) -> Value {
+        json!({
+            "version": version,
+            "type": "Wine-Lutris",
+            "date": "2024-06-01",
+            "download": "https://downloads.invalid/x.tar.xz",
+            "downsize": 100,
+            "disksize": 1234,
+            "checksum": "https://downloads.invalid/x.sha512sum",
+            "release_notes_link": "https://downloads.invalid/notes",
+            "isInstalled": false,
+            "hasUpdate": false,
+            "installDir": "/renderer/says/here"
+        })
+    }
+
+    #[test]
+    fn a_wine_version_info_is_its_eleven_keys_and_nothing_else() {
+        let full = release("Wine-Lutris-9");
+        assert!(parse_wine_version(&[full.clone()]).is_ok());
+        // download, downsize and checksum are the keys a feed may not give.
+        let mut sparse = full.clone();
+        for key in ["download", "downsize", "checksum"] {
+            sparse.as_object_mut().unwrap().remove(key);
+        }
+        assert!(parse_wine_version(&[sparse]).is_ok());
+        for ty in [
+            "Wine-GE",
+            "GE-Proton",
+            "Proton",
+            "Wine-Lutris",
+            "Wine-Kron4ek",
+            "Wine-Crossover",
+            "Wine-Staging-macOS",
+            "Game-Porting-Toolkit",
+            "Proton-CachyOS",
+        ] {
+            let mut r = full.clone();
+            r["type"] = json!(ty);
+            assert!(parse_wine_version(&[r]).is_ok(), "{ty}");
+        }
+        let with = |key: &str, value: Value| {
+            let mut r = full.clone();
+            r[key] = value;
+            r
+        };
+        let without = |key: &str| {
+            let mut r = full.clone();
+            r.as_object_mut().unwrap().remove(key);
+            r
+        };
+        for (args, want) in [
+            (vec![], ("(args)", "invalid_type")),
+            (vec![full.clone(), full.clone()], ("(args)", "invalid_type")),
+            (vec![json!("v")], ("0", "invalid_type")),
+            (vec![json!(null)], ("0", "invalid_type")),
+            (vec![json!([])], ("0", "invalid_type")),
+            (vec![with("extra", json!(1))], ("0", "unrecognized_keys")),
+            (vec![without("version")], ("0.version", "invalid_type")),
+            (vec![with("version", json!(""))], ("0.version", "too_small")),
+            (
+                vec![with("version", json!(1))],
+                ("0.version", "invalid_type"),
+            ),
+            (
+                vec![with("version", json!("v".repeat(1025)))],
+                ("0.version", "too_big"),
+            ),
+            (
+                vec![with("type", json!("Wine-Mystery"))],
+                ("0.type", "invalid_value"),
+            ),
+            (vec![without("type")], ("0.type", "invalid_type")),
+            (vec![without("date")], ("0.date", "invalid_type")),
+            (vec![without("disksize")], ("0.disksize", "invalid_type")),
+            (
+                vec![with("disksize", json!("1"))],
+                ("0.disksize", "invalid_type"),
+            ),
+            (
+                vec![without("release_notes_link")],
+                ("0.release_notes_link", "invalid_type"),
+            ),
+            (
+                vec![without("isInstalled")],
+                ("0.isInstalled", "invalid_type"),
+            ),
+            (
+                vec![with("hasUpdate", json!("no"))],
+                ("0.hasUpdate", "invalid_type"),
+            ),
+            (
+                vec![without("installDir")],
+                ("0.installDir", "invalid_type"),
+            ),
+            (
+                vec![with("installDir", json!("d".repeat(4097)))],
+                ("0.installDir", "too_big"),
+            ),
+            (
+                vec![with("download", json!(null))],
+                ("0.download", "invalid_type"),
+            ),
+            (
+                vec![with("downsize", json!("1"))],
+                ("0.downsize", "invalid_type"),
+            ),
+            (
+                vec![with("checksum", json!("c".repeat(1025)))],
+                ("0.checksum", "too_big"),
+            ),
+        ] {
+            assert_eq!(parse_wine_version(&args).map(|_| ()), Err(want), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn a_rejected_release_is_a_fixed_literal_before_the_context_is_looked_at() {
+        let mut bad = release("Wine-Lutris-9");
+        bad["SECRET-KEY-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"] = json!("SECRET-VALUE");
+        for answer in [
+            tauri::async_runtime::block_on(install_channel(None, vec![bad.clone()])),
+            tauri::async_runtime::block_on(remove_channel(None, vec![bad])),
+        ] {
+            let error = answer.unwrap_err();
+            assert!(
+                error.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+                "{error}"
+            );
+            assert!(!error.contains("SECRET"), "{error}");
+        }
+        // A valid release with no context answers not ready, never a panic.
+        assert_eq!(
+            tauri::async_runtime::block_on(install_channel(None, vec![release("v")])),
+            Err("installWineVersion: not ready".to_string())
+        );
+        assert_eq!(
+            tauri::async_runtime::block_on(remove_channel(None, vec![release("v")])),
+            Err("removeWineVersion: not ready".to_string())
+        );
+    }
+
+    #[test]
+    fn remove_passes_the_crate_the_version_and_never_the_renderers_directory() {
+        let r = release("Wine-Lutris-9");
+        let args = [r];
+        let parsed = parse_wine_version(&args).unwrap();
+        let op_args = remove_op_args(parsed);
+        assert_eq!(op_args, vec![json!("Wine-Lutris-9")]);
+        assert!(!op_args.iter().any(|a| a.to_string().contains("renderer")));
+    }
+
+    /// The wine context over a fake HOME, with a fetch that waits for its cancel and a recording
+    /// emitter.
+    fn wine_over(home: &gamelib_testutil::FakeHome, emitter: Arc<Recorded>) -> Arc<WineCtx> {
+        let root = home.root().to_path_buf();
+        let engine = gamelib_engine::ctx::EngineCtx::new(
+            Arc::new(gamelib_store::host::StoreHost::new()),
+            Arc::new(gamelib_core::clock::SystemClock),
+            gamelib_engine::ctx::Platform::Linux,
+            gamelib_engine::ctx::EnginePaths {
+                app_folder: root.join("userdata"),
+                user_data: root.join("userdata"),
+                tools_path: root.join("tools"),
+                user_home: root.clone(),
+                temp: root.join("temp"),
+            },
+            gamelib_core::shutdown::Shutdown::new(),
+        )
+        .with_fetch(Arc::new(WaitsForCancel))
+        .with_emitter(emitter)
+        .with_ui(Arc::new(engine_dispatch::ShellEngineUi::silent(Arc::new(
+            gamelib_engine::sinks::NullEmitter,
+        ))));
+        Arc::new(WineCtx::new(
+            Arc::new(engine),
+            root.join("tools").join("runtimes"),
+        ))
+    }
+
+    #[derive(Default)]
+    struct Recorded(std::sync::Mutex<Vec<(String, Vec<Value>)>>);
+    impl gamelib_core::emitter::FrontendEmitter for Recorded {
+        fn emit(&self, channel: &str, args: Vec<Value>) {
+            self.0.lock().unwrap().push((channel.to_string(), args));
+        }
+    }
+
+    /// A download that never finishes by itself: it waits for its cancel and then reports `aborted`.
+    struct WaitsForCancel;
+    impl gamelib_engine::fetch::Fetch for WaitsForCancel {
+        fn get(
+            &self,
+            _req: gamelib_engine::fetch::FetchRequest,
+        ) -> gamelib_engine::fetch::FetchFuture<
+            '_,
+            Result<gamelib_engine::fetch::FetchResponse, gamelib_engine::fetch::FetchError>,
+        > {
+            Box::pin(async { Err(gamelib_engine::fetch::FetchError::Network) })
+        }
+
+        fn download<'a>(
+            &'a self,
+            _req: gamelib_engine::fetch::FetchRequest,
+            _dest: &'a std::path::Path,
+            _progress: &'a (dyn Fn(gamelib_engine::fetch::Progress) + Send + Sync),
+            cancel: CancellationToken,
+        ) -> gamelib_engine::fetch::FetchFuture<
+            'a,
+            Result<gamelib_engine::fetch::DownloadOutcome, gamelib_engine::fetch::FetchError>,
+        > {
+            Box::pin(async move {
+                cancel.cancelled().await;
+                Err(gamelib_engine::fetch::FetchError::Aborted)
+            })
+        }
+    }
+
+    #[test]
+    fn an_unknown_key_removes_nothing_and_a_missing_version_removes_nothing() {
+        let home = gamelib_testutil::FakeHome::new("wine-dispatch-remove-");
+        let wine = wine_over(&home, Arc::new(Recorded::default()));
+        let kept = home.root().join("tools").join("wine").join("Wine-Lutris-9");
+        std::fs::create_dir_all(&kept).unwrap();
+        let mut bad = release("Wine-Lutris-9");
+        bad["installDir"] = json!(kept.display().to_string());
+        bad["extra"] = json!(true);
+        let rejected =
+            tauri::async_runtime::block_on(remove_channel(Some(Arc::clone(&wine)), vec![bad]));
+        assert!(rejected
+            .unwrap_err()
+            .starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER));
+        assert!(kept.is_dir());
+        // A version the store never listed: the renderer's installDir is not trusted, nothing goes.
+        let mut forged = release("Wine-Lutris-9");
+        forged["installDir"] = json!(kept.display().to_string());
+        let answered = tauri::async_runtime::block_on(remove_channel(Some(wine), vec![forged]));
+        assert_eq!(answered, Ok(Value::Null));
+        assert!(
+            kept.is_dir(),
+            "the renderer's installDir must never be removed"
+        );
+    }
+
+    #[test]
+    fn a_cancel_id_maps_to_one_token_and_ends_with_its_install() {
+        let (token, guard) = register_install("Wine-Lutris-9");
+        assert!(!token.is_cancelled());
+        assert!(!cancel_install("another"));
+        assert!(cancel_install("Wine-Lutris-9"));
+        assert!(token.is_cancelled());
+        drop(guard);
+        assert!(
+            !cancel_install("Wine-Lutris-9"),
+            "a finished install has no cancel"
+        );
+        // A second install under the same id replaces the first; the first's guard going away
+        // does not take the second's cancel with it.
+        let (_first, first_guard) = register_install("same");
+        let (second, second_guard) = register_install("same");
+        drop(first_guard);
+        assert!(cancel_install("same"));
+        assert!(second.is_cancelled());
+        drop(second_guard);
+        assert!(!cancel_install("same"));
+    }
+
+    #[test]
+    fn the_renderers_abort_cancels_a_running_install_with_the_aborted_result() {
+        let home = gamelib_testutil::FakeHome::new("wine-dispatch-cancel-");
+        let emitter = Arc::new(Recorded::default());
+        let wine = wine_over(&home, Arc::clone(&emitter));
+        let version = "Wine-Lutris-9-cancel";
+        let mut r = release(version);
+        r.as_object_mut().unwrap().remove("checksum");
+        let canceller = std::thread::spawn(move || {
+            // The install registers its token as it starts; the renderer's `abort(version)` is
+            // the call that cancels it. Bounded, so a missing registration fails the test below
+            // instead of hanging it.
+            for _ in 0..1000 {
+                if cancel_install_for_abort(&[json!(version)]) {
+                    return true;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+            false
+        });
+        let answer = tauri::async_runtime::block_on(install_channel(Some(wine), vec![r]));
+        assert!(canceller.join().unwrap(), "the install registered a cancel");
+        assert_eq!(answer, Ok(Value::Null));
+        let pushes = emitter.0.lock().unwrap();
+        let progress: Vec<&Value> = pushes
+            .iter()
+            .filter(|(channel, _)| channel == "progressOfWineManager")
+            .map(|(_, args)| &args[1])
+            .collect();
+        assert_eq!(progress.last().unwrap()["status"], "idle", "{progress:?}");
+        assert!(
+            !home
+                .root()
+                .join("tools")
+                .join("wine")
+                .join(version)
+                .exists(),
+            "an aborted install leaves no directory"
+        );
+        assert!(
+            !cancel_install(version),
+            "the finished install is unregistered"
+        );
+    }
+
+    #[test]
+    fn the_abort_hook_ignores_anything_but_one_string() {
+        for args in [vec![], vec![json!(1)], vec![json!(null)], vec![json!({})]] {
+            assert!(!cancel_install_for_abort(&args), "{args:?}");
+        }
+        assert!(!cancel_install_for_abort(&[json!("nobody")]));
+    }
+
+    #[test]
+    fn the_install_settings_come_from_the_global_config_with_the_steam_default() {
+        let config = json!({
+            "version": "v0",
+            "defaultSettings": {
+                "downloadProtonToSteam": true,
+                "defaultSteamPath": "/home/me/.steam/steam"
+            }
+        });
+        assert_eq!(
+            install_settings_from(Some(&config), || panic!("a stored path needs no default")),
+            InstallSettings {
+                download_proton_to_steam: true,
+                default_steam_path: "/home/me/.steam/steam".to_string()
+            }
+        );
+        // No stored path: the discovered default stands in, only when it is going to be used.
+        let on = json!({ "defaultSettings": { "downloadProtonToSteam": true } });
+        assert_eq!(
+            install_settings_from(Some(&on), || "/discovered".to_string()),
+            InstallSettings {
+                download_proton_to_steam: true,
+                default_steam_path: "/discovered".to_string()
+            }
+        );
+        let off = json!({ "defaultSettings": { "downloadProtonToSteam": false } });
+        assert_eq!(
+            install_settings_from(Some(&off), || panic!("off needs no default")),
+            InstallSettings::default()
+        );
+        // An unreadable or wrong-typed config is the TS default: off.
+        for junk in [
+            None,
+            Some(json!(null)),
+            Some(json!([])),
+            Some(json!({ "defaultSettings": 3 })),
+            Some(json!({ "defaultSettings": { "downloadProtonToSteam": "yes" } })),
+        ] {
+            assert_eq!(
+                install_settings_from(junk.as_ref(), || panic!("never needed")),
+                InstallSettings::default(),
+                "{junk:?}"
             );
         }
     }

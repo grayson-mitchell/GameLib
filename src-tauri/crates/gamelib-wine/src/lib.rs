@@ -12,6 +12,10 @@ pub mod extract;
 pub mod manager;
 pub mod runtimes;
 
+/// The cancel token an install takes (`manager::install::install`), re-exported so the shell, which
+/// owns the renderer's cancel, needs no `tokio-util` of its own.
+pub use tokio_util::sync::CancellationToken;
+
 use ctx::WineCtx;
 use serde_json::Value;
 use std::future::Future;
