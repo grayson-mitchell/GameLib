@@ -183,7 +183,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // (`engineWineResolvers.ts`).
   // Phase 87 Plan 35 (D-23, D-14): invoke 7 -> 2 -- winetricksApply/Available/Installed are scheduled resolvers and
   // winetricksQueueState/winetricksCancelRemaining are native `wine` channels.
-  'wineToolsFlowRegistration.ts': { invoke: 2, send: 0 }
+  // Phase 87 Plan 36 (D-23): invoke 2 -> 1 -- runWineCommandForGame is a scheduled resolver.
+  'wineToolsFlowRegistration.ts': { invoke: 1, send: 0 }
 }
 
 /**

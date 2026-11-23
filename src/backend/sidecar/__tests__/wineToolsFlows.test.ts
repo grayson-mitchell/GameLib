@@ -55,9 +55,7 @@
 // forwarding -- factory-mocked so this suite never drives its real filesystem/child_process
 // side effects.
 // `../../tools` is factory-mocked so this suite never runs the real download/prefix-inspection logic.
-// `Winetricks`/`runWineCommandOnGame` are provided here (Phase 34.6 Plan 11) so Describe 7's
-// `runWineCommandForGame` hardening tests can invoke the already-registered (top-level, non-Windows-branch)
-// handler without it crashing on an undefined import. (The DXVK toggles left this module in Phase 87 Plan 34.)
+// (The DXVK toggles left this module in Phase 87 Plan 34, `runWineCommandForGame` in Plan 36.)
 jest.mock('../../tools', () => {
   // One tools object for the whole file: `createTools(deps)` hands the same mocks out every time.
   const tools = {
@@ -90,7 +88,6 @@ import { join } from 'path'
 import { registerWineToolsFlows } from '../wineToolsFlowRegistration'
 import { createIpcRegistry } from '../ipcRegistry'
 import { ipcViews } from '../../testUtils/ipcViews'
-import { createTools } from '../../tools'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import type { IpcHandler } from '../ipcRegistry'
 
@@ -107,9 +104,6 @@ const listenerCountsBefore = new Map(
     channel,
     listeners.length
   ])
-)
-const { runWineCommandOnGame, runWineCommandForPendingInstall } = createTools(
-  {} as unknown as Parameters<typeof createTools>[0]
 )
 const runWineCommand = jest.fn()
 const toolsSlices = createTestToolsSlices()
@@ -178,17 +172,9 @@ describe('curated-import guard — no ipc_handler import, and no deferred/foreig
     expect(/ipc_handler/.test(stripped)).toBe(false)
   })
 
-  it('T-34.5-15 runWineCommandForGame is PRESENT with the correct kind (invoke); winetricksInstall is retired and absent from BOTH registries', () => {
-    // Phase 34.6 Plan 07 ports these four channels. This test replaces the pre-port absence
-    // assertion (kept, never deleted — a mis-registered send channel fails SILENTLY under the
-    // sidecar, so kind-correctness here is the only thing that would catch it).
-    // Phase 87 Plan 35 (D-23): `winetricksAvailable` and `winetricksInstalled` are scheduled resolvers.
-    const invokeChannels = ['runWineCommandForGame']
-    for (const channel of invokeChannels) {
-      expect(handlerRegistry.has(channel)).toBe(true)
-      expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
-    }
-
+  it('T-34.5-15 winetricksInstall is retired and absent from BOTH registries', () => {
+    // Phase 87 Plans 35 and 36 (D-23): the Winetricks channels and `runWineCommandForGame` are scheduled resolvers
+    // (`engineWineResolvers.ts`), so this module holds only `runWineCommand`.
     // Phase 45 Plan 02 (D-11 promote, 2026-10-10): `winetricksInstall` is retired outright, not
     // merely kind-swapped — absent from BOTH handlerRegistry and listenerRegistry.
     expect(handlerRegistry.has('winetricksInstall')).toBe(false)
@@ -434,232 +420,15 @@ describe('T-34.5-17 / T-34.5-32 (plans 34.5-05 / 34.5-09, root cause R2) — pla
   )
 })
 
-// ── Describe 7: runWineCommandForGame hardening — shape guard + pass-through (T-34.5-C6-49-03,
-// Phase 34.6 Plan 11, REQ-34.6-05) ─────────────────────────────────────────────────────────────
-//
-// Exercises the already-registered (file-scope, line 90) handler, on this project's real CI
-// platform (macOS -- `isWindows` is false), so these two tests take the non-Windows branch
-// (`runWineCommandOnGame`). The Windows-branch shell-removal proof lives in its own isolated
-// sandbox below (Describe 8), since forcing `isWindows` true requires a fresh module registry.
-describe('runWineCommandForGame hardening — shape guard + pass-through (T-34.5-C6-49-03, Phase 34.6 Plan 11)', () => {
-  const mockRunWineCommandOnGame = runWineCommandOnGame as jest.MockedFunction<
-    typeof runWineCommandOnGame
-  >
-
-  beforeEach(() => {
-    mockRunWineCommandOnGame.mockClear()
-    mockRunWineCommandOnGame.mockResolvedValue({ stdout: '', stderr: '' })
-  })
-
-  it('REJECT: a non-array commandParts is rejected by assertCommandParts, and runWineCommandOnGame is never reached', async () => {
-    const handler = handlerRegistry.get('runWineCommandForGame') as IpcHandler
-    expect(handler).toBeDefined()
-
-    await expect(
-      handler({} as never, {
-        appName: 'test-app',
-        commandParts: 'not-an-array' as unknown as string[],
-        runner: 'legendary'
-      })
-    ).rejects.toThrow()
-
-    expect(mockRunWineCommandOnGame).not.toHaveBeenCalled()
-  })
-
-  describe('pendingInstall (CR-04)', () => {
-    const mockPending = runWineCommandForPendingInstall as jest.MockedFunction<
-      typeof runWineCommandForPendingInstall
-    >
-    beforeEach(() => {
-      mockPending.mockClear()
-      mockPending.mockResolvedValue({ stdout: '', stderr: '' })
-    })
-
-    it('pendingInstall true routes to runWineCommandForPendingInstall with wait, not runWineCommandOnGame', async () => {
-      const handler = handlerRegistry.get('runWineCommandForGame') as IpcHandler
-      await handler({} as never, {
-        appName: 'abc',
-        runner: 'sideload',
-        commandParts: ['/x/setup.exe'],
-        wait: true,
-        pendingInstall: true
-      })
-      expect(mockPending).toHaveBeenCalledWith({
-        runner: 'sideload',
-        appName: 'abc',
-        commandParts: ['/x/setup.exe'],
-        wait: true
-      })
-      expect(mockRunWineCommandOnGame).not.toHaveBeenCalled()
-    })
-
-    it('without pendingInstall the existing path runs with wait false', async () => {
-      const handler = handlerRegistry.get('runWineCommandForGame') as IpcHandler
-      await handler({} as never, {
-        appName: 'abc',
-        runner: 'sideload',
-        commandParts: ['/x/setup.exe'],
-        wait: true
-      })
-      expect(mockPending).not.toHaveBeenCalled()
-      expect(mockRunWineCommandOnGame).toHaveBeenCalledWith('sideload', 'abc', {
-        commandParts: ['/x/setup.exe'],
-        wait: false,
-        protonVerb: 'runinprefix'
-      })
-    })
-
-    it('non-boolean pendingInstall and wait are treated as absent/false', async () => {
-      const handler = handlerRegistry.get('runWineCommandForGame') as IpcHandler
-      await handler({} as never, {
-        appName: 'abc',
-        runner: 'sideload',
-        commandParts: ['/x/setup.exe'],
-        wait: 'true',
-        pendingInstall: 'true'
-      })
-      expect(mockPending).not.toHaveBeenCalled()
-      expect(mockRunWineCommandOnGame).toHaveBeenCalledTimes(1)
-    })
-
-    it('malformed commandParts throw before any call', async () => {
-      const handler = handlerRegistry.get('runWineCommandForGame') as IpcHandler
-      await expect(
-        handler({} as never, {
-          appName: 'abc',
-          runner: 'sideload',
-          commandParts: 'x',
-          pendingInstall: true
-        })
-      ).rejects.toThrow()
-      expect(mockPending).not.toHaveBeenCalled()
-    })
-  })
-
-  it('ALLOW: a legitimate apostrophe-and-space-containing commandParts array reaches runWineCommandOnGame UNCHANGED (non-Windows branch, proves this is a shape check, not a content check)', async () => {
-    const handler = handlerRegistry.get('runWineCommandForGame') as IpcHandler
-    const legitimateCommandParts = [
-      "Sid Meier's Civilization V.exe",
-      '-galaxy integration disabled'
-    ]
-
-    await handler({} as never, {
-      appName: 'test-app',
-      commandParts: legitimateCommandParts,
-      runner: 'legendary'
-    })
-
-    expect(mockRunWineCommandOnGame).toHaveBeenCalledTimes(1)
-    const [forwardedRunner, forwardedAppName, forwardedOptions] = defined(
-      mockRunWineCommandOnGame.mock.calls[0],
-      'first call'
-    )
-    expect(forwardedRunner).toBe('legendary')
-    expect(forwardedAppName).toBe('test-app')
-    // Identity, not just deep-equality -- proves the handler forwards the SAME array rather
-    // than reshaping it before delegating.
-    expect((forwardedOptions as { commandParts: string[] }).commandParts).toBe(
-      legitimateCommandParts
-    )
-  })
-})
-
-// ── Describe 8: runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, Phase
-// 34.6 Plan 11) ─────────────────────────────────────────────────────────────────────────────────
-//
-// `isWindows` (`constants/environment.ts`) is a plain module-level const frozen at import time,
-// so forcing the Windows branch on this project's macOS-only CI requires a fresh module registry
-// with `isWindows` doMocked true -- mirrors Describe 4's own `jest.isolateModules()` sandbox
-// shape. Every heavy transitive dependency `wineToolsFlowRegistration.ts` imports is doMocked so
-// this sandbox's `registerWineToolsFlows()` re-run has no real filesystem/child_process/network
-// side effect; `./rendererPathGuard` is deliberately left REAL (cheap, pure, already proven in
-// its own dedicated suite) so this test also exercises the real `assertCommandParts` shape guard
-// on the Windows branch, not just the shell-removal.
-describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, Phase 34.6 Plan 11)', () => {
-  it('the Windows branch calls spawnAsync with an argv ARRAY, never a shell-joined string', async () => {
-    let isolatedHandler!: IpcHandler
-    const spawnAsyncMock = jest
-      .fn()
-      .mockResolvedValue({ code: 0, stdout: '', stderr: '' })
-    const runWineCommandOnGameMock = jest.fn()
-
-    jest.isolateModules(() => {
-      jest.doMock('../../tools', () => ({
-        DXVK: { getLatest: jest.fn(), installRemove: jest.fn() },
-        Winetricks: {
-          listAvailable: jest.fn(),
-          listInstalled: jest.fn(),
-          install: jest.fn()
-        },
-        runWineCommandOnGame: runWineCommandOnGameMock
-      }))
-      jest.doMock('../../constants/environment', () => ({
-        isWindows: true,
-        isMac: false,
-        isLinux: false
-      }))
-      jest.doMock('../../dialog/dialog', () => ({ notify: jest.fn() }))
-      jest.doMock('../../logger', () => ({
-        logDebug: jest.fn(),
-        logError: jest.fn(),
-        LogPrefix: { Backend: 'Backend', WineDownloader: 'WineDownloader' }
-      }))
-      jest.doMock('../sendChannelObservable', () => ({
-        logSendHandlerReached: jest.fn()
-      }))
-      jest.doMock('i18next', () => ({ t: jest.fn((key: string) => key) }))
-
-      /* eslint-disable @typescript-eslint/no-require-imports */
-      const {
-        registerWineToolsFlows: isolatedRegister
-      } = require('../wineToolsFlowRegistration')
-      const isolatedIpc = createIpcRegistry()
-      isolatedRegister({
-        ipc: isolatedIpc,
-        config: {
-          getAlternativeWine: jest.fn(),
-          getSettings: jest.fn(() => ({}))
-        },
-        gameConfigs: { get: jest.fn() },
-        managers: {},
-        commandRunner: { runWineCommand: jest.fn() },
-        launcher: {
-          validWine: jest.fn(),
-          setupEnvVars: jest.fn(),
-          setupWineEnvVars: jest.fn()
-        },
-        // The boot's event bus is a scripted fake here: the releases listener only has to subscribe.
-        appRuntime: { events: { on: jest.fn(), emit: jest.fn() } },
-        spawnAsync: spawnAsyncMock
-      })
-      isolatedHandler = isolatedIpc.getHandler(
-        'runWineCommandForGame'
-      ) as IpcHandler
-      /* eslint-enable @typescript-eslint/no-require-imports */
-    })
-
-    expect(isolatedHandler).toBeDefined()
-
-    const commandParts = [
-      "C:\\Program Files\\Sid Meier's Civilization V\\game.exe",
-      '-galaxy integration disabled'
-    ]
-
-    await isolatedHandler({} as never, {
-      appName: 'test-app',
-      commandParts,
-      runner: 'legendary'
-    })
-
-    expect(spawnAsyncMock).toHaveBeenCalledTimes(1)
-    expect(runWineCommandOnGameMock).not.toHaveBeenCalled()
-
-    const [forwardedCommand, forwardedArgs] = spawnAsyncMock.mock.calls[0]
-    expect(forwardedCommand).toBe(commandParts[0])
-    // Proves an argv ARRAY, never a shell-joined string -- a `.join(' ')` shell call would
-    // instead pass one flattened string as spawnAsync's first argument.
-    expect(Array.isArray(forwardedArgs)).toBe(true)
-    expect(forwardedArgs).toEqual(commandParts.slice(1))
+// ── Describe 7: the wine-command-for-game channel is registered elsewhere, never here (Phase 87 Plan 36) ─
+// `runWineCommandForGame` is a scheduled resolver (`engineWineResolvers.ts`, proved in `engineWineResolvers.test.ts`) over
+// the Rust `wine_run_command_for_game` op. Its shape guard (T-34.5-C6-49-03, 34.6-11), the Steam and native guards and
+// the Windows branch's argv-array spawn are Rust behavioural tests (`run_for_game_guard.rs`, 87-33), so the TS cases
+// that pinned them here went with the handler.
+describe('runWineCommandForGame is registered elsewhere, never here (Phase 87 Plan 36)', () => {
+  it('has no handle and no listener in this module', () => {
+    expect(handlerRegistry.has('runWineCommandForGame')).toBe(false)
+    expect((listenerRegistry.get('runWineCommandForGame') ?? []).length).toBe(0)
   })
 })
 

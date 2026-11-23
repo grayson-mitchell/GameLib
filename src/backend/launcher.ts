@@ -48,7 +48,8 @@ import {
   engineServicesFrom,
   type EngineServicesSource
 } from './services/engineServices'
-import { toolsFrom } from './services/toolsFrom'
+import { gatherGameCommandFacts } from './services/gameCommandFacts'
+import { runWineCommandForGame } from './sidecar/engineWineResolvers'
 import type {
   CommandRunner,
   InfoCaches,
@@ -1222,10 +1223,17 @@ async function installFixes(
 
     for (const filePath of knownFixes.runInPrefix) {
       const fullPath = join(gameInfo.install.install_path!, filePath)
-      await toolsFrom(engineSource(deps)).runWineCommandOnGame(
-        runner,
-        appName,
+      // Phase 87 (87-36): one wine command through the shared resolver; Rust judges the Steam, native and
+      // install-path guards and spawns the program in the game's own bottle.
+      await runWineCommandForGame(
         {
+          requestRustInvoke: deps.requestRustInvoke,
+          gameCommandFacts: (r, a, opts) =>
+            gatherGameCommandFacts(engineSource(deps), r, a, opts)
+        },
+        {
+          runner,
+          appName,
           commandParts: [fullPath],
           wait: true,
           protonVerb: 'run'

@@ -3,10 +3,12 @@ import type { RustInvokeDeps } from '../host/rustInvokeDeps'
 import type { Runner } from 'common/types'
 import {
   RUST_WINE_DXVK_INSTALL_REMOVE,
+  RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALLED
 } from 'common/types/sidecarTransport'
+import type { GameCommandFacts } from '../services/gameCommandFacts'
 import type { WinetricksTarget } from '../services/winetricksTarget'
 import type { IpcRegistry } from './ipcRegistry'
 
@@ -35,8 +37,22 @@ export interface DxvkToggleArgs {
   action: 'backup' | 'restore'
 }
 
+/**
+ * The slice the wine-command resolvers read, which the launcher's known-fix step builds too: the one Rust transport
+ * and the facts about a game only TypeScript can read (`services/gameCommandFacts.ts`: the library, the game
+ * configs, the Steam bottle markers). `pendingInstall` is the sideload "Run installer" that runs before the game is
+ * in the library. It rejects when the library, the game config or a resolver fails.
+ */
+export interface WineCommandResolverDeps extends RustInvokeDeps {
+  gameCommandFacts: (
+    runner: Runner,
+    appName: string,
+    opts: { pendingInstall: boolean }
+  ) => Promise<GameCommandFacts>
+}
+
 /** The slice every resolver of this file reads: the game configs and the one Rust transport. */
-export interface EngineWineResolverDeps extends RustInvokeDeps {
+export interface EngineWineResolverDeps extends WineCommandResolverDeps {
   ipc: Pick<IpcRegistry, 'handle'>
   gameConfigs: Pick<GameConfigs, 'get'>
   /**
@@ -148,6 +164,45 @@ export async function winetricksInstalled(
   return deps.requestRustInvoke(RUST_WINE_WINETRICKS_INSTALLED, [target])
 }
 
+/** What a wine command on a game is: the game, the command as the caller sent it and how it runs. */
+export interface WineCommandForGameArgs {
+  runner: Runner
+  appName: string
+  /** Any JSON: the Rust shape guard judges it (non-empty strings, at most 256 of 4096 characters). */
+  commandParts: unknown
+  wait?: boolean
+  protonVerb?: string
+  startFolder?: string
+  /** A sideload "Run installer" before the game is in the library (CR-04). */
+  pendingInstall?: boolean
+}
+
+/**
+ * The `runWineCommandForGame` channel, and the launcher's known-fix `runInPrefix` step: one wine command on a game,
+ * in the game's own bottle. TypeScript gathers the facts only it holds (the game's tool settings and its library
+ * entry, `gameCommandFacts`); the Rust op judges every guard (the command's shape, a Steam title without its own
+ * bottle, a native game, no install path, a pending install of anything but a sideload) before any child starts,
+ * spawns as a Helper, and answers the empty result with one log line when a guard refused.
+ */
+export async function runWineCommandForGame(
+  deps: WineCommandResolverDeps,
+  args: WineCommandForGameArgs
+): Promise<unknown> {
+  const facts = await deps.gameCommandFacts(args.runner, args.appName, {
+    pendingInstall: args.pendingInstall === true
+  })
+  return deps.requestRustInvoke(RUST_WINE_RUN_COMMAND_FOR_GAME, [
+    {
+      ...facts,
+      pendingInstall: args.pendingInstall,
+      commandParts: args.commandParts,
+      wait: args.wait,
+      protonVerb: args.protonVerb,
+      startFolder: args.startFolder
+    }
+  ])
+}
+
 /**
  * Registers every channel this file resolves, once per boot, from `handlers.ts` (pinned by
  * `registrationOncePerBoot.test.ts`). A channel is registered here or in `wineToolsFlowRegistration.ts`,
@@ -183,5 +238,28 @@ export function registerEngineWineResolvers(
         runner: args[0] as Runner,
         appName: args[1] as string
       })
+  )
+  // The renderer's wine command on a game runs `wait: false` with `runinprefix`, as the TS handler did; only a
+  // pending install (Run installer) carries the caller's `wait`. The Rust op forces `runinprefix` for it too.
+  deps.ipc.handle(
+    'runWineCommandForGame',
+    (_event: unknown, ...args: unknown[]) => {
+      const { appName, commandParts, runner, wait, pendingInstall } =
+        args[0] as {
+          appName: string
+          commandParts: unknown
+          runner: Runner
+          wait?: unknown
+          pendingInstall?: unknown
+        }
+      return runWineCommandForGame(deps, {
+        runner,
+        appName,
+        commandParts,
+        wait: pendingInstall === true && wait === true,
+        protonVerb: 'runinprefix',
+        pendingInstall: pendingInstall === true
+      })
+    }
   )
 }

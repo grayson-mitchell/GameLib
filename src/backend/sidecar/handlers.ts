@@ -98,6 +98,7 @@ import { registerSteamPollEventFlows } from './steamPollEventRegistration'
 import { managerDepsFromServices } from '../services/managerDeps'
 import type { EngineServicesSource } from '../services/engineServices'
 import { resolveWinetricksTarget } from '../services/winetricksTarget'
+import { gatherGameCommandFacts } from '../services/gameCommandFacts'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 
 /**
@@ -409,7 +410,9 @@ export function registerHandlers(deps: {
     gameConfigs: deps.services.gameConfigs,
     requestRustInvoke: deps.services.host.requestRustInvoke,
     winetricksTarget: (runner, appName, opts) =>
-      resolveWinetricksTarget(engineSource, runner, appName, opts)
+      resolveWinetricksTarget(engineSource, runner, appName, opts),
+    gameCommandFacts: (runner, appName, opts) =>
+      gatherGameCommandFacts(engineSource, runner, appName, opts)
   })
   registerShortcutsFlows({
     ipc,

@@ -1144,6 +1144,25 @@ pub(crate) fn rpc_wine_run_command(args: &[Value]) -> Result<Value, String> {
     )
 }
 
+/// The `wine_run_command_for_game` `rustInvoke` arm (the `runWineCommandForGame` resolver and the launcher's
+/// known-fix `runInPrefix` step, 87-36): one object, the game facts the resolver gathered and the command, to
+/// which the shell adds [`wine_run_host`]. The crate decodes it strictly (an unknown key is
+/// `wine_run_command_for_game:bad-args`), judges the command's shape first (`bad-command-parts`, nothing
+/// spawned), then the Steam, native and install-path guards, and spawns through its labelled Helper spawn. A
+/// refused command answers the empty result and logs one line. Unbounded in the sidecar (a wine command runs
+/// until the program ends or the app shuts down).
+pub(crate) fn rpc_wine_run_command_for_game(args: &[Value]) -> Result<Value, String> {
+    WineRunCommandForGameArgs::from_args(args)?;
+    let [request @ Value::Object(_)] = args else {
+        return Err("wine_run_command_for_game:bad-args".to_string());
+    };
+    rpc_wine_op(
+        wine_ctx(),
+        "wine_run_command_for_game",
+        &[request.clone(), wine_run_host()],
+    )
+}
+
 /// The `wine_discover_alternatives` `rustInvoke` arm (the `discoverAlternativeWine` shim, 87-26): exactly one
 /// boolean, `scanCustom`, and nothing else from the sidecar. The shell builds the crate's whole
 /// `DiscoveryHost` itself ([`discovery_host`]: its roots, `PATH`, settings and the Steam libraries), so no
@@ -2392,6 +2411,37 @@ mod tests {
             assert_eq!(
                 rpc_wine_winetricks_apply(&bad),
                 Err("wine_winetricks_apply:bad-args".to_string()),
+                "{bad:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_run_command_for_game_arm_takes_one_object_and_answers_not_ready_before_install() {
+        assert!(wine_ctx().is_none());
+        // The command's shape is the crate's guard to judge, so a malformed `commandParts` still reaches it.
+        for command_parts in [json!(["winecfg"]), json!("winecfg"), json!([]), json!(null)] {
+            let request = json!({
+                "runner": "gog",
+                "appName": "1",
+                "unavailable": "no-engine",
+                "commandParts": command_parts
+            });
+            assert_eq!(
+                rpc_wine_run_command_for_game(&[request]),
+                Err("wine_run_command_for_game:not-ready".to_string()),
+                "{command_parts}"
+            );
+        }
+        for bad in [
+            vec![],
+            vec![json!("winecfg")],
+            vec![json!(null)],
+            vec![json!({}), json!({})],
+        ] {
+            assert_eq!(
+                rpc_wine_run_command_for_game(&bad),
+                Err("wine_run_command_for_game:bad-args".to_string()),
                 "{bad:?}"
             );
         }

@@ -1231,6 +1231,21 @@ export const RUST_WINE_WINETRICKS_LIST_INSTALLED =
   'wine_winetricks_list_installed' as const
 
 /**
+ * Phase 87 (SVC-02, 87-36): `wine_run_command_for_game` is `runWineCommandForGame`'s body and the launcher's
+ * `runWineCommandOnGame` use: the Steam, native, install-path and command-shape guards, then one wine command in
+ * the game's own bottle (on Windows, the program itself as an argv array). Args: one object, the facts the
+ * `runWineCommandForGame` resolver gathered (`gameCommandFacts`: the game, the resolved tool `settings` or the
+ * `unavailable` reason, the Steam eligibility, the native flag, the folder name and install path, whether it is a
+ * pending install) with the command (`commandParts`, `wait`, `protonVerb`, `startFolder`); the crate's
+ * `assert_command_parts` judges the command (a non-empty array of at most 256 strings of at most 4096
+ * characters). The shell adds the wine host facts. Resolves `{ stdout, stderr, code }`, the empty result when a
+ * guard refused (one log line, nothing spawned). A wine command can run for minutes: listed in the sidecar's
+ * `UNBOUNDED_RUST_CHANNELS`. The `runWineCommandForGame` resolver (`engineWineResolvers.ts`) is its caller.
+ */
+export const RUST_WINE_RUN_COMMAND_FOR_GAME =
+  'wine_run_command_for_game' as const
+
+/**
  * Phase 87 (SVC-02, 87-31): `engine_set_online` tells the Rust engine whether the machine is online. The
  * sidecar's online monitor is still the one that probes (until Phase 98), so it writes its status through
  * to `EngineCtx.online` at boot and on every change; Rust-initiated network work (the DXMT boot update, the
@@ -1591,6 +1606,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_WINE_WINETRICKS_INSTALLED,
   RUST_WINE_WINETRICKS_INSTALL,
   RUST_WINE_WINETRICKS_LIST_INSTALLED,
+  RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_ENGINE_SET_ONLINE
 ] as const
 

@@ -52,8 +52,9 @@ const MODULES: ModuleSpec[] = [
     // Phase 87 Plan 34 (D-23): 10 -> 7. The three DXVK toggles are scheduled resolvers (`engineWineResolvers.ts`).
     // Phase 87 Plan 35 (D-23, D-14): 7 -> 2. winetricksApply/Available/Installed are scheduled resolvers and
     // winetricksQueueState/winetricksCancelRemaining are native `wine` channels.
+    // Phase 87 Plan 36 (D-23): 2 -> 1. `runWineCommandForGame` is a scheduled resolver.
     path: join(__dirname, '../wineToolsFlowRegistration.ts'),
-    expectedCount: 2
+    expectedCount: 1
   },
   {
     name: 'shortcuts',
@@ -194,8 +195,9 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
   // Phase 87 Plan 26 (D-14): 39 -> 38, `getAlternativeWine` is a native `wine` channel.
   // Phase 87 Plan 34 (D-23): 38 -> 35, the three DXVK toggles are scheduled resolvers, not the modules' handles.
   // Phase 87 Plan 35 (D-23, D-14): 35 -> 30, the five Winetricks channels are resolvers or native channels.
-  it('extracts exactly 30 channels total', () => {
-    expect(allChannels).toHaveLength(30)
+  // Phase 87 Plan 36 (D-23): 30 -> 29, `runWineCommandForGame` is a scheduled resolver.
+  it('extracts exactly 29 channels total', () => {
+    expect(allChannels).toHaveLength(29)
   })
 
   it.each(MODULES)('$name has exactly $expectedCount channels', (spec) => {

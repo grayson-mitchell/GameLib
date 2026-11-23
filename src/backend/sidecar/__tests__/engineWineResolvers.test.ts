@@ -7,6 +7,7 @@
  */
 import {
   RUST_WINE_DXVK_INSTALL_REMOVE,
+  RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALLED
@@ -16,6 +17,7 @@ import { defined } from 'backend/testUtils/indexed'
 import { createIpcRegistry, type IpcRegistry } from '../ipcRegistry'
 import {
   registerEngineWineResolvers,
+  runWineCommandForGame,
   toggleDXVK,
   toggleDXVKNVAPI,
   toggleVKD3D,
@@ -36,10 +38,12 @@ function makeDeps(answer: unknown = true): EngineWineResolverDeps & {
   calls: Array<[string, unknown[]]>
   settingsFor: string[]
   targetFor: Array<[string, string, { ensureBottle: boolean }]>
+  factsFor: Array<[string, string, { pendingInstall: boolean }]>
 } {
   const calls: Array<[string, unknown[]]> = []
   const settingsFor: string[] = []
   const targetFor: Array<[string, string, { ensureBottle: boolean }]> = []
+  const factsFor: Array<[string, string, { pendingInstall: boolean }]> = []
   const requestRustInvoke = ((channel: string, args: unknown[]) => {
     calls.push([channel, args])
     return answer instanceof Error
@@ -65,9 +69,22 @@ function makeDeps(answer: unknown = true): EngineWineResolverDeps & {
         settings: TOOL_SETTINGS
       } as never)
     },
+    gameCommandFacts: (runner, appName, opts) => {
+      factsFor.push([runner, appName, opts])
+      return Promise.resolve({
+        runner,
+        appName,
+        settings: TOOL_SETTINGS,
+        steamEligible: true,
+        isNative: false,
+        folderName: 'Game Folder',
+        installPath: '/games/Game Folder'
+      } as never)
+    },
     calls,
     settingsFor,
-    targetFor
+    targetFor,
+    factsFor
   }
 }
 
@@ -174,7 +191,8 @@ describe('registerEngineWineResolvers', () => {
         ...Object.keys(tools),
         'winetricksApply',
         'winetricksAvailable',
-        'winetricksInstalled'
+        'winetricksInstalled',
+        'runWineCommandForGame'
       ].sort()
     )
   })
@@ -287,5 +305,161 @@ describe('winetricksInstalled', () => {
         [{ runner: 'legendary', appName: 'a-3', settings: TOOL_SETTINGS }]
       ]
     ])
+  })
+})
+
+// 87-36 (D-23): the wine command on a game. The resolver gathers the facts only TypeScript holds (`gameCommandFacts`),
+// then makes the one typed call; every guard is Rust's, so the resolver never judges the command.
+describe('runWineCommandForGame', () => {
+  const FACTS = {
+    runner: 'gog',
+    appName: 'app-1',
+    settings: TOOL_SETTINGS,
+    steamEligible: true,
+    isNative: false,
+    folderName: 'Game Folder',
+    installPath: '/games/Game Folder'
+  }
+
+  it('gathers the facts for a game and sends them with the command in one typed call', async () => {
+    const deps = makeDeps({ stdout: 'out', stderr: '', code: 0 })
+    const result = await runWineCommandForGame(deps, {
+      runner: 'gog',
+      appName: 'app-1',
+      commandParts: ['/games/Game Folder/fix.exe'],
+      wait: true,
+      protonVerb: 'run'
+    })
+    expect(result).toEqual({ stdout: 'out', stderr: '', code: 0 })
+    expect(deps.factsFor).toEqual([['gog', 'app-1', { pendingInstall: false }]])
+    expect(deps.calls).toEqual([
+      [
+        RUST_WINE_RUN_COMMAND_FOR_GAME,
+        [
+          {
+            ...FACTS,
+            pendingInstall: undefined,
+            commandParts: ['/games/Game Folder/fix.exe'],
+            wait: true,
+            protonVerb: 'run',
+            startFolder: undefined
+          }
+        ]
+      ]
+    ])
+  })
+
+  it('sends the commandParts exactly as they came, so the Rust shape guard (not this resolver) judges them', async () => {
+    const deps = makeDeps({ stdout: '', stderr: '' })
+    for (const commandParts of ['winecfg', [], null, [1], ["it's a path"]]) {
+      deps.calls.length = 0
+      await runWineCommandForGame(deps, {
+        runner: 'gog',
+        appName: 'app-1',
+        commandParts
+      })
+      const request = deps.calls[0]?.[1][0] as { commandParts: unknown }
+      expect(request.commandParts).toBe(commandParts)
+    }
+  })
+
+  it('asks for a pending install and passes the caller wait through for it', async () => {
+    const deps = makeDeps({ stdout: '', stderr: '' })
+    await runWineCommandForGame(deps, {
+      runner: 'sideload',
+      appName: 'a-2',
+      commandParts: ['setup.exe'],
+      wait: true,
+      pendingInstall: true
+    })
+    expect(deps.factsFor).toEqual([
+      ['sideload', 'a-2', { pendingInstall: true }]
+    ])
+    expect(deps.calls[0]?.[1][0]).toMatchObject({
+      pendingInstall: true,
+      wait: true
+    })
+  })
+
+  it("lets Rust's refusal reach the caller instead of swallowing it", async () => {
+    const deps = makeDeps(
+      new Error('wine_run_command_for_game:bad-command-parts')
+    )
+    await expect(
+      runWineCommandForGame(deps, {
+        runner: 'gog',
+        appName: 'app-1',
+        commandParts: 'nope'
+      })
+    ).rejects.toThrow('wine_run_command_for_game:bad-command-parts')
+  })
+
+  it('lets a facts failure reach the caller and makes no Rust call', async () => {
+    const deps = makeDeps(true)
+    deps.gameCommandFacts = () => Promise.reject(new Error('no such game'))
+    await expect(
+      runWineCommandForGame(deps, {
+        runner: 'gog',
+        appName: 'missing',
+        commandParts: ['winecfg']
+      })
+    ).rejects.toThrow('no such game')
+    expect(deps.calls).toEqual([])
+  })
+
+  describe('the renderer channel', () => {
+    it('runs the renderer command with wait false and runinprefix, whatever wait the renderer sent', async () => {
+      const deps = makeDeps({ stdout: '', stderr: '' })
+      registerEngineWineResolvers(deps)
+      await deps.registry.getHandler('runWineCommandForGame')?.({} as never, {
+        appName: 'app-1',
+        runner: 'gog',
+        commandParts: ["C:\\Games\\It's here\\a b.exe", '-x'],
+        wait: true
+      })
+      expect(deps.calls[0]?.[1][0]).toMatchObject({
+        runner: 'gog',
+        appName: 'app-1',
+        pendingInstall: false,
+        wait: false,
+        protonVerb: 'runinprefix',
+        commandParts: ["C:\\Games\\It's here\\a b.exe", '-x']
+      })
+    })
+
+    it('carries the wait only for a pending install, which is sideload only in Rust', async () => {
+      const deps = makeDeps({ stdout: '', stderr: '' })
+      registerEngineWineResolvers(deps)
+      await deps.registry.getHandler('runWineCommandForGame')?.({} as never, {
+        appName: 'a-2',
+        runner: 'sideload',
+        commandParts: ['setup.exe'],
+        wait: true,
+        pendingInstall: true
+      })
+      expect(deps.factsFor).toEqual([
+        ['sideload', 'a-2', { pendingInstall: true }]
+      ])
+      expect(deps.calls[0]?.[1][0]).toMatchObject({
+        pendingInstall: true,
+        wait: true
+      })
+    })
+
+    it('treats a non-boolean pendingInstall and wait as absent', async () => {
+      const deps = makeDeps({ stdout: '', stderr: '' })
+      registerEngineWineResolvers(deps)
+      await deps.registry.getHandler('runWineCommandForGame')?.({} as never, {
+        appName: 'app-1',
+        runner: 'gog',
+        commandParts: ['winecfg'],
+        wait: 'true',
+        pendingInstall: 'true'
+      })
+      expect(deps.calls[0]?.[1][0]).toMatchObject({
+        pendingInstall: false,
+        wait: false
+      })
+    })
   })
 })

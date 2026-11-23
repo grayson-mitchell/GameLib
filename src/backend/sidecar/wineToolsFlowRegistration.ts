@@ -47,7 +47,7 @@
  *     - `removeWineVersion`      -> native `wine` slice since Phase 87 (87-20, D-14); no handle here
  *     - `winetricksAvailable`    -> scheduled resolver since Phase 87 (87-35, D-23); no handle here
  *     - `winetricksInstalled`    -> scheduled resolver since Phase 87 (87-35, D-23); no handle here
- *     - `runWineCommandForGame`  -> tools/ipc_handler.ts (Phase 34.6 Plan 07, T-34.5-C6-49-03)
+ *     - `runWineCommandForGame`  -> scheduled resolver since Phase 87 (87-36, D-23); no handle here
  *     - `winetricksApply`           -> scheduled resolver since Phase 87 (87-35, D-23); no handle here
  *     - `winetricksQueueState`      -> native `wine` slice since Phase 87 (87-35, D-14); no handle here
  *     - `winetricksCancelRemaining` -> native `wine` slice since Phase 87 (87-35, D-14); no handle here
@@ -69,10 +69,8 @@ import type { OnlineMonitor } from '../online_monitor'
 import type { AppState } from '../host/appState'
 import type { IpcRegistry } from './ipcRegistry'
 import { wineReleasesInfoReady } from '../enginewine/wineManager'
-import { createTools, type ToolsDeps } from '../tools'
+import type { ToolsDeps } from '../tools'
 import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
-import { isWindows } from '../constants/environment'
-import { assertCommandParts } from './rendererPathGuard'
 import type { DialogBoxDeps, NotifyDeps } from '../dialog/dialog'
 import type { GlobalConfigSlice } from '../config'
 import type { GameConfigs } from '../game_config'
@@ -88,7 +86,7 @@ import type {
   StoreManagers,
   Stores
 } from 'backend/services/types'
-import type { Runner, WineCommandArgs } from 'common/types'
+import type { WineCommandArgs } from 'common/types'
 import type { WineToolsAsync } from 'common/types/ipc/wineTools'
 
 type WineToolsCommandArgs = Parameters<WineToolsAsync['runWineCommand']>[0]
@@ -125,7 +123,7 @@ export interface WineToolsFlowDeps
 }
 
 /**
- * Registers this cluster's 2 channels (2 invoke, 0 send — the three Winetricks resolvers (`winetricksApply`,
+ * Registers this cluster's 1 channel (1 invoke, 0 send — the three Winetricks resolvers (`winetricksApply`,
  * `winetricksAvailable`, `winetricksInstalled`) joined the three DXVK toggles in the scheduled resolvers of
  * `engineWineResolvers.ts` (Phase 87 Plans 34 and 35, D-23) and `winetricksQueueState` and
  * `winetricksCancelRemaining` moved to the Rust native `wine` slice (Plan 35, D-14); `winetricksInstall` retired, Phase 45
@@ -140,9 +138,6 @@ export interface WineToolsFlowDeps
  * `registrationOncePerBoot.test.ts`; a second boot in one process throws in `bootSidecar()`.
  */
 export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
-  const { runWineCommandOnGame, runWineCommandForPendingInstall } =
-    createTools(deps)
-
   // ── D-14 seam 3: `runWineCommand` (main.ts:766) ─────────────────────────────────────────────
   //
   // This is D-14's seam, not a new construction: `runWineCommand` is pure Node `child_process`
@@ -236,50 +231,8 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   // lives on in the crate: an empty component list is an acceptable result of a catalog read, never a platform
   // decline.
 
-  // T-34.5-C6-49-03 (Tampering, mitigate — HARDENED, Phase 34.6 Plan 11, REQ-34.6-05):
-  // `runWineCommandForGame` carries a renderer-supplied `commandParts` array reaching a Wine
-  // process. `assertCommandParts` is a SHAPE-ONLY guard (non-empty array of strings) — it never
-  // inspects argument content/characters, so a legitimate argument containing spaces or an
-  // apostrophe still passes; it exists to stop a malformed non-array/non-string value from
-  // reaching `spawnAsync`/`.join()` at all (T-34.6-31 crash-shaped DoS). The Windows branch's
-  // shell is REMOVED here: the old code handed a space-joined, renderer-supplied argv array to a
-  // shell (`execAsync` over a flattened string) — the flattening was the vulnerability, not the
-  // array itself.
-  // `spawnAsync` (`backend/utils.ts`, already used elsewhere in this codebase, non-shell
-  // `child_process.spawn`) is reused rather than introducing a new helper, passing `commandParts`
-  // through as an argv array exactly like the non-Windows `runWineCommandOnGame`/`launcher.ts`
-  // `runWineCommand` path already does. T-34.6-34 (accepted residual): this Windows branch is
-  // UNVERIFIED on real Windows hardware — every gate this project runs is macOS-only.
-  // CR-04: `pendingInstall` reaches a sideload-only path whose bottle name is computed server-side.
-  deps.ipc.handle(
-    'runWineCommandForGame',
-    async (_event: unknown, ...args: unknown[]) => {
-      const { appName, commandParts, runner, wait, pendingInstall } =
-        args[0] as {
-          appName: string
-          commandParts: string[]
-          runner: Runner
-          wait?: unknown
-          pendingInstall?: unknown
-        }
-      assertCommandParts(commandParts)
-      if (isWindows) {
-        const [command, ...commandArgs] = commandParts
-        return deps.spawnAsync(command, commandArgs)
-      }
-      if (pendingInstall === true) {
-        return runWineCommandForPendingInstall({
-          runner,
-          appName,
-          commandParts,
-          wait: wait === true
-        })
-      }
-      return runWineCommandOnGame(runner, appName, {
-        commandParts,
-        wait: false,
-        protonVerb: 'runinprefix'
-      })
-    }
-  )
+  // Phase 87 (87-36, D-23): `runWineCommandForGame` is a scheduled resolver (`sidecar/engineWineResolvers.ts`) over
+  // the Rust `wine_run_command_for_game` op; this module registers no handle for it (one owner, D-06). The shape guard
+  // on the renderer's `commandParts` (T-34.5-C6-49-03, hardened by 34.6-11), the Steam and native guards and the
+  // Windows branch (the program itself as an argv array, never a shell) are the crate's now, behind Rust tests.
 }

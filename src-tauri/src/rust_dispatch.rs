@@ -230,6 +230,9 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::WineWinetricksListInstalled => {
             wine_dispatch::rpc_wine_winetricks_list_installed(args)
         }
+        RustInvokeChannel::WineRunCommandForGame => {
+            wine_dispatch::rpc_wine_run_command_for_game(args)
+        }
         RustInvokeChannel::EngineSetOnline => engine_dispatch::rpc_engine_set_online(args),
     }
 }

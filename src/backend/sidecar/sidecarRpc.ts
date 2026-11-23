@@ -68,6 +68,7 @@ import {
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,
+  RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
   RUST_DIALOG_SAVE,
@@ -181,6 +182,9 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * `wine_winetricks_available` read the catalog, whose first read downloads the winetricks script and lists it;
  * `wine_winetricks_install` runs one winetricks per verb. None has a limit of its own beyond the app shutdown.
  * `wine_winetricks_installed` and `wine_winetricks_list_installed` read one log file and stay bounded.
+ *
+ * Eleventh (Phase 87, 87-36): `wine_run_command_for_game` runs one wine command on a game (a winecfg, an installer, a
+ * known-fix program with `wait` true): it ends with the program or the app shutdown, with no limit of its own.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -216,7 +220,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_WINE_DXVK_INSTALL_REMOVE,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
-  RUST_WINE_WINETRICKS_INSTALL
+  RUST_WINE_WINETRICKS_INSTALL,
+  RUST_WINE_RUN_COMMAND_FOR_GAME
 ]
 
 function isValidRequest(value: unknown): value is SidecarRpcRequest {

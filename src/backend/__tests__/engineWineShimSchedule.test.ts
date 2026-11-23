@@ -258,7 +258,7 @@ const SCHEDULE: readonly ScheduleRow[] = [
     inputs: ['gameSettings'],
     channel: 'RUST_WINE_DXVK_INSTALL_REMOVE',
     wiring: ['registerEngineWineResolvers'],
-    callers: ['src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   {
@@ -267,7 +267,7 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['gameSettings'],
     channel: 'RUST_WINE_DXVK_INSTALL_REMOVE',
-    callers: ['src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   {
@@ -276,7 +276,7 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['gameSettings'],
     channel: 'RUST_WINE_DXVK_INSTALL_REMOVE',
-    callers: ['src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   // 87-34 (D-15): the DXVK shim. The launcher's DXVK step and the still-TS engine's `installRemove`
@@ -319,7 +319,7 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['target'],
     channel: 'RUST_WINE_WINETRICKS_APPLY',
-    callers: ['src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   {
@@ -328,7 +328,7 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['target'],
     channel: 'RUST_WINE_WINETRICKS_AVAILABLE',
-    callers: ['src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   {
@@ -337,7 +337,23 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['target'],
     channel: 'RUST_WINE_WINETRICKS_INSTALLED',
-    callers: ['src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
+    deletedBy: 98
+  },
+  // Every resolver row now lists `launcher.ts` among its callers: it imports `engineWineResolvers.ts` for
+  // `runWineCommandForGame` (87-36), and the importer check is per file.
+  // 87-36 (D-23): the wine command on a game. `facts` is the game's library entry and tool settings
+  // (`services/gameCommandFacts.ts`: the native flag, the folder and install path, the Steam eligibility and the
+  // resolved settings or the reason there are none); every guard, the command-shape check and the spawn are Rust's.
+  // The renderer's channel and the launcher's known-fix `runInPrefix` step both call it. Phase 98 deletes it with the
+  // library and the config those read.
+  {
+    name: 'runWineCommandForGame',
+    file: 'src/backend/sidecar/engineWineResolvers.ts',
+    shape: 'resolver',
+    inputs: ['facts'],
+    channel: 'RUST_WINE_RUN_COMMAND_FOR_GAME',
+    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   // 87-26 (D-22 deviation, for the checker and the operator): `getDefaultWineBinary` is read synchronously by

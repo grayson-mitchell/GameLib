@@ -28,37 +28,50 @@ export type WinetricksTarget =
   | { runner: Runner; appName: string; unavailable: string }
 
 /**
- * Resolves the target for `runner`/`appName`. `ensureBottle` is true when the call is a need that creates the bottle
- * (an apply, a catalog read: a verb is a need) and false for a read of the installed list, which never creates one.
+ * Resolves the target for `runner`/`appName`, rejecting when the library, the game config or a resolver fails.
+ * `ensureBottle` is true when the call is a need that creates the bottle (an apply, a catalog read: a verb is a
+ * need, and so is a wine command) and false for a read of the installed list, which never creates one. The
+ * Winetricks resolvers use [`resolveWinetricksTarget`], which never rejects; a wine command on a game uses this one
+ * (`services/gameCommandFacts.ts`), where the TS handler let a failure reach the renderer.
  */
-export async function resolveWinetricksTarget(
+export async function resolveToolTarget(
   source: EngineServicesSource,
   runner: Runner,
   appName: string,
   { ensureBottle }: { ensureBottle: boolean }
 ): Promise<WinetricksTarget> {
-  try {
-    if (hasCapability(runner, 'usesBottleRuntime')) {
-      const { resolveSteamWineToolSettings } =
-        await import('backend/storeManagers/steam/bridgeWineTools')
-      const resolved = await resolveSteamWineToolSettings(
-        steamEngineServicesFrom(source),
-        appName
-      )
-      return resolved.kind === 'unavailable'
-        ? { runner, appName, unavailable: resolved.reason }
-        : { runner, appName, settings: resolved.settings }
-    }
-    const game = source.libraryManagers[runner].getGame(appName)
-    const resolved = await resolveToolSettings(
+  if (hasCapability(runner, 'usesBottleRuntime')) {
+    const { resolveSteamWineToolSettings } =
+      await import('backend/storeManagers/steam/bridgeWineTools')
+    const resolved = await resolveSteamWineToolSettings(
       steamEngineServicesFrom(source),
-      game,
-      await game.getSettings(),
-      { ensureBottle }
+      appName
     )
     return resolved.kind === 'unavailable'
       ? { runner, appName, unavailable: resolved.reason }
       : { runner, appName, settings: resolved.settings }
+  }
+  const game = source.libraryManagers[runner].getGame(appName)
+  const resolved = await resolveToolSettings(
+    steamEngineServicesFrom(source),
+    game,
+    await game.getSettings(),
+    { ensureBottle }
+  )
+  return resolved.kind === 'unavailable'
+    ? { runner, appName, unavailable: resolved.reason }
+    : { runner, appName, settings: resolved.settings }
+}
+
+/** [`resolveToolTarget`] that never rejects: a failure is logged and answers `unavailable` ("no-engine"). */
+export async function resolveWinetricksTarget(
+  source: EngineServicesSource,
+  runner: Runner,
+  appName: string,
+  opts: { ensureBottle: boolean }
+): Promise<WinetricksTarget> {
+  try {
+    return await resolveToolTarget(source, runner, appName, opts)
   } catch (error) {
     logError(
       [

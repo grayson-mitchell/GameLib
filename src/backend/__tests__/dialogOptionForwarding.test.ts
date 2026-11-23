@@ -246,7 +246,10 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // has a limit of its own beyond the shutdown. Not a dialog channel either.
     'RUST_WINE_WINETRICKS_APPLY',
     'RUST_WINE_WINETRICKS_AVAILABLE',
-    'RUST_WINE_WINETRICKS_INSTALL'
+    'RUST_WINE_WINETRICKS_INSTALL',
+    // Phase 87 plan 36: wine_run_command_for_game runs one wine command on a game (an installer, a known-fix
+    // program with wait true), ended by the program or the shutdown. Not a dialog channel either.
+    'RUST_WINE_RUN_COMMAND_FOR_GAME'
   ]
 
   test('contains exactly the dialog, depot, Rust CM, safety remove, wine runtime download and wine manager channels', () => {

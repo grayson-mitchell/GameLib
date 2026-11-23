@@ -70,6 +70,8 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   'Async:winetricksApply': 'wineTools',
   'Async:winetricksAvailable': 'wineTools',
   'Async:winetricksInstalled': 'wineTools',
+  // Phase 87 Plan 36 (D-23): the wine command on a game is a scheduled resolver.
+  'Async:runWineCommandForGame': 'wineTools',
   'Async:gamepadAction': 'testStubs',
   'Async:get-connectivity-status': 'mainProcess',
   'Async:getSignInProbeOutcomes': 'mainProcess',
@@ -352,7 +354,8 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     expect(computed).toEqual(NO_REGISTRATION_OWNER)
     // Phase 87 Plan 35 (D-23): +3 Async (winetricksApply, winetricksAvailable, winetricksInstalled, now scheduled
     // resolvers); owner-less allowlist 64 -> 67. winetricksQueueState and winetricksCancelRemaining became native channels.
-    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(67)
+    // Phase 87 Plan 36 (D-23): +1 Async (runWineCommandForGame, now a scheduled resolver); 67 -> 68.
+    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(68)
   })
 
   it('(d) near-miss: a manifest-owned channel leaves the computed owner-less set', () => {

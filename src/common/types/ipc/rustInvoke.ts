@@ -110,6 +110,7 @@ import {
   RUST_WINE_WINETRICKS_INSTALLED,
   RUST_WINE_WINETRICKS_INSTALL,
   RUST_WINE_WINETRICKS_LIST_INSTALLED,
+  RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_ENGINE_SET_ONLINE,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
@@ -887,6 +888,12 @@ export const rustInvokeArgs = {
     z.array(z.string().meta({ title: 'verb' })).meta({ title: 'verbs' })
   ]),
   [RUST_WINE_WINETRICKS_LIST_INSTALLED]: z.tuple([
+    z.unknown().meta({ title: 'request', 'x-rust-value': true })
+  ]),
+  // Phase 87 (SVC-02, 87-36): a wine command on a game. One object, the game facts and the command, opaque here and
+  // decoded strictly by the crate (`ForGameArgs`, deny_unknown_fields); the command's shape (`commandParts`) is
+  // the crate's guard to judge, so it travels as the renderer sent it. The wine host facts are the shell's.
+  [RUST_WINE_RUN_COMMAND_FOR_GAME]: z.tuple([
     z.unknown().meta({ title: 'request', 'x-rust-value': true })
   ]),
   // Phase 87 (SVC-02, 87-31): the sidecar online monitor's status, written through to the engine context.
