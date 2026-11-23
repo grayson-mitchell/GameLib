@@ -64,12 +64,14 @@ const ANTICHEAT_CALLERS = [
   'src/backend/sidecar/bootstrap.ts'
 ] as const
 
-/** Every importer of `info/wiki.ts` (86-23); `callers` is checked per file, so the three wiki rows share it. */
+/**
+ * Every importer of `info/wiki.ts` (86-23); `callers` is checked per file, so the three wiki rows share it.
+ * The GOG, Epic and Amazon store managers reach `getUmuId` through `resolveLaunchUmuId` (86-27, WR-41),
+ * so that helper is the importer and the three managers are not.
+ */
 const WIKI_CALLERS = [
   'src/backend/shortcuts/nonesteamgame/nonesteamgame.ts',
-  'src/backend/storeManagers/gog/games.ts',
-  'src/backend/storeManagers/legendary/games.ts',
-  'src/backend/storeManagers/nile/games.ts',
+  'src/backend/storeManagers/storeManagerCommon/umuGameId.ts',
   'src/backend/utils.ts'
 ] as const
 
@@ -200,8 +202,8 @@ const SCHEDULE: readonly ScheduleRow[] = [
     deletedBy: 92
   },
   // 86-23, wiki game info and umu. All three functions live in `info/wiki.ts`, and `callers` is per
-  // FILE, so each row lists every importer: the GOG, Epic and Amazon store managers (the umu id for
-  // the Linux launch GAMEID), the non-Steam shortcut flow (the wiki lookup for the Steam id) and
+  // FILE, so each row lists every importer: `resolveLaunchUmuId`, the best-effort helper the GOG, Epic and
+  // Amazon store managers call for the Linux launch GAMEID (86-27, WR-41), the non-Steam shortcut flow (the wiki lookup for the Steam id) and
   // `utils.ts` (`clearCache`'s wiki cache clear). `getUmuId` is a one-call shim; its callers are the
   // last library managers to port, so phase 92 deletes it. `getWikiGameInfo` is a RESOLVER (D-24):
   // the one input Rust cannot gather is the game, which lives in a library manager's memory, so it

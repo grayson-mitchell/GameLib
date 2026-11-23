@@ -40,7 +40,7 @@ import {
 import { removeNonSteamGame } from 'backend/shortcuts/nonesteamgame/nonesteamgame'
 import type { ShortcutsDeps } from 'backend/shortcuts/utils'
 import setup from './setup'
-import { getUmuId } from 'backend/info/wiki'
+import { resolveLaunchUmuId } from 'backend/storeManagers/storeManagerCommon/umuGameId'
 import { isWindows } from 'backend/constants/environment'
 
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
@@ -456,11 +456,11 @@ export default class NileGameManager implements Game {
       }
 
       if (await isUmuSupported(this.deps, gameSettings)) {
-        const umuId = (await getUmuId(
+        const umuId = await resolveLaunchUmuId(
           this.deps,
           gameInfo.app_name,
           gameInfo.runner
-        )) as string | null
+        )
         if (umuId) {
           commandEnv['GAMEID'] = umuId
         }
