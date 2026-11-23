@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-10-PLAN.md
-last_updated: "2026-11-23T02:24:52.578Z"
+stopped_at: Completed 87-11-PLAN.md
+last_updated: "2026-11-23T02:42:28.474Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 9f9fa3bd5ac304b9c0d79837d5a3246a64737ca4
+state_head: 0527ffe21e4cbe9c9c4ec4d42241c8bd290faa21
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 11 of 59
+Plan: 12 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -420,6 +420,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P08 | 8 min | 2 tasks | 345 files |
 | Phase 87 P09 | 20 min | 2 tasks | 407 files |
 | Phase 87 P10 | 35 min | 2 tasks | 468 files |
+| Phase 87 P11 | 55 min | 2 tasks | 901 files |
 
 ## Accumulated Context
 
@@ -851,6 +852,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: DXMT oracle calls each registered handler directly so a handler rejection is recorded; the TS tools oracles share toolsOracleSupport.ts (archive builder, platform pin, log capture)
 - [Phase 87]: 87-10: winetricks goldens drive the real tools with a scripted spawn tracer (streamed runs, scripted failures); every body synthetic, no live request
 - [Phase 87]: 87-10: the library lookup is a native-game double, so engine and bottle resolution stays out of the winetricks slice; a Steam title with no own bottle is the one unavailable case
+- [Phase 87]: the bottle goldens fix placeholder-normalised content hashes (a marker holds an absolute wineserver path) and the fixtures carry the shipped pin id and sha256, so a pin bump regenerates state/ and goldens
+- [Phase 87]: ensureGameBottle is recorded over the real createCrossoverBottle and createFallbackBottle with decide, resolveBinDir and ensurePin supplied; the engine-switch goldens over the same fixtures stay 87-16
 
 ### Pending Todos
 
@@ -1129,8 +1132,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T02:24:50.759Z
-Stopped at: Completed 87-10-PLAN.md
+Last session: 2026-11-23T02:42:26.624Z
+Stopped at: Completed 87-11-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
