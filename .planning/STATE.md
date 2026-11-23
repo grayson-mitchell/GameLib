@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 94
 current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 94-09-PLAN.md
-last_updated: "2026-11-23T23:22:33.030Z"
+stopped_at: Completed 94-12-PLAN.md
+last_updated: "2026-11-23T23:42:50.171Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 94 execution started
-state_head: b31640993196589d424423785237926455a1a84b
+state_head: 9217ad0c64c5f7c7d4d14b51426072d37821e5b4
 progress:
   total_phases: 22
   completed_phases: 23
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
-Plan: 9 of 32
-Status: Ready to execute (94-12 next; 94-07 is open, awaiting four macOS icon_geometry goldens that need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24; worktree-local STATE, D-02)
-Last activity: 2026-11-24 — Completed 94-09 (Humble user flows on a fake clock: login watch, disconnect, probe, health, verdict; the keyring-backed secret owner and its migration; expiry digest; Steam app-id resolver; user-agent vectors; i18n rows for the digest and shortcut toasts and Catalog::t_unescaped)
+Plan: 10 of 32
+Status: Ready to execute (94-12 complete; 94-11 next, wave 4; 94-07 is open, awaiting four macOS icon_geometry goldens that need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-12 (the Humble classifier in Rust: classify, a V8 date-parser port and an order-preserving JSON value replay all 492 recorded TS vectors; classify.test.ts's 116 tests carried over as named Rust tests; two copied-quirk todos)
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -479,6 +479,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P06 | 95min | 3 tasks | 22 files |
 | Phase 94 P08 | 190min | 3 tasks | 14 files |
 | Phase 94 P09 | 45min | 3 tasks | 314 files |
+| Phase 94 P12 | 75min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -1034,6 +1035,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-09: the digest date is pinned to en-US in the golden (the TS renders the host default locale) and i18next escapes its slashes (1&#x2F;2&#x2F;2027) in the OS notification: the Rust digest must choose to replicate or fix
 - [Phase 94]: 94-09: a dead cookie API (zero cookies from the first read) aborts the watch with error on the first tick; the 10-minute deadline is reached only by a live jar with no candidate or a window that never opens
 - [Phase 94]: 94-09: Catalog::t_unescaped is for the one dialog row the TS renders with escapeValue false, flagged per row in rendered.json; plural suffixes stay unported because the en count keys equal the base key
+- [Phase 94]: 94-12: classifier time values are i64 ms with a caller-supplied fixed-offset LocalZone (jiff::Timestamp cannot hold V8's range); host-zone source is for 94-15
+- [Phase 94]: 94-12: classify reads an order-preserving JsValue because Object.keys order is asserted and serde_json preserve_order is forbidden
 
 ### Pending Todos
 
@@ -1315,8 +1318,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T23:22:32.897Z
-Stopped at: Completed 94-09-PLAN.md
+Last session: 2026-11-23T23:42:50.035Z
+Stopped at: Completed 94-12-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
