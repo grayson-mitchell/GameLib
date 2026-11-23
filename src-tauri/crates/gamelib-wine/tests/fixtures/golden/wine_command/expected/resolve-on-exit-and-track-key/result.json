@@ -1,0 +1,14 @@
+{
+  "note": "resolveOnExit selects resolveOn exit; trackKey beats installFolderName and the prefix as the track key",
+  "commandPartsBefore": [
+    "game.exe"
+  ],
+  "commandPartsAfter": [
+    "game.exe"
+  ],
+  "result": {
+    "stderr": "",
+    "stdout": "",
+    "code": 0
+  }
+}

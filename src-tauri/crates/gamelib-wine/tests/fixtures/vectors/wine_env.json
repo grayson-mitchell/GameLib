@@ -1,0 +1,3088 @@
+[
+  {
+    "id": "env-linux-defaults",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "env-ld-preload-from-process",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {
+      "LD_PRELOAD": "/opt/synthetic/preload.so"
+    },
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {},
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "env-ld-preload-from-settings",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [
+        {
+          "key": "LD_PRELOAD",
+          "value": "/opt/synthetic/user.so"
+        }
+      ],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": "/opt/synthetic/user.so"
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "env-nvidia-prime",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": true,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "DRI_PRIME": "1",
+        "__NV_PRIME_RENDER_OFFLOAD": "1",
+        "__GLX_VENDOR_LIBRARY_NAME": "nvidia",
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "env-mac-show-fps",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": true,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "MTL_HUD_ENABLED": "1",
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "MTL_HUD_ENABLED": "1",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "env-linux-install-path",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "installPath": "<HOME>/Games/GameOne",
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "STEAM_COMPAT_INSTALL_PATH": "<HOME>/Games/GameOne",
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "env-mac-install-path-ignored",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "installPath": "<HOME>/Games/GameOne",
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "env-custom-quotes-and-overrides",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": true,
+      "showFps": false,
+      "enviromentOptions": [
+        {
+          "key": "MY_VAR",
+          "value": "\"quoted value\""
+        },
+        {
+          "key": "PLAIN",
+          "value": "a b"
+        },
+        {
+          "key": "DRI_PRIME",
+          "value": "0"
+        },
+        {
+          "key": "EMPTY",
+          "value": ""
+        }
+      ],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "DRI_PRIME": "0",
+        "__NV_PRIME_RENDER_OFFLOAD": "1",
+        "__GLX_VENDOR_LIBRARY_NAME": "nvidia",
+        "MY_VAR": "quoted value",
+        "PLAIN": "a b",
+        "EMPTY": "",
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "env-custom-unset-syntax",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [
+        {
+          "key": "WINEDEBUG",
+          "value": "-all"
+        },
+        {
+          "key": "UNSET_ME",
+          "value": ""
+        },
+        {
+          "key": "MANGOHUD_CONFIG",
+          "value": "\"cpu_temp,gpu_temp\""
+        }
+      ],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "WINEDEBUG": "-all",
+        "UNSET_ME": "",
+        "MANGOHUD_CONFIG": "cpu_temp,gpu_temp",
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "env-windows-defaults",
+    "platform": "windows",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-libs-no-probes",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-gstreamer-both",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [
+      "<TOOLS>/wine/Wine-9/lib64/gstreamer-1.0/",
+      "<TOOLS>/wine/Wine-9/lib/gstreamer-1.0/"
+    ],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib",
+        "GST_PLUGIN_SYSTEM_PATH_1_0": "<TOOLS>/wine/Wine-9/lib64/gstreamer-1.0:<TOOLS>/wine/Wine-9/lib/gstreamer-1.0"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-gstreamer-one-only",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [
+      "<TOOLS>/wine/Wine-9/lib64/gstreamer-1.0/"
+    ],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-winedll-both",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [
+      "<TOOLS>/wine/Wine-9/lib64/wine/",
+      "<TOOLS>/wine/Wine-9/lib/wine/"
+    ],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib",
+        "WINEDLLPATH": "<TOOLS>/wine/Wine-9/lib64/wine:<TOOLS>/wine/Wine-9/lib/wine"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-winedll-one-only",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [
+      "<TOOLS>/wine/Wine-9/lib/wine/"
+    ],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-both-probes",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [
+      "<TOOLS>/wine/Wine-9/lib64/gstreamer-1.0/",
+      "<TOOLS>/wine/Wine-9/lib/gstreamer-1.0/",
+      "<TOOLS>/wine/Wine-9/lib64/wine/",
+      "<TOOLS>/wine/Wine-9/lib/wine/"
+    ],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib",
+        "GST_PLUGIN_SYSTEM_PATH_1_0": "<TOOLS>/wine/Wine-9/lib64/gstreamer-1.0:<TOOLS>/wine/Wine-9/lib/gstreamer-1.0",
+        "WINEDLLPATH": "<TOOLS>/wine/Wine-9/lib64/wine:<TOOLS>/wine/Wine-9/lib/wine"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-orig-ld-set-in-process",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {
+      "ORIG_LD_LIBRARY_PATH": "/opt/synthetic/orig",
+      "LD_LIBRARY_PATH": "/opt/synthetic/ld"
+    },
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib:/opt/synthetic/ld"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-ld-library-path-appended",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {
+      "LD_LIBRARY_PATH": "/opt/synthetic/ld-a:/opt/synthetic/ld-b"
+    },
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "/opt/synthetic/ld-a:/opt/synthetic/ld-b",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib:/opt/synthetic/ld-a:/opt/synthetic/ld-b"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-prefer-system-libs",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": true,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-no-lib-paths",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver"
+      }
+    },
+    "env": {
+      "LD_LIBRARY_PATH": "/opt/synthetic/ld"
+    },
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "/opt/synthetic/ld"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-only-lib32",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": ""
+      }
+    }
+  },
+  {
+    "id": "wine-mac-no-lib-paths",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": ""
+      }
+    }
+  },
+  {
+    "id": "wine-mac-with-libs",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine Crossover - 9.0",
+        "bin": "<TOOLS>/wine/mac/Contents/Resources/wine/bin/wine64",
+        "wineserver": "<TOOLS>/wine/mac/Contents/Resources/wine/bin/wineserver",
+        "lib": "<TOOLS>/wine/mac/Contents/Resources/wine/lib",
+        "lib32": "<TOOLS>/wine/mac/Contents/Resources/wine/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/mac/Contents/Resources/wine/lib:<TOOLS>/wine/mac/Contents/Resources/wine/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-dlloverrides-appended",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [
+        {
+          "key": "WINEDLLOVERRIDES",
+          "value": "d3d11=n"
+        }
+      ],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "WINEDLLOVERRIDES": "d3d11=n",
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "d3d11=n;winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-dlloverrides-key-case-insensitive",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [
+        {
+          "key": "WineDllOverrides",
+          "value": "dxgi=n"
+        }
+      ],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "WineDllOverrides": "dxgi=n",
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WineDllOverrides": "dxgi=n;winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-esync-fsync",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": true,
+      "enableMsync": false,
+      "enableFsync": true,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "WINEESYNC": "1",
+        "WINEFSYNC": "1",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-sync-off",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-wayland-hdr",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": true,
+      "enableHDR": true,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "DISPLAY": "",
+        "DXVK_HDR": "1",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-wayland-no-hdr",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": true,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "DISPLAY": "",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-wow64",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": true,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "WINEARCH": "wow64",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-nvapi",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": true,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "DXVK_ENABLE_NVAPI": "1",
+        "DXVK_NVAPI_ALLOW_OTHER_DRIVERS": "1",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-mac-nvapi-ignored",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": true,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine Crossover - 9.0",
+        "bin": "<TOOLS>/wine/mac/Contents/Resources/wine/bin/wine64",
+        "wineserver": "<TOOLS>/wine/mac/Contents/Resources/wine/bin/wineserver",
+        "lib": "<TOOLS>/wine/mac/Contents/Resources/wine/lib",
+        "lib32": "<TOOLS>/wine/mac/Contents/Resources/wine/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/mac/Contents/Resources/wine/lib:<TOOLS>/wine/mac/Contents/Resources/wine/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-runtimes",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": true,
+      "battlEyeRuntime": true,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "PROTON_EAC_RUNTIME": "<TOOLS>/runtimes/eac_runtime",
+        "PROTON_BATTLEYE_RUNTIME": "<TOOLS>/runtimes/battleye_runtime",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-fsr-default-sharpness",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": true,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "1",
+        "WINE_FULLSCREEN_FSR_STRENGTH": "2",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-fsr-sharpness-zero",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": true,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "maxSharpness": 0,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "1",
+        "WINE_FULLSCREEN_FSR_STRENGTH": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-fsr-sharpness-five",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": true,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "maxSharpness": 5,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "1",
+        "WINE_FULLSCREEN_FSR_STRENGTH": "5",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-fps-cap-and-hud",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": true,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": true,
+      "DXVKFpsCap": "144",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "DXVK_HUD": "fps",
+        "DXVK_FRAME_RATE": "144",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-mac-msync",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": true,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine Crossover - 9.0",
+        "bin": "<TOOLS>/wine/mac/Contents/Resources/wine/bin/wine64",
+        "wineserver": "<TOOLS>/wine/mac/Contents/Resources/wine/bin/wineserver",
+        "lib": "<TOOLS>/wine/mac/Contents/Resources/wine/lib",
+        "lib32": "<TOOLS>/wine/mac/Contents/Resources/wine/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "WINEMSYNC": "1",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/mac/Contents/Resources/wine/lib:<TOOLS>/wine/mac/Contents/Resources/wine/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-mac-dxmt-name-implies-msync",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-Staging-DXMT",
+        "bin": "<TOOLS>/wine/mac/Contents/Resources/wine/bin/wine64",
+        "wineserver": "<TOOLS>/wine/mac/Contents/Resources/wine/bin/wineserver",
+        "lib": "<TOOLS>/wine/mac/Contents/Resources/wine/lib",
+        "lib32": "<TOOLS>/wine/mac/Contents/Resources/wine/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "WINEMSYNC": "1",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/mac/Contents/Resources/wine/lib:<TOOLS>/wine/mac/Contents/Resources/wine/lib"
+      }
+    }
+  },
+  {
+    "id": "wine-linux-deprecated-ge-name",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-GE-Proton7-35",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib",
+        "SteamVirtualGamepadInfo": ""
+      }
+    }
+  },
+  {
+    "id": "wine-linux-modern-ge-name",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-GE-Proton8-26",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib",
+        "SteamVirtualGamepadInfo": ""
+      }
+    }
+  },
+  {
+    "id": "wine-windows-prefix-only",
+    "platform": "windows",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib"
+      }
+    }
+  },
+  {
+    "id": "proton-linux-defaults",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "gameId": "GameOne",
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+        "PROTONPATH": "<TOOLS>/proton/GE-Proton9-27",
+        "WINE_FULLSCREEN_FSR": "0",
+        "PROTON_NO_ESYNC": "1",
+        "PROTON_NO_FSYNC": "1",
+        "PROTON_DISABLE_NVAPI": "1",
+        "STEAM_COMPAT_APP_ID": "0",
+        "SteamAppId": "0",
+        "SteamGameId": "heroic-GameOne",
+        "PROTON_LOG_DIR": "<HOME>"
+      }
+    }
+  },
+  {
+    "id": "proton-linux-no-gameid-uses-zero",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+        "PROTONPATH": "<TOOLS>/proton/GE-Proton9-27",
+        "WINE_FULLSCREEN_FSR": "0",
+        "PROTON_NO_ESYNC": "1",
+        "PROTON_NO_FSYNC": "1",
+        "PROTON_DISABLE_NVAPI": "1",
+        "STEAM_COMPAT_APP_ID": "0",
+        "SteamAppId": "0",
+        "SteamGameId": "heroic-0",
+        "PROTON_LOG_DIR": "<HOME>"
+      }
+    }
+  },
+  {
+    "id": "proton-linux-sync-on",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": true,
+      "enableMsync": false,
+      "enableFsync": true,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+        "PROTONPATH": "<TOOLS>/proton/GE-Proton9-27",
+        "WINE_FULLSCREEN_FSR": "0",
+        "PROTON_DISABLE_NVAPI": "1",
+        "STEAM_COMPAT_APP_ID": "0",
+        "SteamAppId": "0",
+        "SteamGameId": "heroic-0",
+        "PROTON_LOG_DIR": "<HOME>"
+      }
+    }
+  },
+  {
+    "id": "proton-linux-wayland-hdr",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": true,
+      "enableHDR": true,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+        "PROTONPATH": "<TOOLS>/proton/GE-Proton9-27",
+        "WINE_FULLSCREEN_FSR": "0",
+        "PROTON_NO_ESYNC": "1",
+        "PROTON_NO_FSYNC": "1",
+        "PROTON_ENABLE_WAYLAND": "1",
+        "PROTON_ENABLE_HDR": "1",
+        "PROTON_DISABLE_NVAPI": "1",
+        "STEAM_COMPAT_APP_ID": "0",
+        "SteamAppId": "0",
+        "SteamGameId": "heroic-0",
+        "PROTON_LOG_DIR": "<HOME>"
+      }
+    }
+  },
+  {
+    "id": "proton-linux-wow64",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": true,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+        "PROTONPATH": "<TOOLS>/proton/GE-Proton9-27",
+        "WINE_FULLSCREEN_FSR": "0",
+        "PROTON_NO_ESYNC": "1",
+        "PROTON_NO_FSYNC": "1",
+        "PROTON_USE_WOW64": "1",
+        "PROTON_DISABLE_NVAPI": "1",
+        "STEAM_COMPAT_APP_ID": "0",
+        "SteamAppId": "0",
+        "SteamGameId": "heroic-0",
+        "PROTON_LOG_DIR": "<HOME>"
+      }
+    }
+  },
+  {
+    "id": "proton-linux-nvapi",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": true,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+        "PROTONPATH": "<TOOLS>/proton/GE-Proton9-27",
+        "WINE_FULLSCREEN_FSR": "0",
+        "PROTON_NO_ESYNC": "1",
+        "PROTON_NO_FSYNC": "1",
+        "PROTON_ENABLE_NVAPI": "1",
+        "DXVK_NVAPI_ALLOW_OTHER_DRIVERS": "1",
+        "STEAM_COMPAT_APP_ID": "0",
+        "SteamAppId": "0",
+        "SteamGameId": "heroic-0",
+        "PROTON_LOG_DIR": "<HOME>"
+      }
+    }
+  },
+  {
+    "id": "proton-linux-runtimes",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": true,
+      "battlEyeRuntime": true,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+        "PROTONPATH": "<TOOLS>/proton/GE-Proton9-27",
+        "WINE_FULLSCREEN_FSR": "0",
+        "PROTON_NO_ESYNC": "1",
+        "PROTON_NO_FSYNC": "1",
+        "PROTON_DISABLE_NVAPI": "1",
+        "PROTON_EAC_RUNTIME": "<TOOLS>/runtimes/eac_runtime",
+        "PROTON_BATTLEYE_RUNTIME": "<TOOLS>/runtimes/battleye_runtime",
+        "STEAM_COMPAT_APP_ID": "0",
+        "SteamAppId": "0",
+        "SteamGameId": "heroic-0",
+        "PROTON_LOG_DIR": "<HOME>"
+      }
+    }
+  },
+  {
+    "id": "proton-steam-ids-from-process",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "gameId": "GameOne",
+    "env": {
+      "STEAM_COMPAT_APP_ID": "480",
+      "SteamAppId": "481",
+      "SteamGameId": "482"
+    },
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+        "PROTONPATH": "<TOOLS>/proton/GE-Proton9-27",
+        "WINE_FULLSCREEN_FSR": "0",
+        "PROTON_NO_ESYNC": "1",
+        "PROTON_NO_FSYNC": "1",
+        "PROTON_DISABLE_NVAPI": "1",
+        "STEAM_COMPAT_APP_ID": "480",
+        "SteamAppId": "481",
+        "SteamGameId": "482",
+        "PROTON_LOG_DIR": "<HOME>"
+      }
+    }
+  },
+  {
+    "id": "proton-steam-appid-follows-compat-id",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "env": {
+      "STEAM_COMPAT_APP_ID": "480"
+    },
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+        "PROTONPATH": "<TOOLS>/proton/GE-Proton9-27",
+        "WINE_FULLSCREEN_FSR": "0",
+        "PROTON_NO_ESYNC": "1",
+        "PROTON_NO_FSYNC": "1",
+        "PROTON_DISABLE_NVAPI": "1",
+        "STEAM_COMPAT_APP_ID": "480",
+        "SteamAppId": "480",
+        "SteamGameId": "heroic-0",
+        "PROTON_LOG_DIR": "<HOME>"
+      }
+    }
+  },
+  {
+    "id": "proton-verbose-logs",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": true,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+        "PROTONPATH": "<TOOLS>/proton/GE-Proton9-27",
+        "WINE_FULLSCREEN_FSR": "0",
+        "PROTON_NO_ESYNC": "1",
+        "PROTON_NO_FSYNC": "1",
+        "PROTON_DISABLE_NVAPI": "1",
+        "STEAM_COMPAT_APP_ID": "0",
+        "SteamAppId": "0",
+        "SteamGameId": "heroic-0",
+        "PROTON_LOG_DIR": "<HOME>",
+        "WINEDEBUG": "+fixme",
+        "DXVK_LOG_LEVEL": "info",
+        "VKD3D_DEBUG": "fixme"
+      }
+    }
+  },
+  {
+    "id": "proton-verbose-logs-user-keys-win",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [
+        {
+          "key": "WINEDEBUG",
+          "value": "-all"
+        },
+        {
+          "key": "DXVK_LOG_LEVEL",
+          "value": "none"
+        }
+      ],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": true,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "WINEDEBUG": "-all",
+        "DXVK_LOG_LEVEL": "none",
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+        "PROTONPATH": "<TOOLS>/proton/GE-Proton9-27",
+        "WINE_FULLSCREEN_FSR": "0",
+        "PROTON_NO_ESYNC": "1",
+        "PROTON_NO_FSYNC": "1",
+        "PROTON_DISABLE_NVAPI": "1",
+        "STEAM_COMPAT_APP_ID": "0",
+        "SteamAppId": "0",
+        "SteamGameId": "heroic-0",
+        "PROTON_LOG_DIR": "<HOME>",
+        "VKD3D_DEBUG": "fixme"
+      }
+    }
+  },
+  {
+    "id": "proton-mac-prefix-vars",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+        "PROTONPATH": "<TOOLS>/proton/GE-Proton9-27",
+        "WINE_FULLSCREEN_FSR": "0",
+        "PROTON_NO_ESYNC": "1",
+        "PROTON_DISABLE_NVAPI": "1",
+        "STEAM_COMPAT_APP_ID": "0",
+        "SteamAppId": "0",
+        "SteamGameId": "heroic-0",
+        "PROTON_LOG_DIR": "<HOME>"
+      }
+    }
+  },
+  {
+    "id": "crossover-mac-bottle",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "GameLibSteam",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "crossover",
+        "name": "CrossOver - 24.0.0",
+        "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "CX_BOTTLE": "GameLibSteam",
+        "WINE_FULLSCREEN_FSR": "0"
+      }
+    }
+  },
+  {
+    "id": "crossover-mac-show-fps-and-msync",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": true,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "Other Bottle",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": true,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "crossover",
+        "name": "CrossOver - 24.0.0",
+        "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "MTL_HUD_ENABLED": "1",
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "CX_BOTTLE": "Other Bottle",
+        "MTL_HUD_ENABLED": "1",
+        "WINE_FULLSCREEN_FSR": "0",
+        "WINEMSYNC": "1"
+      }
+    }
+  },
+  {
+    "id": "toolkit-mac-defaults",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "toolkit",
+        "name": "GPTK-3",
+        "bin": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+        "wineserver": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+        "lib": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+        "lib32": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINE_FULLSCREEN_FSR": "0"
+      }
+    }
+  },
+  {
+    "id": "toolkit-mac-msync-sets-esync",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": true,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "wineVersion": {
+        "type": "toolkit",
+        "name": "GPTK-3",
+        "bin": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+        "wineserver": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+        "lib": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+        "lib32": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINE_FULLSCREEN_FSR": "0",
+        "WINEMSYNC": "1",
+        "WINEESYNC": "1"
+      }
+    }
+  },
+  {
+    "id": "toolkit-mac-avx",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": true,
+      "wineVersion": {
+        "type": "toolkit",
+        "name": "GPTK-3",
+        "bin": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+        "wineserver": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+        "lib": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+        "lib32": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ROSETTA_ADVERTISE_AVX": "1"
+      }
+    }
+  },
+  {
+    "id": "wine-mac-avx-ignored",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": true,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine Crossover - 9.0",
+        "bin": "<TOOLS>/wine/mac/Contents/Resources/wine/bin/wine64",
+        "wineserver": "<TOOLS>/wine/mac/Contents/Resources/wine/bin/wineserver",
+        "lib": "<TOOLS>/wine/mac/Contents/Resources/wine/lib",
+        "lib32": "<TOOLS>/wine/mac/Contents/Resources/wine/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINE_FULLSCREEN_FSR": "0",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/mac/Contents/Resources/wine/lib:<TOOLS>/wine/mac/Contents/Resources/wine/lib"
+      }
+    }
+  },
+  {
+    "id": "toolkit-linux-avx-ignored",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": true,
+      "wineVersion": {
+        "type": "toolkit",
+        "name": "GPTK-3",
+        "bin": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+        "wineserver": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+        "lib": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+        "lib32": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib"
+      }
+    },
+    "env": {},
+    "existing": [],
+    "expected": {
+      "setupEnvVars": {
+        "LD_PRELOAD": ""
+      },
+      "setupWineEnvVars": {
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINE_FULLSCREEN_FSR": "0"
+      }
+    }
+  }
+]

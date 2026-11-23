@@ -1,0 +1,53 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton/GE-Proton9-27",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton/GE-Proton9-27/proton",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Games",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/prefix",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/prefix/pfx",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/prefix/pfx/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  }
+]

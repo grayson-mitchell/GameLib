@@ -1,0 +1,17 @@
+{
+  "note": "a custom protonVerb is the first argv element and PROTON_VERB",
+  "commandPartsBefore": [
+    "setup.exe",
+    "/S"
+  ],
+  "commandPartsAfter": [
+    "waitforexitandrun",
+    "setup.exe",
+    "/S"
+  ],
+  "result": {
+    "stderr": "",
+    "stdout": "",
+    "code": 0
+  }
+}

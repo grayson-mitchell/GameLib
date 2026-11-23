@@ -1,0 +1,16 @@
+{
+  "note": "wine type, prefix present, wait: the command then wineserver --wait with the same env and cwd",
+  "commandPartsBefore": [
+    "explorer.exe",
+    "C:\\game.exe"
+  ],
+  "commandPartsAfter": [
+    "explorer.exe",
+    "C:\\game.exe"
+  ],
+  "result": {
+    "stderr": "warn-line\n",
+    "stdout": "out-line\n",
+    "code": 0
+  }
+}

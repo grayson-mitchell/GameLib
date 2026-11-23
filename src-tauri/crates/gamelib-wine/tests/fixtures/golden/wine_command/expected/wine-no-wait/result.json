@@ -1,0 +1,14 @@
+{
+  "note": "no wait: no wineserver call, the exit code is passed through",
+  "commandPartsBefore": [
+    "notepad.exe"
+  ],
+  "commandPartsAfter": [
+    "notepad.exe"
+  ],
+  "result": {
+    "stderr": "",
+    "stdout": "",
+    "code": 3
+  }
+}

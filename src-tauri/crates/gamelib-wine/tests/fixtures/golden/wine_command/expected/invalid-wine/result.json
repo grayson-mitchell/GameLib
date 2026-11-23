@@ -1,0 +1,13 @@
+{
+  "note": "the wine binary is missing: the result is { stdout: \"\", stderr: \"Invalid wine\" } and nothing runs",
+  "commandPartsBefore": [
+    "game.exe"
+  ],
+  "commandPartsAfter": [
+    "game.exe"
+  ],
+  "result": {
+    "stdout": "",
+    "stderr": "Invalid wine"
+  }
+}

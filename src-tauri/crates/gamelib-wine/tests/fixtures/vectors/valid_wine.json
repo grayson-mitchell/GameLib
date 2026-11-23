@@ -1,0 +1,286 @@
+[
+  {
+    "id": "wine-both-present",
+    "platform": "linux",
+    "wineVersion": {
+      "type": "wine",
+      "name": "Wine-9",
+      "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+      "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+      "lib": "<TOOLS>/wine/Wine-9/lib64",
+      "lib32": "<TOOLS>/wine/Wine-9/lib"
+    },
+    "existing": [
+      "<TOOLS>/wine/Wine-9/bin/wine",
+      "<TOOLS>/wine/Wine-9/bin/wineserver"
+    ],
+    "expected": true
+  },
+  {
+    "id": "wine-bin-only",
+    "platform": "linux",
+    "wineVersion": {
+      "type": "wine",
+      "name": "Wine-9",
+      "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+      "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+      "lib": "<TOOLS>/wine/Wine-9/lib64",
+      "lib32": "<TOOLS>/wine/Wine-9/lib"
+    },
+    "existing": [
+      "<TOOLS>/wine/Wine-9/bin/wine"
+    ],
+    "expected": false
+  },
+  {
+    "id": "wine-wineserver-only",
+    "platform": "linux",
+    "wineVersion": {
+      "type": "wine",
+      "name": "Wine-9",
+      "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+      "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+      "lib": "<TOOLS>/wine/Wine-9/lib64",
+      "lib32": "<TOOLS>/wine/Wine-9/lib"
+    },
+    "existing": [
+      "<TOOLS>/wine/Wine-9/bin/wineserver"
+    ],
+    "expected": false
+  },
+  {
+    "id": "wine-none-present",
+    "platform": "linux",
+    "wineVersion": {
+      "type": "wine",
+      "name": "Wine-9",
+      "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+      "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+      "lib": "<TOOLS>/wine/Wine-9/lib64",
+      "lib32": "<TOOLS>/wine/Wine-9/lib"
+    },
+    "existing": [],
+    "expected": false
+  },
+  {
+    "id": "wine-no-wineserver-field",
+    "platform": "linux",
+    "wineVersion": {
+      "type": "wine",
+      "name": "Wine-9",
+      "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+      "lib": "<TOOLS>/wine/Wine-9/lib64",
+      "lib32": "<TOOLS>/wine/Wine-9/lib"
+    },
+    "existing": [
+      "<TOOLS>/wine/Wine-9/bin/wine"
+    ],
+    "expected": false
+  },
+  {
+    "id": "wine-empty-wineserver-field",
+    "platform": "linux",
+    "wineVersion": {
+      "type": "wine",
+      "name": "Wine-9",
+      "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+      "wineserver": "",
+      "lib": "<TOOLS>/wine/Wine-9/lib64",
+      "lib32": "<TOOLS>/wine/Wine-9/lib"
+    },
+    "existing": [
+      "<TOOLS>/wine/Wine-9/bin/wine"
+    ],
+    "expected": false
+  },
+  {
+    "id": "wine-mac-both-present",
+    "platform": "mac",
+    "wineVersion": {
+      "type": "wine",
+      "name": "Wine Crossover - 9.0",
+      "bin": "<TOOLS>/wine/mac/Contents/Resources/wine/bin/wine64",
+      "wineserver": "<TOOLS>/wine/mac/Contents/Resources/wine/bin/wineserver",
+      "lib": "<TOOLS>/wine/mac/Contents/Resources/wine/lib",
+      "lib32": "<TOOLS>/wine/mac/Contents/Resources/wine/lib"
+    },
+    "existing": [
+      "<TOOLS>/wine/mac/Contents/Resources/wine/bin/wine64",
+      "<TOOLS>/wine/mac/Contents/Resources/wine/bin/wineserver"
+    ],
+    "expected": true
+  },
+  {
+    "id": "wine-windows-both-present",
+    "platform": "windows",
+    "wineVersion": {
+      "type": "wine",
+      "name": "Wine-9",
+      "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+      "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+      "lib": "<TOOLS>/wine/Wine-9/lib64",
+      "lib32": "<TOOLS>/wine/Wine-9/lib"
+    },
+    "existing": [
+      "<TOOLS>/wine/Wine-9/bin/wine",
+      "<TOOLS>/wine/Wine-9/bin/wineserver"
+    ],
+    "expected": true
+  },
+  {
+    "id": "proton-bin-present",
+    "platform": "linux",
+    "wineVersion": {
+      "type": "proton",
+      "name": "GE-Proton9-27",
+      "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+    },
+    "existing": [
+      "<TOOLS>/proton/GE-Proton9-27/proton"
+    ],
+    "expected": true
+  },
+  {
+    "id": "proton-bin-missing",
+    "platform": "linux",
+    "wineVersion": {
+      "type": "proton",
+      "name": "GE-Proton9-27",
+      "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+    },
+    "existing": [],
+    "expected": false
+  },
+  {
+    "id": "proton-wineserver-not-needed",
+    "platform": "linux",
+    "wineVersion": {
+      "type": "proton",
+      "name": "GE-Proton9-27",
+      "bin": "<TOOLS>/proton/GE-Proton9-27/proton",
+      "wineserver": "<TOOLS>/proton/missing/wineserver"
+    },
+    "existing": [
+      "<TOOLS>/proton/GE-Proton9-27/proton"
+    ],
+    "expected": true
+  },
+  {
+    "id": "crossover-bin-present",
+    "platform": "mac",
+    "wineVersion": {
+      "type": "crossover",
+      "name": "CrossOver - 24.0.0",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+    },
+    "existing": [
+      "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+    ],
+    "expected": true
+  },
+  {
+    "id": "crossover-bin-missing",
+    "platform": "mac",
+    "wineVersion": {
+      "type": "crossover",
+      "name": "CrossOver - 24.0.0",
+      "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+      "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+    },
+    "existing": [
+      "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+    ],
+    "expected": false
+  },
+  {
+    "id": "toolkit-present-recent-macos",
+    "platform": "mac",
+    "release": "24.1.0",
+    "wineVersion": {
+      "type": "toolkit",
+      "name": "GPTK-3",
+      "bin": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+      "wineserver": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+      "lib": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+      "lib32": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib"
+    },
+    "existing": [
+      "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64"
+    ],
+    "expected": true
+  },
+  {
+    "id": "toolkit-present-darwin-14",
+    "platform": "mac",
+    "release": "14.0.0",
+    "wineVersion": {
+      "type": "toolkit",
+      "name": "GPTK-3",
+      "bin": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+      "wineserver": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+      "lib": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+      "lib32": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib"
+    },
+    "existing": [
+      "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64"
+    ],
+    "expected": true
+  },
+  {
+    "id": "toolkit-present-old-darwin-13",
+    "platform": "mac",
+    "release": "13.6.0",
+    "wineVersion": {
+      "type": "toolkit",
+      "name": "GPTK-3",
+      "bin": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+      "wineserver": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+      "lib": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+      "lib32": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib"
+    },
+    "existing": [
+      "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64"
+    ],
+    "expected": false
+  },
+  {
+    "id": "toolkit-missing-recent-macos",
+    "platform": "mac",
+    "release": "24.1.0",
+    "wineVersion": {
+      "type": "toolkit",
+      "name": "GPTK-3",
+      "bin": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+      "wineserver": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+      "lib": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+      "lib32": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib"
+    },
+    "existing": [],
+    "expected": false
+  },
+  {
+    "id": "toolkit-linux-skips-os-check",
+    "platform": "linux",
+    "release": "13.6.0",
+    "wineVersion": {
+      "type": "toolkit",
+      "name": "GPTK-3",
+      "bin": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64",
+      "wineserver": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wineserver",
+      "lib": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib",
+      "lib32": "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/lib"
+    },
+    "existing": [
+      "<TOOLS>/game-porting-toolkit/GPTK-3/Contents/Resources/wine/bin/wine64"
+    ],
+    "expected": true
+  },
+  {
+    "id": "no-wine-version",
+    "platform": "linux",
+    "wineVersion": null,
+    "existing": [],
+    "expected": false
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "note": "crossover skips the prefix check, sets CX_BOTTLE and has no WINEPREFIX; wineserver --wait runs",
+  "commandPartsBefore": [
+    "game.exe"
+  ],
+  "commandPartsAfter": [
+    "game.exe"
+  ],
+  "result": {
+    "stderr": "",
+    "stdout": "",
+    "code": 0
+  }
+}

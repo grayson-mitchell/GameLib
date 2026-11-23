@@ -1,0 +1,32 @@
+[
+  {
+    "kind": "warning",
+    "message": "Required prefix files are missing, running `verifyWinePrefix` to create prefix"
+  },
+  {
+    "kind": "runOptions",
+    "program": "<TOOLS>/proton/GE-Proton9-27/proton",
+    "replaceEnv": true,
+    "track": {
+      "runner": "wine",
+      "key": "<HOME>/Games/prefix"
+    },
+    "resolveOn": "close",
+    "timeoutMs": null,
+    "timeoutNone": true,
+    "windowsHide": false
+  },
+  {
+    "kind": "runOptions",
+    "program": "<TOOLS>/proton/GE-Proton9-27/proton",
+    "replaceEnv": true,
+    "track": {
+      "runner": "wine",
+      "key": "<HOME>/Games/prefix"
+    },
+    "resolveOn": "close",
+    "timeoutMs": null,
+    "timeoutNone": true,
+    "windowsHide": false
+  }
+]

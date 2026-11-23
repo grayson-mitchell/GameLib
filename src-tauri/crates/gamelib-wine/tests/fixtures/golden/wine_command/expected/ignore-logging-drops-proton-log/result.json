@@ -1,0 +1,15 @@
+{
+  "note": "ignoreLogging deletes PROTON_LOG even when the settings set it; options.env is merged before the settings env",
+  "commandPartsBefore": [
+    "game.exe"
+  ],
+  "commandPartsAfter": [
+    "run",
+    "game.exe"
+  ],
+  "result": {
+    "stderr": "",
+    "stdout": "",
+    "code": 0
+  }
+}

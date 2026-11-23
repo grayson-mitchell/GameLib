@@ -1,0 +1,13 @@
+{
+  "note": "validWine tests the binary as stored, quotes included, so a quoted bin is Invalid wine before the later quote strip is reached",
+  "commandPartsBefore": [
+    "game.exe"
+  ],
+  "commandPartsAfter": [
+    "game.exe"
+  ],
+  "result": {
+    "stdout": "",
+    "stderr": "Invalid wine"
+  }
+}

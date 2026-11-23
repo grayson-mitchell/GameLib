@@ -1,0 +1,15 @@
+{
+  "note": "a partly present proton prefix counts as missing; proton has no wineserver, so there is no wait",
+  "commandPartsBefore": [
+    "game.exe"
+  ],
+  "commandPartsAfter": [
+    "run",
+    "game.exe"
+  ],
+  "result": {
+    "stderr": "",
+    "stdout": "",
+    "code": 0
+  }
+}

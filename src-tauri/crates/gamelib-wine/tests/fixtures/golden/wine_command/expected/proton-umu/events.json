@@ -1,0 +1,15 @@
+[
+  {
+    "kind": "runOptions",
+    "program": "<HOME>/scripted-bin/umu-run",
+    "replaceEnv": true,
+    "track": {
+      "runner": "wine",
+      "key": "Game One"
+    },
+    "resolveOn": "close",
+    "timeoutMs": null,
+    "timeoutNone": true,
+    "windowsHide": false
+  }
+]

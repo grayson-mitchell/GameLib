@@ -1,0 +1,14 @@
+{
+  "note": "no gameSettings: the default settings are used",
+  "commandPartsBefore": [
+    "winecfg"
+  ],
+  "commandPartsAfter": [
+    "winecfg"
+  ],
+  "result": {
+    "stderr": "",
+    "stdout": "",
+    "code": 0
+  }
+}

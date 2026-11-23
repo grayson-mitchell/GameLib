@@ -1,0 +1,15 @@
+{
+  "note": "umu allowed but umu-run is neither on PATH nor at defaultUmuPath: proton runs directly",
+  "commandPartsBefore": [
+    "game.exe"
+  ],
+  "commandPartsAfter": [
+    "run",
+    "game.exe"
+  ],
+  "result": {
+    "stderr": "",
+    "stdout": "",
+    "code": 0
+  }
+}

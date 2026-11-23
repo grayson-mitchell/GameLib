@@ -1,0 +1,16 @@
+{
+  "note": "the first wrapper is the program and the rest precede the wine binary in argv",
+  "commandPartsBefore": [
+    "game.exe"
+  ],
+  "commandPartsAfter": [
+    "mangohud",
+    "<TOOLS>/wine/Wine-9/bin/wine",
+    "game.exe"
+  ],
+  "result": {
+    "stderr": "",
+    "stdout": "",
+    "code": 0
+  }
+}

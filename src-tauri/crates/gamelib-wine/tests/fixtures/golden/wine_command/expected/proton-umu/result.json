@@ -1,0 +1,14 @@
+{
+  "note": "umu-run on PATH: it is the binary and the verb is not unshifted",
+  "commandPartsBefore": [
+    "game.exe"
+  ],
+  "commandPartsAfter": [
+    "game.exe"
+  ],
+  "result": {
+    "stderr": "",
+    "stdout": "",
+    "code": 0
+  }
+}

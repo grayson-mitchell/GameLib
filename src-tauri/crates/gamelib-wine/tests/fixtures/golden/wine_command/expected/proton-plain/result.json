@@ -1,0 +1,15 @@
+{
+  "note": "proton with UMU disabled: the verb is unshifted into argv and PROTON_VERB is run",
+  "commandPartsBefore": [
+    "<HOME>/Games/GameOne/game.exe"
+  ],
+  "commandPartsAfter": [
+    "run",
+    "<HOME>/Games/GameOne/game.exe"
+  ],
+  "result": {
+    "stderr": "",
+    "stdout": "",
+    "code": 0
+  }
+}

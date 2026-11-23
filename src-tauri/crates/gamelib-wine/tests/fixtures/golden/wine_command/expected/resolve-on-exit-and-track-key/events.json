@@ -1,0 +1,15 @@
+[
+  {
+    "kind": "runOptions",
+    "program": "<TOOLS>/wine/Wine-9/bin/wine",
+    "replaceEnv": true,
+    "track": {
+      "runner": "wine",
+      "key": "custom-track"
+    },
+    "resolveOn": "exit",
+    "timeoutMs": null,
+    "timeoutNone": true,
+    "windowsHide": false
+  }
+]

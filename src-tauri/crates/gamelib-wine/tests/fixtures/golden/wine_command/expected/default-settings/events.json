@@ -1,0 +1,15 @@
+[
+  {
+    "kind": "runOptions",
+    "program": "<TOOLS>/wine/Wine-9/bin/wine",
+    "replaceEnv": true,
+    "track": {
+      "runner": "wine",
+      "key": "<HOME>/Games/prefix"
+    },
+    "resolveOn": "close",
+    "timeoutMs": null,
+    "timeoutNone": true,
+    "windowsHide": false
+  }
+]

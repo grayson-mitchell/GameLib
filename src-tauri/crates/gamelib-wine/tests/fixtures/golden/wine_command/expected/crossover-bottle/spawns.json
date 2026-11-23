@@ -1,0 +1,48 @@
+[
+  {
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "game.exe"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLibSteam",
+        "LD_PRELOAD": "",
+        "PROTON_VERB": "run",
+        "WINE_FULLSCREEN_FSR": "0"
+      },
+      "unset": []
+    },
+    "cwd": "<HOME>/Games/GameOne",
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+    "argv": [
+      "--wait"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLibSteam",
+        "LD_PRELOAD": "",
+        "PROTON_VERB": "run",
+        "WINE_FULLSCREEN_FSR": "0"
+      },
+      "unset": []
+    },
+    "cwd": "<HOME>/Games/GameOne",
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

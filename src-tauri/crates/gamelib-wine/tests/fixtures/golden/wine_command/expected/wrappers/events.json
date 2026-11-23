@@ -1,0 +1,15 @@
+[
+  {
+    "kind": "runOptions",
+    "program": "gamemoderun",
+    "replaceEnv": true,
+    "track": {
+      "runner": "wine",
+      "key": "<HOME>/Games/prefix"
+    },
+    "resolveOn": "close",
+    "timeoutMs": null,
+    "timeoutNone": true,
+    "windowsHide": false
+  }
+]

@@ -1,0 +1,1368 @@
+[
+  {
+    "id": "wine-wait",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [
+        {
+          "key": "MY_VAR",
+          "value": "\"quoted value\""
+        }
+      ],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wine",
+        "text": ""
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/dosdevices",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/drive_c",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/system.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/user.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/userdef.reg",
+        "text": ""
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "explorer.exe",
+        "C:\\game.exe"
+      ],
+      "wait": true,
+      "installFolderName": "Game One",
+      "gameInstallPath": "<HOME>/Games/GameOne",
+      "startFolder": "<HOME>/Games/GameOne"
+    },
+    "scripted": [
+      {
+        "program": "<TOOLS>/wine/Wine-9/bin/wine",
+        "argv": [
+          "explorer.exe",
+          "C:\\game.exe"
+        ],
+        "code": 0,
+        "stdout": "out-line\n",
+        "stderr": "warn-line\n"
+      },
+      {
+        "program": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "argv": [
+          "--wait"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "note": "wine type, prefix present, wait: the command then wineserver --wait with the same env and cwd"
+  },
+  {
+    "id": "wine-no-wait",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wine",
+        "text": ""
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/dosdevices",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/drive_c",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/system.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/user.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/userdef.reg",
+        "text": ""
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "notepad.exe"
+      ],
+      "wait": false
+    },
+    "scripted": [
+      {
+        "program": "<TOOLS>/wine/Wine-9/bin/wine",
+        "argv": [
+          "notepad.exe"
+        ],
+        "code": 3,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "note": "no wait: no wineserver call, the exit code is passed through"
+  },
+  {
+    "id": "proton-plain",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": true,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx.lock",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/tracked_files",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/version",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/config_info",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/dosdevices",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/drive_c",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/system.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/user.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/userdef.reg",
+        "text": ""
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/GameOne/game.exe"
+      ],
+      "installFolderName": "Game One",
+      "startFolder": "<HOME>/Games/GameOne"
+    },
+    "scripted": [
+      {
+        "program": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "argv": [
+          "run",
+          "<HOME>/Games/GameOne/game.exe"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "note": "proton with UMU disabled: the verb is unshifted into argv and PROTON_VERB is run"
+  },
+  {
+    "id": "proton-no-umu-installed",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": false,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx.lock",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/tracked_files",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/version",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/config_info",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/dosdevices",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/drive_c",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/system.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/user.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/userdef.reg",
+        "text": ""
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "game.exe"
+      ]
+    },
+    "scripted": [
+      {
+        "program": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "argv": [
+          "run",
+          "game.exe"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "note": "umu allowed but umu-run is neither on PATH nor at defaultUmuPath: proton runs directly"
+  },
+  {
+    "id": "proton-umu",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": false,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx.lock",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/tracked_files",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/version",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/config_info",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/dosdevices",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/drive_c",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/system.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/user.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/userdef.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/scripted-bin/umu-run",
+        "text": "",
+        "mode": "0755"
+      }
+    ],
+    "path": [
+      "<HOME>/scripted-bin"
+    ],
+    "args": {
+      "commandParts": [
+        "game.exe"
+      ],
+      "installFolderName": "Game One"
+    },
+    "scripted": [
+      {
+        "program": "<HOME>/scripted-bin/umu-run",
+        "argv": [
+          "game.exe"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "note": "umu-run on PATH: it is the binary and the verb is not unshifted"
+  },
+  {
+    "id": "proton-custom-verb",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": true,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx.lock",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/tracked_files",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/version",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/config_info",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/dosdevices",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/drive_c",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/system.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/user.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/userdef.reg",
+        "text": ""
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "setup.exe",
+        "/S"
+      ],
+      "protonVerb": "waitforexitandrun"
+    },
+    "scripted": [
+      {
+        "program": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "argv": [
+          "waitforexitandrun",
+          "setup.exe",
+          "/S"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "note": "a custom protonVerb is the first argv element and PROTON_VERB"
+  },
+  {
+    "id": "crossover-bottle",
+    "platform": "mac",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "GameLibSteam",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": false,
+      "wineVersion": {
+        "type": "crossover",
+        "name": "CrossOver - 24.0.0",
+        "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+      }
+    },
+    "seed": [
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+        "text": ""
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "game.exe"
+      ],
+      "wait": true,
+      "startFolder": "<HOME>/Games/GameOne"
+    },
+    "scripted": [
+      {
+        "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "argv": [
+          "game.exe"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+        "argv": [
+          "--wait"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "note": "crossover skips the prefix check, sets CX_BOTTLE and has no WINEPREFIX; wineserver --wait runs"
+  },
+  {
+    "id": "missing-prefix-verify",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wine",
+        "text": ""
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "text": ""
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "game.exe"
+      ],
+      "wait": false
+    },
+    "scripted": [
+      {
+        "program": "<TOOLS>/wine/Wine-9/bin/wine",
+        "argv": [
+          "wineboot",
+          "--init"
+        ],
+        "code": 0,
+        "stdout": "boot\n",
+        "stderr": ""
+      },
+      {
+        "program": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "argv": [
+          "--wait"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "program": "<TOOLS>/wine/Wine-9/bin/wine",
+        "argv": [
+          "game.exe"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "note": "the prefix is absent: a warning, the prefix directory is made, verifyWinePrefix runs wineboot --init (waiting, as system.reg is missing), then the command"
+  },
+  {
+    "id": "partial-proton-prefix-verify",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": true,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/drive_c",
+        "dir": true
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "game.exe"
+      ]
+    },
+    "scripted": [
+      {
+        "program": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "argv": [
+          "run",
+          "wineboot",
+          "--init"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "program": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "argv": [
+          "run",
+          "game.exe"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "note": "a partly present proton prefix counts as missing; proton has no wineserver, so there is no wait"
+  },
+  {
+    "id": "invalid-wine",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/dosdevices",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/drive_c",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/system.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/user.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/userdef.reg",
+        "text": ""
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "game.exe"
+      ]
+    },
+    "scripted": [],
+    "note": "the wine binary is missing: the result is { stdout: \"\", stderr: \"Invalid wine\" } and nothing runs"
+  },
+  {
+    "id": "invalid-wine-missing-wineserver",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wine",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/dosdevices",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/drive_c",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/system.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/user.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/userdef.reg",
+        "text": ""
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "game.exe"
+      ]
+    },
+    "scripted": [],
+    "note": "wine needs both binaries; a missing wineserver is invalid"
+  },
+  {
+    "id": "default-settings",
+    "platform": "linux",
+    "useDefaultSettings": true,
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wine",
+        "text": ""
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/dosdevices",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/drive_c",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/system.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/user.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/userdef.reg",
+        "text": ""
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "winecfg"
+      ]
+    },
+    "scripted": [
+      {
+        "program": "<TOOLS>/wine/Wine-9/bin/wine",
+        "argv": [
+          "winecfg"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "note": "no gameSettings: the default settings are used"
+  },
+  {
+    "id": "wrappers",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wine",
+        "text": ""
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/dosdevices",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/drive_c",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/system.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/user.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/userdef.reg",
+        "text": ""
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "game.exe"
+      ],
+      "options": {
+        "wrappers": [
+          "gamemoderun",
+          "mangohud"
+        ]
+      }
+    },
+    "scripted": [
+      {
+        "program": "gamemoderun",
+        "argv": [
+          "mangohud",
+          "<TOOLS>/wine/Wine-9/bin/wine",
+          "game.exe"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "note": "the first wrapper is the program and the rest precede the wine binary in argv"
+  },
+  {
+    "id": "quoted-bin-is-invalid-wine",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "'<TOOLS>/wine/Wine-9/bin/wine'",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wine",
+        "text": ""
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/dosdevices",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/drive_c",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/system.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/user.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/userdef.reg",
+        "text": ""
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "game.exe"
+      ]
+    },
+    "scripted": [],
+    "note": "validWine tests the binary as stored, quotes included, so a quoted bin is Invalid wine before the later quote strip is reached"
+  },
+  {
+    "id": "ignore-logging-drops-proton-log",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [
+        {
+          "key": "PROTON_LOG",
+          "value": "1"
+        }
+      ],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": true,
+      "wineVersion": {
+        "type": "proton",
+        "name": "GE-Proton9-27",
+        "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx.lock",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/tracked_files",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/version",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/config_info",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/dosdevices",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/drive_c",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/system.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/user.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/pfx/userdef.reg",
+        "text": ""
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "game.exe"
+      ],
+      "ignoreLogging": true,
+      "options": {
+        "env": {
+          "FROM_OPTIONS": "yes",
+          "PROTON_LOG": "1"
+        }
+      }
+    },
+    "scripted": [
+      {
+        "program": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "argv": [
+          "run",
+          "game.exe"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "note": "ignoreLogging deletes PROTON_LOG even when the settings set it; options.env is merged before the settings env"
+  },
+  {
+    "id": "resolve-on-exit-and-track-key",
+    "platform": "linux",
+    "settings": {
+      "nvidiaPrime": false,
+      "showFps": false,
+      "enviromentOptions": [],
+      "winePrefix": "<HOME>/Games/prefix",
+      "wineCrossoverBottle": "",
+      "enableDXVKFpsLimit": false,
+      "DXVKFpsCap": "60",
+      "enableFSR": false,
+      "enableEsync": false,
+      "enableMsync": false,
+      "enableFsync": false,
+      "enableWineWayland": false,
+      "enableHDR": false,
+      "enableWoW64": false,
+      "autoInstallDxvkNvapi": false,
+      "eacRuntime": false,
+      "battlEyeRuntime": false,
+      "verboseLogs": false,
+      "preferSystemLibs": false,
+      "advertiseAvxForRosetta": false,
+      "disableUMU": false,
+      "wineVersion": {
+        "type": "wine",
+        "name": "Wine-9",
+        "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+        "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "lib": "<TOOLS>/wine/Wine-9/lib64",
+        "lib32": "<TOOLS>/wine/Wine-9/lib"
+      }
+    },
+    "seed": [
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wine",
+        "text": ""
+      },
+      {
+        "path": "<TOOLS>/wine/Wine-9/bin/wineserver",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/dosdevices",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/drive_c",
+        "dir": true
+      },
+      {
+        "path": "<HOME>/Games/prefix/system.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/user.reg",
+        "text": ""
+      },
+      {
+        "path": "<HOME>/Games/prefix/userdef.reg",
+        "text": ""
+      }
+    ],
+    "args": {
+      "commandParts": [
+        "game.exe"
+      ],
+      "resolveOnExit": true,
+      "options": {
+        "trackKey": "custom-track"
+      },
+      "installFolderName": "Game One"
+    },
+    "scripted": [
+      {
+        "program": "<TOOLS>/wine/Wine-9/bin/wine",
+        "argv": [
+          "game.exe"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "note": "resolveOnExit selects resolveOn exit; trackKey beats installFolderName and the prefix as the track key"
+  }
+]

@@ -1,0 +1,41 @@
+[
+  {
+    "kind": "runOptions",
+    "program": "<TOOLS>/wine/Wine-9/bin/wine",
+    "replaceEnv": true,
+    "track": {
+      "runner": "wine",
+      "key": "Game One"
+    },
+    "resolveOn": "close",
+    "timeoutMs": null,
+    "timeoutNone": true,
+    "windowsHide": false
+  },
+  {
+    "kind": "logWriter",
+    "text": "out-line\n"
+  },
+  {
+    "kind": "output",
+    "data": "out-line\n"
+  },
+  {
+    "kind": "logWriter",
+    "text": "warn-line\n"
+  },
+  {
+    "kind": "output",
+    "data": "warn-line\n"
+  },
+  {
+    "kind": "runOptions",
+    "program": "<TOOLS>/wine/Wine-9/bin/wineserver",
+    "replaceEnv": true,
+    "track": null,
+    "resolveOn": null,
+    "timeoutMs": 1800000,
+    "timeoutNone": false,
+    "windowsHide": false
+  }
+]

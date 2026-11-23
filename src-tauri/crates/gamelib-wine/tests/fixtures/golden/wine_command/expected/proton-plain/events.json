@@ -1,0 +1,15 @@
+[
+  {
+    "kind": "runOptions",
+    "program": "<TOOLS>/proton/GE-Proton9-27/proton",
+    "replaceEnv": true,
+    "track": {
+      "runner": "wine",
+      "key": "Game One"
+    },
+    "resolveOn": "close",
+    "timeoutMs": null,
+    "timeoutNone": true,
+    "windowsHide": false
+  }
+]

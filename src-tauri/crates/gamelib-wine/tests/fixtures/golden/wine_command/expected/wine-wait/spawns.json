@@ -1,0 +1,59 @@
+[
+  {
+    "program": "<TOOLS>/wine/Wine-9/bin/wine",
+    "argv": [
+      "explorer.exe",
+      "C:\\game.exe"
+    ],
+    "envDiff": {
+      "set": {
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib",
+        "LD_PRELOAD": "",
+        "MY_VAR": "quoted value",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "PROTON_VERB": "run",
+        "STEAM_COMPAT_INSTALL_PATH": "<HOME>/Games/GameOne",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINE_FULLSCREEN_FSR": "0"
+      },
+      "unset": []
+    },
+    "cwd": "<HOME>/Games/GameOne",
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "out-line\n",
+      "stderr": "warn-line\n"
+    }
+  },
+  {
+    "program": "<TOOLS>/wine/Wine-9/bin/wineserver",
+    "argv": [
+      "--wait"
+    ],
+    "envDiff": {
+      "set": {
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib",
+        "LD_PRELOAD": "",
+        "MY_VAR": "quoted value",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "PROTON_VERB": "run",
+        "STEAM_COMPAT_INSTALL_PATH": "<HOME>/Games/GameOne",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINE_FULLSCREEN_FSR": "0"
+      },
+      "unset": []
+    },
+    "cwd": "<HOME>/Games/GameOne",
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

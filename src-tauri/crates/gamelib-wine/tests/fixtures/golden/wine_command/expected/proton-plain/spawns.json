@@ -1,0 +1,36 @@
+[
+  {
+    "program": "<TOOLS>/proton/GE-Proton9-27/proton",
+    "argv": [
+      "run",
+      "<HOME>/Games/GameOne/game.exe"
+    ],
+    "envDiff": {
+      "set": {
+        "LD_PRELOAD": "",
+        "PROTONPATH": "<TOOLS>/proton/GE-Proton9-27",
+        "PROTON_DISABLE_NVAPI": "1",
+        "PROTON_LOG_DIR": "<HOME>",
+        "PROTON_NO_ESYNC": "1",
+        "PROTON_NO_FSYNC": "1",
+        "PROTON_VERB": "run",
+        "STEAM_COMPAT_APP_ID": "0",
+        "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+        "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+        "SteamAppId": "0",
+        "SteamGameId": "heroic-Game One",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINE_FULLSCREEN_FSR": "0"
+      },
+      "unset": []
+    },
+    "cwd": "<HOME>/Games/GameOne",
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

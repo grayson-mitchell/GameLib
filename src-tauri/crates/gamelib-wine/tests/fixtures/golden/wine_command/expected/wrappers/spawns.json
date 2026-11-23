@@ -1,0 +1,30 @@
+[
+  {
+    "program": "gamemoderun",
+    "argv": [
+      "mangohud",
+      "<TOOLS>/wine/Wine-9/bin/wine",
+      "game.exe"
+    ],
+    "envDiff": {
+      "set": {
+        "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib",
+        "LD_PRELOAD": "",
+        "ORIG_LD_LIBRARY_PATH": "",
+        "PROTON_VERB": "run",
+        "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+        "WINEPREFIX": "<HOME>/Games/prefix",
+        "WINE_FULLSCREEN_FSR": "0"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

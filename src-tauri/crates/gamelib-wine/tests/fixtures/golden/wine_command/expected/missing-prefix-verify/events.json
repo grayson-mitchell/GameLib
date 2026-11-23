@@ -1,0 +1,42 @@
+[
+  {
+    "kind": "warning",
+    "message": "Required prefix files are missing, running `verifyWinePrefix` to create prefix"
+  },
+  {
+    "kind": "runOptions",
+    "program": "<TOOLS>/wine/Wine-9/bin/wine",
+    "replaceEnv": true,
+    "track": {
+      "runner": "wine",
+      "key": "<HOME>/Games/prefix"
+    },
+    "resolveOn": "close",
+    "timeoutMs": null,
+    "timeoutNone": true,
+    "windowsHide": false
+  },
+  {
+    "kind": "runOptions",
+    "program": "<TOOLS>/wine/Wine-9/bin/wineserver",
+    "replaceEnv": true,
+    "track": null,
+    "resolveOn": null,
+    "timeoutMs": 1800000,
+    "timeoutNone": false,
+    "windowsHide": false
+  },
+  {
+    "kind": "runOptions",
+    "program": "<TOOLS>/wine/Wine-9/bin/wine",
+    "replaceEnv": true,
+    "track": {
+      "runner": "wine",
+      "key": "<HOME>/Games/prefix"
+    },
+    "resolveOn": "close",
+    "timeoutMs": null,
+    "timeoutNone": true,
+    "windowsHide": false
+  }
+]

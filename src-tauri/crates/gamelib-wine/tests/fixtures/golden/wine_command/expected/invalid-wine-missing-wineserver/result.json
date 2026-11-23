@@ -1,0 +1,13 @@
+{
+  "note": "wine needs both binaries; a missing wineserver is invalid",
+  "commandPartsBefore": [
+    "game.exe"
+  ],
+  "commandPartsAfter": [
+    "game.exe"
+  ],
+  "result": {
+    "stdout": "",
+    "stderr": "Invalid wine"
+  }
+}

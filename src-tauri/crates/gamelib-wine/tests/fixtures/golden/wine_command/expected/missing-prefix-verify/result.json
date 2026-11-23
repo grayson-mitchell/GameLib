@@ -1,0 +1,14 @@
+{
+  "note": "the prefix is absent: a warning, the prefix directory is made, verifyWinePrefix runs wineboot --init (waiting, as system.reg is missing), then the command",
+  "commandPartsBefore": [
+    "game.exe"
+  ],
+  "commandPartsAfter": [
+    "game.exe"
+  ],
+  "result": {
+    "stderr": "",
+    "stdout": "",
+    "code": 0
+  }
+}
