@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-39-PLAN.md
-last_updated: "2026-11-23T12:35:17.911Z"
+stopped_at: Completed 87-40-PLAN.md
+last_updated: "2026-11-23T12:57:20.401Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 4eaf54e0b8639627cd8dd1162fbe29c3ddc09c66
+state_head: c3ddfc3c27cf86ae7c1286c4d2dafcf244d7ef6a
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 40 of 59
+Plan: 41 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -449,6 +449,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P37 | 23min | 2 tasks | 87 files |
 | Phase 87 P38 | 16min | 2 tasks | 14 files |
 | Phase 87 P39 | 23 min | 2 tasks | 17 files |
+| Phase 87 P40 | n/a | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -945,6 +946,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: EngineCtx holds the running-games ledger and the engine registry as in-memory mutex-guarded maps; engine_bottle_is_provisioned answers false for an unsafe bottle name — EngineCtx holds the running-games ledger and the engine registry as in-memory mutex-guarded maps; engine_bottle_is_provisioned answers false for an unsafe bottle name
 - [Phase 87]: 87-39: removal checks the name (one clean segment directly under the Bottles root) before gamelib-safety remove_tree with the Bottles trust root; an unresolvable root or a symlinked bottle never reaches a sibling
 - [Phase 87]: 87-39: twin.ts exports six helpers beyond the ten planned names (deletedBy 87 rows) because the still-TS marker writer shares them with the readers; 87-56 makes them private
+- [Phase 87]: 87-40: the switch ports every branch but the CrossOver restore and the per-bottle serialisation (50 of 73 goldens replay); a restoring switch answers restore-pending before touching anything — the unported restore can never half-switch a bottle; 87-41 empties the LATER list
+- [Phase 87]: 87-40: engine arguments to engine_bottle_prepare and engine_bottle_create_fallback must sit inside the pinned-engine root or tools/wine; create_fallback_bottle refuses an unclean name — the sidecar names programs the creation and the DXVK installer spawn (T-87-82); the TS had no check
+- [Phase 87]: 87-40: the switch returns its selection and registers it only on request (register_selection); 87-42 registers as the TS callers did — the TS switch never touched the registry and the goldens' logs carry no registry line
 
 ### Pending Todos
 
@@ -1225,8 +1229,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T12:35:15.456Z
-Stopped at: Completed 87-39-PLAN.md
+Last session: 2026-11-23T12:57:17.909Z
+Stopped at: Completed 87-40-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
