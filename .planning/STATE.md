@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 87-53-PLAN.md
-last_updated: "2026-11-23T17:24:46.859Z"
+last_updated: "2026-11-23T17:35:55.639Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 81249b84b0ff8ac8a832d13aa6daab55977c6b57
+state_head: de33de9b2c558009d1fe28d8ec762799d469b89d
 progress:
   total_phases: 20
   completed_phases: 23
@@ -1070,6 +1070,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261123-bbi | Refresh buttons spin at least 1 s per click via useMinimumSpin (Humble Keys acceptance; Library header, Wine Manager, error screen, wiki refresh/Retry) | 2026-11-23 | 17cf992c2 | — | [261123-bbi-refresh-buttons-spin-at-least-1s-per-cli](./quick/261123-bbi-refresh-buttons-spin-at-least-1s-per-cli/) |
 | 261123-pnl | GameLib Light clean retheme: light chrome, single accent, neutral greys | 2026-11-23 | 3d588119a | — | [261123-pnl-gamelib-light-clean-retheme-light-chrome](./quick/261123-pnl-gamelib-light-clean-retheme-light-chrome/) |
 | 261123-txk | Ranged five-connection download for wine and fallback-engine archives | 2026-11-23 | a1c5f9a21 | — | [261123-txk-ranged-five-connection-download-for-wine](./quick/261123-txk-ranged-five-connection-download-for-wine/) |
+| 261124-8f3 | Bottle-port quirks: is_bottle_provisioned refuses unclean names (item 5), prefix resolver refuses padded CrossOver bottle names (item 6); other quirks closed as intended | 2026-11-24 | de33de9b2 | — | [261124-8f3-bottle-port-quirks-sanitise-is-bottle-pr](./quick/261124-8f3-bottle-port-quirks-sanitise-is-bottle-pr/) |
 
 ## Deferred Items
 
