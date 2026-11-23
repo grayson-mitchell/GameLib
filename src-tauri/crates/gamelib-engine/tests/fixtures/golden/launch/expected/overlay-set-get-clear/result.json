@@ -1,0 +1,292 @@
+{
+  "note": "the overlay context is set, read, replaced and cleared; no selection means the stored settings come back",
+  "steps": [
+    {
+      "step": {
+        "op": "overlay",
+        "action": "get"
+      },
+      "context": null,
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": null,
+        "overlay": null,
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      },
+      "key": "legendary:Quail",
+      "returned": {
+        "winePrefix": "<HOME>/old-prefix"
+      },
+      "sameObject": true,
+      "inputUnchanged": true,
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": null,
+        "overlay": null,
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "prime",
+        "selection": "crossover",
+        "prefix": "bottle"
+      },
+      "accepted": true,
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          }
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "overlay",
+        "action": "get"
+      },
+      "context": {
+        "prefix": {
+          "kind": "bottle",
+          "bottleName": "GameLib-legendary-Quail"
+        }
+      },
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          }
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      },
+      "key": "legendary:Quail",
+      "returned": {
+        "winePrefix": "<HOME>/old-prefix",
+        "wineCrossoverBottle": "GameLib-legendary-Quail",
+        "wineVersion": {
+          "type": "crossover",
+          "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+          "name": "CrossOver 26.3.0.39832",
+          "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+        }
+      },
+      "sameObject": false,
+      "inputUnchanged": true,
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          }
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "overlay",
+        "action": "set",
+        "prefix": "bottle",
+        "binDir": "<HOME>/Other/bin"
+      },
+      "context": {
+        "prefix": {
+          "kind": "bottle",
+          "bottleName": "GameLib-legendary-Quail"
+        },
+        "binDir": "<HOME>/Other/bin"
+      },
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Other/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      },
+      "key": "legendary:Quail",
+      "returned": {
+        "winePrefix": "<HOME>/old-prefix",
+        "wineCrossoverBottle": "GameLib-legendary-Quail",
+        "wineVersion": {
+          "type": "crossover",
+          "bin": "<HOME>/Other/bin/wine",
+          "name": "CrossOver 26.3.0.39832",
+          "wineserver": "<HOME>/Other/bin/wineserver"
+        }
+      },
+      "sameObject": false,
+      "inputUnchanged": true,
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Other/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "overlay",
+        "action": "clear"
+      },
+      "context": null,
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": null,
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      },
+      "key": "legendary:Quail",
+      "returned": {
+        "winePrefix": "<HOME>/old-prefix"
+      },
+      "sameObject": true,
+      "inputUnchanged": true,
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": null,
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail uses engine=crossover build=26.3.0.39832 reason=cx-healthy"
+    }
+  ]
+}

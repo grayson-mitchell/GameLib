@@ -1,0 +1,34 @@
+{
+  "note": "a stored legacy wine: the engine step is skipped, the legacy line is logged, nothing is decided",
+  "steps": [
+    {
+      "step": {
+        "op": "select"
+      },
+      "result": {
+        "kind": "legacy",
+        "key": "legendary:Quail"
+      },
+      "trace": [],
+      "launchLog": [
+        "engine=legacy name=\"Odd Wine\" reason=override"
+      ],
+      "after": {
+        "registry": null,
+        "overlay": null,
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail engine=legacy name=\"Odd Wine\" reason=override"
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+[
+  {
+    "id": "skip-native",
+    "note": "a native game: the engine layer does not apply",
+    "game": {
+      "native": true
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "legacy-override",
+    "note": "a stored legacy wine: the engine step is skipped, the legacy line is logged, nothing is decided",
+    "world": {
+      "effective": {
+        "legacy": "Odd Wine"
+      }
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "use-crossover-healthy",
+    "note": "Automatic with a healthy CrossOver: registers CrossOver, publishes the state, no toast",
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "fallback-cx-missing-pin-installed",
+    "note": "Automatic with CrossOver missing and the pin installed: the built-in engine, the fallback toast, no download",
+    "engines": "installed",
+    "world": {
+      "cx": "missing"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "launch-settings-crossover-overlay",
+    "note": "after a CrossOver selection the overlay turns the stored settings into the bottle settings; the input is never mutated",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "bin": "<HOME>/old/wine",
+            "name": "Odd Wine"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "overlay-set-get-clear",
+    "note": "the overlay context is set, read, replaced and cleared; no selection means the stored settings come back",
+    "steps": [
+      {
+        "op": "overlay",
+        "action": "get"
+      },
+      {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      },
+      {
+        "op": "prime",
+        "selection": "crossover",
+        "prefix": "bottle"
+      },
+      {
+        "op": "overlay",
+        "action": "get"
+      },
+      {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      },
+      {
+        "op": "overlay",
+        "action": "set",
+        "prefix": "bottle",
+        "binDir": "<HOME>/Other/bin"
+      },
+      {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      },
+      {
+        "op": "overlay",
+        "action": "clear"
+      },
+      {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      }
+    ]
+  }
+]

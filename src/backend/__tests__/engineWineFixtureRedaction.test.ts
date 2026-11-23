@@ -35,8 +35,8 @@ const CRATES_ROOT = join(__dirname, '..', '..', '..', 'src-tauri', 'crates')
 /** The crates whose fixtures Phase 87 commits. */
 const SCANNED_CRATES = ['gamelib-engine', 'gamelib-wine'] as const
 
-/** The files 87-05, 87-07, 87-08, 87-09, 87-10, 87-11, 87-12, 87-13 and 87-14 commit (the runtimes, wine-manager, wine-core, discovery, DXVK-family, DXMT, winetricks, bottles, config, decision, demo-status, fallback-engine and engine-state goldens, recordings, state fixtures and vectors): a half-scanned tree fails. */
-const FILE_FLOOR = 3907
+/** The files 87-05, 87-07, 87-08, 87-09, 87-10, 87-11, 87-12, 87-13, 87-14 and 87-15 commit (the runtimes, wine-manager, wine-core, discovery, DXVK-family, DXMT, winetricks, bottles, config, decision, demo-status, fallback-engine, engine-state and launch-step goldens, recordings, state fixtures and vectors): a half-scanned tree fails. */
+const FILE_FLOOR = 3939
 
 /** Account names that name a role or a Wine prefix's own user, never a person. */
 const SYNTHETIC_ACCOUNTS: readonly string[] = [
