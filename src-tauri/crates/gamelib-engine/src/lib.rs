@@ -41,6 +41,7 @@ pub const OPS: &[&str] = &[
     "engine_per_game_bottle_name",
     "engine_pins",
     "engine_resolve_tool_settings",
+    "engine_set_online",
 ];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a missing collaborator, a
@@ -104,8 +105,21 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
             .await;
             Ok(result.to_value())
         }
+        // The shell's online monitor says it changed (D-17): the DXMT fetch and the boot update read it.
+        "engine_set_online" => {
+            let request: SetOnlineRequest = decode(op, args)?;
+            ctx.set_online(request.online);
+            Ok(Value::Null)
+        }
         _ => Err(format!("unknown op: {op}")),
     }
+}
+
+/// The argument of `engine_set_online`: the monitor's answer.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SetOnlineRequest {
+    online: bool,
 }
 
 /// The argument of `engine_resolve_tool_settings`: the game and its stored settings.
@@ -239,8 +253,40 @@ mod tests {
             "engine_list_options",
             "engine_per_game_bottle_name",
             "engine_resolve_tool_settings",
+            "engine_set_online",
         ] {
             assert!(OPS.contains(&op), "{op}");
+        }
+    }
+
+    #[tokio::test]
+    async fn the_set_online_op_records_the_monitors_answer_and_takes_one_strict_object() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        // The first reading of the monitor is "not yet probed": not online.
+        assert!(!ctx.is_online());
+        let set = dispatch("engine_set_online", &[json!({"online": true})], &ctx)
+            .await
+            .unwrap();
+        assert_eq!(set, Value::Null);
+        assert!(ctx.is_online());
+        dispatch("engine_set_online", &[json!({"online": false})], &ctx)
+            .await
+            .unwrap();
+        assert!(!ctx.is_online());
+
+        for bad in [
+            vec![],
+            vec![json!(true)],
+            vec![json!({})],
+            vec![json!({"online": "yes"})],
+            vec![json!({"online": true, "extra": 1})],
+            vec![json!({"online": true}), json!(1)],
+        ] {
+            ctx.set_online(true);
+            let err = dispatch("engine_set_online", &bad, &ctx).await.unwrap_err();
+            assert_eq!(err, "engine_set_online:bad-args", "{bad:?}");
+            assert!(ctx.is_online(), "a rejected call changes nothing: {bad:?}");
         }
     }
 

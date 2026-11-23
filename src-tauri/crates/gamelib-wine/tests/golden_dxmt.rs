@@ -29,7 +29,10 @@ use gamelib_store::json::Json;
 use gamelib_testutil::FakeHome;
 use gamelib_wine::ctx::{Arch, WineCtx};
 use gamelib_wine::manager::store;
-use gamelib_wine::tools::dxmt::{on_wine_installed, on_wine_uninstalled, WineVersionInfo};
+use gamelib_wine::tools::dxmt::{
+    boot_update, on_releases_info, on_wine_installed, on_wine_uninstalled, DxmtReleasesInfo,
+    WineVersionInfo,
+};
 use gamelib_wine::tools::macho::ScriptedScan;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -258,6 +261,20 @@ impl Profile {
         walk_tree(self.root(), "", &mut out);
         out.sort_by(|a, b| a.0.cmp(&b.0));
         Value::Array(out.into_iter().map(|(_, v)| v).collect())
+    }
+
+    /// The tree without the wine-manager store the harness seeded under `userData` (the oracle held
+    /// that list in a mocked store, which left no file): only what DXMT itself left on disk.
+    fn tree_without_seeded_store(&self) -> Value {
+        Value::Array(
+            self.tree()
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|entry| !entry["path"].as_str().unwrap().starts_with("Library"))
+                .cloned()
+                .collect(),
+        )
     }
 }
 
@@ -627,8 +644,33 @@ enum Outcome {
     Rejected,
 }
 
+/// The `releasesInfoReady` payload of a case: the feed's DXMT tag.
+fn releases_info(case: &Value) -> DxmtReleasesInfo {
+    serde_json::from_value(json!({ "dxmt": { "tag": case["tag"] } })).unwrap()
+}
+
+/// Which Rust entry point answers a `releases-ready` case.
+#[derive(Clone, Copy)]
+enum Via {
+    /// The listener's own entry point: the TS `onReleasesInfoReady`, offline quirk and all.
+    Listener,
+    /// The bounded boot task's body.
+    Boot,
+}
+
 /// The entry point the case's trigger names.
-async fn trigger(run: &Run, case: &Value) -> Outcome {
+async fn trigger_via(run: &Run, case: &Value, via: Via) -> Outcome {
+    if case["trigger"] == "releases-ready" {
+        let info = releases_info(case);
+        let done = match via {
+            Via::Listener => on_releases_info(&run.ctx, &info).await,
+            Via::Boot => boot_update(&run.ctx, &info).await,
+        };
+        return match done {
+            Ok(()) => Outcome::Resolved,
+            Err(_) => Outcome::Rejected,
+        };
+    }
     let wine: WineVersionInfo =
         serde_json::from_value(run.profile.expand_value(&case["wine"])).unwrap_or_default();
     match case["trigger"].as_str().unwrap() {
@@ -653,9 +695,13 @@ async fn trigger(run: &Run, case: &Value) -> Outcome {
 
 /// Replays one case and compares everything the oracle recorded for it.
 async fn replay_case(case: &Value) {
+    replay_case_via(case, Via::Listener).await;
+}
+
+async fn replay_case_via(case: &Value, via: Via) {
     let id = case["id"].as_str().unwrap();
     let run = start(case);
-    let outcome = trigger(&run, case).await;
+    let outcome = trigger_via(&run, case, via).await;
     check_case(&run, case, outcome, id);
 }
 
@@ -780,7 +826,8 @@ fn check_case(run: &Run, case: &Value, outcome: Outcome, id: &str) {
     assert_eq!(run.tap.urls(), want_requests, "{id}: requests");
 
     assert_eq!(
-        run.profile.normalise(run.profile.tree()),
+        run.profile
+            .normalise(run.profile.tree_without_seeded_store()),
         comparable_tree(read_json(&expected.join("tree.json"))),
         "{id}: the tree the case left"
     );
@@ -835,6 +882,60 @@ async fn every_uninstall_case_replays() {
     }
 }
 
+/// Every `releasesInfoReady` case replays through the listener's entry point: the tag already
+/// current, no copies to update, the gate failing a copy, the fetch and the copy, a failed download
+/// and the offline skip that still tries the copy and rejects.
+#[tokio::test]
+async fn every_releases_info_case_replays() {
+    let all = cases();
+    let releases: Vec<&Value> = all
+        .iter()
+        .filter(|c| c["trigger"] == "releases-ready")
+        .collect();
+    assert!(releases.len() >= 9, "{} releases cases", releases.len());
+    for case in releases {
+        replay_case(case).await;
+    }
+}
+
+/// The boot task's body answers every online golden as the listener does: the fetch, the tag already
+/// current, the feed asset already installed, no copies, one failing the gate, a failed download.
+#[tokio::test]
+async fn the_boot_update_replays_the_online_and_already_current_goldens() {
+    let all = cases();
+    let online: Vec<&Value> = all
+        .iter()
+        .filter(|c| c["trigger"] == "releases-ready" && c["online"] != false)
+        .collect();
+    assert!(online.len() >= 8, "{} online boot cases", online.len());
+    for case in online {
+        replay_case_via(case, Via::Boot).await;
+    }
+}
+
+/// Offline, the boot update returns early: one warning, no scan, no request and nothing copied. (The
+/// listener's own entry point keeps the TS quirk the `boot-fetch-offline` golden pins: it still
+/// tries the copy and rejects.)
+#[tokio::test]
+async fn the_boot_update_does_nothing_offline() {
+    let case = case_of("boot-fetch-offline");
+    let run = start(&case);
+    let before = run.profile.tree();
+    let outcome = trigger_via(&run, &case, Via::Boot).await;
+    assert!(matches!(outcome, Outcome::Resolved));
+    run.replay.finish().unwrap();
+    assert!(run.tap.urls().is_empty(), "no request offline");
+    assert!(run.scan.asked().is_empty(), "no scan offline");
+    assert_eq!(
+        run.log.lines(),
+        vec![(
+            "warn",
+            "App offline, skipping possible DXMT update.".to_string()
+        )]
+    );
+    assert_eq!(run.profile.tree(), before, "nothing was written");
+}
+
 /// The places the Rust port deliberately differs from the TS golden (D-19), each explained in
 /// `golden/dxmt/deltas.json`, which this list must match key for key.
 const DELTAS: &[&str] = &[
@@ -843,6 +944,7 @@ const DELTAS: &[&str] = &[
     "error-text",
     "half-made-copy-removal",
     "log-prefix",
+    "offline-boot-returns-early",
     "rejection-text",
 ];
 
