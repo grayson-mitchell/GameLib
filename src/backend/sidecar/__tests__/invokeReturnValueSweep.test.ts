@@ -7,7 +7,7 @@
  * the 40 put the channel name on the following line — a single-line-only regex finds fewer),
  * and asserts:
  *
- *   1. The extracted channel count is exactly 39, with the exact per-module tally 10/11/6/12.
+ *   1. The extracted channel count is exactly 38, with the exact per-module tally 10/10/6/12.
  *   2. Every channel classified RETURNS (declared non-void in `AsyncIPCFunctions`, NOT on the
  *      explicit VOID-PARITY allow-list below) has a `return` statement inside its own handler
  *      body -- so a future edit that silently drops a `return` is caught here, not live.
@@ -48,8 +48,9 @@ const MODULES: ModuleSpec[] = [
     // Phase 87 Plan 20 (D-14): 15 -> 12. `installWineVersion`, `refreshWineVersionInfo` and
     // `removeWineVersion` are native `wine` channels.
     // Phase 87 Plan 24 (D-14): 12 -> 11. `wine.isValidVersion` is a native `wine` channel.
+    // Phase 87 Plan 26 (D-14): 11 -> 10. `getAlternativeWine` is a native `wine` channel.
     path: join(__dirname, '../wineToolsFlowRegistration.ts'),
-    expectedCount: 11
+    expectedCount: 10
   },
   {
     name: 'shortcuts',
@@ -187,8 +188,9 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
   // Phase 87 Plan 18 (D-14): 44 -> 43, `downloadRuntime` is a native `wine` channel too.
   // Phase 87 Plan 20 (D-14): 43 -> 40, the three wine-manager channels are native `wine` channels.
   // Phase 87 Plan 24 (D-14): 40 -> 39, `wine.isValidVersion` is a native `wine` channel.
-  it('extracts exactly 39 channels total', () => {
-    expect(allChannels).toHaveLength(39)
+  // Phase 87 Plan 26 (D-14): 39 -> 38, `getAlternativeWine` is a native `wine` channel.
+  it('extracts exactly 38 channels total', () => {
+    expect(allChannels).toHaveLength(38)
   })
 
   it.each(MODULES)('$name has exactly $expectedCount channels', (spec) => {

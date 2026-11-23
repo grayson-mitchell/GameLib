@@ -72,7 +72,6 @@ export const wineToolsAsyncArgs = {
   winetricksApply: z.tuple([runnerArg(), nonEmptyString(), verbList]),
   winetricksQueueState: z.tuple([runnerArg(), nonEmptyString()]),
   winetricksCancelRemaining: z.tuple([runnerArg(), nonEmptyString()]),
-  getAlternativeWine: z.tuple([]),
   runWineCommandForGame: z.tuple([
     z.strictObject({
       appName: nonEmptyString(),
@@ -87,6 +86,7 @@ export const wineToolsAsyncArgs = {
   // Phase 87 (87-20, D-14): `refreshWineVersionInfo` is a native `wine` channel (`nativeChannels.json`).
   // Phase 87 (87-24, D-14): so is `wine.isValidVersion`; the strict WineInstallation decode lives in the
   // Rust `parse_wine_installation`.
+  // Phase 87 (87-26, D-14): `getAlternativeWine` is a native `wine` channel too; it takes no argument.
   toggleDXVK: z.tuple([toolArgs]),
   toggleVKD3D: z.tuple([toolArgs]),
   toggleDXVKNVAPI: z.tuple([toolArgs])
@@ -99,7 +99,6 @@ interface WineToolsAsyncReturns {
   winetricksApply: Promise<WinetricksApplyResult>
   winetricksQueueState: Promise<WinetricksQueueState>
   winetricksCancelRemaining: Promise<WinetricksQueueState>
-  getAlternativeWine: Promise<WineInstallation[]>
   runWineCommandForGame: Promise<ExecResult>
   toggleDXVK: Promise<boolean>
   toggleVKD3D: Promise<boolean>

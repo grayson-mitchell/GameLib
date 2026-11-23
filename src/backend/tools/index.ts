@@ -252,10 +252,7 @@ export interface ToolsDeps
   storeRoot?: EngineServices['storeRoot']
   paths: EngineServices['paths'] &
     Pick<AppPaths, 'defaultUmuPath' | 'publicDir' | 'runtimePath'>
-  config: Pick<
-    GlobalConfigSlice,
-    'getSettings' | 'getAlternativeWine' | 'setSetting'
-  >
+  config: Pick<GlobalConfigSlice, 'getSettings' | 'setSetting'>
 }
 
 /** The engine's bottle-creation capabilities, built from this tools instance (66.1-22d). */

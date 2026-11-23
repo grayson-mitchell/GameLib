@@ -30,14 +30,14 @@
  * by this deletion and are removed with it (`sendChannelObservable.ts` keeps exporting the latter
  * for `appShellFlowRegistration.ts`'s `frontendReady` channel).
  *
- * Declared channel list (11 total, 11 invoke + 0 send — verified against `main.ts`,
+ * Declared channel list (10 total, 10 invoke + 0 send — verified against `main.ts`,
  * `wine/manager/ipc_handler.ts` and `tools/ipc_handler.ts` source by 34.5-RESEARCH.md/this plan's
  * own `<interfaces>` block; Phase 45 Plan 01, 2026-10-10, adds the winetricks-queue trio; Phase 45
  * Plan 02, 2026-10-10, retires `winetricksInstall`):
  *
- *   invoke (deps.ipc.handle, 11):
+ *   invoke (deps.ipc.handle, 10):
  *     - `runWineCommand`         -> main.ts:766
- *     - `getAlternativeWine`     -> main.ts:973
+ *     - `getAlternativeWine`     -> native `wine` slice since Phase 87 (87-26, D-14); no handle here
  *     - `wine.isValidVersion`    -> native `wine` slice since Phase 87 (87-24, D-14); no handle here
  *     - `toggleDXVK`             -> main.ts:999
  *     - `toggleDXVKNVAPI`        -> main.ts:1007
@@ -100,10 +100,7 @@ export interface WineToolsFlowDeps
   ipc: Pick<IpcRegistry, 'handle'>
   dialogs: DialogBoxDeps['dialogs'] & Pick<Dialogs, 'displayAcks'>
   appState: Pick<AppState, 'raiseMainWindow' | 'raiseMainWindowForInAppDialog'>
-  config: Pick<
-    GlobalConfigSlice,
-    'getSettings' | 'getAlternativeWine' | 'setSetting'
-  >
+  config: Pick<GlobalConfigSlice, 'getSettings' | 'setSetting'>
   gameConfigs: Pick<GameConfigs, 'get'>
   appInfo: Pick<AppInfo, 'version'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
@@ -131,9 +128,9 @@ export interface WineToolsFlowDeps
 }
 
 /**
- * Registers this cluster's 11 channels (11 invoke, 0 send — `winetricksInstall` retired, Phase 45
+ * Registers this cluster's 10 channels (10 invoke, 0 send — `winetricksInstall` retired, Phase 45
  * Plan 02, D-11 promote; `installWineVersion`, `refreshWineVersionInfo` and `removeWineVersion` moved to
- * the Rust native `wine` slice, Phase 87 Plan 20, D-14; so did `wine.isValidVersion`, Plan 24). As of Phase 45 Plan 01 (2026-10-10), the count was 12 invoke + 1 send
+ * the Rust native `wine` slice, Phase 87 Plan 20, D-14; so did `wine.isValidVersion`, Plan 24, and `getAlternativeWine`, Plan 26). As of Phase 45 Plan 01 (2026-10-10), the count was 12 invoke + 1 send
  * from Phase 34.6 Plan 07 plus the 3 new winetricks-queue invoke channels (`winetricksApply`,
  * `winetricksQueueState`, `winetricksCancelRemaining`); Phase 45 Plan 02 then retired the one send
  * channel outright. Called once from `handlers.ts` — this module owns no side effects at import
@@ -189,17 +186,9 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   )
 
   // ── Wine probe pair (main.ts:973, main.ts:1532) ─────────────────────────────────────────────
-  deps.ipc.handle('getAlternativeWine', async () => {
-    return deps.config.getAlternativeWine({
-      wineDownloaderInfoStore: deps.stores.wineManager.wineDownloaderInfoStore,
-      runner: deps.runner,
-      paths: deps.paths,
-      sendFrontendMessage: deps.sendFrontendMessage
-    })
-  })
-
-  // Phase 87 (87-24, D-14): `wine.isValidVersion` is a native `wine` channel (the Rust `wine_valid`); the
-  // sidecar registers no handle for it (one owner, D-06).
+  // Phase 87 (87-24, 87-26, D-14): `getAlternativeWine` (the Rust `wine_discover_alternatives`) and
+  // `wine.isValidVersion` (the Rust `wine_valid`) are native `wine` channels; the sidecar registers no
+  // handle for either (one owner, D-06).
 
   // ── Wine-version-management trio (wine/manager/ipc_handler.ts:14,46,56) ─────────────────────
   //

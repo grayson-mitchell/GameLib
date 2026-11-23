@@ -160,6 +160,12 @@ export interface NativeAsync {
   // spawned. The decode is strict (an unknown key rejects with the invalid-args marker); `lib`, `lib32`
   // and `wineserver` may be absent or null.
   'wine.isValidVersion': (wine: WineInstallation) => Promise<boolean>
+  // Phase 87 (87-26, D-14): the wines installed on this machine, discovered by the Rust `wine` slice
+  // (`gamelib-wine`'s `wine_discover_alternatives`): CrossOver, Wineskin, the Game Porting Toolkit and Whisky
+  // on a Mac; the tools and Lutris wines, Proton and the custom paths on Linux. It takes no argument (the
+  // roots, the `PATH` and the settings are the shell's own), and with no release list stored it refreshes
+  // it first and pushes `wineVersionsUpdated`, so it has no wall-clock bound of its own.
+  getAlternativeWine: () => Promise<WineInstallation[]>
 }
 
 export interface NativeSync {

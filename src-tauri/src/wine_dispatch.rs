@@ -570,6 +570,138 @@ pub(crate) fn wine_is_valid_version(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> N
     Box::pin(wine_valid_channel(wine_ctx().cloned(), args))
 }
 
+/// `/usr/share/steam`, the one absolute path the Linux wine set reads (`getSteamLibraries` always listed
+/// it). The crate keeps it only when it exists.
+const SYSTEM_STEAM: &str = "/usr/share/steam";
+
+/// The text entries of a settings array (`customWinePaths`); anything else in it, or a setting that is no
+/// array, is left out.
+fn text_entries(value: Option<&Value>) -> Vec<Value> {
+    value
+        .and_then(Value::as_array)
+        .map(|list| list.iter().filter(|e| e.is_string()).cloned().collect())
+        .unwrap_or_default()
+}
+
+/// `getSteamLibraries`'s read of `libraryfolders.vdf` under the Steam root the settings name (the
+/// quote-stripped `defaultSteamPath`, the discovered root when the settings hold none), as the crate's
+/// `SteamLibraries`. Blocking: it reads the file.
+fn steam_libraries(settings: &Map<String, Value>) -> Value {
+    let root = settings
+        .get("defaultSteamPath")
+        .and_then(Value::as_str)
+        .filter(|path| !path.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| gamelib_steamfiles::discover::discover_default().path);
+    let root = root.replace('\'', "");
+    let found = gamelib_steamfiles::library::read_library_folders(
+        &std::path::Path::new(&root)
+            .join("steamapps")
+            .join("libraryfolders.vdf"),
+    );
+    serde_json::json!({ "exists": found.exists, "parsed": found.parsed, "paths": found.paths })
+}
+
+/// The one `DiscoveryHost` object `wine_discover_alternatives` takes: everything the TS discovery read from
+/// the process, the settings and the Steam files, which the crate may not (T-87-71). Every root comes from
+/// the shell (its home, `<appFolder>/config.json`, `/usr/share/steam`), the `PATH` from `path`, the two
+/// settings and the Steam root from the global config the shell reads itself, and the Steam libraries from
+/// the `libraryfolders.vdf` read (Linux only: the macOS set takes none). Nothing the renderer or the
+/// sidecar sent is in it. Blocking: it reads config.json and the vdf.
+fn discovery_host(wine: &WineCtx, path: Option<String>, scan_custom: Option<bool>) -> Value {
+    let settings = gamelib_engine::config::global_settings(&wine.engine);
+    let paths = &wine.engine.paths;
+    let mut host = Map::new();
+    host.insert(
+        "roots".to_string(),
+        serde_json::json!({
+            "home": paths.user_home.to_string_lossy(),
+            "configPath": paths.app_folder.join("config.json").to_string_lossy(),
+            "systemSteam": SYSTEM_STEAM,
+        }),
+    );
+    if let Some(path) = path {
+        host.insert("path".to_string(), Value::String(path));
+    }
+    host.insert(
+        "settings".to_string(),
+        serde_json::json!({
+            "customWinePaths": text_entries(settings.get("customWinePaths")),
+            "showValveProton": settings
+                .get("showValveProton")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+        }),
+    );
+    if wine.engine.platform == gamelib_engine::ctx::Platform::Linux {
+        host.insert("steamLibraries".to_string(), steam_libraries(&settings));
+    }
+    if let Some(scan) = scan_custom {
+        host.insert("scanCustom".to_string(), Value::Bool(scan));
+    }
+    Value::Object(host)
+}
+
+/// Runs `wine_discover_alternatives` over [`discovery_host`] on the blocking pool (the crate's async
+/// `dispatch` is driven with `block_on` there, as [`run_wine_op`] does).
+async fn discover_alternatives_blocking(
+    wine: Arc<WineCtx>,
+    path: Option<String>,
+    scan_custom: Option<bool>,
+    failed: &'static str,
+) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let host = discovery_host(&wine, path, scan_custom);
+        tauri::async_runtime::block_on(gamelib_wine::dispatch(
+            "wine_discover_alternatives",
+            &[host],
+            &wine,
+        ))
+    })
+    .await
+    .map_err(|_| failed.to_string())?
+}
+
+/// `getAlternativeWine` takes no argument: the renderer names no path (T-87-71).
+fn parse_no_args(args: &[Value]) -> Result<(), Rejection> {
+    if args.is_empty() {
+        Ok(())
+    } else {
+        Err(("(args)", "too_big"))
+    }
+}
+
+/// The body of `getAlternativeWine`: decode first (a bad call is rejected the same way before and after the
+/// install), then the crate's discovery over the shell's own host. `path` is the process `PATH`, passed in
+/// so a test drives this over a real context without reading the developer's.
+async fn get_alternative_wine_channel(
+    wine: Option<Arc<WineCtx>>,
+    args: Vec<Value>,
+    path: Option<String>,
+) -> Result<Value, String> {
+    parse_no_args(&args)
+        .map_err(|(arg, code)| invalid_args("getAlternativeWine", &[arg], &[code]))?;
+    let wine = wine.ok_or_else(|| "getAlternativeWine: not ready".to_string())?;
+    discover_alternatives_blocking(
+        wine,
+        path,
+        None,
+        "getAlternativeWine: the discovery did not finish",
+    )
+    .await
+}
+
+/// The native `getAlternativeWine` handler (slice `wine`, D-14): the wines installed on this machine,
+/// answered by the crate's `wine_discover_alternatives`. With no release list stored the crate refreshes
+/// it first and pushes `wineVersionsUpdated`, as the TS did, so this has no wall-clock bound of its own.
+pub(crate) fn get_alternative_wine(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(get_alternative_wine_channel(
+        wine_ctx().cloned(),
+        args,
+        std::env::var("PATH").ok(),
+    ))
+}
+
 /// Runs `op` over `args` for a `rustInvoke` arm. These arms run on the dispatcher's worker thread, never
 /// inside a runtime, so the crate's own `dispatch_sync` drives the op there. Before [`install`] the
 /// answer is `<op>:not-ready`.
@@ -1574,6 +1706,120 @@ mod tests {
             env.get("PATH").and_then(Value::as_str),
             std::env::var("PATH").ok().as_deref()
         );
+    }
+
+    #[test]
+    fn get_alternative_wine_takes_no_argument_and_answers_not_ready_before_install() {
+        assert!(wine_ctx().is_none());
+        let router_ctx = Arc::new(crate::native_router::NativeCtx::for_tests(
+            Arc::new(NoHost),
+            None,
+        ));
+        for bad in [
+            vec![json!("/SECRET-PATH")],
+            vec![json!(null)],
+            vec![json!({ "path": "/SECRET-PATH" })],
+            vec![json!(1), json!(2)],
+        ] {
+            let error =
+                tauri::async_runtime::block_on(get_alternative_wine(Arc::clone(&router_ctx), bad))
+                    .unwrap_err();
+            assert!(
+                error.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+                "{error}"
+            );
+            assert!(!error.contains("SECRET"), "{error}");
+        }
+        assert_eq!(
+            tauri::async_runtime::block_on(get_alternative_wine(router_ctx, vec![])),
+            Err("getAlternativeWine: not ready".to_string())
+        );
+    }
+
+    #[test]
+    fn the_discovery_host_is_the_shells_own_roots_path_and_settings() {
+        let home = gamelib_testutil::FakeHome::new("wine-dispatch-host-");
+        let wine = wine_over(&home, Arc::new(Recorded::default()));
+        let steam = home.root().join("steam");
+        std::fs::create_dir_all(steam.join("steamapps")).unwrap();
+        let library = home.root().join("library");
+        std::fs::create_dir_all(&library).unwrap();
+        std::fs::write(
+            steam.join("steamapps").join("libraryfolders.vdf"),
+            format!(
+                "\"libraryfolders\" {{ \"0\" {{ \"path\" \"{}\" }} }}",
+                library.display()
+            ),
+        )
+        .unwrap();
+        let mut settings = Map::new();
+        settings.insert(
+            "defaultSteamPath".to_string(),
+            json!(format!("{}'", steam.display())),
+        );
+        let libraries = steam_libraries(&settings);
+        assert_eq!(libraries["exists"], json!(true));
+        assert_eq!(libraries["parsed"], json!(true));
+        assert_eq!(libraries["paths"], json!([library.display().to_string()]));
+
+        // Nothing the renderer sent is in the host, and what the crate is given decodes strictly.
+        let host = discovery_host(&wine, Some("/usr/bin".to_string()), None);
+        let decoded: gamelib_wine::discovery::DiscoveryHost =
+            serde_json::from_value(host.clone()).expect("the crate decodes the shell's host");
+        assert_eq!(decoded.roots.home, home.root());
+        assert_eq!(
+            decoded.roots.config_path,
+            home.root().join("userdata").join("config.json")
+        );
+        assert_eq!(
+            decoded.roots.system_steam.as_deref(),
+            Some(std::path::Path::new(SYSTEM_STEAM))
+        );
+        assert_eq!(decoded.path.as_deref(), Some("/usr/bin"));
+        assert_eq!(decoded.scan_custom, None);
+        assert!(decoded.steam_libraries.is_some());
+        let scanned = discovery_host(&wine, None, Some(false));
+        assert_eq!(scanned["scanCustom"], json!(false));
+        assert!(scanned.get("path").is_none());
+    }
+
+    #[test]
+    fn the_settings_entries_are_text_only() {
+        assert_eq!(
+            text_entries(Some(&json!(["/a", 1, null, "/b", {}]))),
+            vec![json!("/a"), json!("/b")]
+        );
+        assert!(text_entries(Some(&json!("/a"))).is_empty());
+        assert!(text_entries(None).is_empty());
+    }
+
+    #[test]
+    fn get_alternative_wine_lists_the_tools_wines_over_a_real_context() {
+        let home = gamelib_testutil::FakeHome::new("wine-dispatch-discover-");
+        let wine = wine_over(&home, Arc::new(Recorded::default()));
+        let bin = home
+            .root()
+            .join("tools")
+            .join("wine")
+            .join("Wine-Test")
+            .join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        std::fs::write(bin.join("wine"), b"").unwrap();
+        // An empty PATH, so the developer's own wine is not found.
+        let answer = tauri::async_runtime::block_on(get_alternative_wine_channel(
+            Some(wine),
+            vec![],
+            Some(String::new()),
+        ))
+        .expect("discovery answers");
+        let names: Vec<&str> = answer
+            .as_array()
+            .expect("a list")
+            .iter()
+            .filter_map(|wine| wine["name"].as_str())
+            .collect();
+        assert!(names.contains(&"Wine-Test"), "{answer}");
+        assert!(!answer.to_string().contains("SECRET"));
     }
 
     #[test]

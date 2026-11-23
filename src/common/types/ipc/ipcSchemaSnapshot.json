@@ -1044,13 +1044,9 @@
     {
       "channel": "getAlternativeWine",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [],
-        "items": false,
-        "maxItems": 0
-      }
+      "owner": "native",
+      "args": [],
+      "returns": "WineInstallation[]"
     },
     {
       "channel": "getAmazonLoginData",

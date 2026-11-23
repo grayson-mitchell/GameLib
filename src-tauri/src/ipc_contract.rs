@@ -876,6 +876,7 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "deleteUploadedLogFile",
     "downloadRuntime",
     "getAllGameOverrides",
+    "getAlternativeWine",
     "getAnticheatInfo",
     "getGameMetadataOverride",
     "getHeroicVersion",

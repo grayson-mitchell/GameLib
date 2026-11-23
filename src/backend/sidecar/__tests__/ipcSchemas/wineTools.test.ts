@@ -64,7 +64,6 @@ const asyncTable: FixtureTable<typeof wineToolsAsyncArgs> = {
     valid: [['legendary', 'abc']],
     invalid: [['nope', 'abc']]
   },
-  getAlternativeWine: { valid: [[]], invalid: [['extra']] },
   runWineCommandForGame: {
     valid: [
       [
