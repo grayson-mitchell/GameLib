@@ -1093,12 +1093,12 @@ Plans:
   3. The Humble and shortcut test oracles are ported as Rust tests or recorded fixtures
   4. The Humble and shortcuts TypeScript and their sidecar registrations are deleted in this phase, except scheduled survivors listed in the schedule test (D-03, D-04, D-24, D-27)
 
-**Plans:** 1/32 plans executed in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
+**Plans:** 2/32 plans executed in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
 
 Plans:
 **Wave 1**
 - [x] 94-01-PLAN.md — Live macOS gate contract 94-HUMAN-UAT.md (five D-09 items, D-10 signed upgrade), the 82 amendment (humbleConfigStore 94 -> 92, timestampStore 94 -> 88, D-24) and the SC4 wording
-- [ ] 94-02-PLAN.md — gamelib-humble and gamelib-shortcuts crates with their full dependency set, CI wiring, and `ProcSpec::hide_window`
+- [x] 94-02-PLAN.md — gamelib-humble and gamelib-shortcuts crates with their full dependency set, CI wiring, and `ProcSpec::hide_window`
 - [ ] 94-03-PLAN.md — Delete-gate machinery: humblePortComplete, shortcutsPortComplete (no flag, D-15) and the survivor schedule with the `relocated` shape
 
 **Wave 2** *(blocked on Wave 1 completion)*

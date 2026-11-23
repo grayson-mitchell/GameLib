@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 94
 current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 94-01-PLAN.md
-last_updated: "2026-11-23T20:37:29.660Z"
+stopped_at: Completed 94-02-PLAN.md
+last_updated: "2026-11-23T20:44:16.587Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 94 execution started
-state_head: 647748bf7fd6eebeaf6404cdc45f194a547d82eb
+state_head: bee0a3144da21902d31a13966ff86b0dfdaf0f86
 progress:
   total_phases: 22
   completed_phases: 23
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
-Plan: 2 of 32
-Status: Ready to execute (94-02 next; worktree-local STATE, D-02)
-Last activity: 2026-11-24 — Completed 94-01 (live macOS gate contract 94-HUMAN-UAT.md authored, 82 ownership amendment: humbleConfigStore 94 -> 92, timestampStore 94 -> 88)
+Plan: 3 of 32
+Status: Ready to execute (94-03 next; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-02 (gamelib-humble and gamelib-shortcuts crates, CI wiring, ProcSpec::hide_window)
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -472,6 +472,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P58 | 280min | 3 tasks | 21 files |
 | Phase 87 P59 | 6h25m | 3 tasks | 3 files |
 | Phase 94 P01 | 15min | 3 tasks | 5 files |
+| Phase 94 P02 | 25min | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -1014,6 +1015,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-58: Windows-only test reds (twelve CI runs) fixed by #[cfg(unix)] gating and a leading-tilde fix in tools/dxvk.rs, not by loosening assertions
 - [Phase 87]: 87-59: the live gate scored item 1 issue, item 2 pass, item 3 blocked, item 4 issue; the offline refusal, Winetricks target prefix and wine-manager install of never-installed releases go to /gsd-plan-phase 87 --gaps; the engine-log wiring is the deferred decision
 - [Phase 94]: 94-01: humbleConfigStore TS mirror deletion moves 94 -> 92 and timestampStore 94 -> 88 (D-24); item 3 needs the Desktop-shortcut setting on; item 4 runs with Mac Steam closed
+- [Phase 94]: 94-02: test-only ops chained into dispatch under cfg(test), never in a release OPS; hide_window applied via pure creation_flags in the Windows arm only; jiff declared in gamelib-humble only
 
 ### Pending Todos
 
@@ -1295,8 +1297,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T20:37:29.528Z
-Stopped at: Completed 94-01-PLAN.md
+Last session: 2026-11-23T20:44:16.458Z
+Stopped at: Completed 94-02-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
