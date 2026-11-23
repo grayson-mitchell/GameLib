@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-01-PLAN.md
-last_updated: "2026-11-23T00:42:50.662Z"
+stopped_at: Completed 87-02-PLAN.md
+last_updated: "2026-11-23T00:49:58.762Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: 44cbd81d79da5760fd942e6e7e463ce2b21772a9
+state_head: c94d704fc97cc2d69d7ff93b650b2bf46b07efcd
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 2 of 59
+Plan: 3 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -411,6 +411,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 86 P25 | 2h30m | 3 tasks | 9 files |
 | Phase 86 P26 | 36min | 3 tasks | 2 files |
 | Phase 87 P01 | 5 min | 3 tasks | 5 files |
+| Phase 87 P02 | 25min | 2 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -824,6 +825,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 86]: 86-26: SVC-01 live half proven on macOS and marked complete; Windows/Linux live check rides with Phase 99 (D-16)
 - [Phase 87]: 87-01: DXMT in the live gate is driven via wine-manager Wine-Staging-macOS install/uninstall (-DXMT copy), as no per-bottle DXMT control exists
 - [Phase 87]: 87-01: offline-refusal sub-check runs first under no-crossover.sb with the pin absent; item 2 (backdate) runs last, item 4 on the throwaway bottle before it
+- [Phase 87]: 87-02: pins() errors on a malformed pin table instead of returning an empty one, so a prune never reads nothing pinned
+- [Phase 87]: 87-02: dispatch panic and shutdown tests drive guarded() directly; OPS never carries a test-only op
 
 ### Pending Todos
 
@@ -1102,8 +1105,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T00:42:48.811Z
-Stopped at: Completed 87-01-PLAN.md
+Last session: 2026-11-23T00:49:56.917Z
+Stopped at: Completed 87-02-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
