@@ -12,6 +12,7 @@ pub mod bottles;
 pub mod config;
 pub mod crossover;
 pub mod ctx;
+pub mod decision;
 pub mod dxvk;
 pub mod engines;
 pub mod fetch;
@@ -55,6 +56,7 @@ pub const OPS: &[&str] = &[
     "engine_cancel",
     "engine_cx_demo_status",
     "engine_cx_resolve_bin_dir",
+    "engine_decide_launch",
     "engine_default_engine",
     "engine_ledger_mark_running",
     "engine_ledger_mark_stopped",
@@ -327,6 +329,31 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
             )
             .await;
             Ok(probe.to_value())
+        }
+        // The engine a launch runs on (D-20): the stored override, else CrossOver when its pre-flight is
+        // healthy, else the pinned fallback, never bottled Steam. The override and the process monitor's
+        // phase are the caller's; the pin table is always the shared one and the bottle's marker is read
+        // here, so a caller cannot name an engine the shared table does not ship. The answer is the
+        // sidecar's `LaunchDecision`.
+        "engine_decide_launch" => {
+            let request: DecideLaunchRequest = decode(op, args)?;
+            let marker_view = bottles::marker::read_marker_summary(ctx, &request.bottle_name);
+            let decision = decision::launch::decide_launch_engine(
+                ctx,
+                &decision::launch::DecideArgs {
+                    key: request.key,
+                    bottle_name: request.bottle_name,
+                    override_value: request.override_value,
+                    monitor_phase: request.monitor_phase,
+                    hint_wine_bins: request.hint_wine_bins,
+                    pins: None,
+                    marker_view,
+                    tuning: decision::preflight::ProbeTuning::default(),
+                },
+            )
+            .await
+            .map_err(|e| format!("{op}:{e}"))?;
+            Ok(decision.to_value())
         }
         // One of the five allowlisted tools with the isolated profile (D-18). A program outside the list is
         // an answer (`stderr: "tool not allowed: ..."`), as `runTool` gave, and spawns nothing. `cancelId`
@@ -715,6 +742,21 @@ struct DemoStatusRequest {
     timeout_ms: Option<u64>,
 }
 
+/// The argument of `engine_decide_launch`. The stored override is any JSON (the closed grammar parses it);
+/// `monitorPhase` is the process monitor's answer for the title.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct DecideLaunchRequest {
+    key: String,
+    bottle_name: String,
+    #[serde(rename = "override", default)]
+    override_value: Value,
+    #[serde(default)]
+    monitor_phase: Option<decision::preflight::MonitorPhase>,
+    #[serde(default)]
+    hint_wine_bins: Vec<String>,
+}
+
 /// The argument of `engine_set_online`: the monitor's answer.
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -863,6 +905,7 @@ mod tests {
             "engine_cancel",
             "engine_cx_demo_status",
             "engine_cx_resolve_bin_dir",
+            "engine_decide_launch",
             "engine_default_engine",
             "engine_ledger_mark_running",
             "engine_ledger_mark_stopped",
@@ -927,6 +970,69 @@ mod tests {
             spawn.env_set.get("CX_BOTTLE").map(String::as_str),
             Some("GameLib-gog-1")
         );
+    }
+
+    #[tokio::test]
+    async fn the_launch_decision_op_takes_strict_arguments_and_falls_back_when_crossover_is_missing(
+    ) {
+        let home = FakeHome::new("engine-lib-");
+        let mut ctx = ctx(&home);
+        // The machine's own /Applications must not answer.
+        ctx.crossover_locator = crossover::locate::CrossoverLocator::with_system_applications(
+            home.root()
+                .join("no-applications")
+                .to_string_lossy()
+                .into_owned(),
+        );
+        for (op, bad) in [
+            ("engine_decide_launch", json!({"key": "gog:1"})),
+            (
+                "engine_decide_launch",
+                json!({"key": "gog:1", "bottleName": "b", "pins": {}}),
+            ),
+            (
+                "engine_decide_launch",
+                json!({"key": "gog:1", "bottleName": "b", "monitorPhase": "paused"}),
+            ),
+        ] {
+            assert_eq!(
+                dispatch(op, &[bad], &ctx).await,
+                Err(format!("{op}:bad-args")),
+                "{op}"
+            );
+        }
+
+        // No CrossOver: the launch falls to the current pin with the reason, and says it needs a download.
+        let launch = dispatch(
+            "engine_decide_launch",
+            &[json!({"key": "gog:1", "bottleName": "GameLib-gog-1", "override": "automatic"})],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(launch["kind"], "use");
+        assert_eq!(launch["selection"]["kind"], "pinned");
+        assert_eq!(launch["selection"]["reason"], "cx-missing");
+        assert_eq!(launch["preflight"]["kind"], "missing");
+        assert_eq!(launch["needsDownload"], true);
+        // An override the closed grammar does not know is automatic, never an engine named by the caller.
+        let odd = dispatch(
+            "engine_decide_launch",
+            &[json!({"key": "gog:1", "bottleName": "GameLib-gog-1", "override": "/usr/bin/wine"})],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(odd["override"], "automatic");
+        // A CrossOver override with CrossOver missing is refused, not rerouted.
+        let refused = dispatch(
+            "engine_decide_launch",
+            &[json!({"key": "gog:1", "bottleName": "GameLib-gog-1", "override": "crossover"})],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(refused["kind"], "unavailable");
     }
 
     #[tokio::test]

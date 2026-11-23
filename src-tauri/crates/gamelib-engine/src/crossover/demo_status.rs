@@ -151,7 +151,7 @@ pub fn parse_demo_status(stdout: &str) -> DemoStatus {
 }
 
 /// First `n` UTF-16 units of `s` (`String.slice(0, n)`).
-fn utf16_prefix(s: &str, n: usize) -> String {
+pub(crate) fn utf16_prefix(s: &str, n: usize) -> String {
     if utf16_len(s) <= n {
         return s.to_string();
     }
