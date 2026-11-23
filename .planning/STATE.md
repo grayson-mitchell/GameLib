@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-29-PLAN.md
-last_updated: "2026-11-23T09:02:48.362Z"
+stopped_at: Completed 87-30-PLAN.md
+last_updated: "2026-11-23T09:33:01.993Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: a1c5f9a21612a060ec6effa2d07988a226fbb427
+state_head: 32afbbeafc8e204c4605f282a457a472e14e0574
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 30 of 59
+Plan: 31 of 59
 Status: Ready to execute
 Last activity: 2026-11-23 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -439,6 +439,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P27 | 20 min | 2 tasks | 10 files |
 | Phase 87 P28 | 18 min | 3 tasks | 29 files |
 | Phase 87 P29 | 25min | 2 tasks | 5 files |
+| Phase 87 P30 | 14 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -908,6 +909,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-28: the engine slice serves getPerGameBottleName, listEngineOptions and getDefaultEngine natively; the shell fills EngineCtx.default_wine (PATH rule) and crossover_bin_dir (default folders then discover_crossover, wine context read lazily)
 - [Phase 87]: 87-28: twin.ts holds engineKeyFor, isWritableEngineOverride, importEngineSettings, getPerGameBottleNameFor once, plus perGameBottleName as a fifth deletedBy-87 row 87-56 must make private; every twin row lists all 14 importers
 - [Phase 87]: 87-29: ShellDxvk resolves the wine context at call time and is EngineCtx.dxvk; WineDxvkInstaller maps DxvkError to false; the full ToolsHost (public dir, online, Darwin release) stays with 87-34
+- [Phase 87]: 87-30: on_releases_info keeps the TS offline quirk its golden pins; boot_update (the bounded task body) returns early offline; both take the DXMT releases payload
+- [Phase 87]: 87-30: EngineCtx.online starts false (monitor's first reading); DXMT_BOOT_BOUND is 60 s; store-supplied -DXMT paths are written only strictly inside <tools>/wine
 
 ### Pending Todos
 
@@ -1188,8 +1191,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T07:58:01.008Z
-Stopped at: Completed 87-29-PLAN.md
+Last session: 2026-11-23T09:33:00.002Z
+Stopped at: Completed 87-30-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

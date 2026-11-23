@@ -651,7 +651,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 29/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
+**Plans:** 30/59 plans executed in 38 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes)
 
 Plans:
 **Wave 1**
@@ -706,7 +706,7 @@ Plans:
 - [x] 87-29-PLAN.md — WineDxvkInstaller behind the engine trait, ShellDxvk
 
 **Wave 12** *(blocked on Wave 11 completion)*
-- [ ] 87-30-PLAN.md — DXMT in the crate (gate, bounded boot update, hooks, online flag); nothing wired
+- [x] 87-30-PLAN.md — DXMT in the crate (gate, bounded boot update, hooks, online flag); nothing wired
 
 **Wave 13** *(blocked on Wave 12 completion)*
 - [ ] 87-31-PLAN.md — Online-state shim and the one-commit DXMT ownership switch; closes the DXMT gap
