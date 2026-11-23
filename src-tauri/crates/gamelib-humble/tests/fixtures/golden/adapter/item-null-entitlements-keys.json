@@ -1,0 +1,15 @@
+{
+  "fn": "libraryItemToOrderDetail",
+  "input": {
+    "id": "n",
+    "entitlements": {
+      "keys": null
+    }
+  },
+  "output": {
+    "gamekey": "n",
+    "tpkd_dict": {
+      "all_tpks": []
+    }
+  }
+}

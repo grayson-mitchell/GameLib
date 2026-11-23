@@ -1,0 +1,48 @@
+[
+  {
+    "id": 1,
+    "request": {
+      "method": "GET",
+      "target": "/home/library",
+      "headers": [
+        [
+          "Accept",
+          "text/html"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 302,
+      "headers": [
+        [
+          "content-type",
+          "text/html"
+        ],
+        [
+          "location",
+          "https://auth.humblebundle.com/login?flow=fake-flow"
+        ]
+      ]
+    }
+  }
+]

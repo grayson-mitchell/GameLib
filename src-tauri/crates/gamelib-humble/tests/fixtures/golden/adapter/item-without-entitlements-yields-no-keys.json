@@ -1,0 +1,14 @@
+{
+  "fn": "libraryItemToOrderDetail",
+  "input": {
+    "id": "e",
+    "title": "No entitlements"
+  },
+  "output": {
+    "gamekey": "e",
+    "tpkd_dict": {
+      "all_tpks": []
+    },
+    "human_name": "No entitlements"
+  }
+}
