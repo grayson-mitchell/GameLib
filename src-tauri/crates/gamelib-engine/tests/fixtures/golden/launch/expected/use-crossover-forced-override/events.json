@@ -1,0 +1,32 @@
+[
+  {
+    "channel": "engineStateChanged",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "Quail",
+        "engine": "crossover",
+        "reason": "override",
+        "engineLabel": "CrossOver",
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "crossover",
+        "engineSource": "stored",
+        "prefixKind": "bottle",
+        "perGameBottleName": "GameLib-legendary-Quail",
+        "legacyLabel": null
+      }
+    ]
+  }
+]

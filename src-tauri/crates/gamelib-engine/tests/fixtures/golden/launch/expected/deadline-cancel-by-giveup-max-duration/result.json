@@ -1,0 +1,370 @@
+{
+  "note": "the watcher reaches its own cap: it gives up and stands the deadline down",
+  "steps": [
+    {
+      "step": {
+        "op": "select"
+      },
+      "result": {
+        "kind": "use",
+        "key": "legendary:Quail",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "prefix": {
+          "kind": "bottle",
+          "bottleName": "GameLib-legendary-Quail",
+          "origin": "per-game"
+        }
+      },
+      "trace": [
+        {
+          "op": "isProvisioned",
+          "bottle": "GameLib-legendary-Quail"
+        },
+        {
+          "op": "resolveCrossoverBinDir",
+          "found": true
+        },
+        {
+          "op": "probe",
+          "bottle": "GameLib-legendary-Quail"
+        },
+        {
+          "op": "prepare",
+          "key": "legendary:Quail",
+          "bottleName": "GameLib-legendary-Quail",
+          "next": "engine=crossover build=26.3.0.39832 reason=cx-healthy",
+          "nextKind": "crossover",
+          "crossoverHealthy": true,
+          "crossoverSettings": {
+            "wineVersion": {
+              "type": "crossover",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+              "name": "CrossOver 26.3.0.39832",
+              "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+            },
+            "wineCrossoverBottle": "GameLib-legendary-Quail",
+            "winePrefix": "<HOME>/old-prefix"
+          }
+        }
+      ],
+      "launchLog": [
+        "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+      ],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ],
+        "maxDurationMs": 10000
+      },
+      "arm": 1,
+      "trace": [
+        {
+          "op": "timer-set",
+          "at": 0,
+          "ms": 180000,
+          "due": 180000,
+          "keepAlive": null
+        },
+        {
+          "op": "watch",
+          "installPath": "<HOME>/Games/Quail",
+          "bottleDir": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-legendary-Quail",
+          "started": true
+        },
+        {
+          "op": "timer-set",
+          "at": 0,
+          "ms": 10000,
+          "due": 10000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 10000
+        },
+        {
+          "op": "timer-set",
+          "at": 0,
+          "ms": 1500,
+          "due": 1500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 1500
+        }
+      ],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 1
+      },
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "advance",
+        "ms": 200000
+      },
+      "now": 200000,
+      "trace": [
+        {
+          "op": "timer-fire",
+          "at": 1500,
+          "due": 1500
+        },
+        {
+          "op": "listing",
+          "at": 1500,
+          "n": 1,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 1500,
+          "ms": 1500,
+          "due": 3000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 3000
+        },
+        {
+          "op": "timer-fire",
+          "at": 3000,
+          "due": 3000
+        },
+        {
+          "op": "listing",
+          "at": 3000,
+          "n": 2,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 3000,
+          "ms": 1500,
+          "due": 4500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 4500
+        },
+        {
+          "op": "timer-fire",
+          "at": 4500,
+          "due": 4500
+        },
+        {
+          "op": "listing",
+          "at": 4500,
+          "n": 3,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 4500,
+          "ms": 1500,
+          "due": 6000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 6000
+        },
+        {
+          "op": "timer-fire",
+          "at": 6000,
+          "due": 6000
+        },
+        {
+          "op": "listing",
+          "at": 6000,
+          "n": 4,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 6000,
+          "ms": 1500,
+          "due": 7500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 7500
+        },
+        {
+          "op": "timer-fire",
+          "at": 7500,
+          "due": 7500
+        },
+        {
+          "op": "listing",
+          "at": 7500,
+          "n": 5,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 7500,
+          "ms": 1500,
+          "due": 9000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 9000
+        },
+        {
+          "op": "timer-fire",
+          "at": 9000,
+          "due": 9000
+        },
+        {
+          "op": "listing",
+          "at": 9000,
+          "n": 6,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 9000,
+          "ms": 1500,
+          "due": 10500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 10500
+        },
+        {
+          "op": "timer-fire",
+          "at": 10000,
+          "due": 10000
+        },
+        {
+          "op": "timer-clear",
+          "at": 10000,
+          "due": 10500,
+          "pending": true
+        },
+        {
+          "op": "timer-clear",
+          "at": 10000,
+          "due": null,
+          "pending": false
+        },
+        {
+          "op": "timer-clear",
+          "at": 10000,
+          "due": 180000,
+          "pending": true
+        }
+      ],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 1
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail uses engine=crossover build=26.3.0.39832 reason=cx-healthy"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "BottleLedger: legendary:Quail running in GameLib-legendary-Quail"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail engine=crossover build=26.3.0.39832 reason=cx-healthy"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: gave up (max-duration) after 10000 ms"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: launch deadline for key legendary:Quail cancelled (monitor-unavailable)"
+    }
+  ]
+}

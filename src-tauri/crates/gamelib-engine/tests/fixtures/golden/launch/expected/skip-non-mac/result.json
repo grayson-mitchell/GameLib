@@ -1,0 +1,25 @@
+{
+  "note": "a non-macOS host: skipped, nothing decided",
+  "steps": [
+    {
+      "step": {
+        "op": "select"
+      },
+      "result": {
+        "kind": "skip"
+      },
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": null,
+        "overlay": null,
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    }
+  ],
+  "logs": []
+}

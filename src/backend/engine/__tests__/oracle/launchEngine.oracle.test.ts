@@ -35,8 +35,9 @@
  * bottle ledger, the lines written to the game's launch log and the number of events published so
  * far. events.json is the `engineStateChanged` sequence. tree.json is the profile afterwards.
  */
-import { existsSync, readFileSync } from 'fs'
-import { join } from 'path'
+import { createHash } from 'crypto'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { dirname, join } from 'path'
 import { describeSkipOnWindows } from 'backend/__tests__/skip'
 import {
   assertManifest,
@@ -55,13 +56,17 @@ import {
   oracleMode
 } from 'backend/testUtils/engineWineOracle/recorder'
 import { createSpawnTracer } from 'backend/testUtils/engineWineOracle/spawnTrace'
-import { snapshotTree } from 'backend/testUtils/engineWineOracle/treeSnapshot'
+import {
+  snapshotTree,
+  type TreeEntry
+} from 'backend/testUtils/engineWineOracle/treeSnapshot'
 import {
   captureLog,
   type LogLine
 } from 'backend/testUtils/engineWineOracle/toolsOracleSupport'
 import { createFakeBottleGateRust } from 'backend/testUtils/fakeBottleGateRust'
 import { createFakeClock } from 'backend/testUtils/fakeClock'
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import { createSpawnAsync } from 'backend/spawnAsync'
 import * as i18nModule from 'i18next'
 import * as logger from 'backend/logger'
@@ -88,14 +93,20 @@ import {
   type LaunchEngineDeps,
   type LaunchEngineStep
 } from '../../launchEngine'
-import { watchForGameProcess } from '../../gameProcessWatch'
+import {
+  deriveGameProcessPrefix,
+  deriveGameProcessPrefixes,
+  watchForGameProcess
+} from '../../gameProcessWatch'
+import { parsePsLine, processListing } from '../../processListing'
 import { buildEngines, buildBottle, fixtureByName } from './fixtureBottles'
 
 const CRATE = 'gamelib-engine'
 const SLICE = 'launch'
 /** The case count this plan commits as a floor; a later edit may raise it, never lower it. */
-const FLOOR = 5
+const FLOOR = 25
 /** The process-match vectors this plan commits as a floor. */
+const VECTOR_FLOOR = 40
 
 /** The date the case starts at. */
 const START = Date.UTC(2026, 10, 23, 12, 0, 0)
@@ -197,6 +208,23 @@ interface LaunchCase {
 }
 
 type Trace = Record<string, unknown>
+
+/**
+ * The tree under the profile with each file's sha256 taken over its content with the profile roots
+ * as placeholders (a bottle's marker holds a wineserver's absolute path, which differs per run).
+ */
+function snapshotNormalised(profile: EngineOracleProfile): TreeEntry[] {
+  return snapshotTree(profile.home).map((entry) => {
+    if (entry.kind !== 'file') return entry
+    const text = readFileSync(join(profile.home, entry.path), 'utf8')
+    return {
+      ...entry,
+      sha256: createHash('sha256')
+        .update(normalisePaths(text, profile))
+        .digest('hex')
+    }
+  })
+}
 
 const flush = (): Promise<void> => new Promise((r) => setImmediate(r))
 
@@ -907,7 +935,7 @@ describeSkipOnWindows('launch step oracle (87-15)', () => {
       writeOrCompareGolden(CRATE, SLICE, c.id, {
         result: normalisePaths({ note: c.note, steps, logs }, profile),
         events: normalisePaths(events, profile),
-        after: normalisePaths(snapshotTree(profile.home), profile),
+        after: normalisePaths(snapshotNormalised(profile), profile),
         spawns: normalisePaths([...tracer.records], profile)
       })
     })
@@ -926,13 +954,43 @@ describeSkipOnWindows('launch step oracle (87-15)', () => {
     const ids = new Set(cases.map((c) => c.id))
     for (const id of [
       'skip-native',
+      'skip-steam-runner',
       'legacy-override',
       'use-crossover-healthy',
       'fallback-cx-missing-pin-installed',
-      'launch-settings-crossover-overlay'
+      'fallback-cx-expired-pin-installed',
+      'fallback-cx-broken-pin-installed',
+      'fallback-setup-purpose-no-toast',
+      'override-crossover-missing-refused',
+      'offline-refused-cx-missing-no-pin',
+      'refused-twice-two-dialogs',
+      'launch-settings-crossover-overlay',
+      'deadline-fires-no-match-no-raise',
+      'deadline-cancel-first-match-unix',
+      'deadline-cancel-by-end-launch',
+      'deadline-cancel-by-giveup-listing-failures',
+      'deadline-quit-with-deadline-armed'
     ]) {
       expect(ids.has(id)).toBe(true)
     }
+  })
+
+  it('a deadline-fired case records zero raise calls and one notify (WR-02)', () => {
+    if (oracleMode() === 'write') return
+    const file = join(
+      fixturesRoot(CRATE),
+      'golden',
+      SLICE,
+      'expected',
+      'deadline-fires-no-match-no-raise',
+      'result.json'
+    )
+    const text = readFileSync(file, 'utf8')
+    expect(text).toContain('launch-deadline-unconfirmed')
+    expect(text).not.toContain('"raiseMainWindow"')
+    expect(text).not.toContain('"raiseMainWindowForInAppDialog"')
+    expect(text).not.toContain('"showDialog"')
+    expect(text.match(/"op": "notify"/g)?.length).toBe(1)
   })
 
   it('the pinned-fallback case records the fallback toast notification', () => {
@@ -947,5 +1005,539 @@ describeSkipOnWindows('launch step oracle (87-15)', () => {
     )
     const text = readFileSync(file, 'utf8')
     expect(text).toContain('CrossOver not found — using built-in engine')
+  })
+})
+
+// ---------------------------------------------------------------------------------------------
+// The process-match vectors (D-08): the forms `gameProcessWatch` matches and the `ps` parse.
+// ---------------------------------------------------------------------------------------------
+
+const HOME = '/Users/Shared'
+const AVERNUM = '/Volumes/Games/Avernum 4'
+const QUAIL = `${HOME}/Games/Quail`
+const BOTTLE = `${HOME}/bottles/GameLib-legendary-Quail`
+const BOTTLE_GAME = `${BOTTLE}/drive_c/Games/Quail`
+
+interface MatchVector {
+  id: string
+  note: string
+  installPath: string
+  home: string
+  bottleDir?: string
+  /** The `ps -axo pid=,command=` (or `pgrep -lf .`) output the watcher reads. */
+  listing: string
+}
+
+const ps = (pid: number, command: string): string =>
+  `${String(pid).padStart(5, ' ')} ${command}`
+
+const MATCH_VECTORS: MatchVector[] = [
+  {
+    id: 'unix-path-start-of-command',
+    note: 'the command line starts with the install dir',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(101, `${AVERNUM}/Game.exe`)
+  },
+  {
+    id: 'unix-path-later-argument-after-space',
+    note: 'GPTK shape: the install dir is a later argument, preceded by a space',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(
+      102,
+      `wine64-preloader /opt/wine/bin/wine64 ${AVERNUM}/Game.exe`
+    )
+  },
+  {
+    id: 'unix-path-after-quote',
+    note: 'preceded by a double quote',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(103, `wine "${AVERNUM}/Game.exe"`)
+  },
+  {
+    id: 'unix-path-after-equals',
+    note: 'preceded by =',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(104, `launcher --root=${AVERNUM}/data`)
+  },
+  {
+    id: 'unix-path-after-tab',
+    note: 'preceded by a tab',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(105, `wine\t${AVERNUM}/Game.exe`)
+  },
+  {
+    id: 'unix-path-glued-to-a-longer-path-is-not-a-match',
+    note: 'a character other than whitespace, quote or = before the form: not a match',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(106, `x${AVERNUM}/Game.exe`)
+  },
+  {
+    id: 'unix-path-case-insensitive',
+    note: 'the comparison lowercases both sides',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(107, '/VOLUMES/GAMES/AVERNUM 4/GAME.EXE')
+  },
+  {
+    id: 'unix-path-lowercase-command-uppercase-install',
+    note: 'the install path is upper case and the command lower case',
+    installPath: '/Volumes/GAMES/AVERNUM 4',
+    home: HOME,
+    listing: ps(108, '/volumes/games/avernum 4/game.exe')
+  },
+  {
+    id: 'trailing-separator-keeps-a-sibling-apart',
+    note: '`Avernum 4` must not match `Avernum 4 Remaster`',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(109, `${AVERNUM} Remaster/Game.exe`)
+  },
+  {
+    id: 'trailing-separator-bare-dir-is-not-a-match',
+    note: 'the command names the dir itself without a separator: no match',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(110, `open ${AVERNUM}`)
+  },
+  {
+    id: 'install-path-with-trailing-slash',
+    note: 'a trailing slash on the install path is trimmed and re-added once',
+    installPath: `${AVERNUM}/`,
+    home: HOME,
+    listing: ps(111, `${AVERNUM}/Game.exe`)
+  },
+  {
+    id: 'z-drive-form',
+    note: '`Z:` plus the absolute path with backslashes',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(112, 'Z:\\Volumes\\Games\\Avernum 4\\Game.exe')
+  },
+  {
+    id: 'z-drive-form-case-insensitive',
+    note: 'the Z form in lower case',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(113, 'z:\\volumes\\games\\avernum 4\\game.exe')
+  },
+  {
+    id: 'z-drive-form-quoted-by-ps',
+    note: 'ps shows a Windows command line in quotes: the leading quote is dropped by the parse',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(114, '"Z:\\Volumes\\Games\\Avernum 4\\Game.exe" -windowed')
+  },
+  {
+    id: 'z-drive-form-sibling-is-not-a-match',
+    note: 'the Z form keeps the trailing separator too',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(115, 'Z:\\Volumes\\Games\\Avernum 4 Remaster\\Game.exe')
+  },
+  {
+    id: 'y-drive-form-under-home',
+    note: 'an install under the home dir also carries a `Y:` form relative to home',
+    installPath: QUAIL,
+    home: HOME,
+    listing: ps(116, 'Y:\\Games\\Quail\\Game.exe')
+  },
+  {
+    id: 'y-drive-form-case-insensitive',
+    note: 'the Y form in upper case',
+    installPath: QUAIL,
+    home: HOME,
+    listing: ps(117, 'Y:\\GAMES\\QUAIL\\GAME.EXE')
+  },
+  {
+    id: 'y-drive-form-not-derived-outside-home',
+    note: 'an install outside the home dir has no Y form: the same text is not a match',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(118, 'Y:\\Games\\Avernum 4\\Game.exe')
+  },
+  {
+    id: 'y-drive-form-home-with-trailing-slash',
+    note: 'a home dir written with a trailing slash derives the same Y form',
+    installPath: QUAIL,
+    home: `${HOME}/`,
+    listing: ps(119, 'Y:\\Games\\Quail\\Game.exe')
+  },
+  {
+    id: 'c-drive-form-under-the-bottle',
+    note: "an install under the bottle's drive_c carries a `C:` form (CR-02)",
+    installPath: BOTTLE_GAME,
+    home: HOME,
+    bottleDir: BOTTLE,
+    listing: ps(120, 'C:\\Games\\Quail\\Game.exe')
+  },
+  {
+    id: 'c-drive-form-without-a-bottle-is-not-derived',
+    note: 'the same install and command without a bottle dir: no C form, no match',
+    installPath: BOTTLE_GAME,
+    home: HOME,
+    listing: ps(121, 'C:\\Games\\Quail\\Game.exe')
+  },
+  {
+    id: 'c-drive-form-install-outside-the-bottle',
+    note: 'an install outside drive_c has no C form',
+    installPath: QUAIL,
+    home: HOME,
+    bottleDir: BOTTLE,
+    listing: ps(122, 'C:\\Games\\Quail\\Game.exe')
+  },
+  {
+    id: 'basename-only-is-unmatchable',
+    note: 'a bare-basename launch (cwd plus Game.exe) cannot be matched',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(123, 'Game.exe')
+  },
+  {
+    id: 'basename-after-a-launcher-stub-is-unmatchable',
+    note: 'a launcher stub that names only the basename',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(124, 'C:\\windows\\system32\\start.exe /exec Game.exe')
+  },
+  {
+    id: 'first-match-wins-and-reports-its-pid',
+    note: 'two matching processes: the first line in the listing is the one reported',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: [
+      ps(200, '/usr/sbin/cfprefsd agent'),
+      ps(201, `${AVERNUM}/Game.exe`),
+      ps(202, `${AVERNUM}/Helper.exe`)
+    ].join('\n')
+  },
+  {
+    id: 'garbage-and-blank-lines-are-skipped',
+    note: 'lines that do not parse are skipped, not errors',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: [
+      '',
+      'not a ps line',
+      '  PID COMMAND',
+      ps(203, `${AVERNUM}/Game.exe`)
+    ].join('\n')
+  },
+  {
+    id: 'pgrep-shape-no-padding',
+    note: 'the `pgrep -lf .` shape: pid, one space, command, no padding',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: `4242 ${AVERNUM}/Game.exe`
+  },
+  {
+    id: 'another-games-dir-is-not-a-match',
+    note: 'a different install dir in the listing',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ps(125, '/Volumes/Games/Other Game/Game.exe')
+  },
+  {
+    id: 'empty-listing',
+    note: 'nothing running',
+    installPath: AVERNUM,
+    home: HOME,
+    listing: ''
+  },
+  {
+    id: 'relative-install-path-is-not-watched',
+    note: 'a relative install path derives no form: no watcher at all',
+    installPath: 'Games/Avernum 4',
+    home: HOME,
+    listing: ps(126, 'Games/Avernum 4/Game.exe')
+  },
+  {
+    id: 'empty-install-path-is-not-watched',
+    note: 'an empty install path derives no form',
+    installPath: '',
+    home: HOME,
+    listing: ps(127, '/Game.exe')
+  },
+  {
+    id: 'root-install-path-is-not-watched',
+    note: 'the filesystem root is not usable',
+    installPath: '/',
+    home: HOME,
+    listing: ps(128, '/Game.exe')
+  }
+]
+
+const PREFIX_VECTORS: {
+  id: string
+  installPath: string
+  home: string
+  bottleDir?: string
+}[] = [
+  { id: 'outside-home', installPath: AVERNUM, home: HOME },
+  { id: 'under-home', installPath: QUAIL, home: HOME },
+  { id: 'under-home-trailing-slash', installPath: `${QUAIL}/`, home: HOME },
+  {
+    id: 'under-home-and-bottle',
+    installPath: BOTTLE_GAME,
+    home: HOME,
+    bottleDir: BOTTLE
+  },
+  {
+    id: 'under-bottle-only',
+    installPath: BOTTLE_GAME,
+    home: '/Volumes/Other',
+    bottleDir: BOTTLE
+  },
+  {
+    id: 'bottle-dir-trailing-slash',
+    installPath: BOTTLE_GAME,
+    home: HOME,
+    bottleDir: `${BOTTLE}/`
+  },
+  {
+    id: 'home-is-a-prefix-of-a-sibling-name',
+    installPath: '/Volumes/Home2/Games/Quail',
+    home: '/Volumes/Home'
+  },
+  { id: 'empty-home', installPath: QUAIL, home: '' },
+  {
+    id: 'upper-case-is-lowered',
+    installPath: '/Volumes/GAMES/Avernum 4',
+    home: HOME
+  },
+  { id: 'spaces-and-dots', installPath: '/Volumes/Games/A.B C/D', home: HOME },
+  { id: 'relative', installPath: 'Games/Quail', home: HOME },
+  { id: 'empty', installPath: '', home: HOME },
+  { id: 'root', installPath: '/', home: HOME },
+  { id: 'many-slashes-root', installPath: '///', home: HOME }
+]
+
+const PS_LINES: { id: string; line: string }[] = [
+  { id: 'padded-pid', line: '  123 /usr/bin/thing --flag' },
+  { id: 'unpadded-pid', line: '4242 /usr/bin/thing' },
+  { id: 'tab-before-pid', line: '\t 77 cmd' },
+  {
+    id: 'quoted-windows-command',
+    line: '  901 "C:\\Program Files\\Game\\Game.exe" -arg'
+  },
+  {
+    id: 'command-with-spaces-kept',
+    line: '  15 wine C:\\Program Files\\A B\\x.exe'
+  },
+  { id: 'command-trimmed', line: '  16 cmd with trailing space   ' },
+  { id: 'pid-only', line: '  123' },
+  { id: 'pid-and-one-space', line: '  123 ' },
+  { id: 'header-line', line: '  PID COMMAND' },
+  { id: 'empty', line: '' },
+  { id: 'non-numeric-pid', line: 'abc /bin/x' },
+  { id: 'two-spaces-after-pid', line: '  9  two-spaces' },
+  { id: 'only-a-quote', line: '  50 "' }
+]
+
+type ListingScript = { cmd: string; outcome: 'ok' | 'fail'; stdout?: string }
+
+const LISTING_VECTORS: { id: string; note: string; script: ListingScript[] }[] =
+  [
+    {
+      id: 'ps-answers',
+      note: '`ps -axo pid=,command=` works',
+      script: [{ cmd: 'ps', outcome: 'ok', stdout: ps(1, '/sbin/launchd') }]
+    },
+    {
+      id: 'ps-cannot-spawn-pgrep-answers',
+      note: 'G4: ps is setuid and a sandbox refuses it; `pgrep -lf .` stands in',
+      script: [
+        { cmd: 'ps', outcome: 'fail' },
+        { cmd: 'pgrep', outcome: 'ok', stdout: '1 /sbin/launchd' }
+      ]
+    },
+    {
+      id: 'both-fail-the-ps-error-is-rethrown',
+      note: 'the ps error, not the pgrep one, reaches the caller',
+      script: [
+        { cmd: 'ps', outcome: 'fail' },
+        { cmd: 'pgrep', outcome: 'fail' }
+      ]
+    }
+  ]
+
+describeSkipOnWindows('the process-match vectors (87-15)', () => {
+  const vectorFile = join(fixturesRoot(CRATE), 'vectors', 'process_match.json')
+  const json = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`
+
+  /** Runs the real watcher once over a scripted listing and reports what it saw. */
+  async function runMatch(
+    v: MatchVector
+  ): Promise<{ watching: boolean; matched: boolean; pid: string | null }> {
+    const timers: { fn: () => void; ms: number }[] = []
+    let pid: string | null = null
+    const watcher = watchForGameProcess({
+      installPath: v.installPath,
+      ...(v.bottleDir === undefined ? {} : { bottleDir: v.bottleDir }),
+      onFirstMatch: (p) => {
+        pid = p
+      },
+      services: {
+        spawnAsync: (() => Promise.reject(new Error('unscripted'))) as never
+      },
+      deps: {
+        processListing: () => Promise.resolve(v.listing),
+        setTimer: (fn, ms) => {
+          timers.push({ fn, ms })
+          return { unref: () => undefined }
+        },
+        clearTimer: () => undefined,
+        homeDir: () => v.home
+      }
+    })
+    if (watcher === null) return { watching: false, matched: false, pid: null }
+    // The first timer is the give-up cap, the second the poll.
+    const poll = timers.find((t) => t.ms === 1500)
+    poll?.fn()
+    await flush()
+    watcher.stop()
+    return { watching: true, matched: pid !== null, pid }
+  }
+
+  async function buildVectors(): Promise<Record<string, unknown[]>> {
+    const spy = jest
+      .spyOn(logger, 'logInfo')
+      .mockImplementation(() => undefined)
+    try {
+      const match: unknown[] = []
+      for (const v of MATCH_VECTORS) {
+        match.push({ ...v, expected: await runMatch(v) })
+      }
+      const listing: unknown[] = []
+      for (const v of LISTING_VECTORS) {
+        const calls: { cmd: string; args: string[] }[] = []
+        let n = 0
+        const spawnAsync = ((cmd: string, args: string[]) => {
+          calls.push({ cmd, args })
+          const step = v.script[n++]
+          if (!step || step.outcome === 'fail') {
+            return Promise.reject(new Error(`${cmd} failed`))
+          }
+          return Promise.resolve({ stdout: step.stdout ?? '', stderr: '' })
+        }) as never
+        let outcome: Record<string, unknown>
+        try {
+          outcome = { stdout: await processListing({ spawnAsync }) }
+        } catch (error) {
+          outcome = {
+            threw: error instanceof Error ? error.message : String(error)
+          }
+        }
+        listing.push({ ...v, expected: { ...outcome, spawned: calls } })
+      }
+      return {
+        prefixes: PREFIX_VECTORS.map((v) => ({
+          ...v,
+          expected: deriveGameProcessPrefixes(
+            v.installPath,
+            v.home,
+            v.bottleDir
+          )
+        })),
+        prefix: PREFIX_VECTORS.map((v) => ({
+          id: v.id,
+          installPath: v.installPath,
+          expected: deriveGameProcessPrefix(v.installPath)
+        })),
+        parsePsLine: PS_LINES.map((v) => ({
+          ...v,
+          expected: parsePsLine(v.line)
+        })),
+        match,
+        listing
+      }
+    } finally {
+      spy.mockRestore()
+    }
+  }
+
+  function writeOrCompare(text: string): void {
+    const mode = oracleMode()
+    if (mode === 'record') return
+    if (mode === 'write') {
+      mkdirSync(dirname(vectorFile), { recursive: true })
+      writeFileSync(vectorFile, text)
+      return
+    }
+    expect(text).toBe(readFileSync(vectorFile, 'utf8'))
+  }
+
+  it('process_match.json pins the match forms, the prefixes and the ps parse', async () => {
+    const vectors = await buildVectors()
+    const total = Object.values(vectors).flat().length
+    assertAtOrAboveFloor('process match vectors', total, VECTOR_FLOOR)
+    for (const [name, list] of Object.entries(vectors)) {
+      const ids = (list as { id: string }[]).map((v) => v.id)
+      expect(new Set(ids).size).toBe(ids.length)
+      assertAtOrAboveFloor(`process match ${name} vectors`, list.length, 1)
+    }
+    writeOrCompare(json(vectors))
+    const committed = JSON.parse(readFileSync(vectorFile, 'utf8')) as Record<
+      string,
+      unknown[]
+    >
+    assertAtOrAboveFloor(
+      'process match committed vectors',
+      Object.values(committed).flat().length,
+      VECTOR_FLOOR
+    )
+  })
+
+  it('an empty vector list fails the floor', () => {
+    expect(() =>
+      assertAtOrAboveFloor('process match vectors', 0, VECTOR_FLOOR)
+    ).toThrow(/below the floor/)
+  })
+
+  it('every match form in the plan is a vector and each recorded verdict is what the form says', async () => {
+    const vectors = await buildVectors()
+    const byId = new Map(
+      (
+        vectors.match as {
+          id: string
+          expected: { matched: boolean; watching: boolean }
+        }[]
+      ).map((v) => [v.id, v.expected])
+    )
+    // The verdicts are asserted here as well as recorded: a form that stopped matching must fail
+    // this test even if its golden were rewritten in the same change.
+    for (const id of [
+      'unix-path-start-of-command',
+      'unix-path-later-argument-after-space',
+      'z-drive-form',
+      'z-drive-form-case-insensitive',
+      'y-drive-form-under-home',
+      'c-drive-form-under-the-bottle',
+      'unix-path-case-insensitive',
+      'install-path-with-trailing-slash'
+    ]) {
+      expect(byId.get(id)?.matched).toBe(true)
+    }
+    for (const id of [
+      'trailing-separator-keeps-a-sibling-apart',
+      'basename-only-is-unmatchable',
+      'unix-path-glued-to-a-longer-path-is-not-a-match',
+      'y-drive-form-not-derived-outside-home',
+      'c-drive-form-without-a-bottle-is-not-derived'
+    ]) {
+      expect(byId.get(id)?.matched).toBe(false)
+    }
+    for (const id of [
+      'relative-install-path-is-not-watched',
+      'empty-install-path-is-not-watched',
+      'root-install-path-is-not-watched'
+    ]) {
+      expect(byId.get(id)?.watching).toBe(false)
+    }
   })
 })

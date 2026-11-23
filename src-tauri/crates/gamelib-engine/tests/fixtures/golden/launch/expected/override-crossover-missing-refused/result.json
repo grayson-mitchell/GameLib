@@ -1,0 +1,72 @@
+{
+  "note": "override CrossOver with CrossOver missing: refused, dialog override-unavailable, nothing registered",
+  "steps": [
+    {
+      "step": {
+        "op": "select"
+      },
+      "result": {
+        "kind": "refused",
+        "key": "legendary:Quail"
+      },
+      "trace": [
+        {
+          "op": "isProvisioned",
+          "bottle": "GameLib-legendary-Quail"
+        },
+        {
+          "op": "resolveCrossoverBinDir",
+          "found": false
+        },
+        {
+          "op": "notify",
+          "title": "Quail",
+          "body": "The engine chosen for this game in Wine settings is not available (CrossOver override is not usable: CrossOver is not installed). Choose Automatic or install it."
+        },
+        {
+          "op": "raiseMainWindow"
+        },
+        {
+          "op": "trackAck",
+          "ackId": "ack-1"
+        },
+        {
+          "op": "raiseMainWindowForInAppDialog"
+        },
+        {
+          "op": "sendFrontendMessage",
+          "channel": "showDialog",
+          "args": [
+            "Quail",
+            "The engine chosen for this game in Wine settings is not available (CrossOver override is not usable: CrossOver is not installed). Choose Automatic or install it.",
+            "MESSAGE",
+            null,
+            "ack-1"
+          ]
+        }
+      ],
+      "launchLog": [],
+      "after": {
+        "registry": null,
+        "overlay": null,
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    }
+  ],
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail engine override crossover is unavailable: CrossOver override is not usable: CrossOver is not installed"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "[engine-notice] key=legendary:Quail tag=override-unavailable dispatched=in-app-dialog+notify dialog-frame-sent=true display=pending"
+    }
+  ]
+}

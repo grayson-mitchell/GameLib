@@ -1,0 +1,2864 @@
+{
+  "note": "a bare-basename launch cannot be matched: the deadline fires and only notifies",
+  "steps": [
+    {
+      "step": {
+        "op": "select"
+      },
+      "result": {
+        "kind": "use",
+        "key": "legendary:Quail",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "prefix": {
+          "kind": "bottle",
+          "bottleName": "GameLib-legendary-Quail",
+          "origin": "per-game"
+        }
+      },
+      "trace": [
+        {
+          "op": "isProvisioned",
+          "bottle": "GameLib-legendary-Quail"
+        },
+        {
+          "op": "resolveCrossoverBinDir",
+          "found": true
+        },
+        {
+          "op": "probe",
+          "bottle": "GameLib-legendary-Quail"
+        },
+        {
+          "op": "prepare",
+          "key": "legendary:Quail",
+          "bottleName": "GameLib-legendary-Quail",
+          "next": "engine=crossover build=26.3.0.39832 reason=cx-healthy",
+          "nextKind": "crossover",
+          "crossoverHealthy": true,
+          "crossoverSettings": {
+            "wineVersion": {
+              "type": "crossover",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+              "name": "CrossOver 26.3.0.39832",
+              "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+            },
+            "wineCrossoverBottle": "GameLib-legendary-Quail",
+            "winePrefix": "<HOME>/old-prefix"
+          }
+        }
+      ],
+      "launchLog": [
+        "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+      ],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  405 Game.exe",
+            "  406 wine64 Game.exe"
+          ]
+        ]
+      },
+      "arm": 1,
+      "trace": [
+        {
+          "op": "timer-set",
+          "at": 0,
+          "ms": 180000,
+          "due": 180000,
+          "keepAlive": null
+        },
+        {
+          "op": "watch",
+          "installPath": "<HOME>/Games/Quail",
+          "bottleDir": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-legendary-Quail",
+          "started": true
+        },
+        {
+          "op": "timer-set",
+          "at": 0,
+          "ms": 185000,
+          "due": 185000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 185000
+        },
+        {
+          "op": "timer-set",
+          "at": 0,
+          "ms": 1500,
+          "due": 1500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 1500
+        }
+      ],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 1
+      },
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "advance",
+        "ms": 181000
+      },
+      "now": 181000,
+      "trace": [
+        {
+          "op": "timer-fire",
+          "at": 1500,
+          "due": 1500
+        },
+        {
+          "op": "listing",
+          "at": 1500,
+          "n": 1,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 1500,
+          "ms": 1500,
+          "due": 3000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 3000
+        },
+        {
+          "op": "timer-fire",
+          "at": 3000,
+          "due": 3000
+        },
+        {
+          "op": "listing",
+          "at": 3000,
+          "n": 2,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 3000,
+          "ms": 1500,
+          "due": 4500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 4500
+        },
+        {
+          "op": "timer-fire",
+          "at": 4500,
+          "due": 4500
+        },
+        {
+          "op": "listing",
+          "at": 4500,
+          "n": 3,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 4500,
+          "ms": 1500,
+          "due": 6000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 6000
+        },
+        {
+          "op": "timer-fire",
+          "at": 6000,
+          "due": 6000
+        },
+        {
+          "op": "listing",
+          "at": 6000,
+          "n": 4,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 6000,
+          "ms": 1500,
+          "due": 7500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 7500
+        },
+        {
+          "op": "timer-fire",
+          "at": 7500,
+          "due": 7500
+        },
+        {
+          "op": "listing",
+          "at": 7500,
+          "n": 5,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 7500,
+          "ms": 1500,
+          "due": 9000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 9000
+        },
+        {
+          "op": "timer-fire",
+          "at": 9000,
+          "due": 9000
+        },
+        {
+          "op": "listing",
+          "at": 9000,
+          "n": 6,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 9000,
+          "ms": 1500,
+          "due": 10500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 10500
+        },
+        {
+          "op": "timer-fire",
+          "at": 10500,
+          "due": 10500
+        },
+        {
+          "op": "listing",
+          "at": 10500,
+          "n": 7,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 10500,
+          "ms": 1500,
+          "due": 12000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 12000
+        },
+        {
+          "op": "timer-fire",
+          "at": 12000,
+          "due": 12000
+        },
+        {
+          "op": "listing",
+          "at": 12000,
+          "n": 8,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 12000,
+          "ms": 1500,
+          "due": 13500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 13500
+        },
+        {
+          "op": "timer-fire",
+          "at": 13500,
+          "due": 13500
+        },
+        {
+          "op": "listing",
+          "at": 13500,
+          "n": 9,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 13500,
+          "ms": 1500,
+          "due": 15000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 15000
+        },
+        {
+          "op": "timer-fire",
+          "at": 15000,
+          "due": 15000
+        },
+        {
+          "op": "listing",
+          "at": 15000,
+          "n": 10,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 15000,
+          "ms": 1500,
+          "due": 16500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 16500
+        },
+        {
+          "op": "timer-fire",
+          "at": 16500,
+          "due": 16500
+        },
+        {
+          "op": "listing",
+          "at": 16500,
+          "n": 11,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 16500,
+          "ms": 1500,
+          "due": 18000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 18000
+        },
+        {
+          "op": "timer-fire",
+          "at": 18000,
+          "due": 18000
+        },
+        {
+          "op": "listing",
+          "at": 18000,
+          "n": 12,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 18000,
+          "ms": 1500,
+          "due": 19500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 19500
+        },
+        {
+          "op": "timer-fire",
+          "at": 19500,
+          "due": 19500
+        },
+        {
+          "op": "listing",
+          "at": 19500,
+          "n": 13,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 19500,
+          "ms": 1500,
+          "due": 21000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 21000
+        },
+        {
+          "op": "timer-fire",
+          "at": 21000,
+          "due": 21000
+        },
+        {
+          "op": "listing",
+          "at": 21000,
+          "n": 14,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 21000,
+          "ms": 1500,
+          "due": 22500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 22500
+        },
+        {
+          "op": "timer-fire",
+          "at": 22500,
+          "due": 22500
+        },
+        {
+          "op": "listing",
+          "at": 22500,
+          "n": 15,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 22500,
+          "ms": 1500,
+          "due": 24000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 24000
+        },
+        {
+          "op": "timer-fire",
+          "at": 24000,
+          "due": 24000
+        },
+        {
+          "op": "listing",
+          "at": 24000,
+          "n": 16,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 24000,
+          "ms": 1500,
+          "due": 25500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 25500
+        },
+        {
+          "op": "timer-fire",
+          "at": 25500,
+          "due": 25500
+        },
+        {
+          "op": "listing",
+          "at": 25500,
+          "n": 17,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 25500,
+          "ms": 1500,
+          "due": 27000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 27000
+        },
+        {
+          "op": "timer-fire",
+          "at": 27000,
+          "due": 27000
+        },
+        {
+          "op": "listing",
+          "at": 27000,
+          "n": 18,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 27000,
+          "ms": 1500,
+          "due": 28500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 28500
+        },
+        {
+          "op": "timer-fire",
+          "at": 28500,
+          "due": 28500
+        },
+        {
+          "op": "listing",
+          "at": 28500,
+          "n": 19,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 28500,
+          "ms": 1500,
+          "due": 30000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 30000
+        },
+        {
+          "op": "timer-fire",
+          "at": 30000,
+          "due": 30000
+        },
+        {
+          "op": "listing",
+          "at": 30000,
+          "n": 20,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 30000,
+          "ms": 1500,
+          "due": 31500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 31500
+        },
+        {
+          "op": "timer-fire",
+          "at": 31500,
+          "due": 31500
+        },
+        {
+          "op": "listing",
+          "at": 31500,
+          "n": 21,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 31500,
+          "ms": 1500,
+          "due": 33000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 33000
+        },
+        {
+          "op": "timer-fire",
+          "at": 33000,
+          "due": 33000
+        },
+        {
+          "op": "listing",
+          "at": 33000,
+          "n": 22,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 33000,
+          "ms": 1500,
+          "due": 34500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 34500
+        },
+        {
+          "op": "timer-fire",
+          "at": 34500,
+          "due": 34500
+        },
+        {
+          "op": "listing",
+          "at": 34500,
+          "n": 23,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 34500,
+          "ms": 1500,
+          "due": 36000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 36000
+        },
+        {
+          "op": "timer-fire",
+          "at": 36000,
+          "due": 36000
+        },
+        {
+          "op": "listing",
+          "at": 36000,
+          "n": 24,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 36000,
+          "ms": 1500,
+          "due": 37500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 37500
+        },
+        {
+          "op": "timer-fire",
+          "at": 37500,
+          "due": 37500
+        },
+        {
+          "op": "listing",
+          "at": 37500,
+          "n": 25,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 37500,
+          "ms": 1500,
+          "due": 39000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 39000
+        },
+        {
+          "op": "timer-fire",
+          "at": 39000,
+          "due": 39000
+        },
+        {
+          "op": "listing",
+          "at": 39000,
+          "n": 26,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 39000,
+          "ms": 1500,
+          "due": 40500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 40500
+        },
+        {
+          "op": "timer-fire",
+          "at": 40500,
+          "due": 40500
+        },
+        {
+          "op": "listing",
+          "at": 40500,
+          "n": 27,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 40500,
+          "ms": 1500,
+          "due": 42000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 42000
+        },
+        {
+          "op": "timer-fire",
+          "at": 42000,
+          "due": 42000
+        },
+        {
+          "op": "listing",
+          "at": 42000,
+          "n": 28,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 42000,
+          "ms": 1500,
+          "due": 43500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 43500
+        },
+        {
+          "op": "timer-fire",
+          "at": 43500,
+          "due": 43500
+        },
+        {
+          "op": "listing",
+          "at": 43500,
+          "n": 29,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 43500,
+          "ms": 1500,
+          "due": 45000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 45000
+        },
+        {
+          "op": "timer-fire",
+          "at": 45000,
+          "due": 45000
+        },
+        {
+          "op": "listing",
+          "at": 45000,
+          "n": 30,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 45000,
+          "ms": 1500,
+          "due": 46500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 46500
+        },
+        {
+          "op": "timer-fire",
+          "at": 46500,
+          "due": 46500
+        },
+        {
+          "op": "listing",
+          "at": 46500,
+          "n": 31,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 46500,
+          "ms": 1500,
+          "due": 48000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 48000
+        },
+        {
+          "op": "timer-fire",
+          "at": 48000,
+          "due": 48000
+        },
+        {
+          "op": "listing",
+          "at": 48000,
+          "n": 32,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 48000,
+          "ms": 1500,
+          "due": 49500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 49500
+        },
+        {
+          "op": "timer-fire",
+          "at": 49500,
+          "due": 49500
+        },
+        {
+          "op": "listing",
+          "at": 49500,
+          "n": 33,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 49500,
+          "ms": 1500,
+          "due": 51000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 51000
+        },
+        {
+          "op": "timer-fire",
+          "at": 51000,
+          "due": 51000
+        },
+        {
+          "op": "listing",
+          "at": 51000,
+          "n": 34,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 51000,
+          "ms": 1500,
+          "due": 52500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 52500
+        },
+        {
+          "op": "timer-fire",
+          "at": 52500,
+          "due": 52500
+        },
+        {
+          "op": "listing",
+          "at": 52500,
+          "n": 35,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 52500,
+          "ms": 1500,
+          "due": 54000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 54000
+        },
+        {
+          "op": "timer-fire",
+          "at": 54000,
+          "due": 54000
+        },
+        {
+          "op": "listing",
+          "at": 54000,
+          "n": 36,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 54000,
+          "ms": 1500,
+          "due": 55500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 55500
+        },
+        {
+          "op": "timer-fire",
+          "at": 55500,
+          "due": 55500
+        },
+        {
+          "op": "listing",
+          "at": 55500,
+          "n": 37,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 55500,
+          "ms": 1500,
+          "due": 57000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 57000
+        },
+        {
+          "op": "timer-fire",
+          "at": 57000,
+          "due": 57000
+        },
+        {
+          "op": "listing",
+          "at": 57000,
+          "n": 38,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 57000,
+          "ms": 1500,
+          "due": 58500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 58500
+        },
+        {
+          "op": "timer-fire",
+          "at": 58500,
+          "due": 58500
+        },
+        {
+          "op": "listing",
+          "at": 58500,
+          "n": 39,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 58500,
+          "ms": 1500,
+          "due": 60000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 60000
+        },
+        {
+          "op": "timer-fire",
+          "at": 60000,
+          "due": 60000
+        },
+        {
+          "op": "listing",
+          "at": 60000,
+          "n": 40,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 60000,
+          "ms": 1500,
+          "due": 61500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 61500
+        },
+        {
+          "op": "timer-fire",
+          "at": 61500,
+          "due": 61500
+        },
+        {
+          "op": "listing",
+          "at": 61500,
+          "n": 41,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 61500,
+          "ms": 1500,
+          "due": 63000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 63000
+        },
+        {
+          "op": "timer-fire",
+          "at": 63000,
+          "due": 63000
+        },
+        {
+          "op": "listing",
+          "at": 63000,
+          "n": 42,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 63000,
+          "ms": 1500,
+          "due": 64500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 64500
+        },
+        {
+          "op": "timer-fire",
+          "at": 64500,
+          "due": 64500
+        },
+        {
+          "op": "listing",
+          "at": 64500,
+          "n": 43,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 64500,
+          "ms": 1500,
+          "due": 66000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 66000
+        },
+        {
+          "op": "timer-fire",
+          "at": 66000,
+          "due": 66000
+        },
+        {
+          "op": "listing",
+          "at": 66000,
+          "n": 44,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 66000,
+          "ms": 1500,
+          "due": 67500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 67500
+        },
+        {
+          "op": "timer-fire",
+          "at": 67500,
+          "due": 67500
+        },
+        {
+          "op": "listing",
+          "at": 67500,
+          "n": 45,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 67500,
+          "ms": 1500,
+          "due": 69000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 69000
+        },
+        {
+          "op": "timer-fire",
+          "at": 69000,
+          "due": 69000
+        },
+        {
+          "op": "listing",
+          "at": 69000,
+          "n": 46,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 69000,
+          "ms": 1500,
+          "due": 70500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 70500
+        },
+        {
+          "op": "timer-fire",
+          "at": 70500,
+          "due": 70500
+        },
+        {
+          "op": "listing",
+          "at": 70500,
+          "n": 47,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 70500,
+          "ms": 1500,
+          "due": 72000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 72000
+        },
+        {
+          "op": "timer-fire",
+          "at": 72000,
+          "due": 72000
+        },
+        {
+          "op": "listing",
+          "at": 72000,
+          "n": 48,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 72000,
+          "ms": 1500,
+          "due": 73500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 73500
+        },
+        {
+          "op": "timer-fire",
+          "at": 73500,
+          "due": 73500
+        },
+        {
+          "op": "listing",
+          "at": 73500,
+          "n": 49,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 73500,
+          "ms": 1500,
+          "due": 75000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 75000
+        },
+        {
+          "op": "timer-fire",
+          "at": 75000,
+          "due": 75000
+        },
+        {
+          "op": "listing",
+          "at": 75000,
+          "n": 50,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 75000,
+          "ms": 1500,
+          "due": 76500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 76500
+        },
+        {
+          "op": "timer-fire",
+          "at": 76500,
+          "due": 76500
+        },
+        {
+          "op": "listing",
+          "at": 76500,
+          "n": 51,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 76500,
+          "ms": 1500,
+          "due": 78000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 78000
+        },
+        {
+          "op": "timer-fire",
+          "at": 78000,
+          "due": 78000
+        },
+        {
+          "op": "listing",
+          "at": 78000,
+          "n": 52,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 78000,
+          "ms": 1500,
+          "due": 79500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 79500
+        },
+        {
+          "op": "timer-fire",
+          "at": 79500,
+          "due": 79500
+        },
+        {
+          "op": "listing",
+          "at": 79500,
+          "n": 53,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 79500,
+          "ms": 1500,
+          "due": 81000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 81000
+        },
+        {
+          "op": "timer-fire",
+          "at": 81000,
+          "due": 81000
+        },
+        {
+          "op": "listing",
+          "at": 81000,
+          "n": 54,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 81000,
+          "ms": 1500,
+          "due": 82500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 82500
+        },
+        {
+          "op": "timer-fire",
+          "at": 82500,
+          "due": 82500
+        },
+        {
+          "op": "listing",
+          "at": 82500,
+          "n": 55,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 82500,
+          "ms": 1500,
+          "due": 84000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 84000
+        },
+        {
+          "op": "timer-fire",
+          "at": 84000,
+          "due": 84000
+        },
+        {
+          "op": "listing",
+          "at": 84000,
+          "n": 56,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 84000,
+          "ms": 1500,
+          "due": 85500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 85500
+        },
+        {
+          "op": "timer-fire",
+          "at": 85500,
+          "due": 85500
+        },
+        {
+          "op": "listing",
+          "at": 85500,
+          "n": 57,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 85500,
+          "ms": 1500,
+          "due": 87000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 87000
+        },
+        {
+          "op": "timer-fire",
+          "at": 87000,
+          "due": 87000
+        },
+        {
+          "op": "listing",
+          "at": 87000,
+          "n": 58,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 87000,
+          "ms": 1500,
+          "due": 88500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 88500
+        },
+        {
+          "op": "timer-fire",
+          "at": 88500,
+          "due": 88500
+        },
+        {
+          "op": "listing",
+          "at": 88500,
+          "n": 59,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 88500,
+          "ms": 1500,
+          "due": 90000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 90000
+        },
+        {
+          "op": "timer-fire",
+          "at": 90000,
+          "due": 90000
+        },
+        {
+          "op": "listing",
+          "at": 90000,
+          "n": 60,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 90000,
+          "ms": 1500,
+          "due": 91500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 91500
+        },
+        {
+          "op": "timer-fire",
+          "at": 91500,
+          "due": 91500
+        },
+        {
+          "op": "listing",
+          "at": 91500,
+          "n": 61,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 91500,
+          "ms": 1500,
+          "due": 93000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 93000
+        },
+        {
+          "op": "timer-fire",
+          "at": 93000,
+          "due": 93000
+        },
+        {
+          "op": "listing",
+          "at": 93000,
+          "n": 62,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 93000,
+          "ms": 1500,
+          "due": 94500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 94500
+        },
+        {
+          "op": "timer-fire",
+          "at": 94500,
+          "due": 94500
+        },
+        {
+          "op": "listing",
+          "at": 94500,
+          "n": 63,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 94500,
+          "ms": 1500,
+          "due": 96000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 96000
+        },
+        {
+          "op": "timer-fire",
+          "at": 96000,
+          "due": 96000
+        },
+        {
+          "op": "listing",
+          "at": 96000,
+          "n": 64,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 96000,
+          "ms": 1500,
+          "due": 97500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 97500
+        },
+        {
+          "op": "timer-fire",
+          "at": 97500,
+          "due": 97500
+        },
+        {
+          "op": "listing",
+          "at": 97500,
+          "n": 65,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 97500,
+          "ms": 1500,
+          "due": 99000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 99000
+        },
+        {
+          "op": "timer-fire",
+          "at": 99000,
+          "due": 99000
+        },
+        {
+          "op": "listing",
+          "at": 99000,
+          "n": 66,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 99000,
+          "ms": 1500,
+          "due": 100500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 100500
+        },
+        {
+          "op": "timer-fire",
+          "at": 100500,
+          "due": 100500
+        },
+        {
+          "op": "listing",
+          "at": 100500,
+          "n": 67,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 100500,
+          "ms": 1500,
+          "due": 102000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 102000
+        },
+        {
+          "op": "timer-fire",
+          "at": 102000,
+          "due": 102000
+        },
+        {
+          "op": "listing",
+          "at": 102000,
+          "n": 68,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 102000,
+          "ms": 1500,
+          "due": 103500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 103500
+        },
+        {
+          "op": "timer-fire",
+          "at": 103500,
+          "due": 103500
+        },
+        {
+          "op": "listing",
+          "at": 103500,
+          "n": 69,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 103500,
+          "ms": 1500,
+          "due": 105000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 105000
+        },
+        {
+          "op": "timer-fire",
+          "at": 105000,
+          "due": 105000
+        },
+        {
+          "op": "listing",
+          "at": 105000,
+          "n": 70,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 105000,
+          "ms": 1500,
+          "due": 106500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 106500
+        },
+        {
+          "op": "timer-fire",
+          "at": 106500,
+          "due": 106500
+        },
+        {
+          "op": "listing",
+          "at": 106500,
+          "n": 71,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 106500,
+          "ms": 1500,
+          "due": 108000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 108000
+        },
+        {
+          "op": "timer-fire",
+          "at": 108000,
+          "due": 108000
+        },
+        {
+          "op": "listing",
+          "at": 108000,
+          "n": 72,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 108000,
+          "ms": 1500,
+          "due": 109500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 109500
+        },
+        {
+          "op": "timer-fire",
+          "at": 109500,
+          "due": 109500
+        },
+        {
+          "op": "listing",
+          "at": 109500,
+          "n": 73,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 109500,
+          "ms": 1500,
+          "due": 111000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 111000
+        },
+        {
+          "op": "timer-fire",
+          "at": 111000,
+          "due": 111000
+        },
+        {
+          "op": "listing",
+          "at": 111000,
+          "n": 74,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 111000,
+          "ms": 1500,
+          "due": 112500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 112500
+        },
+        {
+          "op": "timer-fire",
+          "at": 112500,
+          "due": 112500
+        },
+        {
+          "op": "listing",
+          "at": 112500,
+          "n": 75,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 112500,
+          "ms": 1500,
+          "due": 114000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 114000
+        },
+        {
+          "op": "timer-fire",
+          "at": 114000,
+          "due": 114000
+        },
+        {
+          "op": "listing",
+          "at": 114000,
+          "n": 76,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 114000,
+          "ms": 1500,
+          "due": 115500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 115500
+        },
+        {
+          "op": "timer-fire",
+          "at": 115500,
+          "due": 115500
+        },
+        {
+          "op": "listing",
+          "at": 115500,
+          "n": 77,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 115500,
+          "ms": 1500,
+          "due": 117000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 117000
+        },
+        {
+          "op": "timer-fire",
+          "at": 117000,
+          "due": 117000
+        },
+        {
+          "op": "listing",
+          "at": 117000,
+          "n": 78,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 117000,
+          "ms": 1500,
+          "due": 118500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 118500
+        },
+        {
+          "op": "timer-fire",
+          "at": 118500,
+          "due": 118500
+        },
+        {
+          "op": "listing",
+          "at": 118500,
+          "n": 79,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 118500,
+          "ms": 1500,
+          "due": 120000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 120000
+        },
+        {
+          "op": "timer-fire",
+          "at": 120000,
+          "due": 120000
+        },
+        {
+          "op": "listing",
+          "at": 120000,
+          "n": 80,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 120000,
+          "ms": 1500,
+          "due": 121500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 121500
+        },
+        {
+          "op": "timer-fire",
+          "at": 121500,
+          "due": 121500
+        },
+        {
+          "op": "listing",
+          "at": 121500,
+          "n": 81,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 121500,
+          "ms": 1500,
+          "due": 123000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 123000
+        },
+        {
+          "op": "timer-fire",
+          "at": 123000,
+          "due": 123000
+        },
+        {
+          "op": "listing",
+          "at": 123000,
+          "n": 82,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 123000,
+          "ms": 1500,
+          "due": 124500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 124500
+        },
+        {
+          "op": "timer-fire",
+          "at": 124500,
+          "due": 124500
+        },
+        {
+          "op": "listing",
+          "at": 124500,
+          "n": 83,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 124500,
+          "ms": 1500,
+          "due": 126000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 126000
+        },
+        {
+          "op": "timer-fire",
+          "at": 126000,
+          "due": 126000
+        },
+        {
+          "op": "listing",
+          "at": 126000,
+          "n": 84,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 126000,
+          "ms": 1500,
+          "due": 127500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 127500
+        },
+        {
+          "op": "timer-fire",
+          "at": 127500,
+          "due": 127500
+        },
+        {
+          "op": "listing",
+          "at": 127500,
+          "n": 85,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 127500,
+          "ms": 1500,
+          "due": 129000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 129000
+        },
+        {
+          "op": "timer-fire",
+          "at": 129000,
+          "due": 129000
+        },
+        {
+          "op": "listing",
+          "at": 129000,
+          "n": 86,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 129000,
+          "ms": 1500,
+          "due": 130500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 130500
+        },
+        {
+          "op": "timer-fire",
+          "at": 130500,
+          "due": 130500
+        },
+        {
+          "op": "listing",
+          "at": 130500,
+          "n": 87,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 130500,
+          "ms": 1500,
+          "due": 132000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 132000
+        },
+        {
+          "op": "timer-fire",
+          "at": 132000,
+          "due": 132000
+        },
+        {
+          "op": "listing",
+          "at": 132000,
+          "n": 88,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 132000,
+          "ms": 1500,
+          "due": 133500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 133500
+        },
+        {
+          "op": "timer-fire",
+          "at": 133500,
+          "due": 133500
+        },
+        {
+          "op": "listing",
+          "at": 133500,
+          "n": 89,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 133500,
+          "ms": 1500,
+          "due": 135000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 135000
+        },
+        {
+          "op": "timer-fire",
+          "at": 135000,
+          "due": 135000
+        },
+        {
+          "op": "listing",
+          "at": 135000,
+          "n": 90,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 135000,
+          "ms": 1500,
+          "due": 136500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 136500
+        },
+        {
+          "op": "timer-fire",
+          "at": 136500,
+          "due": 136500
+        },
+        {
+          "op": "listing",
+          "at": 136500,
+          "n": 91,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 136500,
+          "ms": 1500,
+          "due": 138000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 138000
+        },
+        {
+          "op": "timer-fire",
+          "at": 138000,
+          "due": 138000
+        },
+        {
+          "op": "listing",
+          "at": 138000,
+          "n": 92,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 138000,
+          "ms": 1500,
+          "due": 139500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 139500
+        },
+        {
+          "op": "timer-fire",
+          "at": 139500,
+          "due": 139500
+        },
+        {
+          "op": "listing",
+          "at": 139500,
+          "n": 93,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 139500,
+          "ms": 1500,
+          "due": 141000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 141000
+        },
+        {
+          "op": "timer-fire",
+          "at": 141000,
+          "due": 141000
+        },
+        {
+          "op": "listing",
+          "at": 141000,
+          "n": 94,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 141000,
+          "ms": 1500,
+          "due": 142500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 142500
+        },
+        {
+          "op": "timer-fire",
+          "at": 142500,
+          "due": 142500
+        },
+        {
+          "op": "listing",
+          "at": 142500,
+          "n": 95,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 142500,
+          "ms": 1500,
+          "due": 144000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 144000
+        },
+        {
+          "op": "timer-fire",
+          "at": 144000,
+          "due": 144000
+        },
+        {
+          "op": "listing",
+          "at": 144000,
+          "n": 96,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 144000,
+          "ms": 1500,
+          "due": 145500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 145500
+        },
+        {
+          "op": "timer-fire",
+          "at": 145500,
+          "due": 145500
+        },
+        {
+          "op": "listing",
+          "at": 145500,
+          "n": 97,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 145500,
+          "ms": 1500,
+          "due": 147000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 147000
+        },
+        {
+          "op": "timer-fire",
+          "at": 147000,
+          "due": 147000
+        },
+        {
+          "op": "listing",
+          "at": 147000,
+          "n": 98,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 147000,
+          "ms": 1500,
+          "due": 148500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 148500
+        },
+        {
+          "op": "timer-fire",
+          "at": 148500,
+          "due": 148500
+        },
+        {
+          "op": "listing",
+          "at": 148500,
+          "n": 99,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 148500,
+          "ms": 1500,
+          "due": 150000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 150000
+        },
+        {
+          "op": "timer-fire",
+          "at": 150000,
+          "due": 150000
+        },
+        {
+          "op": "listing",
+          "at": 150000,
+          "n": 100,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 150000,
+          "ms": 1500,
+          "due": 151500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 151500
+        },
+        {
+          "op": "timer-fire",
+          "at": 151500,
+          "due": 151500
+        },
+        {
+          "op": "listing",
+          "at": 151500,
+          "n": 101,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 151500,
+          "ms": 1500,
+          "due": 153000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 153000
+        },
+        {
+          "op": "timer-fire",
+          "at": 153000,
+          "due": 153000
+        },
+        {
+          "op": "listing",
+          "at": 153000,
+          "n": 102,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 153000,
+          "ms": 1500,
+          "due": 154500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 154500
+        },
+        {
+          "op": "timer-fire",
+          "at": 154500,
+          "due": 154500
+        },
+        {
+          "op": "listing",
+          "at": 154500,
+          "n": 103,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 154500,
+          "ms": 1500,
+          "due": 156000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 156000
+        },
+        {
+          "op": "timer-fire",
+          "at": 156000,
+          "due": 156000
+        },
+        {
+          "op": "listing",
+          "at": 156000,
+          "n": 104,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 156000,
+          "ms": 1500,
+          "due": 157500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 157500
+        },
+        {
+          "op": "timer-fire",
+          "at": 157500,
+          "due": 157500
+        },
+        {
+          "op": "listing",
+          "at": 157500,
+          "n": 105,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 157500,
+          "ms": 1500,
+          "due": 159000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 159000
+        },
+        {
+          "op": "timer-fire",
+          "at": 159000,
+          "due": 159000
+        },
+        {
+          "op": "listing",
+          "at": 159000,
+          "n": 106,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 159000,
+          "ms": 1500,
+          "due": 160500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 160500
+        },
+        {
+          "op": "timer-fire",
+          "at": 160500,
+          "due": 160500
+        },
+        {
+          "op": "listing",
+          "at": 160500,
+          "n": 107,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 160500,
+          "ms": 1500,
+          "due": 162000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 162000
+        },
+        {
+          "op": "timer-fire",
+          "at": 162000,
+          "due": 162000
+        },
+        {
+          "op": "listing",
+          "at": 162000,
+          "n": 108,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 162000,
+          "ms": 1500,
+          "due": 163500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 163500
+        },
+        {
+          "op": "timer-fire",
+          "at": 163500,
+          "due": 163500
+        },
+        {
+          "op": "listing",
+          "at": 163500,
+          "n": 109,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 163500,
+          "ms": 1500,
+          "due": 165000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 165000
+        },
+        {
+          "op": "timer-fire",
+          "at": 165000,
+          "due": 165000
+        },
+        {
+          "op": "listing",
+          "at": 165000,
+          "n": 110,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 165000,
+          "ms": 1500,
+          "due": 166500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 166500
+        },
+        {
+          "op": "timer-fire",
+          "at": 166500,
+          "due": 166500
+        },
+        {
+          "op": "listing",
+          "at": 166500,
+          "n": 111,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 166500,
+          "ms": 1500,
+          "due": 168000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 168000
+        },
+        {
+          "op": "timer-fire",
+          "at": 168000,
+          "due": 168000
+        },
+        {
+          "op": "listing",
+          "at": 168000,
+          "n": 112,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 168000,
+          "ms": 1500,
+          "due": 169500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 169500
+        },
+        {
+          "op": "timer-fire",
+          "at": 169500,
+          "due": 169500
+        },
+        {
+          "op": "listing",
+          "at": 169500,
+          "n": 113,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 169500,
+          "ms": 1500,
+          "due": 171000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 171000
+        },
+        {
+          "op": "timer-fire",
+          "at": 171000,
+          "due": 171000
+        },
+        {
+          "op": "listing",
+          "at": 171000,
+          "n": 114,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 171000,
+          "ms": 1500,
+          "due": 172500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 172500
+        },
+        {
+          "op": "timer-fire",
+          "at": 172500,
+          "due": 172500
+        },
+        {
+          "op": "listing",
+          "at": 172500,
+          "n": 115,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 172500,
+          "ms": 1500,
+          "due": 174000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 174000
+        },
+        {
+          "op": "timer-fire",
+          "at": 174000,
+          "due": 174000
+        },
+        {
+          "op": "listing",
+          "at": 174000,
+          "n": 116,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 174000,
+          "ms": 1500,
+          "due": 175500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 175500
+        },
+        {
+          "op": "timer-fire",
+          "at": 175500,
+          "due": 175500
+        },
+        {
+          "op": "listing",
+          "at": 175500,
+          "n": 117,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 175500,
+          "ms": 1500,
+          "due": 177000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 177000
+        },
+        {
+          "op": "timer-fire",
+          "at": 177000,
+          "due": 177000
+        },
+        {
+          "op": "listing",
+          "at": 177000,
+          "n": 118,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 177000,
+          "ms": 1500,
+          "due": 178500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 178500
+        },
+        {
+          "op": "timer-fire",
+          "at": 178500,
+          "due": 178500
+        },
+        {
+          "op": "listing",
+          "at": 178500,
+          "n": 119,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 178500,
+          "ms": 1500,
+          "due": 180000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 180000
+        },
+        {
+          "op": "timer-fire",
+          "at": 180000,
+          "due": 180000
+        },
+        {
+          "op": "timer-clear",
+          "at": 180000,
+          "due": 180000,
+          "pending": true
+        },
+        {
+          "op": "timer-clear",
+          "at": 180000,
+          "due": 185000,
+          "pending": true
+        },
+        {
+          "op": "notify",
+          "title": "Couldn't confirm the game started",
+          "body": "GameLib couldn't confirm that Quail started within 180 seconds. It has not been stopped. If it is stuck, stop it from its game page and check the launch log (Settings > Logs)."
+        }
+      ],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 2
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail uses engine=crossover build=26.3.0.39832 reason=cx-healthy"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "BottleLedger: legendary:Quail running in GameLib-legendary-Quail"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail engine=crossover build=26.3.0.39832 reason=cx-healthy"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "Engine: launch deadline fired for key legendary:Quail after 180000 ms (no game process seen)"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail launch deadline fired (engine=crossover build=26.3.0.39832 reason=cx-healthy) with no game process seen; not stopping anything"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "[engine-notice] key=legendary:Quail tag=launch-deadline-unconfirmed dispatched=notify raise=false"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail launch deadline notice surface=in-app pushed=true raise=false"
+    }
+  ]
+}

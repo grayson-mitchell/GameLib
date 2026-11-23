@@ -119,5 +119,1368 @@
         }
       }
     ]
+  },
+  {
+    "id": "skip-browser",
+    "note": "a Browser install: skipped",
+    "game": {
+      "platform": "Browser"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "skip-steam-runner",
+    "note": "a Steam game runs on the bottle runtime, not here: skipped",
+    "game": {
+      "runner": "steam",
+      "appName": "620"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "skip-non-mac",
+    "note": "a non-macOS host: skipped, nothing decided",
+    "world": {
+      "isMac": false
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "skip-unusable-key",
+    "note": "an app name that makes no engine key: skipped",
+    "game": {
+      "appName": "bad name/with slash"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "use-crossover-trial",
+    "note": "a CrossOver in its trial: still healthy, selected, no toast",
+    "world": {
+      "cx": "trial"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "use-crossover-forced-override",
+    "note": "override CrossOver with a healthy CrossOver: reason override",
+    "world": {
+      "effective": "crossover"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "use-crossover-override-expired",
+    "note": "override CrossOver with an expired CrossOver is still used (the user chose it)",
+    "world": {
+      "effective": "crossover",
+      "cx": "expired"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "use-crossover-prepare-switching-status",
+    "note": "the bottle is switching engine: the \"setting-up\" status line is sent",
+    "world": {
+      "prepare": "ok-changed",
+      "prepareSwitching": true
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "use-crossover-unrecognised-demo-status",
+    "note": "an unrecognised --demo-status is a broken CrossOver: the fallback applies",
+    "engines": "installed",
+    "world": {
+      "cx": "unrecognised"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "fallback-cx-expired-pin-installed",
+    "note": "Automatic with an expired CrossOver: the built-in engine and the \"trial expired\" toast",
+    "engines": "installed",
+    "world": {
+      "cx": "expired"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "fallback-cx-broken-pin-installed",
+    "note": "Automatic with a CrossOver whose probe fails twice: the wineserver is stopped, the built-in engine and the \"isn't working\" toast",
+    "engines": "installed",
+    "world": {
+      "cx": "broken"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "fallback-cx-not-executable",
+    "note": "bin/wine present but not executable: broken without a probe",
+    "engines": "installed",
+    "world": {
+      "cx": "not-executable"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "fallback-cx-missing-wine",
+    "note": "the bin dir exists without bin/wine: missing",
+    "engines": "installed",
+    "world": {
+      "cx": "missing-wine"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "fallback-cx-missing-download-ok",
+    "note": "CrossOver missing and no pin installed: the pin is downloaded first, then used with the toast",
+    "world": {
+      "cx": "missing",
+      "ensure": "ok"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "fallback-download-fails-refused",
+    "note": "the first-need download fails: a dialog (engine-download-failed), refused, registry cleared",
+    "world": {
+      "cx": "missing",
+      "ensure": "fail"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "fallback-download-aborted-no-dialog",
+    "note": "the download is aborted: refused with no dialog",
+    "world": {
+      "cx": "missing",
+      "ensure": "aborted"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "fallback-selection-rejected",
+    "note": "the download reports ok but the engine files are not there: the registry rejects it, a dialog (engine-selection-rejected)",
+    "world": {
+      "cx": "missing",
+      "ensure": "ok-no-files"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "fallback-setup-purpose-no-toast",
+    "note": "the setup purpose never toasts the fallback (WR-01 sibling)",
+    "engines": "installed",
+    "world": {
+      "cx": "expired"
+    },
+    "steps": [
+      {
+        "op": "select",
+        "purpose": "setup"
+      }
+    ]
+  },
+  {
+    "id": "fallback-toast-on-every-launch",
+    "note": "the toast is shown on each Automatic fallback launch, never remembered",
+    "engines": "installed",
+    "world": {
+      "cx": "missing"
+    },
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "end"
+      },
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "inconclusive-no-marker-launches-crossover",
+    "note": "an invalid-bottle probe proves nothing: CrossOver is used (cx-inconclusive), no toast",
+    "world": {
+      "cx": "invalid-bottle"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "inconclusive-keeps-pinned-marker",
+    "note": "an inconclusive probe on a bottle whose marker says pinned: the bottle keeps the built-in engine, no toast",
+    "engines": "installed",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "game": {
+      "settings": {
+        "wineVersion": {
+          "type": "crossover",
+          "bin": "$BIN/wine",
+          "name": "CrossOver"
+        },
+        "wineCrossoverBottle": "fx-pinned-current",
+        "winePrefix": "<HOME>/old-prefix"
+      }
+    },
+    "world": {
+      "cx": "invalid-bottle"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "override-pinned-installed",
+    "note": "override to the built-in engine with the pin installed: used with reason override, no toast",
+    "engines": "installed",
+    "world": {
+      "effective": "pinned"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "override-pinned-needs-download",
+    "note": "override to the built-in engine with the pin absent: downloaded, used",
+    "world": {
+      "effective": "pinned",
+      "ensure": "ok"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "override-wine-manager-unavailable",
+    "note": "override to a Wine Manager build that is not installed: refused with the override-unavailable dialog",
+    "world": {
+      "effective": "wine-manager"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "override-crossover-missing-refused",
+    "note": "override CrossOver with CrossOver missing: refused, dialog override-unavailable, nothing registered",
+    "world": {
+      "effective": "crossover",
+      "cx": "missing"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "override-crossover-broken-refused",
+    "note": "override CrossOver with a broken CrossOver: refused, dialog override-unavailable",
+    "world": {
+      "effective": "crossover",
+      "cx": "broken"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "bottle-created-on-first-need",
+    "note": "a plain-prefix game switched to Automatic: its own bottle is created, then the decision runs",
+    "game": {
+      "settings": {
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<HOME>/old/wine",
+          "name": "Odd Wine"
+        },
+        "wineCrossoverBottle": "",
+        "winePrefix": "<HOME>/old-prefix"
+      }
+    },
+    "world": {
+      "provisioned": false
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "bottle-create-fails-refused",
+    "note": "the per-game bottle cannot be created: dialog engine-bottle-create-failed, refused, no decision",
+    "game": {
+      "settings": {
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<HOME>/old/wine",
+          "name": "Odd Wine"
+        },
+        "wineCrossoverBottle": "",
+        "winePrefix": "<HOME>/old-prefix"
+      }
+    },
+    "world": {
+      "provisioned": false,
+      "ensureBottle": "error"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "legacy-shared-bottle-never-created",
+    "note": "a game on a shared CrossOver bottle: the provisioned check is not even asked",
+    "game": {
+      "settings": {
+        "wineVersion": {
+          "type": "crossover",
+          "bin": "$BIN/wine",
+          "name": "CrossOver"
+        },
+        "wineCrossoverBottle": "GameLib",
+        "winePrefix": "<HOME>/old-prefix"
+      }
+    },
+    "world": {
+      "provisioned": false
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "plain-prefix-pinned-override",
+    "note": "a plain-prefix game overridden to the built-in engine: prefix stays plain, no prepare, no ledger entry, a plain overlay",
+    "engines": "installed",
+    "game": {
+      "settings": {
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<HOME>/old/wine",
+          "name": "Odd Wine"
+        },
+        "wineCrossoverBottle": "",
+        "winePrefix": "<HOME>/old-prefix"
+      }
+    },
+    "world": {
+      "effective": "pinned"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "offline-refused-cx-missing-no-pin",
+    "note": "offline, CrossOver missing, no pin: refused before the pre-flight with the download dialog",
+    "world": {
+      "cx": "missing"
+    },
+    "steps": [
+      {
+        "op": "select",
+        "offline": true
+      }
+    ]
+  },
+  {
+    "id": "offline-cx-missing-pin-installed-proceeds",
+    "note": "offline, CrossOver missing, pin installed: proceeds on the pin with the toast",
+    "engines": "installed",
+    "world": {
+      "cx": "missing"
+    },
+    "steps": [
+      {
+        "op": "select",
+        "offline": true
+      }
+    ]
+  },
+  {
+    "id": "offline-healthy-proceeds",
+    "note": "offline with a healthy CrossOver: proceeds",
+    "world": {
+      "cx": "healthy"
+    },
+    "steps": [
+      {
+        "op": "select",
+        "offline": true
+      }
+    ]
+  },
+  {
+    "id": "offline-restore-needs-pin-refused",
+    "note": "offline, override CrossOver, the bottle carries a pinned marker and DXVK but the pin is absent: refused (restore-needs-pin)",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "game": {
+      "settings": {
+        "wineVersion": {
+          "type": "crossover",
+          "bin": "$BIN/wine",
+          "name": "CrossOver"
+        },
+        "wineCrossoverBottle": "fx-pinned-current",
+        "winePrefix": "<HOME>/old-prefix"
+      }
+    },
+    "world": {
+      "effective": "crossover"
+    },
+    "steps": [
+      {
+        "op": "select",
+        "offline": true
+      }
+    ]
+  },
+  {
+    "id": "offline-automatic-restore-pin-installed-proceeds",
+    "note": "offline, Automatic, pinned marker, the pin installed: not refused",
+    "engines": "installed",
+    "bottles": [
+      "fx-pinned-current"
+    ],
+    "game": {
+      "settings": {
+        "wineVersion": {
+          "type": "crossover",
+          "bin": "$BIN/wine",
+          "name": "CrossOver"
+        },
+        "wineCrossoverBottle": "fx-pinned-current",
+        "winePrefix": "<HOME>/old-prefix"
+      }
+    },
+    "steps": [
+      {
+        "op": "select",
+        "offline": true
+      }
+    ]
+  },
+  {
+    "id": "offline-override-pinned-not-gated",
+    "note": "offline, override to the built-in engine: the gate leaves it to the normal path",
+    "engines": "installed",
+    "world": {
+      "effective": "pinned"
+    },
+    "steps": [
+      {
+        "op": "select",
+        "offline": true
+      }
+    ]
+  },
+  {
+    "id": "offline-plain-prefix-not-gated",
+    "note": "offline with a plain prefix: the gate only applies to bottles",
+    "engines": "installed",
+    "game": {
+      "settings": {
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<HOME>/old/wine",
+          "name": "Odd Wine"
+        },
+        "wineCrossoverBottle": "",
+        "winePrefix": "<HOME>/old-prefix"
+      }
+    },
+    "world": {
+      "effective": "pinned",
+      "cx": "missing"
+    },
+    "steps": [
+      {
+        "op": "select",
+        "offline": true
+      }
+    ]
+  },
+  {
+    "id": "refused-twice-two-dialogs",
+    "note": "a refused launch pressed twice: a dialog, a window raise and a new ack id on EVERY attempt",
+    "world": {
+      "cx": "missing"
+    },
+    "steps": [
+      {
+        "op": "select",
+        "offline": true
+      },
+      {
+        "op": "select",
+        "offline": true
+      }
+    ]
+  },
+  {
+    "id": "prepare-dxvk-failed-crossover-refused",
+    "note": "CR-03: the switch back to CrossOver cannot restore DXVK: dialog engine-restore-failed, refused",
+    "world": {
+      "prepare": "dxvk-failed"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "prepare-dxvk-failed-pinned-continues",
+    "note": "the built-in engine is best-effort: a DXVK failure degrades and the launch continues",
+    "engines": "installed",
+    "world": {
+      "cx": "missing",
+      "prepare": "dxvk-failed"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "prepare-bottle-busy-refused",
+    "note": "D-16: another game holds the bottle: dialog engine-bottle-busy, refused, nothing killed",
+    "world": {
+      "prepare": "bottle-busy"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "prepare-game-running-refused",
+    "note": "the game itself is running: the same dialog",
+    "world": {
+      "prepare": "game-running"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "prepare-shared-bottle-refused",
+    "note": "a shared bottle cannot switch: the same dialog",
+    "world": {
+      "prepare": "shared-bottle"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "prepare-other-refused-no-dialog",
+    "note": "any other switch failure refuses without a dialog",
+    "world": {
+      "prepare": "other"
+    },
+    "steps": [
+      {
+        "op": "select"
+      }
+    ]
+  },
+  {
+    "id": "launch-settings-pinned-bottle",
+    "note": "a pinned selection on a bottle: the overlay carries the built-in Wine and DXVK settings",
+    "engines": "installed",
+    "world": {
+      "cx": "missing"
+    },
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix",
+          "wineVersion": {
+            "type": "crossover",
+            "bin": "$BIN/wine",
+            "name": "CrossOver"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "launch-settings-plain-prefix-pinned",
+    "note": "a pinned selection on a plain prefix: only the Wine changes",
+    "engines": "installed",
+    "game": {
+      "settings": {
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<HOME>/old/wine",
+          "name": "Odd Wine"
+        },
+        "wineCrossoverBottle": "",
+        "winePrefix": "<HOME>/old-prefix"
+      }
+    },
+    "world": {
+      "effective": "pinned"
+    },
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix",
+          "wineVersion": {
+            "type": "wine",
+            "bin": "<HOME>/old/wine",
+            "name": "Odd Wine"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "launch-settings-null-key-and-no-overlay",
+    "note": "a null key, an unknown key and a key with no overlay all return the stored settings object itself",
+    "steps": [
+      {
+        "op": "settings",
+        "key": null,
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      },
+      {
+        "op": "settings",
+        "key": "gog:other",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      },
+      {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      }
+    ]
+  },
+  {
+    "id": "launch-settings-after-refusal",
+    "note": "a refused launch clears the selection and the overlay: the stored settings come back",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      },
+      {
+        "op": "select",
+        "world": {
+          "effective": "crossover",
+          "cx": "missing"
+        }
+      },
+      {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      }
+    ]
+  },
+  {
+    "id": "deadline-fires-no-match-no-raise",
+    "note": "WR-02: the deadline fires with no process seen: one notification, no raise, no modal, nothing stopped, the launch stays held, the notice is pushed in-app",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 180000
+      },
+      {
+        "op": "advance",
+        "ms": 200000
+      }
+    ]
+  },
+  {
+    "id": "deadline-fires-after-a-quiet-start",
+    "note": "the timer order of one armed launch: cap, poll, polls, the deadline at 180 s, the watcher stopped by the fired deadline",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 4600
+      },
+      {
+        "op": "advance",
+        "ms": 175400
+      }
+    ]
+  },
+  {
+    "id": "deadline-cancel-first-match-unix",
+    "note": "the unix-path form appears on the second poll: first-match cancels the deadline, no notice later",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ],
+          [
+            "  399 <HOME>/Games/Quail2/Game.exe"
+          ],
+          [
+            "  400 <HOME>/Games/Quail/Game.exe"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 200000
+      }
+    ]
+  },
+  {
+    "id": "deadline-cancel-first-match-z-form",
+    "note": "the Z: form is matched",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ],
+          [
+            "  401 \"$ZINSTALL\\Game.exe\" -windowed"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 5000
+      }
+    ]
+  },
+  {
+    "id": "deadline-cancel-first-match-y-form",
+    "note": "the Y: form (an install under home, home-relative with backslashes) is matched",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ],
+          [
+            "  402 \"Y:\\Games\\Quail\\Game.exe\""
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 5000
+      }
+    ]
+  },
+  {
+    "id": "deadline-cancel-first-match-c-form",
+    "note": "the C: form (an install under the bottle drive_c) is matched",
+    "game": {
+      "installPath": "$BOTTLE/drive_c/Games/Quail"
+    },
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ],
+          [
+            "  403 \"C:\\Games\\Quail\\Game.exe\""
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 5000
+      }
+    ]
+  },
+  {
+    "id": "deadline-cancel-first-match-case-insensitive",
+    "note": "a case-changed command still matches",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  404 <HOME>/GAMES/QUAIL/GAME.EXE"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 5000
+      }
+    ]
+  },
+  {
+    "id": "deadline-basename-only-fires",
+    "note": "a bare-basename launch cannot be matched: the deadline fires and only notifies",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  405 Game.exe",
+            "  406 wine64 Game.exe"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 181000
+      }
+    ]
+  },
+  {
+    "id": "deadline-sibling-dir-fires",
+    "note": "a sibling install dir (Quail Remaster) is not a match: the deadline fires",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  407 <HOME>/Games/Quail Remaster/Game.exe"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 181000
+      }
+    ]
+  },
+  {
+    "id": "deadline-cancel-by-end-launch",
+    "note": "endEngineLaunch cancels the deadline (launcher-exited), stops the watcher, clears the registry, overlay and ledger",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 3000
+      },
+      {
+        "op": "end"
+      },
+      {
+        "op": "advance",
+        "ms": 200000
+      }
+    ]
+  },
+  {
+    "id": "deadline-end-launch-without-arm",
+    "note": "endEngineLaunch for a launch that never armed releases the registry, overlay and ledger entry",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "end"
+      }
+    ]
+  },
+  {
+    "id": "deadline-cancel-by-giveup-listing-failures",
+    "note": "WR-01: the listing fails twenty times in a row: the watcher gives up and stands the deadline down (monitor-unavailable); no notice",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          "throw"
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 200000
+      }
+    ]
+  },
+  {
+    "id": "deadline-cancel-by-giveup-max-duration",
+    "note": "the watcher reaches its own cap: it gives up and stands the deadline down",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ],
+        "maxDurationMs": 10000
+      },
+      {
+        "op": "advance",
+        "ms": 200000
+      }
+    ]
+  },
+  {
+    "id": "deadline-stands-down-without-watcher",
+    "note": "no derivable signal (no watcher): the armed deadline is stood down at once (monitor-unavailable)",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "none"
+      },
+      {
+        "op": "advance",
+        "ms": 200000
+      }
+    ]
+  },
+  {
+    "id": "deadline-unusable-install-path-stands-down",
+    "note": "a relative install path derives no form, the real watcher returns null: stood down",
+    "game": {
+      "installPath": "relative/Quail"
+    },
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 200000
+      }
+    ]
+  },
+  {
+    "id": "deadline-plain-prefix-not-armed",
+    "note": "a plain-prefix launch is not armed",
+    "engines": "installed",
+    "game": {
+      "settings": {
+        "wineVersion": {
+          "type": "wine",
+          "bin": "<HOME>/old/wine",
+          "name": "Odd Wine"
+        },
+        "wineCrossoverBottle": "",
+        "winePrefix": "<HOME>/old-prefix"
+      }
+    },
+    "world": {
+      "effective": "pinned"
+    },
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 200000
+      }
+    ]
+  },
+  {
+    "id": "deadline-no-overlay-not-armed",
+    "note": "no overlay context (a skipped or legacy launch): not armed",
+    "steps": [
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 200000
+      }
+    ]
+  },
+  {
+    "id": "deadline-null-key-not-armed",
+    "note": "a null key: not armed",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "nullKey": true,
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 200000
+      }
+    ]
+  },
+  {
+    "id": "deadline-superseded-by-a-second-arm",
+    "note": "arming the same key twice cancels the first deadline (superseded); one notice at the second deadline",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 60000
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 200000
+      }
+    ]
+  },
+  {
+    "id": "deadline-registry-entry-gone-uses-armed-selection",
+    "note": "G5: the registry entry is gone when the deadline fires, the selection seen at arm time is named in the log",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ]
+      },
+      {
+        "op": "registry-clear"
+      },
+      {
+        "op": "advance",
+        "ms": 181000
+      }
+    ]
+  },
+  {
+    "id": "deadline-notice-not-pushed-without-a-published-state",
+    "note": "a deadline armed on a primed launch that never published a state: the notification is shown, the in-app push is not (pushed=false)",
+    "steps": [
+      {
+        "op": "prime",
+        "selection": "crossover",
+        "prefix": "bottle"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 181000
+      }
+    ]
+  },
+  {
+    "id": "deadline-quit-with-deadline-armed",
+    "note": "the host quits with a launch armed: nothing is cancelled and nothing fires; every timer is unref-able (no keep-alive reason) so the process can drain",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 60000
+      },
+      {
+        "op": "quit"
+      }
+    ]
+  },
+  {
+    "id": "deadline-quit-after-first-match",
+    "note": "the host quits after the match cancelled the deadline: no armed deadline, no pending timer",
+    "steps": [
+      {
+        "op": "select"
+      },
+      {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  408 <HOME>/Games/Quail/Game.exe"
+          ]
+        ]
+      },
+      {
+        "op": "advance",
+        "ms": 3000
+      },
+      {
+        "op": "quit"
+      }
+    ]
   }
 ]

@@ -1,0 +1,72 @@
+{
+  "note": "a plain-prefix game overridden to the built-in engine: prefix stays plain, no prepare, no ledger entry, a plain overlay",
+  "steps": [
+    {
+      "step": {
+        "op": "select"
+      },
+      "result": {
+        "kind": "use",
+        "key": "legendary:Quail",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "prefix": {
+          "kind": "plain",
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      },
+      "trace": [],
+      "launchLog": [
+        "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=override"
+      ],
+      "after": {
+        "registry": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "override",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "plain"
+          }
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 1
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail uses engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=override"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=override"
+    }
+  ]
+}

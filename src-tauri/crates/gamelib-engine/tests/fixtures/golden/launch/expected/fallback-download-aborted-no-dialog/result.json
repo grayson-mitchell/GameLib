@@ -1,0 +1,41 @@
+{
+  "note": "the download is aborted: refused with no dialog",
+  "steps": [
+    {
+      "step": {
+        "op": "select"
+      },
+      "result": {
+        "kind": "refused",
+        "key": "legendary:Quail"
+      },
+      "trace": [
+        {
+          "op": "isProvisioned",
+          "bottle": "GameLib-legendary-Quail"
+        },
+        {
+          "op": "resolveCrossoverBinDir",
+          "found": false
+        },
+        {
+          "op": "ensurePinned",
+          "pin": "wine-staging-11.20",
+          "appName": "Quail",
+          "runner": "legendary"
+        }
+      ],
+      "launchLog": [],
+      "after": {
+        "registry": null,
+        "overlay": null,
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    }
+  ],
+  "logs": []
+}

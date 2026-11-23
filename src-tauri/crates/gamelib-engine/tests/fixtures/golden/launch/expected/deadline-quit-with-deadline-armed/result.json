@@ -1,0 +1,1116 @@
+{
+  "note": "the host quits with a launch armed: nothing is cancelled and nothing fires; every timer is unref-able (no keep-alive reason) so the process can drain",
+  "steps": [
+    {
+      "step": {
+        "op": "select"
+      },
+      "result": {
+        "kind": "use",
+        "key": "legendary:Quail",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "prefix": {
+          "kind": "bottle",
+          "bottleName": "GameLib-legendary-Quail",
+          "origin": "per-game"
+        }
+      },
+      "trace": [
+        {
+          "op": "isProvisioned",
+          "bottle": "GameLib-legendary-Quail"
+        },
+        {
+          "op": "resolveCrossoverBinDir",
+          "found": true
+        },
+        {
+          "op": "probe",
+          "bottle": "GameLib-legendary-Quail"
+        },
+        {
+          "op": "prepare",
+          "key": "legendary:Quail",
+          "bottleName": "GameLib-legendary-Quail",
+          "next": "engine=crossover build=26.3.0.39832 reason=cx-healthy",
+          "nextKind": "crossover",
+          "crossoverHealthy": true,
+          "crossoverSettings": {
+            "wineVersion": {
+              "type": "crossover",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+              "name": "CrossOver 26.3.0.39832",
+              "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+            },
+            "wineCrossoverBottle": "GameLib-legendary-Quail",
+            "winePrefix": "<HOME>/old-prefix"
+          }
+        }
+      ],
+      "launchLog": [
+        "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+      ],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ]
+      },
+      "arm": 1,
+      "trace": [
+        {
+          "op": "timer-set",
+          "at": 0,
+          "ms": 180000,
+          "due": 180000,
+          "keepAlive": null
+        },
+        {
+          "op": "watch",
+          "installPath": "<HOME>/Games/Quail",
+          "bottleDir": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-legendary-Quail",
+          "started": true
+        },
+        {
+          "op": "timer-set",
+          "at": 0,
+          "ms": 185000,
+          "due": 185000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 185000
+        },
+        {
+          "op": "timer-set",
+          "at": 0,
+          "ms": 1500,
+          "due": 1500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 1500
+        }
+      ],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 1
+      },
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "advance",
+        "ms": 60000
+      },
+      "now": 60000,
+      "trace": [
+        {
+          "op": "timer-fire",
+          "at": 1500,
+          "due": 1500
+        },
+        {
+          "op": "listing",
+          "at": 1500,
+          "n": 1,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 1500,
+          "ms": 1500,
+          "due": 3000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 3000
+        },
+        {
+          "op": "timer-fire",
+          "at": 3000,
+          "due": 3000
+        },
+        {
+          "op": "listing",
+          "at": 3000,
+          "n": 2,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 3000,
+          "ms": 1500,
+          "due": 4500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 4500
+        },
+        {
+          "op": "timer-fire",
+          "at": 4500,
+          "due": 4500
+        },
+        {
+          "op": "listing",
+          "at": 4500,
+          "n": 3,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 4500,
+          "ms": 1500,
+          "due": 6000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 6000
+        },
+        {
+          "op": "timer-fire",
+          "at": 6000,
+          "due": 6000
+        },
+        {
+          "op": "listing",
+          "at": 6000,
+          "n": 4,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 6000,
+          "ms": 1500,
+          "due": 7500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 7500
+        },
+        {
+          "op": "timer-fire",
+          "at": 7500,
+          "due": 7500
+        },
+        {
+          "op": "listing",
+          "at": 7500,
+          "n": 5,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 7500,
+          "ms": 1500,
+          "due": 9000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 9000
+        },
+        {
+          "op": "timer-fire",
+          "at": 9000,
+          "due": 9000
+        },
+        {
+          "op": "listing",
+          "at": 9000,
+          "n": 6,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 9000,
+          "ms": 1500,
+          "due": 10500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 10500
+        },
+        {
+          "op": "timer-fire",
+          "at": 10500,
+          "due": 10500
+        },
+        {
+          "op": "listing",
+          "at": 10500,
+          "n": 7,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 10500,
+          "ms": 1500,
+          "due": 12000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 12000
+        },
+        {
+          "op": "timer-fire",
+          "at": 12000,
+          "due": 12000
+        },
+        {
+          "op": "listing",
+          "at": 12000,
+          "n": 8,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 12000,
+          "ms": 1500,
+          "due": 13500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 13500
+        },
+        {
+          "op": "timer-fire",
+          "at": 13500,
+          "due": 13500
+        },
+        {
+          "op": "listing",
+          "at": 13500,
+          "n": 9,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 13500,
+          "ms": 1500,
+          "due": 15000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 15000
+        },
+        {
+          "op": "timer-fire",
+          "at": 15000,
+          "due": 15000
+        },
+        {
+          "op": "listing",
+          "at": 15000,
+          "n": 10,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 15000,
+          "ms": 1500,
+          "due": 16500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 16500
+        },
+        {
+          "op": "timer-fire",
+          "at": 16500,
+          "due": 16500
+        },
+        {
+          "op": "listing",
+          "at": 16500,
+          "n": 11,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 16500,
+          "ms": 1500,
+          "due": 18000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 18000
+        },
+        {
+          "op": "timer-fire",
+          "at": 18000,
+          "due": 18000
+        },
+        {
+          "op": "listing",
+          "at": 18000,
+          "n": 12,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 18000,
+          "ms": 1500,
+          "due": 19500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 19500
+        },
+        {
+          "op": "timer-fire",
+          "at": 19500,
+          "due": 19500
+        },
+        {
+          "op": "listing",
+          "at": 19500,
+          "n": 13,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 19500,
+          "ms": 1500,
+          "due": 21000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 21000
+        },
+        {
+          "op": "timer-fire",
+          "at": 21000,
+          "due": 21000
+        },
+        {
+          "op": "listing",
+          "at": 21000,
+          "n": 14,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 21000,
+          "ms": 1500,
+          "due": 22500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 22500
+        },
+        {
+          "op": "timer-fire",
+          "at": 22500,
+          "due": 22500
+        },
+        {
+          "op": "listing",
+          "at": 22500,
+          "n": 15,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 22500,
+          "ms": 1500,
+          "due": 24000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 24000
+        },
+        {
+          "op": "timer-fire",
+          "at": 24000,
+          "due": 24000
+        },
+        {
+          "op": "listing",
+          "at": 24000,
+          "n": 16,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 24000,
+          "ms": 1500,
+          "due": 25500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 25500
+        },
+        {
+          "op": "timer-fire",
+          "at": 25500,
+          "due": 25500
+        },
+        {
+          "op": "listing",
+          "at": 25500,
+          "n": 17,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 25500,
+          "ms": 1500,
+          "due": 27000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 27000
+        },
+        {
+          "op": "timer-fire",
+          "at": 27000,
+          "due": 27000
+        },
+        {
+          "op": "listing",
+          "at": 27000,
+          "n": 18,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 27000,
+          "ms": 1500,
+          "due": 28500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 28500
+        },
+        {
+          "op": "timer-fire",
+          "at": 28500,
+          "due": 28500
+        },
+        {
+          "op": "listing",
+          "at": 28500,
+          "n": 19,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 28500,
+          "ms": 1500,
+          "due": 30000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 30000
+        },
+        {
+          "op": "timer-fire",
+          "at": 30000,
+          "due": 30000
+        },
+        {
+          "op": "listing",
+          "at": 30000,
+          "n": 20,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 30000,
+          "ms": 1500,
+          "due": 31500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 31500
+        },
+        {
+          "op": "timer-fire",
+          "at": 31500,
+          "due": 31500
+        },
+        {
+          "op": "listing",
+          "at": 31500,
+          "n": 21,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 31500,
+          "ms": 1500,
+          "due": 33000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 33000
+        },
+        {
+          "op": "timer-fire",
+          "at": 33000,
+          "due": 33000
+        },
+        {
+          "op": "listing",
+          "at": 33000,
+          "n": 22,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 33000,
+          "ms": 1500,
+          "due": 34500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 34500
+        },
+        {
+          "op": "timer-fire",
+          "at": 34500,
+          "due": 34500
+        },
+        {
+          "op": "listing",
+          "at": 34500,
+          "n": 23,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 34500,
+          "ms": 1500,
+          "due": 36000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 36000
+        },
+        {
+          "op": "timer-fire",
+          "at": 36000,
+          "due": 36000
+        },
+        {
+          "op": "listing",
+          "at": 36000,
+          "n": 24,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 36000,
+          "ms": 1500,
+          "due": 37500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 37500
+        },
+        {
+          "op": "timer-fire",
+          "at": 37500,
+          "due": 37500
+        },
+        {
+          "op": "listing",
+          "at": 37500,
+          "n": 25,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 37500,
+          "ms": 1500,
+          "due": 39000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 39000
+        },
+        {
+          "op": "timer-fire",
+          "at": 39000,
+          "due": 39000
+        },
+        {
+          "op": "listing",
+          "at": 39000,
+          "n": 26,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 39000,
+          "ms": 1500,
+          "due": 40500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 40500
+        },
+        {
+          "op": "timer-fire",
+          "at": 40500,
+          "due": 40500
+        },
+        {
+          "op": "listing",
+          "at": 40500,
+          "n": 27,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 40500,
+          "ms": 1500,
+          "due": 42000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 42000
+        },
+        {
+          "op": "timer-fire",
+          "at": 42000,
+          "due": 42000
+        },
+        {
+          "op": "listing",
+          "at": 42000,
+          "n": 28,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 42000,
+          "ms": 1500,
+          "due": 43500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 43500
+        },
+        {
+          "op": "timer-fire",
+          "at": 43500,
+          "due": 43500
+        },
+        {
+          "op": "listing",
+          "at": 43500,
+          "n": 29,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 43500,
+          "ms": 1500,
+          "due": 45000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 45000
+        },
+        {
+          "op": "timer-fire",
+          "at": 45000,
+          "due": 45000
+        },
+        {
+          "op": "listing",
+          "at": 45000,
+          "n": 30,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 45000,
+          "ms": 1500,
+          "due": 46500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 46500
+        },
+        {
+          "op": "timer-fire",
+          "at": 46500,
+          "due": 46500
+        },
+        {
+          "op": "listing",
+          "at": 46500,
+          "n": 31,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 46500,
+          "ms": 1500,
+          "due": 48000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 48000
+        },
+        {
+          "op": "timer-fire",
+          "at": 48000,
+          "due": 48000
+        },
+        {
+          "op": "listing",
+          "at": 48000,
+          "n": 32,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 48000,
+          "ms": 1500,
+          "due": 49500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 49500
+        },
+        {
+          "op": "timer-fire",
+          "at": 49500,
+          "due": 49500
+        },
+        {
+          "op": "listing",
+          "at": 49500,
+          "n": 33,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 49500,
+          "ms": 1500,
+          "due": 51000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 51000
+        },
+        {
+          "op": "timer-fire",
+          "at": 51000,
+          "due": 51000
+        },
+        {
+          "op": "listing",
+          "at": 51000,
+          "n": 34,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 51000,
+          "ms": 1500,
+          "due": 52500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 52500
+        },
+        {
+          "op": "timer-fire",
+          "at": 52500,
+          "due": 52500
+        },
+        {
+          "op": "listing",
+          "at": 52500,
+          "n": 35,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 52500,
+          "ms": 1500,
+          "due": 54000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 54000
+        },
+        {
+          "op": "timer-fire",
+          "at": 54000,
+          "due": 54000
+        },
+        {
+          "op": "listing",
+          "at": 54000,
+          "n": 36,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 54000,
+          "ms": 1500,
+          "due": 55500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 55500
+        },
+        {
+          "op": "timer-fire",
+          "at": 55500,
+          "due": 55500
+        },
+        {
+          "op": "listing",
+          "at": 55500,
+          "n": 37,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 55500,
+          "ms": 1500,
+          "due": 57000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 57000
+        },
+        {
+          "op": "timer-fire",
+          "at": 57000,
+          "due": 57000
+        },
+        {
+          "op": "listing",
+          "at": 57000,
+          "n": 38,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 57000,
+          "ms": 1500,
+          "due": 58500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 58500
+        },
+        {
+          "op": "timer-fire",
+          "at": 58500,
+          "due": 58500
+        },
+        {
+          "op": "listing",
+          "at": 58500,
+          "n": 39,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 58500,
+          "ms": 1500,
+          "due": 60000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 60000
+        },
+        {
+          "op": "timer-fire",
+          "at": 60000,
+          "due": 60000
+        },
+        {
+          "op": "listing",
+          "at": 60000,
+          "n": 40,
+          "result": "lines"
+        },
+        {
+          "op": "timer-set",
+          "at": 60000,
+          "ms": 1500,
+          "due": 61500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 61500
+        }
+      ],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 1
+      },
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "quit"
+      },
+      "activeDeadlines": 1,
+      "pendingTimers": 3,
+      "keepAliveReasons": [],
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 1
+      },
+      "eventsSoFar": 1
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail uses engine=crossover build=26.3.0.39832 reason=cx-healthy"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "BottleLedger: legendary:Quail running in GameLib-legendary-Quail"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail engine=crossover build=26.3.0.39832 reason=cx-healthy"
+    }
+  ]
+}

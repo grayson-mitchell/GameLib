@@ -1,0 +1,25 @@
+{
+  "note": "a Steam game runs on the bottle runtime, not here: skipped",
+  "steps": [
+    {
+      "step": {
+        "op": "select"
+      },
+      "result": {
+        "kind": "skip"
+      },
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": null,
+        "overlay": null,
+        "ledger": {
+          "GameLib-steam-620": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    }
+  ],
+  "logs": []
+}

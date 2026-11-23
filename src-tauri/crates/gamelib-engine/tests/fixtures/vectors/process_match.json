@@ -1,0 +1,774 @@
+{
+  "prefixes": [
+    {
+      "id": "outside-home",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "expected": [
+        "/volumes/games/avernum 4/",
+        "z:\\volumes\\games\\avernum 4\\"
+      ]
+    },
+    {
+      "id": "under-home",
+      "installPath": "/Users/Shared/Games/Quail",
+      "home": "/Users/Shared",
+      "expected": [
+        "/users/shared/games/quail/",
+        "z:\\users\\shared\\games\\quail\\",
+        "y:\\games\\quail\\"
+      ]
+    },
+    {
+      "id": "under-home-trailing-slash",
+      "installPath": "/Users/Shared/Games/Quail/",
+      "home": "/Users/Shared",
+      "expected": [
+        "/users/shared/games/quail/",
+        "z:\\users\\shared\\games\\quail\\",
+        "y:\\games\\quail\\"
+      ]
+    },
+    {
+      "id": "under-home-and-bottle",
+      "installPath": "/Users/Shared/bottles/GameLib-legendary-Quail/drive_c/Games/Quail",
+      "home": "/Users/Shared",
+      "bottleDir": "/Users/Shared/bottles/GameLib-legendary-Quail",
+      "expected": [
+        "/users/shared/bottles/gamelib-legendary-quail/drive_c/games/quail/",
+        "z:\\users\\shared\\bottles\\gamelib-legendary-quail\\drive_c\\games\\quail\\",
+        "y:\\bottles\\gamelib-legendary-quail\\drive_c\\games\\quail\\",
+        "c:\\games\\quail\\"
+      ]
+    },
+    {
+      "id": "under-bottle-only",
+      "installPath": "/Users/Shared/bottles/GameLib-legendary-Quail/drive_c/Games/Quail",
+      "home": "/Volumes/Other",
+      "bottleDir": "/Users/Shared/bottles/GameLib-legendary-Quail",
+      "expected": [
+        "/users/shared/bottles/gamelib-legendary-quail/drive_c/games/quail/",
+        "z:\\users\\shared\\bottles\\gamelib-legendary-quail\\drive_c\\games\\quail\\",
+        "c:\\games\\quail\\"
+      ]
+    },
+    {
+      "id": "bottle-dir-trailing-slash",
+      "installPath": "/Users/Shared/bottles/GameLib-legendary-Quail/drive_c/Games/Quail",
+      "home": "/Users/Shared",
+      "bottleDir": "/Users/Shared/bottles/GameLib-legendary-Quail/",
+      "expected": [
+        "/users/shared/bottles/gamelib-legendary-quail/drive_c/games/quail/",
+        "z:\\users\\shared\\bottles\\gamelib-legendary-quail\\drive_c\\games\\quail\\",
+        "y:\\bottles\\gamelib-legendary-quail\\drive_c\\games\\quail\\",
+        "c:\\games\\quail\\"
+      ]
+    },
+    {
+      "id": "home-is-a-prefix-of-a-sibling-name",
+      "installPath": "/Volumes/Home2/Games/Quail",
+      "home": "/Volumes/Home",
+      "expected": [
+        "/volumes/home2/games/quail/",
+        "z:\\volumes\\home2\\games\\quail\\"
+      ]
+    },
+    {
+      "id": "empty-home",
+      "installPath": "/Users/Shared/Games/Quail",
+      "home": "",
+      "expected": [
+        "/users/shared/games/quail/",
+        "z:\\users\\shared\\games\\quail\\"
+      ]
+    },
+    {
+      "id": "upper-case-is-lowered",
+      "installPath": "/Volumes/GAMES/Avernum 4",
+      "home": "/Users/Shared",
+      "expected": [
+        "/volumes/games/avernum 4/",
+        "z:\\volumes\\games\\avernum 4\\"
+      ]
+    },
+    {
+      "id": "spaces-and-dots",
+      "installPath": "/Volumes/Games/A.B C/D",
+      "home": "/Users/Shared",
+      "expected": [
+        "/volumes/games/a.b c/d/",
+        "z:\\volumes\\games\\a.b c\\d\\"
+      ]
+    },
+    {
+      "id": "relative",
+      "installPath": "Games/Quail",
+      "home": "/Users/Shared",
+      "expected": []
+    },
+    {
+      "id": "empty",
+      "installPath": "",
+      "home": "/Users/Shared",
+      "expected": []
+    },
+    {
+      "id": "root",
+      "installPath": "/",
+      "home": "/Users/Shared",
+      "expected": []
+    },
+    {
+      "id": "many-slashes-root",
+      "installPath": "///",
+      "home": "/Users/Shared",
+      "expected": []
+    }
+  ],
+  "prefix": [
+    {
+      "id": "outside-home",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "expected": "/volumes/games/avernum 4/"
+    },
+    {
+      "id": "under-home",
+      "installPath": "/Users/Shared/Games/Quail",
+      "expected": "/users/shared/games/quail/"
+    },
+    {
+      "id": "under-home-trailing-slash",
+      "installPath": "/Users/Shared/Games/Quail/",
+      "expected": "/users/shared/games/quail/"
+    },
+    {
+      "id": "under-home-and-bottle",
+      "installPath": "/Users/Shared/bottles/GameLib-legendary-Quail/drive_c/Games/Quail",
+      "expected": "/users/shared/bottles/gamelib-legendary-quail/drive_c/games/quail/"
+    },
+    {
+      "id": "under-bottle-only",
+      "installPath": "/Users/Shared/bottles/GameLib-legendary-Quail/drive_c/Games/Quail",
+      "expected": "/users/shared/bottles/gamelib-legendary-quail/drive_c/games/quail/"
+    },
+    {
+      "id": "bottle-dir-trailing-slash",
+      "installPath": "/Users/Shared/bottles/GameLib-legendary-Quail/drive_c/Games/Quail",
+      "expected": "/users/shared/bottles/gamelib-legendary-quail/drive_c/games/quail/"
+    },
+    {
+      "id": "home-is-a-prefix-of-a-sibling-name",
+      "installPath": "/Volumes/Home2/Games/Quail",
+      "expected": "/volumes/home2/games/quail/"
+    },
+    {
+      "id": "empty-home",
+      "installPath": "/Users/Shared/Games/Quail",
+      "expected": "/users/shared/games/quail/"
+    },
+    {
+      "id": "upper-case-is-lowered",
+      "installPath": "/Volumes/GAMES/Avernum 4",
+      "expected": "/volumes/games/avernum 4/"
+    },
+    {
+      "id": "spaces-and-dots",
+      "installPath": "/Volumes/Games/A.B C/D",
+      "expected": "/volumes/games/a.b c/d/"
+    },
+    {
+      "id": "relative",
+      "installPath": "Games/Quail",
+      "expected": null
+    },
+    {
+      "id": "empty",
+      "installPath": "",
+      "expected": null
+    },
+    {
+      "id": "root",
+      "installPath": "/",
+      "expected": null
+    },
+    {
+      "id": "many-slashes-root",
+      "installPath": "///",
+      "expected": null
+    }
+  ],
+  "parsePsLine": [
+    {
+      "id": "padded-pid",
+      "line": "  123 /usr/bin/thing --flag",
+      "expected": {
+        "pid": "123",
+        "command": "/usr/bin/thing --flag"
+      }
+    },
+    {
+      "id": "unpadded-pid",
+      "line": "4242 /usr/bin/thing",
+      "expected": {
+        "pid": "4242",
+        "command": "/usr/bin/thing"
+      }
+    },
+    {
+      "id": "tab-before-pid",
+      "line": "\t 77 cmd",
+      "expected": {
+        "pid": "77",
+        "command": "cmd"
+      }
+    },
+    {
+      "id": "quoted-windows-command",
+      "line": "  901 \"C:\\Program Files\\Game\\Game.exe\" -arg",
+      "expected": {
+        "pid": "901",
+        "command": "C:\\Program Files\\Game\\Game.exe\" -arg"
+      }
+    },
+    {
+      "id": "command-with-spaces-kept",
+      "line": "  15 wine C:\\Program Files\\A B\\x.exe",
+      "expected": {
+        "pid": "15",
+        "command": "wine C:\\Program Files\\A B\\x.exe"
+      }
+    },
+    {
+      "id": "command-trimmed",
+      "line": "  16 cmd with trailing space   ",
+      "expected": {
+        "pid": "16",
+        "command": "cmd with trailing space"
+      }
+    },
+    {
+      "id": "pid-only",
+      "line": "  123",
+      "expected": null
+    },
+    {
+      "id": "pid-and-one-space",
+      "line": "  123 ",
+      "expected": {
+        "pid": "123",
+        "command": ""
+      }
+    },
+    {
+      "id": "header-line",
+      "line": "  PID COMMAND",
+      "expected": null
+    },
+    {
+      "id": "empty",
+      "line": "",
+      "expected": null
+    },
+    {
+      "id": "non-numeric-pid",
+      "line": "abc /bin/x",
+      "expected": null
+    },
+    {
+      "id": "two-spaces-after-pid",
+      "line": "  9  two-spaces",
+      "expected": {
+        "pid": "9",
+        "command": "two-spaces"
+      }
+    },
+    {
+      "id": "only-a-quote",
+      "line": "  50 \"",
+      "expected": {
+        "pid": "50",
+        "command": ""
+      }
+    }
+  ],
+  "match": [
+    {
+      "id": "unix-path-start-of-command",
+      "note": "the command line starts with the install dir",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  101 /Volumes/Games/Avernum 4/Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "101"
+      }
+    },
+    {
+      "id": "unix-path-later-argument-after-space",
+      "note": "GPTK shape: the install dir is a later argument, preceded by a space",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  102 wine64-preloader /opt/wine/bin/wine64 /Volumes/Games/Avernum 4/Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "102"
+      }
+    },
+    {
+      "id": "unix-path-after-quote",
+      "note": "preceded by a double quote",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  103 wine \"/Volumes/Games/Avernum 4/Game.exe\"",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "103"
+      }
+    },
+    {
+      "id": "unix-path-after-equals",
+      "note": "preceded by =",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  104 launcher --root=/Volumes/Games/Avernum 4/data",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "104"
+      }
+    },
+    {
+      "id": "unix-path-after-tab",
+      "note": "preceded by a tab",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  105 wine\t/Volumes/Games/Avernum 4/Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "105"
+      }
+    },
+    {
+      "id": "unix-path-glued-to-a-longer-path-is-not-a-match",
+      "note": "a character other than whitespace, quote or = before the form: not a match",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  106 x/Volumes/Games/Avernum 4/Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": false,
+        "pid": null
+      }
+    },
+    {
+      "id": "unix-path-case-insensitive",
+      "note": "the comparison lowercases both sides",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  107 /VOLUMES/GAMES/AVERNUM 4/GAME.EXE",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "107"
+      }
+    },
+    {
+      "id": "unix-path-lowercase-command-uppercase-install",
+      "note": "the install path is upper case and the command lower case",
+      "installPath": "/Volumes/GAMES/AVERNUM 4",
+      "home": "/Users/Shared",
+      "listing": "  108 /volumes/games/avernum 4/game.exe",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "108"
+      }
+    },
+    {
+      "id": "trailing-separator-keeps-a-sibling-apart",
+      "note": "`Avernum 4` must not match `Avernum 4 Remaster`",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  109 /Volumes/Games/Avernum 4 Remaster/Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": false,
+        "pid": null
+      }
+    },
+    {
+      "id": "trailing-separator-bare-dir-is-not-a-match",
+      "note": "the command names the dir itself without a separator: no match",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  110 open /Volumes/Games/Avernum 4",
+      "expected": {
+        "watching": true,
+        "matched": false,
+        "pid": null
+      }
+    },
+    {
+      "id": "install-path-with-trailing-slash",
+      "note": "a trailing slash on the install path is trimmed and re-added once",
+      "installPath": "/Volumes/Games/Avernum 4/",
+      "home": "/Users/Shared",
+      "listing": "  111 /Volumes/Games/Avernum 4/Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "111"
+      }
+    },
+    {
+      "id": "z-drive-form",
+      "note": "`Z:` plus the absolute path with backslashes",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  112 Z:\\Volumes\\Games\\Avernum 4\\Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "112"
+      }
+    },
+    {
+      "id": "z-drive-form-case-insensitive",
+      "note": "the Z form in lower case",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  113 z:\\volumes\\games\\avernum 4\\game.exe",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "113"
+      }
+    },
+    {
+      "id": "z-drive-form-quoted-by-ps",
+      "note": "ps shows a Windows command line in quotes: the leading quote is dropped by the parse",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  114 \"Z:\\Volumes\\Games\\Avernum 4\\Game.exe\" -windowed",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "114"
+      }
+    },
+    {
+      "id": "z-drive-form-sibling-is-not-a-match",
+      "note": "the Z form keeps the trailing separator too",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  115 Z:\\Volumes\\Games\\Avernum 4 Remaster\\Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": false,
+        "pid": null
+      }
+    },
+    {
+      "id": "y-drive-form-under-home",
+      "note": "an install under the home dir also carries a `Y:` form relative to home",
+      "installPath": "/Users/Shared/Games/Quail",
+      "home": "/Users/Shared",
+      "listing": "  116 Y:\\Games\\Quail\\Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "116"
+      }
+    },
+    {
+      "id": "y-drive-form-case-insensitive",
+      "note": "the Y form in upper case",
+      "installPath": "/Users/Shared/Games/Quail",
+      "home": "/Users/Shared",
+      "listing": "  117 Y:\\GAMES\\QUAIL\\GAME.EXE",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "117"
+      }
+    },
+    {
+      "id": "y-drive-form-not-derived-outside-home",
+      "note": "an install outside the home dir has no Y form: the same text is not a match",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  118 Y:\\Games\\Avernum 4\\Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": false,
+        "pid": null
+      }
+    },
+    {
+      "id": "y-drive-form-home-with-trailing-slash",
+      "note": "a home dir written with a trailing slash derives the same Y form",
+      "installPath": "/Users/Shared/Games/Quail",
+      "home": "/Users/Shared/",
+      "listing": "  119 Y:\\Games\\Quail\\Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "119"
+      }
+    },
+    {
+      "id": "c-drive-form-under-the-bottle",
+      "note": "an install under the bottle's drive_c carries a `C:` form (CR-02)",
+      "installPath": "/Users/Shared/bottles/GameLib-legendary-Quail/drive_c/Games/Quail",
+      "home": "/Users/Shared",
+      "bottleDir": "/Users/Shared/bottles/GameLib-legendary-Quail",
+      "listing": "  120 C:\\Games\\Quail\\Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "120"
+      }
+    },
+    {
+      "id": "c-drive-form-without-a-bottle-is-not-derived",
+      "note": "the same install and command without a bottle dir: no C form, no match",
+      "installPath": "/Users/Shared/bottles/GameLib-legendary-Quail/drive_c/Games/Quail",
+      "home": "/Users/Shared",
+      "listing": "  121 C:\\Games\\Quail\\Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": false,
+        "pid": null
+      }
+    },
+    {
+      "id": "c-drive-form-install-outside-the-bottle",
+      "note": "an install outside drive_c has no C form",
+      "installPath": "/Users/Shared/Games/Quail",
+      "home": "/Users/Shared",
+      "bottleDir": "/Users/Shared/bottles/GameLib-legendary-Quail",
+      "listing": "  122 C:\\Games\\Quail\\Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": false,
+        "pid": null
+      }
+    },
+    {
+      "id": "basename-only-is-unmatchable",
+      "note": "a bare-basename launch (cwd plus Game.exe) cannot be matched",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  123 Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": false,
+        "pid": null
+      }
+    },
+    {
+      "id": "basename-after-a-launcher-stub-is-unmatchable",
+      "note": "a launcher stub that names only the basename",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  124 C:\\windows\\system32\\start.exe /exec Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": false,
+        "pid": null
+      }
+    },
+    {
+      "id": "first-match-wins-and-reports-its-pid",
+      "note": "two matching processes: the first line in the listing is the one reported",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  200 /usr/sbin/cfprefsd agent\n  201 /Volumes/Games/Avernum 4/Game.exe\n  202 /Volumes/Games/Avernum 4/Helper.exe",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "201"
+      }
+    },
+    {
+      "id": "garbage-and-blank-lines-are-skipped",
+      "note": "lines that do not parse are skipped, not errors",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "\nnot a ps line\n  PID COMMAND\n  203 /Volumes/Games/Avernum 4/Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "203"
+      }
+    },
+    {
+      "id": "pgrep-shape-no-padding",
+      "note": "the `pgrep -lf .` shape: pid, one space, command, no padding",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "4242 /Volumes/Games/Avernum 4/Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": true,
+        "pid": "4242"
+      }
+    },
+    {
+      "id": "another-games-dir-is-not-a-match",
+      "note": "a different install dir in the listing",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  125 /Volumes/Games/Other Game/Game.exe",
+      "expected": {
+        "watching": true,
+        "matched": false,
+        "pid": null
+      }
+    },
+    {
+      "id": "empty-listing",
+      "note": "nothing running",
+      "installPath": "/Volumes/Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "",
+      "expected": {
+        "watching": true,
+        "matched": false,
+        "pid": null
+      }
+    },
+    {
+      "id": "relative-install-path-is-not-watched",
+      "note": "a relative install path derives no form: no watcher at all",
+      "installPath": "Games/Avernum 4",
+      "home": "/Users/Shared",
+      "listing": "  126 Games/Avernum 4/Game.exe",
+      "expected": {
+        "watching": false,
+        "matched": false,
+        "pid": null
+      }
+    },
+    {
+      "id": "empty-install-path-is-not-watched",
+      "note": "an empty install path derives no form",
+      "installPath": "",
+      "home": "/Users/Shared",
+      "listing": "  127 /Game.exe",
+      "expected": {
+        "watching": false,
+        "matched": false,
+        "pid": null
+      }
+    },
+    {
+      "id": "root-install-path-is-not-watched",
+      "note": "the filesystem root is not usable",
+      "installPath": "/",
+      "home": "/Users/Shared",
+      "listing": "  128 /Game.exe",
+      "expected": {
+        "watching": false,
+        "matched": false,
+        "pid": null
+      }
+    }
+  ],
+  "listing": [
+    {
+      "id": "ps-answers",
+      "note": "`ps -axo pid=,command=` works",
+      "script": [
+        {
+          "cmd": "ps",
+          "outcome": "ok",
+          "stdout": "    1 /sbin/launchd"
+        }
+      ],
+      "expected": {
+        "stdout": "    1 /sbin/launchd",
+        "spawned": [
+          {
+            "cmd": "ps",
+            "args": [
+              "-axo",
+              "pid=,command="
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ps-cannot-spawn-pgrep-answers",
+      "note": "G4: ps is setuid and a sandbox refuses it; `pgrep -lf .` stands in",
+      "script": [
+        {
+          "cmd": "ps",
+          "outcome": "fail"
+        },
+        {
+          "cmd": "pgrep",
+          "outcome": "ok",
+          "stdout": "1 /sbin/launchd"
+        }
+      ],
+      "expected": {
+        "stdout": "1 /sbin/launchd",
+        "spawned": [
+          {
+            "cmd": "ps",
+            "args": [
+              "-axo",
+              "pid=,command="
+            ]
+          },
+          {
+            "cmd": "pgrep",
+            "args": [
+              "-lf",
+              "."
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "both-fail-the-ps-error-is-rethrown",
+      "note": "the ps error, not the pgrep one, reaches the caller",
+      "script": [
+        {
+          "cmd": "ps",
+          "outcome": "fail"
+        },
+        {
+          "cmd": "pgrep",
+          "outcome": "fail"
+        }
+      ],
+      "expected": {
+        "threw": "ps failed",
+        "spawned": [
+          {
+            "cmd": "ps",
+            "args": [
+              "-axo",
+              "pid=,command="
+            ]
+          },
+          {
+            "cmd": "pgrep",
+            "args": [
+              "-lf",
+              "."
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

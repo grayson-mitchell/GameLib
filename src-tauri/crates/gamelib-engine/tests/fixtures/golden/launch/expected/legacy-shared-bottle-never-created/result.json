@@ -1,0 +1,96 @@
+{
+  "note": "a game on a shared CrossOver bottle: the provisioned check is not even asked",
+  "steps": [
+    {
+      "step": {
+        "op": "select"
+      },
+      "result": {
+        "kind": "use",
+        "key": "legendary:Quail",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "prefix": {
+          "kind": "bottle",
+          "bottleName": "GameLib",
+          "origin": "legacy-crossover"
+        }
+      },
+      "trace": [
+        {
+          "op": "resolveCrossoverBinDir",
+          "found": true
+        },
+        {
+          "op": "probe",
+          "bottle": "GameLib"
+        },
+        {
+          "op": "prepare",
+          "key": "legendary:Quail",
+          "bottleName": "GameLib",
+          "next": "engine=crossover build=26.3.0.39832 reason=cx-healthy",
+          "nextKind": "crossover",
+          "crossoverHealthy": true,
+          "crossoverSettings": {
+            "wineVersion": {
+              "type": "crossover",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+              "name": "CrossOver 26.3.0.39832",
+              "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+            },
+            "wineCrossoverBottle": "GameLib",
+            "winePrefix": "<HOME>/old-prefix"
+          }
+        }
+      ],
+      "launchLog": [
+        "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+      ],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib"
+          },
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [],
+          "GameLib": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 1
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail uses engine=crossover build=26.3.0.39832 reason=cx-healthy"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "BottleLedger: legendary:Quail running in GameLib"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail engine=crossover build=26.3.0.39832 reason=cx-healthy"
+    }
+  ]
+}

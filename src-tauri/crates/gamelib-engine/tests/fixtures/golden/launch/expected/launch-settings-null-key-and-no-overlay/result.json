@@ -1,0 +1,83 @@
+{
+  "note": "a null key, an unknown key and a key with no overlay all return the stored settings object itself",
+  "steps": [
+    {
+      "step": {
+        "op": "settings",
+        "key": null,
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      },
+      "key": null,
+      "returned": {
+        "winePrefix": "<HOME>/old-prefix"
+      },
+      "sameObject": true,
+      "inputUnchanged": true,
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": null,
+        "overlay": null,
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "settings",
+        "key": "gog:other",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      },
+      "key": "gog:other",
+      "returned": {
+        "winePrefix": "<HOME>/old-prefix"
+      },
+      "sameObject": true,
+      "inputUnchanged": true,
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": null,
+        "overlay": null,
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "settings",
+        "stored": {
+          "winePrefix": "<HOME>/old-prefix"
+        }
+      },
+      "key": "legendary:Quail",
+      "returned": {
+        "winePrefix": "<HOME>/old-prefix"
+      },
+      "sameObject": true,
+      "inputUnchanged": true,
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": null,
+        "overlay": null,
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    }
+  ],
+  "logs": []
+}

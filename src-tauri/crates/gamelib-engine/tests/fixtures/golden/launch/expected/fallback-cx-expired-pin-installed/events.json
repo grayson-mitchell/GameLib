@@ -1,0 +1,35 @@
+[
+  {
+    "channel": "engineStateChanged",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "Quail",
+        "engine": "builtin",
+        "reason": "cx-expired",
+        "engineLabel": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": {
+          "reason": "cx-expired",
+          "seq": 1
+        },
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": "bottle",
+        "perGameBottleName": "GameLib-legendary-Quail",
+        "legacyLabel": null
+      }
+    ]
+  }
+]

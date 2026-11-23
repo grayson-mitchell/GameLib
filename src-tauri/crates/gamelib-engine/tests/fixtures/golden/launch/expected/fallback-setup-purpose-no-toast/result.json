@@ -1,0 +1,113 @@
+{
+  "note": "the setup purpose never toasts the fallback (WR-01 sibling)",
+  "steps": [
+    {
+      "step": {
+        "op": "select",
+        "purpose": "setup"
+      },
+      "result": {
+        "kind": "use",
+        "key": "legendary:Quail",
+        "selection": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-expired",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "prefix": {
+          "kind": "bottle",
+          "bottleName": "GameLib-legendary-Quail",
+          "origin": "per-game"
+        }
+      },
+      "trace": [
+        {
+          "op": "isProvisioned",
+          "bottle": "GameLib-legendary-Quail"
+        },
+        {
+          "op": "resolveCrossoverBinDir",
+          "found": true
+        },
+        {
+          "op": "probe",
+          "bottle": "GameLib-legendary-Quail"
+        },
+        {
+          "op": "prepare",
+          "key": "legendary:Quail",
+          "bottleName": "GameLib-legendary-Quail",
+          "next": "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired",
+          "nextKind": "pinned",
+          "crossoverHealthy": false,
+          "crossoverSettings": {
+            "wineVersion": {
+              "type": "crossover",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+              "name": "CrossOver",
+              "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+            },
+            "wineCrossoverBottle": "GameLib-legendary-Quail",
+            "winePrefix": "<HOME>/old-prefix"
+          }
+        }
+      ],
+      "launchLog": [
+        "engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+      ],
+      "after": {
+        "registry": {
+          "kind": "pinned",
+          "pinId": "wine-staging-11.20",
+          "reason": "cx-expired",
+          "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+          "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+          "label": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "version": "11.20",
+          "dxvk": {
+            "dir": "<TOOLS>/steam-engines/dxvk-macOS-v1.10.3-20230507-repack",
+            "version": "v1.10.3-20230507-repack"
+          }
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          }
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 1
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail uses engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "BottleLedger: legendary:Quail running in GameLib-legendary-Quail"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-expired"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "note": "no overlay context (a skipped or legacy launch): not armed",
+  "steps": [
+    {
+      "step": {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          [
+            "  310 /usr/sbin/cfprefsd agent",
+            "  311 /Applications/Other.app/Contents/MacOS/Other"
+          ]
+        ]
+      },
+      "arm": 1,
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": null,
+        "overlay": null,
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    },
+    {
+      "step": {
+        "op": "advance",
+        "ms": 200000
+      },
+      "now": 200000,
+      "trace": [],
+      "launchLog": [],
+      "after": {
+        "registry": null,
+        "overlay": null,
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    }
+  ],
+  "logs": []
+}

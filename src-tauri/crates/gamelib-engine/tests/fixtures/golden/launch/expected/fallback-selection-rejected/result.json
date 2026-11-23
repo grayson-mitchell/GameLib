@@ -1,0 +1,78 @@
+{
+  "note": "the download reports ok but the engine files are not there: the registry rejects it, a dialog (engine-selection-rejected)",
+  "steps": [
+    {
+      "step": {
+        "op": "select"
+      },
+      "result": {
+        "kind": "refused",
+        "key": "legendary:Quail"
+      },
+      "trace": [
+        {
+          "op": "isProvisioned",
+          "bottle": "GameLib-legendary-Quail"
+        },
+        {
+          "op": "resolveCrossoverBinDir",
+          "found": false
+        },
+        {
+          "op": "ensurePinned",
+          "pin": "wine-staging-11.20",
+          "appName": "Quail",
+          "runner": "legendary"
+        },
+        {
+          "op": "notify",
+          "title": "Quail",
+          "body": "GameLib couldn't set up Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in) for this game, so it did not start. Check the launch log (Settings > Logs)."
+        },
+        {
+          "op": "raiseMainWindow"
+        },
+        {
+          "op": "trackAck",
+          "ackId": "ack-1"
+        },
+        {
+          "op": "raiseMainWindowForInAppDialog"
+        },
+        {
+          "op": "sendFrontendMessage",
+          "channel": "showDialog",
+          "args": [
+            "Quail",
+            "GameLib couldn't set up Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in) for this game, so it did not start. Check the launch log (Settings > Logs).",
+            "MESSAGE",
+            null,
+            "ack-1"
+          ]
+        }
+      ],
+      "launchLog": [],
+      "after": {
+        "registry": null,
+        "overlay": null,
+        "ledger": {
+          "GameLib-legendary-Quail": []
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 0
+    }
+  ],
+  "logs": [
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail engine selection was rejected (engine=pinned name=\"Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)\" version=11.20 reason=cx-missing); not launching"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "[engine-notice] key=legendary:Quail tag=engine-selection-rejected dispatched=in-app-dialog+notify dialog-frame-sent=true display=pending"
+    }
+  ]
+}

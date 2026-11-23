@@ -1,0 +1,758 @@
+{
+  "note": "WR-01: the listing fails twenty times in a row: the watcher gives up and stands the deadline down (monitor-unavailable); no notice",
+  "steps": [
+    {
+      "step": {
+        "op": "select"
+      },
+      "result": {
+        "kind": "use",
+        "key": "legendary:Quail",
+        "selection": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "prefix": {
+          "kind": "bottle",
+          "bottleName": "GameLib-legendary-Quail",
+          "origin": "per-game"
+        }
+      },
+      "trace": [
+        {
+          "op": "isProvisioned",
+          "bottle": "GameLib-legendary-Quail"
+        },
+        {
+          "op": "resolveCrossoverBinDir",
+          "found": true
+        },
+        {
+          "op": "probe",
+          "bottle": "GameLib-legendary-Quail"
+        },
+        {
+          "op": "prepare",
+          "key": "legendary:Quail",
+          "bottleName": "GameLib-legendary-Quail",
+          "next": "engine=crossover build=26.3.0.39832 reason=cx-healthy",
+          "nextKind": "crossover",
+          "crossoverHealthy": true,
+          "crossoverSettings": {
+            "wineVersion": {
+              "type": "crossover",
+              "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+              "name": "CrossOver 26.3.0.39832",
+              "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+            },
+            "wineCrossoverBottle": "GameLib-legendary-Quail",
+            "winePrefix": "<HOME>/old-prefix"
+          }
+        }
+      ],
+      "launchLog": [
+        "engine=crossover build=26.3.0.39832 reason=cx-healthy"
+      ],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "arm",
+        "watcher": "real",
+        "listing": [
+          "throw"
+        ]
+      },
+      "arm": 1,
+      "trace": [
+        {
+          "op": "timer-set",
+          "at": 0,
+          "ms": 180000,
+          "due": 180000,
+          "keepAlive": null
+        },
+        {
+          "op": "watch",
+          "installPath": "<HOME>/Games/Quail",
+          "bottleDir": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLib-legendary-Quail",
+          "started": true
+        },
+        {
+          "op": "timer-set",
+          "at": 0,
+          "ms": 185000,
+          "due": 185000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 185000
+        },
+        {
+          "op": "timer-set",
+          "at": 0,
+          "ms": 1500,
+          "due": 1500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 1500
+        }
+      ],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 1
+      },
+      "eventsSoFar": 1
+    },
+    {
+      "step": {
+        "op": "advance",
+        "ms": 200000
+      },
+      "now": 200000,
+      "trace": [
+        {
+          "op": "timer-fire",
+          "at": 1500,
+          "due": 1500
+        },
+        {
+          "op": "listing",
+          "at": 1500,
+          "n": 1,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 1500,
+          "ms": 1500,
+          "due": 3000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 3000
+        },
+        {
+          "op": "timer-fire",
+          "at": 3000,
+          "due": 3000
+        },
+        {
+          "op": "listing",
+          "at": 3000,
+          "n": 2,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 3000,
+          "ms": 1500,
+          "due": 4500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 4500
+        },
+        {
+          "op": "timer-fire",
+          "at": 4500,
+          "due": 4500
+        },
+        {
+          "op": "listing",
+          "at": 4500,
+          "n": 3,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 4500,
+          "ms": 1500,
+          "due": 6000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 6000
+        },
+        {
+          "op": "timer-fire",
+          "at": 6000,
+          "due": 6000
+        },
+        {
+          "op": "listing",
+          "at": 6000,
+          "n": 4,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 6000,
+          "ms": 1500,
+          "due": 7500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 7500
+        },
+        {
+          "op": "timer-fire",
+          "at": 7500,
+          "due": 7500
+        },
+        {
+          "op": "listing",
+          "at": 7500,
+          "n": 5,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 7500,
+          "ms": 1500,
+          "due": 9000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 9000
+        },
+        {
+          "op": "timer-fire",
+          "at": 9000,
+          "due": 9000
+        },
+        {
+          "op": "listing",
+          "at": 9000,
+          "n": 6,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 9000,
+          "ms": 1500,
+          "due": 10500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 10500
+        },
+        {
+          "op": "timer-fire",
+          "at": 10500,
+          "due": 10500
+        },
+        {
+          "op": "listing",
+          "at": 10500,
+          "n": 7,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 10500,
+          "ms": 1500,
+          "due": 12000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 12000
+        },
+        {
+          "op": "timer-fire",
+          "at": 12000,
+          "due": 12000
+        },
+        {
+          "op": "listing",
+          "at": 12000,
+          "n": 8,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 12000,
+          "ms": 1500,
+          "due": 13500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 13500
+        },
+        {
+          "op": "timer-fire",
+          "at": 13500,
+          "due": 13500
+        },
+        {
+          "op": "listing",
+          "at": 13500,
+          "n": 9,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 13500,
+          "ms": 1500,
+          "due": 15000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 15000
+        },
+        {
+          "op": "timer-fire",
+          "at": 15000,
+          "due": 15000
+        },
+        {
+          "op": "listing",
+          "at": 15000,
+          "n": 10,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 15000,
+          "ms": 1500,
+          "due": 16500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 16500
+        },
+        {
+          "op": "timer-fire",
+          "at": 16500,
+          "due": 16500
+        },
+        {
+          "op": "listing",
+          "at": 16500,
+          "n": 11,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 16500,
+          "ms": 1500,
+          "due": 18000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 18000
+        },
+        {
+          "op": "timer-fire",
+          "at": 18000,
+          "due": 18000
+        },
+        {
+          "op": "listing",
+          "at": 18000,
+          "n": 12,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 18000,
+          "ms": 1500,
+          "due": 19500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 19500
+        },
+        {
+          "op": "timer-fire",
+          "at": 19500,
+          "due": 19500
+        },
+        {
+          "op": "listing",
+          "at": 19500,
+          "n": 13,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 19500,
+          "ms": 1500,
+          "due": 21000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 21000
+        },
+        {
+          "op": "timer-fire",
+          "at": 21000,
+          "due": 21000
+        },
+        {
+          "op": "listing",
+          "at": 21000,
+          "n": 14,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 21000,
+          "ms": 1500,
+          "due": 22500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 22500
+        },
+        {
+          "op": "timer-fire",
+          "at": 22500,
+          "due": 22500
+        },
+        {
+          "op": "listing",
+          "at": 22500,
+          "n": 15,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 22500,
+          "ms": 1500,
+          "due": 24000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 24000
+        },
+        {
+          "op": "timer-fire",
+          "at": 24000,
+          "due": 24000
+        },
+        {
+          "op": "listing",
+          "at": 24000,
+          "n": 16,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 24000,
+          "ms": 1500,
+          "due": 25500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 25500
+        },
+        {
+          "op": "timer-fire",
+          "at": 25500,
+          "due": 25500
+        },
+        {
+          "op": "listing",
+          "at": 25500,
+          "n": 17,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 25500,
+          "ms": 1500,
+          "due": 27000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 27000
+        },
+        {
+          "op": "timer-fire",
+          "at": 27000,
+          "due": 27000
+        },
+        {
+          "op": "listing",
+          "at": 27000,
+          "n": 18,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 27000,
+          "ms": 1500,
+          "due": 28500,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 28500
+        },
+        {
+          "op": "timer-fire",
+          "at": 28500,
+          "due": 28500
+        },
+        {
+          "op": "listing",
+          "at": 28500,
+          "n": 19,
+          "result": "throws"
+        },
+        {
+          "op": "timer-set",
+          "at": 28500,
+          "ms": 1500,
+          "due": 30000,
+          "keepAlive": null
+        },
+        {
+          "op": "timer-unref",
+          "due": 30000
+        },
+        {
+          "op": "timer-fire",
+          "at": 30000,
+          "due": 30000
+        },
+        {
+          "op": "listing",
+          "at": 30000,
+          "n": 20,
+          "result": "throws"
+        },
+        {
+          "op": "timer-clear",
+          "at": 30000,
+          "due": null,
+          "pending": false
+        },
+        {
+          "op": "timer-clear",
+          "at": 30000,
+          "due": 185000,
+          "pending": true
+        },
+        {
+          "op": "timer-clear",
+          "at": 30000,
+          "due": 180000,
+          "pending": true
+        }
+      ],
+      "launchLog": [],
+      "after": {
+        "registry": {
+          "kind": "crossover",
+          "reason": "cx-healthy",
+          "crossoverBuild": "26.3.0.39832",
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "overlay": {
+          "prefix": {
+            "kind": "bottle",
+            "bottleName": "GameLib-legendary-Quail"
+          },
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        "ledger": {
+          "GameLib-legendary-Quail": [
+            "legendary:Quail"
+          ]
+        },
+        "activeDeadlines": 0
+      },
+      "eventsSoFar": 1
+    }
+  ],
+  "logs": [
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail uses engine=crossover build=26.3.0.39832 reason=cx-healthy"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "BottleLedger: legendary:Quail running in GameLib-legendary-Quail"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: legendary:Quail engine=crossover build=26.3.0.39832 reason=cx-healthy"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (1/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (2/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (3/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (4/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (5/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (6/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (7/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (8/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (9/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (10/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (11/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (12/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (13/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (14/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (15/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (16/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (17/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (18/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (19/20): ps failed"
+    },
+    {
+      "level": "WARNING",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: process listing failed (20/20): ps failed"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "gameProcessWatch: gave up (listing-failures) after 30000 ms"
+    },
+    {
+      "level": "INFO",
+      "prefix": "Backend",
+      "message": "Engine: launch deadline for key legendary:Quail cancelled (monitor-unavailable)"
+    }
+  ]
+}

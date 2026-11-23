@@ -1,0 +1,66 @@
+[
+  {
+    "channel": "engineStateChanged",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "Quail",
+        "engine": "crossover",
+        "reason": "cx-healthy",
+        "engineLabel": "CrossOver",
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": null,
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": "bottle",
+        "perGameBottleName": "GameLib-legendary-Quail",
+        "legacyLabel": null
+      }
+    ]
+  },
+  {
+    "channel": "engineStateChanged",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "Quail",
+        "engine": "crossover",
+        "reason": "cx-healthy",
+        "engineLabel": "CrossOver",
+        "trialDaysRemaining": null,
+        "showTrialNotice": false,
+        "crossoverInstalled": true,
+        "showNoCrossoverNote": false,
+        "untestedCrossoverBuild": null,
+        "overrideEligible": true,
+        "wineToolsEligible": false,
+        "overlayEligible": false,
+        "overrideWarning": null,
+        "launchNotice": null,
+        "overlayNotice": null,
+        "exitNotice": null,
+        "deadlineNotice": {
+          "title": "Quail",
+          "seconds": 180,
+          "seq": 1
+        },
+        "effectiveEngineId": "automatic",
+        "engineSource": "derived",
+        "prefixKind": "bottle",
+        "perGameBottleName": "GameLib-legendary-Quail",
+        "legacyLabel": null
+      }
+    ]
+  }
+]
