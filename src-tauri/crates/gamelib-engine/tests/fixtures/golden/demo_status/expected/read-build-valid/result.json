@@ -1,0 +1,106 @@
+{
+  "op": "read-build",
+  "args": {
+    "items": [
+      {
+        "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      },
+      {
+        "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      },
+      {
+        "binDir": "/Volumes/Games/Apps/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      },
+      "build": "26.3.0.39832",
+      "toolCalls": [
+        {
+          "tool": "/usr/bin/plutil",
+          "args": [
+            "-extract",
+            "CFBundleVersion",
+            "raw",
+            "-o",
+            "-",
+            "/Applications/CrossOver.app/Contents/Info.plist"
+          ],
+          "timeoutMs": 15000
+        }
+      ],
+      "logs": []
+    },
+    {
+      "input": {
+        "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      },
+      "build": "26.3.0.39832",
+      "toolCalls": [
+        {
+          "tool": "/usr/bin/plutil",
+          "args": [
+            "-extract",
+            "CFBundleVersion",
+            "raw",
+            "-o",
+            "-",
+            "<HOME>/Applications/CrossOver.app/Contents/Info.plist"
+          ],
+          "timeoutMs": 15000
+        }
+      ],
+      "logs": []
+    },
+    {
+      "input": {
+        "binDir": "/Volumes/Games/Apps/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      },
+      "build": "26.3.0.39832",
+      "toolCalls": [
+        {
+          "tool": "/usr/bin/plutil",
+          "args": [
+            "-extract",
+            "CFBundleVersion",
+            "raw",
+            "-o",
+            "-",
+            "/Volumes/Games/Apps/CrossOver.app/Contents/Info.plist"
+          ],
+          "timeoutMs": 15000
+        }
+      ],
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true
+}

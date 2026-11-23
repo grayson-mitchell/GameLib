@@ -1,0 +1,46 @@
+{
+  "op": "probe",
+  "args": {
+    "items": [
+      {
+        "bottleName": {
+          "repeat": {
+            "char": "a",
+            "count": 256
+          }
+        },
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "bottleName": {
+          "repeat": {
+            "char": "a",
+            "count": 256
+          }
+        },
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "invalid-bottle",
+        "detail": "bottle name rejected",
+        "elapsedMs": 0
+      },
+      "runOptions": [],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa outcome=invalid-bottle bottle name rejected elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true
+}

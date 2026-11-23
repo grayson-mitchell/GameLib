@@ -1,0 +1,41 @@
+{
+  "op": "probe",
+  "args": {
+    "items": [
+      {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "throws": "spawn ENOENT"
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "throws": "spawn ENOENT"
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "spawn-error",
+        "detail": "spawn ENOENT",
+        "elapsedMs": 0
+      },
+      "runOptions": [
+        {
+          "timeoutMs": 15000,
+          "maxBufferBytes": 65536,
+          "replaceEnv": true,
+          "stdin": ""
+        }
+      ],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=spawn-error spawn ENOENT elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true
+}

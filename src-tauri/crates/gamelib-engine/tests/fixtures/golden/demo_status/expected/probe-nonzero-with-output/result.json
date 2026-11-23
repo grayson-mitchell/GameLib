@@ -1,0 +1,45 @@
+{
+  "op": "probe",
+  "args": {
+    "items": [
+      {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "code": 1,
+          "stdout": "cxmessage: wrapper\n  fatal error\n",
+          "stderr": "cxwine: failed\n\tsecond line\n"
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "code": 1,
+          "stdout": "cxmessage: wrapper\n  fatal error\n",
+          "stderr": "cxwine: failed\n\tsecond line\n"
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "nonzero-exit",
+        "detail": "code=1 stderr=cxwine: failed second line stdout=cxmessage: wrapper fatal error",
+        "elapsedMs": 0
+      },
+      "runOptions": [
+        {
+          "timeoutMs": 15000,
+          "maxBufferBytes": 65536,
+          "replaceEnv": true,
+          "stdin": ""
+        }
+      ],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=1 stderr=cxwine: failed second line stdout=cxmessage: wrapper fatal error elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true
+}

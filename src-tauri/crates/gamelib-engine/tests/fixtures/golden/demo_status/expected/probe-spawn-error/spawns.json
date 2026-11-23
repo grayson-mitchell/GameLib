@@ -1,0 +1,24 @@
+[
+  {
+    "item": 0,
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "--demo-status"
+    ],
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "GameLib-gog-1207658924"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "via": "run",
+    "result": {
+      "code": null,
+      "stdout": "",
+      "stderr": "",
+      "error": "spawn ENOENT"
+    }
+  }
+]

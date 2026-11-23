@@ -1,0 +1,112 @@
+{
+  "op": "notice",
+  "args": {
+    "items": [
+      {
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.3.0.39832"
+          },
+          {
+            "do": "show",
+            "build": null
+          }
+        ]
+      },
+      {
+        "initial": [
+          "26.3.0.39832"
+        ],
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.3.0.39832"
+          },
+          {
+            "do": "show",
+            "build": null
+          }
+        ]
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.3.0.39832"
+          },
+          {
+            "do": "show",
+            "build": null
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "show",
+            "build": "26.3.0.39832"
+          },
+          "shown": false
+        },
+        {
+          "step": {
+            "do": "show",
+            "build": null
+          },
+          "shown": false
+        }
+      ],
+      "gets": 0,
+      "sets": [],
+      "finalValue": {
+        "absent": true
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "initial": [
+          "26.3.0.39832"
+        ],
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.3.0.39832"
+          },
+          {
+            "do": "show",
+            "build": null
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "show",
+            "build": "26.3.0.39832"
+          },
+          "shown": false
+        },
+        {
+          "step": {
+            "do": "show",
+            "build": null
+          },
+          "shown": false
+        }
+      ],
+      "gets": 0,
+      "sets": [],
+      "finalValue": [
+        "26.3.0.39832"
+      ],
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true
+}

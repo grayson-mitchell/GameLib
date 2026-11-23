@@ -1,0 +1,65 @@
+{
+  "op": "tested",
+  "args": {
+    "items": [
+      {
+        "build": "__proto__"
+      },
+      {
+        "build": "constructor"
+      },
+      {
+        "build": "toString"
+      },
+      {
+        "build": "hasOwnProperty"
+      },
+      {
+        "build": "valueOf"
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "build": "__proto__"
+      },
+      "tested": false,
+      "logLine": "Engine: CrossOver build __proto__ is untested with GameLib; please report issues",
+      "logs": []
+    },
+    {
+      "input": {
+        "build": "constructor"
+      },
+      "tested": false,
+      "logLine": "Engine: CrossOver build constructor is untested with GameLib; please report issues",
+      "logs": []
+    },
+    {
+      "input": {
+        "build": "toString"
+      },
+      "tested": false,
+      "logLine": "Engine: CrossOver build toString is untested with GameLib; please report issues",
+      "logs": []
+    },
+    {
+      "input": {
+        "build": "hasOwnProperty"
+      },
+      "tested": false,
+      "logLine": "Engine: CrossOver build hasOwnProperty is untested with GameLib; please report issues",
+      "logs": []
+    },
+    {
+      "input": {
+        "build": "valueOf"
+      },
+      "tested": false,
+      "logLine": "Engine: CrossOver build valueOf is untested with GameLib; please report issues",
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true
+}

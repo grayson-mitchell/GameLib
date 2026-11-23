@@ -1,0 +1,44 @@
+{
+  "op": "probe",
+  "args": {
+    "items": [
+      {
+        "bottleName": "My Game: (Test) 1.0 & more",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "bottleName": "My Game: (Test) 1.0 & more",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      "probe": {
+        "kind": "ok",
+        "status": {
+          "kind": "licensed"
+        },
+        "elapsedMs": 0
+      },
+      "runOptions": [
+        {
+          "timeoutMs": 15000,
+          "maxBufferBytes": 65536,
+          "replaceEnv": true,
+          "stdin": ""
+        }
+      ],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=My Game: (Test) 1.0 & more outcome=ok status=licensed elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true
+}

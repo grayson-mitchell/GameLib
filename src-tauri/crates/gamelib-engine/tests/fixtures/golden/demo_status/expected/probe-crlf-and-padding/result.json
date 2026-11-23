@@ -1,0 +1,45 @@
+{
+  "op": "probe",
+  "args": {
+    "items": [
+      {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "code": 0,
+          "stdout": "noise\r\n  Demo version (5 days remaining)  \r\n\r\n"
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "code": 0,
+          "stdout": "noise\r\n  Demo version (5 days remaining)  \r\n\r\n"
+        }
+      },
+      "probe": {
+        "kind": "ok",
+        "status": {
+          "kind": "trial",
+          "daysRemaining": 5
+        },
+        "elapsedMs": 0
+      },
+      "runOptions": [
+        {
+          "timeoutMs": 15000,
+          "maxBufferBytes": 65536,
+          "replaceEnv": true,
+          "stdin": ""
+        }
+      ],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=trial elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true
+}

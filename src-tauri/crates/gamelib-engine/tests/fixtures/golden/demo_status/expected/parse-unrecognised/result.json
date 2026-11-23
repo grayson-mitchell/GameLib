@@ -1,0 +1,142 @@
+{
+  "op": "parse",
+  "args": {
+    "items": [
+      {
+        "stdout": ""
+      },
+      {
+        "stdout": "\n\n"
+      },
+      {
+        "stdout": "standard version"
+      },
+      {
+        "stdout": "Standard  version"
+      },
+      {
+        "stdout": "Demo version (1 day remaining)"
+      },
+      {
+        "stdout": "Demo version (-1 days remaining)"
+      },
+      {
+        "stdout": "Demo version (expired -1 days ago)"
+      },
+      {
+        "stdout": "Demo version (expired 3 days ago) x"
+      },
+      {
+        "stdout": "Demo version (12 days remaining)\nStandard"
+      },
+      {
+        "stdout": "Demo version ( 12 days remaining)"
+      },
+      {
+        "stdout": "Demo version (1e3 days remaining)"
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "stdout": ""
+      },
+      "status": {
+        "kind": "unrecognised"
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "\n\n"
+      },
+      "status": {
+        "kind": "unrecognised"
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "standard version"
+      },
+      "status": {
+        "kind": "unrecognised"
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "Standard  version"
+      },
+      "status": {
+        "kind": "unrecognised"
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "Demo version (1 day remaining)"
+      },
+      "status": {
+        "kind": "unrecognised"
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "Demo version (-1 days remaining)"
+      },
+      "status": {
+        "kind": "unrecognised"
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "Demo version (expired -1 days ago)"
+      },
+      "status": {
+        "kind": "unrecognised"
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "Demo version (expired 3 days ago) x"
+      },
+      "status": {
+        "kind": "unrecognised"
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "Demo version (12 days remaining)\nStandard"
+      },
+      "status": {
+        "kind": "unrecognised"
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "Demo version ( 12 days remaining)"
+      },
+      "status": {
+        "kind": "unrecognised"
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "Demo version (1e3 days remaining)"
+      },
+      "status": {
+        "kind": "unrecognised"
+      },
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true
+}

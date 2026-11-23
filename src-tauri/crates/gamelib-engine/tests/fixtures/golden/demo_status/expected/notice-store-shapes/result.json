@@ -1,0 +1,462 @@
+{
+  "op": "notice",
+  "args": {
+    "items": [
+      {
+        "initial": "not-a-list",
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          {
+            "do": "show",
+            "build": "26.4.0.2"
+          }
+        ]
+      },
+      {
+        "initial": 5,
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          {
+            "do": "show",
+            "build": "26.4.0.2"
+          }
+        ]
+      },
+      {
+        "initial": null,
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          {
+            "do": "show",
+            "build": "26.4.0.2"
+          }
+        ]
+      },
+      {
+        "initial": {
+          "0": "26.4.0.1"
+        },
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          {
+            "do": "show",
+            "build": "26.4.0.2"
+          }
+        ]
+      },
+      {
+        "initial": [
+          1,
+          null,
+          "26.4.0.1",
+          {
+            "a": 1
+          }
+        ],
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          {
+            "do": "show",
+            "build": "26.4.0.2"
+          }
+        ]
+      },
+      {
+        "initial": [],
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          {
+            "do": "show",
+            "build": "26.4.0.2"
+          }
+        ]
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "initial": "not-a-list",
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          {
+            "do": "show",
+            "build": "26.4.0.2"
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          "shown": true
+        },
+        {
+          "step": {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          "dismissed": true
+        },
+        {
+          "step": {
+            "do": "show",
+            "build": "26.4.0.2"
+          },
+          "shown": false
+        }
+      ],
+      "gets": 3,
+      "sets": [
+        {
+          "key": "dismissedUntestedCrossoverBuilds",
+          "value": [
+            "26.4.0.2"
+          ]
+        }
+      ],
+      "finalValue": [
+        "26.4.0.2"
+      ],
+      "logs": []
+    },
+    {
+      "input": {
+        "initial": 5,
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          {
+            "do": "show",
+            "build": "26.4.0.2"
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          "shown": true
+        },
+        {
+          "step": {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          "dismissed": true
+        },
+        {
+          "step": {
+            "do": "show",
+            "build": "26.4.0.2"
+          },
+          "shown": false
+        }
+      ],
+      "gets": 3,
+      "sets": [
+        {
+          "key": "dismissedUntestedCrossoverBuilds",
+          "value": [
+            "26.4.0.2"
+          ]
+        }
+      ],
+      "finalValue": [
+        "26.4.0.2"
+      ],
+      "logs": []
+    },
+    {
+      "input": {
+        "initial": null,
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          {
+            "do": "show",
+            "build": "26.4.0.2"
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          "shown": true
+        },
+        {
+          "step": {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          "dismissed": true
+        },
+        {
+          "step": {
+            "do": "show",
+            "build": "26.4.0.2"
+          },
+          "shown": false
+        }
+      ],
+      "gets": 3,
+      "sets": [
+        {
+          "key": "dismissedUntestedCrossoverBuilds",
+          "value": [
+            "26.4.0.2"
+          ]
+        }
+      ],
+      "finalValue": [
+        "26.4.0.2"
+      ],
+      "logs": []
+    },
+    {
+      "input": {
+        "initial": {
+          "0": "26.4.0.1"
+        },
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          {
+            "do": "show",
+            "build": "26.4.0.2"
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          "shown": true
+        },
+        {
+          "step": {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          "dismissed": true
+        },
+        {
+          "step": {
+            "do": "show",
+            "build": "26.4.0.2"
+          },
+          "shown": false
+        }
+      ],
+      "gets": 3,
+      "sets": [
+        {
+          "key": "dismissedUntestedCrossoverBuilds",
+          "value": [
+            "26.4.0.2"
+          ]
+        }
+      ],
+      "finalValue": [
+        "26.4.0.2"
+      ],
+      "logs": []
+    },
+    {
+      "input": {
+        "initial": [
+          1,
+          null,
+          "26.4.0.1",
+          {
+            "a": 1
+          }
+        ],
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          {
+            "do": "show",
+            "build": "26.4.0.2"
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          "shown": false
+        },
+        {
+          "step": {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          "dismissed": true
+        },
+        {
+          "step": {
+            "do": "show",
+            "build": "26.4.0.2"
+          },
+          "shown": false
+        }
+      ],
+      "gets": 3,
+      "sets": [
+        {
+          "key": "dismissedUntestedCrossoverBuilds",
+          "value": [
+            "26.4.0.1",
+            "26.4.0.2"
+          ]
+        }
+      ],
+      "finalValue": [
+        "26.4.0.1",
+        "26.4.0.2"
+      ],
+      "logs": []
+    },
+    {
+      "input": {
+        "initial": [],
+        "steps": [
+          {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          {
+            "do": "show",
+            "build": "26.4.0.2"
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "show",
+            "build": "26.4.0.1"
+          },
+          "shown": true
+        },
+        {
+          "step": {
+            "do": "dismiss",
+            "build": "26.4.0.2"
+          },
+          "dismissed": true
+        },
+        {
+          "step": {
+            "do": "show",
+            "build": "26.4.0.2"
+          },
+          "shown": false
+        }
+      ],
+      "gets": 3,
+      "sets": [
+        {
+          "key": "dismissedUntestedCrossoverBuilds",
+          "value": [
+            "26.4.0.2"
+          ]
+        }
+      ],
+      "finalValue": [
+        "26.4.0.2"
+      ],
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true
+}

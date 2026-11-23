@@ -1,0 +1,244 @@
+{
+  "op": "probe",
+  "args": {
+    "items": [
+      {
+        "bottleName": "a/b",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      {
+        "bottleName": "a\\b",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      {
+        "bottleName": "..",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      {
+        "bottleName": "a..b",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      {
+        "bottleName": "a\u0000b",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      {
+        "bottleName": "",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      {
+        "bottleName": "   ",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      {
+        "bottleName": " padded",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      {
+        "bottleName": "padded ",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "bottleName": "a/b",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "invalid-bottle",
+        "detail": "bottle name rejected",
+        "elapsedMs": 0
+      },
+      "runOptions": [],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=a/b outcome=invalid-bottle bottle name rejected elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "bottleName": "a\\b",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "invalid-bottle",
+        "detail": "bottle name rejected",
+        "elapsedMs": 0
+      },
+      "runOptions": [],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=a\\b outcome=invalid-bottle bottle name rejected elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "bottleName": "..",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "invalid-bottle",
+        "detail": "bottle name rejected",
+        "elapsedMs": 0
+      },
+      "runOptions": [],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=.. outcome=invalid-bottle bottle name rejected elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "bottleName": "a..b",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "invalid-bottle",
+        "detail": "bottle name rejected",
+        "elapsedMs": 0
+      },
+      "runOptions": [],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=a..b outcome=invalid-bottle bottle name rejected elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "bottleName": "a\u0000b",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "invalid-bottle",
+        "detail": "bottle name rejected",
+        "elapsedMs": 0
+      },
+      "runOptions": [],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=a\u0000b outcome=invalid-bottle bottle name rejected elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "bottleName": "",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "invalid-bottle",
+        "detail": "bottle name rejected",
+        "elapsedMs": 0
+      },
+      "runOptions": [],
+      "logs": [
+        "INFO Engine: demo-status probe bottle= outcome=invalid-bottle bottle name rejected elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "bottleName": "   ",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "invalid-bottle",
+        "detail": "bottle name rejected",
+        "elapsedMs": 0
+      },
+      "runOptions": [],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=    outcome=invalid-bottle bottle name rejected elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "bottleName": " padded",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "invalid-bottle",
+        "detail": "bottle name rejected",
+        "elapsedMs": 0
+      },
+      "runOptions": [],
+      "logs": [
+        "INFO Engine: demo-status probe bottle= padded outcome=invalid-bottle bottle name rejected elapsedMs=0"
+      ]
+    },
+    {
+      "input": {
+        "bottleName": "padded ",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "invalid-bottle",
+        "detail": "bottle name rejected",
+        "elapsedMs": 0
+      },
+      "runOptions": [],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=padded  outcome=invalid-bottle bottle name rejected elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true
+}

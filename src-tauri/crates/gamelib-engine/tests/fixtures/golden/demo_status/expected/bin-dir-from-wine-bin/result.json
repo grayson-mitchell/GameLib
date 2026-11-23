@@ -1,0 +1,120 @@
+{
+  "op": "bin-dir",
+  "args": {
+    "items": [
+      {
+        "wineBin": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      {
+        "wineBin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      {
+        "wineBin": "/SharedSupport/CrossOver/bin/wine"
+      },
+      {
+        "wineBin": "/x/SharedSupport/CrossOver/bin/wine"
+      },
+      {
+        "wineBin": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine64"
+      },
+      {
+        "wineBin": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine/"
+      },
+      {
+        "wineBin": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+      },
+      {
+        "wineBin": "SharedSupport/CrossOver/bin/wine"
+      },
+      {
+        "wineBin": "/usr/local/bin/wine"
+      },
+      {
+        "wineBin": ""
+      },
+      {
+        "wineBin": "wine"
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "wineBin": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+      "logs": []
+    },
+    {
+      "input": {
+        "wineBin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+      },
+      "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+      "logs": []
+    },
+    {
+      "input": {
+        "wineBin": "/SharedSupport/CrossOver/bin/wine"
+      },
+      "binDir": "/SharedSupport/CrossOver/bin",
+      "logs": []
+    },
+    {
+      "input": {
+        "wineBin": "/x/SharedSupport/CrossOver/bin/wine"
+      },
+      "binDir": "/x/SharedSupport/CrossOver/bin",
+      "logs": []
+    },
+    {
+      "input": {
+        "wineBin": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine64"
+      },
+      "binDir": null,
+      "logs": []
+    },
+    {
+      "input": {
+        "wineBin": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine/"
+      },
+      "binDir": null,
+      "logs": []
+    },
+    {
+      "input": {
+        "wineBin": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+      },
+      "binDir": null,
+      "logs": []
+    },
+    {
+      "input": {
+        "wineBin": "SharedSupport/CrossOver/bin/wine"
+      },
+      "binDir": null,
+      "logs": []
+    },
+    {
+      "input": {
+        "wineBin": "/usr/local/bin/wine"
+      },
+      "binDir": null,
+      "logs": []
+    },
+    {
+      "input": {
+        "wineBin": ""
+      },
+      "binDir": null,
+      "logs": []
+    },
+    {
+      "input": {
+        "wineBin": "wine"
+      },
+      "binDir": null,
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true
+}

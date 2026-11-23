@@ -1,0 +1,1231 @@
+[
+  {
+    "id": "probe-standard",
+    "op": "probe",
+    "note": "the licensed answer: Standard version (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-trial-12",
+    "op": "probe",
+    "note": "a trial with 12 days remaining (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 0,
+            "stdout": "Demo version (12 days remaining)\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-trial-1",
+    "op": "probe",
+    "note": "a trial with 1 days remaining (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 0,
+            "stdout": "Demo version (1 days remaining)\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-trial-0",
+    "op": "probe",
+    "note": "a trial with 0 days remaining (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 0,
+            "stdout": "Demo version (0 days remaining)\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-expired-3",
+    "op": "probe",
+    "note": "a trial that expired 3 days ago (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 0,
+            "stdout": "Demo version (expired 3 days ago)\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-expired-0",
+    "op": "probe",
+    "note": "a trial that expired 0 days ago (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 0,
+            "stdout": "Demo version (expired 0 days ago)\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-expired-400",
+    "op": "probe",
+    "note": "a trial that expired 400 days ago (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 0,
+            "stdout": "Demo version (expired 400 days ago)\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-last-line-wins",
+    "op": "probe",
+    "note": "only the last non-blank line is read (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 0,
+            "stdout": "cxwine: note\n\nStandard version\n\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-crlf-and-padding",
+    "op": "probe",
+    "note": "CRLF line ends and padded lines parse (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 0,
+            "stdout": "noise\r\n  Demo version (5 days remaining)  \r\n\r\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-noise-after-status",
+    "op": "probe",
+    "note": "a line after the status makes it unrecognised (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\nextra\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-empty-output",
+    "op": "probe",
+    "note": "empty stdout is unrecognised (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 0,
+            "stdout": ""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-singular-day",
+    "op": "probe",
+    "note": "a singular day is not a trial form (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 0,
+            "stdout": "Demo version (1 day remaining)\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-timeout-default",
+    "op": "probe",
+    "note": "no result in the 15 s cap is a timeout (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": null,
+            "timedOut": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-timeout-custom",
+    "op": "probe",
+    "note": "a caller timeout replaces the 15 s cap (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "timeoutMs": 3000,
+          "step": {
+            "code": null,
+            "timedOut": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-nonzero-with-output",
+    "op": "probe",
+    "note": "a nonzero exit keeps stderr and stdout, whitespace collapsed to one line (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 1,
+            "stdout": "cxmessage: wrapper\n  fatal error\n",
+            "stderr": "cxwine: failed\n\tsecond line\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-nonzero-long-output",
+    "op": "probe",
+    "note": "the nonzero detail cuts stderr at 200 and stdout at 400 characters (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 2,
+            "stdout": {
+              "repeat": {
+                "char": "o",
+                "count": 500
+              }
+            },
+            "stderr": {
+              "repeat": {
+                "char": "e",
+                "count": 300
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-nonzero-no-code",
+    "op": "probe",
+    "note": "a run with no exit code (killed) is a nonzero exit (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": null,
+            "stdout": "",
+            "stderr": "killed"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-spawn-error",
+    "op": "probe",
+    "note": "a rejected spawn is a spawn error (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "throws": "spawn ENOENT"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-output-truncated",
+    "op": "probe",
+    "note": "output cut at the 64 KiB buffer reads as whatever line survived (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "step": {
+            "code": 0,
+            "stdout": "Demo version (1",
+            "truncated": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-bottle-255-chars",
+    "op": "probe",
+    "note": "a 255 character bottle name is the longest accepted (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": {
+            "repeat": {
+              "char": "a",
+              "count": 255
+            }
+          },
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-bottle-256-chars-refused",
+    "op": "probe",
+    "note": "an over-255-character bottle name is refused before any spawn (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": {
+            "repeat": {
+              "char": "a",
+              "count": 256
+            }
+          },
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-bottle-names-refused",
+    "op": "probe",
+    "note": "names the engine layer refuses are never spawned: a slash, a backslash, a parent path, a NUL, blank and padded (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "a/b",
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        },
+        {
+          "bottleName": "a\\b",
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        },
+        {
+          "bottleName": "..",
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        },
+        {
+          "bottleName": "a..b",
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        },
+        {
+          "bottleName": "a\u0000b",
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        },
+        {
+          "bottleName": "",
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        },
+        {
+          "bottleName": "   ",
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        },
+        {
+          "bottleName": " padded",
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        },
+        {
+          "bottleName": "padded ",
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-bottle-spaces-and-punctuation",
+    "op": "probe",
+    "note": "spaces and punctuation travel in CX_BOTTLE, not argv (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "My Game: (Test) 1.0 & more",
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-real-profile-arm-shape",
+    "op": "probe",
+    "note": "the production call shape: no base env, so the runner merges the process env under CX_BOTTLE (replaceEnv false) (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "baseEnv": "inherit",
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-fake-profile-arm-shape",
+    "op": "probe",
+    "note": "the test call shape: a fake profile env used verbatim (replaceEnv true) (production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output)",
+    "args": {
+      "items": [
+        {
+          "bottleName": "GameLib-gog-1207658924",
+          "baseEnv": "fake",
+          "step": {
+            "code": 0,
+            "stdout": "Standard version\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "parse-forms",
+    "op": "parse",
+    "note": "parseDemoStatus over the three forms and what surrounds them",
+    "args": {
+      "items": [
+        {
+          "stdout": "Standard version"
+        },
+        {
+          "stdout": "Demo version (12 days remaining)"
+        },
+        {
+          "stdout": "Demo version (expired 3 days ago)"
+        },
+        {
+          "stdout": "a\nb\nStandard version"
+        },
+        {
+          "stdout": "Standard version\r\n"
+        },
+        {
+          "stdout": "  Standard version  "
+        }
+      ]
+    }
+  },
+  {
+    "id": "parse-unrecognised",
+    "op": "parse",
+    "note": "parseDemoStatus over text that is not a form",
+    "args": {
+      "items": [
+        {
+          "stdout": ""
+        },
+        {
+          "stdout": "\n\n"
+        },
+        {
+          "stdout": "standard version"
+        },
+        {
+          "stdout": "Standard  version"
+        },
+        {
+          "stdout": "Demo version (1 day remaining)"
+        },
+        {
+          "stdout": "Demo version (-1 days remaining)"
+        },
+        {
+          "stdout": "Demo version (expired -1 days ago)"
+        },
+        {
+          "stdout": "Demo version (expired 3 days ago) x"
+        },
+        {
+          "stdout": "Demo version (12 days remaining)\nStandard"
+        },
+        {
+          "stdout": "Demo version ( 12 days remaining)"
+        },
+        {
+          "stdout": "Demo version (1e3 days remaining)"
+        }
+      ]
+    }
+  },
+  {
+    "id": "read-build-valid",
+    "op": "read-build",
+    "note": "readCrossoverBuild reads CFBundleVersion with plutil from the app bundle beside bin, in /Applications or ~/Applications",
+    "args": {
+      "items": [
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0.39832\n"
+          }
+        },
+        {
+          "binDir": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0.39832\n"
+          }
+        },
+        {
+          "binDir": "/Volumes/Games/Apps/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0.39832\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "read-build-refused-before-spawn",
+    "op": "read-build",
+    "note": "a bin dir without the CrossOver suffix, or whose bundle is not an .app, reads null with no spawn",
+    "args": {
+      "items": [
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0.39832\n"
+          }
+        },
+        {
+          "binDir": "/Applications/CrossOver.app/bin",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0.39832\n"
+          }
+        },
+        {
+          "binDir": "/Applications/CrossOver/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0.39832\n"
+          }
+        },
+        {
+          "binDir": "/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0.39832\n"
+          }
+        },
+        {
+          "binDir": "",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0.39832\n"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "read-build-failures",
+    "op": "read-build",
+    "note": "a plutil failure or timeout reads null; a rejected tool run is recorded by class",
+    "args": {
+      "items": [
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 1,
+            "stdout": "",
+            "stderr": "no such key"
+          }
+        },
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": null,
+            "timedOut": true
+          }
+        },
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0.39832\n",
+            "timedOut": true
+          }
+        },
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "throws": "tool failed"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "read-build-output-shapes",
+    "op": "read-build",
+    "note": "only a dotted four-number build is accepted; the output is trimmed",
+    "args": {
+      "items": [
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0.39832"
+          }
+        },
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "  26.3.0.39832\n"
+          }
+        },
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0"
+          }
+        },
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0.39832.1"
+          }
+        },
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0.39832\n26.3.0.1"
+          }
+        },
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "v26.3.0.39832"
+          }
+        },
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": ""
+          }
+        },
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0.x"
+          }
+        },
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "26.3.0.39832 "
+          }
+        },
+        {
+          "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+          "step": {
+            "code": 0,
+            "stdout": "０.１.２.３"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "tested-builds",
+    "op": "tested",
+    "note": "isTestedCrossover and the untested log line for the tested build, other builds and an unreadable one",
+    "args": {
+      "items": [
+        {
+          "build": "26.3.0.39832"
+        },
+        {
+          "build": "26.4.0.40000"
+        },
+        {
+          "build": "25.0.0.1"
+        },
+        {
+          "build": null
+        },
+        {
+          "build": ""
+        },
+        {
+          "build": "26.3.0.39832 "
+        },
+        {
+          "build": " 26.3.0.39832"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tested-prototype-keys",
+    "op": "tested",
+    "note": "a build named like an Object.prototype key is not tested",
+    "args": {
+      "items": [
+        {
+          "build": "__proto__"
+        },
+        {
+          "build": "constructor"
+        },
+        {
+          "build": "toString"
+        },
+        {
+          "build": "hasOwnProperty"
+        },
+        {
+          "build": "valueOf"
+        }
+      ]
+    }
+  },
+  {
+    "id": "notice-untested-flow",
+    "op": "notice",
+    "note": "shouldShowUntestedNotice until the build is dismissed, then never; the store key and the written list are recorded",
+    "args": {
+      "items": [
+        {
+          "steps": [
+            {
+              "do": "show",
+              "build": "26.4.0.40000"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.4.0.40000"
+            },
+            {
+              "do": "show",
+              "build": "26.4.0.40000"
+            },
+            {
+              "do": "show",
+              "build": "26.5.0.1"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.4.0.40000"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.5.0.1"
+            },
+            {
+              "do": "show",
+              "build": "26.5.0.1"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "notice-tested-and-unreadable",
+    "op": "notice",
+    "note": "a tested build or an unreadable one never shows the notice, whatever the store holds",
+    "args": {
+      "items": [
+        {
+          "steps": [
+            {
+              "do": "show",
+              "build": "26.3.0.39832"
+            },
+            {
+              "do": "show",
+              "build": null
+            }
+          ]
+        },
+        {
+          "initial": [
+            "26.3.0.39832"
+          ],
+          "steps": [
+            {
+              "do": "show",
+              "build": "26.3.0.39832"
+            },
+            {
+              "do": "show",
+              "build": null
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "notice-malformed-builds-refused",
+    "op": "notice",
+    "note": "dismissUntestedNotice refuses a build that is not a dotted four-number string and writes nothing",
+    "args": {
+      "items": [
+        {
+          "steps": [
+            {
+              "do": "dismiss",
+              "build": "../x"
+            }
+          ]
+        },
+        {
+          "steps": [
+            {
+              "do": "dismiss",
+              "build": "26.4.0"
+            }
+          ]
+        },
+        {
+          "steps": [
+            {
+              "do": "dismiss",
+              "build": "26.4.0.1.2"
+            }
+          ]
+        },
+        {
+          "steps": [
+            {
+              "do": "dismiss",
+              "build": "26.4.0.x"
+            }
+          ]
+        },
+        {
+          "steps": [
+            {
+              "do": "dismiss",
+              "build": ""
+            }
+          ]
+        },
+        {
+          "steps": [
+            {
+              "do": "dismiss",
+              "build": " 26.4.0.1"
+            }
+          ]
+        },
+        {
+          "steps": [
+            {
+              "do": "dismiss",
+              "build": "26.4.0.1\n"
+            }
+          ]
+        },
+        {
+          "steps": [
+            {
+              "do": "dismiss",
+              "build": "26.4.0.1; rm"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "notice-store-shapes",
+    "op": "notice",
+    "note": "a stored value that is not a list of strings reads as empty; non-string items are dropped when the list is written back",
+    "args": {
+      "items": [
+        {
+          "initial": "not-a-list",
+          "steps": [
+            {
+              "do": "show",
+              "build": "26.4.0.1"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.4.0.2"
+            },
+            {
+              "do": "show",
+              "build": "26.4.0.2"
+            }
+          ]
+        },
+        {
+          "initial": 5,
+          "steps": [
+            {
+              "do": "show",
+              "build": "26.4.0.1"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.4.0.2"
+            },
+            {
+              "do": "show",
+              "build": "26.4.0.2"
+            }
+          ]
+        },
+        {
+          "initial": null,
+          "steps": [
+            {
+              "do": "show",
+              "build": "26.4.0.1"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.4.0.2"
+            },
+            {
+              "do": "show",
+              "build": "26.4.0.2"
+            }
+          ]
+        },
+        {
+          "initial": {
+            "0": "26.4.0.1"
+          },
+          "steps": [
+            {
+              "do": "show",
+              "build": "26.4.0.1"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.4.0.2"
+            },
+            {
+              "do": "show",
+              "build": "26.4.0.2"
+            }
+          ]
+        },
+        {
+          "initial": [
+            1,
+            null,
+            "26.4.0.1",
+            {
+              "a": 1
+            }
+          ],
+          "steps": [
+            {
+              "do": "show",
+              "build": "26.4.0.1"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.4.0.2"
+            },
+            {
+              "do": "show",
+              "build": "26.4.0.2"
+            }
+          ]
+        },
+        {
+          "initial": [],
+          "steps": [
+            {
+              "do": "show",
+              "build": "26.4.0.1"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.4.0.2"
+            },
+            {
+              "do": "show",
+              "build": "26.4.0.2"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "notice-dismissed-list-cap",
+    "op": "notice",
+    "note": "the dismissed list keeps its last 50 builds and does not repeat one",
+    "args": {
+      "items": [
+        {
+          "initialBuilds": {
+            "prefix": "26.9.0.",
+            "count": 49
+          },
+          "steps": [
+            {
+              "do": "dismiss",
+              "build": "26.4.0.1"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.4.0.1"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.4.0.2"
+            },
+            {
+              "do": "show",
+              "build": "26.9.0.0"
+            },
+            {
+              "do": "show",
+              "build": "26.9.0.59"
+            }
+          ]
+        },
+        {
+          "initialBuilds": {
+            "prefix": "26.9.0.",
+            "count": 50
+          },
+          "steps": [
+            {
+              "do": "dismiss",
+              "build": "26.4.0.1"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.4.0.1"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.4.0.2"
+            },
+            {
+              "do": "show",
+              "build": "26.9.0.0"
+            },
+            {
+              "do": "show",
+              "build": "26.9.0.59"
+            }
+          ]
+        },
+        {
+          "initialBuilds": {
+            "prefix": "26.9.0.",
+            "count": 60
+          },
+          "steps": [
+            {
+              "do": "dismiss",
+              "build": "26.4.0.1"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.4.0.1"
+            },
+            {
+              "do": "dismiss",
+              "build": "26.4.0.2"
+            },
+            {
+              "do": "show",
+              "build": "26.9.0.0"
+            },
+            {
+              "do": "show",
+              "build": "26.9.0.59"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "bin-dir-from-wine-bin",
+    "op": "bin-dir",
+    "note": "crossoverBinDirFromWineBin keeps the directory of a wine path that ends in the CrossOver bin suffix",
+    "args": {
+      "items": [
+        {
+          "wineBin": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+        },
+        {
+          "wineBin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+        },
+        {
+          "wineBin": "/SharedSupport/CrossOver/bin/wine"
+        },
+        {
+          "wineBin": "/x/SharedSupport/CrossOver/bin/wine"
+        },
+        {
+          "wineBin": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine64"
+        },
+        {
+          "wineBin": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine/"
+        },
+        {
+          "wineBin": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin"
+        },
+        {
+          "wineBin": "SharedSupport/CrossOver/bin/wine"
+        },
+        {
+          "wineBin": "/usr/local/bin/wine"
+        },
+        {
+          "wineBin": ""
+        },
+        {
+          "wineBin": "wine"
+        }
+      ]
+    }
+  },
+  {
+    "id": "bin-dir-non-strings",
+    "op": "bin-dir",
+    "note": "a wine bin that is not a string has no bin dir",
+    "args": {
+      "items": [
+        {
+          "wineBin": null
+        },
+        {
+          "wineBin": 5
+        },
+        {
+          "wineBin": true
+        },
+        {
+          "wineBin": [
+            "a"
+          ]
+        },
+        {
+          "wineBin": {
+            "a": 1
+          }
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,46 @@
+{
+  "op": "probe",
+  "args": {
+    "items": [
+      {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "code": 0,
+          "stdout": "Demo version (1",
+          "truncated": true
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "code": 0,
+          "stdout": "Demo version (1",
+          "truncated": true
+        }
+      },
+      "probe": {
+        "kind": "ok",
+        "status": {
+          "kind": "unrecognised"
+        },
+        "elapsedMs": 0
+      },
+      "runOptions": [
+        {
+          "timeoutMs": 15000,
+          "maxBufferBytes": 65536,
+          "replaceEnv": true,
+          "stdin": ""
+        }
+      ],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=unrecognised elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true
+}

@@ -59,8 +59,11 @@ import {
 import { createFakeBottleGateRust } from 'backend/testUtils/fakeBottleGateRust'
 import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import * as logger from 'backend/logger'
-import { createCrossoverLocator } from '../../crossoverLocation'
-import { createProbeDemoStatus } from '../../demoStatus'
+import {
+  createCrossoverLocator,
+  crossoverBinDirFromWineBin
+} from '../../crossoverLocation'
+import { createProbeDemoStatus, parseDemoStatus } from '../../demoStatus'
 import {
   CX_CREATE_CAP_MS,
   decideCreationEngine,
@@ -78,12 +81,23 @@ import { createEngineRuntime } from '../../engineRuntime'
 import { ENGINE_PINS, type EnginePin } from '../../enginePins'
 import { parseEngineOverride } from '../../engineIds'
 import { offlineLaunchCertainlyBlocked } from '../../offlineRefusal'
+import type { RunTool } from '../../runTool'
+import {
+  dismissUntestedNotice,
+  isTestedCrossover,
+  readCrossoverBuild,
+  shouldShowUntestedNotice,
+  untestedCrossoverLogLine
+} from '../../testedCrossoverVersions'
 import { RETIRED_PIN_ID } from './fixtureBottles'
 
 const CRATE = 'gamelib-engine'
 const DECISION = 'decision'
+const DEMO_STATUS = 'demo_status'
 /** The decision case count this plan commits as a floor; a later edit may raise it, never lower it. */
 const DECISION_FLOOR = 80
+/** The demo-status case count this plan commits as a floor. */
+const DEMO_FLOOR = 15
 
 const json = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`
 
@@ -108,6 +122,7 @@ interface ProbeStep {
   stdout?: string
   stderr?: string
   timedOut?: boolean
+  truncated?: boolean
   throws?: string
 }
 
@@ -985,6 +1000,7 @@ function buildDeps(
       stdout: step.stdout,
       stderr: step.stderr,
       timedOut: step.timedOut,
+      truncated: step.truncated,
       throws: step.throws,
       repeat: i === cx.probe.length - 1
     }))
@@ -1483,5 +1499,793 @@ describeSkipOnWindows('engine decision oracle (87-13)', () => {
     for (const o of kept) {
       expect(o.calls).not.toContain('killCrossoverWineserver')
     }
+  })
+})
+
+// ---------------------------------------------------------------------------------------------
+// Demo status and the tested-version rules (Task 2).
+//
+// `--demo-status` is the declared real-profile arm (D-18, spike 060): CrossOver reads its licence
+// from the real profile, so in production the probe inherits the process env (`replaceEnv` false,
+// `CX_BOTTLE` the only key it sets) and a fake HOME would hide the licence. The golden runs the
+// probe under the fake profile with scripted output: every case but the arm-shape one passes the
+// fake profile's env (`replaceEnv` true), and the arm-shape case records the production call shape
+// (no base env) without spawning, because the tracer answers from its script.
+// ---------------------------------------------------------------------------------------------
+
+type DemoOp = 'probe' | 'parse' | 'read-build' | 'tested' | 'notice' | 'bin-dir'
+
+interface DemoCase {
+  id: string
+  op: DemoOp
+  note: string
+  args: { items: Item[] }
+}
+
+const UNREAD_NOTE =
+  'production inherits the real profile (declared real-profile arm, D-18); the golden runs under the fake profile with scripted output'
+
+function demoCases(): DemoCase[] {
+  const probe = (id: string, note: string, items: Item[]): DemoCase => ({
+    id,
+    op: 'probe',
+    note: `${note} (${UNREAD_NOTE})`,
+    args: { items }
+  })
+  const one = (id: string, note: string, item: Item): DemoCase =>
+    probe(id, note, [item])
+  const bottle = 'GameLib-gog-1207658924'
+  const out: DemoCase[] = [
+    one('probe-standard', 'the licensed answer: Standard version', {
+      bottleName: bottle,
+      step: { code: 0, stdout: 'Standard version\n' }
+    })
+  ]
+  for (const n of [12, 1, 0]) {
+    out.push(
+      one(`probe-trial-${n}`, `a trial with ${n} days remaining`, {
+        bottleName: bottle,
+        step: { code: 0, stdout: `Demo version (${n} days remaining)\n` }
+      })
+    )
+  }
+  for (const n of [3, 0, 400]) {
+    out.push(
+      one(`probe-expired-${n}`, `a trial that expired ${n} days ago`, {
+        bottleName: bottle,
+        step: { code: 0, stdout: `Demo version (expired ${n} days ago)\n` }
+      })
+    )
+  }
+  out.push(
+    one('probe-last-line-wins', 'only the last non-blank line is read', {
+      bottleName: bottle,
+      step: { code: 0, stdout: 'cxwine: note\n\nStandard version\n\n' }
+    }),
+    one('probe-crlf-and-padding', 'CRLF line ends and padded lines parse', {
+      bottleName: bottle,
+      step: {
+        code: 0,
+        stdout: 'noise\r\n  Demo version (5 days remaining)  \r\n\r\n'
+      }
+    }),
+    one(
+      'probe-noise-after-status',
+      'a line after the status makes it unrecognised',
+      {
+        bottleName: bottle,
+        step: { code: 0, stdout: 'Standard version\nextra\n' }
+      }
+    ),
+    one('probe-empty-output', 'empty stdout is unrecognised', {
+      bottleName: bottle,
+      step: { code: 0, stdout: '' }
+    }),
+    one('probe-singular-day', 'a singular day is not a trial form', {
+      bottleName: bottle,
+      step: { code: 0, stdout: 'Demo version (1 day remaining)\n' }
+    }),
+    one('probe-timeout-default', 'no result in the 15 s cap is a timeout', {
+      bottleName: bottle,
+      step: { code: null, timedOut: true }
+    }),
+    one('probe-timeout-custom', 'a caller timeout replaces the 15 s cap', {
+      bottleName: bottle,
+      timeoutMs: 3000,
+      step: { code: null, timedOut: true }
+    }),
+    one(
+      'probe-nonzero-with-output',
+      'a nonzero exit keeps stderr and stdout, whitespace collapsed to one line',
+      {
+        bottleName: bottle,
+        step: {
+          code: 1,
+          stdout: 'cxmessage: wrapper\n  fatal error\n',
+          stderr: 'cxwine: failed\n\tsecond line\n'
+        }
+      }
+    ),
+    one(
+      'probe-nonzero-long-output',
+      'the nonzero detail cuts stderr at 200 and stdout at 400 characters',
+      {
+        bottleName: bottle,
+        step: {
+          code: 2,
+          stdout: rep('o', 500),
+          stderr: rep('e', 300)
+        }
+      }
+    ),
+    one(
+      'probe-nonzero-no-code',
+      'a run with no exit code (killed) is a nonzero exit',
+      {
+        bottleName: bottle,
+        step: { code: null, stdout: '', stderr: 'killed' }
+      }
+    ),
+    one('probe-spawn-error', 'a rejected spawn is a spawn error', {
+      bottleName: bottle,
+      step: { throws: 'spawn ENOENT' }
+    }),
+    one(
+      'probe-output-truncated',
+      'output cut at the 64 KiB buffer reads as whatever line survived',
+      {
+        bottleName: bottle,
+        step: { code: 0, stdout: 'Demo version (1', truncated: true }
+      }
+    ),
+    one(
+      'probe-bottle-255-chars',
+      'a 255 character bottle name is the longest accepted',
+      {
+        bottleName: rep('a', 255),
+        step: { code: 0, stdout: 'Standard version\n' }
+      }
+    ),
+    one(
+      'probe-bottle-256-chars-refused',
+      'an over-255-character bottle name is refused before any spawn',
+      {
+        bottleName: rep('a', 256),
+        step: { code: 0, stdout: 'Standard version\n' }
+      }
+    ),
+    probe(
+      'probe-bottle-names-refused',
+      'names the engine layer refuses are never spawned: a slash, a backslash, a parent path, a NUL, blank and padded',
+      [
+        'a/b',
+        'a\\b',
+        '..',
+        'a..b',
+        'a\u0000b',
+        '',
+        '   ',
+        ' padded',
+        'padded '
+      ].map((bottleName) => ({
+        bottleName,
+        step: { code: 0, stdout: 'Standard version\n' }
+      }))
+    ),
+    one(
+      'probe-bottle-spaces-and-punctuation',
+      'spaces and punctuation travel in CX_BOTTLE, not argv',
+      {
+        bottleName: 'My Game: (Test) 1.0 & more',
+        step: { code: 0, stdout: 'Standard version\n' }
+      }
+    ),
+    one(
+      'probe-real-profile-arm-shape',
+      'the production call shape: no base env, so the runner merges the process env under CX_BOTTLE (replaceEnv false)',
+      {
+        bottleName: bottle,
+        baseEnv: 'inherit',
+        step: { code: 0, stdout: 'Standard version\n' }
+      }
+    ),
+    one(
+      'probe-fake-profile-arm-shape',
+      'the test call shape: a fake profile env used verbatim (replaceEnv true)',
+      {
+        bottleName: bottle,
+        baseEnv: 'fake',
+        step: { code: 0, stdout: 'Standard version\n' }
+      }
+    )
+  )
+  const strings = (
+    id: string,
+    op: DemoOp,
+    note: string,
+    items: Item[]
+  ): DemoCase => ({
+    id,
+    op,
+    note,
+    args: { items }
+  })
+  out.push(
+    strings(
+      'parse-forms',
+      'parse',
+      'parseDemoStatus over the three forms and what surrounds them',
+      [
+        'Standard version',
+        'Demo version (12 days remaining)',
+        'Demo version (expired 3 days ago)',
+        'a\nb\nStandard version',
+        'Standard version\r\n',
+        '  Standard version  '
+      ].map((stdout) => ({ stdout }))
+    ),
+    strings(
+      'parse-unrecognised',
+      'parse',
+      'parseDemoStatus over text that is not a form',
+      [
+        '',
+        '\n\n',
+        'standard version',
+        'Standard  version',
+        'Demo version (1 day remaining)',
+        'Demo version (-1 days remaining)',
+        'Demo version (expired -1 days ago)',
+        'Demo version (expired 3 days ago) x',
+        'Demo version (12 days remaining)\nStandard',
+        'Demo version ( 12 days remaining)',
+        'Demo version (1e3 days remaining)'
+      ].map((stdout) => ({ stdout }))
+    ),
+    strings(
+      'read-build-valid',
+      'read-build',
+      'readCrossoverBuild reads CFBundleVersion with plutil from the app bundle beside bin, in /Applications or ~/Applications',
+      ['/Applications', '<HOME>/Applications', '/Volumes/Games/Apps'].map(
+        (root) => ({
+          binDir: `${root}/CrossOver.app/Contents/SharedSupport/CrossOver/bin`,
+          step: { code: 0, stdout: '26.3.0.39832\n' }
+        })
+      )
+    ),
+    strings(
+      'read-build-refused-before-spawn',
+      'read-build',
+      'a bin dir without the CrossOver suffix, or whose bundle is not an .app, reads null with no spawn',
+      [
+        '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver',
+        '/Applications/CrossOver.app/bin',
+        '/Applications/CrossOver/Contents/SharedSupport/CrossOver/bin',
+        '/Contents/SharedSupport/CrossOver/bin',
+        ''
+      ].map((binDir) => ({
+        binDir,
+        step: { code: 0, stdout: '26.3.0.39832\n' }
+      }))
+    ),
+    strings(
+      'read-build-failures',
+      'read-build',
+      'a plutil failure or timeout reads null; a rejected tool run is recorded by class',
+      [
+        { step: { code: 1, stdout: '', stderr: 'no such key' } },
+        { step: { code: null, timedOut: true } },
+        { step: { code: 0, stdout: '26.3.0.39832\n', timedOut: true } },
+        { step: { throws: 'tool failed' } }
+      ].map((item) => ({
+        binDir:
+          '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin',
+        ...item
+      }))
+    ),
+    strings(
+      'read-build-output-shapes',
+      'read-build',
+      'only a dotted four-number build is accepted; the output is trimmed',
+      [
+        '26.3.0.39832',
+        '  26.3.0.39832\n',
+        '26.3.0',
+        '26.3.0.39832.1',
+        '26.3.0.39832\n26.3.0.1',
+        'v26.3.0.39832',
+        '',
+        '26.3.0.x',
+        '26.3.0.39832 ',
+        '０.１.２.３'
+      ].map((stdout) => ({
+        binDir:
+          '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin',
+        step: { code: 0, stdout }
+      }))
+    ),
+    strings(
+      'tested-builds',
+      'tested',
+      'isTestedCrossover and the untested log line for the tested build, other builds and an unreadable one',
+      [
+        '26.3.0.39832',
+        '26.4.0.40000',
+        '25.0.0.1',
+        null,
+        '',
+        '26.3.0.39832 ',
+        ' 26.3.0.39832'
+      ].map((build) => ({ build }))
+    ),
+    strings(
+      'tested-prototype-keys',
+      'tested',
+      'a build named like an Object.prototype key is not tested',
+      ['__proto__', 'constructor', 'toString', 'hasOwnProperty', 'valueOf'].map(
+        (build) => ({ build })
+      )
+    ),
+    strings(
+      'notice-untested-flow',
+      'notice',
+      'shouldShowUntestedNotice until the build is dismissed, then never; the store key and the written list are recorded',
+      [
+        {
+          steps: [
+            { do: 'show', build: '26.4.0.40000' },
+            { do: 'dismiss', build: '26.4.0.40000' },
+            { do: 'show', build: '26.4.0.40000' },
+            { do: 'show', build: '26.5.0.1' },
+            { do: 'dismiss', build: '26.4.0.40000' },
+            { do: 'dismiss', build: '26.5.0.1' },
+            { do: 'show', build: '26.5.0.1' }
+          ]
+        }
+      ]
+    ),
+    strings(
+      'notice-tested-and-unreadable',
+      'notice',
+      'a tested build or an unreadable one never shows the notice, whatever the store holds',
+      [
+        {
+          steps: [
+            { do: 'show', build: '26.3.0.39832' },
+            { do: 'show', build: null }
+          ]
+        },
+        {
+          initial: ['26.3.0.39832'],
+          steps: [
+            { do: 'show', build: '26.3.0.39832' },
+            { do: 'show', build: null }
+          ]
+        }
+      ]
+    ),
+    strings(
+      'notice-malformed-builds-refused',
+      'notice',
+      'dismissUntestedNotice refuses a build that is not a dotted four-number string and writes nothing',
+      [
+        '../x',
+        '26.4.0',
+        '26.4.0.1.2',
+        '26.4.0.x',
+        '',
+        ' 26.4.0.1',
+        '26.4.0.1\n',
+        '26.4.0.1; rm'
+      ].map((build) => ({ steps: [{ do: 'dismiss', build }] }))
+    ),
+    strings(
+      'notice-store-shapes',
+      'notice',
+      'a stored value that is not a list of strings reads as empty; non-string items are dropped when the list is written back',
+      [
+        { initial: 'not-a-list' },
+        { initial: 5 },
+        { initial: null },
+        { initial: { '0': '26.4.0.1' } },
+        { initial: [1, null, '26.4.0.1', { a: 1 }] },
+        { initial: [] }
+      ].map((item) => ({
+        ...item,
+        steps: [
+          { do: 'show', build: '26.4.0.1' },
+          { do: 'dismiss', build: '26.4.0.2' },
+          { do: 'show', build: '26.4.0.2' }
+        ]
+      }))
+    ),
+    strings(
+      'notice-dismissed-list-cap',
+      'notice',
+      'the dismissed list keeps its last 50 builds and does not repeat one',
+      [
+        { initialBuilds: { prefix: '26.9.0.', count: 49 } },
+        { initialBuilds: { prefix: '26.9.0.', count: 50 } },
+        { initialBuilds: { prefix: '26.9.0.', count: 60 } }
+      ].map((item) => ({
+        ...item,
+        steps: [
+          { do: 'dismiss', build: '26.4.0.1' },
+          { do: 'dismiss', build: '26.4.0.1' },
+          { do: 'dismiss', build: '26.4.0.2' },
+          { do: 'show', build: '26.9.0.0' },
+          { do: 'show', build: '26.9.0.59' }
+        ]
+      }))
+    ),
+    strings(
+      'bin-dir-from-wine-bin',
+      'bin-dir',
+      'crossoverBinDirFromWineBin keeps the directory of a wine path that ends in the CrossOver bin suffix',
+      [
+        '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine',
+        '<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine',
+        '/SharedSupport/CrossOver/bin/wine',
+        '/x/SharedSupport/CrossOver/bin/wine',
+        '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine64',
+        '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine/',
+        '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin',
+        'SharedSupport/CrossOver/bin/wine',
+        '/usr/local/bin/wine',
+        '',
+        'wine'
+      ].map((wineBin) => ({ wineBin }))
+    ),
+    strings(
+      'bin-dir-non-strings',
+      'bin-dir',
+      'a wine bin that is not a string has no bin dir',
+      [null, 5, true, ['a'], { a: 1 }].map((wineBin) => ({ wineBin }))
+    )
+  )
+  return out
+}
+
+interface NoticeStep {
+  do: 'show' | 'dismiss'
+  build: string | null
+}
+
+async function runDemoItem(
+  op: DemoOp,
+  profile: EngineOracleProfile,
+  item: Item,
+  sink: { logs: LogLine[] }
+): Promise<{ result: unknown; spawns: unknown[] }> {
+  sink.logs = []
+  const P = (text: string): string => expandPlaceholders(text, profile)
+  const spawns: unknown[] = []
+  const finish = (result: unknown) => ({
+    result: {
+      ...(result as Record<string, unknown>),
+      logs: sink.logs.map((l) => `${l.level} ${l.message}`)
+    },
+    spawns
+  })
+  switch (op) {
+    case 'probe': {
+      const step = materialise(item.step) as ProbeStep
+      const binDir = join(
+        profile.home,
+        'Applications',
+        'CrossOver.app',
+        'Contents',
+        'SharedSupport',
+        'CrossOver',
+        'bin'
+      )
+      const env = profile.fake.childEnv({})
+      const tracer = createSpawnTracer({
+        baseEnv: env,
+        scripted: [
+          {
+            program: join(binDir, 'wine'),
+            argv: ['--demo-status'],
+            ...step,
+            repeat: true
+          }
+        ]
+      })
+      const runOptions: unknown[] = []
+      const probe = createProbeDemoStatus({
+        runner: {
+          run: (program, argv, opts) => {
+            runOptions.push({
+              timeoutMs: opts?.timeoutMs ?? null,
+              maxBufferBytes: opts?.maxBufferBytes ?? null,
+              replaceEnv: opts?.replaceEnv ?? false,
+              stdin: opts?.stdin ?? null
+            })
+            return tracer.runner.run(program, argv, opts)
+          }
+        }
+      })
+      const result = await attempt(async () => ({
+        input: item,
+        probe: await probe({
+          binDir,
+          bottleName: materialise(item.bottleName) as string,
+          timeoutMs: item.timeoutMs as number | undefined,
+          baseEnv: item.baseEnv === 'inherit' ? undefined : env
+        }),
+        runOptions
+      }))
+      spawns.push(...tracer.records)
+      return finish(result)
+    }
+    case 'parse':
+      return finish({
+        input: item,
+        status: parseDemoStatus(item.stdout as string)
+      })
+    case 'read-build': {
+      const step = item.step as ProbeStep
+      const toolCalls: unknown[] = []
+      const runTool: RunTool = (tool, args, opts) => {
+        toolCalls.push({ tool, args: [...args], timeoutMs: opts.timeoutMs })
+        if (step.throws !== undefined) {
+          return Promise.reject(new Error(step.throws))
+        }
+        return Promise.resolve({
+          code: step.code === undefined ? 0 : step.code,
+          stdout: step.stdout ?? '',
+          stderr: step.stderr ?? '',
+          timedOut: step.timedOut ?? false,
+          aborted: false
+        })
+      }
+      const result = await attempt(async () => ({
+        input: item,
+        build: await readCrossoverBuild(P(item.binDir as string), runTool),
+        toolCalls
+      }))
+      return finish(result)
+    }
+    case 'tested': {
+      const build = item.build as string | null
+      return finish({
+        input: item,
+        tested: isTestedCrossover(build),
+        logLine: untestedCrossoverLogLine(build)
+      })
+    }
+    case 'notice': {
+      const key = 'dismissedUntestedCrossoverBuilds'
+      const data = new Map<string, unknown>()
+      const initialBuilds = item.initialBuilds as
+        | { prefix: string; count: number }
+        | undefined
+      if (initialBuilds) {
+        data.set(
+          key,
+          Array.from(
+            { length: initialBuilds.count },
+            (_, n) => `${initialBuilds.prefix}${n}`
+          )
+        )
+      } else if ('initial' in item) {
+        data.set(key, item.initial)
+      }
+      const gets: string[] = []
+      const sets: unknown[] = []
+      const store = {
+        get: (k: string, fallback: unknown): unknown => {
+          gets.push(k)
+          return data.has(k) ? data.get(k) : fallback
+        },
+        set: (k: string, value: unknown): void => {
+          sets.push({ key: k, value })
+          data.set(k, value)
+        }
+      }
+      const results = ((item.steps ?? []) as NoticeStep[]).map((step) =>
+        step.do === 'show'
+          ? { step, shown: shouldShowUntestedNotice(step.build, store) }
+          : {
+              step,
+              dismissed: dismissUntestedNotice(step.build as string, store)
+            }
+      )
+      return finish({
+        input: item,
+        results,
+        gets: gets.length,
+        sets,
+        finalValue: data.has(key) ? data.get(key) : { absent: true }
+      })
+    }
+    case 'bin-dir':
+      return finish({
+        input: item,
+        binDir:
+          crossoverBinDirFromWineBin(
+            typeof item.wineBin === 'string'
+              ? P(item.wineBin)
+              : (item.wineBin as never)
+          ) ?? null
+      })
+  }
+}
+
+describeSkipOnWindows('demo status and tested-version oracle (87-13)', () => {
+  const cases = demoCases()
+  const spies: jest.SpyInstance[] = []
+  const restorers: (() => void)[] = []
+  const sink: { logs: LogLine[] } = { logs: [] }
+
+  beforeEach(() => {
+    for (const [name, level] of [
+      ['logDebug', 'DEBUG'],
+      ['logInfo', 'INFO'],
+      ['logWarning', 'WARNING'],
+      ['logError', 'ERROR']
+    ] as const) {
+      spies.push(
+        jest
+          .spyOn(logger, name)
+          .mockImplementation((message: unknown, options?: unknown) => {
+            captureLog(sink.logs, level, message, options)
+          })
+      )
+    }
+    restorers.push(mockPlatform('mac'))
+    restorers.push(pinClock(Date.UTC(2026, 10, 23)))
+  })
+
+  afterEach(() => {
+    for (const spy of spies.splice(0)) spy.mockRestore()
+    for (const restore of restorers.splice(0)) restore()
+  })
+
+  it.each(cases)('$id', async (c) => {
+    const mode = oracleMode()
+    await withEngineOracleProfile(async (profile) => {
+      const before = JSON.stringify(snapshotTree(profile.home))
+      const outcomes: unknown[] = []
+      const spawns: unknown[] = []
+      for (const [index, item] of c.args.items.entries()) {
+        const outcome = await runDemoItem(c.op, profile, item, sink)
+        outcomes.push(outcome.result)
+        for (const record of outcome.spawns) {
+          spawns.push({ item: index, ...(record as object) })
+        }
+      }
+      const after = snapshotTree(profile.home)
+      expect(JSON.stringify(after)).toBe(before)
+      writeOrCompareGolden(
+        CRATE,
+        DEMO_STATUS,
+        c.id,
+        {
+          result: normalisePaths(
+            { op: c.op, args: c.args, outcomes, treeUnchanged: true },
+            profile
+          ),
+          events: [],
+          after,
+          spawns: normalisePaths(spawns, profile)
+        },
+        mode
+      )
+    })
+  })
+
+  it('cases.json agrees with the generated case list, the MANIFEST agrees with both and holds one folder per case', () => {
+    const file = join(goldenDir(CRATE, DEMO_STATUS), 'cases.json')
+    const mode = oracleMode()
+    if (mode === 'write') {
+      mkdirSync(dirname(file), { recursive: true })
+      writeFileSync(file, json(cases))
+    } else if (mode === 'compare') {
+      expect(json(cases)).toBe(readFileSync(file, 'utf8'))
+    }
+    syncManifest(CRATE, DEMO_STATUS, cases, DEMO_FLOOR)
+    assertManifest(CRATE, DEMO_STATUS, cases, DEMO_FLOOR)
+  })
+
+  it('an empty case list fails the manifest check', () => {
+    expectEmptyCasesToFail(CRATE, DEMO_STATUS, DEMO_FLOOR)
+  })
+
+  it('every op is covered and the real-profile arm is named', () => {
+    expect(new Set(cases.map((c) => c.op))).toEqual(
+      new Set(['probe', 'parse', 'read-build', 'tested', 'notice', 'bin-dir'])
+    )
+    for (const c of cases.filter((x) => x.op === 'probe')) {
+      expect(c.note).toContain('declared real-profile arm')
+    }
+  })
+
+  const golden = (
+    id: string
+  ): {
+    outcomes: Record<string, unknown>[]
+    spawns: Record<string, unknown>[]
+  } | null => {
+    const root = join(goldenDir(CRATE, DEMO_STATUS), 'expected', id)
+    if (oracleMode() === 'record' || !existsSync(root)) return null
+    return {
+      outcomes: (
+        JSON.parse(readFileSync(join(root, 'result.json'), 'utf8')) as {
+          outcomes: Record<string, unknown>[]
+        }
+      ).outcomes,
+      spawns: JSON.parse(
+        readFileSync(join(root, 'spawns.json'), 'utf8')
+      ) as Record<string, unknown>[]
+    }
+  }
+
+  it('the probe spawns <binDir>/wine --demo-status with CX_BOTTLE, an empty stdin, the 15 s cap and the 64 KiB buffer', () => {
+    const g = golden('probe-standard')
+    expect(g?.spawns).toHaveLength(1)
+    expect(g?.spawns[0]).toMatchObject({
+      program:
+        '<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine',
+      argv: ['--demo-status'],
+      envDiff: { set: { CX_BOTTLE: 'GameLib-gog-1207658924' }, unset: [] },
+      stdin: ''
+    })
+    expect(g?.outcomes[0]).toMatchObject({
+      probe: { kind: 'ok', status: { kind: 'licensed' } },
+      runOptions: [
+        { timeoutMs: 15000, maxBufferBytes: 65536, replaceEnv: true, stdin: '' }
+      ]
+    })
+  })
+
+  it('the production arm records replaceEnv false; an over-long or unsafe bottle name spawns nothing', () => {
+    expect(golden('probe-real-profile-arm-shape')?.outcomes[0]).toMatchObject({
+      runOptions: [{ replaceEnv: false }]
+    })
+    expect(golden('probe-bottle-256-chars-refused')?.spawns).toEqual([])
+    expect(golden('probe-bottle-256-chars-refused')?.outcomes[0]).toMatchObject(
+      {
+        probe: { kind: 'failed', reason: 'invalid-bottle' }
+      }
+    )
+    expect(golden('probe-bottle-names-refused')?.spawns).toEqual([])
+    expect(golden('probe-bottle-255-chars')?.spawns).toHaveLength(1)
+  })
+
+  it('the three status forms, the timeout, the nonzero exit and the spawn error are each recorded', () => {
+    const status = (id: string): unknown =>
+      (golden(id)?.outcomes[0] as { probe: unknown } | undefined)?.probe
+    expect(status('probe-trial-12')).toMatchObject({
+      status: { kind: 'trial', daysRemaining: 12 }
+    })
+    expect(status('probe-expired-3')).toMatchObject({
+      status: { kind: 'expired', daysAgo: 3 }
+    })
+    expect(status('probe-timeout-default')).toMatchObject({ reason: 'timeout' })
+    expect(status('probe-nonzero-with-output')).toMatchObject({
+      reason: 'nonzero-exit'
+    })
+    expect(status('probe-spawn-error')).toMatchObject({ reason: 'spawn-error' })
+    expect(status('probe-noise-after-status')).toMatchObject({
+      status: { kind: 'unrecognised' }
+    })
+  })
+
+  it('the tested-version rules: the tested build never shows the notice, an untested one shows until dismissed', () => {
+    const flow = golden('notice-untested-flow')?.outcomes[0] as {
+      results: { shown?: boolean; dismissed?: boolean }[]
+    }
+    expect(flow.results.map((r) => r.shown ?? r.dismissed)).toEqual([
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false
+    ])
+    const tested = golden('tested-builds')?.outcomes[0] as { tested: boolean }
+    expect(tested.tested).toBe(true)
   })
 })

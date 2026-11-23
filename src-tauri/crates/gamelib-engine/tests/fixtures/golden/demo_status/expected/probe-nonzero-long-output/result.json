@@ -1,0 +1,65 @@
+{
+  "op": "probe",
+  "args": {
+    "items": [
+      {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "code": 2,
+          "stdout": {
+            "repeat": {
+              "char": "o",
+              "count": 500
+            }
+          },
+          "stderr": {
+            "repeat": {
+              "char": "e",
+              "count": 300
+            }
+          }
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "code": 2,
+          "stdout": {
+            "repeat": {
+              "char": "o",
+              "count": 500
+            }
+          },
+          "stderr": {
+            "repeat": {
+              "char": "e",
+              "count": 300
+            }
+          }
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "nonzero-exit",
+        "detail": "code=2 stderr=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee stdout=oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+        "elapsedMs": 0
+      },
+      "runOptions": [
+        {
+          "timeoutMs": 15000,
+          "maxBufferBytes": 65536,
+          "replaceEnv": true,
+          "stdin": ""
+        }
+      ],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=2 stderr=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee stdout=oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true
+}

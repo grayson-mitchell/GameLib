@@ -1,0 +1,274 @@
+{
+  "op": "notice",
+  "args": {
+    "items": [
+      {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": "../x"
+          }
+        ]
+      },
+      {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": "26.4.0"
+          }
+        ]
+      },
+      {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": "26.4.0.1.2"
+          }
+        ]
+      },
+      {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": "26.4.0.x"
+          }
+        ]
+      },
+      {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": ""
+          }
+        ]
+      },
+      {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": " 26.4.0.1"
+          }
+        ]
+      },
+      {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": "26.4.0.1\n"
+          }
+        ]
+      },
+      {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": "26.4.0.1; rm"
+          }
+        ]
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": "../x"
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "dismiss",
+            "build": "../x"
+          },
+          "dismissed": false
+        }
+      ],
+      "gets": 0,
+      "sets": [],
+      "finalValue": {
+        "absent": true
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": "26.4.0"
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "dismiss",
+            "build": "26.4.0"
+          },
+          "dismissed": false
+        }
+      ],
+      "gets": 0,
+      "sets": [],
+      "finalValue": {
+        "absent": true
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": "26.4.0.1.2"
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "dismiss",
+            "build": "26.4.0.1.2"
+          },
+          "dismissed": false
+        }
+      ],
+      "gets": 0,
+      "sets": [],
+      "finalValue": {
+        "absent": true
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": "26.4.0.x"
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "dismiss",
+            "build": "26.4.0.x"
+          },
+          "dismissed": false
+        }
+      ],
+      "gets": 0,
+      "sets": [],
+      "finalValue": {
+        "absent": true
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": ""
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "dismiss",
+            "build": ""
+          },
+          "dismissed": false
+        }
+      ],
+      "gets": 0,
+      "sets": [],
+      "finalValue": {
+        "absent": true
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": " 26.4.0.1"
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "dismiss",
+            "build": " 26.4.0.1"
+          },
+          "dismissed": false
+        }
+      ],
+      "gets": 0,
+      "sets": [],
+      "finalValue": {
+        "absent": true
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": "26.4.0.1\n"
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "dismiss",
+            "build": "26.4.0.1\n"
+          },
+          "dismissed": false
+        }
+      ],
+      "gets": 0,
+      "sets": [],
+      "finalValue": {
+        "absent": true
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "steps": [
+          {
+            "do": "dismiss",
+            "build": "26.4.0.1; rm"
+          }
+        ]
+      },
+      "results": [
+        {
+          "step": {
+            "do": "dismiss",
+            "build": "26.4.0.1; rm"
+          },
+          "dismissed": false
+        }
+      ],
+      "gets": 0,
+      "sets": [],
+      "finalValue": {
+        "absent": true
+      },
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true
+}

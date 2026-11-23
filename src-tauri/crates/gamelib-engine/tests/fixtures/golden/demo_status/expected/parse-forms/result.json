@@ -1,0 +1,84 @@
+{
+  "op": "parse",
+  "args": {
+    "items": [
+      {
+        "stdout": "Standard version"
+      },
+      {
+        "stdout": "Demo version (12 days remaining)"
+      },
+      {
+        "stdout": "Demo version (expired 3 days ago)"
+      },
+      {
+        "stdout": "a\nb\nStandard version"
+      },
+      {
+        "stdout": "Standard version\r\n"
+      },
+      {
+        "stdout": "  Standard version  "
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "stdout": "Standard version"
+      },
+      "status": {
+        "kind": "licensed"
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "Demo version (12 days remaining)"
+      },
+      "status": {
+        "kind": "trial",
+        "daysRemaining": 12
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "Demo version (expired 3 days ago)"
+      },
+      "status": {
+        "kind": "expired",
+        "daysAgo": 3
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "a\nb\nStandard version"
+      },
+      "status": {
+        "kind": "licensed"
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "Standard version\r\n"
+      },
+      "status": {
+        "kind": "licensed"
+      },
+      "logs": []
+    },
+    {
+      "input": {
+        "stdout": "  Standard version  "
+      },
+      "status": {
+        "kind": "licensed"
+      },
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true
+}

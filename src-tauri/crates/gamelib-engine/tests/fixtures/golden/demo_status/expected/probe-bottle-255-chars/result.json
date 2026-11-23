@@ -1,0 +1,54 @@
+{
+  "op": "probe",
+  "args": {
+    "items": [
+      {
+        "bottleName": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        },
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "bottleName": {
+          "repeat": {
+            "char": "a",
+            "count": 255
+          }
+        },
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      "probe": {
+        "kind": "ok",
+        "status": {
+          "kind": "licensed"
+        },
+        "elapsedMs": 0
+      },
+      "runOptions": [
+        {
+          "timeoutMs": 15000,
+          "maxBufferBytes": 65536,
+          "replaceEnv": true,
+          "stdin": ""
+        }
+      ],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa outcome=ok status=licensed elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true
+}

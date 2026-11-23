@@ -1,0 +1,105 @@
+{
+  "op": "read-build",
+  "args": {
+    "items": [
+      {
+        "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      },
+      {
+        "binDir": "/Applications/CrossOver.app/bin",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      },
+      {
+        "binDir": "/Applications/CrossOver/Contents/SharedSupport/CrossOver/bin",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      },
+      {
+        "binDir": "/Contents/SharedSupport/CrossOver/bin",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      },
+      {
+        "binDir": "",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "binDir": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      },
+      "build": null,
+      "toolCalls": [],
+      "logs": []
+    },
+    {
+      "input": {
+        "binDir": "/Applications/CrossOver.app/bin",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      },
+      "build": null,
+      "toolCalls": [],
+      "logs": []
+    },
+    {
+      "input": {
+        "binDir": "/Applications/CrossOver/Contents/SharedSupport/CrossOver/bin",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      },
+      "build": null,
+      "toolCalls": [],
+      "logs": []
+    },
+    {
+      "input": {
+        "binDir": "/Contents/SharedSupport/CrossOver/bin",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      },
+      "build": null,
+      "toolCalls": [],
+      "logs": []
+    },
+    {
+      "input": {
+        "binDir": "",
+        "step": {
+          "code": 0,
+          "stdout": "26.3.0.39832\n"
+        }
+      },
+      "build": null,
+      "toolCalls": [],
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true
+}

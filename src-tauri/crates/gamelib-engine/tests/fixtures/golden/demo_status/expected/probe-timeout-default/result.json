@@ -1,0 +1,43 @@
+{
+  "op": "probe",
+  "args": {
+    "items": [
+      {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "code": null,
+          "timedOut": true
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "code": null,
+          "timedOut": true
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "timeout",
+        "detail": "no result within 15000 ms",
+        "elapsedMs": 0
+      },
+      "runOptions": [
+        {
+          "timeoutMs": 15000,
+          "maxBufferBytes": 65536,
+          "replaceEnv": true,
+          "stdin": ""
+        }
+      ],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=timeout no result within 15000 ms elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true
+}

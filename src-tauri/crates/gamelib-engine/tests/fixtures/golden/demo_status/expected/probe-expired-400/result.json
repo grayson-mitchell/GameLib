@@ -1,0 +1,45 @@
+{
+  "op": "probe",
+  "args": {
+    "items": [
+      {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "code": 0,
+          "stdout": "Demo version (expired 400 days ago)\n"
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "code": 0,
+          "stdout": "Demo version (expired 400 days ago)\n"
+        }
+      },
+      "probe": {
+        "kind": "ok",
+        "status": {
+          "kind": "expired",
+          "daysAgo": 400
+        },
+        "elapsedMs": 0
+      },
+      "runOptions": [
+        {
+          "timeoutMs": 15000,
+          "maxBufferBytes": 65536,
+          "replaceEnv": true,
+          "stdin": ""
+        }
+      ],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=expired elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true
+}

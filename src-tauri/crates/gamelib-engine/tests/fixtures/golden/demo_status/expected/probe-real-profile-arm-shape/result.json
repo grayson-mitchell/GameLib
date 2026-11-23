@@ -1,0 +1,46 @@
+{
+  "op": "probe",
+  "args": {
+    "items": [
+      {
+        "bottleName": "GameLib-gog-1207658924",
+        "baseEnv": "inherit",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "bottleName": "GameLib-gog-1207658924",
+        "baseEnv": "inherit",
+        "step": {
+          "code": 0,
+          "stdout": "Standard version\n"
+        }
+      },
+      "probe": {
+        "kind": "ok",
+        "status": {
+          "kind": "licensed"
+        },
+        "elapsedMs": 0
+      },
+      "runOptions": [
+        {
+          "timeoutMs": 15000,
+          "maxBufferBytes": 65536,
+          "replaceEnv": false,
+          "stdin": ""
+        }
+      ],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=ok status=licensed elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true
+}

@@ -1,0 +1,87 @@
+{
+  "op": "tested",
+  "args": {
+    "items": [
+      {
+        "build": "26.3.0.39832"
+      },
+      {
+        "build": "26.4.0.40000"
+      },
+      {
+        "build": "25.0.0.1"
+      },
+      {
+        "build": null
+      },
+      {
+        "build": ""
+      },
+      {
+        "build": "26.3.0.39832 "
+      },
+      {
+        "build": " 26.3.0.39832"
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "build": "26.3.0.39832"
+      },
+      "tested": true,
+      "logLine": null,
+      "logs": []
+    },
+    {
+      "input": {
+        "build": "26.4.0.40000"
+      },
+      "tested": false,
+      "logLine": "Engine: CrossOver build 26.4.0.40000 is untested with GameLib; please report issues",
+      "logs": []
+    },
+    {
+      "input": {
+        "build": "25.0.0.1"
+      },
+      "tested": false,
+      "logLine": "Engine: CrossOver build 25.0.0.1 is untested with GameLib; please report issues",
+      "logs": []
+    },
+    {
+      "input": {
+        "build": null
+      },
+      "tested": false,
+      "logLine": "Engine: CrossOver build could not be read; treating it as untested",
+      "logs": []
+    },
+    {
+      "input": {
+        "build": ""
+      },
+      "tested": false,
+      "logLine": "Engine: CrossOver build  is untested with GameLib; please report issues",
+      "logs": []
+    },
+    {
+      "input": {
+        "build": "26.3.0.39832 "
+      },
+      "tested": false,
+      "logLine": "Engine: CrossOver build 26.3.0.39832  is untested with GameLib; please report issues",
+      "logs": []
+    },
+    {
+      "input": {
+        "build": " 26.3.0.39832"
+      },
+      "tested": false,
+      "logLine": "Engine: CrossOver build  26.3.0.39832 is untested with GameLib; please report issues",
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true
+}

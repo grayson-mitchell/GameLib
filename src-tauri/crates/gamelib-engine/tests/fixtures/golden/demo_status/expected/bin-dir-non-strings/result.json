@@ -1,0 +1,68 @@
+{
+  "op": "bin-dir",
+  "args": {
+    "items": [
+      {
+        "wineBin": null
+      },
+      {
+        "wineBin": 5
+      },
+      {
+        "wineBin": true
+      },
+      {
+        "wineBin": [
+          "a"
+        ]
+      },
+      {
+        "wineBin": {
+          "a": 1
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "wineBin": null
+      },
+      "binDir": null,
+      "logs": []
+    },
+    {
+      "input": {
+        "wineBin": 5
+      },
+      "binDir": null,
+      "logs": []
+    },
+    {
+      "input": {
+        "wineBin": true
+      },
+      "binDir": null,
+      "logs": []
+    },
+    {
+      "input": {
+        "wineBin": [
+          "a"
+        ]
+      },
+      "binDir": null,
+      "logs": []
+    },
+    {
+      "input": {
+        "wineBin": {
+          "a": 1
+        }
+      },
+      "binDir": null,
+      "logs": []
+    }
+  ],
+  "treeUnchanged": true
+}

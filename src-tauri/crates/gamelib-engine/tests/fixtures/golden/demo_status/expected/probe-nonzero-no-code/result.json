@@ -1,0 +1,45 @@
+{
+  "op": "probe",
+  "args": {
+    "items": [
+      {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "code": null,
+          "stdout": "",
+          "stderr": "killed"
+        }
+      }
+    ]
+  },
+  "outcomes": [
+    {
+      "input": {
+        "bottleName": "GameLib-gog-1207658924",
+        "step": {
+          "code": null,
+          "stdout": "",
+          "stderr": "killed"
+        }
+      },
+      "probe": {
+        "kind": "failed",
+        "reason": "nonzero-exit",
+        "detail": "code=null stderr=killed stdout=",
+        "elapsedMs": 0
+      },
+      "runOptions": [
+        {
+          "timeoutMs": 15000,
+          "maxBufferBytes": 65536,
+          "replaceEnv": true,
+          "stdin": ""
+        }
+      ],
+      "logs": [
+        "INFO Engine: demo-status probe bottle=GameLib-gog-1207658924 outcome=nonzero-exit code=null stderr=killed stdout= elapsedMs=0"
+      ]
+    }
+  ],
+  "treeUnchanged": true
+}
