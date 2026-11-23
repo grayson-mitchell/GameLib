@@ -8,6 +8,7 @@
 //! This crate may depend on `gamelib-engine`; `gamelib-engine` never depends on this one (D-04).
 
 pub mod ctx;
+pub mod discovery;
 pub mod extract;
 pub mod manager;
 pub mod runtimes;
@@ -28,6 +29,8 @@ use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
 pub const OPS: &[&str] = &[
+    "wine_discover_alternatives",
+    "wine_discover_crossover",
     "wine_manager_install",
     "wine_manager_list",
     "wine_manager_refresh",
@@ -51,6 +54,18 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, 
 /// Each plan adds its arms here, in step with `OPS`.
 async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String> {
     match op {
+        "wine_discover_alternatives" => {
+            let host = discovery_host_arg(op, args)?;
+            let found = discovery::discover_alternatives(ctx, &host).await;
+            serde_json::to_value(found).map_err(|_| format!("{op}:bad-result"))
+        }
+        "wine_discover_crossover" => {
+            if !args.is_empty() {
+                return Err(format!("{op}:bad-args"));
+            }
+            let found = discovery::discover_crossover(ctx).await;
+            serde_json::to_value(found).map_err(|_| format!("{op}:bad-result"))
+        }
         "wine_manager_install" => {
             let (release, settings) = install_args(op, args)?;
             // Nothing cancels this token: through the op an install ends on its own or on the app
@@ -117,6 +132,16 @@ async fn route(op: &str, args: &[Value], ctx: &WineCtx) -> Result<Value, String>
         }
         _ => Err(format!("unknown op: {op}")),
     }
+}
+
+/// `wine_discover_alternatives`'s one argument: the [`discovery::DiscoveryHost`] the shell built (its
+/// roots, `PATH`, the two settings, the Steam libraries it read). A bad shape is a fixed
+/// `<op>:bad-args`: a path or a value the renderer sent never reaches the error.
+fn discovery_host_arg(op: &str, args: &[Value]) -> Result<discovery::DiscoveryHost, String> {
+    let [host @ Value::Object(_)] = args else {
+        return Err(format!("{op}:bad-args"));
+    };
+    serde_json::from_value(host.clone()).map_err(|_| format!("{op}:bad-args"))
 }
 
 /// `wine_valid`'s arguments: the `WineInstallation` to check (or `null`, no wine selected) and,

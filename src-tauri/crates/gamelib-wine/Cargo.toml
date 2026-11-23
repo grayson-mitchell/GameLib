@@ -33,6 +33,10 @@ serde_json = "1"
 # The sha512 of a downloaded wine archive against the checksum asset its release names. Already
 # locked (gamelib-engine hashes with sha2), so no new crate enters the tree.
 sha2 = "0.10"
+# The `Info.plist` of a CrossOver, Wine or Game Porting Toolkit bundle and Whisky's version plist (the
+# TS read them with the `plist` package). Already locked (tauri reads plists), so no new crate enters
+# the tree; the XML reader only, no serde.
+plist = { version = "1", default-features = false }
 
 [features]
 # Test seams for the golden tests and the CLI: the engine crate's `Replay` and scripted fakes

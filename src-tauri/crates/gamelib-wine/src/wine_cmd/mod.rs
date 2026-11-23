@@ -18,11 +18,11 @@ pub mod env;
 pub mod prefix;
 pub mod valid;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::{Component, Path, PathBuf};
 
 /// The wine flavour of an installation (`WineInstallation.type`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum WineKind {
     Wine,
@@ -31,19 +31,21 @@ pub enum WineKind {
     Toolkit,
 }
 
-/// One wine installation as the settings store it (`WineInstallation` in `common/types.ts`).
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+/// One wine installation as the settings store it (`WineInstallation` in `common/types.ts`). Serialised
+/// like `JSON.stringify` of the TS object: an absent field is left out (an empty string stays), which
+/// is how discovery answers the renderer.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct WineInstallation {
     pub bin: String,
     pub name: String,
     #[serde(rename = "type")]
     pub kind: WineKind,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lib: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lib32: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wineserver: Option<String>,
 }
 
