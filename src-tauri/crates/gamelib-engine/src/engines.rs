@@ -9,9 +9,10 @@
 use std::path::Path;
 
 use gamelib_store::json::Json;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::bottles::{marker, paths};
 use crate::ctx::EngineCtx;
 use crate::jsutil::{js_truthy, path_join, prop};
 use crate::pins::{EnginePin, PinnedArtifact};
@@ -25,7 +26,7 @@ const WINE_RELEASES_KEY: &str = "wine-releases";
 pub const WINE_STAGING_MACOS: &str = "Wine-Staging-macOS";
 
 /// A Wine (and, for a pin, DXVK) a game can run on that is not CrossOver (`NonCrossoverEngine`).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NonCrossoverEngine {
     pub wine_bin: String,
@@ -35,7 +36,7 @@ pub struct NonCrossoverEngine {
     pub dxvk: Option<DxvkBuild>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DxvkBuild {
     pub dir: String,
     pub version: String,
@@ -172,17 +173,9 @@ pub fn resolve_wine_manager_staging(ctx: &EngineCtx, version: &str) -> Option<No
     })
 }
 
-/// The bottle's marker file and the DXVK-macOS version file a contradicted marker is judged by.
-const ENGINE_MARKER_FILE: &str = ".gamelib-engine.json";
-const DXVK_VERSION_FILE: &str = "current_dxvk-macOS";
-
 /// `getBottleDir`: `<userHome>/Library/Application Support/CrossOver/Bottles/<bottleName>`.
 pub fn bottle_dir(ctx: &EngineCtx, bottle_name: &str) -> String {
-    path_join(&[
-        &ctx.paths.user_home.to_string_lossy(),
-        "Library/Application Support/CrossOver/Bottles",
-        bottle_name,
-    ])
+    paths::bottle_dir(&ctx.paths.user_home, bottle_name)
 }
 
 /// `isBottleProvisioned`: the bottle directory has been created (its `cxbottle.conf` exists). Not
@@ -196,31 +189,18 @@ pub fn is_bottle_provisioned(ctx: &EngineCtx, bottle_name: &str) -> bool {
 /// `readBottleEngineMarkerKind`: the read-only view of the bottle's engine marker. `None` for an
 /// absent or unreadable marker or an unsafe bottle name; never infers or writes a marker. A
 /// crossover marker contradicted by DXVK-macOS in the bottle reads as the pin, as the switch treats
-/// it (76 review WR-01).
+/// it (76 review WR-01). The read rules live in [`crate::bottles::marker`].
 pub fn read_bottle_engine_marker_kind(
     ctx: &EngineCtx,
     bottle_name: &str,
 ) -> Option<crate::offline::MarkerKind> {
-    use crate::game_engine::sanitize_bottle_name;
-    use crate::ids::is_version_token;
     use crate::offline::MarkerKind;
 
-    if sanitize_bottle_name(bottle_name).as_deref() != Some(bottle_name) {
-        return None;
-    }
-    let dir = bottle_dir(ctx, bottle_name);
-    let text = std::fs::read_to_string(Path::new(&dir).join(ENGINE_MARKER_FILE)).ok()?;
-    let raw: Value = serde_json::from_str(&text).ok()?;
-    let kind = prop(&raw, "kind")?.as_str()?;
-    if !matches!(kind, "crossover" | "pinned" | "wine-manager") {
-        return None;
-    }
-    if !is_version_token(prop(&raw, "id")?.as_str()?) {
-        return None;
-    }
-    prop(&raw, "wineserverBin")?.as_str()?;
-    if kind == "crossover" && !Path::new(&dir).join(DXVK_VERSION_FILE).exists() {
-        return Some(MarkerKind::Crossover);
-    }
-    Some(MarkerKind::NonCrossover)
+    marker::read_marker_kind_is_crossover(ctx, bottle_name).map(|crossover| {
+        if crossover {
+            MarkerKind::Crossover
+        } else {
+            MarkerKind::NonCrossover
+        }
+    })
 }

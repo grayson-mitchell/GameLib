@@ -8,6 +8,7 @@
 //!
 //! This crate never depends on `gamelib-wine` (D-04): the dependency runs the other way.
 
+pub mod bottles;
 pub mod config;
 pub mod ctx;
 pub mod dxvk;
@@ -36,6 +37,7 @@ use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
 pub const OPS: &[&str] = &[
+    "engine_bottle_record_pinned",
     "engine_default_engine",
     "engine_list_options",
     "engine_per_game_bottle_name",
@@ -56,6 +58,21 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value
 /// Each plan adds its arms here, in step with `OPS`.
 async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, String> {
     match op {
+        // The marker a pinned-engine bottle gets at creation: written through the in-process version
+        // gate, `false` when nothing was written (a newer marker, an absent bottle, an unsafe name).
+        "engine_bottle_record_pinned" => {
+            let request: RecordPinnedRequest = decode(op, args)?;
+            let engine = engines::NonCrossoverEngine {
+                wine_bin: request.engine.wine_bin,
+                wineserver_bin: request.engine.wineserver_bin,
+                label: request.engine.label,
+                version: request.engine.version,
+                dxvk: request.engine.dxvk,
+            };
+            let recorded =
+                bottles::marker::record_pinned(ctx, &request.bottle_name, &request.pin_id, &engine);
+            Ok(Value::Bool(recorded))
+        }
         // D-09: the global default engine, derived or stored, Legacy included.
         "engine_default_engine" => {
             if !args.is_empty() {
@@ -113,6 +130,27 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
         }
         _ => Err(format!("unknown op: {op}")),
     }
+}
+
+/// The argument of `engine_bottle_record_pinned`: the bottle, the pin's id and the engine the bottle
+/// was created with.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct RecordPinnedRequest {
+    bottle_name: String,
+    pin_id: String,
+    engine: RecordedEngine,
+}
+
+/// A non-CrossOver engine as the sidecar names it (`NonCrossoverEngine`), strictly.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct RecordedEngine {
+    wine_bin: String,
+    wineserver_bin: String,
+    label: String,
+    version: String,
+    dxvk: Option<engines::DxvkBuild>,
 }
 
 /// The argument of `engine_set_online`: the monitor's answer.
@@ -249,6 +287,7 @@ mod tests {
         assert_eq!(sorted, OPS);
         assert!(OPS.contains(&"engine_pins"));
         for op in [
+            "engine_bottle_record_pinned",
             "engine_default_engine",
             "engine_list_options",
             "engine_per_game_bottle_name",
@@ -288,6 +327,77 @@ mod tests {
             assert_eq!(err, "engine_set_online:bad-args", "{bad:?}");
             assert!(ctx.is_online(), "a rejected call changes nothing: {bad:?}");
         }
+    }
+
+    /// A bottle under the ctx's user home, with a system.reg and (optionally) a conf.
+    fn lay_bottle(home: &FakeHome, name: &str, with_conf: bool, dxvk: bool) -> std::path::PathBuf {
+        let dir =
+            std::path::PathBuf::from(bottles::paths::bottle_dir(&home.root().join("home"), name));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("system.reg"), "r").unwrap();
+        if with_conf {
+            std::fs::write(dir.join("cxbottle.conf"), "[Bottle]\n").unwrap();
+        }
+        if dxvk {
+            std::fs::write(dir.join("current_dxvk-macOS"), "v1\n").unwrap();
+        }
+        dir
+    }
+
+    #[tokio::test]
+    async fn the_record_pinned_op_writes_the_marker_once_and_never_over_a_newer_one() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        let dir = lay_bottle(&home, "GameLib-gog-1", true, true);
+        let engine = json!({
+            "wineBin": "/t/wine", "wineserverBin": "/t/wineserver", "label": "Pinned",
+            "version": "11.20", "dxvk": {"dir": "/t/steam-engines/dxvk-macOS-v1", "version": "v1"}
+        });
+        let args = [
+            json!({"bottleName": "GameLib-gog-1", "pinId": "wine-staging-11.20", "engine": engine}),
+        ];
+        assert_eq!(
+            dispatch("engine_bottle_record_pinned", &args, &ctx)
+                .await
+                .unwrap(),
+            json!(true)
+        );
+        let marker = dir.join(".gamelib-engine.json");
+        assert_eq!(
+            std::fs::read_to_string(&marker).unwrap(),
+            r#"{"kind":"pinned","id":"wine-staging-11.20","wineserverBin":"/t/wineserver","dxvk":{"dir":"/t/steam-engines/dxvk-macOS-v1","version":"v1"},"version":1}"#
+        );
+        // A marker a newer build wrote is kept and the op says nothing was recorded.
+        let newer = r#"{"kind":"pinned","id":"x","wineserverBin":"/w","version":2}"#;
+        std::fs::write(&marker, newer).unwrap();
+        assert_eq!(
+            dispatch("engine_bottle_record_pinned", &args, &ctx)
+                .await
+                .unwrap(),
+            json!(false)
+        );
+        assert_eq!(std::fs::read_to_string(&marker).unwrap(), newer);
+        // An absent bottle, an unsafe name and a bad pin id record nothing.
+        for (name, pin) in [("no-such", "p"), ("../x", "p"), ("GameLib-gog-1", "bad/id")] {
+            let args = [json!({"bottleName": name, "pinId": pin, "engine": engine})];
+            assert_eq!(
+                dispatch("engine_bottle_record_pinned", &args, &ctx)
+                    .await
+                    .unwrap(),
+                json!(false),
+                "{name} {pin}"
+            );
+        }
+        // The engine is strict: an unknown member is a bad argument.
+        let mut loose = engine.clone();
+        loose["extra"] = json!(1);
+        let args = [json!({"bottleName": "GameLib-gog-1", "pinId": "p", "engine": loose})];
+        assert_eq!(
+            dispatch("engine_bottle_record_pinned", &args, &ctx)
+                .await
+                .unwrap_err(),
+            "engine_bottle_record_pinned:bad-args"
+        );
     }
 
     #[tokio::test]
