@@ -14,6 +14,8 @@ use gamelib_proc::spec::SpecProcRunner;
 use gamelib_store::host::StoreHost;
 use serde::{Deserialize, Serialize};
 
+use crate::bottles::ledger::Ledger;
+use crate::bottles::registry::Registry;
 use crate::dxvk::{DxvkInstaller, NoDxvk};
 use crate::fetch::{Fetch, ReqwestFetch};
 use crate::sinks::{EngineLog, EngineUi, NullEmitter};
@@ -110,6 +112,10 @@ pub struct EngineCtx {
     /// (`check-online`, not yet probed, behaves as not online). The DXMT fetch reads it; offline, a
     /// tool is not looked up.
     pub online: Arc<AtomicBool>,
+    /// The running games of every bottle (D-16). In memory only: empty at construction.
+    pub ledger: Ledger,
+    /// The engine each running title launched with (D-07). In memory only: empty at construction.
+    pub registry: Registry,
 }
 
 impl EngineCtx {
@@ -133,6 +139,8 @@ impl EngineCtx {
             default_wine: Arc::new(|| None),
             crossover_bin_dir: Arc::new(|| Box::pin(async { None })),
             online: Arc::new(AtomicBool::new(false)),
+            ledger: Ledger::new(),
+            registry: Registry::new(),
             host,
             clock,
             platform,

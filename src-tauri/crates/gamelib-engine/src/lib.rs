@@ -37,6 +37,7 @@ use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
 pub const OPS: &[&str] = &[
+    "engine_bottle_is_provisioned",
     "engine_bottle_record_pinned",
     "engine_default_engine",
     "engine_list_options",
@@ -58,6 +59,14 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value
 /// Each plan adds its arms here, in step with `OPS`.
 async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, String> {
     match op {
+        // Whether the named bottle's `cxbottle.conf` exists. An unsafe name is answered `false` (the op
+        // is a surface the renderer's names can reach; the library function never sanitised).
+        "engine_bottle_is_provisioned" => {
+            let request: BottleNameRequest = decode(op, args)?;
+            let provisioned = bottles::paths::is_clean_bottle_name(&request.bottle_name)
+                && engines::is_bottle_provisioned(ctx, &request.bottle_name);
+            Ok(Value::Bool(provisioned))
+        }
         // The marker a pinned-engine bottle gets at creation: written through the in-process version
         // gate, `false` when nothing was written (a newer marker, an absent bottle, an unsafe name).
         "engine_bottle_record_pinned" => {
@@ -130,6 +139,13 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
         }
         _ => Err(format!("unknown op: {op}")),
     }
+}
+
+/// The argument of `engine_bottle_is_provisioned`.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct BottleNameRequest {
+    bottle_name: String,
 }
 
 /// The argument of `engine_bottle_record_pinned`: the bottle, the pin's id and the engine the bottle
@@ -287,6 +303,7 @@ mod tests {
         assert_eq!(sorted, OPS);
         assert!(OPS.contains(&"engine_pins"));
         for op in [
+            "engine_bottle_is_provisioned",
             "engine_bottle_record_pinned",
             "engine_default_engine",
             "engine_list_options",
@@ -342,6 +359,36 @@ mod tests {
             std::fs::write(dir.join("current_dxvk-macOS"), "v1\n").unwrap();
         }
         dir
+    }
+
+    #[tokio::test]
+    async fn the_provisioned_op_reads_the_conf_and_refuses_an_unsafe_name() {
+        let home = FakeHome::new("engine-lib-");
+        let ctx = ctx(&home);
+        lay_bottle(&home, "GameLib-gog-1", true, false);
+        lay_bottle(&home, "GameLib-gog-2", false, false);
+        let ask = |name: &str| {
+            let ctx = &ctx;
+            let args = [json!({"bottleName": name})];
+            async move { dispatch("engine_bottle_is_provisioned", &args, ctx).await }
+        };
+        assert_eq!(ask("GameLib-gog-1").await.unwrap(), json!(true));
+        assert_eq!(ask("GameLib-gog-2").await.unwrap(), json!(false));
+        assert_eq!(ask("no-such-bottle").await.unwrap(), json!(false));
+        // A traversal name never reaches a path.
+        assert_eq!(ask("../x").await.unwrap(), json!(false));
+        for bad in [
+            vec![],
+            vec![json!("GameLib-gog-1")],
+            vec![json!({})],
+            vec![json!({"bottleName": 1})],
+            vec![json!({"bottleName": "x", "extra": 1})],
+        ] {
+            let err = dispatch("engine_bottle_is_provisioned", &bad, &ctx)
+                .await
+                .unwrap_err();
+            assert_eq!(err, "engine_bottle_is_provisioned:bad-args", "{bad:?}");
+        }
     }
 
     #[tokio::test]

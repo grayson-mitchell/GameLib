@@ -12,13 +12,11 @@ use gamelib_store::json::Json;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::bottles::{marker, paths};
+use crate::bottles::{marker, paths, pin_marker};
 use crate::ctx::EngineCtx;
 use crate::jsutil::{js_truthy, path_join, prop};
-use crate::pins::{EnginePin, PinnedArtifact};
+use crate::pins::EnginePin;
 
-/// The marker a pinned artifact directory carries (`{ sha256 }`).
-const PIN_MARKER: &str = ".gamelib-pin.json";
 /// The Wine Manager's store (`<userData>/store/wine-downloader-info.json`) and its one key.
 const WINE_MANAGER_STORE: &str = "wine-downloader-info";
 const WINE_RELEASES_KEY: &str = "wine-releases";
@@ -68,27 +66,15 @@ pub fn pinned_engine_paths(ctx: &EngineCtx, pin: &EnginePin) -> PinnedEnginePath
     }
 }
 
-/// The directory's marker names this artifact's sha256 (`markerMatches`); a missing, unparseable or
-/// sha-less marker does not.
-fn marker_matches(dir: &str, artifact: &PinnedArtifact) -> bool {
-    let Ok(text) = std::fs::read_to_string(Path::new(dir).join(PIN_MARKER)) else {
-        return false;
-    };
-    let Ok(marker) = serde_json::from_str::<Value>(&text) else {
-        return false;
-    };
-    prop(&marker, "sha256").and_then(Value::as_str) == Some(artifact.sha256.as_str())
-}
-
 /// Both halves of the pin are on disk and carry the pin's own sha256 (`isPinnedEngineInstalled`).
 pub fn is_pinned_engine_installed(ctx: &EngineCtx, pin: &EnginePin) -> bool {
     let paths = pinned_engine_paths(ctx, pin);
     let wine = Path::new(&paths.wine_bin).exists()
         && Path::new(&paths.wineserver_bin).exists()
-        && marker_matches(&paths.wine_dir, &pin.wine);
+        && pin_marker::matches(Path::new(&paths.wine_dir), &pin.wine);
     let dxvk = Path::new(&paths.dxvk_dir).join("x32").exists()
         && Path::new(&paths.dxvk_dir).join("x64").exists()
-        && marker_matches(&paths.dxvk_dir, &pin.dxvk);
+        && pin_marker::matches(Path::new(&paths.dxvk_dir), &pin.dxvk);
     wine && dxvk
 }
 

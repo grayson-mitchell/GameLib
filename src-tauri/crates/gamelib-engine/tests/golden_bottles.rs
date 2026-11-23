@@ -1,8 +1,8 @@
 //! The bottle state primitives against the TS goldens (87-11 recorded them, 87-38 ports the state
 //! half, 87-39 the create, kill and removal half; D-07, D-08, D-19): `golden/bottles` holds one case
-//! per behaviour of the engine marker (record, reconcile, the three read-only views) and, in the
-//! second task of the slice, the `cxbottle.conf` writer, the provisioned check, the running-games
-//! ledger, the engine registry and the prefix resolver.
+//! per behaviour of the engine marker (record, reconcile, the three read-only views), the
+//! `cxbottle.conf` writer, the provisioned check, the running-games ledger, the engine registry and
+//! the prefix resolver.
 //!
 //! Every case replays over a fake HOME laid out as the oracle's profile (`<APPFOLDER>`, `<TOOLS>`,
 //! `<HOME>`): the case's pinned-engine variant is copied from `state/engines`, each named fixture
@@ -12,8 +12,9 @@
 //! golden. A count floor lives here beside the replay, so editing the JSON alone cannot lower the
 //! bar, and an empty case list fails. POSIX only, as the TS oracle's replays are.
 //!
-//! The cases of the ops listed in [`LATER_OPS`] replay in the next task and in 87-39; a case whose op
-//! is in neither list fails the suite.
+//! The cases of the create, kill and removal ops (`create-crossover`, `create-fallback`, `ensure`,
+//! `kill`, `remove-created`) are listed in [`LATER_OPS`] and replay in 87-39; a case whose op is in
+//! neither list fails the suite.
 #![cfg(unix)]
 
 use std::os::unix::fs::PermissionsExt;
@@ -22,12 +23,18 @@ use std::sync::Arc;
 
 use gamelib_core::clock::SystemClock;
 use gamelib_core::shutdown::Shutdown;
+use gamelib_engine::bottles::conf::{build_cxbottle_conf, write_cxbottle_conf};
 use gamelib_engine::bottles::marker::{
     self, read_marker_summary, reconcile_with, record_crossover_with, record_pinned_with,
     restore_needs_absent_pin, Gate,
 };
+use gamelib_engine::bottles::paths::bottle_dir;
+use gamelib_engine::bottles::prefix::resolve_game_prefix_value;
+use gamelib_engine::bottles::registry::EngineSelection;
 use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
-use gamelib_engine::engines::{read_bottle_engine_marker_kind, DxvkBuild, NonCrossoverEngine};
+use gamelib_engine::engines::{
+    is_bottle_provisioned, read_bottle_engine_marker_kind, DxvkBuild, NonCrossoverEngine,
+};
 use gamelib_engine::offline::MarkerKind;
 use gamelib_engine::testing::RecordingLog;
 use gamelib_store::host::StoreHost;
@@ -39,19 +46,22 @@ use sha2::{Digest, Sha256};
 /// `golden/bottles` holds 146 cases; a later edit may raise this, never lower it.
 const CASE_FLOOR: usize = 140;
 
-/// The ops this build replays (the marker half of the state slice).
-const STATE_OPS: [&str; 4] = ["views", "reconcile", "record-pinned", "record-crossover"];
-
-/// The ops a later task or plan ports: the conf, provisioned, ledger, registry and prefix cases
-/// (the next task of this slice) and CrossOver and fallback bottle creation, the per-game flight, the
-/// wineserver kill and guarded removal (87-39). Listed so a new op in the case list cannot go
-/// unnoticed.
-const LATER_OPS: [&str; 10] = [
+/// The ops this build replays (the state half of the slice).
+const STATE_OPS: [&str; 9] = [
+    "views",
+    "reconcile",
+    "record-pinned",
+    "record-crossover",
     "provisioned",
     "conf-write",
     "ledger",
     "registry",
     "resolve-prefix",
+];
+
+/// The ops 87-39 ports (CrossOver and fallback bottle creation, the per-game flight, the wineserver
+/// kill, guarded removal). Listed so a new op in the case list cannot go unnoticed.
+const LATER_OPS: [&str; 5] = [
     "create-crossover",
     "create-fallback",
     "ensure",
@@ -65,6 +75,7 @@ const CURRENT_PIN_ID: &str = "wine-staging-11.20";
 const CURRENT_PIN_WINE_VERSION: &str = "11.20";
 const CURRENT_PIN_DXVK_VERSION: &str = "v1.10.3-20230507-repack";
 const CX_BIN_DIR: &str = "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin";
+const BOTTLE_ID_3: &str = "AAAAAAAA-0000-4000-8000-000000000003";
 const BOTTLES_REL: &str = "Library/Application Support/CrossOver/Bottles";
 
 fn fixtures() -> PathBuf {
@@ -152,7 +163,7 @@ fn a_shrunken_case_list_fails_the_floor() {
 }
 
 #[test]
-fn every_case_op_is_replayed_here_or_scheduled_later() {
+fn every_case_op_is_replayed_here_or_scheduled_for_87_39() {
     for case in cases() {
         let op = case["op"].as_str().unwrap();
         assert!(
@@ -533,6 +544,68 @@ fn kind_text(kind: Option<MarkerKind>) -> Value {
     }
 }
 
+/// The ledger and registry steps of a case, in order (each step's own result).
+fn run_steps(ctx: &EngineCtx, op: &str, steps: &[Value], profile: &Profile) -> Value {
+    let log = ctx.log.as_deref();
+    let mut out = Vec::new();
+    for step in steps {
+        let call = step["call"].as_str().unwrap_or_default();
+        let mut item = step.clone();
+        let returned = match (op, call) {
+            ("ledger", "markGameRunning") => json!(ctx.ledger.mark_game_running(
+                log,
+                step["bottle"].as_str().unwrap_or_default(),
+                step["key"].as_str().unwrap_or_default()
+            )),
+            ("ledger", "markGameStopped") => {
+                ctx.ledger.mark_game_stopped(
+                    step["bottle"].as_str().unwrap_or_default(),
+                    step["key"].as_str().unwrap_or_default(),
+                );
+                Value::Null
+            }
+            ("ledger", "gamesRunningIn") => {
+                json!(ctx
+                    .ledger
+                    .games_running_in(step["bottle"].as_str().unwrap_or_default()))
+            }
+            ("ledger", "otherGamesRunning") => json!(ctx.ledger.other_games_running(
+                step["bottle"].as_str().unwrap_or_default(),
+                step["key"].as_str().unwrap_or_default()
+            )),
+            ("ledger", _) => json!(ctx.ledger.size()),
+            ("registry", "set") => {
+                let selection: EngineSelection =
+                    serde_json::from_value(profile.expand_value(&step["selection"]))
+                        .expect("a selection of the goldens decodes");
+                json!(ctx.registry.set_engine_selection(
+                    log,
+                    step["key"].as_str().unwrap_or_default(),
+                    selection
+                ))
+            }
+            ("registry", "get") => ctx
+                .registry
+                .get_engine_selection(step["key"].as_str().unwrap_or_default())
+                .map_or(Value::Null, |s| serde_json::to_value(s).unwrap()),
+            ("registry", _) => {
+                ctx.registry
+                    .clear_engine_selection(step["key"].as_str().unwrap_or_default());
+                Value::Null
+            }
+            other => panic!("unsupported step {other:?}"),
+        };
+        // The oracle echoes the step; `mutateInput` only exists to prove the registry copies, which
+        // an owned Rust value does by construction, so the flag is not echoed back.
+        if op == "registry" {
+            item = json!({"call": call, "key": step["key"]});
+        }
+        item["returned"] = returned;
+        out.push(item);
+    }
+    Value::Array(out)
+}
+
 struct Replayed {
     before: Value,
     outcome: Value,
@@ -604,6 +677,41 @@ fn run_case(case: &Value) -> Replayed {
                         "markerSha256": profile.marker_sha(bottle),
                     })
                 })
+                .collect(),
+        ),
+        "provisioned" => Value::Array(
+            names_of(&args)
+                .into_iter()
+                .map(
+                    |name| json!({"name": name, "provisioned": is_bottle_provisioned(&ctx, &name)}),
+                )
+                .collect(),
+        ),
+        "conf-write" => {
+            let dir = PathBuf::from(bottle_dir(profile.root(), bottle));
+            let calls: Vec<Value> = (0..times_of(&args))
+                .map(|_| {
+                    let returned = write_cxbottle_conf(Some(log.as_ref()), &dir, || {
+                        BOTTLE_ID_3.to_lowercase()
+                    });
+                    let conf = std::fs::read_to_string(dir.join("cxbottle.conf")).ok();
+                    json!({"returned": returned, "conf": conf})
+                })
+                .collect();
+            json!({"built": build_cxbottle_conf(BOTTLE_ID_3), "calls": calls})
+        }
+        "ledger" | "registry" => run_steps(
+            &ctx,
+            op,
+            args["steps"].as_array().map_or(&[][..], Vec::as_slice),
+            &profile,
+        ),
+        "resolve-prefix" => Value::Array(
+            args["inputs"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|input| json!({"input": input, "returned": resolve_game_prefix_value(input)}))
                 .collect(),
         ),
         other => panic!("op {other} is not ported by this build"),
@@ -734,8 +842,8 @@ fn the_tracer_goldens_replay() {
 }
 
 #[test]
-fn every_marker_golden_replays() {
-    replay(&STATE_OPS, 79);
+fn every_state_golden_replays() {
+    replay(&STATE_OPS, 98);
 }
 
 #[test]
@@ -751,6 +859,7 @@ fn the_documented_deltas_are_exactly_those_this_replay_treats_differently() {
     assert_eq!(
         keys,
         [
+            "conf-log-lines-name-the-bottle-not-its-path",
             "gate-is-in-process-and-cannot-fail",
             "unreadable-marker-is-rewritten-as-the-ts-did",
         ]
@@ -769,4 +878,157 @@ fn the_replayed_ops_each_have_a_case() {
             "no golden case for op {op}"
         );
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The twin vectors of the bottle helpers (`vectors/bottle_twin.json`, T-87-36)
+// ---------------------------------------------------------------------------------------------
+//
+// The TS keeps `getBottleDir`, `sanitizeBottleName`, `isBottleProvisioned` and the marker readers as
+// a twin until their callers move (D-24); the 87-11 oracle recorded the vectors from the TS and the
+// TS replay is `bottles.oracle.test.ts`. This replays the same file against the Rust functions, so
+// the one sanitiser of each language is pinned by one shared list of inputs and neither side can
+// drift without one replay failing. The `buildFallbackGameSettings` and `isPinnedEngineInstalled`
+// groups are not replayed here: the first belongs to the tool-settings slice and the second to the
+// pinned-engine one, each with their own goldens.
+
+const TWIN_VECTORS: &str = include_str!("fixtures/vectors/bottle_twin.json");
+
+/// The groups replayed here with the counts the file held when recorded (87-11); never lower one.
+const TWIN_GROUP_FLOORS: [(&str, usize); 6] = [
+    ("getBottleDir", 16),
+    ("sanitizeBottleName", 31),
+    ("isBottleProvisioned", 25),
+    ("readBottleEngineMarkerKind", 25),
+    ("readBottleEngineMarkerSummary", 25),
+    ("restoreNeedsAbsentPin", 46),
+];
+
+fn twin_replay(group: &str, input: &Value) -> Value {
+    let profile = Profile::new();
+    if let Some(variant) = input["engines"].as_str() {
+        if variant != "none" {
+            profile.build_engines(variant);
+        }
+    }
+    for name in input["fixtures"].as_array().into_iter().flatten() {
+        profile.build_bottle(name.as_str().unwrap());
+    }
+    profile.seed(&input["seed"]);
+    let ctx = profile.ctx(Arc::new(RecordingLog::new()));
+    let bottle = input["bottle"].as_str().unwrap_or_default();
+    let answer = match group {
+        "getBottleDir" => {
+            let home = profile.expand(input["userHome"].as_str().unwrap());
+            json!(bottle_dir(
+                Path::new(&home),
+                input["name"].as_str().unwrap_or_default()
+            ))
+        }
+        "sanitizeBottleName" => match (input["kind"].as_str(), input["value"].as_str()) {
+            (Some("string"), Some(text)) => {
+                gamelib_engine::bottles::paths::sanitize_bottle_name(text)
+                    .map_or(Value::Null, Value::String)
+            }
+            // A null, an undefined, a number and an object are not names.
+            _ => Value::Null,
+        },
+        "isBottleProvisioned" => json!(is_bottle_provisioned(&ctx, bottle)),
+        "readBottleEngineMarkerKind" => kind_text(read_bottle_engine_marker_kind(&ctx, bottle)),
+        "readBottleEngineMarkerSummary" => {
+            read_marker_summary(&ctx, bottle).map_or(Value::Null, |s| s.to_value())
+        }
+        "restoreNeedsAbsentPin" => json!(restore_needs_absent_pin(&ctx, bottle)),
+        other => panic!("unknown vector group {other}"),
+    };
+    profile.normalise(answer)
+}
+
+#[test]
+fn every_recorded_bottle_twin_vector_replays_against_the_rust_functions() {
+    let file: Value = serde_json::from_str(TWIN_VECTORS).expect("bottle_twin.json parses");
+    let mut replayed = 0;
+    for (group, floor) in TWIN_GROUP_FLOORS {
+        let list = file[group].as_array().expect("a group is an array");
+        check_floor(group, list.len(), floor).unwrap();
+        let mismatches: Vec<String> = list
+            .iter()
+            .filter_map(|vector| {
+                let input = materialise(&vector["input"]);
+                let got = twin_replay(group, &input);
+                (got != vector["expected"]).then(|| {
+                    format!(
+                        "{group}/{}: expected {}, got {got}",
+                        vector["id"].as_str().unwrap(),
+                        vector["expected"]
+                    )
+                })
+            })
+            .collect();
+        assert!(mismatches.is_empty(), "{mismatches:#?}");
+        replayed += list.len();
+    }
+    check_floor("replayed bottle twin vectors", replayed, 168).unwrap();
+}
+
+#[test]
+fn the_twin_replay_is_not_vacuous() {
+    assert!(check_floor("empty", 0, 168).is_err());
+    let input = json!({"kind": "string", "value": " GameLib-x "});
+    assert_eq!(twin_replay("sanitizeBottleName", &input), "GameLib-x");
+    assert_ne!(twin_replay("sanitizeBottleName", &input), " GameLib-x ");
+}
+
+// ---------------------------------------------------------------------------------------------
+// The selection registry sequences (`vectors/selection_registry.json`)
+// ---------------------------------------------------------------------------------------------
+//
+// 11 set, get and clear sequences the TS recorded for the write-through selection view (87-11): the
+// registry is the one in-memory map both languages must agree on until the TS one is deleted.
+
+const REGISTRY_VECTORS: &str = include_str!("fixtures/vectors/selection_registry.json");
+const REGISTRY_SEQUENCE_FLOOR: usize = 11;
+
+#[test]
+fn every_recorded_selection_registry_sequence_replays_against_the_registry() {
+    let list: Vec<Value> =
+        serde_json::from_str(REGISTRY_VECTORS).expect("selection_registry.json parses");
+    check_floor("registry sequences", list.len(), REGISTRY_SEQUENCE_FLOOR).unwrap();
+    let mut mismatches = Vec::new();
+    for sequence in &list {
+        let profile = Profile::new();
+        if let Some(variant) = sequence["engines"].as_str() {
+            if variant != "none" {
+                profile.build_engines(variant);
+            }
+        }
+        let ctx = profile.ctx(Arc::new(RecordingLog::new()));
+        let steps = sequence["steps"].as_array().unwrap();
+        let got = profile.normalise(run_steps(&ctx, "registry", steps, &profile));
+        if got != sequence["expected"] {
+            mismatches.push(format!(
+                "{}: expected {}, got {got}",
+                sequence["id"], sequence["expected"]
+            ));
+        }
+    }
+    assert!(mismatches.is_empty(), "{mismatches:#?}");
+}
+
+#[test]
+fn a_selection_whose_binaries_are_not_on_disk_is_not_stored() {
+    // The same pinned selection as the sequences use, in a profile with no engine installed.
+    let profile = Profile::new();
+    let ctx = profile.ctx(Arc::new(RecordingLog::new()));
+    let steps = vec![
+        json!({"call": "set", "key": "gog:1", "selection": {
+            "kind": "pinned", "pinId": "wine-staging-11.20", "reason": "cx-missing",
+            "wineBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wine",
+            "wineserverBin": "<TOOLS>/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver",
+            "label": "Pinned", "version": "11.20", "dxvk": null}}),
+        json!({"call": "get", "key": "gog:1"}),
+    ];
+    let got = run_steps(&ctx, "registry", &steps, &profile);
+    assert_eq!(got[0]["returned"], json!(false));
+    assert_eq!(got[1]["returned"], Value::Null);
 }
