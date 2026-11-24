@@ -1597,7 +1597,7 @@ mod tests {
                 ("0.release_notes_link", "invalid_type"),
             ),
             (
-                vec![without("isInstalled")],
+                vec![with("isInstalled", json!("yes"))],
                 ("0.isInstalled", "invalid_type"),
             ),
             (
@@ -1605,7 +1605,7 @@ mod tests {
                 ("0.hasUpdate", "invalid_type"),
             ),
             (
-                vec![without("installDir")],
+                vec![with("installDir", json!(1))],
                 ("0.installDir", "invalid_type"),
             ),
             (
@@ -1626,6 +1626,109 @@ mod tests {
             ),
         ] {
             assert_eq!(parse_wine_version(&args).map(|_| ()), Err(want), "{args:?}");
+        }
+    }
+
+    /// A release as the refresh merge stores it for a never-installed build, and as the released
+    /// builds stored it (D-07): no `isInstalled`, `hasUpdate` or `installDir`. The renderer sends
+    /// the stored entry unchanged.
+    fn feed_shaped(version: &str) -> Value {
+        let mut entry = release(version);
+        for key in ["isInstalled", "hasUpdate", "installDir"] {
+            entry.as_object_mut().unwrap().remove(key);
+        }
+        entry
+    }
+
+    #[test]
+    fn a_never_installed_entry_decodes_and_every_other_rejection_is_unchanged() {
+        // F2: the three state keys are absent on a never-installed entry.
+        assert!(parse_wine_version(&[feed_shaped("Wine-Lutris-9")]).is_ok());
+        for key in ["isInstalled", "hasUpdate", "installDir"] {
+            let mut one_missing = release("Wine-Lutris-9");
+            one_missing.as_object_mut().unwrap().remove(key);
+            assert!(parse_wine_version(&[one_missing]).is_ok(), "{key}");
+        }
+        // A present key of the wrong type, an unknown key and an unknown release type are
+        // still rejected with the same path and code (T-87-67, T-87-106).
+        let with = |key: &str, value: Value| {
+            let mut r = feed_shaped("Wine-Lutris-9");
+            r[key] = value;
+            r
+        };
+        for (args, want) in [
+            (
+                vec![with("isInstalled", json!("yes"))],
+                ("0.isInstalled", "invalid_type"),
+            ),
+            (
+                vec![with("hasUpdate", json!(0))],
+                ("0.hasUpdate", "invalid_type"),
+            ),
+            (
+                vec![with("installDir", json!(null))],
+                ("0.installDir", "invalid_type"),
+            ),
+            (
+                vec![with("installDir", json!("d".repeat(4097)))],
+                ("0.installDir", "too_big"),
+            ),
+            (vec![with("x", json!(1))], ("0", "unrecognized_keys")),
+            (
+                vec![with("type", json!("Other"))],
+                ("0.type", "invalid_value"),
+            ),
+        ] {
+            assert_eq!(parse_wine_version(&args).map(|_| ()), Err(want), "{args:?}");
+        }
+    }
+
+    /// The archive the golden_wine_manager install cases replay (`eac_runtime/empty` inside one
+    /// top directory, stripped on extraction) and the checksum file its digest sits in.
+    const GOLDEN_ARCHIVE: &[u8] = include_bytes!(
+        "../crates/gamelib-wine/tests/fixtures/recorded/wine_manager/install-checksum-match/body-3.bin"
+    );
+    const GOLDEN_CHECKSUMS: &str = include_str!(
+        "../crates/gamelib-wine/tests/fixtures/recorded/wine_manager/install-checksum-match/body-1.txt"
+    );
+
+    /// Serves the golden feed: the checksum file for a GET, the archive for a download.
+    struct ServesGolden;
+    impl gamelib_engine::fetch::Fetch for ServesGolden {
+        fn get(
+            &self,
+            _req: gamelib_engine::fetch::FetchRequest,
+        ) -> gamelib_engine::fetch::FetchFuture<
+            '_,
+            Result<gamelib_engine::fetch::FetchResponse, gamelib_engine::fetch::FetchError>,
+        > {
+            Box::pin(async {
+                Ok(gamelib_engine::fetch::FetchResponse {
+                    status: 200,
+                    headers: Vec::new(),
+                    body: GOLDEN_CHECKSUMS.as_bytes().to_vec(),
+                })
+            })
+        }
+
+        fn download<'a>(
+            &'a self,
+            _req: gamelib_engine::fetch::FetchRequest,
+            dest: &'a std::path::Path,
+            _progress: &'a (dyn Fn(gamelib_engine::fetch::Progress) + Send + Sync),
+            _cancel: CancellationToken,
+        ) -> gamelib_engine::fetch::FetchFuture<
+            'a,
+            Result<gamelib_engine::fetch::DownloadOutcome, gamelib_engine::fetch::FetchError>,
+        > {
+            Box::pin(async move {
+                std::fs::write(dest, GOLDEN_ARCHIVE)
+                    .map_err(|_| gamelib_engine::fetch::FetchError::Network)?;
+                Ok(gamelib_engine::fetch::DownloadOutcome {
+                    bytes: GOLDEN_ARCHIVE.len() as u64,
+                    sha256: String::new(),
+                })
+            })
         }
     }
 
@@ -1668,6 +1771,15 @@ mod tests {
     /// The wine context over a fake HOME, with a fetch that waits for its cancel and a recording
     /// emitter.
     fn wine_over(home: &gamelib_testutil::FakeHome, emitter: Arc<Recorded>) -> Arc<WineCtx> {
+        wine_over_fetch(home, emitter, Arc::new(WaitsForCancel))
+    }
+
+    /// [`wine_over`] with the fetch the test chooses.
+    fn wine_over_fetch(
+        home: &gamelib_testutil::FakeHome,
+        emitter: Arc<Recorded>,
+        fetch: Arc<dyn gamelib_engine::fetch::Fetch>,
+    ) -> Arc<WineCtx> {
         let root = home.root().to_path_buf();
         let engine = gamelib_engine::ctx::EngineCtx::new(
             Arc::new(gamelib_store::host::StoreHost::new()),
@@ -1682,7 +1794,7 @@ mod tests {
             },
             gamelib_core::shutdown::Shutdown::new(),
         )
-        .with_fetch(Arc::new(WaitsForCancel))
+        .with_fetch(fetch)
         .with_emitter(emitter)
         .with_ui(Arc::new(engine_dispatch::ShellEngineUi::silent(Arc::new(
             gamelib_engine::sinks::NullEmitter,
@@ -1729,6 +1841,110 @@ mod tests {
                 Err(gamelib_engine::fetch::FetchError::Aborted)
             })
         }
+    }
+
+    /// The stored list, read through the crate's own list seam.
+    fn stored_list(wine: &WineCtx) -> Vec<Value> {
+        match gamelib_wine::manager::releases::list(wine).unwrap() {
+            Value::Array(entries) => entries,
+            other => panic!("not a list: {other}"),
+        }
+    }
+
+    /// Seeds the wine-manager store with `entries`, as a refresh merge leaves it.
+    fn seed_stored(wine: &WineCtx, entries: &[Value]) {
+        let store = gamelib_wine::manager::store::open(wine).unwrap();
+        gamelib_wine::manager::store::write(
+            &store,
+            entries
+                .iter()
+                .cloned()
+                .map(gamelib_store::json::Json::from)
+                .collect(),
+        )
+        .unwrap();
+    }
+
+    fn golden_entry() -> Value {
+        let mut entry = feed_shaped("GE-Proton9-27");
+        entry["type"] = json!("GE-Proton");
+        entry["download"] = json!("https://downloads.oracle.invalid/GE-Proton9-27.tar.xz");
+        entry["checksum"] = json!("https://downloads.oracle.invalid/GE-Proton9-27.sha512sum");
+        entry
+    }
+
+    #[test]
+    fn a_never_installed_entry_installs_end_to_end_through_the_arm() {
+        let home = gamelib_testutil::FakeHome::new("wine-dispatch-install-");
+        let emitter = Arc::new(Recorded::default());
+        let wine = wine_over_fetch(&home, Arc::clone(&emitter), Arc::new(ServesGolden));
+        let entry = golden_entry();
+        seed_stored(&wine, std::slice::from_ref(&entry));
+
+        let answer =
+            tauri::async_runtime::block_on(install_channel(Some(Arc::clone(&wine)), vec![entry]));
+        assert_eq!(answer, Ok(Value::Null));
+
+        let installed = home
+            .root()
+            .join("tools")
+            .join("proton")
+            .join("GE-Proton9-27");
+        assert!(
+            installed.join("empty").is_file(),
+            "the archive was extracted"
+        );
+        let leftovers: Vec<_> = std::fs::read_dir(installed.parent().unwrap())
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            leftovers,
+            ["GE-Proton9-27"],
+            "no archive or partial directory"
+        );
+        let stored = stored_list(&wine);
+        assert_eq!(stored.len(), 1);
+        assert_eq!(stored[0]["isInstalled"], json!(true));
+        assert_eq!(stored[0]["hasUpdate"], json!(false));
+        assert_eq!(
+            stored[0]["installDir"],
+            json!(installed.display().to_string())
+        );
+        let pushes = emitter.0.lock().unwrap();
+        assert!(pushes
+            .iter()
+            .any(|(channel, _)| channel == "wineVersionsUpdated"));
+    }
+
+    #[test]
+    fn a_renderer_supplied_install_dir_is_never_where_the_install_goes() {
+        let home = gamelib_testutil::FakeHome::new("wine-dispatch-install-dir-");
+        let wine = wine_over_fetch(&home, Arc::new(Recorded::default()), Arc::new(ServesGolden));
+        let stored_entry = golden_entry();
+        seed_stored(&wine, std::slice::from_ref(&stored_entry));
+        let elsewhere = home.root().join("elsewhere").join("GE-Proton9-27");
+        std::fs::create_dir_all(elsewhere.parent().unwrap()).unwrap();
+        let mut sent = stored_entry;
+        sent["installDir"] = json!(elsewhere.display().to_string());
+        sent["isInstalled"] = json!(false);
+        sent["hasUpdate"] = json!(false);
+
+        let answer =
+            tauri::async_runtime::block_on(install_channel(Some(Arc::clone(&wine)), vec![sent]));
+        assert_eq!(answer, Ok(Value::Null));
+
+        assert!(!elsewhere.exists(), "the supplied directory was used");
+        let computed = home
+            .root()
+            .join("tools")
+            .join("proton")
+            .join("GE-Proton9-27");
+        assert!(computed.join("empty").is_file());
+        assert_eq!(
+            stored_list(&wine)[0]["installDir"],
+            json!(computed.display().to_string())
+        );
     }
 
     #[test]
