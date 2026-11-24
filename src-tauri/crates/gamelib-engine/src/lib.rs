@@ -55,6 +55,7 @@ pub const OPS: &[&str] = &[
     "engine_bottle_record_crossover",
     "engine_bottle_record_pinned",
     "engine_bottle_remove_created",
+    "engine_bottle_remove_per_game",
     "engine_cancel",
     "engine_cx_demo_status",
     "engine_cx_resolve_bin_dir",
@@ -250,6 +251,15 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
             let removed = bottles::lifecycle::remove_created_bottle_dir(ctx, &request.bottle_name)
                 == bottles::lifecycle::RemoveCreated::Removed;
             Ok(Value::Bool(removed))
+        }
+        // The guarded removal of a non-Steam game's own per-game bottle (F5, D-19). The bottle name is
+        // computed here from the game's identity and is a target only when the game's stored
+        // `wineCrossoverBottle` equals it; anything else answers `not-bottle-backed` and deletes
+        // nothing. The answer is `{outcome, reason?, otherKey?}`.
+        "engine_bottle_remove_per_game" => {
+            let request: bottles::remove_per_game::RemovePerGameRequest = decode(op, args)?;
+            let outcome = bottles::remove_per_game::remove_per_game_bottle(ctx, &request).await;
+            Ok(outcome.to_value())
         }
         // The running-games ledger the switch reads (D-16): `true` when the game was recorded (an unsafe
         // bottle name or a key that is not an engine key is refused), as `markGameRunning` answered.
@@ -1460,6 +1470,7 @@ mod tests {
             "engine_bottle_record_crossover",
             "engine_bottle_record_pinned",
             "engine_bottle_remove_created",
+            "engine_bottle_remove_per_game",
             "engine_cancel",
             "engine_cx_demo_status",
             "engine_cx_resolve_bin_dir",

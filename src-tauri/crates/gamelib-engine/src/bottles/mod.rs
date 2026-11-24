@@ -20,6 +20,7 @@ pub mod per_game;
 pub mod pin_marker;
 pub mod prefix;
 pub mod registry;
+pub mod remove_per_game;
 pub mod switch;
 
 pub use marker::{BOTTLE_FILE_VERSION, ENGINE_MARKER_CHAIN, MARKER_FILE};
