@@ -1093,7 +1093,7 @@ Plans:
   3. The Humble and shortcut test oracles are ported as Rust tests or recorded fixtures
   4. The Humble and shortcuts TypeScript and their sidecar registrations are deleted in this phase, except scheduled survivors listed in the schedule test (D-03, D-04, D-24, D-27)
 
-**Plans:** 20/32 plans executed (94-07 partial and 94-14 partial, awaiting macOS icon_geometry goldens) in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
+**Plans:** 21/32 plans executed (94-07 partial and 94-14 partial, awaiting macOS icon_geometry goldens) in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
 
 Plans:
 **Wave 1**
@@ -1134,7 +1134,7 @@ Plans:
 
 **Wave 9** *(blocked on Wave 8 completion)*
 - [x] 94-21-PLAN.md — Humble secrets owner over the unchanged keyring slots and dev vault; the boot migration moved to Rust in one commit (D-18)
-- [ ] 94-22-PLAN.md — Every shortcut caller switched to Rust through resolvers; `processShortcut` relocated (D-27); shortcutsFlowRegistration deleted
+- [x] 94-22-PLAN.md — Every shortcut caller switched to Rust through resolvers; `processShortcut` relocated (D-27); shortcutsFlowRegistration deleted
 
 **Wave 10** *(blocked on Wave 9 completion)*
 - [ ] 94-23-PLAN.md — Humble server-action adapter in Rust, pinned on the wire to the TS and the real capture
