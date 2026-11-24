@@ -1652,6 +1652,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn dismiss_engine_notice_writes_the_store_through_the_host_and_installing_reads_no_file() {
         let home = gamelib_testutil::FakeHome::new("engine-notices-");
