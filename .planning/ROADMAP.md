@@ -1093,7 +1093,7 @@ Plans:
   3. The Humble and shortcut test oracles are ported as Rust tests or recorded fixtures
   4. The Humble and shortcuts TypeScript and their sidecar registrations are deleted in this phase, except scheduled survivors listed in the schedule test (D-03, D-04, D-24, D-27)
 
-**Plans:** 16/32 plans executed (94-07 partial and 94-14 partial, awaiting macOS icon_geometry goldens) in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
+**Plans:** 17/32 plans executed (94-07 partial and 94-14 partial, awaiting macOS icon_geometry goldens) in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
 
 Plans:
 **Wave 1**
@@ -1126,7 +1126,7 @@ Plans:
 
 **Wave 7** *(blocked on Wave 6 completion)*
 - [x] 94-17-PLAN.md — Expiry digest with i18next-identical text and the backfill; the user-agent twin
-- [ ] 94-18-PLAN.md — Removal with the creation proof on every OS (D-29) and the add op with renderer notifications
+- [x] 94-18-PLAN.md — Removal with the creation proof on every OS (D-29) and the add op with renderer notifications
 
 **Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 94-19-PLAN.md — The eleven Humble files round-trip byte for byte through the StoreHost (D-07); corrupt copy-aside; disconnect clear set

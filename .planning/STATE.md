@@ -5,7 +5,7 @@ milestone_name: Node Sidecar Retirement
 current_phase: 94
 current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 94-17-PLAN.md
+stopped_at: Completed 94-18-PLAN.md
 last_updated: "2026-11-24T04:47:14.070Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 94 execution started
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
-Plan: 16 of 32
-Status: Ready to execute (94-17 complete; 94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24 and 94-15 left a named pending header check for it; 94-18 next; worktree-local STATE, D-02)
-Last activity: 2026-11-24 — Completed 94-17: the Humble expiry digest in Rust (transition detection, the WR-01 backfill, the dedupe record written before the notification, i18next-identical title and body) replaying the 11 alerts goldens and the sync flow legacy backfill state byte for byte, and the browser user agent as a Rust twin pinned to the 8 shared vectors; the escaped digest text and the en-US-only date are filed as todos
+Plan: 17 of 32
+Status: Ready to execute (94-18 complete; 94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24 and 94-15 left a named pending header check for it; 94-19 next, wave 8; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-18: shortcuts_remove deleting only what GameLib provably wrote on every OS (macOS bundle and Desktop link, Linux .desktop, Windows .lnk, through gamelib-safety, refusing on unknown) replaying the 44 removal goldens with their 19 recorded D-29 deltas, and shortcuts_add with the per-OS file set, partial-failure semantics and the handler's notifications replaying 132 text and 40 Windows add goldens plus a named twin of each of the 25 TS outcome tests; no caller reaches either op before 94-22
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -486,6 +486,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P15 | 150min | 2 tasks | 14 files |
 | Phase 94 P16 | 105min | 3 tasks | 12 files |
 | Phase 94 P17 | 60min | 2 tasks | 6 files |
+| Phase 94 P18 | 170min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -1064,6 +1065,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-17: the digest text keeps i18next's HTML escaping (1&#x2F;2&#x2F;2027, Tom &amp; Jerry) through the escaping Catalog::t because the plan demands every alerts golden replay (T-94-31); the visible defect is the todo 2026-11-24-humble-digest-text-is-html-escaped (fix is Catalog::t_unescaped plus a deliberate golden re-record)
 - [Phase 94]: 94-17: the digest date is pinned to the en-US M/D/YYYY, read as the calendar day in the host zone at the expiry instant (a zone-less string in the offset now, local_zone_at(now)); the locale policy for other process locales or UI languages is the todo 2026-11-24-humble-digest-date-is-en-us-only
 - [Phase 94]: 94-17: detect_and_notify_expiration_transitions takes an AlertOptions {suppress_notifications, notify_humble_expirations, steam_deck_game_mode} beside (ctx, keys) because the crate reads neither settings nor environment; a key whose dedupe record cannot be written is excluded from the digest and an unopenable store shows nothing, where the TS no-ops on a read-only store and re-fires every sync; 94-25 supplies the options
+- [Phase 94]: 94-18: every shortcut delete is gated on a creation proof (macOS bundle with the run.sh marker, a Desktop link to exactly the Applications bundle, a Linux .desktop with the Exec=xdg-open gamelib://launch? line, a Windows .lnk holding the UTF-16LE gamelib://launch?appName=) and goes through gamelib-safety remove_tree with the folder the item lives in as its trust root; an item the proof cannot read or attribute is refused and reported, replaying the 94-07 deltas
+- [Phase 94]: 94-18: the Linux proof also needs a [Desktop Entry] line and both file proofs refuse a file over 64 KiB; a macOS add writes no bundle when the shell executable is unknown; shortcuts_add answers bad-args for an empty title, an empty app name or an unknown runner while add_with_desktop (the golden seam, registry answer injected) accepts the title-less goldens
+- [Phase 94]: 94-18: caller contract for 94-22: the TS resolver resolves gogProductIcon lazily (only when the install has no goggame ico or support icon; an API failure is null, never a failed add) and passes notify true for the renderer and false for the store managers; steam_registration_wanted is the predicate 94-20 joins to the add
+- [Phase 94]: 94-18: shortcuts_dispatch::install takes the AppHandle and loads the locales catalog; ShellShortcutsUi raises the OS notification and the showDialog frame (no ack id); rpc_shortcuts_add and rpc_shortcuts_remove are not created until 94-22 registers the channels
 
 ### Pending Todos
 
@@ -1345,8 +1350,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T05:05:00.000Z
-Stopped at: Completed 94-17-PLAN.md
+Last session: 2026-11-24T07:30:00.000Z
+Stopped at: Completed 94-18-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
