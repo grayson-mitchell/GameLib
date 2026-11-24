@@ -4,7 +4,9 @@
 //! Every child's environment is built from a `FakeHome` (convention 2), except the one named
 //! real-profile arm below.
 
-use gamelib_core::process::{Pipe, ProcSpec, SpecRunner};
+#[cfg(unix)]
+use gamelib_core::process::Pipe;
+use gamelib_core::process::{ProcSpec, SpecRunner};
 use gamelib_proc::{global, SpecProcRunner};
 use gamelib_testutil::FakeHome;
 use std::sync::{Arc, Mutex};
