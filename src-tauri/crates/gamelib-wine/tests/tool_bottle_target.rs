@@ -536,3 +536,122 @@ async fn a_clean_exit_with_ordinary_output_ends_the_verb_installed() {
     assert_eq!(state["run"]["outcomes"][VERB], "installed", "{state}");
     assert!(error_lines(&state).is_empty(), "{}", state["run"]["log"]);
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Run EXE in prefix, winecfg and a game wine command target the same bottle (87-64 Task 3).
+//
+// CrossOver's own `wine` finds the bottle by `CX_BOTTLE`; the env builder gives a CrossOver target only that
+// (the TS environment, kept), so no `WINEPREFIX` is set. The test accepts either of the two shapes the plan
+// allows (`WINEPREFIX` is the bottle's directory, or it is absent) and refuses the one that is F3 (the stored
+// shared prefix).
+// ---------------------------------------------------------------------------------------------------------------
+
+fn wine_command_spawn(rig: &Rig) -> RecordedSpawn {
+    let wine = rig.cx_bin.join("wine");
+    rig.runner
+        .spawns()
+        .into_iter()
+        .find(|s| Path::new(&s.program) == wine)
+        .expect("CrossOver's wine was spawned")
+}
+
+fn assert_command_targets_the_bottle(rig: &Rig, spawn: &RecordedSpawn) {
+    assert_eq!(
+        spawn.env_set.get("CX_BOTTLE").map(String::as_str),
+        Some(rig.bottle.as_str()),
+        "CX_BOTTLE names the game's bottle: {:?}",
+        spawn.env_set
+    );
+    match spawn.env_set.get("WINEPREFIX") {
+        None => {}
+        Some(prefix) => assert_eq!(
+            Path::new(prefix),
+            rig.bottle_dir().as_path(),
+            "a WINEPREFIX, when there is one, is the bottle's directory"
+        ),
+    }
+    assert!(
+        !spawn
+            .env_set
+            .values()
+            .any(|v| v.contains(&*rig.shared_prefix().to_string_lossy())),
+        "no variable names the shared prefix: {:?}",
+        spawn.env_set
+    );
+    assert!(
+        !rig.shared_prefix().exists(),
+        "the shared prefix was created"
+    );
+}
+
+fn game_args(rig: &Rig, settings: &Value) -> Value {
+    json!({
+        "runner": RUNNER,
+        "appName": APP,
+        "settings": settings,
+        "folderName": "Trash Goblin",
+        "installPath": rig.home.root().join("games/trash-goblin"),
+    })
+}
+
+async fn tool_call(rig: &Rig, extra: Value, settings: &Value) -> Value {
+    let mut args = game_args(rig, settings);
+    for (key, value) in extra.as_object().unwrap() {
+        args[key] = value.clone();
+    }
+    gamelib_wine::dispatch("wine_tool_call", &[args, host_json()], &rig.ctx)
+        .await
+        .expect("the tool call answers")
+}
+
+#[tokio::test]
+async fn winecfg_for_a_bottle_backed_game_runs_in_its_bottle() {
+    let rig = Rig::new(ok_output(""));
+    let settings = engine_settings(&rig.resolve().await);
+    tool_call(&rig, json!({"tool": "winecfg"}), &settings).await;
+    let spawn = wine_command_spawn(&rig);
+    assert_eq!(spawn.argv, ["winecfg"]);
+    assert_command_targets_the_bottle(&rig, &spawn);
+}
+
+#[tokio::test]
+async fn winecfg_during_a_live_crossover_launch_runs_in_its_bottle() {
+    let rig = Rig::new(ok_output(""));
+    rig.start_live_launch();
+    let settings = engine_settings(&rig.resolve().await);
+    tool_call(&rig, json!({"tool": "winecfg"}), &settings).await;
+    assert_command_targets_the_bottle(&rig, &wine_command_spawn(&rig));
+}
+
+#[tokio::test]
+async fn run_exe_for_a_bottle_backed_game_runs_in_its_bottle_with_the_exe_as_one_argument() {
+    let rig = Rig::new(ok_output(""));
+    let settings = engine_settings(&rig.resolve().await);
+    // An exe path with a space, a quote and shell metacharacters stays one argv entry (T-87-114).
+    let exe = "/g/Trash Goblin/it's; rm -rf $(HOME) & setup.exe";
+    tool_call(&rig, json!({"tool": "runExe", "exe": exe}), &settings).await;
+    let spawn = wine_command_spawn(&rig);
+    assert_eq!(spawn.argv, [exe]);
+    assert_eq!(
+        spawn.cwd.as_deref(),
+        Some(Path::new("/g/Trash Goblin")),
+        "the exe's own folder is the working directory"
+    );
+    assert_command_targets_the_bottle(&rig, &spawn);
+}
+
+#[tokio::test]
+async fn a_game_wine_command_runs_in_the_games_bottle() {
+    let rig = Rig::new(ok_output(""));
+    let settings = engine_settings(&rig.resolve().await);
+    let mut args = game_args(&rig, &settings);
+    args["commandParts"] = json!(["cmd", "/c", "echo hi"]);
+    let result =
+        gamelib_wine::dispatch("wine_run_command_for_game", &[args, host_json()], &rig.ctx)
+            .await
+            .expect("the command answers");
+    assert_eq!(result["code"], 0, "{result}");
+    let spawn = wine_command_spawn(&rig);
+    assert_eq!(spawn.argv, ["cmd", "/c", "echo hi"]);
+    assert_command_targets_the_bottle(&rig, &spawn);
+}
