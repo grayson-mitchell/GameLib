@@ -18,6 +18,7 @@ pub mod launch;
 pub mod overlay;
 pub mod reader;
 pub mod registry;
+pub mod remote;
 pub mod types;
 
 /// The cancel token a long op takes, re-exported so the shell, which owns the renderer's cancel, needs
@@ -37,6 +38,7 @@ use tokio::runtime::{Builder, Handle, Runtime};
 pub const OPS: &[&str] = &[
     "knownfix_apply_profile_registry",
     "knownfix_apply_registry",
+    "knownfix_fetch_remote",
     "knownfix_launch_overrides",
     "knownfix_overlay_catalogue",
     "knownfix_profile_overlay_env",
@@ -193,6 +195,19 @@ async fn route(op: &str, args: &[Value], ctx: &KnownFixCtx) -> Result<Value, Str
             .await;
             serde_json::to_value(env).map_err(|_| format!("{op}:bad-result"))
         }
+        // The install-time download of a game's remote known fixes (88-11, D-03): GameLib's feed, then
+        // Heroic's on a 404, written filtered into `<appFolder>/fixes`. Answers `null` whatever happened (an
+        // indeterminate answer is a log line). Argument `{ appName, runner }`.
+        "knownfix_fetch_remote" => {
+            let args: FetchRemoteArgs = decode(op, args)?;
+            let runner =
+                types::Runner::parse(&args.runner).ok_or_else(|| format!("{op}:bad-args"))?;
+            if !bounded_name(&args.app_name) {
+                return Err(format!("{op}:bad-args"));
+            }
+            remote::fetch_remote_known_fixes(ctx, &args.app_name, runner).await;
+            Ok(Value::Null)
+        }
         _ => Err(format!("unknown op: {op}")),
     }
 }
@@ -203,6 +218,14 @@ const MAX_ENV_ENTRIES: usize = 256;
 /// An app name, app id or label: 1 to 256 UTF-16 units (the bound the other ops hold their names to).
 fn bounded_name(name: &str) -> bool {
     !name.is_empty() && name.encode_utf16().count() <= 256
+}
+
+/// The object argument of `knownfix_fetch_remote`.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct FetchRemoteArgs {
+    app_name: String,
+    runner: String,
 }
 
 /// The object argument of `knownfix_profile_overlay_env`.
@@ -390,6 +413,7 @@ mod tests {
         assert_eq!(sorted, OPS);
         assert!(OPS.contains(&"knownfix_apply_profile_registry"));
         assert!(OPS.contains(&"knownfix_apply_registry"));
+        assert!(OPS.contains(&"knownfix_fetch_remote"));
         assert!(OPS.contains(&"knownfix_launch_overrides"));
         assert!(OPS.contains(&"knownfix_overlay_catalogue"));
         assert!(OPS.contains(&"knownfix_profile_overlay_env"));
