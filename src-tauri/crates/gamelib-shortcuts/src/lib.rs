@@ -11,15 +11,18 @@
 
 pub mod ctx;
 pub mod exists;
+pub mod game;
 pub mod http;
 pub mod icns;
 pub mod icons;
 pub mod launch_url;
 pub mod linux;
 pub mod mac;
+pub mod notice;
 pub mod paths;
 pub mod proof;
 pub mod registry;
+pub mod remove;
 pub mod sanitize;
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
@@ -35,7 +38,7 @@ use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell. Keep sorted; each plan adds its own.
-pub const OPS: &[&str] = &["shortcuts_exist"];
+pub const OPS: &[&str] = &["shortcuts_exist", "shortcuts_remove"];
 
 /// The runner names a game can belong to, as the renderer and the sidecar spell them.
 const RUNNERS: &[&str] = &["gog", "legendary", "nile", "sideload", "steam"];
@@ -98,8 +101,17 @@ async fn route(op: &str, args: &[Value], ctx: &ShortcutsCtx) -> Result<Value, St
                 exists::shortcuts_exist(ctx, args.title.as_deref()).await,
             ))
         }
+        "shortcuts_remove" => {
+            let args: remove::RemoveArgs = decode(op, args)?;
+            to_value(op, remove::shortcuts_remove(ctx, args).await)
+        }
         _ => Err(format!("unknown op: {op}")),
     }
+}
+
+/// An op's outcome as the JSON the shell answers with.
+fn to_value<T: serde::Serialize>(op: &str, outcome: T) -> Result<Value, String> {
+    serde_json::to_value(outcome).map_err(|_| format!("{op}:serialize"))
 }
 
 /// The one object argument of an op, decoded strictly (the arg structs deny unknown fields). The

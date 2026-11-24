@@ -8,6 +8,10 @@
 //! spawns nothing and waits on nothing; an op before [`install`] answers `<op>:not-ready`. Every op
 //! runs inside the crate's `guarded` wrapper (a shutdown registrant raced against the token).
 //!
+//! D-17: what an add or remove says to the operator goes through [`ShellShortcutsUi`] (the OS notification
+//! and the renderer's dialog frame) with the notice text rendered from the bundled `locales` in the user's
+//! language, both installed in the context.
+//!
 //! D-21: the only child processes an op may start are `reg.exe` (the Windows Desktop folder) and
 //! `powershell.exe` (the Windows `.lnk` writer), through `SpecProcRunner` as a helper, hidden and bounded. The crate reads no environment variable; this file
 //! supplies the home, the app data folder, the Linux Desktop folder and the Windows expansion
@@ -20,8 +24,10 @@ use super::*;
 use std::path::{Path, PathBuf};
 
 use gamelib_core::clock::SystemClock;
+use gamelib_core::emitter::FrontendEmitter;
+use gamelib_i18n::Catalog;
 use gamelib_proc::spec::SpecProcRunner;
-use gamelib_shortcuts::ctx::{Platform, ShortcutPaths, ShortcutsCtx, ShortcutsLog};
+use gamelib_shortcuts::ctx::{Platform, ShortcutPaths, ShortcutsCtx, ShortcutsLog, ShortcutsUi};
 use gamelib_shortcuts::http::ReqwestHttp;
 use gamelib_store::host::StoreHost;
 
@@ -131,6 +137,78 @@ impl ShortcutsLog for ShellShortcutsLog {
     }
 }
 
+/// One way the shell reaches the operator, as a plain function so a test can record what the
+/// [`ShellShortcutsUi`] did without an `AppHandle`.
+type NotifySink = Box<dyn Fn(&str, &str) + Send + Sync>;
+type DialogSink = Box<dyn Fn(&str, &str, &str) + Send + Sync>;
+
+/// The `showDialog` frame the renderer's dialog handler takes (`dialog.ts` `showDialogBoxModalAuto`: title,
+/// message, type, no buttons). It carries no ack id: nothing waits on this dialog being shown.
+fn dialog_frame(title: &str, body: &str, kind: &str) -> Vec<Value> {
+    vec![
+        Value::String(title.to_string()),
+        Value::String(body.to_string()),
+        Value::String(kind.to_string()),
+        Value::Null,
+    ]
+}
+
+/// The shell's [`ShortcutsUi`] (D-17): what a shortcut op says to the operator.
+///
+/// - `notify` is the OS notification through `notification_show::show_notification`, the one delivery
+///   path `Notification.show()`, the engine and Humble share, with the title and body unchanged.
+/// - `show_dialog` is the [`dialog_frame`] pushed through the shell's [`FrontendEmitter`], so the
+///   renderer's dialog handler is unchanged.
+///
+/// Nothing here logs a title or a body (a title can carry a game name).
+pub(crate) struct ShellShortcutsUi {
+    notify: NotifySink,
+    dialog: DialogSink,
+}
+
+impl ShellShortcutsUi {
+    /// The production sinks over the app handle and the shell's emitter.
+    pub(crate) fn for_app(app: &AppHandle, emitter: Arc<dyn FrontendEmitter>) -> ShellShortcutsUi {
+        let notify_app = app.clone();
+        ShellShortcutsUi {
+            notify: Box::new(move |title, body| {
+                if notification_show::show_notification(&notify_app, Some(title), Some(body))
+                    .is_err()
+                {
+                    shell_log("shortcuts notification could not be shown");
+                }
+            }),
+            dialog: Box::new(move |title, body, kind| {
+                emitter.emit("showDialog", dialog_frame(title, body, kind));
+            }),
+        }
+    }
+
+    /// A UI whose sinks are the given functions, for a test.
+    #[cfg(test)]
+    pub(crate) fn with_sinks(notify: NotifySink, dialog: DialogSink) -> ShellShortcutsUi {
+        ShellShortcutsUi { notify, dialog }
+    }
+}
+
+impl ShortcutsUi for ShellShortcutsUi {
+    fn notify(&self, title: &str, body: &str) {
+        (self.notify)(title, body);
+    }
+
+    fn show_dialog(&self, title: &str, body: &str, kind: &str) {
+        (self.dialog)(title, body, kind);
+    }
+}
+
+/// The catalog notice text is rendered through, loaded from `locales_dir` in `language` (a shipped code or
+/// BCP-47 tag; `en` when `None`). It never fails: a missing or malformed file leaves the catalog empty and
+/// every notice renders its English default. Read once at install, so a language changed while GameLib
+/// runs reaches shortcut notices on the next start.
+fn load_catalog(locales_dir: &Path, language: Option<&str>) -> Arc<Catalog> {
+    Arc::new(Catalog::load(locales_dir, language.unwrap_or("en")))
+}
+
 /// Builds the context from its parts. Split from [`install`] so a unit test can build one on a fake
 /// home. Nothing here spawns, connects or waits.
 pub(crate) fn build_ctx(
@@ -154,7 +232,7 @@ pub(crate) fn build_ctx(
 
 /// Builds the one context and stores it. Called from `run_setup` after the store host opened and
 /// before the sidecar is spawned. A second call is ignored (the first context stays).
-pub(crate) fn install(user_data: &Path) {
+pub(crate) fn install(app: &AppHandle, user_data: &Path) {
     let Some(user_home) = user_home() else {
         shell_log("shortcuts context not installed: no home directory");
         return;
@@ -183,6 +261,18 @@ pub(crate) fn install(user_data: &Path) {
         expansion_env(platform),
         gamelib_core::shutdown::global().clone(),
     );
+    let emitter: Arc<dyn FrontendEmitter> =
+        Arc::new(steampoll_dispatch::TauriFrontendEmitter(app.clone()));
+    // The same locales folder and language the steampoll host and the Humble notices render from.
+    let (app_root, asset_dir) = steampoll_dispatch::app_root_and_asset_dir(app);
+    let language = gamelib_steampoll::profile::SidecarProfile::current()
+        .and_then(|profile| profile.language());
+    let ctx = ctx
+        .with_ui(Arc::new(ShellShortcutsUi::for_app(app, emitter)))
+        .with_catalog(load_catalog(
+            &app_root.join(asset_dir).join("locales"),
+            language.as_deref(),
+        ));
     let _ = SHORTCUTS_CTX.set(Arc::new(ctx));
 }
 
@@ -211,6 +301,7 @@ mod tests {
     use super::*;
     use gamelib_testutil::FakeHome;
     use serde_json::json;
+    use std::sync::Mutex;
 
     /// A context on a fake home with the host's own platform.
     fn test_ctx(home: &FakeHome, platform: Platform) -> ShortcutsCtx {
@@ -438,5 +529,88 @@ mod tests {
                 None
             );
         }
+    }
+
+    /// Every notification and dialog a [`ShellShortcutsUi`] was asked for, one line each.
+    type UiCalls = Arc<Mutex<Vec<String>>>;
+
+    fn recording_ui() -> (ShellShortcutsUi, UiCalls) {
+        let calls: UiCalls = Arc::new(Mutex::new(Vec::new()));
+        let (notified, dialogged) = (Arc::clone(&calls), Arc::clone(&calls));
+        let ui = ShellShortcutsUi::with_sinks(
+            Box::new(move |title, body| {
+                notified
+                    .lock()
+                    .unwrap()
+                    .push(format!("notify {title}|{body}"));
+            }),
+            Box::new(move |title, body, kind| {
+                dialogged
+                    .lock()
+                    .unwrap()
+                    .push(format!("dialog {title}|{body}|{kind}"));
+            }),
+        );
+        (ui, calls)
+    }
+
+    #[test]
+    fn the_shell_ui_passes_a_notification_and_a_dialog_to_its_sinks_unchanged() {
+        let (ui, calls) = recording_ui();
+        ui.notify(
+            "Shortcuts",
+            "Shortcuts were created on Desktop and Start Menu",
+        );
+        ui.show_dialog("Steam", "Added", "MESSAGE");
+        assert_eq!(
+            *calls.lock().unwrap(),
+            [
+                "notify Shortcuts|Shortcuts were created on Desktop and Start Menu",
+                "dialog Steam|Added|MESSAGE"
+            ]
+        );
+    }
+
+    #[test]
+    fn a_dialog_is_the_show_dialog_frame_with_no_buttons_and_no_ack_id() {
+        assert_eq!(
+            dialog_frame("T", "B", "ERROR"),
+            vec![json!("T"), json!("B"), json!("ERROR"), Value::Null]
+        );
+    }
+
+    #[test]
+    fn the_context_carries_the_ui_and_the_catalog_and_renders_a_notice_through_them() {
+        let home = FakeHome::new("gamelib-shortcuts-dispatch-");
+        let locales = home.root().join("locales").join("en");
+        std::fs::create_dir_all(&locales).unwrap();
+        std::fs::write(
+            locales.join("translation.json"),
+            "{\"box\": {\"shortcuts\": {\"title\": \"Verknuepfungen\"}}}",
+        )
+        .unwrap();
+        let (ui, calls) = recording_ui();
+        let ctx = test_ctx(&home, Platform::Linux)
+            .with_ui(Arc::new(ui))
+            .with_catalog(load_catalog(&home.root().join("locales"), None));
+        let catalog = ctx.catalog.as_ref().expect("the catalog was loaded");
+        let none = serde_json::Map::new();
+        // A key in the bundle is rendered; one that is not falls back to its default.
+        assert_eq!(
+            catalog.t("box.shortcuts.title", "Shortcuts", &none),
+            "Verknuepfungen"
+        );
+        assert_eq!(
+            catalog.t("box.shortcuts.error", "Fallback", &none),
+            "Fallback"
+        );
+        ctx.ui.as_ref().expect("the ui was set").notify("t", "b");
+        assert_eq!(*calls.lock().unwrap(), ["notify t|b"]);
+        // A missing folder is an empty catalog, never a failure.
+        let empty = load_catalog(&home.root().join("no-such-locales"), Some("de"));
+        assert_eq!(
+            empty.t("box.shortcuts.title", "Shortcuts", &none),
+            "Shortcuts"
+        );
     }
 }

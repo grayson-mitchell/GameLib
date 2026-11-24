@@ -9,7 +9,7 @@
 //!
 //! Pinned to the TS by the `golden/exists` replay.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::ctx::{Platform, ShortcutPaths, ShortcutsCtx};
 use crate::paths::shortcut_files;
@@ -39,6 +39,17 @@ pub fn shortcuts_exist_at(
     desktop.as_deref().is_some_and(present) || menu.as_deref().is_some_and(present)
 }
 
+/// The Windows Desktop folder, read from the registry (D-12); `None` off Windows. On Windows no answer (no
+/// runner, a failed query, an absent value) means there is no Desktop path, never a guessed one.
+pub(crate) async fn windows_desktop_for(ctx: &ShortcutsCtx) -> Option<PathBuf> {
+    match (ctx.platform, ctx.proc.as_deref()) {
+        (Platform::Windows, Some(proc)) => {
+            registry::windows_desktop_dir(proc, &ctx.expand_env).await
+        }
+        _ => None,
+    }
+}
+
 /// The `shortcuts_exist` op body: reads the Windows Desktop from the registry on Windows (D-12) and
 /// answers whether either shortcut file is present.
 pub async fn shortcuts_exist(ctx: &ShortcutsCtx, title: Option<&str>) -> bool {
@@ -46,14 +57,7 @@ pub async fn shortcuts_exist(ctx: &ShortcutsCtx, title: Option<&str>) -> bool {
         ctx.note("shortcuts_exist: no title, shortcut lookup skipped");
         return false;
     }
-    // On Windows the Desktop is a registry known folder (D-12): no answer (no runner, a failed query,
-    // an absent value) means there is no Desktop path, never a guessed one.
-    let windows_desktop = match (ctx.platform, ctx.proc.as_deref()) {
-        (Platform::Windows, Some(proc)) => {
-            registry::windows_desktop_dir(proc, &ctx.expand_env).await
-        }
-        _ => None,
-    };
+    let windows_desktop = windows_desktop_for(ctx).await;
     shortcuts_exist_at(
         ctx.platform,
         &ctx.paths,
@@ -66,7 +70,6 @@ pub async fn shortcuts_exist(ctx: &ShortcutsCtx, title: Option<&str>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
 
     #[test]
     fn an_empty_path_is_not_present() {

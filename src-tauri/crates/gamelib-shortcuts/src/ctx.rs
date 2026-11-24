@@ -7,6 +7,7 @@ use std::sync::Arc;
 use gamelib_core::clock::Clock;
 use gamelib_core::process::SpecRunner;
 use gamelib_core::shutdown::Shutdown;
+use gamelib_i18n::Catalog;
 use gamelib_store::host::StoreHost;
 
 use crate::http::{Http, NoHttp};
@@ -56,6 +57,16 @@ pub trait ShortcutsLog: Send + Sync {
     fn line(&self, text: &str);
 }
 
+/// What an op says to the operator (D-17), supplied by the shell. A notice is the OS notification a
+/// renderer-path add or remove raises; a dialog is the in-app modal the Add-to-Steam step shows. Neither
+/// carries a game title or path into a log line (the shell implements this without logging either).
+pub trait ShortcutsUi: Send + Sync {
+    /// An OS notification with the title and body unchanged.
+    fn notify(&self, title: &str, body: &str);
+    /// The renderer's modal dialog frame; `kind` is the dialog type (`MESSAGE`, `ERROR`).
+    fn show_dialog(&self, title: &str, body: &str, kind: &str);
+}
+
 /// Everything an op needs from outside the crate. Fields are public so the shell can fill the ones a
 /// later plan adds; [`ShortcutsCtx::new`] gives each a neutral default.
 pub struct ShortcutsCtx {
@@ -87,6 +98,12 @@ pub struct ShortcutsCtx {
     pub http: Arc<dyn Http>,
     /// Where an op's diagnostic line goes, if anywhere.
     pub log: Option<Arc<dyn ShortcutsLog>>,
+    /// Where a notice or dialog goes. `None` headless: nothing is shown, as for `notify: false`.
+    pub ui: Option<Arc<dyn ShortcutsUi>>,
+    /// The catalog notice text is rendered through, loaded by the shell from the bundled `locales` in the
+    /// user's language. `None`: every notice renders its English default, which is also what a missing
+    /// key renders.
+    pub catalog: Option<Arc<Catalog>>,
 }
 
 impl ShortcutsCtx {
@@ -108,6 +125,8 @@ impl ShortcutsCtx {
             system_root: None,
             http: Arc::new(NoHttp),
             log: None,
+            ui: None,
+            catalog: None,
         }
     }
 
@@ -150,6 +169,18 @@ impl ShortcutsCtx {
     /// Installs the diagnostic sink.
     pub fn with_log(mut self, log: Arc<dyn ShortcutsLog>) -> ShortcutsCtx {
         self.log = Some(log);
+        self
+    }
+
+    /// Installs the notice and dialog sink.
+    pub fn with_ui(mut self, ui: Arc<dyn ShortcutsUi>) -> ShortcutsCtx {
+        self.ui = Some(ui);
+        self
+    }
+
+    /// Installs the catalog notice text is rendered through.
+    pub fn with_catalog(mut self, catalog: Arc<Catalog>) -> ShortcutsCtx {
+        self.catalog = Some(catalog);
         self
     }
 

@@ -7,6 +7,8 @@ use std::time::Duration;
 
 use gamelib_core::process::{BoxFuture, LineSink, ProcSpec, SpecOutput, SpecRunner};
 
+use crate::ctx::ShortcutsUi;
+
 /// One spawn a [`ScriptedRunner`] saw: the fields of the [`ProcSpec`] a golden pins.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordedSpawn {
@@ -64,5 +66,49 @@ impl SpecRunner for ScriptedRunner {
         }
         let answer = self.answer.clone();
         Box::pin(async move { answer })
+    }
+}
+
+/// A [`ShortcutsUi`] that keeps every notification and dialog it was asked for, `(title, body)` and
+/// `(title, body, kind)`, in order.
+#[derive(Default)]
+pub struct RecordingUi {
+    notices: Mutex<Vec<(String, String)>>,
+    dialogs: Mutex<Vec<(String, String, String)>>,
+}
+
+impl RecordingUi {
+    /// Every `(title, body)` notification, in order.
+    pub fn notices(&self) -> Vec<(String, String)> {
+        match self.notices.lock() {
+            Ok(guard) => guard.clone(),
+            Err(poisoned) => poisoned.into_inner().clone(),
+        }
+    }
+
+    /// Every `(title, body, kind)` dialog, in order.
+    pub fn dialogs(&self) -> Vec<(String, String, String)> {
+        match self.dialogs.lock() {
+            Ok(guard) => guard.clone(),
+            Err(poisoned) => poisoned.into_inner().clone(),
+        }
+    }
+}
+
+impl ShortcutsUi for RecordingUi {
+    fn notify(&self, title: &str, body: &str) {
+        let entry = (title.to_string(), body.to_string());
+        match self.notices.lock() {
+            Ok(mut guard) => guard.push(entry),
+            Err(poisoned) => poisoned.into_inner().push(entry),
+        }
+    }
+
+    fn show_dialog(&self, title: &str, body: &str, kind: &str) {
+        let entry = (title.to_string(), body.to_string(), kind.to_string());
+        match self.dialogs.lock() {
+            Ok(mut guard) => guard.push(entry),
+            Err(poisoned) => poisoned.into_inner().push(entry),
+        }
     }
 }

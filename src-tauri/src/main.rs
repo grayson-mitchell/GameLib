@@ -1943,7 +1943,7 @@ fn run_setup(
     // Phase 94 (SVC-05, D-20): the one shortcuts context, built right after the host opened. Nothing here
     // spawns a process or waits; an op before this answers not-ready.
     if let Some(paths) = log_paths.as_ref() {
-        shortcuts_dispatch::install(std::path::Path::new(&paths.user_data));
+        shortcuts_dispatch::install(app.handle(), std::path::Path::new(&paths.user_data));
     }
     // Phase 94 (SVC-04, D-20): the one Humble context, built right after the host opened. Nothing here
     // spawns a process or waits; an op before this answers not-ready.
