@@ -12,6 +12,7 @@ pub mod app_id_resolver;
 pub mod classify;
 pub mod ctx;
 pub mod dedup;
+pub mod expiration_alerts;
 pub mod http;
 pub mod js_date;
 pub mod js_value;
