@@ -218,23 +218,25 @@ the transcript for an app log line.
 
 ## Required literals
 
-Sinks are `gamelib.log` unless stated. The emitters named are the Rust crate lines at authoring (HEAD `b81419c02`), which write
-through `ctx.log`. At authoring the shell's `build_ctx` calls no `with_log`, so `ctx.log` is `None` and none of these reaches
-a log (87-59's deferred engine-log gap). Plan 87-61 wires a `ShellEngineLog` that writes each line to `gamelib.log` as a
-`[Shell]` line through the redactor. Every row is therefore CONDITIONAL on 87-61, and 87-69 Task 1 re-greps each literal at
-the shipped gap code, resolves the row, and also confirms the redacted form still contains the literal. For a row that must
-be ABSENT the re-check also confirms the presence case would log.
+Sinks are `gamelib.log` unless stated. Authored by 87-60 at HEAD `b81419c02`, when the shell's `build_ctx` called no `with_log`, so
+`ctx.log` was `None` and none of these reached a log (87-59's deferred engine-log gap). 87-69 Task 1 re-grepped every row at the
+shipped gap source (`release/v0.13.1` `97d6d2052`, whose production code is `07b194604`) and resolved it: 87-61 wired a
+`ShellEngineLog` (`engine_dispatch.rs:309`, `:329`) that writes each crate line to `gamelib.log` as a `[Shell]` line through
+the redactor, and the literal-survival tests in `src-tauri/src/engine_log.rs` name the rows below. Each row's Status is its
+resolution; the grep evidence is in `## Pre-run re-check`. For a row that must be ABSENT the re-check also confirmed the
+presence case still logs.
 
-| Literal | Emitter (planned) | Sink | Status |
+| Literal | Emitter (as shipped) | Sink | Status |
 |---|---|---|---|
-| `launch blocked before pre-flight while offline (crossover-missing)` (the offline gate's warning, item 1) | `step.warn` at `launch/step.rs:529-532`, the arm text from `arm.as_str()`; 87-63 may move the gate, so the line is re-read there | `gamelib.log` as a `[Shell]` WARNING line via 87-61's engine log | CONDITIONAL, `re-check: 87-69 Task 1` (87-61 wires the sink; 87-63 may change the emitter's place and text) |
-| `[engine-notice] key=<k> tag=engine-download-failed dispatched=in-app-dialog+notify` with `display=pending`, then `display=confirmed` or `unconfirmed` (the refusal's display lines, items 1 and 2) | `launch/dialogs.rs:188` and `settled_line` `:71` | `gamelib.log` as `[Shell]` | CONDITIONAL, `re-check: 87-69 Task 1` (sink by 87-61; the redacted form keeps the key and tag) |
-| `Engine: downloading <kind> <version>`, `Engine: verifying <kind>`, `Engine: extracting <kind>` (the pinned engine's first-need download, item 2) | `fallback/ensure.rs:608`, `:644`, `:666` | `gamelib.log` as `[Shell]` | CONDITIONAL, `re-check: 87-69 Task 1` (sink by 87-61) |
-| `Engine: <key> launch deadline fired (` and `Engine: <key> launch deadline notice surface=in-app pushed=<b> raise=false` (the 180 s hold, item 3; the notice line must show `raise=false`) | `launch/deadline.rs:250` and `:288`; the engine-notice line `launch/dialogs.rs:207` | `gamelib.log` as `[Shell]` | CONDITIONAL, `re-check: 87-69 Task 1` (sink by 87-61). A log line proves intent, not that nothing raised the window: the frontmost-application observation scores the no-raise |
-| `Not creating DXMT copy of` (the DXMT skip line, item 6) | `gamelib-wine` `tools/dxmt.rs:147` | `gamelib.log` as `[Shell]` | CONDITIONAL, `re-check: 87-69 Task 1` (sink by 87-61). If the install creates a `-DXMT` copy instead, the line is absent and the half scores on the copy |
-| the bottle-removal outcome line (fixed text plus the bottle name, item 7) | added by 87-66 in `gamelib-engine` bottles, one line per failing step, run through 87-61's redactor; the `removePrefix` route of 87-70 logs its own fixed-text line when it refuses | `gamelib.log` as `[Shell]` (engine line) or `[Backend]` (route line) | CONDITIONAL, `re-check: 87-69 Task 1` (the exact text exists only after 87-66 and 87-70 execute; a successful removal may log nothing, so the success path is scored by the directory and the sibling bytes, never by a log absence) |
-| `GAMELIB_IPC_INVALID_ARGS` for channel `installWineVersion` (**ABSENT**, item 6) | the renderer's `IpcValidationError` frame as `[ERROR][Frontend] Installing <version> failed: IpcValidationError: [GAMELIB_IPC_INVALID_ARGS] ... 'installWineVersion'` | `gamelib.log` | CONDITIONAL, `re-check: 87-69 Task 1` (the absence is only meaningful if 87-62 left the decoder able to emit the presence case for a wrong-typed key). The presence case is measured: 87-59's `gamelib-launch-3-wine.log` carries it at 21:30:20-21:30:40 |
-| `store frame rejected` and `refused a store write:` (**ABSENT**, items 4 and 6; the engine notices and the wine-downloader store are written through the same host) | `store_dispatch.rs:449` (`WARN: store frame rejected: <reason>`) and `store_native.rs:423` (`WARN: native <channel> refused a store write: <kind>`) | `gamelib.log` as `[Shell]` | CONDITIONAL, `re-check: 87-69 Task 1` (87-62 touches the install shim; the re-check confirms both lines still exist, so the absence stays falsifiable) |
+| `Engine: <key> launch blocked before pre-flight while offline (<arm>)` with `<arm>` `crossover-missing` (or `restore-needs-pin`), a WARNING line (the offline gate's warning, item 1). The `Engine: <key> ` prefix is `Step::warn`'s | `step.warn` at `launch/step.rs:578-581`, the arm text from `arm.as_str()` | `gamelib.log` as a `[WARNING] [Shell]` line via 87-61's engine log | REACHABLE as amended: the emitter moved from `:529-532` to `:578-581` and the written line carries the `Engine: <key> ` prefix; the gate logic is unchanged by 87-63 |
+| `Engine: <key> offline gate: request-offline=<b> context-online=<b> on-bottle=<b> override=<id> crossover-missing=<b> current-pin-installed=<b> marker=<kind\|none> restore-needs-pin=<b> verdict=<blocked:<arm>\|proceeds>` (the gate's reading, an INFO line written whenever either offline signal says offline; item 1's discriminating evidence for F1, added by 87-63) | `Step::note` and `offline_gate_line`, `launch/step.rs:364` and the call before the refusal | `gamelib.log` as an `[INFO] [Shell]` line | REACHABLE as an added row (87-63 postdates the contract). It is the F1 discriminator: `request-offline=false` is the TS caller, `request-offline=true context-online=true` is a lost `engine_set_online`, `verdict=proceeds` names the layer that let the launch through |
+| `[engine-notice] key=<k> tag=engine-download-failed dispatched=in-app-dialog+notify dialog-frame-sent=<b> display=pending`, then `[engine-notice] key=<k> tag=engine-download-failed display=confirmed` or `display=unconfirmed` (the refusal's display lines, items 1 and 2) | `launch/dialogs.rs:188` (pending) and `settled_line` `:71` (confirmed or unconfirmed, with a trailing `elapsedMs=<n>` or `timeout=<n>`) | `gamelib.log` as `[Shell]` | REACHABLE as amended: the pending line carries `dialog-frame-sent=<b>` between `dispatched=` and `display=`, which the contract's text omitted; the redacted form keeps `key=` and `tag=` (`key` is not a redacted key) |
+| `Engine: downloading <name> <version>`, `Engine: verifying <name>`, `Engine: extracting <name>` for `<name>` `wine` and `dxvk` (six lines for a first-need pin download; item 2) | `fallback/ensure.rs:608`, `:644`, `:666` (`env.info`) | `gamelib.log` as `[Shell]` | REACHABLE as amended: `<kind>` in the contract is the artifact name `wine` or `dxvk`, and the lines have no `Engine: <key>` prefix |
+| `Engine: <key> launch deadline fired (` and `Engine: <key> launch deadline notice surface=in-app pushed=<b> raise=false`, plus `[engine-notice] key=<k> tag=launch-deadline-unconfirmed dispatched=notify raise=false` (the 180 s hold, item 3; the notice line must show `raise=false`) | `launch/deadline.rs:250` and `:288`; `launch/dialogs.rs:207` with `NOTICE_TAG` `launch-deadline-unconfirmed` (`deadline.rs:43`) | `gamelib.log` as `[Shell]` | REACHABLE as amended. A fourth line, `Engine: launch deadline fired for key <k> after <ms> ms (no game process seen)` (`deadline.rs:223`), has no `(` after `fired` and is not the literal: count the parenthesised form only. A log line proves intent, not that nothing raised the window: the frontmost-application observation scores the no-raise |
+| `Not creating DXMT copy of <version>: <path> <reason>; missing ...` (the DXMT skip line, item 6; the path is redacted to `~`) | `gamelib-wine` `tools/dxmt.rs:144-147` (`log_warn`, text `Not {action} DXMT copy of ...` with `action` `creating` on an install) | `gamelib.log` as `[WARNING] [Shell]` | REACHABLE as amended: a WARNING line whose path part reads `~`. If the install creates a `-DXMT` copy instead, the line is absent and the half scores on the copy |
+| the bottle-removal lines: on a failing or declined step `removePerGameBottle: <fixed text> "<bottle>"...` from the engine (`bottles/remove_per_game.rs:211-324`, seven `warn` sites, `[WARNING] [Shell]`); on the route's success `Removed the game bottle` (`utils/uninstaller.ts:187`, `[INFO] [Backend]`); on a route failure `removePrefix: the per-game bottle removal did not answer` or `... gave an unreadable answer` (`:168`, `:176`, `[WARNING] [Backend]`) (item 7) | 87-66 in `gamelib-engine` bottles; 87-70's `removeOwnBottle` in `uninstaller.ts` | `gamelib.log` as `[Shell]` (engine lines) or `[Backend]` (route lines) | REACHABLE as amended: the exact texts exist. A refused removal logs the engine `removePerGameBottle:` line (the in-use, guard-declined and unsafe cases) and shows the notice. The success path is still scored by the bottle directory and the sibling bytes, never by a log line or a log absence; `Removed the game bottle` corroborates it |
+| `GAMELIB_IPC_INVALID_ARGS` for channel `installWineVersion` (**ABSENT**, item 6) | the renderer's `IpcValidationError` frame as `[ERROR][Frontend] Installing <version> failed: IpcValidationError: [GAMELIB_IPC_INVALID_ARGS] ... 'installWineVersion'` (`WineItem/index.tsx:77` logs it; `wine_dispatch.rs` `parse_wine_version` raises it) | `gamelib.log` | REACHABLE: 87-62 defaults only the absent `isInstalled`, `hasUpdate` and `installDir`; a wrong-typed value (`"isInstalled": "yes"`, `installDir: 1`, an over-long `installDir`) is still rejected with `0.<key>` `invalid_type` or `too_big` (`wine_dispatch.rs` tests at `:1608-1621`, `:1669-1681`), so the absence stays falsifiable. The presence case is measured: 87-59's `gamelib-launch-3-wine.log` carries it at 21:30:20-21:30:40 |
+| `store frame rejected` and `refused a store write:` (**ABSENT**, items 4 and 6; the engine notices and the wine-downloader store are written through the same host) | `store_dispatch.rs:449` (`WARN: store frame rejected: <reason>`) and `store_native.rs:423` (`WARN: native <channel> refused a store write: <kind>`) | `gamelib.log` as `[Shell]` | REACHABLE: both emitters still exist at the gap source, so the absence stays falsifiable |
 
 Observation rows (no log line; scored by the operator's report, with the matching file state): the refusal dialog text "(offline)"
 in item 1; the renderer's `engine-download` status leaving after the refusal (`GamePage/index.tsx:196`, label
@@ -386,6 +388,99 @@ or different from the per-game name.
 - DXVK install and restore on a bottle-backed game: hidden by design (`GamesSettings/index.tsx:276`), kept blocked as in 87-59.
 - A `-DXMT` copy while no feed's `winemac.so` exports the macdrv metal-view symbols: scored by the skip line instead (item 6).
 - GPTK and bottled Steam as engines (D-20): not engines the engine step selects, so no item scores them.
+
+## Pre-run re-check
+
+Run by 87-69 Task 1 on 2026-11-25, before any launch of the gap build. Read-only: nothing was launched, copied, edited or
+restored on the operator's profile, bottles or licence, and `/Applications/GameLib.app` is still the signed 0.13.0 build. The
+checks are `git grep` and `git show` against the gap build's source and read-only `ls`, `codesign -dv`, `PlistBuddy` and a
+key-listing of one store file (names only, no values).
+
+### Gap build identity
+
+The line below is copied verbatim from `87-VALIDATION.md` under `### Phase 87 gap build (87-68)`. Its status is `pending`, not
+`blocked`, so the re-run proceeds on the signed build.
+
+Gate (gap build): pending (identities match: signed Phase 87 gap build v0.13.1, run 45455431706, `release/v0.13.1` at 97d6d2052 = main 07b194604 + the version bump, same Identifier, Developer ID leaf, TeamIdentifier S7U223QWXJ and byte-identical designated requirement (sha256 68d712d0...) as the installed signed 0.13.0 build (run 45314401170) and the signed Phase 86 build v0.12.0 (run 45056179067); notarized and stapled; contains every 87-60 to 87-67 and 87-70 gap fix)
+
+- Source under test: `release/v0.13.1` at `97d6d2052fdf92b7f7e28ef584ab4df5674f577d` = main `07b194604` plus one version-bump
+  commit. `git diff --name-only 07b194604 97d6d2052` lists exactly `package.json`, `src-tauri/Cargo.lock`,
+  `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`. Main's HEAD since then adds only `.planning/` files, so every grep
+  below at `97d6d2052` reads the shipped production code. Every path and line number below is at that commit.
+- Installed now (read-only): `/Applications/GameLib.app` is `0.13.0`, `Identifier=com.gamelib.shell`,
+  `TeamIdentifier=S7U223QWXJ`, `CDHash=18d7ea76c1f0758325b0976c643496d28c3b861d`, the 87-59 build. No GameLib process is running.
+  The gap build's `CDHash` is `266b7378d08b90e305efe37d2573270b01b146dd` (87-68's record); P8 re-reads it after the install.
+
+### Literal rows, resolved
+
+Each row of `## Required literals` was re-grepped at the gap source: the emitter exists, it writes through `ctx.log` (wired by
+87-61 at `engine_dispatch.rs:309` and `:329`, redacted by `ShellEngineLog::write` at `engine_log.rs:59`) or through
+`shell_log`, and the literal survives the redactor (87-61's literal-survival tests in `engine_log.rs`:
+`the_refusal_dialog_line_keeps_its_display_pending_literal`, `the_deadline_notice_line_keeps_its_raise_false_literal`,
+`the_engine_download_lines_keep_their_literals`, `the_launch_deadline_lines_keep_their_literals`,
+`the_offline_gate_warning_keeps_its_literal`, `the_dxmt_skip_line_keeps_its_literal_and_loses_its_profile_path`).
+
+| Row | Item | Resolution | Evidence |
+|---|---|---|---|
+| offline gate warning | 1 | REACHABLE as amended | emitter `launch/step.rs:578-581` (`step.warn`, arm word from `arm.as_str()`: `crossover-missing` or `restore-needs-pin`), written as `Engine: <key> ` plus the text; the gate fires only when the game is on a bottle, the request says offline and the override is Automatic or CrossOver (`step.rs:557`), and with CrossOver missing and the pin absent the arm is `crossover-missing` (`offline.rs:95-115`). The contract's old line numbers `:529-532` moved; the text did not |
+| offline gate reading (added row) | 1 | REACHABLE as an added row | `offline_gate_line` at `launch/step.rs:364`, written by `Step::note` as `Engine: <key> offline gate: request-offline=... verdict=...` whenever either signal says offline, refused or not. This is 87-63's instrument for F1, whose root cause 87-63 did not establish (every layer was green at HEAD); the live line is what names it |
+| `[engine-notice] ... display=pending`, then `confirmed` or `unconfirmed` | 1, 2 | REACHABLE as amended | `launch/dialogs.rs:188` (pending, with `dialog-frame-sent=<b>` before `display=`, which the old row omitted), `settled_line` `:71` used at `:122` (`timeout=<n>`) and `:145` (`elapsedMs=<n>`); `key=` is not a redacted key (`engine_log.rs` `is_sensitive_key`: only `username`, `session`, `account`, `accountname`, `login` and the `token`, `password`, `passwd`, `secret`, `apikey`, `api_key`, `authorization`, `cookie` suffixes) |
+| `Engine: downloading`, `verifying`, `extracting` | 2 | REACHABLE as amended | `fallback/ensure.rs:608`, `:644`, `:666`; `<kind>` is the artifact name `wine` or `dxvk`, and these lines carry no `Engine: <key>` prefix; a first-need pin download writes six lines |
+| `launch deadline fired (` and `notice ... raise=false` | 3 | REACHABLE as amended | `launch/deadline.rs:250` and `:288`, `launch/dialogs.rs:207` with `NOTICE_TAG` `launch-deadline-unconfirmed` (`deadline.rs:43`); armed from `lib.rs:601` through `arm_engine_launch_deadline` (`step.rs:889`). The extra line at `deadline.rs:223` reads `fired for key`, with no `(`, so it is not counted as the literal |
+| `Not creating DXMT copy of` | 6 | REACHABLE as amended | `gamelib-wine` `tools/dxmt.rs:144-147`, `log_warn`, `Not {action} DXMT copy of {version}: {winemac_path} {reason}; missing ...`; the home path comes out as `~` (the engine-log test pins it). A `-DXMT` copy scores the half instead if the install makes one |
+| bottle-removal lines | 7 | REACHABLE as amended | engine: seven `removePerGameBottle: ...` `warn` sites at `bottles/remove_per_game.rs:211-324` (cxbottle did not finish, unsafe name, in use, guard declined, no CrossOver install, guard now declines, could not remove); route: `Removed the game bottle` at `utils/uninstaller.ts:187` and two WARNING lines at `:168` and `:176`. A successful removal is scored by the directory and the sibling bytes; the route's `Removed the game bottle` line corroborates |
+| `GAMELIB_IPC_INVALID_ARGS` for `installWineVersion` (absent) | 6 | REACHABLE | 87-62's `parse_wine_version` (`wine_dispatch.rs:252`) defaults only the absent `isInstalled`, `hasUpdate` and `installDir` (`:241-243`); a wrong-typed or over-long value still answers `0.<key>` `invalid_type` or `too_big` (tests `:1608-1621`, `:1669-1681`), so the presence case can still be emitted and the absence is falsifiable |
+| `store frame rejected` and `refused a store write:` (absent) | 4, 6 | REACHABLE | `store_dispatch.rs:449` and `store_native.rs:423` exist at the gap source with the quoted texts, so the absence is falsifiable |
+
+IMPOSSIBLE rows: none. No row needed amending to an observation row. The three 87-59 rows that scored IMPOSSIBLE (the engine
+lines, the deadline lines, the DXMT line, all because `ctx.log` was `None`) are REACHABLE now through 87-61's wiring, and the
+shell tests that prove the wiring end to end are `an_offline_launch_with_no_engine_is_refused_and_the_gate_warning_reaches_gamelib_log`
+(`engine_dispatch.rs`, 87-63) and `a_crate_line_written_during_an_op_reaches_gamelib_log_as_a_shell_warning` (`engine_log.rs`, 87-61).
+
+### Structural reachability rows that were CONDITIONAL, resolved
+
+These resolve the Test 1, 3, 6 and 7 rows of `## Structural Reachability Review` (left as authored; this section supersedes
+their CONDITIONAL marks). Each gesture is traced to the component that renders its control, in the state the item assumes.
+
+| Item | Gesture and component | Resolution |
+|---|---|---|
+| 4 (failed state) | Apply a verb in `screens/Settings/sections/WinetricksSettings/index.tsx` (verbs whose last attempt failed are folded from queue outcomes at `:141`, outcomes read at `:466`) | REACHABLE as amended: 87-64 found a non-zero exit already ends the verb `failed` (the tab renders it), and added one closed rule, `regedit: The file '<path>' was not found`, which ends the verb `failed` even on exit 0 (`winetricks/classify.rs:177`, `install.rs:484`). The offline download verb must exit non-zero for a failed row; see the live re-check list |
+| 6 (list follows) | Install on a row of `screens/WineManager/index.tsx`; the list re-reads in `handleWineVersionsUpdated` (`:86-93`, `window.api.handleWineVersionsUpdated`) | REACHABLE: 87-62 queues `wineVersionsUpdated` behind the store host's pending changes (`engine_dispatch.rs:265-303`, `AFTER_STORE_CHANGES`), so the renderer snapshot is patched before the list re-reads. The ordering is proven in tests (`wine_dispatch.rs` `:2070-2105`); the live list following without a restart is the observation |
+| 7 (bottle toggle) | `components/UI/UninstallModal/index.tsx`. The toggle is `<ToggleSwitch htmlId="uninstallCheckbox" ...>` at `:278-298`, labelled `gamelib:uninstall.removeBottle` with the bottle name when `bottleName` is set (`:282-286`) and the old `gamepage:box.uninstall.checkbox` prefix label otherwise, `disabled={disableDeleteWine}` (`:294`), shown when `showWineCheckbox` (`:182`: not native, not DLC, not a Steam hand-off). `bottleName` is set only when `window.api.getPerGameBottleName({ runner, appName })` equals the stored `wineCrossoverBottle` (`:110-116`), and `disableDeleteWine` is true only when there is no per-game bottle and the stored prefix equals the default (`:132-135`); the risk warning is `:300-307` and the disabled note `:308` | REACHABLE as amended: the control exists in the state the item assumes (a game whose stored `wineCrossoverBottle` is its per-game name enables the toggle and names the bottle). A game with no `wineCrossoverBottle`, or a different one, on the default prefix reaches the disabled toggle, which is what the three-theme legibility check needs. `getPerGameBottleName` is a native engine channel (`nativeChannels.json:1906`, preload `api/engine.ts:11`) |
+| 5 (Stop) | `MainButton.tsx` Stop control while `is.playing` | REACHABLE, unchanged. 87-65 routes a CrossOver overlay's Stop to the bottle's wineserver (`utils.ts` `shutdownWine`) through the guarded `engine_bottle_kill_wineserver` op |
+
+### State the operator's profile is in (read-only)
+
+- The pinned engine IS installed: `~/Library/Application Support/gamelib/tools/steam-engines/` holds
+  `wine-staging-11.20` and `dxvk-macOS-v1.10.3-20230507-repack`. Item 1 needs it absent, so the pin must be moved aside at the
+  checkpoint, after the P3 `ditto` copy and with the operator's recorded approval. It was not touched here.
+- `tools/wine/` holds `Wine-11.21` and `Wine-Staging-macOS-latest`.
+- `store/wine-downloader-info.json` (keys listed, no values read out): the `Wine-Staging-macOS` list has 15 entries, 13 with
+  no stored `isInstalled` key (the first are `Wine-11.20`, `Wine-11.18`, `Wine-11.17`, `Wine-11.16`, `Wine-11.15`,
+  `Wine-11.14`), `Wine-Crossover` has 2 (both without the key), `Game-Porting-Toolkit` has 15 (14 without). So never-installed
+  entries exist; the operator names the one for item 6 at P5 and the row must show an Install button.
+
+### Live re-check owed
+
+1. P8 on the installed gap build: `Identifier`, the Developer ID leaf, `TeamIdentifier`, the designated requirement and the
+   expected `CDHash` `266b7378...`; a mismatch scores every item `blocked` (D-12).
+2. Item 1's F1 discriminator. 87-63 could not reproduce F1 and named no root cause, so item 1 is the first live evidence: read
+   the `offline gate:` line in `gamelib-launch-2.log` first. `request-offline=false` is the TS caller, `request-offline=true
+   context-online=true` is a lost `engine_set_online`, `verdict=proceeds` with `crossover-missing=false` is the CrossOver verdict
+   and `current-pin-installed=true` is the pin check. A refusal without the dialog text "(offline)", or no `offline gate:` line
+   at all, scores item 1 `issue` with that reading, not `pass`.
+3. The app's monitor reads offline before Play: the `Connectivity: fresh check ... -> offline via <source>` line
+   (`connectivityNow.ts:176`) precedes the press; the Wi-Fi menu alone is not proof (Test 6).
+4. Item 4's offline Apply ends `failed` only if the chosen download verb exits non-zero offline (or prints the one regedit
+   form). A verb that exits 0 offline with no such line scores `issue` with the verb named; it is not a pass.
+5. Item 6's list following without a restart or tab switch is a live observation (the ordering is proven in tests only), as is
+   Remove flipping the row back.
+6. Item 3 needs the P5 title that the matcher cannot see; none is named yet, so item 3 is `blocked` with the gap named if the
+   operator names none.
+7. Item 7 needs the named game's stored `wineCrossoverBottle` to equal its per-game name (read at the dialog: the toggle names
+   the bottle), the dialog opened and cancelled first, and the sibling compare taken with the app closed.
+8. The three log rows that were IMPOSSIBLE in 87-59 are scored from `gamelib-launch-N.log` only after the redaction presence
+   control passes (a non-engine line carries the home path; the engine selection does not).
 
 ## Summary
 
