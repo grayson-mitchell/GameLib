@@ -662,7 +662,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 69/73 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves
+**Plans:** 70/73 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves
 
 Plans:
 **Wave 1**
@@ -832,7 +832,7 @@ Plans:
 - [x] 87-66-PLAN.md — Rust op that removes a non-Steam game's own bottle through gamelib-safety, with the refusal arms and the sibling table (F5, D-19)
 
 **Gap wave 5** *(blocked on 87-61, 87-63, 87-65, 87-66)*
-- [ ] 87-70-PLAN.md — The removal op's rustInvoke channel, the removeGameBottle shim with its schedule rows, and the uninstaller route with the default-prefix refusal (F5)
+- [x] 87-70-PLAN.md — The removal op's rustInvoke channel, the removeGameBottle shim with its schedule rows, and the uninstaller route with the default-prefix refusal (F5)
 
 **Gap wave 6** *(blocked on 87-66, 87-70)*
 - [ ] 87-67-PLAN.md — Uninstall dialog offers the game's bottle with a risk warning; legible disabled toggle in the three themes (F5)
