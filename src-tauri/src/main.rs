@@ -122,6 +122,7 @@ mod depot_dispatch;
 mod dialogs;
 mod engine_dispatch;
 mod engine_log;
+mod humble_dispatch;
 mod info_dispatch;
 mod info_secrets;
 mod ipc_contract;
@@ -1944,6 +1945,11 @@ fn run_setup(
     if let Some(paths) = log_paths.as_ref() {
         shortcuts_dispatch::install(std::path::Path::new(&paths.user_data));
     }
+    // Phase 94 (SVC-04, D-20): the one Humble context, built right after the host opened. Nothing here
+    // spawns a process or waits; an op before this answers not-ready.
+    if let Some(paths) = log_paths.as_ref() {
+        humble_dispatch::install(app.handle(), std::path::Path::new(&paths.user_data));
+    }
     // Where the sidecar's store frames are resolved: the directory this boot opened.
     if let Some(paths) = log_paths.as_ref() {
         store_dispatch::configure(std::path::PathBuf::from(&paths.user_data));
@@ -2428,6 +2434,7 @@ mod tests {
         "dialogs.rs",
         "engine_dispatch.rs",
         "engine_log.rs",
+        "humble_dispatch.rs",
         "info_dispatch.rs",
         "info_secrets.rs",
         "ipc_contract.rs",
@@ -2493,6 +2500,7 @@ mod tests {
         include_str!("dialogs.rs"),
         include_str!("engine_dispatch.rs"),
         include_str!("engine_log.rs"),
+        include_str!("humble_dispatch.rs"),
         include_str!("info_dispatch.rs"),
         include_str!("info_secrets.rs"),
         include_str!("ipc_contract.rs"),

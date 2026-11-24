@@ -2130,13 +2130,9 @@
     {
       "channel": "humbleGetGiftedAt",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [],
-        "items": false,
-        "maxItems": 0
-      }
+      "owner": "native",
+      "args": [],
+      "returns": "{ [machineName]: number }"
     },
     {
       "channel": "humbleGetKeys",
@@ -2152,13 +2148,9 @@
     {
       "channel": "humbleGetOwnershipOverrides",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [],
-        "items": false,
-        "maxItems": 0
-      }
+      "owner": "native",
+      "args": [],
+      "returns": "{ [machineName]: number }"
     },
     {
       "channel": "humbleGetRevealedKeyValue",

@@ -12,6 +12,7 @@ pub mod classify;
 pub mod ctx;
 pub mod js_date;
 pub mod js_value;
+pub mod stores;
 
 use ctx::HumbleCtx;
 use serde_json::Value;
@@ -23,7 +24,7 @@ use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell. Keep sorted; each plan adds its own.
-pub const OPS: &[&str] = &[];
+pub const OPS: &[&str] = &["humble_get_gifted_at", "humble_get_ownership_overrides"];
 
 /// Ops that exist only in this crate's own unit tests, to pin the dispatch contract. Never part of
 /// a release [`OPS`].
@@ -56,13 +57,36 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &HumbleCtx) -> Result<Value
 }
 
 /// Each plan adds its arms here, in step with `OPS`.
-#[allow(unused_variables)]
 async fn route(op: &str, args: &[Value], ctx: &HumbleCtx) -> Result<Value, String> {
     #[cfg(test)]
     if let Some(done) = test_route(op, args) {
         return done;
     }
-    Err(format!("unknown op: {op}"))
+    match op {
+        "humble_get_gifted_at" => {
+            no_args(op, args)?;
+            Ok(map_value(stores::gifted_at(ctx)))
+        }
+        "humble_get_ownership_overrides" => {
+            no_args(op, args)?;
+            Ok(map_value(stores::ownership_overrides(ctx)))
+        }
+        _ => Err(format!("unknown op: {op}")),
+    }
+}
+
+/// An op that takes no argument: exactly `[]`. The error is the fixed `<op>:bad-args`.
+fn no_args(op: &str, args: &[Value]) -> Result<(), String> {
+    if args.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("{op}:bad-args"))
+    }
+}
+
+/// A string-keyed map as the JSON object the renderer reads.
+fn map_value(map: std::collections::BTreeMap<String, Value>) -> Value {
+    Value::Object(map.into_iter().collect())
 }
 
 /// The one object argument of an op, decoded strictly (the arg structs deny unknown fields). The
@@ -171,6 +195,7 @@ mod tests {
     fn ctx(shutdown: Shutdown) -> HumbleCtx {
         HumbleCtx::new(
             Arc::new(StoreHost::new()),
+            std::path::PathBuf::new(),
             Arc::new(SystemClock),
             ctx::Platform::Linux,
             shutdown,

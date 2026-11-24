@@ -928,6 +928,10 @@ const IN_SCOPE_SUITES = [
  * resolvers over a fake `requestRustInvoke` and an in-memory `createIpcRegistry()`, and reaches no path
  * module, `homedir()`, filesystem or child process.
  *
+ * `shortcutsResolvers.test.ts` (Phase 94 Plan 11) is structurally contained: it drives the scheduled
+ * `resolveShortcutsExists` over fake managers and a fake `requestRustInvoke` and an in-memory
+ * `createIpcRegistry()`, and reaches no path module, `homedir()`, filesystem or child process.
+ *
  * `ipcRegistry.test.ts` (Phase 66.3 Plan 03) is structurally contained: it exercises
  * `createIpcRegistry()` instances with in-memory handlers, and reaches no path module, `homedir()`,
  * filesystem or child process.
@@ -1005,6 +1009,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'settingsFlows.test.ts',
   'shellFilesFlows.test.ts',
   'shortcutsFlows.test.ts',
+  'shortcutsResolvers.test.ts',
   'sidecarRpcFraming.test.ts',
   'sidecarStdoutFramesOnly.test.ts',
   'signInProbeBootWire.test.ts',

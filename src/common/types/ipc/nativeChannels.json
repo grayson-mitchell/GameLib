@@ -2002,6 +2002,22 @@
         [{ "kind": "untested-crossover", "build": "27.0.0.1", "extra": 1 }],
         [{ "kind": "no-crossover" }, {}]
       ]
+    },
+    "humbleGetGiftedAt": {
+      "kind": "invoke",
+      "slice": "humble",
+      "args": [],
+      "returns": "{ [machineName]: number }",
+      "valid": [[]],
+      "invalid": [[1], ["x"]]
+    },
+    "humbleGetOwnershipOverrides": {
+      "kind": "invoke",
+      "slice": "humble",
+      "args": [],
+      "returns": "{ [machineName]: number }",
+      "valid": [[]],
+      "invalid": [[1], ["x"]]
     }
   }
 }

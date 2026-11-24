@@ -1068,6 +1068,8 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "getStoreSearchDeals",
     "getUploadedLogFiles",
     "getWikiGameInfo",
+    "humbleGetGiftedAt",
+    "humbleGetOwnershipOverrides",
     "installWineVersion",
     "isRuntimeInstalled",
     "itad.getKeyStatus",

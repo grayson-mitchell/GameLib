@@ -2,7 +2,7 @@
  * Curated Humble channel registration (Phase 34.4 Plans 04+05,
  * REQ-34.4-07/08/09).
  *
- * Registers all 16 Chromium-free Humble channels this slice owns, importing
+ * Registers all 14 Chromium-free Humble channels this slice owns, importing
  * the REAL `humble/user.ts`, `humble/library.ts` and `humble/validation.ts`
  * UNCHANGED (mirrors `steamAuthFlowRegistration.ts`'s own objective — prove
  * the real logic runs behind the new transport, not a reimplementation):
@@ -15,7 +15,9 @@
  *   - `humbleGetSyncState` -> `HumbleLibrary.getSyncState()`.
  *
  * Key-state group (`ipcMain.handle`, `humble/ipc_handler.ts:92,105-116`):
- *   - `humbleGetGiftedAt` -> `HumbleLibrary.getAllGiftedAt()`.
+ *   - `humbleGetGiftedAt` is NOT registered here: it is a native `humble` channel answered by Rust from
+ *     the Humble store (94-13, D-16), one owner. `HumbleLibrary.getAllGiftedAt()` stays for the
+ *     TypeScript library's own readers until the library port retires it.
  *   - `humbleMarkRedeemed` -> `HumbleLibrary.markRedeemed(gamekey, machineName)`.
  *   - `humbleUndoRedeemed` -> `HumbleLibrary.undoRedeemed(gamekey, machineName)`.
  *   - `humbleGetRevealedKeyValue` -> `HumbleLibrary.getRevealedKeyValue(gamekey, machineName)`.
@@ -36,7 +38,7 @@
  *     only) WITHOUT calling the mutating method — an exact AppID match is
  *     ground truth (D-44) and is never overridable.
  *   - `humbleClearOwnershipOverride` -> `HumbleLibrary.clearOwnershipOverride(machineName)`.
- *   - `humbleGetOwnershipOverrides` -> `HumbleLibrary.getAllOwnershipOverrides()`.
+ *   - `humbleGetOwnershipOverrides` is likewise native (94-13, D-16), not registered here.
  *
  * `humbleRecordGiftLinkOpened` (`ipcMain.handle`, Phase 34.4 Plan 05,
  * REQ-34.4-07) — **CORRECTED CLASSIFICATION.** 34.4-CONTEXT.md's Discretion
@@ -140,7 +142,7 @@ import { isPackagedSidecar } from './isPackagedSidecar'
 import type { ExpirationAlertDeps } from '../humble/expirationAlerts'
 
 /**
- * Registers all 16 Humble channels this slice owns. Called once from
+ * Registers all 14 Humble channels this slice owns. Called once from
  * `handlers.ts` — this module owns no side effects at import time beyond the
  * imports above; the caller decides when registration onto the handler
  * registry happens.
@@ -179,10 +181,6 @@ export function registerHumbleFlows(
   })
 
   // ── Key-state group (REQ-34.4-07) ────────────────────────────────────────
-  deps.ipc.handle('humbleGetGiftedAt', async () => {
-    return deps.humble.library.getAllGiftedAt()
-  })
-
   deps.ipc.handle(
     'humbleMarkRedeemed',
     async (_event: unknown, ...args: unknown[]) => {
@@ -255,10 +253,6 @@ export function registerHumbleFlows(
       return deps.humble.library.clearOwnershipOverride(args[0] as string)
     }
   )
-
-  deps.ipc.handle('humbleGetOwnershipOverrides', async () => {
-    return deps.humble.library.getAllOwnershipOverrides()
-  })
 
   // ── Gift links (REQ-34.4-07, Plan 05) ─────────────────────────────────────
   // CORRECTED CLASSIFICATION (see module docstring): this is ipcMain.handle,

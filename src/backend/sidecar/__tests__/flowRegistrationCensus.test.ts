@@ -110,7 +110,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Phase 86 Plan 10 (D-17): invoke 16 -> 14 -- `getAllGameOverrides` and
   // `getGameMetadataOverride` are native `info` channels.
   'gameDetailsFlowRegistration.ts': { invoke: 14, send: 3 },
-  'humbleFlowRegistration.ts': { invoke: 15, send: 1 },
+  // Phase 94 Plan 13 (D-16): invoke 15 -> 13 -- `humbleGetGiftedAt` and `humbleGetOwnershipOverrides` are
+  // native `humble` channels.
+  'humbleFlowRegistration.ts': { invoke: 13, send: 1 },
   // Phase 40 Plan 03 (D-11): invoke 4 -> 3, send 2 -> 1 -- `humbleGetLoginUserAgent`
   // (invoke-kind) and `humbleLoginNavigated` (send-kind) removed after a four-surface sweep
   // found zero remaining callers (see 40-CHANNEL-RECENSUS.md); their only renderer caller was

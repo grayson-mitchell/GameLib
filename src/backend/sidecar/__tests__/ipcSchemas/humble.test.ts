@@ -39,12 +39,12 @@ const asyncTable: FixtureTable<typeof humbleAsyncArgs> = {
     valid: [['game_machine']],
     invalid: [[], [''], [null]]
   },
-  humbleGetOwnershipOverrides: noArgs,
+  // Phase 94 Plan 13 (D-16): `humbleGetOwnershipOverrides` and `humbleGetGiftedAt` are native `humble`
+  // channels; their vectors are in `nativeChannels.json`.
   humbleRecordGiftLinkOpened: {
     valid: [['game_machine']],
     invalid: [[], [''], [{}]]
   },
-  humbleGetGiftedAt: noArgs,
   humbleMarkRedeemed: {
     valid: [[identity]],
     invalid: [
@@ -88,7 +88,7 @@ const pushTable: FixtureTable<typeof humbleFrontendMessagesArgs> = {
 }
 
 describe('humble channel schemas', () => {
-  it('has a fixture for every key (21 total)', () => {
+  it('has a fixture for every key (19 total)', () => {
     expectFixtureCoverage(humbleSyncArgs, syncTable)
     expectFixtureCoverage(humbleAsyncArgs, asyncTable)
     expectFixtureCoverage(humbleFrontendMessagesArgs, pushTable)
@@ -96,7 +96,7 @@ describe('humble channel schemas', () => {
       Object.keys(humbleSyncArgs).length +
         Object.keys(humbleAsyncArgs).length +
         Object.keys(humbleFrontendMessagesArgs).length
-    ).toBe(21)
+    ).toBe(19)
   })
   runFixtureTable(humbleSyncArgs, syncTable)
   runFixtureTable(humbleAsyncArgs, asyncTable)
