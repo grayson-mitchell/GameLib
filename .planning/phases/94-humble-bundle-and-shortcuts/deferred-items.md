@@ -30,3 +30,11 @@
   collided with the 86 info oracle's retired identifier that `infoPortComplete` bans). 94-10-PLAN.md follows the
   rename. **For 94-10:** its `GAMELIB_HUMBLE_REDACT_*` variables also contain `GAMELIB_HUMBLE`; read them only from
   a file under `__tests__/` (the walk skips those), never from `testUtils/humbleOracle/*.ts`, or rename them.
+
+## From 94-13 (found, not fixed: outside that plan's files)
+
+- `src-tauri/src/info_dispatch.rs` `bundled_public_dir` joins `public` onto the app root in both a debug and a packaged
+  build, but the sidecar's `publicDir` (and `steampoll_dispatch::app_root_and_asset_dir`) is `public` in dev and `build`
+  packaged. The info crate's CrossOver cold-start snapshot is read from `InfoPaths.public_dir`, so a packaged build may
+  look under `<root>/public` where the assets are under `<root>/build`. 94-13 loads the Humble catalog from the
+  steampoll folder instead. Owner: a Phase 86 follow-up or a quick task; verify on a packaged build first.
