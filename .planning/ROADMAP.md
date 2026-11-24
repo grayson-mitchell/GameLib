@@ -863,10 +863,51 @@ Plans:
   3. The `launchOracle` harness, pairwise generator, and the `gamelib-launch` / `gamelib-knownfix` crates exist and run in three-OS CI
   4. The known-fixes TypeScript and its registrations are deleted, leaving only scheduled shims; closes on goldens and three-OS CI, no signed build
 
-**Plans:** 0 plans
+**Plans:** 17 plans in 13 waves; planned 2026-11-25
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 88 to break down)
+**Wave 1**
+- [ ] 88-01-PLAN.md — Live gate contract 88-HUMAN-UAT.md (four D-17 items), the 82 ownership and utils amendments with a target sub-phase per row (D-24, D-28, D-30), the validation map's sub-phase column
+- [ ] 88-02-PLAN.md — 87 prerequisite check, the 13 schedule rows re-targeted (roadmap-derived decimal deletedBy), launchrust discovery, launchPortComplete with the no-rollback scan
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 88-03-PLAN.md — gamelib-knownfix and gamelib-launch (+cli) crates, CI wiring, the shared overlay catalogue JSON (tracer: knownfix_overlay_catalogue through the CLI)
+- [ ] 88-04-PLAN.md — The shared launchOracle harness: pinned base env, injected platform and probes, pairwise generator, spawn-class column, incident-title census
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 88-05-PLAN.md — Goldens: known-fix reader layering (pairwise) and launch overrides, every incident test as a named case
+- [ ] 88-06-PLAN.md — Goldens: registry and dllOverrides fixes (spawn class helper), overlay archive, overlay install and env
+- [ ] 88-07-PLAN.md — Goldens: remote-fixes fetcher and the known-fix report, with offline-replayable exchanges
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 88-08-PLAN.md — Rust reader, layering and status probe; getKnownFixes and getGamelibFixStatus native in the knownfix slice
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 88-09-PLAN.md — Rust launch overrides and registry fixes (reg add as gamelib-proc Helpers through the wine command core)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 88-10-PLAN.md — Rust overlay archive, verified install with single flight, and overlay env
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 88-11-PLAN.md — Rust remote-fixes fetcher and report client, additive POST on gamelib-engine's Fetch
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 88-12-PLAN.md — rustInvoke known-fix channels; managers' launch overrides and the download manager's fetch on shims
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 88-13-PLAN.md — Launcher registry fixes and overlay env on unbounded shims; synchronous twins with golden vectors
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 88-14-PLAN.md — Steam bridge known-fixes on shims and twins; the TS overlay single flight leaves appRuntime
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 88-15-PLAN.md — Known-fix report on a shim; the Steam library's synchronous readers on the twins
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 88-16-PLAN.md — Delete the known-fix TypeScript behind knownFixPortComplete (RED first) and the survivor check
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 88-17-PLAN.md — Clean-worktree proof, push checkpoint and three-OS CI (D-30: no signed build)
 
 ### Phase 88.1: Launch builders and prepare steps (INSERTED)
 
