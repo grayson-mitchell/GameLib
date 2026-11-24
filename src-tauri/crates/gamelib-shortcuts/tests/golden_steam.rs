@@ -924,3 +924,177 @@ fn the_families_cover_the_whole_manifest() {
         );
     }
 }
+
+// ------------------------------------------- what the goldens cannot record
+fn template(id: &str) -> Value {
+    cases().remove(id).expect("a golden case")
+}
+#[tokio::test]
+async fn a_lookup_that_found_nothing_still_writes_the_shortcut_with_the_games_own_art() {
+    // WR-42 at the crate seam: the lookup answers None (a failure or no id) and the art is the game's.
+    let run = build(&template("add-wiki-rejects"));
+    assert!(steam_add(&run.ctx, &run.game, &run.settings).await);
+    assert_eq!(run.files.calls.lock().expect("calls").len(), 2);
+    assert!(run
+        .http
+        .asked()
+        .iter()
+        .all(|url| !url.contains("steamstatic")));
+}
+#[tokio::test]
+async fn a_known_steam_id_takes_all_four_pieces_of_art_from_the_cdn() {
+    let run = build(&template("add-steamid-pcgw"));
+    assert!(steam_add(&run.ctx, &run.game, &run.settings).await);
+    let cdn: Vec<String> = run
+        .http
+        .asked()
+        .into_iter()
+        .filter(|url| url.contains("steamstatic"))
+        .collect();
+    let base = "https://cdn.cloudflare.steamstatic.com/steam/apps/292030";
+    assert_eq!(
+        cdn,
+        [
+            format!("{base}/library_600x900_2x.jpg"),
+            format!("{base}/header.jpg"),
+            format!("{base}/library_hero.jpg"),
+            format!("{base}/logo.png"),
+        ]
+    );
+}
+#[tokio::test]
+async fn a_real_png_data_url_cover_is_written_as_a_jpeg() {
+    let mut run = build(&template("add-art-data-url-square"));
+    run.game.art_square = Some(
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQYlWNgAAIAAAUAAdafFs0AAAAASUVORK5CYII="
+            .to_string(),
+    );
+    assert!(steam_add(&run.ctx, &run.game, &run.settings).await);
+    let grid = run.profile.steam().join("userdata/1001/config/grid");
+    let cover = fs::read(grid.join("3764062133p.jpg")).expect("the cover was written");
+    assert_eq!(&cover[..3], [0xff, 0xd8, 0xff], "a JPEG");
+}
+/// A file Steam's grid names that is a link out of the grid is unlinked, never followed: the file it
+/// pointed at is untouched (T-94-37).
+#[tokio::test]
+async fn removal_unlinks_a_grid_link_and_never_touches_what_it_points_at() {
+    let run = build(&template("remove-basic"));
+    let config = run.profile.steam().join("userdata/1001/config");
+    let summary = read_shortcuts(&config.join("shortcuts.vdf"));
+    let entry = &summary.entries[0];
+    let short = generate_short_app_id(
+        entry.exe.as_deref().expect("an exe"),
+        entry.app_name.as_deref().expect("a name"),
+    );
+    let outside = run.profile.root().join("precious.txt");
+    fs::write(&outside, "keep me").expect("a file outside the grid");
+    let grid = config.join("grid");
+    fs::create_dir_all(&grid).expect("a grid folder");
+    let link = grid.join(format!("{short}p.jpg"));
+    #[cfg(unix)]
+    let made = std::os::unix::fs::symlink(&outside, &link);
+    #[cfg(windows)]
+    let made = std::os::windows::fs::symlink_file(&outside, &link);
+    if !gamelib_testutil::require_link(made, "a grid link", std::env::var_os("CI").is_some()) {
+        return;
+    }
+    steam_remove(&run.ctx, &run.game, &run.settings);
+    assert_eq!(
+        fs::read_to_string(&outside).expect("still there"),
+        "keep me"
+    );
+    assert!(
+        fs::symlink_metadata(&link).is_err(),
+        "the link itself is gone"
+    );
+}
+/// A grid file whose name is not one of the five the removed entry gives is left alone.
+#[tokio::test]
+async fn removal_deletes_only_the_five_names_the_ids_give() {
+    let golden = template("remove-basic");
+    let run = build(&golden);
+    let grid = run.profile.steam().join("userdata/1001/config/grid");
+    // `seedRemovedGrid` seeded the five names and `unrelated.jpg`; three more files of the user's.
+    for name in ["123456789p.jpg", "notes.txt"] {
+        fs::write(grid.join(name), "mine").expect("a file");
+    }
+    steam_remove(&run.ctx, &run.game, &run.settings);
+    let left: Vec<String> = tree_of(&grid)
+        .into_iter()
+        .map(|(path, _, _)| path)
+        .collect();
+    assert_eq!(left, ["123456789p.jpg", "notes.txt", "unrelated.jpg"]);
+}
+#[tokio::test]
+async fn the_steam_ops_validate_their_arguments_and_need_the_shell_seam() {
+    let run = build(&template("add-linux-basic"));
+    let args = |game: Value| {
+        vec![json!({
+            "game": game,
+            "settings": {
+                "addDesktopShortcuts": false, "addStartMenuShortcuts": false,
+                "addSteamShortcuts": true, "defaultSteamPath": null
+            }
+        })]
+    };
+    let game = |title: &str, runner: &str| {
+        json!({
+            "appName": "a", "runner": runner, "title": title, "isDlc": false,
+            "canAddSteamShortcut": true
+        })
+    };
+    for op in [
+        "shortcuts_steam_add",
+        "shortcuts_steam_remove",
+        "shortcuts_steam_is_added",
+    ] {
+        let bad = Err(format!("{op}:bad-args"));
+        assert_eq!(
+            gamelib_shortcuts::dispatch(op, &args(game("T", "nope")), &run.ctx).await,
+            bad,
+            "{op}: an unknown runner"
+        );
+        assert_eq!(
+            gamelib_shortcuts::dispatch(op, &[], &run.ctx).await,
+            bad,
+            "{op}: no argument"
+        );
+        let mut extra = args(game("T", "gog"));
+        extra[0]["game"]["extra"] = json!("secret-text");
+        assert_eq!(
+            gamelib_shortcuts::dispatch(op, &extra, &run.ctx).await,
+            bad,
+            "{op}: an unknown field never reaches the answer"
+        );
+        let mut headless = build(&template("add-linux-basic")).ctx;
+        headless.steam_files = None;
+        assert_eq!(
+            gamelib_shortcuts::dispatch(op, &args(game("T", "gog")), &headless).await,
+            Err(format!("{op}:not-ready")),
+            "{op}: no shortcuts.vdf seam"
+        );
+    }
+    // A game with no title is asked about, not refused; it is never in Steam. A removal needs a title.
+    assert_eq!(
+        gamelib_shortcuts::dispatch("shortcuts_steam_is_added", &args(game("", "gog")), &run.ctx)
+            .await,
+        Ok(json!(false))
+    );
+    assert_eq!(
+        gamelib_shortcuts::dispatch("shortcuts_steam_remove", &args(game("", "gog")), &run.ctx)
+            .await,
+        Err("shortcuts_steam_remove:bad-args".to_string())
+    );
+    // With no Steam path set there is no userdata folder: the add shows the TS message.
+    let answered =
+        gamelib_shortcuts::dispatch("shortcuts_steam_add", &args(game("T", "gog")), &run.ctx).await;
+    assert_eq!(answered, Ok(json!(false)));
+    let dialogs = run.ui.dialogs();
+    assert_eq!(dialogs.len(), 1);
+    assert_eq!(dialogs[0].0, "Error Adding Game to Steam");
+    assert_eq!(
+        dialogs[0].1,
+        "Adding T to Steam failed with:\n userdata does not exist. Can't add/remove game to/from Steam!"
+    );
+    assert_eq!(dialogs[0].2, "ERROR");
+}
