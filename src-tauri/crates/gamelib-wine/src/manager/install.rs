@@ -265,12 +265,31 @@ fn remove_dir(ctx: &WineCtx, dir: &Path) -> bool {
     }
 }
 
+/// Where the store says `version` is installed, read before the install touches anything: the stored
+/// entry's `installDir` when the entry is marked installed and names one. `None` for a never-installed
+/// entry (the keys are absent), an entry the store lacks or a store that cannot be read; the install
+/// then computes the directory itself. The store is this app's own state, unlike the renderer's copy.
+fn stored_install_dir(ctx: &WineCtx, version: &str) -> Option<PathBuf> {
+    let store = store::open(ctx).ok()?;
+    let releases = store::read(&store)?;
+    let entry = releases
+        .iter()
+        .find(|entry| text_of(entry, "version") == Some(version))?;
+    if !matches!(entry.get("isInstalled"), Some(Json::Bool(true))) {
+        return None;
+    }
+    text_of(entry, "installDir")
+        .filter(|dir| !dir.is_empty())
+        .map(PathBuf::from)
+}
+
 /// `installVersion`: the download, the checks, the backup, the extraction.
 async fn install_version(
     ctx: &WineCtx,
     release: &Map<String, Value>,
     version: &str,
     install_dir: &Path,
+    stored_dir: Option<PathBuf>,
     overwrite: bool,
     token: &CancellationToken,
 ) -> Result<Installed, Fail> {
@@ -279,10 +298,11 @@ async fn install_version(
         .and_then(archive_file_name)
         .ok_or(Fail::Failed("no-download-link"))?;
     let tar_file = install_dir.join(file_name);
-    // A caller's `installDir` is where an update goes back to; it is never used to delete anything
-    // but what this run made there.
-    let install_sub_dir = match text_field(release, "installDir") {
-        Some(dir) => PathBuf::from(dir),
+    // An update goes back to where the store says the build is. The renderer's `installDir` is not
+    // read at all (V5): the directory is the store's own entry or the one computed for this type, so a
+    // supplied path can neither receive an install nor be moved aside as a backup.
+    let install_sub_dir = match stored_dir {
+        Some(dir) => dir,
         None => install_dir.join(version),
     };
 
@@ -484,22 +504,32 @@ async fn install_wine_version(
     let release_type = text_field(release, "type").unwrap_or("");
     let install_dir = install_dir_for(ctx, release_type, settings);
 
+    let stored_dir = stored_install_dir(ctx, version);
     let watch = Watch::new(ctx, cancel);
-    let installed =
-        match install_version(ctx, release, version, &install_dir, overwrite, &watch.token).await {
-            Ok(installed) => installed,
-            Err(fail) => {
-                if fail == Fail::Aborted || watch.token.is_cancelled() || cancel.is_cancelled() {
-                    log_warn(ctx, &format!("Installation of {version} was aborted"));
-                    return Outcome::Abort;
-                }
-                let Fail::Failed(why) = fail else {
-                    return Outcome::Error;
-                };
-                log_error(ctx, &format!("Installation of {version} failed: {why}"));
-                return Outcome::Error;
+    let installed = match install_version(
+        ctx,
+        release,
+        version,
+        &install_dir,
+        stored_dir,
+        overwrite,
+        &watch.token,
+    )
+    .await
+    {
+        Ok(installed) => installed,
+        Err(fail) => {
+            if fail == Fail::Aborted || watch.token.is_cancelled() || cancel.is_cancelled() {
+                log_warn(ctx, &format!("Installation of {version} was aborted"));
+                return Outcome::Abort;
             }
-        };
+            let Fail::Failed(why) = fail else {
+                return Outcome::Error;
+            };
+            log_error(ctx, &format!("Installation of {version} failed: {why}"));
+            return Outcome::Error;
+        }
+    };
     drop(watch);
 
     // Update the stored information.

@@ -975,6 +975,11 @@ fn release_of(run: &Run, case: &Value) -> Value {
 
 /// What an install or remove case compares, minus what a delta changes.
 fn compare_run(run: &Run, case: &Value, golden: &Value) {
+    compare_run_with_tree(run, case, golden, |tree| tree);
+}
+
+/// [`compare_run`], with `shape` applied to both trees before they are compared.
+fn compare_run_with_tree(run: &Run, case: &Value, golden: &Value, shape: impl Fn(Value) -> Value) {
     let id = case["id"].as_str().unwrap();
     let expected = golden_dir().join("expected").join(id);
     let check = |field: &str, got: Value, want: Value| {
@@ -1014,8 +1019,8 @@ fn compare_run(run: &Run, case: &Value, golden: &Value) {
     );
     check(
         "tree",
-        run.profile.normalise(run.profile.tree()),
-        comparable_tree(read_json(&expected.join("tree.json"))),
+        shape(run.profile.normalise(run.profile.tree())),
+        shape(comparable_tree(read_json(&expected.join("tree.json")))),
     );
 }
 
@@ -1134,6 +1139,57 @@ async fn replay_remove(case: &Value) {
     let removed = !golden["notifications"].as_array().unwrap().is_empty();
     assert_eq!(result, json!(removed), "{id}: the result");
     compare_run(&run, case, &golden);
+}
+
+/// F2 (87-62): the stored entry of a release that was never installed has no `isInstalled`,
+/// `hasUpdate` or `installDir` (the refresh merge appends feed releases without them, and released
+/// builds stored them that way, D-07). This is `install-checksum-match` with those three keys left
+/// out of the release and of the store it starts from, replayed over the same recorded exchanges rather than
+/// a new case: it adds no recording, and the install must end exactly where the keyed twin ends (the
+/// golden's store value, tree, requests, events, notifications and spawns). A renderer-supplied
+/// `installDir` is not read, so the keyed twin and this one land in the same directory.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_never_installed_entry_installs_to_the_same_result_as_its_keyed_twin() {
+    let mut case = cases_of_op("install")
+        .into_iter()
+        .find(|c| c["id"] == "install-checksum-match")
+        .unwrap();
+    for key in ["isInstalled", "hasUpdate", "installDir"] {
+        case["release"].as_object_mut().unwrap().remove(key);
+    }
+    let id = "install-checksum-match";
+    let run = start(&case);
+    // `start` seeds from the case file (the keyed release); seed the stripped one over it, the way
+    // a refresh merge leaves a never-installed release.
+    let stripped = run
+        .profile
+        .expand_json(&Json::from(case["release"].clone()));
+    assert!(["isInstalled", "hasUpdate", "installDir"]
+        .iter()
+        .all(|key| stripped.get(key).is_none()));
+    store::write(&store::open(&run.ctx).unwrap(), vec![stripped]).unwrap();
+    let args = [release_of(&run, &case)];
+    let outcome = gamelib_wine::dispatch("wine_manager_install", &args, &run.ctx)
+        .await
+        .unwrap_or_else(|e| panic!("{id}: {e}"));
+    run.replay.finish().unwrap_or_else(|e| panic!("{id}: {e}"));
+    assert_eq!(outcome, json!("success"));
+    let golden = read_json(&golden_dir().join("expected").join(id).join("result.json"));
+    // The store file's bytes differ in one way only: a never-installed entry gets `installDir`,
+    // `isInstalled` and `hasUpdate` appended in the order the install sets them, where the keyed
+    // twin's entry already held them in the feed's order. The store's value is compared whole by the
+    // `store` field, so the file's digest is dropped from the tree on both sides.
+    compare_run_with_tree(&run, &case, &golden, |mut tree| {
+        for entry in tree.as_array_mut().unwrap() {
+            if entry["path"]
+                .as_str()
+                .is_some_and(|p| p.ends_with("wine-downloader-info.json"))
+            {
+                entry.as_object_mut().unwrap().remove("sha256");
+            }
+        }
+        tree
+    });
 }
 
 /// A wine-manager removal of a Wine-Staging-macOS calls DXMT's `on_wine_uninstalled` (87-31): its `-DXMT`

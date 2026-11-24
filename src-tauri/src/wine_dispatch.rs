@@ -220,9 +220,15 @@ const RELEASE_TYPES: &[&str] = &[
     "Proton-CachyOS",
 ];
 
-/// The eleven keys of a `WineVersionInfo`, each with its shape and whether a feed may leave it out
-/// (a Wine-Staging-macOS release has no checksum and a release with no matching asset has no
-/// download or downsize; JSON drops an undefined key). The same bounds the TS zod carried.
+/// The eleven keys of a `WineVersionInfo`, each with its shape and whether it may be left out. A feed
+/// may leave out `download`, `downsize` and `checksum` (a Wine-Staging-macOS release has no checksum
+/// and a release with no matching asset has no download or downsize; JSON drops an undefined key).
+/// `isInstalled`, `hasUpdate` and `installDir` are state of an installed entry: the stored entry of a
+/// release that was never installed has none of them (the refresh merge appends feed releases without
+/// them, and the stores released builds wrote hold them that way, D-07), and the renderer passes the
+/// stored entry unchanged. Absent they read as false, false and the empty string; present, they are
+/// still type-checked. The same bounds the TS zod carried (which also required the three, a defect
+/// copied for parity and fixed here as the 87-59 item 4 finding F2).
 const RELEASE_FIELDS: &[(&str, Field, bool)] = &[
     ("version", Field::NonEmpty(1024), false),
     ("type", Field::Type, false),
@@ -232,14 +238,16 @@ const RELEASE_FIELDS: &[(&str, Field, bool)] = &[
     ("disksize", Field::Number, false),
     ("checksum", Field::Text(1024), true),
     ("release_notes_link", Field::Text(8192), false),
-    ("isInstalled", Field::Bool, false),
-    ("hasUpdate", Field::Bool, false),
-    ("installDir", Field::Text(4096), false),
+    ("isInstalled", Field::Bool, true),
+    ("hasUpdate", Field::Bool, true),
+    ("installDir", Field::Text(4096), true),
 ];
 
 /// Decodes the one `WineVersionInfo` argument of `installWineVersion` and `removeWineVersion`: a
-/// strict object of exactly the eleven keys (an unknown key is rejected, T-87-67). The object is
-/// handed on as it came; the crate decodes what it reads again. Every rejection is a fixed path and
+/// strict object of the eleven keys, of which `isInstalled`, `hasUpdate` and `installDir` may be
+/// absent (a never-installed entry; see [`RELEASE_FIELDS`]); an unknown key is rejected (T-87-67), and
+/// so is a present key of the wrong shape. The object is handed on as it came; the crate decodes what
+/// it reads again and never takes the install directory from it. Every rejection is a fixed path and
 /// code, never the renderer's value or key.
 fn parse_wine_version(args: &[Value]) -> Result<&Map<String, Value>, Rejection> {
     let [arg] = args else {
