@@ -2,14 +2,14 @@
 gsd_state_version: "1.0"
 milestone: v0.11
 milestone_name: Node Sidecar Retirement
-current_phase: 87
-current_phase_name: Engine, Wine and tools
+current_phase: 88
+current_phase_name: Launch scaffolding and known fixes
 status: executing
-stopped_at: Completed 87-68-PLAN.md
-last_updated: "2026-11-24T18:31:58.395Z"
-last_activity: 2026-11-24
-last_activity_desc: Phase 87 execution started
-state_head: 3802937ebecfb9131893aef0620608600c30c428
+stopped_at: Completed 88-01-PLAN.md
+last_updated: "2026-11-24T19:31:03.799Z"
+last_activity: 2026-11-25
+last_activity_desc: Phase 88 execution started
+state_head: 8bc4f0269a0a201c4cf19558e5e1a213b9808448
 progress:
   total_phases: 25
   completed_phases: 23
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-20)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 87 — Engine, Wine and tools
+**Current focus:** Phase 88 — Launch scaffolding and known fixes
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 73 of 73
+Phase: 88 (Launch scaffolding and known fixes) — EXECUTING
+Plan: 2 of 17
 Status: Ready to execute
-Last activity: 2026-11-24 — Phase 87 execution started
+Last activity: 2026-11-25 — Phase 88 execution started
 Progress: [█████████░] 92%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -481,6 +481,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P70 | 15 min | 2 tasks | 10 files |
 | Phase 87 P67 | 30 min | 2 tasks | 7 files |
 | Phase 87 P68 | 2h 20m | 3 tasks | 4 files |
+| Phase 88 P01 | 25 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -1048,6 +1049,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-67: uninstall-dialog catalogue keys live in the gamelib namespace (gamelib:uninstall.removeBottle*), because the churn guard forbids changes to upstream catalogues such as gamepage.json
 - [Phase 87]: 87-67: disabled ToggleSwitch label and box use --border-color (4.36/3.73/3.61 against the dialog surface in midnightMirage/gruvbox_dark/dracula); shared component, so every disabled toggle changes
 - [Phase 87]: 87-68: clean-worktree proof head P 4cf38d88c (main f3a1a361d + a jest.mock baseline fix for 87-67's bottleToggle test); three-OS CI green at 07b194604 after one Windows-only test fixture fix (87-61 engine_log); signed gap build release/v0.13.1 (97d6d2052 = 07b194604 + bump), run 45455431706, draft GameLib v0.13.1, identity byte-identical to 0.13.0 and Phase 86, Gate (gap build): pending
+- [Phase 88]: 88-01: Task 2 item 2's second Play is a gamelib://launch link from the shell (the game page Play control latches, so a UI double Play is unperformable); item 3 uses a CrossOver title so the Wine-loader exit is exercised (D-31)
+- [Phase 88]: 88-01: Phase 88 sub-phase targets recorded in the 82 amendments keep every 'TS mirror deleted' cell an integer; overlay-install-flight flips 97 -> 88 (gamelib-knownfix); info-caches:systemInfo Rust owner corrected to gamelib-info
 
 ### Pending Todos
 
@@ -1329,8 +1332,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T18:31:55.726Z
-Stopped at: Completed 87-68-PLAN.md
+Last session: 2026-11-24T19:31:01.074Z
+Stopped at: Completed 88-01-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

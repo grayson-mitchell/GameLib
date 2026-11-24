@@ -556,12 +556,12 @@
     {
       "number": "87",
       "name": "Engine, Wine and tools",
-      "status": "in_progress"
+      "status": "pending"
     },
     {
       "number": "88",
       "name": "Launch scaffolding and known fixes",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "88.1",
@@ -657,7 +657,7 @@
   "next": {
     "command": "/gsd-progress --next",
     "label": "Advance to the next step",
-    "reason": "Phase 31 of 49 · 100% · executing"
+    "reason": "Phase 32 of 50 · 92% · executing"
   },
-  "updated_at": "2026-11-24T16:22:16.935Z"
+  "updated_at": "2026-11-24T19:30:44.323Z"
 }

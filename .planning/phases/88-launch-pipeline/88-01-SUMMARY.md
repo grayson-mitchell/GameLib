@@ -102,7 +102,7 @@ status: complete
 - The review found and amended two things before any run: a UI double Play cannot be performed (the Play control latches), so item 2 uses a `gamelib://launch` link; and P2's "nothing left running" would fail on the state item 3 needs, so P2 is amended for item 3's reopen.
 - 82-STATE-OWNERSHIP.md: `app-runtime:overlay-install-flight` flips 97 -> 88 with Rust owner `gamelib-knownfix` (still one `*`), a new `known-fix-trees` row, a corrected `info-caches:systemInfo` Rust owner, a target sub-phase for every 88-scheduled row, and three deferral rows (`online_monitor.ts`, `connectivityNow.ts`, `gamedetails/`).
 - 82-UTILS-BOOTSTRAP-INVENTORY.md: `checkWineBeforeLaunch` and `downloadDefaultWine` move 87 -> 88 (88.1); `shutdownWine` and `getWineFromProton` are recorded as scheduled TS that stays; every utils and boot-step row destined for 88 carries its sub-phase.
-- 88-VALIDATION.md: a Sub-phase column on all twelve per-task rows (one 88, two 88.1 rows plus the anti-cheat row counted in them, 88.2, 88.3, one `all`), the D-30 gate-model sentence, and the author and runner named in Manual-Only Verifications.
+- 88-VALIDATION.md: a Sub-phase column on all twelve per-task rows (one 88, three 88.1, three 88.2, four 88.3, one `all`), the D-30 gate-model sentence, and the author and runner named in Manual-Only Verifications.
 
 ## Task Commits
 
@@ -154,7 +154,7 @@ None. The ROADMAP check the plan asked for passed: Phase 88.3 success criterion 
 
 ## Known Stubs
 
-None. The five CONDITIONAL rows of 88-HUMAN-UAT.md "Required literals" are deliberate (no Rust emitter exists yet); each is re-checked by the 88.3 live-gate plan, Task 1. They are not stubs in shipped code and are not entered in `.planning/WINDOWS.md`.
+None. The eight CONDITIONAL rows of 88-HUMAN-UAT.md "Required literals" are deliberate (no Rust emitter exists yet); each is re-checked by the 88.3 live-gate plan, Task 1. They are not stubs in shipped code and are not entered in `.planning/WINDOWS.md`.
 
 ## Threat Flags
 
