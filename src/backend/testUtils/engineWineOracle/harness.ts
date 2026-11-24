@@ -284,6 +284,12 @@ export interface GoldenCapture {
   spawns?: readonly unknown[]
   /** `METHOD url` of every request the TS made, in order. */
   requests?: readonly string[]
+  /**
+   * Extra named files a slice records beside the five fixed ones (88-06: `calls.json`, the seams a
+   * case drove). A file is written only when named here, so a slice without extras keeps the same
+   * file set as before.
+   */
+  extra?: Readonly<Record<string, unknown>>
 }
 
 function listFiles(dir: string, base = dir): string[] {
@@ -322,6 +328,9 @@ export function writeOrCompareGolden(
     ['spawns.json', json(capture.spawns ?? [])],
     ['tree.json', json(capture.after ?? [])]
   ])
+  for (const [name, value] of Object.entries(capture.extra ?? {})) {
+    produced.set(name, json(value))
+  }
   const dir = join(goldenDir(crate, slice), 'expected', caseId)
   if (mode === 'write') {
     rmSync(dir, { recursive: true, force: true })

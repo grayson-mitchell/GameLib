@@ -1,0 +1,72 @@
+[
+  {
+    "id": "launcher-path-crossover-registry-and-dll-override",
+    "platform": "mac",
+    "scripted": [
+      {
+        "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "code": 0,
+        "repeat": true
+      }
+    ],
+    "steps": [
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "gog",
+        "settings": {
+          "nvidiaPrime": false,
+          "showFps": false,
+          "enviromentOptions": [],
+          "winePrefix": "<HOME>/Games/prefix",
+          "wineCrossoverBottle": "GameLibSteam",
+          "enableDXVKFpsLimit": false,
+          "DXVKFpsCap": "60",
+          "enableFSR": false,
+          "enableEsync": false,
+          "enableMsync": false,
+          "enableFsync": false,
+          "enableWineWayland": false,
+          "enableHDR": false,
+          "enableWoW64": false,
+          "autoInstallDxvkNvapi": false,
+          "eacRuntime": false,
+          "battlEyeRuntime": false,
+          "verboseLogs": false,
+          "preferSystemLibs": false,
+          "advertiseAvxForRosetta": false,
+          "disableUMU": true,
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver - 24.0.0",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+          }
+        },
+        "seam": "real",
+        "seed": [
+          {
+            "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/public/fixes/GOGAPP-gog.profile.json",
+            "text": "{\"title\":\"t\",\"registry\":[{\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"nvapi64\":\"disabled\"}}]}"
+          },
+          {
+            "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteam/system.reg",
+            "text": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n"
+          },
+          {
+            "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteam/user.reg",
+            "text": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n"
+          }
+        ]
+      }
+    ]
+  }
+]
