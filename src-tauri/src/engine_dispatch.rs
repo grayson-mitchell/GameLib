@@ -260,6 +260,34 @@ impl DxvkInstaller for ShellDxvk {
     }
 }
 
+/// The pushes that tell the renderer to re-read a store, which must leave after the `storeChanged`
+/// frames of the changes made before them (87-62, F4). The crate announces a wine-manager change
+/// (`wineVersionsUpdated`) straight after it wrote the store, but the renderer's snapshot is patched
+/// by the host's dispatcher thread, a moment later: the list re-read before the patch and showed the
+/// old state. Each of these channels is queued behind the host's pending changes instead.
+const AFTER_STORE_CHANGES: &[&str] = &["wineVersionsUpdated"];
+
+/// The engine emitter: every channel goes straight to `inner`, except the [`AFTER_STORE_CHANGES`]
+/// ones, which go through [`StoreHost::post`], so they are emitted on the dispatcher thread after
+/// every change already queued (with no listener on the host they run at once, on the caller's
+/// thread). Ordering comes from the host's queue, never from a delay.
+struct AfterStoreChanges {
+    host: Arc<StoreHost>,
+    inner: Arc<dyn FrontendEmitter>,
+}
+
+impl FrontendEmitter for AfterStoreChanges {
+    fn emit(&self, channel: &str, args: Vec<Value>) {
+        if !AFTER_STORE_CHANGES.contains(&channel) {
+            self.inner.emit(channel, args);
+            return;
+        }
+        let inner = Arc::clone(&self.inner);
+        let channel = channel.to_string();
+        self.host.post(Box::new(move || inner.emit(&channel, args)));
+    }
+}
+
 /// Builds the context from its parts. Split from [`install`] so a unit test can build one without an
 /// `AppHandle`. Nothing here spawns, connects or waits.
 pub(crate) fn build_ctx(
@@ -272,6 +300,10 @@ pub(crate) fn build_ctx(
     shutdown: Shutdown,
 ) -> EngineCtx {
     let clock = Arc::new(SystemClock);
+    let emitter: Arc<dyn FrontendEmitter> = Arc::new(AfterStoreChanges {
+        host: Arc::clone(&host),
+        inner: emitter,
+    });
     // 87-61: the context's log (it had none, so every crate line was dropped). Built before `user_home`
     // moves into the paths: the redactor renders it as `~`.
     let engine_log = ShellEngineLog::for_home(&user_home);
