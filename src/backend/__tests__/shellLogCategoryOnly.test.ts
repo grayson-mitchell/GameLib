@@ -13,7 +13,7 @@
  * What this gate does. It walks EVERY `.rs` file under `src-tauri/src` itself (the shared reader
  * `tauriShellSource` deliberately excludes the macOS siblings, which is where the notification and
  * Epic-embed lines live; only the generated `ipc_contract.rs` is skipped), strips comments with the
- * shared stripper, finds every `shell_log(` and `shell_log_detail(` call, takes its balanced
+ * shared stripper, finds every `shell_log(`, `shell_log_detail(` and `shell_log_at(` call, takes its balanced
  * argument list (for `shell_log_detail`, the FIRST argument only: the second is the stderr-only
  * detail and is allowed to carry anything) and fails, naming the file, on:
  *
@@ -23,6 +23,20 @@
  *     `{shell_exe}`, `{app_root}`, `{steam_root}`, `{forward_args...}`;
  *   - one of those names, or `localizedDescription`, as an identifier in the argument list outside
  *     a string literal (a positional argument: `format!("... {}", e)`, `e.kind()`).
+ *
+ * The engine log (87-61). `shell_log_at(level, message)` is the one route of crate-composed text into
+ * `gamelib.log`: the engine and wine crates write lines through `ctx.log` (`ShellEngineLog`,
+ * `src-tauri/src/engine_log.rs`), and their text is composed by those crates (bottle names, error
+ * strings, argv), so the category-only rule above cannot hold for it. It is redacted by construction
+ * instead (`EngineLineRedactor::redact`: home as `~`, the account name, secret and account pairs,
+ * full argument lines as a count, URL queries, a line cap). So this gate scans `shell_log_at(` too
+ * (its SECOND argument is the message), applies the same named-placeholder rules to it, and adds a
+ * rule of its own: the message must be the redactor's output, which is `redact(` on the same
+ * statement or an identifier bound by a `let ... = ... redact(` in the same function. A new
+ * `shell_log_at` call that passes anything else fails, naming the file, so the engine log cannot
+ * become a bypass. What that rule still cannot see: a `String` helper that returns redacted text
+ * under another name, a binding made in a different function, a macro, or a redactor that is
+ * called but whose result is discarded (the redactor's own behaviour is tested in `engine_log.rs`).
  *
  * What it does NOT do, stated so nobody reads a green run as a proof. It is a source-text match, not
  * a data-flow analysis. It cannot see error text that reaches a message under another name
@@ -79,11 +93,16 @@ const IDENT_RE = new RegExp(
 )
 
 interface ShellLogCall {
-  readonly name: 'shell_log' | 'shell_log_detail'
-  /** The argument text that must be category-only (the first argument for `shell_log_detail`). */
+  readonly name: 'shell_log' | 'shell_log_detail' | 'shell_log_at'
+  /**
+   * The argument text that must be category-only: the first argument for `shell_log_detail`, the
+   * second (after the level) for `shell_log_at`.
+   */
   readonly message: string
   readonly line: number
   readonly head: string
+  /** Where the call starts in the comment-stripped code. */
+  readonly index: number
 }
 
 /** Index just past the string literal (plain, raw, or char) that starts at `i`, or `i` itself. */
@@ -148,7 +167,8 @@ function listDiagCalls(code: string): ShellLogCall[] {
       name: 'shell_log',
       message: args,
       line: code.slice(0, match.index).split('\n').length,
-      head: (code.slice(match.index).split('\n')[0] ?? '').trim()
+      head: (code.slice(match.index).split('\n')[0] ?? '').trim(),
+      index: match.index
     })
   }
   return calls
@@ -156,7 +176,7 @@ function listDiagCalls(code: string): ShellLogCall[] {
 
 function listShellLogCalls(code: string): ShellLogCall[] {
   const calls: ShellLogCall[] = []
-  const callRe = /\bshell_log(_detail)?\(/g
+  const callRe = /\bshell_log(_detail|_at)?\(/g
   let match: RegExpExecArray | null
   while ((match = callRe.exec(code)) !== null) {
     if (code.slice(Math.max(0, match.index - 3), match.index) === 'fn ') {
@@ -164,15 +184,56 @@ function listShellLogCalls(code: string): ShellLogCall[] {
     }
     const openIdx = match.index + match[0].length - 1
     const { args, firstEnd } = readArgs(code, openIdx)
-    const detail = match[1] !== undefined
+    const kind = match[1]
+    const name =
+      kind === '_detail'
+        ? 'shell_log_detail'
+        : kind === '_at'
+          ? 'shell_log_at'
+          : 'shell_log'
+    // The text after the first argument: for `shell_log_at(level, message)` that is the message.
+    const afterFirst = code.slice(firstEnd + 1, openIdx + 1 + args.length)
     calls.push({
-      name: detail ? 'shell_log_detail' : 'shell_log',
-      message: detail ? code.slice(openIdx + 1, firstEnd) : args,
+      name,
+      message:
+        name === 'shell_log_detail'
+          ? code.slice(openIdx + 1, firstEnd)
+          : name === 'shell_log_at'
+            ? afterFirst
+            : args,
       line: code.slice(0, match.index).split('\n').length,
-      head: (code.slice(match.index).split('\n')[0] ?? '').trim()
+      head: (code.slice(match.index).split('\n')[0] ?? '').trim(),
+      index: match.index
     })
   }
   return calls
+}
+
+/** The text of the function enclosing `index`, from its `fn` line up to `index`. */
+function enclosingFnText(code: string, index: number): string {
+  const fnRe =
+    /^[ \t]*(?:pub(?:\([^)]*\))?[ \t]+)?(?:(?:const|async|unsafe)[ \t]+)*fn[ \t]/gm
+  let start = 0
+  let m: RegExpExecArray | null
+  while ((m = fnRe.exec(code)) !== null && m.index < index) start = m.index
+  return code.slice(start, index)
+}
+
+/**
+ * Why an engine-log call is not passing the redactor's output, or null when it is: the message is a
+ * `redact(` call, or an identifier bound by `let ... = ... redact(` in the same function.
+ */
+function unredactedEngineLine(code: string, call: ShellLogCall): string | null {
+  const message = call.message.trim().replace(/^&\s*/, '')
+  if (/\bredact\(/.test(message)) return null
+  const ident = /^[A-Za-z_]\w*$/.exec(message)
+  if (ident) {
+    const bound = new RegExp(
+      `\\blet\\s+(?:mut\\s+)?${ident[0]}\\b[^;=]*=[^;]*\\bredact\\(`
+    )
+    if (bound.test(enclosingFnText(code, call.index))) return null
+  }
+  return 'message is not the redactor output (redact( on the same statement, or a binding assigned from redact( in the same function)'
 }
 
 /** Why a message argument is not category-only, or null when it is. */
@@ -223,11 +284,26 @@ function readCode(rel: string, root: string = SHELL_SRC): string {
 }
 
 describe('no shell_log message carries external text (WR-02, privacy half)', () => {
-  test('every shell_log / shell_log_detail message argument is category-only', () => {
+  test('every shell_log / shell_log_detail / shell_log_at message argument is category-only', () => {
     const offences: string[] = []
     for (const rel of shellRsFiles()) {
       for (const call of listShellLogCalls(readCode(rel))) {
         const why = externalTextIn(call.message)
+        if (why !== null) {
+          offences.push(`${rel}:${call.line} ${call.name} ${why}: ${call.head}`)
+        }
+      }
+    }
+    expect(offences).toEqual([])
+  })
+
+  test('every shell_log_at call passes the engine redactor output (87-61)', () => {
+    const offences: string[] = []
+    for (const rel of shellRsFiles()) {
+      const code = readCode(rel)
+      for (const call of listShellLogCalls(code)) {
+        if (call.name !== 'shell_log_at') continue
+        const why = unredactedEngineLine(code, call)
         if (why !== null) {
           offences.push(`${rel}:${call.line} ${call.name} ${why}: ${call.head}`)
         }
@@ -247,6 +323,20 @@ describe('no shell_log message carries external text (WR-02, privacy half)', () 
     expect(
       all.filter((c) => c.name === 'shell_log_detail').length
     ).toBeGreaterThan(10)
+  })
+
+  test('non-vacuity: the walk finds the engine log shell_log_at call, in engine_log.rs', () => {
+    const files = shellRsFiles()
+    expect(files).toContain('engine_log.rs')
+    const atCalls = files.flatMap((rel) =>
+      listShellLogCalls(readCode(rel))
+        .filter((c) => c.name === 'shell_log_at')
+        .map((c) => ({ rel, call: c }))
+    )
+    expect(atCalls.length).toBeGreaterThanOrEqual(1)
+    expect(atCalls.map((c) => c.rel)).toContain('engine_log.rs')
+    // The definition in main.rs is not a call.
+    expect(atCalls.map((c) => c.rel)).not.toContain('main.rs')
   })
 })
 
@@ -385,5 +475,76 @@ describe('the matcher is not vacuous (positive and negative controls)', () => {
     )
     expect(call?.name).toBe('shell_log_detail')
     expect(call?.message).toBe('&format!("a ({kind}), b")')
+  })
+})
+
+describe('the engine log rule is not vacuous (87-61 positive and negative controls)', () => {
+  const flaggedAt = (code: string): string | null => {
+    const calls = listShellLogCalls(code).filter(
+      (c) => c.name === 'shell_log_at'
+    )
+    expect(calls).toHaveLength(1)
+    const call = calls[0]
+    if (call === undefined) return 'no call'
+    return externalTextIn(call.message) ?? unredactedEngineLine(code, call)
+  }
+
+  test.each([
+    [
+      'an error placeholder',
+      'fn f(level: Level, e: E) { shell_log_at(level, &format!("x {e}")) }'
+    ],
+    [
+      'a raw line that never met the redactor',
+      'fn f(level: Level, line: &str) { crate::shell_log_at(level, line) }'
+    ],
+    [
+      'a formatted line that never met the redactor',
+      'fn f(level: Level, line: &str) { shell_log_at(level, &format!("engine: {line}")) }'
+    ],
+    [
+      'a binding assigned in another function',
+      'fn a(line: &str) { let redacted = r.redact(line); }\nfn b(level: Level) { shell_log_at(level, &redacted) }'
+    ],
+    [
+      'a binding that is not from redact(',
+      'fn f(level: Level, line: &str) { let redacted = line.to_string(); shell_log_at(level, &redacted) }'
+    ]
+  ])('flags %s', (_what, code) => {
+    expect(flaggedAt(code)).not.toBeNull()
+  })
+
+  test.each([
+    [
+      'the engine_log.rs shape (a binding from redact( in the same function)',
+      'fn write(&self, level: Level, line: &str) {\n  let redacted = self.redactor.redact(line);\n  crate::shell_log_at(level, &redacted);\n}'
+    ],
+    [
+      'redact( on the same statement',
+      'fn f(level: Level, line: &str) { shell_log_at(level, &redactor.redact(line)) }'
+    ],
+    [
+      'a typed mutable binding from redact(',
+      'fn f(level: Level, line: &str) { let mut out: String = r.redact(line); shell_log_at(level, &out) }'
+    ]
+  ])('does not flag %s', (_what, code) => {
+    expect(flaggedAt(code)).toBeNull()
+  })
+
+  test('shell_log_at contributes its second argument, and its definition is not a call', () => {
+    const [call] = listShellLogCalls(
+      'shell_log_at(Level::Info, &format!("a ({kind}), b"))'
+    )
+    expect(call?.name).toBe('shell_log_at')
+    expect(call?.message.trim()).toBe('&format!("a ({kind}), b")')
+    expect(
+      listShellLogCalls(
+        'pub(crate) fn shell_log_at(level: gamelib_log::Level, message: &str) {}'
+      )
+    ).toHaveLength(0)
+    // The test-only half is a different function and is not scanned.
+    expect(
+      listShellLogCalls('shell_log_at_to(Some(&l), level, line)')
+    ).toHaveLength(0)
   })
 })
