@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-57-PLAN.md
-last_updated: "2026-11-23T21:59:46.295Z"
+stopped_at: Completed 87-58-PLAN.md
+last_updated: "2026-11-24T02:34:13.144Z"
 last_activity: 2026-11-23
 last_activity_desc: Phase 87 execution started
-state_head: f720c6690762cba6dd3a5e3754590021cfc2acdd
+state_head: 6c5bfa0a3d2040e6a44c068e1612ebcbe162364b
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 61 of 62 (87-57 complete 2026-11-24; 87-58 next)
-Status: Ready to execute (87-58 next via /gsd-execute-phase 87)
-Last activity: 2026-11-24 — Completed 87-57 (engineWineSurvivors compares SCHEDULE with a 77-row survivor table in both directions, oracle harness trimmed, census and ratchets agree)
+Plan: 62 of 62 (87-58 complete 2026-11-24; 87-59 next)
+Status: Ready to execute (87-59 next via /gsd-execute-phase 87; D-12 gate blocked until a signed Phase 87 artifact exists)
+Last activity: 2026-11-24 — Completed 87-58 (clean-worktree proof at 1e586bf8d, three-OS CI green at f9f1cce2e after twelve Windows-found fixes, release dry run 45279091996 built and notarized but uploads no artifact: Gate blocked)
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -469,6 +469,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P56b | n/a | 3 tasks | 51 files |
 | Phase 87 P56c | not recorded | 3 tasks | 138 files |
 | Phase 87 P57 | not recorded | 2 tasks | 12 files |
+| Phase 87 P58 | 280min | 3 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -1007,6 +1008,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-56b: createRunTool moved to testUtils/realRunTool.ts (test support) so engine/runTool.ts is gone before 87-56c
 - [Phase 87]: 87-56c: every Steam slice takes requestRustInvoke from its own deps in place of the engineRuntime member; the tool-target and game-command sources are local Pick-based types; engineStateWiring.test.ts deleted with its subject; steam_engine_notices keeps its storeTable row via EXTRA_ROWS
 - [Phase 87]: 87-57: EXPECTED_SURVIVORS holds 77 rows (the plan's 70 plus the five 87-56a/b rows, cancelFallbackBottle and bridgeDeadlines); compared with SCHEDULE by (file, name, shape, wiring) in both directions, deletedBy held to 88..98 but outside the key
+- [Phase 87]: 87-58: push-and-build with dry_run=true; D-10 accepted as met by the operator; D-12 gate blocked (a dry run uploads no artifact)
+- [Phase 87]: 87-58: Windows-only test reds (twelve CI runs) fixed by #[cfg(unix)] gating and a leading-tilde fix in tools/dxvk.rs, not by loosening assertions
 
 ### Pending Todos
 
@@ -1288,8 +1291,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T21:59:43.570Z
-Stopped at: Completed 87-57-PLAN.md
+Last session: 2026-11-24T02:34:10.480Z
+Stopped at: Completed 87-58-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
