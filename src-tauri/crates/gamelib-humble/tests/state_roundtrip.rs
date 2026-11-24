@@ -13,10 +13,12 @@
 //!   file with the `after` bytes and the golden's `changed` set.
 //! - `legacy-notified-expiration-is-backfilled-to-a-composite-key` runs the digest's backfill over the
 //!   legacy bytes.
+//! - the Rust-only corrupt case (FND-06, 85 D-05) and the disconnect clear set (94-09's
+//!   `disconnect-wipes-credentials-and-keeps-the-user-state`).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use gamelib_core::clock::Clock;
@@ -27,11 +29,11 @@ use gamelib_humble::expiration_alerts::{
 };
 use gamelib_humble::http::NoHttp;
 use gamelib_humble::stores::{
-    append_audit, load_app_ids, load_audit, load_config, load_library, load_local_redeemed,
-    load_notified_expirations, load_stamps, load_sync_state, patch_sync_state, put_app_id,
-    put_audit, put_library_entry, put_local_redeemed, put_notified_expiration, put_stamp,
-    set_config_flag, set_username, AuditRecord, ConfigFlag, HumbleStore, StampStore, StoreRead,
-    SyncPatch, WriteError,
+    append_audit, clear_on_disconnect, load_app_ids, load_audit, load_config, load_library,
+    load_local_redeemed, load_notified_expirations, load_stamps, load_sync_state, patch_sync_state,
+    put_app_id, put_audit, put_library_entry, put_local_redeemed, put_notified_expiration,
+    put_stamp, set_config_flag, set_username, AuditRecord, ConfigFlag, HumbleStore, StampStore,
+    StoreRead, SyncPatch, WriteError, CLEAR_ON_DISCONNECT,
 };
 use gamelib_store::host::StoreHost;
 use gamelib_testutil::FakeHome;
@@ -40,6 +42,16 @@ use serde_json::Value;
 
 /// 2026-11-24T12:00:00Z, the instant the TypeScript harness pinned its clock to.
 const BASE_MS: u64 = 1_795_521_600_000;
+
+const SEVEN_USER_STATE: [HumbleStore; 7] = [
+    HumbleStore::Revealed,
+    HumbleStore::OwnershipOverride,
+    HumbleStore::GiftedAt,
+    HumbleStore::Audit,
+    HumbleStore::LocalRedeemed,
+    HumbleStore::NotifiedExpiration,
+    HumbleStore::SettleDeclined,
+];
 
 struct PinnedClock(u64);
 
@@ -489,5 +501,227 @@ fn the_state_golden_set_is_the_manifest_set() {
         "corrupt-state-file-is-a-rust-only-case",
     ] {
         assert!(dir.join(format!("{name}.json")).is_file(), "{name}");
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+// Task 2: a corrupt file is kept, and disconnect clears exactly what the TypeScript cleared
+// ------------------------------------------------------------------------------------------------
+
+/// The `.corrupt.` copies the host left beside `rel`, as bytes.
+fn aside_copies(home: &FakeHome, rel: &str) -> Vec<Vec<u8>> {
+    let dir = path_of(home, rel);
+    let dir = dir.parent().unwrap();
+    let stem = Path::new(rel).file_stem().unwrap().to_string_lossy();
+    let prefix = format!("{stem}.corrupt.");
+    let mut copies: Vec<Vec<u8>> = fs::read_dir(dir)
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_name().to_string_lossy().starts_with(&prefix))
+        .map(|e| fs::read(e.path()).unwrap())
+        .collect();
+    copies.sort();
+    copies
+}
+
+fn corrupt_inputs() -> BTreeMap<String, Vec<u8>> {
+    let case = golden("state/corrupt-state-file-is-a-rust-only-case.json");
+    assert_eq!(case["rustOnly"], "FND-06 copy-aside, 85 D-05");
+    case["corruptInputs"]
+        .as_object()
+        .expect("corrupt inputs")
+        .iter()
+        .map(|(rel, v)| (rel.clone(), v.as_str().unwrap().as_bytes().to_vec()))
+        .collect()
+}
+
+/// Every typed way of writing `which`, each of which must refuse an unreadable file.
+fn write_attempts(ctx: &HumbleCtx, which: HumbleStore) -> Vec<Result<(), WriteError>> {
+    match which {
+        HumbleStore::Config => vec![
+            set_config_flag(ctx, ConfigFlag::IsLoggedIn, true),
+            set_username(ctx, "someone"),
+        ],
+        HumbleStore::Library => {
+            vec![put_library_entry(
+                ctx,
+                "fake-gamekey-0001",
+                &gamelib_humble::stores::Entry::default(),
+                BASE_MS,
+            )]
+        }
+        HumbleStore::Revealed => vec![put_stamp(ctx, StampStore::Revealed, "k", 1, BASE_MS)],
+        HumbleStore::Audit => vec![append_audit(
+            ctx,
+            "k",
+            &AuditRecord {
+                event: "reveal".into(),
+                at: 1,
+                outcome: None,
+                title: "t".into(),
+                platform: "steam".into(),
+            },
+            BASE_MS,
+        )],
+        _ => unreachable!("only the stores this test names"),
+    }
+}
+
+#[test]
+fn a_corrupt_user_state_file_is_copied_aside_and_never_reset() {
+    let inputs = corrupt_inputs();
+    assert!(inputs.len() >= 2, "the golden names a library and a config");
+
+    // The golden's two files, plus `humble_revealed` fed the library's corrupt bytes (the plan's case).
+    let mut cases: Vec<(HumbleStore, String, Vec<u8>)> = Vec::new();
+    for (rel, bytes) in &inputs {
+        let which = HumbleStore::ALL
+            .into_iter()
+            .find(|s| &rel_of(*s) == rel)
+            .unwrap_or_else(|| panic!("{rel} is not a Humble file"));
+        cases.push((which, rel.clone(), bytes.clone()));
+    }
+    let library_bytes = inputs["store_cache/humble_library.json"].clone();
+    cases.push((
+        HumbleStore::Revealed,
+        rel_of(HumbleStore::Revealed),
+        library_bytes.clone(),
+    ));
+    cases.push((
+        HumbleStore::Audit,
+        rel_of(HumbleStore::Audit),
+        library_bytes,
+    ));
+
+    for (which, rel, corrupt) in &cases {
+        let home = FakeHome::new("humble-corrupt-");
+        seed(&home, rel, corrupt);
+        let ctx = ctx_at(&home, BASE_MS);
+
+        // The read says unreadable: it is not "empty".
+        match which.open_checked(&ctx) {
+            StoreRead::Unreadable(un) => assert_eq!(un.store, *which, "{rel}"),
+            other => panic!(
+                "{rel}: expected Unreadable, got ok={}",
+                other.ok().is_some()
+            ),
+        }
+        let unreadable = match which {
+            HumbleStore::Config => load_config(&ctx).is_unreadable(),
+            HumbleStore::Library => load_library(&ctx).is_unreadable(),
+            HumbleStore::Revealed => load_stamps(&ctx, StampStore::Revealed).is_unreadable(),
+            HumbleStore::Audit => load_audit(&ctx).is_unreadable(),
+            _ => unreachable!(),
+        };
+        assert!(unreadable, "{rel}: the typed read reports unreadable");
+
+        // Every typed write is refused, as unreadable.
+        for attempt in write_attempts(&ctx, *which) {
+            match attempt {
+                Err(WriteError::Unreadable(un)) => assert_eq!(un.store, *which),
+                other => panic!("{rel}: a write over a corrupt file must be refused: {other:?}"),
+            }
+        }
+
+        // The file is exactly what it was, and the host's aside copy holds the same bytes.
+        assert_eq!(
+            read_bytes(&home, rel).as_deref(),
+            Some(corrupt.as_slice()),
+            "{rel}: never reset"
+        );
+        assert_eq!(
+            aside_copies(&home, rel),
+            vec![corrupt.clone()],
+            "{rel}: one aside copy with the original bytes"
+        );
+    }
+}
+
+#[test]
+fn a_corrupt_cache_is_copied_aside_and_restarts_empty() {
+    // `humble_sync` is a rebuildable cache: the host's cache rule (copy aside, start empty) applies,
+    // and the aside copy keeps the original bytes.
+    let inputs = corrupt_inputs();
+    let corrupt = inputs["store_cache/humble_library.json"].clone();
+    let rel = rel_of(HumbleStore::Sync);
+    let home = FakeHome::new("humble-corrupt-cache-");
+    seed(&home, &rel, &corrupt);
+    let ctx = ctx_at(&home, BASE_MS);
+
+    let state = ok(load_sync_state(&ctx), "sync");
+    assert_eq!(
+        state.synced_at, None,
+        "an unreadable cache reads as never synced"
+    );
+    assert_eq!(aside_copies(&home, &rel), vec![corrupt.clone()]);
+
+    patch_sync_state(&ctx, &SyncPatch::new().synced_at(Some(BASE_MS)), BASE_MS).unwrap();
+    assert!(read_text(&home, &rel).contains("\"syncedAt\": 1795521600000"));
+    assert_eq!(
+        aside_copies(&home, &rel),
+        vec![corrupt],
+        "the original bytes survive in the copy"
+    );
+}
+
+#[test]
+fn disconnect_clears_the_config_library_and_sync_and_leaves_the_rest_byte_identical() {
+    let case = golden("user/disconnect-wipes-credentials-and-keeps-the-user-state.json");
+    let before = utf8_files(&case["stateBefore"]);
+    let after = utf8_files(&case["stateAfter"]);
+    assert_eq!(before.len(), 11);
+    assert_eq!(after.len(), 11);
+
+    let home = FakeHome::new("humble-disconnect-");
+    seed_all(&home, &before);
+    let ctx = ctx_at(&home, BASE_MS);
+    let report = clear_on_disconnect(&ctx);
+    assert!(report.is_complete(), "{:?}", report.failed);
+    assert_eq!(report.cleared, CLEAR_ON_DISCONNECT);
+
+    for (rel, want) in &after {
+        assert_eq!(&read_text(&home, rel), want, "{rel}");
+    }
+    // The set that is cleared is the three the TypeScript cleared, and nothing else moved.
+    let cleared: BTreeSet<String> = CLEAR_ON_DISCONNECT.iter().map(|s| rel_of(*s)).collect();
+    for which in HumbleStore::ALL {
+        let rel = rel_of(which);
+        let moved = read_text(&home, &rel) != before[&rel];
+        assert_eq!(moved, cleared.contains(&rel), "{rel}");
+    }
+    for which in SEVEN_USER_STATE
+        .into_iter()
+        .chain([HumbleStore::SteamAppId])
+    {
+        let rel = rel_of(which);
+        assert_eq!(read_text(&home, &rel), before[&rel], "{rel} survives");
+    }
+}
+
+#[test]
+fn disconnect_reports_a_file_it_could_not_read_and_still_clears_the_rest() {
+    let case = golden("user/disconnect-wipes-credentials-and-keeps-the-user-state.json");
+    let before = utf8_files(&case["stateBefore"]);
+    let after = utf8_files(&case["stateAfter"]);
+    let corrupt = corrupt_inputs()["store_cache/humble_library.json"].clone();
+
+    let home = FakeHome::new("humble-disconnect-corrupt-");
+    seed_all(&home, &before);
+    seed(&home, "store_cache/humble_library.json", &corrupt);
+    let ctx = ctx_at(&home, BASE_MS);
+    let report = clear_on_disconnect(&ctx);
+
+    assert!(!report.is_complete());
+    assert_eq!(report.failed.len(), 1);
+    assert_eq!(report.failed[0].0, HumbleStore::Library);
+    assert!(matches!(report.failed[0].1, WriteError::Unreadable(_)));
+    assert_eq!(report.cleared, [HumbleStore::Config, HumbleStore::Sync]);
+    assert_eq!(
+        read_bytes(&home, "store_cache/humble_library.json").as_deref(),
+        Some(corrupt.as_slice()),
+        "the unreadable library is kept as it was"
+    );
+    for rel in ["humble_store/config.json", "store_cache/humble_sync.json"] {
+        assert_eq!(read_text(&home, rel), after[rel], "{rel}");
     }
 }

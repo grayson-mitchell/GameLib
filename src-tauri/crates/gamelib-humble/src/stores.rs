@@ -30,8 +30,9 @@ use std::io;
 use std::sync::Arc;
 
 use gamelib_store::engine::{OpenOutcome, ReadOnlyReason};
-use gamelib_store::host::Store;
+use gamelib_store::host::{Origin, Store};
 use gamelib_store::json::{Json, Num, Obj};
+use gamelib_store::ops::Op;
 use gamelib_store::table::row_for_key;
 use serde_json::Value;
 
@@ -911,6 +912,49 @@ pub fn put_app_id(
     write_with(ctx, HumbleStore::SteamAppId, |store| {
         put_app_id_entry(store, key, entry, now_ms)
     })
+}
+
+// ---- disconnect ----------------------------------------------------------------------------------
+
+/// What `HumbleUser.disconnect()` clears, in its order: the config first (the credential boundary), then
+/// the library and sync state, which are rebuilt by a re-sync. The seven user-state files (82-STATE-
+/// OWNERSHIP rows 69-75) and the Steam app-id cache are never cleared, so a revealed key never
+/// regresses and a correction, a gift, an audit line or a decline survives a reconnect.
+pub const CLEAR_ON_DISCONNECT: [HumbleStore; 3] =
+    [HumbleStore::Config, HumbleStore::Library, HumbleStore::Sync];
+
+/// Which of the cleared stores were cleared and which were not.
+#[derive(Debug, Default)]
+pub struct ClearReport {
+    pub cleared: Vec<HumbleStore>,
+    pub failed: Vec<(HumbleStore, WriteError)>,
+}
+
+impl ClearReport {
+    pub fn is_complete(&self) -> bool {
+        self.failed.is_empty()
+    }
+}
+
+/// `configStore.clear()`, `humbleLibraryStore.clear()`, `humbleSyncStore.clear()`, each through the host
+/// (`Op::Clear`: the document becomes `{}` and the version envelope is stamped back). Every store is
+/// attempted whatever an earlier one did, and a file the host could not read is reported, never
+/// overwritten. The keyring secrets, the fence and the cookie wipe are the caller's.
+pub fn clear_on_disconnect(ctx: &HumbleCtx) -> ClearReport {
+    let mut report = ClearReport::default();
+    for which in CLEAR_ON_DISCONNECT {
+        let done = write_with(ctx, which, |store| {
+            store
+                .apply(Op::Clear, Origin::Rust)
+                .map(|_| ())
+                .map_err(io::Error::from)
+        });
+        match done {
+            Ok(()) => report.cleared.push(which),
+            Err(e) => report.failed.push((which, e)),
+        }
+    }
+    report
 }
 
 #[cfg(test)]
