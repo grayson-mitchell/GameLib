@@ -3,11 +3,26 @@
     margin-bottom: var(--space-md);
   }
 
+  /* Neutral accent-tinted note (sketch-findings game-settings-dialog, rule 2):
+     information, not danger, so no red fill. Theme tokens only. */
   .default-wine-warning {
-    padding: var(--space-xs);
+    margin: var(--space-xs) 0 var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--space-3xs);
+    color: var(--text-secondary);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
+  /* Amber, risk-only warning (rule 5): shown once, only while the bottle
+     toggle is on, over the theme's own warning token. */
+  .uninstallModal__riskWarning {
+    margin: var(--space-xs) 0 var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--space-3xs);
     color: var(--text-default);
-    padding-top: 0;
-    margin-top: var(--space-xs);
+    background: color-mix(in srgb, var(--status-warning) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--status-warning) 40%, transparent);
   }
 
   label + .hiddenCheckbox + label {

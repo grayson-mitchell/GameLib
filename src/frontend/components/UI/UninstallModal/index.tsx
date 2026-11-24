@@ -38,6 +38,10 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
 }) {
   const [isNative, setIsNative] = useState(true)
   const [winePrefix, setWinePrefix] = useState('')
+  // 87-67 (F5 UI): the game's own CrossOver bottle, set only when the stored `wineCrossoverBottle`
+  // equals the name the engine layer computes for this game (the same two-fact rule as the Rust op,
+  // 87-66). It labels the toggle; the backend recomputes the target, so no name is ever sent (T-87-123).
+  const [bottleName, setBottleName] = useState('')
   const [deletePrefixChecked, setDeletePrefixChecked] = useState(false)
   const [deleteSettingsChecked, setDeleteSettingsChecked] = useState(true)
   const [disableDeleteWine, setDisableDeleteWine] = useState(false)
@@ -102,8 +106,33 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
 
     const defaultSettings = await window.api.requestGameSettings('default')
 
+    // Steam titles never show the toggle (quick 261112-90h), so they never ask for a name.
+    let perGameBottle = ''
+    if (!hasCapability(runner, 'installHandOffToClient')) {
+      try {
+        const name = await window.api.getPerGameBottleName({ runner, appName })
+        if (name && gameSettings.wineCrossoverBottle === name) {
+          perGameBottle = name
+        }
+      } catch (error) {
+        // Fall back to the prefix branch: an unanswered name query never offers a bottle removal.
+        window.api.logError(
+          `getPerGameBottleName failed for ${appName}: ${
+            error instanceof Error
+              ? (error.stack ?? error.message)
+              : String(error)
+          }`
+        )
+      }
+    }
+
     setWinePrefix(gameSettings.winePrefix)
-    setDisableDeleteWine(gameSettings.winePrefix === defaultSettings.winePrefix)
+    setBottleName(perGameBottle)
+    // A bottle-backed game keeps the default prefix on purpose; its bottle is what the toggle removes.
+    setDisableDeleteWine(
+      perGameBottle === '' &&
+        gameSettings.winePrefix === defaultSettings.winePrefix
+    )
   }
 
   useEffect(() => {
@@ -249,17 +278,32 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
               <ToggleSwitch
                 htmlId="uninstallCheckbox"
                 value={deletePrefixChecked}
-                title={t('gamepage:box.uninstall.checkbox', {
-                  defaultValue:
-                    "Remove prefix: {{prefix}}{{newLine}}Note: This can't be undone and will also remove not backed up save files.",
-                  prefix: winePrefix,
-                  newLine: '\n'
-                })}
+                title={
+                  bottleName
+                    ? t('gamelib:uninstall.removeBottle', {
+                        defaultValue: "Remove this game's bottle: {{bottle}}",
+                        bottle: bottleName
+                      })
+                    : t('gamepage:box.uninstall.checkbox', {
+                        defaultValue:
+                          "Remove prefix: {{prefix}}{{newLine}}Note: This can't be undone and will also remove not backed up save files.",
+                        prefix: winePrefix,
+                        newLine: '\n'
+                      })
+                }
                 disabled={disableDeleteWine}
                 handleChange={() => {
                   setDeletePrefixChecked(!deletePrefixChecked)
                 }}
               />
+            )}
+            {showWineCheckbox && bottleName && deletePrefixChecked && (
+              <p className="uninstallModal__riskWarning">
+                {t(
+                  'gamelib:uninstall.removeBottleWarning',
+                  "This can't be undone. Saves kept inside the bottle are deleted."
+                )}
+              </p>
             )}
             {showWineCheckbox && disableDeleteWine && (
               <p className="default-wine-warning">

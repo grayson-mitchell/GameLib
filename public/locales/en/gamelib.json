@@ -1301,6 +1301,10 @@
         "remove": "Remove",
         "save": "Save"
     },
+    "uninstall": {
+        "removeBottle": "Remove this game's bottle: {{bottle}}",
+        "removeBottleWarning": "This can't be undone. Saves kept inside the bottle are deleted."
+    },
     "webview": {
         "embedPlaceholder": {
             "message": "Paused while a window is open"
