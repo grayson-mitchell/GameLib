@@ -29,7 +29,9 @@ use crate::exists::{shortcut_path_present, shortcuts_exist_at, windows_desktop_f
 use crate::game::ShortcutGame;
 use crate::notice;
 use crate::paths::shortcut_files;
-use crate::proof::{is_gamelib_bundle, is_gamelib_desktop_link};
+use crate::proof::{
+    is_gamelib_bundle, is_gamelib_desktop_file, is_gamelib_desktop_link, is_gamelib_lnk,
+};
 
 /// The arguments of `shortcuts_remove`.
 #[derive(Debug, Deserialize)]
@@ -127,7 +129,8 @@ fn judge(platform: Platform, path: &Path, bundle: Option<&Path>) -> Verdict {
             bundle.is_some_and(|bundle| is_gamelib_desktop_link(path, bundle))
         }
         Platform::Mac => is_gamelib_bundle(path),
-        Platform::Linux | Platform::Windows => false,
+        Platform::Linux => is_gamelib_desktop_file(path),
+        Platform::Windows => is_gamelib_lnk(path),
     };
     if ours {
         Verdict::Ours

@@ -390,15 +390,9 @@ fn every_removal_golden_replays_with_its_recorded_delta() {
     let cases = remove_cases();
     let deltas = deltas();
     let (mut replayed, mut skipped, mut refusing, mut failures) = (0usize, 0usize, 0usize, vec![]);
-    let mut not_yet = 0usize;
     for (id, case) in &cases {
         // The `addclear-` goldens are the add side, replayed below as the same proof seen from removal.
         if id.starts_with("addclear-") {
-            continue;
-        }
-        // Tracer (94-18 task 1): the macOS arm only; the Linux and Windows arms and their proofs join in task 2.
-        if platform_of(case) != Platform::Mac {
-            not_yet += 1;
             continue;
         }
         match replay(id, case, &deltas) {
@@ -420,7 +414,7 @@ fn every_removal_golden_replays_with_its_recorded_delta() {
         .keys()
         .filter(|id| id.starts_with("addclear-"))
         .count();
-    assert_eq!(replayed + skipped + add_side + not_yet, cases.len());
+    assert_eq!(replayed + skipped + add_side, cases.len());
     if !cfg!(windows) || on_ci() {
         assert_eq!(skipped, 0, "a link-capable host skips nothing");
     }
@@ -727,4 +721,99 @@ fn every_notice_resolves_in_the_shipped_english_catalog_to_the_ts_default() {
         let got = catalog.t(text.key, "MISSING-FROM-CATALOG", &serde_json::Map::new());
         assert_eq!(got, text.default, "{}", text.key);
     }
+}
+
+#[tokio::test]
+async fn linux_removes_its_two_files_keeps_a_foreign_one_and_says_which() {
+    use gamelib_shortcuts::linux::write_desktop_file;
+    let profile = Profile::new();
+    let (ctx, ui) = ctx_for(&profile, Platform::Linux);
+    let planned = plan(Platform::Linux, &profile.paths, "Plain Game", None);
+    let (desktop, menu) = (
+        planned.desktop.expect("desktop").path,
+        planned.menu.expect("menu").path,
+    );
+    fs::create_dir_all(desktop.parent().expect("a parent")).expect("desktop dir");
+    fs::create_dir_all(menu.parent().expect("a parent")).expect("menu dir");
+    write_desktop_file(&desktop, "Plain Game", "plainapp", "legendary", None, None)
+        .expect("desktop");
+    write_desktop_file(&menu, "Plain Game", "plainapp", "legendary", None, None).expect("menu");
+
+    let out = run(&ctx, remove_args("Plain Game", false, true)).await;
+    assert!(!desktop.exists() && !menu.exists());
+    assert_eq!(out["existsAfter"], json!(false));
+    assert_eq!(
+        ui.notices(),
+        vec![("Shortcuts".to_string(), notice::REMOVED.default.to_string())]
+    );
+
+    // A user's own launcher of the same name is left alone, and the notice is the error one.
+    fs::write(&menu, "[Desktop Entry]\nName=Mine\nExec=/usr/bin/mine\n").expect("foreign");
+    let out = run(&ctx, remove_args("Plain Game", false, true)).await;
+    assert!(menu.exists());
+    assert_eq!(
+        strings(&out["refused"]),
+        BTreeSet::from([menu.to_string_lossy().into_owned()])
+    );
+    assert_eq!(out["existsAfter"], json!(true));
+    assert_eq!(ui.notices().len(), 2);
+    assert_eq!(ui.notices()[1].1, notice::REMOVE_FAILED.default);
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn windows_reads_the_registry_desktop_and_removes_only_proven_lnk_files() {
+    use gamelib_core::process::SpecOutput;
+    use gamelib_shortcuts::testing::ScriptedRunner;
+    let profile = Profile::new();
+    let desktop_dir = profile.root().join("Desktop");
+    let answer = format!(
+        "\r\nHKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\r\n    Desktop    REG_SZ    {}\r\n\r\n",
+        desktop_dir.display()
+    );
+    let runner = Arc::new(ScriptedRunner::answering(SpecOutput {
+        code: Some(0),
+        stdout: answer,
+        ..SpecOutput::default()
+    }));
+    let (ctx, ui) = ctx_for(&profile, Platform::Windows);
+    let ctx = ctx.with_proc(runner.clone());
+    let planned = plan(
+        Platform::Windows,
+        &profile.paths,
+        "Plain Game",
+        Some(&desktop_dir),
+    );
+    let (desktop, menu) = (
+        planned.desktop.expect("desktop").path,
+        planned.menu.expect("menu").path,
+    );
+    for (path, text) in [
+        (
+            &desktop,
+            "GAMELIB-LNK \"gamelib://launch?appName=plainapp&runner=legendary\"",
+        ),
+        (&menu, "FOREIGN-LNK C:\\Program Files\\Foreign\\foreign.exe"),
+    ] {
+        fs::create_dir_all(path.parent().expect("a parent")).expect("dir");
+        fs::write(
+            path,
+            text.encode_utf16()
+                .flat_map(u16::to_le_bytes)
+                .collect::<Vec<u8>>(),
+        )
+        .expect("lnk");
+    }
+
+    let out = run(&ctx, remove_args("Plain Game", false, true)).await;
+
+    assert!(!desktop.exists(), "the proven Desktop .lnk is removed");
+    assert!(menu.exists(), "a user's own .lnk of the same name is not");
+    assert_eq!(
+        strings(&out["refused"]),
+        BTreeSet::from([menu.to_string_lossy().into_owned()])
+    );
+    assert_eq!(out["existsAfter"], json!(true));
+    assert_eq!(runner.spawns().len(), 1, "one registry query");
+    assert_eq!(ui.notices()[0].1, notice::REMOVE_FAILED.default);
 }
