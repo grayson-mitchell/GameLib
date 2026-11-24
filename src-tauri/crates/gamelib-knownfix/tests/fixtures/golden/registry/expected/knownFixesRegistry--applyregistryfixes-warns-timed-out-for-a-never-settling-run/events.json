@@ -1,0 +1,8 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: registry fix HKCU\\Software\\Foo Bar (/reg:64) timed out (no running child to kill)"
+  }
+]

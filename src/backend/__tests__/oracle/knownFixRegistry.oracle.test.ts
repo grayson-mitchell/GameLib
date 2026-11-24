@@ -56,6 +56,11 @@ import {
   loadClasses,
   type SpawnClass
 } from 'backend/testUtils/launchOracle/spawnClass'
+import {
+  assertCasesCoverTitles,
+  slug,
+  tsTestTitles
+} from 'backend/testUtils/launchOracle/census'
 import { createCommandRunner } from 'backend/commandRunner'
 import {
   setupEnvVars,
@@ -586,6 +591,17 @@ describeSkipOnWindows('known-fix registry oracle (88-06)', () => {
       ...(spawns ? { spawns } : {}),
       ...(tree ? { after: tree } : {})
     })
+  })
+
+  it('every title of knownFixesRegistry.test.ts is a named case, one for one', () => {
+    const ids = cases
+      .filter((c) => c.id.startsWith('knownFixesRegistry--'))
+      .map((c) => c.id.slice('knownFixesRegistry--'.length))
+    const titles = tsTestTitles(
+      join(__dirname, '..', 'knownFixesRegistry.test.ts')
+    )
+    assertCasesCoverTitles(ids, titles, {})
+    expect([...ids].sort()).toEqual(titles.map(slug).sort())
   })
 
   it('the committed MANIFEST agrees with the case list and holds one folder per case', () => {

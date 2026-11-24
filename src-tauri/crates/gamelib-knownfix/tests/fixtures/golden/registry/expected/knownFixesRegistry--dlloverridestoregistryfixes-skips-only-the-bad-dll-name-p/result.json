@@ -1,0 +1,96 @@
+{
+  "steps": [
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "a.exe",
+          "dlls": {
+            "d3d9.dll": "native",
+            "ok": "builtin"
+          }
+        }
+      ],
+      "compiled": [
+        {
+          "key": "HKCU\\Software\\Wine\\AppDefaults\\a.exe\\DllOverrides",
+          "name": "ok",
+          "type": "REG_SZ",
+          "value": "builtin",
+          "views": [
+            64
+          ]
+        }
+      ]
+    },
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "a.exe",
+          "dlls": {
+            "a\\b": "native",
+            "ok": "builtin"
+          }
+        }
+      ],
+      "compiled": [
+        {
+          "key": "HKCU\\Software\\Wine\\AppDefaults\\a.exe\\DllOverrides",
+          "name": "ok",
+          "type": "REG_SZ",
+          "value": "builtin",
+          "views": [
+            64
+          ]
+        }
+      ]
+    },
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "a.exe",
+          "dlls": {
+            "": "native",
+            "ok": "builtin"
+          }
+        }
+      ],
+      "compiled": [
+        {
+          "key": "HKCU\\Software\\Wine\\AppDefaults\\a.exe\\DllOverrides",
+          "name": "ok",
+          "type": "REG_SZ",
+          "value": "builtin",
+          "views": [
+            64
+          ]
+        }
+      ]
+    },
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "a.exe",
+          "dlls": {
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": "native",
+            "ok": "builtin"
+          }
+        }
+      ],
+      "compiled": [
+        {
+          "key": "HKCU\\Software\\Wine\\AppDefaults\\a.exe\\DllOverrides",
+          "name": "ok",
+          "type": "REG_SZ",
+          "value": "builtin",
+          "views": [
+            64
+          ]
+        }
+      ]
+    }
+  ]
+}

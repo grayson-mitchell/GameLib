@@ -1,0 +1,48 @@
+[
+  {
+    "step": 0,
+    "kind": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKCU\\Software\\Foo",
+      "/v",
+      "Bar",
+      "/t",
+      "REG_DWORD",
+      "/d",
+      "1",
+      "/reg:64",
+      "/f"
+    ],
+    "wait": false,
+    "protonVerb": "runinprefix",
+    "skipPrefixCheckIKnowWhatImDoing": null,
+    "hasOnSpawn": true,
+    "gameSettingsIsTheCallers": true,
+    "winePrefix": "/games/prefixes/GOGAPP"
+  },
+  {
+    "step": 0,
+    "kind": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKCU\\Software\\Wine\\AppDefaults\\Game.exe\\DllOverrides",
+      "/v",
+      "nvapi64",
+      "/t",
+      "REG_SZ",
+      "/d",
+      "native",
+      "/reg:64",
+      "/f"
+    ],
+    "wait": false,
+    "protonVerb": "runinprefix",
+    "skipPrefixCheckIKnowWhatImDoing": null,
+    "hasOnSpawn": true,
+    "gameSettingsIsTheCallers": true,
+    "winePrefix": "/games/prefixes/GOGAPP"
+  }
+]

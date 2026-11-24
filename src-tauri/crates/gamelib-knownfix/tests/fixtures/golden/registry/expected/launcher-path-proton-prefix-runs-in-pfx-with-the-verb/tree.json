@@ -1,0 +1,116 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/fixes",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/fixes/local",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/fixes/local/GOGAPP-gog.profile.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "b03fb5091b07ecb4167bb30d93cf721bf37d330a0c7972a5ccc0dc2fcb768e07"
+  },
+  {
+    "path": ".config/GameLib/tools",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton/GE-Proton9-27",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/tools/proton/GE-Proton9-27/proton",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Games",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/prefix",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/prefix/config_info",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Games/prefix/pfx",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/prefix/pfx.lock",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Games/prefix/pfx/dosdevices",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/prefix/pfx/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/prefix/pfx/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "85eca4b199156aaa737fb0ee290f17126bd302105d3ce056e1c90f105b5d0fc6"
+  },
+  {
+    "path": "Games/prefix/pfx/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "85eca4b199156aaa737fb0ee290f17126bd302105d3ce056e1c90f105b5d0fc6"
+  },
+  {
+    "path": "Games/prefix/pfx/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Games/prefix/tracked_files",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Games/prefix/version",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

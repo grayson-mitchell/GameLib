@@ -1,0 +1,76 @@
+{
+  "steps": [
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "a.exe",
+          "dlls": {
+            "x": "n"
+          }
+        }
+      ],
+      "compiled": []
+    },
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "a.exe",
+          "dlls": {
+            "x": "b"
+          }
+        }
+      ],
+      "compiled": []
+    },
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "a.exe",
+          "dlls": {
+            "x": ""
+          }
+        }
+      ],
+      "compiled": []
+    },
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "a.exe",
+          "dlls": {
+            "x": "native, builtin"
+          }
+        }
+      ],
+      "compiled": []
+    },
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "a.exe",
+          "dlls": {
+            "x": 3
+          }
+        }
+      ],
+      "compiled": []
+    },
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "a.exe",
+          "dlls": {
+            "x": null
+          }
+        }
+      ],
+      "compiled": []
+    }
+  ]
+}

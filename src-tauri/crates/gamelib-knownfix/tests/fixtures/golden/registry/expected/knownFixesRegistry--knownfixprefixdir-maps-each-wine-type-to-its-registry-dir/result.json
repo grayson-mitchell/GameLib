@@ -1,0 +1,34 @@
+{
+  "steps": [
+    {
+      "op": "prefixDir",
+      "settings": {
+        "winePrefix": "/x",
+        "wineVersion": {
+          "type": "proton"
+        }
+      },
+      "dir": "/x/pfx"
+    },
+    {
+      "op": "prefixDir",
+      "settings": {
+        "winePrefix": "/x",
+        "wineVersion": {
+          "type": "wine"
+        }
+      },
+      "dir": "/x"
+    },
+    {
+      "op": "prefixDir",
+      "settings": {
+        "wineCrossoverBottle": "B",
+        "wineVersion": {
+          "type": "crossover"
+        }
+      },
+      "dir": "<HOME>/Library/Application Support/CrossOver/Bottles/B"
+    }
+  ]
+}

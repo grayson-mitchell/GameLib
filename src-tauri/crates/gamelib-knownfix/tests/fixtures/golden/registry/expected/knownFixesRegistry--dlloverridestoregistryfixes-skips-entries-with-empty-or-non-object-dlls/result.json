@@ -1,0 +1,20 @@
+{
+  "steps": [
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "a.exe",
+          "dlls": {}
+        },
+        {
+          "exe": "a.exe",
+          "dlls": []
+        },
+        "x",
+        null
+      ],
+      "compiled": []
+    }
+  ]
+}

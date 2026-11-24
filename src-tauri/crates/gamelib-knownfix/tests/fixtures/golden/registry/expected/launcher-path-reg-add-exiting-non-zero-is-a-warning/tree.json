@@ -1,0 +1,60 @@
+[
+  {
+    "path": "Applications",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents/SharedSupport",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents/SharedSupport/CrossOver",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "public",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "public/fixes",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "public/fixes/GOGAPP-gog.profile.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "4e3e356d0626a3ebaa552ba13cf8331346d6c9ee0ab53194273b92a42df85589"
+  }
+]

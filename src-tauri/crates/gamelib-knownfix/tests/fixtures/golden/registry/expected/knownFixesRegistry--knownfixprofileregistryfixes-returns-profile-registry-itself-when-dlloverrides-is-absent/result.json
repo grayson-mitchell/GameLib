@@ -1,0 +1,36 @@
+{
+  "steps": [
+    {
+      "op": "profileFixes",
+      "profile": {
+        "registry": [
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1
+          }
+        ]
+      },
+      "result": [
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1
+        }
+      ],
+      "isUndefined": false,
+      "isTheProfileRegistry": true
+    },
+    {
+      "op": "profileFixes",
+      "profile": {
+        "registry": "junk"
+      },
+      "result": "junk",
+      "isUndefined": false,
+      "isTheProfileRegistry": true
+    }
+  ]
+}

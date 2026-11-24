@@ -1,0 +1,11 @@
+{
+  "steps": [
+    {
+      "op": "profileApply",
+      "appName": "GOGAPP",
+      "runner": "legendary",
+      "seam": "scripted",
+      "settled": true
+    }
+  ]
+}

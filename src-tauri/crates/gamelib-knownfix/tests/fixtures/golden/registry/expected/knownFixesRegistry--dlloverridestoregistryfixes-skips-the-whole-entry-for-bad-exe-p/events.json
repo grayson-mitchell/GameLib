@@ -1,0 +1,38 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad exe): \"..\\\\x.exe\""
+  },
+  {
+    "step": 1,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad exe): \"a/b.exe\""
+  },
+  {
+    "step": 2,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad exe): \"Game\""
+  },
+  {
+    "step": 3,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad exe): \"x\\\"y.exe\""
+  },
+  {
+    "step": 4,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad exe): undefined"
+  },
+  {
+    "step": 5,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad exe): 5"
+  }
+]

@@ -1,0 +1,49 @@
+{
+  "steps": [
+    {
+      "op": "regIsSet",
+      "fix": {
+        "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+        "name": "IsInstalled",
+        "type": "REG_DWORD",
+        "data": "1",
+        "views": [
+          32,
+          64
+        ]
+      },
+      "view": 64,
+      "isSet": false
+    },
+    {
+      "op": "regIsSet",
+      "fix": {
+        "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+        "name": "IsInstalled",
+        "type": "REG_DWORD",
+        "data": "1",
+        "views": [
+          32,
+          64
+        ]
+      },
+      "view": 64,
+      "isSet": false
+    },
+    {
+      "op": "regIsSet",
+      "fix": {
+        "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+        "name": "IsInstalled",
+        "type": "REG_DWORD",
+        "data": "1",
+        "views": [
+          32,
+          64
+        ]
+      },
+      "view": 64,
+      "isSet": false
+    }
+  ]
+}

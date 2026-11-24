@@ -1,0 +1,94 @@
+[
+  {
+    "step": 0,
+    "kind": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKCU\\Software\\Foo",
+      "/v",
+      "Bar",
+      "/t",
+      "REG_DWORD",
+      "/d",
+      "1",
+      "/reg:32",
+      "/f"
+    ],
+    "wait": false,
+    "protonVerb": "runinprefix",
+    "skipPrefixCheckIKnowWhatImDoing": null,
+    "hasOnSpawn": true,
+    "gameSettingsIsTheCallers": true,
+    "winePrefix": "/games/prefixes/GOGAPP"
+  },
+  {
+    "step": 0,
+    "kind": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKCU\\Software\\Foo",
+      "/v",
+      "Bar",
+      "/t",
+      "REG_DWORD",
+      "/d",
+      "1",
+      "/reg:64",
+      "/f"
+    ],
+    "wait": false,
+    "protonVerb": "runinprefix",
+    "skipPrefixCheckIKnowWhatImDoing": null,
+    "hasOnSpawn": true,
+    "gameSettingsIsTheCallers": true,
+    "winePrefix": "/games/prefixes/GOGAPP"
+  },
+  {
+    "step": 1,
+    "kind": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKCU\\Software\\Foo",
+      "/v",
+      "Bar",
+      "/t",
+      "REG_DWORD",
+      "/d",
+      "1",
+      "/reg:32",
+      "/f"
+    ],
+    "wait": false,
+    "protonVerb": "runinprefix",
+    "skipPrefixCheckIKnowWhatImDoing": null,
+    "hasOnSpawn": true,
+    "gameSettingsIsTheCallers": true,
+    "winePrefix": "/games/prefixes/GOGAPP"
+  },
+  {
+    "step": 1,
+    "kind": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKCU\\Software\\Foo",
+      "/v",
+      "Bar",
+      "/t",
+      "REG_DWORD",
+      "/d",
+      "1",
+      "/reg:64",
+      "/f"
+    ],
+    "wait": false,
+    "protonVerb": "runinprefix",
+    "skipPrefixCheckIKnowWhatImDoing": null,
+    "hasOnSpawn": true,
+    "gameSettingsIsTheCallers": true,
+    "winePrefix": "/games/prefixes/GOGAPP"
+  }
+]

@@ -1,0 +1,45 @@
+{
+  "steps": [
+    {
+      "op": "prefixDir",
+      "settings": {
+        "winePrefix": "/x",
+        "wineVersion": {
+          "type": "toolkit"
+        }
+      },
+      "dir": "/x"
+    },
+    {
+      "op": "prefixDir",
+      "settings": {
+        "winePrefix": "/x",
+        "wineVersion": {
+          "type": "portproton"
+        }
+      },
+      "dir": null
+    },
+    {
+      "op": "prefixDir",
+      "settings": {
+        "winePrefix": "",
+        "wineVersion": {
+          "type": "wine"
+        }
+      },
+      "dir": null
+    },
+    {
+      "op": "prefixDir",
+      "settings": {
+        "wineCrossoverBottle": "",
+        "winePrefix": "/x",
+        "wineVersion": {
+          "type": "crossover"
+        }
+      },
+      "dir": null
+    }
+  ]
+}

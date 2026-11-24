@@ -1,0 +1,13 @@
+{
+  "steps": [
+    {
+      "op": "profileFixes",
+      "profile": {
+        "title": "t"
+      },
+      "result": null,
+      "isUndefined": true,
+      "isTheProfileRegistry": true
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "steps": [
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "Game.exe",
+          "dlls": {
+            "nvapi64": "disabled"
+          }
+        }
+      ],
+      "compiled": [
+        {
+          "key": "HKCU\\Software\\Wine\\AppDefaults\\Game.exe\\DllOverrides",
+          "name": "nvapi64",
+          "type": "REG_SZ",
+          "value": "",
+          "views": [
+            64
+          ]
+        }
+      ],
+      "validated": [
+        {
+          "key": "HKCU\\Software\\Wine\\AppDefaults\\Game.exe\\DllOverrides",
+          "name": "nvapi64",
+          "type": "REG_SZ",
+          "data": "",
+          "views": [
+            64
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: ignoring dllOverrides, not an array"
+  },
+  {
+    "step": 1,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: ignoring dllOverrides, not an array"
+  },
+  {
+    "step": 2,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: ignoring dllOverrides, not an array"
+  },
+  {
+    "step": 3,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: ignoring dllOverrides, not an array"
+  },
+  {
+    "step": 4,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: ignoring dllOverrides, not an array"
+  }
+]

@@ -1,0 +1,246 @@
+{
+  "steps": [
+    {
+      "op": "validate",
+      "raw": [
+        "x",
+        null,
+        [],
+        {
+          "key": 5,
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1
+        },
+        {
+          "key": "HKLM\\",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1
+        },
+        {
+          "key": "HKLM\\Software\\",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1
+        },
+        {
+          "key": "HKLM\\Software\\\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1
+        },
+        {
+          "key": "HKCU\\aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1
+        },
+        {
+          "key": "HKCU\\Soft\"ware",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1
+        },
+        {
+          "key": "HKCU\\Soft\nware",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "",
+          "type": "REG_DWORD",
+          "value": 1
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+          "type": "REG_DWORD",
+          "value": 1
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "a\nb",
+          "type": "REG_DWORD",
+          "value": 1
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": -1
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1.5
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 4294967296
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": "1"
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_SZ",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_SZ",
+          "value": "a\rb"
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_SZ",
+          "value": "a\u0000b"
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_SZ",
+          "value": 5
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_BINARY",
+          "value": 1
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1,
+          "views": []
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1,
+          "views": [
+            16
+          ]
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1,
+          "views": "x"
+        }
+      ],
+      "result": []
+    },
+    {
+      "op": "validate",
+      "raw": [
+        {
+          "key": "HKEY_LOCAL_MACHINE\\Software\\A",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1,
+          "views": [
+            64,
+            32
+          ]
+        },
+        {
+          "key": "HKEY_CURRENT_USER\\Software\\B",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1,
+          "views": [
+            64
+          ]
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 4294967295,
+          "views": [
+            32,
+            32
+          ]
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Empty",
+          "type": "REG_SZ",
+          "value": ""
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Long",
+          "type": "REG_SZ",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "result": [
+        {
+          "key": "HKEY_LOCAL_MACHINE\\Software\\A",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        },
+        {
+          "key": "HKEY_CURRENT_USER\\Software\\B",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            64
+          ]
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "data": "4294967295",
+          "views": [
+            32
+          ]
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Empty",
+          "type": "REG_SZ",
+          "data": "",
+          "views": [
+            32,
+            64
+          ]
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Long",
+          "type": "REG_SZ",
+          "data": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "views": [
+            32,
+            64
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "steps": [
+    {
+      "op": "profileFixes",
+      "profile": {
+        "registry": "junk",
+        "dllOverrides": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "x": "native"
+            }
+          }
+        ]
+      },
+      "result": [
+        {
+          "key": "HKCU\\Software\\Wine\\AppDefaults\\a.exe\\DllOverrides",
+          "name": "x",
+          "type": "REG_SZ",
+          "value": "native",
+          "views": [
+            64
+          ]
+        }
+      ],
+      "isUndefined": false,
+      "isTheProfileRegistry": false
+    }
+  ]
+}

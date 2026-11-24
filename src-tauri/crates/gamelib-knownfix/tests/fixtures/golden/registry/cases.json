@@ -68,5 +68,2227 @@
         ]
       }
     ]
+  },
+  {
+    "id": "knownFixesRegistry--validateregistryfixes-keeps-a-valid-entry-and-warns-on-a-bad-sibling-with-ctx-label-prefix",
+    "title": "validateRegistryFixes > keeps a valid entry and warns on a bad sibling with ctx label/prefix",
+    "steps": [
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "key": "HKXX\\bad",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--validateregistryfixes-rejects-a-name-starting-with-and-a-quote-in-a-reg-sz-value",
+    "title": "validateRegistryFixes > rejects a name starting with / and a quote in a REG_SZ value",
+    "steps": [
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "/f",
+            "type": "REG_DWORD",
+            "value": 1
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_SZ",
+            "value": "a\"b"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--validateregistryfixes-warns-and-returns-for-a-non-array",
+    "title": "validateRegistryFixes > warns and returns [] for a non-array",
+    "steps": [
+      {
+        "op": "validate",
+        "raw": {}
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyregistryfixes-runs-once-per-view-32-then-64-with-the-reg-add-argv",
+    "title": "applyRegistryFixes > runs once per view, 32 then 64, with the reg add argv",
+    "steps": [
+      {
+        "op": "apply",
+        "raw": [
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1
+          }
+        ],
+        "label": "gog 123",
+        "logPrefix": "Backend",
+        "seam": "plain",
+        "outcomes": [
+          {},
+          {}
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyregistryfixes-warns-never-rejects-on-non-zero-code-undefined-and-rejection",
+    "title": "applyRegistryFixes > warns, never rejects, on non-zero code, undefined and rejection",
+    "steps": [
+      {
+        "op": "apply",
+        "raw": [
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Baz",
+            "type": "REG_DWORD",
+            "value": 1
+          }
+        ],
+        "label": "gog 123",
+        "logPrefix": "Backend",
+        "seam": "plain",
+        "outcomes": [
+          {
+            "code": 2
+          },
+          {
+            "result": "undefined"
+          },
+          {
+            "result": "reject",
+            "message": "boom"
+          },
+          {
+            "code": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyregistryfixes-warns-timed-out-for-a-never-settling-run",
+    "title": "applyRegistryFixes > warns timed out for a never-settling run",
+    "steps": [
+      {
+        "op": "apply",
+        "raw": [
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1,
+            "views": [
+              64
+            ]
+          }
+        ],
+        "label": "gog 123",
+        "logPrefix": "Backend",
+        "seam": "plain",
+        "outcomes": [
+          {
+            "result": "never"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--wineregistryvalueisset-matches-a-dword-in-the-64-view-and-the-wow6432node-32-view",
+    "title": "wineRegistryValueIsSet > matches a DWORD in the 64 view and the Wow6432Node 32 view",
+    "steps": [
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000001\n[Software\\\\Wow6432Node\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000001\n",
+        "fix": {
+          "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+          "name": "IsInstalled",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      },
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000001\n[Software\\\\Wow6432Node\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000001\n",
+        "fix": {
+          "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+          "name": "IsInstalled",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 32
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--wineregistryvalueisset-is-false-when-the-wow6432node-section-is-absent-for-view-32",
+    "title": "wineRegistryValueIsSet > is false when the Wow6432Node section is absent for view 32",
+    "steps": [
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000001\n",
+        "fix": {
+          "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+          "name": "IsInstalled",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      },
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000001\n",
+        "fix": {
+          "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+          "name": "IsInstalled",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 32
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--wineregistryvalueisset-handles-win32-view-32-plain-view-64-false",
+    "title": "wineRegistryValueIsSet > handles win32: view 32 plain, view 64 false",
+    "steps": [
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win32\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000001\n",
+        "fix": {
+          "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+          "name": "IsInstalled",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 32
+      },
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win32\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000001\n",
+        "fix": {
+          "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+          "name": "IsInstalled",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--wineregistryvalueisset-is-false-for-different-data-absent-name-absent-section",
+    "title": "wineRegistryValueIsSet > is false for different data, absent name, absent section",
+    "steps": [
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000000\n",
+        "fix": {
+          "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+          "name": "IsInstalled",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      },
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"Other\"=dword:00000001\n",
+        "fix": {
+          "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+          "name": "IsInstalled",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      },
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Else] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000001\n",
+        "fix": {
+          "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+          "name": "IsInstalled",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--wineregistryvalueisset-compares-key-and-name-case-insensitively",
+    "title": "wineRegistryValueIsSet > compares key and name case-insensitively",
+    "steps": [
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000001\n[Software\\\\Wow6432Node\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000001\n",
+        "fix": {
+          "key": "HKLM\\SOFTWARE\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+          "name": "isinstalled",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--wineregistryvalueisset-matches-reg-sz-with-escaped-backslashes-and-rejects-differences",
+    "title": "wineRegistryValueIsSet > matches REG_SZ with escaped backslashes and rejects differences",
+    "steps": [
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=\"C:\\\\Games\\\\x\"\n",
+        "fix": {
+          "key": "HKLM\\Software\\Foo",
+          "name": "Path",
+          "type": "REG_SZ",
+          "data": "C:\\Games\\x",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      },
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=\"C:\\\\Games\\\\x\"\n",
+        "fix": {
+          "key": "HKLM\\Software\\Foo",
+          "name": "Path",
+          "type": "REG_SZ",
+          "data": "C:\\Games\\y",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--wineregistryvalueisset-rejects-a-different-stored-type",
+    "title": "wineRegistryValueIsSet > rejects a different stored type",
+    "steps": [
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=str(2):\"C:\\\\x\"\n",
+        "fix": {
+          "key": "HKLM\\Software\\Foo",
+          "name": "Path",
+          "type": "REG_SZ",
+          "data": "C:\\x",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      },
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=hex:01,00\n",
+        "fix": {
+          "key": "HKLM\\Software\\Foo",
+          "name": "Path",
+          "type": "REG_SZ",
+          "data": "C:\\x",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--wineregistryvalueisset-rejects-other-escapes-and-non-ascii-expected-data",
+    "title": "wineRegistryValueIsSet > rejects other escapes and non-ASCII expected data",
+    "steps": [
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=\"a\\tb\"\n",
+        "fix": {
+          "key": "HKLM\\Software\\Foo",
+          "name": "Path",
+          "type": "REG_SZ",
+          "data": "a\tb",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      },
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=\"a\\x00e9\"\n",
+        "fix": {
+          "key": "HKLM\\Software\\Foo",
+          "name": "Path",
+          "type": "REG_SZ",
+          "data": "a\tb",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      },
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=\"café\"\n",
+        "fix": {
+          "key": "HKLM\\Software\\Foo",
+          "name": "Path",
+          "type": "REG_SZ",
+          "data": "café",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--wineregistryvalueisset-is-false-without-arch-wrong-first-line-or-a-continuation-line",
+    "title": "wineRegistryValueIsSet > is false without #arch, wrong first line, or a continuation line",
+    "steps": [
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000001\n",
+        "fix": {
+          "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+          "name": "IsInstalled",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      },
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 3\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000001\n",
+        "fix": {
+          "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+          "name": "IsInstalled",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      },
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}] 1792831399\n#time=1dc1\n\"IsInstalled\"=dword:00000001\n\"X\"=hex:01,\\\n",
+        "fix": {
+          "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}",
+          "name": "IsInstalled",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--wineregistryvalueisset-handles-hkcu-view-64-and-doubts-hkcu-view-32",
+    "title": "wineRegistryValueIsSet > handles HKCU view 64 and doubts HKCU view 32",
+    "steps": [
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Wine] 1792831399\n#time=1dc1\n\"Version\"=\"win10\"\n",
+        "fix": {
+          "key": "HKCU\\Software\\Wine",
+          "name": "Version",
+          "type": "REG_SZ",
+          "data": "win10",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 64
+      },
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Wine] 1792831399\n#time=1dc1\n\"Version\"=\"win10\"\n",
+        "fix": {
+          "key": "HKCU\\Software\\Wine",
+          "name": "Version",
+          "type": "REG_SZ",
+          "data": "win10",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 32
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--wineregistryvalueisset-doubts-view-32-for-non-software-wow6432node-and-classes-keys",
+    "title": "wineRegistryValueIsSet > doubts view 32 for non-Software, Wow6432Node and Classes keys",
+    "steps": [
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Wow6432Node\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=\"x\"\n[Software\\\\Classes\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=\"x\"\n[System\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=\"x\"\n",
+        "fix": {
+          "key": "HKLM\\Software\\Wow6432Node\\Foo",
+          "name": "Path",
+          "type": "REG_SZ",
+          "data": "x",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 32
+      },
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Wow6432Node\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=\"x\"\n[Software\\\\Classes\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=\"x\"\n[System\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=\"x\"\n",
+        "fix": {
+          "key": "HKLM\\Software\\Classes\\Foo",
+          "name": "Path",
+          "type": "REG_SZ",
+          "data": "x",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 32
+      },
+      {
+        "op": "regIsSet",
+        "regText": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Wow6432Node\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=\"x\"\n[Software\\\\Classes\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=\"x\"\n[System\\\\Foo] 1792831399\n#time=1dc1\n\"Path\"=\"x\"\n",
+        "fix": {
+          "key": "HKLM\\System\\Foo",
+          "name": "Path",
+          "type": "REG_SZ",
+          "data": "x",
+          "views": [
+            32,
+            64
+          ]
+        },
+        "view": 32
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyregistryfixes-skip-and-kill-spawns-nothing-and-logs-per-view-when-both-views-are-set",
+    "title": "applyRegistryFixes skip and kill > spawns nothing and logs per view when both views are set",
+    "steps": [
+      {
+        "op": "apply",
+        "raw": [
+          {
+            "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+            "name": "IsInstalled",
+            "type": "REG_DWORD",
+            "value": 1
+          }
+        ],
+        "label": "gog 123",
+        "logPrefix": "Backend",
+        "seam": "plain",
+        "outcomes": [],
+        "prefix": "<HOME>/prefix-both",
+        "seed": [
+          {
+            "path": "<HOME>/prefix-both/system.reg",
+            "text": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312}] 1\n#time=1\n\"IsInstalled\"=dword:00000001\n\n[Software\\\\Wow6432Node\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312}] 1\n#time=1\n\"IsInstalled\"=dword:00000001\n\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyregistryfixes-skip-and-kill-runs-only-the-missing-view",
+    "title": "applyRegistryFixes skip and kill > runs only the missing view",
+    "steps": [
+      {
+        "op": "apply",
+        "raw": [
+          {
+            "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+            "name": "IsInstalled",
+            "type": "REG_DWORD",
+            "value": 1
+          }
+        ],
+        "label": "gog 123",
+        "logPrefix": "Backend",
+        "seam": "plain",
+        "outcomes": [
+          {}
+        ],
+        "prefix": "<HOME>/prefix-one",
+        "seed": [
+          {
+            "path": "<HOME>/prefix-one/system.reg",
+            "text": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312}] 1\n#time=1\n\"IsInstalled\"=dword:00000001\n\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyregistryfixes-skip-and-kill-runs-every-view-with-no-prefixdir-or-no-system-reg-without-warning",
+    "title": "applyRegistryFixes skip and kill > runs every view with no prefixDir or no system.reg, without warning",
+    "steps": [
+      {
+        "op": "apply",
+        "raw": [
+          {
+            "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+            "name": "IsInstalled",
+            "type": "REG_DWORD",
+            "value": 1
+          }
+        ],
+        "label": "gog 123",
+        "logPrefix": "Backend",
+        "seam": "plain",
+        "outcomes": [
+          {},
+          {}
+        ]
+      },
+      {
+        "op": "apply",
+        "raw": [
+          {
+            "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+            "name": "IsInstalled",
+            "type": "REG_DWORD",
+            "value": 1
+          }
+        ],
+        "label": "gog 123",
+        "logPrefix": "Backend",
+        "seam": "plain",
+        "outcomes": [
+          {},
+          {}
+        ],
+        "prefix": "<HOME>/prefix-empty",
+        "seed": [
+          {
+            "path": "<HOME>/prefix-empty",
+            "dir": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyregistryfixes-skip-and-kill-sigkills-the-captured-child-on-timeout-and-warns-killed",
+    "title": "applyRegistryFixes skip and kill > SIGKILLs the captured child on timeout and warns killed",
+    "steps": [
+      {
+        "op": "apply",
+        "raw": [
+          {
+            "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+            "name": "IsInstalled",
+            "type": "REG_DWORD",
+            "value": 1,
+            "views": [
+              64
+            ]
+          }
+        ],
+        "label": "gog 123",
+        "logPrefix": "Backend",
+        "seam": "plain",
+        "outcomes": [
+          {
+            "result": "never",
+            "child": {
+              "pid": 4242,
+              "exitCode": null
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyregistryfixes-skip-and-kill-does-not-kill-an-already-exited-child-or-without-onspawn",
+    "title": "applyRegistryFixes skip and kill > does not kill an already-exited child, or without onSpawn",
+    "steps": [
+      {
+        "op": "apply",
+        "raw": [
+          {
+            "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+            "name": "IsInstalled",
+            "type": "REG_DWORD",
+            "value": 1,
+            "views": [
+              64
+            ]
+          }
+        ],
+        "label": "gog 123",
+        "logPrefix": "Backend",
+        "seam": "plain",
+        "outcomes": [
+          {
+            "result": "never",
+            "child": {
+              "pid": 4242,
+              "exitCode": 0
+            }
+          }
+        ]
+      },
+      {
+        "op": "apply",
+        "raw": [
+          {
+            "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+            "name": "IsInstalled",
+            "type": "REG_DWORD",
+            "value": 1,
+            "views": [
+              64
+            ]
+          }
+        ],
+        "label": "gog 123",
+        "logPrefix": "Backend",
+        "seam": "plain",
+        "outcomes": [
+          {
+            "result": "never"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyregistryfixes-skip-and-kill-never-kills-after-a-successful-run",
+    "title": "applyRegistryFixes skip and kill > never kills after a successful run",
+    "steps": [
+      {
+        "op": "apply",
+        "raw": [
+          {
+            "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+            "name": "IsInstalled",
+            "type": "REG_DWORD",
+            "value": 1
+          }
+        ],
+        "label": "gog 123",
+        "logPrefix": "Backend",
+        "seam": "plain",
+        "outcomes": [
+          {
+            "code": 0,
+            "child": {
+              "pid": 4242,
+              "exitCode": null
+            }
+          },
+          {
+            "code": 0,
+            "child": {
+              "pid": 4242,
+              "exitCode": null
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyregistryfixes-skip-and-kill-keeps-the-15-s-timeout",
+    "title": "applyRegistryFixes skip and kill > keeps the 15 s timeout",
+    "steps": [
+      {
+        "op": "timeout"
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--knownfixprefixdir-maps-each-wine-type-to-its-registry-dir",
+    "title": "knownFixPrefixDir > maps each wine type to its registry dir",
+    "steps": [
+      {
+        "op": "prefixDir",
+        "settings": {
+          "winePrefix": "/x",
+          "wineVersion": {
+            "type": "proton"
+          }
+        }
+      },
+      {
+        "op": "prefixDir",
+        "settings": {
+          "winePrefix": "/x",
+          "wineVersion": {
+            "type": "wine"
+          }
+        }
+      },
+      {
+        "op": "prefixDir",
+        "settings": {
+          "wineCrossoverBottle": "B",
+          "wineVersion": {
+            "type": "crossover"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--knownfixprefixdir-is-undefined-when-unknown",
+    "title": "knownFixPrefixDir > is undefined when unknown",
+    "steps": [
+      {
+        "op": "prefixDir",
+        "settings": {
+          "winePrefix": "/x"
+        }
+      },
+      {
+        "op": "prefixDir",
+        "settings": {
+          "wineVersion": {
+            "type": "wine"
+          }
+        }
+      },
+      {
+        "op": "prefixDir",
+        "settings": {
+          "wineVersion": {
+            "type": "crossover"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--dlloverridestoregistryfixes-compiles-dlls-to-reg-sz-appdefaults-entries-disabled-as-empty",
+    "title": "dllOverridesToRegistryFixes > compiles dlls to REG_SZ AppDefaults entries, disabled as empty",
+    "steps": [
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "Game.exe",
+            "dlls": {
+              "nvapi64": "disabled",
+              "d3d9": "native,builtin"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--dlloverridestoregistryfixes-writes-mode-s-verbatim",
+    "title": "dllOverridesToRegistryFixes > writes mode %s verbatim",
+    "steps": [
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "x": "native"
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "x": "builtin"
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "x": "native,builtin"
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "x": "builtin,native"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--dlloverridestoregistryfixes-skips-bad-mode-p-with-a-warning",
+    "title": "dllOverridesToRegistryFixes > skips bad mode %p with a warning",
+    "steps": [
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "x": "n"
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "x": "b"
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "x": ""
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "x": "native, builtin"
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "x": 3
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "x": null
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--dlloverridestoregistryfixes-skips-the-whole-entry-for-bad-exe-p",
+    "title": "dllOverridesToRegistryFixes > skips the whole entry for bad exe %p",
+    "steps": [
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "..\\x.exe",
+            "dlls": {
+              "x": "native"
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a/b.exe",
+            "dlls": {
+              "x": "native"
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "Game",
+            "dlls": {
+              "x": "native"
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "x\"y.exe",
+            "dlls": {
+              "x": "native"
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "dlls": {
+              "x": "native"
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": 5,
+            "dlls": {
+              "x": "native"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--dlloverridestoregistryfixes-skips-only-the-bad-dll-name-p",
+    "title": "dllOverridesToRegistryFixes > skips only the bad dll name %p",
+    "steps": [
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "d3d9.dll": "native",
+              "ok": "builtin"
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "a\\b": "native",
+              "ok": "builtin"
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "": "native",
+              "ok": "builtin"
+            }
+          }
+        ]
+      },
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": "native",
+              "ok": "builtin"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--dlloverridestoregistryfixes-skips-entries-with-empty-or-non-object-dlls",
+    "title": "dllOverridesToRegistryFixes > skips entries with empty or non-object dlls",
+    "steps": [
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "a.exe",
+            "dlls": {}
+          },
+          {
+            "exe": "a.exe",
+            "dlls": []
+          },
+          "x",
+          null
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--dlloverridestoregistryfixes-warns-and-returns-for-non-array-p-without-throwing",
+    "title": "dllOverridesToRegistryFixes > warns and returns [] for non-array %p without throwing",
+    "steps": [
+      {
+        "op": "dllCompile",
+        "raw": null
+      },
+      {
+        "op": "dllCompile",
+        "raw": 5
+      },
+      {
+        "op": "dllCompile",
+        "raw": "x"
+      },
+      {
+        "op": "dllCompile",
+        "raw": {
+          "exe": "a.exe"
+        }
+      },
+      {
+        "op": "dllCompile"
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--dlloverridestoregistryfixes-produces-entries-that-pass-validateregistryfixes",
+    "title": "dllOverridesToRegistryFixes > produces entries that pass validateRegistryFixes",
+    "steps": [
+      {
+        "op": "dllCompile",
+        "raw": [
+          {
+            "exe": "Game.exe",
+            "dlls": {
+              "nvapi64": "disabled"
+            }
+          }
+        ],
+        "thenValidate": true
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--knownfixprofileregistryfixes-is-undefined-with-neither-key",
+    "title": "knownFixProfileRegistryFixes > is undefined with neither key",
+    "steps": [
+      {
+        "op": "profileFixes",
+        "profile": {
+          "title": "t"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--knownfixprofileregistryfixes-returns-profile-registry-itself-when-dlloverrides-is-absent",
+    "title": "knownFixProfileRegistryFixes > returns profile.registry itself when dllOverrides is absent",
+    "steps": [
+      {
+        "op": "profileFixes",
+        "profile": {
+          "registry": [
+            {
+              "key": "HKCU\\Software\\Foo",
+              "name": "Bar",
+              "type": "REG_DWORD",
+              "value": 1
+            }
+          ]
+        }
+      },
+      {
+        "op": "profileFixes",
+        "profile": {
+          "registry": "junk"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--knownfixprofileregistryfixes-puts-registry-first-then-dlloverrides",
+    "title": "knownFixProfileRegistryFixes > puts registry first, then dllOverrides",
+    "steps": [
+      {
+        "op": "profileFixes",
+        "profile": {
+          "registry": [
+            {
+              "key": "HKCU\\Software\\Foo",
+              "name": "Bar",
+              "type": "REG_DWORD",
+              "value": 1
+            }
+          ],
+          "dllOverrides": [
+            {
+              "exe": "a.exe",
+              "dlls": {
+                "x": "native"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--knownfixprofileregistryfixes-warns-once-for-a-non-array-registry-and-keeps-the-overrides",
+    "title": "knownFixProfileRegistryFixes > warns once for a non-array registry and keeps the overrides",
+    "steps": [
+      {
+        "op": "profileFixes",
+        "profile": {
+          "registry": "junk",
+          "dllOverrides": [
+            {
+              "exe": "a.exe",
+              "dlls": {
+                "x": "native"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyknownfixprofileregistry-applies-a-bundled-gog-profile-json-to-the-game-own-prefix",
+    "title": "applyKnownFixProfileRegistry > applies a bundled -gog.profile.json to the game own prefix",
+    "steps": [
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "gog",
+        "settings": {
+          "winePrefix": "/games/prefixes/GOGAPP"
+        },
+        "seam": "scripted",
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/GOGAPP-gog.profile.json",
+            "text": "{\"title\":\"t\",\"registry\":[{\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1}]}"
+          }
+        ],
+        "outcomes": [
+          {},
+          {}
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyknownfixprofileregistry-applies-via-the-local-layer-for-legendary-file-suffix-is-epic",
+    "title": "applyKnownFixProfileRegistry > applies via the local layer for legendary (file suffix is epic)",
+    "steps": [
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "legendary",
+        "settings": {
+          "winePrefix": "/games/prefixes/GOGAPP"
+        },
+        "seam": "scripted",
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/GOGAPP-epic.profile.json",
+            "text": "{\"title\":\"t\",\"registry\":[{\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1}]}"
+          }
+        ],
+        "outcomes": [
+          {},
+          {}
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyknownfixprofileregistry-ignores-a-profile-that-exists-only-in-the-remote-fixes-dir",
+    "title": "applyKnownFixProfileRegistry > ignores a profile that exists only in the remote fixes dir",
+    "steps": [
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "gog",
+        "settings": {
+          "winePrefix": "/games/prefixes/GOGAPP"
+        },
+        "seam": "scripted",
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/GOGAPP-gog.profile.json",
+            "text": "{\"title\":\"t\",\"registry\":[{\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1}]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyknownfixprofileregistry-does-nothing-silently-with-no-profile-or-no-registry",
+    "title": "applyKnownFixProfileRegistry > does nothing, silently, with no profile or no registry",
+    "steps": [
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "gog",
+        "settings": {
+          "winePrefix": "/games/prefixes/GOGAPP"
+        },
+        "seam": "scripted",
+        "seed": []
+      },
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "gog",
+        "settings": {
+          "winePrefix": "/games/prefixes/GOGAPP"
+        },
+        "seam": "scripted",
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/GOGAPP-gog.profile.json",
+            "text": "{\"title\":\"t\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyknownfixprofileregistry-resolves-and-warns-with-the-runner-app-label-when-runwinecommand-rejects",
+    "title": "applyKnownFixProfileRegistry > resolves and warns with the runner/app label when runWineCommand rejects",
+    "steps": [
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "gog",
+        "settings": {
+          "winePrefix": "/games/prefixes/GOGAPP"
+        },
+        "seam": "scripted",
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/GOGAPP-gog.profile.json",
+            "text": "{\"title\":\"t\",\"registry\":[{\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1}]}"
+          }
+        ],
+        "otherwise": {
+          "result": "reject",
+          "message": "nope"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyknownfixprofileregistry-applies-a-dlloverrides-only-profile-as-an-appdefaults-reg-add",
+    "title": "applyKnownFixProfileRegistry > applies a dllOverrides-only profile as an AppDefaults reg add",
+    "steps": [
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "gog",
+        "settings": {
+          "winePrefix": "/games/prefixes/GOGAPP"
+        },
+        "seam": "scripted",
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/GOGAPP-gog.profile.json",
+            "text": "{\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"nvapi64\":\"disabled\"}}]}"
+          }
+        ],
+        "outcomes": [
+          {}
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyknownfixprofileregistry-runs-registry-entries-before-dlloverrides",
+    "title": "applyKnownFixProfileRegistry > runs registry entries before dllOverrides",
+    "steps": [
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "gog",
+        "settings": {
+          "winePrefix": "/games/prefixes/GOGAPP"
+        },
+        "seam": "scripted",
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/GOGAPP-gog.profile.json",
+            "text": "{\"registry\":[{\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1,\"views\":[64]}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"nvapi64\":\"native\"}}]}"
+          }
+        ],
+        "outcomes": [
+          {},
+          {}
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesRegistry--applyknownfixprofileregistry-writes-on-every-call-not-only-the-first",
+    "title": "applyKnownFixProfileRegistry > writes on every call, not only the first",
+    "steps": [
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "gog",
+        "settings": {
+          "winePrefix": "/games/prefixes/GOGAPP"
+        },
+        "seam": "scripted",
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/GOGAPP-gog.profile.json",
+            "text": "{\"title\":\"t\",\"registry\":[{\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1}]}"
+          }
+        ],
+        "outcomes": [
+          {},
+          {}
+        ]
+      },
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "gog",
+        "settings": {
+          "winePrefix": "/games/prefixes/GOGAPP"
+        },
+        "seam": "scripted",
+        "seed": [],
+        "outcomes": [
+          {},
+          {}
+        ]
+      }
+    ]
+  },
+  {
+    "id": "bridge-both-views-run-in-the-bottle",
+    "platform": "mac",
+    "steps": [
+      {
+        "op": "apply",
+        "raw": [
+          {
+            "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+            "name": "IsInstalled",
+            "type": "REG_DWORD",
+            "value": 1
+          }
+        ],
+        "label": "Steam 284100",
+        "logPrefix": "Steam",
+        "seam": "bridge",
+        "outcomes": [
+          {},
+          {}
+        ],
+        "prefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteam",
+        "seed": [
+          {
+            "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteam/system.reg",
+            "text": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "bridge-skips-a-view-already-set-in-the-bottle",
+    "platform": "mac",
+    "steps": [
+      {
+        "op": "apply",
+        "raw": [
+          {
+            "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+            "name": "IsInstalled",
+            "type": "REG_DWORD",
+            "value": 1
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1
+          }
+        ],
+        "label": "Steam 284100",
+        "logPrefix": "Steam",
+        "seam": "bridge",
+        "outcomes": [
+          {},
+          {},
+          {}
+        ],
+        "prefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteam",
+        "seed": [
+          {
+            "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteam/system.reg",
+            "text": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312}] 1\n#time=1\n\"IsInstalled\"=dword:00000001\n\n"
+          },
+          {
+            "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteam/user.reg",
+            "text": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "bridge-timeout-kills-the-reg-add",
+    "platform": "mac",
+    "steps": [
+      {
+        "op": "apply",
+        "raw": [
+          {
+            "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+            "name": "IsInstalled",
+            "type": "REG_DWORD",
+            "value": 1,
+            "views": [
+              64
+            ]
+          }
+        ],
+        "label": "Steam 284100",
+        "logPrefix": "Steam",
+        "seam": "bridge",
+        "outcomes": [
+          {
+            "result": "never",
+            "child": {
+              "pid": 4242,
+              "exitCode": null
+            }
+          }
+        ],
+        "prefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteam",
+        "seed": [
+          {
+            "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteam/system.reg",
+            "text": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "launcher-path-crossover-skips-values-already-in-the-bottle",
+    "platform": "mac",
+    "scripted": [
+      {
+        "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "code": 0,
+        "repeat": true
+      }
+    ],
+    "steps": [
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "gog",
+        "settings": {
+          "nvidiaPrime": false,
+          "showFps": false,
+          "enviromentOptions": [],
+          "winePrefix": "<HOME>/Games/prefix",
+          "wineCrossoverBottle": "GameLibSteam",
+          "enableDXVKFpsLimit": false,
+          "DXVKFpsCap": "60",
+          "enableFSR": false,
+          "enableEsync": false,
+          "enableMsync": false,
+          "enableFsync": false,
+          "enableWineWayland": false,
+          "enableHDR": false,
+          "enableWoW64": false,
+          "autoInstallDxvkNvapi": false,
+          "eacRuntime": false,
+          "battlEyeRuntime": false,
+          "verboseLogs": false,
+          "preferSystemLibs": false,
+          "advertiseAvxForRosetta": false,
+          "disableUMU": true,
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver - 24.0.0",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+          }
+        },
+        "seam": "real",
+        "seed": [
+          {
+            "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/public/fixes/GOGAPP-gog.profile.json",
+            "text": "{\"registry\":[{\"key\":\"HKLM\\\\Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312}\",\"name\":\"IsInstalled\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"nvapi64\":\"disabled\"}}]}"
+          },
+          {
+            "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteam/system.reg",
+            "text": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n[Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312}] 1\n#time=1\n\"IsInstalled\"=dword:00000001\n\n[Software\\\\Wow6432Node\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312}] 1\n#time=1\n\"IsInstalled\"=dword:00000001\n\n"
+          },
+          {
+            "path": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteam/user.reg",
+            "text": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "launcher-path-wine-prefix-registry",
+    "platform": "linux",
+    "scripted": [
+      {
+        "program": "<TOOLS>/wine/Wine-9/bin/wine",
+        "code": 0,
+        "repeat": true
+      }
+    ],
+    "steps": [
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "gog",
+        "settings": {
+          "nvidiaPrime": false,
+          "showFps": false,
+          "enviromentOptions": [],
+          "winePrefix": "<HOME>/Games/prefix",
+          "wineCrossoverBottle": "",
+          "enableDXVKFpsLimit": false,
+          "DXVKFpsCap": "60",
+          "enableFSR": false,
+          "enableEsync": false,
+          "enableMsync": false,
+          "enableFsync": false,
+          "enableWineWayland": false,
+          "enableHDR": false,
+          "enableWoW64": false,
+          "autoInstallDxvkNvapi": false,
+          "eacRuntime": false,
+          "battlEyeRuntime": false,
+          "verboseLogs": false,
+          "preferSystemLibs": false,
+          "advertiseAvxForRosetta": false,
+          "disableUMU": true,
+          "wineVersion": {
+            "type": "wine",
+            "name": "Wine-9",
+            "bin": "<TOOLS>/wine/Wine-9/bin/wine",
+            "wineserver": "<TOOLS>/wine/Wine-9/bin/wineserver",
+            "lib": "<TOOLS>/wine/Wine-9/lib64",
+            "lib32": "<TOOLS>/wine/Wine-9/lib"
+          }
+        },
+        "seam": "real",
+        "seed": [
+          {
+            "path": "<TOOLS>/wine/Wine-9/bin/wine",
+            "text": ""
+          },
+          {
+            "path": "<TOOLS>/wine/Wine-9/bin/wineserver",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Games/prefix/dosdevices",
+            "dir": true
+          },
+          {
+            "path": "<HOME>/Games/prefix/drive_c",
+            "dir": true
+          },
+          {
+            "path": "<HOME>/Games/prefix/system.reg",
+            "text": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n"
+          },
+          {
+            "path": "<HOME>/Games/prefix/user.reg",
+            "text": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n"
+          },
+          {
+            "path": "<HOME>/Games/prefix/userdef.reg",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/public/fixes/GOGAPP-gog.profile.json",
+            "text": "{\"title\":\"t\",\"registry\":[{\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1},{\"key\":\"HKLM\\\\Software\\\\Microsoft\\\\Active Setup\\\\Installed Components\\\\{22d6f312}\",\"name\":\"IsInstalled\",\"type\":\"REG_DWORD\",\"value\":1}]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "launcher-path-proton-prefix-runs-in-pfx-with-the-verb",
+    "platform": "linux",
+    "scripted": [
+      {
+        "program": "<TOOLS>/proton/GE-Proton9-27/proton",
+        "code": 0,
+        "repeat": true
+      }
+    ],
+    "steps": [
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "gog",
+        "settings": {
+          "nvidiaPrime": false,
+          "showFps": false,
+          "enviromentOptions": [],
+          "winePrefix": "<HOME>/Games/prefix",
+          "wineCrossoverBottle": "",
+          "enableDXVKFpsLimit": false,
+          "DXVKFpsCap": "60",
+          "enableFSR": false,
+          "enableEsync": false,
+          "enableMsync": false,
+          "enableFsync": false,
+          "enableWineWayland": false,
+          "enableHDR": false,
+          "enableWoW64": false,
+          "autoInstallDxvkNvapi": false,
+          "eacRuntime": false,
+          "battlEyeRuntime": false,
+          "verboseLogs": false,
+          "preferSystemLibs": false,
+          "advertiseAvxForRosetta": false,
+          "disableUMU": true,
+          "wineVersion": {
+            "type": "proton",
+            "name": "GE-Proton9-27",
+            "bin": "<TOOLS>/proton/GE-Proton9-27/proton"
+          }
+        },
+        "seam": "real",
+        "seed": [
+          {
+            "path": "<TOOLS>/proton/GE-Proton9-27/proton",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Games/prefix/pfx.lock",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Games/prefix/tracked_files",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Games/prefix/version",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Games/prefix/config_info",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Games/prefix/pfx/dosdevices",
+            "dir": true
+          },
+          {
+            "path": "<HOME>/Games/prefix/pfx/drive_c",
+            "dir": true
+          },
+          {
+            "path": "<HOME>/Games/prefix/pfx/system.reg",
+            "text": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n"
+          },
+          {
+            "path": "<HOME>/Games/prefix/pfx/user.reg",
+            "text": "WINE REGISTRY Version 2\n;; All keys relative to REGISTRY\\\\Machine\n\n#arch=win64\n\n"
+          },
+          {
+            "path": "<HOME>/Games/prefix/pfx/userdef.reg",
+            "text": ""
+          },
+          {
+            "path": "<APPFOLDER>/fixes/local/GOGAPP-gog.profile.json",
+            "text": "{\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native,builtin\"}}]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "launcher-path-reg-add-exiting-non-zero-is-a-warning",
+    "platform": "mac",
+    "scripted": [
+      {
+        "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+        "code": 1,
+        "repeat": true
+      }
+    ],
+    "steps": [
+      {
+        "op": "profileApply",
+        "appName": "GOGAPP",
+        "runner": "gog",
+        "settings": {
+          "nvidiaPrime": false,
+          "showFps": false,
+          "enviromentOptions": [],
+          "winePrefix": "<HOME>/Games/prefix",
+          "wineCrossoverBottle": "GameLibSteam",
+          "enableDXVKFpsLimit": false,
+          "DXVKFpsCap": "60",
+          "enableFSR": false,
+          "enableEsync": false,
+          "enableMsync": false,
+          "enableFsync": false,
+          "enableWineWayland": false,
+          "enableHDR": false,
+          "enableWoW64": false,
+          "autoInstallDxvkNvapi": false,
+          "eacRuntime": false,
+          "battlEyeRuntime": false,
+          "verboseLogs": false,
+          "preferSystemLibs": false,
+          "advertiseAvxForRosetta": false,
+          "disableUMU": true,
+          "wineVersion": {
+            "type": "crossover",
+            "name": "CrossOver - 24.0.0",
+            "bin": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "wineserver": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+          }
+        },
+        "seam": "real",
+        "seed": [
+          {
+            "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver",
+            "text": ""
+          },
+          {
+            "path": "<HOME>/public/fixes/GOGAPP-gog.profile.json",
+            "text": "{\"registry\":[{\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1,\"views\":[64]},{\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Baz\",\"type\":\"REG_DWORD\",\"value\":1,\"views\":[64]}]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "validate-every-reject-reason",
+    "steps": [
+      {
+        "op": "validate",
+        "raw": [
+          "x",
+          null,
+          [],
+          {
+            "key": 5,
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1
+          },
+          {
+            "key": "HKLM\\",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1
+          },
+          {
+            "key": "HKLM\\Software\\",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1
+          },
+          {
+            "key": "HKLM\\Software\\\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1
+          },
+          {
+            "key": "HKCU\\aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1
+          },
+          {
+            "key": "HKCU\\Soft\"ware",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1
+          },
+          {
+            "key": "HKCU\\Soft\nware",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "",
+            "type": "REG_DWORD",
+            "value": 1
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+            "type": "REG_DWORD",
+            "value": 1
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "a\nb",
+            "type": "REG_DWORD",
+            "value": 1
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": -1
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1.5
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 4294967296
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": "1"
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_SZ",
+            "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_SZ",
+            "value": "a\rb"
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_SZ",
+            "value": "a\u0000b"
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_SZ",
+            "value": 5
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_BINARY",
+            "value": 1
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1,
+            "views": []
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1,
+            "views": [
+              16
+            ]
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1,
+            "views": "x"
+          }
+        ]
+      },
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "key": "HKEY_LOCAL_MACHINE\\Software\\A",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1,
+            "views": [
+              64,
+              32
+            ]
+          },
+          {
+            "key": "HKEY_CURRENT_USER\\Software\\B",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 1,
+            "views": [
+              64
+            ]
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Bar",
+            "type": "REG_DWORD",
+            "value": 4294967295,
+            "views": [
+              32,
+              32
+            ]
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Empty",
+            "type": "REG_SZ",
+            "value": ""
+          },
+          {
+            "key": "HKCU\\Software\\Foo",
+            "name": "Long",
+            "type": "REG_SZ",
+            "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "command-parts-for-each-type-and-view",
+    "steps": [
+      {
+        "op": "commandParts",
+        "fix": {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32
+          ]
+        },
+        "view": 32
+      },
+      {
+        "op": "commandParts",
+        "fix": {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            64
+          ]
+        },
+        "view": 64
+      },
+      {
+        "op": "commandParts",
+        "fix": {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Path",
+          "type": "REG_SZ",
+          "data": "C:\\Games\\x y",
+          "views": [
+            64
+          ]
+        },
+        "view": 64
+      }
+    ]
+  },
+  {
+    "id": "prefix-dir-toolkit-and-unknown-wine-types",
+    "steps": [
+      {
+        "op": "prefixDir",
+        "settings": {
+          "winePrefix": "/x",
+          "wineVersion": {
+            "type": "toolkit"
+          }
+        }
+      },
+      {
+        "op": "prefixDir",
+        "settings": {
+          "winePrefix": "/x",
+          "wineVersion": {
+            "type": "portproton"
+          }
+        }
+      },
+      {
+        "op": "prefixDir",
+        "settings": {
+          "winePrefix": "",
+          "wineVersion": {
+            "type": "wine"
+          }
+        }
+      },
+      {
+        "op": "prefixDir",
+        "settings": {
+          "wineCrossoverBottle": "",
+          "winePrefix": "/x",
+          "wineVersion": {
+            "type": "crossover"
+          }
+        }
+      }
+    ]
   }
 ]

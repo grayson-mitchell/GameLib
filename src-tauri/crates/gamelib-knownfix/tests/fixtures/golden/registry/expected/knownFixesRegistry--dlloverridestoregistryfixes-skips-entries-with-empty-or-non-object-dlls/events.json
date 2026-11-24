@@ -1,0 +1,26 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (dlls not a non-empty object): {}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (dlls not a non-empty object): []"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (entry not an object): \"x\""
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (entry not an object): null"
+  }
+]

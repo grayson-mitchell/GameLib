@@ -1,0 +1,24 @@
+{
+  "steps": [
+    {
+      "op": "apply",
+      "raw": [
+        {
+          "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+          "name": "IsInstalled",
+          "type": "REG_DWORD",
+          "value": 1,
+          "views": [
+            64
+          ]
+        }
+      ],
+      "label": "Steam 284100",
+      "logPrefix": "Steam",
+      "seam": "bridge",
+      "prefix": "<HOME>/Library/Application Support/CrossOver/Bottles/GameLibSteam",
+      "settled": true,
+      "outcomesLeft": 0
+    }
+  ]
+}

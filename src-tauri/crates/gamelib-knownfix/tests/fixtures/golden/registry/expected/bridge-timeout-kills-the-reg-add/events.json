@@ -1,0 +1,8 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Steam",
+    "text": "Steam 284100: registry fix HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312} IsInstalled (/reg:64) timed out after 15000 ms; killed reg add (pid 4242)"
+  }
+]

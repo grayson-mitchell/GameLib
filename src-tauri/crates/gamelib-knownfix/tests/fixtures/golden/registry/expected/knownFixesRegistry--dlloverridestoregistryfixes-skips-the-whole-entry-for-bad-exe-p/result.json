@@ -1,0 +1,75 @@
+{
+  "steps": [
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "..\\x.exe",
+          "dlls": {
+            "x": "native"
+          }
+        }
+      ],
+      "compiled": []
+    },
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "a/b.exe",
+          "dlls": {
+            "x": "native"
+          }
+        }
+      ],
+      "compiled": []
+    },
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "Game",
+          "dlls": {
+            "x": "native"
+          }
+        }
+      ],
+      "compiled": []
+    },
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": "x\"y.exe",
+          "dlls": {
+            "x": "native"
+          }
+        }
+      ],
+      "compiled": []
+    },
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "dlls": {
+            "x": "native"
+          }
+        }
+      ],
+      "compiled": []
+    },
+    {
+      "op": "dllCompile",
+      "raw": [
+        {
+          "exe": 5,
+          "dlls": {
+            "x": "native"
+          }
+        }
+      ],
+      "compiled": []
+    }
+  ]
+}

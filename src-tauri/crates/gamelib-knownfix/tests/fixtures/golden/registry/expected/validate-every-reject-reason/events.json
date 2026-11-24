@@ -1,0 +1,152 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (not an object): \"x\""
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (not an object): null"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (not an object): []"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad key): {\"key\":5,\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad key): {\"key\":\"HKLM\\\\\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad key): {\"key\":\"HKLM\\\\Software\\\\\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad key): {\"key\":\"HKLM\\\\Software\\\\\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad key): {\"key\":\"HKCU\\\\aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad key): {\"key\":\"HKCU\\\\Soft\\\"ware\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad key): {\"key\":\"HKCU\\\\Soft\\nware\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad name): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"\",\"type\":\"REG_DWORD\",\"value\":1}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad name): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad name): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"a\\nb\",\"type\":\"REG_DWORD\",\"value\":1}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad REG_DWORD value): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":-1}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad REG_DWORD value): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1.5}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad REG_DWORD value): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":4294967296}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad REG_DWORD value): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":\"1\"}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad REG_SZ value): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_SZ\",\"value\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad REG_SZ value): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_SZ\",\"value\":\"a\\rb\"}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad REG_SZ value): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_SZ\",\"value\":\"a\\u0000b\"}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad REG_SZ value): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_SZ\",\"value\":5}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (unknown type): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_BINARY\",\"value\":1}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad views): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1,\"views\":[]}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad views): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1,\"views\":[16]}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad views): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1,\"views\":\"x\"}"
+  }
+]

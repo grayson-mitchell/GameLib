@@ -1,0 +1,33 @@
+{
+  "steps": [
+    {
+      "op": "validate",
+      "raw": [
+        {
+          "key": "HKXX\\bad",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1
+        }
+      ],
+      "result": [
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "data": "1",
+          "views": [
+            32,
+            64
+          ]
+        }
+      ]
+    }
+  ]
+}

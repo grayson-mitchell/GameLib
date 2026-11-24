@@ -1,0 +1,26 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad dll name): \"d3d9.dll\""
+  },
+  {
+    "step": 1,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad dll name): \"a\\\\b\""
+  },
+  {
+    "step": 2,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad dll name): \"\""
+  },
+  {
+    "step": 3,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad dll name): \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\""
+  }
+]

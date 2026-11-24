@@ -1,0 +1,82 @@
+{
+  "steps": [
+    {
+      "op": "commandParts",
+      "fix": {
+        "key": "HKCU\\Software\\Foo",
+        "name": "Bar",
+        "type": "REG_DWORD",
+        "data": "1",
+        "views": [
+          32
+        ]
+      },
+      "view": 32,
+      "parts": [
+        "reg",
+        "add",
+        "HKCU\\Software\\Foo",
+        "/v",
+        "Bar",
+        "/t",
+        "REG_DWORD",
+        "/d",
+        "1",
+        "/reg:32",
+        "/f"
+      ]
+    },
+    {
+      "op": "commandParts",
+      "fix": {
+        "key": "HKCU\\Software\\Foo",
+        "name": "Bar",
+        "type": "REG_DWORD",
+        "data": "1",
+        "views": [
+          64
+        ]
+      },
+      "view": 64,
+      "parts": [
+        "reg",
+        "add",
+        "HKCU\\Software\\Foo",
+        "/v",
+        "Bar",
+        "/t",
+        "REG_DWORD",
+        "/d",
+        "1",
+        "/reg:64",
+        "/f"
+      ]
+    },
+    {
+      "op": "commandParts",
+      "fix": {
+        "key": "HKCU\\Software\\Foo",
+        "name": "Path",
+        "type": "REG_SZ",
+        "data": "C:\\Games\\x y",
+        "views": [
+          64
+        ]
+      },
+      "view": 64,
+      "parts": [
+        "reg",
+        "add",
+        "HKCU\\Software\\Foo",
+        "/v",
+        "Path",
+        "/t",
+        "REG_SZ",
+        "/d",
+        "C:\\Games\\x y",
+        "/reg:64",
+        "/f"
+      ]
+    }
+  ]
+}

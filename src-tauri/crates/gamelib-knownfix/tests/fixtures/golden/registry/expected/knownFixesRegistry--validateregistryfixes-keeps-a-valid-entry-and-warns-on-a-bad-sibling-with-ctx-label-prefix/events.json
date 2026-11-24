@@ -1,0 +1,8 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad key): {\"key\":\"HKXX\\\\bad\",\"name\":\"Bar\",\"type\":\"REG_DWORD\",\"value\":1}"
+  }
+]

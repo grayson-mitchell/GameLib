@@ -1,0 +1,27 @@
+{
+  "steps": [
+    {
+      "op": "apply",
+      "raw": [
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_DWORD",
+          "value": 1
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Baz",
+          "type": "REG_DWORD",
+          "value": 1
+        }
+      ],
+      "label": "gog 123",
+      "logPrefix": "Backend",
+      "seam": "plain",
+      "prefix": null,
+      "settled": true,
+      "outcomesLeft": 0
+    }
+  ]
+}

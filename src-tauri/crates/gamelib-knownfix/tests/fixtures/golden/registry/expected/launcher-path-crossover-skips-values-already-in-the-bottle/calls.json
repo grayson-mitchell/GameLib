@@ -1,0 +1,39 @@
+[
+  {
+    "step": 0,
+    "kind": "runWineCommand",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKCU\\Software\\Wine\\AppDefaults\\Game.exe\\DllOverrides",
+      "/v",
+      "nvapi64",
+      "/t",
+      "REG_SZ",
+      "/d",
+      "",
+      "/reg:64",
+      "/f"
+    ],
+    "wait": false,
+    "protonVerb": "runinprefix",
+    "skipPrefixCheckIKnowWhatImDoing": null,
+    "hasOnSpawn": true,
+    "gameSettingsIsTheCallers": true,
+    "winePrefix": "<HOME>/Games/prefix"
+  },
+  {
+    "step": 0,
+    "kind": "runner.run",
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "replaceEnv": true,
+    "track": {
+      "runner": "wine",
+      "key": "<HOME>/Games/prefix"
+    },
+    "resolveOn": "close",
+    "timeoutNone": true,
+    "windowsHide": false,
+    "cwd": null
+  }
+]

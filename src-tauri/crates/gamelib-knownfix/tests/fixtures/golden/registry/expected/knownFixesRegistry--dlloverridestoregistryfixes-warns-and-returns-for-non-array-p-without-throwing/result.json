@@ -1,0 +1,31 @@
+{
+  "steps": [
+    {
+      "op": "dllCompile",
+      "raw": null,
+      "compiled": []
+    },
+    {
+      "op": "dllCompile",
+      "raw": 5,
+      "compiled": []
+    },
+    {
+      "op": "dllCompile",
+      "raw": "x",
+      "compiled": []
+    },
+    {
+      "op": "dllCompile",
+      "raw": {
+        "exe": "a.exe"
+      },
+      "compiled": []
+    },
+    {
+      "op": "dllCompile",
+      "raw": null,
+      "compiled": []
+    }
+  ]
+}

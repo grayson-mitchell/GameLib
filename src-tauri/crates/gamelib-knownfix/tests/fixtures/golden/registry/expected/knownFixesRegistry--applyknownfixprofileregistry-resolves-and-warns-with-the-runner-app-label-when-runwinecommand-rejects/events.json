@@ -1,0 +1,14 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog GOGAPP: registry fix HKCU\\Software\\Foo Bar (/reg:32) threw: Error: nope"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog GOGAPP: registry fix HKCU\\Software\\Foo Bar (/reg:64) threw: Error: nope"
+  }
+]

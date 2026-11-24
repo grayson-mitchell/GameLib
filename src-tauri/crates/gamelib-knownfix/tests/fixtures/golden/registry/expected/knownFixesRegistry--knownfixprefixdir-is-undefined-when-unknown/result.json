@@ -1,0 +1,29 @@
+{
+  "steps": [
+    {
+      "op": "prefixDir",
+      "settings": {
+        "winePrefix": "/x"
+      },
+      "dir": null
+    },
+    {
+      "op": "prefixDir",
+      "settings": {
+        "wineVersion": {
+          "type": "wine"
+        }
+      },
+      "dir": null
+    },
+    {
+      "op": "prefixDir",
+      "settings": {
+        "wineVersion": {
+          "type": "crossover"
+        }
+      },
+      "dir": null
+    }
+  ]
+}

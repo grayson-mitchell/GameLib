@@ -1,0 +1,21 @@
+{
+  "steps": [
+    {
+      "op": "apply",
+      "raw": [
+        {
+          "key": "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+          "name": "IsInstalled",
+          "type": "REG_DWORD",
+          "value": 1
+        }
+      ],
+      "label": "gog 123",
+      "logPrefix": "Backend",
+      "seam": "plain",
+      "prefix": null,
+      "settled": true,
+      "outcomesLeft": 0
+    }
+  ]
+}

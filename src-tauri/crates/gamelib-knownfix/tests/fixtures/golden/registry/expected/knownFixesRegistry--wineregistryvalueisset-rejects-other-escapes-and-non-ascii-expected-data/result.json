@@ -1,0 +1,49 @@
+{
+  "steps": [
+    {
+      "op": "regIsSet",
+      "fix": {
+        "key": "HKLM\\Software\\Foo",
+        "name": "Path",
+        "type": "REG_SZ",
+        "data": "a\tb",
+        "views": [
+          32,
+          64
+        ]
+      },
+      "view": 64,
+      "isSet": false
+    },
+    {
+      "op": "regIsSet",
+      "fix": {
+        "key": "HKLM\\Software\\Foo",
+        "name": "Path",
+        "type": "REG_SZ",
+        "data": "a\tb",
+        "views": [
+          32,
+          64
+        ]
+      },
+      "view": 64,
+      "isSet": false
+    },
+    {
+      "op": "regIsSet",
+      "fix": {
+        "key": "HKLM\\Software\\Foo",
+        "name": "Path",
+        "type": "REG_SZ",
+        "data": "café",
+        "views": [
+          32,
+          64
+        ]
+      },
+      "view": 64,
+      "isSet": false
+    }
+  ]
+}

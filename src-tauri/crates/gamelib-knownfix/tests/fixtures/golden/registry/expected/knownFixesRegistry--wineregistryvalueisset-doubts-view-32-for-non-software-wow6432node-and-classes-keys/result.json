@@ -1,0 +1,49 @@
+{
+  "steps": [
+    {
+      "op": "regIsSet",
+      "fix": {
+        "key": "HKLM\\Software\\Wow6432Node\\Foo",
+        "name": "Path",
+        "type": "REG_SZ",
+        "data": "x",
+        "views": [
+          32,
+          64
+        ]
+      },
+      "view": 32,
+      "isSet": false
+    },
+    {
+      "op": "regIsSet",
+      "fix": {
+        "key": "HKLM\\Software\\Classes\\Foo",
+        "name": "Path",
+        "type": "REG_SZ",
+        "data": "x",
+        "views": [
+          32,
+          64
+        ]
+      },
+      "view": 32,
+      "isSet": false
+    },
+    {
+      "op": "regIsSet",
+      "fix": {
+        "key": "HKLM\\System\\Foo",
+        "name": "Path",
+        "type": "REG_SZ",
+        "data": "x",
+        "views": [
+          32,
+          64
+        ]
+      },
+      "view": 32,
+      "isSet": false
+    }
+  ]
+}

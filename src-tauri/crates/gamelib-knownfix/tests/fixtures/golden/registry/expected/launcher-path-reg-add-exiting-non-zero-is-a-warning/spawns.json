@@ -1,0 +1,90 @@
+[
+  {
+    "callSite": "knownfix.registry.reg_add",
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "reg",
+      "add",
+      "HKCU\\Software\\Foo",
+      "/v",
+      "Bar",
+      "/t",
+      "REG_DWORD",
+      "/d",
+      "1",
+      "/reg:64",
+      "/f"
+    ],
+    "env": {
+      "APPDATA": "<HOME>/AppData/Roaming",
+      "CX_BOTTLE": "GameLibSteam",
+      "HOME": "<HOME>",
+      "LANG": "C.UTF-8",
+      "LD_PRELOAD": "",
+      "LOCALAPPDATA": "<HOME>/AppData/Local",
+      "PATH": "/usr/bin:/bin",
+      "PROTON_VERB": "runinprefix",
+      "USER": "gamelib-oracle",
+      "USERPROFILE": "<HOME>",
+      "WINE_FULLSCREEN_FSR": "0",
+      "XDG_CACHE_HOME": "<HOME>/.cache",
+      "XDG_CONFIG_HOME": "<HOME>/.config",
+      "XDG_DATA_HOME": "<HOME>/.local/share",
+      "XDG_STATE_HOME": "<HOME>/.local/state"
+    },
+    "unsetEnv": [],
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    "class": "helper"
+  },
+  {
+    "callSite": "knownfix.registry.reg_add",
+    "program": "<HOME>/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+    "argv": [
+      "reg",
+      "add",
+      "HKCU\\Software\\Foo",
+      "/v",
+      "Baz",
+      "/t",
+      "REG_DWORD",
+      "/d",
+      "1",
+      "/reg:64",
+      "/f"
+    ],
+    "env": {
+      "APPDATA": "<HOME>/AppData/Roaming",
+      "CX_BOTTLE": "GameLibSteam",
+      "HOME": "<HOME>",
+      "LANG": "C.UTF-8",
+      "LD_PRELOAD": "",
+      "LOCALAPPDATA": "<HOME>/AppData/Local",
+      "PATH": "/usr/bin:/bin",
+      "PROTON_VERB": "runinprefix",
+      "USER": "gamelib-oracle",
+      "USERPROFILE": "<HOME>",
+      "WINE_FULLSCREEN_FSR": "0",
+      "XDG_CACHE_HOME": "<HOME>/.cache",
+      "XDG_CONFIG_HOME": "<HOME>/.config",
+      "XDG_DATA_HOME": "<HOME>/.local/share",
+      "XDG_STATE_HOME": "<HOME>/.local/state"
+    },
+    "unsetEnv": [],
+    "cwd": null,
+    "stdin": null,
+    "via": "run",
+    "result": {
+      "code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    "class": "helper"
+  }
+]

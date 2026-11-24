@@ -1,0 +1,8 @@
+[
+  {
+    "step": 0,
+    "level": "info",
+    "prefix": "Steam",
+    "text": "Steam 284100: registry fix HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312} IsInstalled (/reg:64) already set in system.reg, skipping reg add"
+  }
+]

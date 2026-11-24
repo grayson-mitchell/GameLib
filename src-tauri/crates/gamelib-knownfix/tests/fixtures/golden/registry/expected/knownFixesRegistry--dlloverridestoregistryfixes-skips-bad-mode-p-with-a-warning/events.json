@@ -1,0 +1,38 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad mode for x): \"n\""
+  },
+  {
+    "step": 1,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad mode for x): \"b\""
+  },
+  {
+    "step": 2,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad mode for x): \"\""
+  },
+  {
+    "step": 3,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad mode for x): \"native, builtin\""
+  },
+  {
+    "step": 4,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad mode for x): 3"
+  },
+  {
+    "step": 5,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid dllOverrides (bad mode for x): null"
+  }
+]

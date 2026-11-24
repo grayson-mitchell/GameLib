@@ -1,0 +1,36 @@
+[
+  {
+    "step": 0,
+    "kind": "run",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+      "/v",
+      "IsInstalled",
+      "/t",
+      "REG_DWORD",
+      "/d",
+      "1",
+      "/reg:32",
+      "/f"
+    ]
+  },
+  {
+    "step": 0,
+    "kind": "run",
+    "commandParts": [
+      "reg",
+      "add",
+      "HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312}",
+      "/v",
+      "IsInstalled",
+      "/t",
+      "REG_DWORD",
+      "/d",
+      "1",
+      "/reg:64",
+      "/f"
+    ]
+  }
+]

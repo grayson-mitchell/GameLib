@@ -1,0 +1,22 @@
+{
+  "steps": [
+    {
+      "op": "validate",
+      "raw": [
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "/f",
+          "type": "REG_DWORD",
+          "value": 1
+        },
+        {
+          "key": "HKCU\\Software\\Foo",
+          "name": "Bar",
+          "type": "REG_SZ",
+          "value": "a\"b"
+        }
+      ],
+      "result": []
+    }
+  ]
+}

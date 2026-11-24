@@ -1,0 +1,14 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad name): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"/f\",\"type\":\"REG_DWORD\",\"value\":1}"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "gog 123: skipping invalid registry fix (bad REG_SZ value): {\"key\":\"HKCU\\\\Software\\\\Foo\",\"name\":\"Bar\",\"type\":\"REG_SZ\",\"value\":\"a\\\"b\"}"
+  }
+]
