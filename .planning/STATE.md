@@ -5,7 +5,7 @@ milestone_name: Node Sidecar Retirement
 current_phase: 94
 current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 94-16-PLAN.md
+stopped_at: Completed 94-17-PLAN.md
 last_updated: "2026-11-24T04:47:14.070Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 94 execution started
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
-Plan: 15 of 32
-Status: Ready to execute (94-16 complete; 94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24 and 94-15 left a named pending header check for it; 94-17 next, wave 7; worktree-local STATE, D-02)
-Last activity: 2026-11-24 — Completed 94-16: the Windows .lnk writer (constant CRLF PowerShell script on stdin, values only through GAMELIB_LNK_* env, hidden 30 s gamelib-proc helper spawn) replaying 90 recorded spawns and writing a real .lnk on this Windows host, the bounded icon chain replaying its 36 goldens, and getIcon with its downloads through the crate HTTP seam replaying its 19 goldens under the shutdown contract
+Plan: 16 of 32
+Status: Ready to execute (94-17 complete; 94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24 and 94-15 left a named pending header check for it; 94-18 next; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-17: the Humble expiry digest in Rust (transition detection, the WR-01 backfill, the dedupe record written before the notification, i18next-identical title and body) replaying the 11 alerts goldens and the sync flow legacy backfill state byte for byte, and the browser user agent as a Rust twin pinned to the 8 shared vectors; the escaped digest text and the en-US-only date are filed as todos
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -485,6 +485,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P14 | 100min | 3 tasks | 9 files |
 | Phase 94 P15 | 150min | 2 tasks | 14 files |
 | Phase 94 P16 | 105min | 3 tasks | 12 files |
+| Phase 94 P17 | 60min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -1060,6 +1061,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-16: get_icon takes the GOG product API's raw images.icon as an input and exports gog_local_icon; the caller must resolve the API lazily (only when no local goggame ico or support icon exists), as the TS did, or an installed game would gain an API call and an API failure would fail the add
 - [Phase 94]: 94-16: icon downloads are atomic (.part renamed), capped at 32 MiB, refuse a non-2xx status or an empty body, hold a shortcuts-icon registrant and abort on shutdown; an app name that is not a plain file name gets no icon (T-94-30)
 - [Phase 94]: 94-16: the regex dependency of gamelib-shortcuts gains unicode-gencat for the icon scan's [^\p{L}\p{N}] name normalisation; gamelib-proc is a dev-dependency for the real PowerShell .lnk test
+- [Phase 94]: 94-17: the digest text keeps i18next's HTML escaping (1&#x2F;2&#x2F;2027, Tom &amp; Jerry) through the escaping Catalog::t because the plan demands every alerts golden replay (T-94-31); the visible defect is the todo 2026-11-24-humble-digest-text-is-html-escaped (fix is Catalog::t_unescaped plus a deliberate golden re-record)
+- [Phase 94]: 94-17: the digest date is pinned to the en-US M/D/YYYY, read as the calendar day in the host zone at the expiry instant (a zone-less string in the offset now, local_zone_at(now)); the locale policy for other process locales or UI languages is the todo 2026-11-24-humble-digest-date-is-en-us-only
+- [Phase 94]: 94-17: detect_and_notify_expiration_transitions takes an AlertOptions {suppress_notifications, notify_humble_expirations, steam_deck_game_mode} beside (ctx, keys) because the crate reads neither settings nor environment; a key whose dedupe record cannot be written is excluded from the digest and an unopenable store shows nothing, where the TS no-ops on a read-only store and re-fires every sync; 94-25 supplies the options
 
 ### Pending Todos
 
@@ -1341,8 +1345,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T03:45:49.577Z
-Stopped at: Completed 94-16-PLAN.md
+Last session: 2026-11-24T05:05:00.000Z
+Stopped at: Completed 94-17-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
