@@ -81,7 +81,7 @@ impl<'de> Deserialize<'de> for RendererMessage {
 /// Cuts at `limit` UTF-16 units, appending `…[truncated N bytes]` with N the units dropped. A cut
 /// inside a surrogate pair keeps the units before it and writes U+FFFD, which is what Node wrote for
 /// the lone half left by `slice`. A value within the limit is returned unchanged.
-pub(crate) fn truncate_utf16(value: &str, limit: usize) -> String {
+pub fn truncate_utf16(value: &str, limit: usize) -> String {
     let total = value.encode_utf16().count();
     if total <= limit {
         return value.to_string();
