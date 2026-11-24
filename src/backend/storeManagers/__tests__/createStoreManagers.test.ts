@@ -172,6 +172,27 @@ describe('createStoreManagers: nothing is constructed at import (source gate)', 
     expect(src).toMatch(/export function createStoreManagers/)
   })
 
+  it("the launcher reads the boot's one monitor: createLauncher and the managers get the same `deps.onlineMonitor` (87-63, F1)", () => {
+    const src = read('../index.ts')
+    // The launcher's offline answer for the engine step and the connectivity log lines the monitor writes must be one
+    // object: a second monitor would keep a status of its own that no log line reports.
+    const launcherCall = src.slice(src.indexOf('createLauncher({'))
+    expect(launcherCall.slice(0, launcherCall.indexOf('})'))).toMatch(
+      /onlineMonitor: deps\.onlineMonitor/
+    )
+    const managerDeps = src.slice(
+      src.indexOf('const managerDeps'),
+      src.indexOf('const launchHooks')
+    )
+    expect(managerDeps).toMatch(/onlineMonitor: deps\.onlineMonitor/)
+    // No other value is ever given as a monitor (the type declaration is not a value).
+    for (const given of src.match(/onlineMonitor: (?!ManagerDeps)[^\n,]+/g) ??
+      []) {
+      expect(given).toMatch(/onlineMonitor: deps\.onlineMonitor/)
+    }
+    expect(src).not.toMatch(/createOnlineMonitor/)
+  })
+
   it('launcher.ts keeps no module-level `let` (the power blocker lives in the factory closure)', () => {
     const src = read('../../launcher.ts')
     const topLevelLets = src.split('\n').filter((line) => /^let\s/.test(line))

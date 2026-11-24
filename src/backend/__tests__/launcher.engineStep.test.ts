@@ -132,11 +132,15 @@ beforeEach(() => {
 // The launcher is built from test deps (66.1-23): the manager table and hooks are plain fakes.
 const tsStore = { has: () => true, get: () => 0, set: jest.fn() }
 const slices = createTestToolsSlices()
-const buildLauncher = () =>
+const buildLauncher = (
+  onlineMonitor: ReturnType<
+    typeof createTestOnlineMonitor
+  > = createTestOnlineMonitor({ online: false })
+) =>
   createLauncher({
     ...slices,
     requestRustInvoke,
-    onlineMonitor: createTestOnlineMonitor({ online: false }),
+    onlineMonitor,
     libraryManagers: {
       legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
     } as never,
@@ -260,6 +264,72 @@ describe('launcher engine step (61-14, 87-52)', () => {
     selectReply = { kind: 'use', key: KEY, logLines: [] }
     await expect(run()).rejects.toThrow('engine_launch_select')
     expect(launchMock).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * 87-63 (F1): the request's `offline` is the monitor's answer at the moment the request is built, on every Play path.
+ * The 87-59 gate saw the monitor in `check-online` (a fresh check found no interface and handed the decision back to the
+ * ping loop, which then failed on every host) and expected the Rust gate's `(offline)` refusal. `check-online` is
+ * unknown, which reads as not online; only `online` reads as online. The Rust crate refuses on this flag
+ * (`offline_refusal.rs`), so a request that lost it would reach the download.
+ */
+describe('launcher engine step request: the offline flag (87-63, F1)', () => {
+  const sentOffline = () =>
+    (callsOn(RUST_ENGINE_LAUNCH_SELECT)[0]?.args[0] as { offline: boolean })
+      .offline
+
+  it.each([
+    ['offline', true],
+    ['check-online', true],
+    ['online', false]
+  ] as const)(
+    'with the monitor in %s the request says offline: %s',
+    async (status, offline) => {
+      const monitor = createTestOnlineMonitor()
+      monitor.setStatus(status)
+      const { launchEventCallback: play } = buildLauncher(monitor)
+      await play({ appName: 'Quail', runner: 'legendary' })
+      expect(callsOn(RUST_ENGINE_LAUNCH_SELECT)).toHaveLength(1)
+      expect(sentOffline()).toBe(offline)
+    }
+  )
+
+  it('reads the monitor when the request is built, not when Play was pressed (the Epic offline prompt path)', async () => {
+    // The renderer's "might not work offline" prompt (and the launch's own awaits) sit between the press and the
+    // request. The Wi-Fi went off in that window: the periodic watch moved the monitor to check-online while the
+    // launch was reading the game's settings, so the request must say offline.
+    const monitor = createTestOnlineMonitor()
+    expect(monitor.isOnline()).toBe(true)
+    getGameMock.mockImplementation(() => ({
+      getGameInfo: () => ({
+        title: 'Quail',
+        app_name: 'Quail',
+        runner: 'legendary',
+        install: {}
+      }),
+      getSettings: () => {
+        monitor.setStatus('check-online')
+        return Promise.resolve(STORED)
+      },
+      isNative: () => false,
+      launch: launchMock
+    }))
+    const { launchEventCallback: play } = buildLauncher(monitor)
+    await play({ appName: 'Quail', runner: 'legendary' })
+    expect(sentOffline()).toBe(true)
+  })
+
+  it('a second Play after the network comes back says online again (the flag is never latched)', async () => {
+    const monitor = createTestOnlineMonitor({ online: false })
+    const { launchEventCallback: play } = buildLauncher(monitor)
+    await play({ appName: 'Quail', runner: 'legendary' })
+    monitor.setOnline(true)
+    await play({ appName: 'Quail', runner: 'legendary' })
+    const sent = callsOn(RUST_ENGINE_LAUNCH_SELECT).map(
+      (call) => (call.args[0] as { offline: boolean }).offline
+    )
+    expect(sent).toEqual([true, false])
   })
 })
 
