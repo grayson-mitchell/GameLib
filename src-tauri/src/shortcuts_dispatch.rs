@@ -25,11 +25,12 @@ use std::path::{Path, PathBuf};
 
 use gamelib_core::clock::SystemClock;
 use gamelib_core::emitter::FrontendEmitter;
+use gamelib_core::process::BoxFuture;
 use gamelib_i18n::Catalog;
 use gamelib_proc::spec::SpecProcRunner;
 use gamelib_shortcuts::ctx::{
     ApplyResult, Platform, PortableExe, ShortcutPaths, ShortcutsCtx, ShortcutsLog,
-    ShortcutsMutation, ShortcutsSummary, ShortcutsUi, SteamShortcutsFile,
+    ShortcutsMutation, ShortcutsSummary, ShortcutsUi, SteamShortcutsFile, WikiLookup,
 };
 use gamelib_shortcuts::http::ReqwestHttp;
 use gamelib_store::host::StoreHost;
@@ -252,6 +253,31 @@ impl SteamShortcutsFile for ShellSteamShortcutsFile {
     }
 }
 
+/// The wiki Steam-id lookup for the crate: `info_wiki_get` over the installed `gamelib-info` context, the same
+/// op the native `getWikiGameInfo` channel runs (on the blocking pool, through `run_info_op`). The crate
+/// never depends on `gamelib-info`. A context not installed yet, a failed lookup or a wiki with no id is
+/// `None` (WR-42: the shortcut is still written, with no Steam id). The context is read when the lookup runs,
+/// not when this is installed, so the two services may start in either order.
+pub(crate) struct ShellWikiLookup;
+
+impl WikiLookup for ShellWikiLookup {
+    fn steam_id(&self, title: &str, app_name: &str, runner: &str) -> BoxFuture<Option<String>> {
+        let args = serde_json::json!({ "title": title, "appName": app_name, "runner": runner });
+        Box::pin(async move {
+            let info = info_ctx()?;
+            let answer = info_dispatch::run_info_op(
+                Arc::clone(info),
+                "info_wiki_get",
+                vec![args],
+                "shortcuts wiki lookup did not finish",
+            )
+            .await
+            .ok()?;
+            gamelib_shortcuts::steam::steam_id_of(&answer)
+        })
+    }
+}
+
 /// How GameLib was started, as a Steam shortcut needs it: the Flatpak id (`FLATPAK_ID`), the AppImage path
 /// (`APPIMAGE`) and the portable Windows build's executable and folder (`PORTABLE_EXECUTABLE_FILE` and
 /// `PORTABLE_EXECUTABLE_DIR`, both or neither). An empty value counts as unset, as the TS `Boolean(env.X)` did.
@@ -326,6 +352,7 @@ pub(crate) fn install(app: &AppHandle, user_data: &Path) {
         gamelib_core::shutdown::global().clone(),
     )
     .with_steam_files(Arc::new(ShellSteamShortcutsFile))
+    .with_wiki(Arc::new(ShellWikiLookup))
     .with_launch_env(flatpak_id, appimage, portable_exe)
     .with_user_data(user_data.to_path_buf());
     let emitter: Arc<dyn FrontendEmitter> =
@@ -684,6 +711,7 @@ mod tests {
         let (ui, calls) = recording_ui();
         let ctx = test_ctx(&home, Platform::Linux)
             .with_steam_files(Arc::new(ShellSteamShortcutsFile))
+            .with_wiki(Arc::new(ShellWikiLookup))
             .with_ui(Arc::new(ui));
         let args = vec![json!({
             "game": {
@@ -735,6 +763,14 @@ mod tests {
         assert_eq!(said.len(), 2, "{said:?}");
         assert!(said[0].starts_with("notify Added to Steam|Game One was successfully added"));
         assert!(said[1].starts_with("notify Removed from Steam|Game One was successfully removed"));
+    }
+
+    #[test]
+    fn a_wiki_lookup_before_the_info_service_is_installed_finds_no_id() {
+        assert!(info_ctx().is_none());
+        let answer =
+            tauri::async_runtime::block_on(ShellWikiLookup.steam_id("Game", "game", "legendary"));
+        assert_eq!(answer, None);
     }
 
     #[test]

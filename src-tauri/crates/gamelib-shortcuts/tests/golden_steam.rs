@@ -1098,3 +1098,182 @@ async fn the_steam_ops_validate_their_arguments_and_need_the_shell_seam() {
     );
     assert_eq!(dialogs[0].2, "ERROR");
 }
+/// A wiki lookup that answers only when the test lets it, so a test can see the add return first.
+struct GatedWiki {
+    gate: Arc<tokio::sync::Notify>,
+    calls: Mutex<usize>,
+}
+impl WikiLookup for GatedWiki {
+    fn steam_id(&self, _title: &str, _app_name: &str, _runner: &str) -> BoxFuture<Option<String>> {
+        *self.calls.lock().expect("calls") += 1;
+        let gate = self.gate.clone();
+        Box::pin(async move {
+            gate.notified().await;
+            None
+        })
+    }
+}
+impl Run {
+    fn game_with(&self, can_add: bool, dlc: bool) -> ShortcutGame {
+        let mut game = self.game.clone();
+        game.can_add_steam_shortcut = can_add;
+        game.is_dlc = dlc;
+        game
+    }
+
+    fn settings_with(&self, steam: bool) -> ShortcutSettings {
+        let mut settings = self.settings.clone();
+        settings.add_steam_shortcuts = steam;
+        settings
+    }
+
+    /// `shortcuts_add` arguments for this run's game: no file to write, so the op returns at once.
+    fn add_args(&self, steam: bool, can_add: bool, dlc: bool) -> gamelib_shortcuts::add::AddArgs {
+        let mut game = json!({
+            "appName": self.game.app_name,
+            "runner": self.game.runner,
+            "title": self.game.title,
+            "isDlc": dlc,
+            "canAddSteamShortcut": can_add,
+        });
+        game["artSquare"] = json!(self.game.art_square);
+        serde_json::from_value(json!({
+            "game": game,
+            "settings": {
+                "addDesktopShortcuts": false,
+                "addStartMenuShortcuts": false,
+                "addSteamShortcuts": steam,
+                "defaultSteamPath": self.settings.default_steam_path,
+            },
+            "fromMenu": false,
+            "notify": false,
+        }))
+        .expect("add args")
+    }
+}
+async fn until<F: Fn() -> bool>(what: &str, done: F) {
+    for _ in 0..500 {
+        if done() {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    panic!("timed out waiting for {what}");
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn shortcuts_add_starts_the_steam_step_and_returns_before_it_finishes() {
+    let mut run = build(&template("add-linux-basic"));
+    let gate = Arc::new(tokio::sync::Notify::new());
+    let wiki = Arc::new(GatedWiki {
+        gate: gate.clone(),
+        calls: Mutex::new(0),
+    });
+    run.ctx.wiki = Some(wiki.clone());
+    let outcome =
+        gamelib_shortcuts::add::shortcuts_add(&run.ctx, run.add_args(true, true, false)).await;
+    // The add itself is done (it has no file to write here) while the Steam step waits for the wiki.
+    assert!(outcome.failed.is_empty());
+    until("the Steam step to ask the wiki", || {
+        *wiki.calls.lock().expect("calls") == 1
+    })
+    .await;
+    assert!(
+        run.ui.notices().is_empty(),
+        "nothing is shown before it ends"
+    );
+    assert!(run.files.calls.lock().expect("calls").is_empty());
+    gate.notify_one();
+    until("the Added to Steam notice", || !run.ui.notices().is_empty()).await;
+    let notices = run.ui.notices();
+    assert_eq!(notices.len(), 1);
+    assert_eq!(notices[0].0, "Added to Steam");
+    assert!(notices[0]
+        .1
+        .starts_with("Oracle Game was successfully added to Steam."));
+    // The task has ended and released its shutdown name.
+    assert!(run
+        .ctx
+        .shutdown
+        .drain(std::time::Duration::from_secs(2))
+        .is_empty());
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn shortcuts_add_does_not_start_the_steam_step_unless_it_is_wanted() {
+    for (steam, can_add, dlc, seam) in [
+        (false, true, false, true),
+        (true, false, false, true),
+        (true, true, true, true),
+        (true, true, false, false),
+    ] {
+        let mut run = build(&template("add-linux-basic"));
+        if !seam {
+            run.ctx.steam_files = None;
+        }
+        let started = gamelib_shortcuts::add::start_steam_add(
+            &run.ctx,
+            &run.game_with(can_add, dlc),
+            &run.settings_with(steam),
+        );
+        assert!(
+            started.is_none(),
+            "steam={steam} can_add={can_add} dlc={dlc} seam={seam}"
+        );
+        gamelib_shortcuts::add::shortcuts_add(&run.ctx, run.add_args(steam, can_add, dlc)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        assert!(run.wiki.calls.lock().expect("calls").is_empty());
+        assert!(run.files.calls.lock().expect("calls").is_empty());
+        assert!(run.ui.notices().is_empty() && run.ui.dialogs().is_empty());
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_shutdown_while_the_steam_step_waits_ends_it_and_it_shows_nothing() {
+    let mut run = build(&template("add-linux-basic"));
+    let wiki = Arc::new(GatedWiki {
+        gate: Arc::new(tokio::sync::Notify::new()),
+        calls: Mutex::new(0),
+    });
+    run.ctx.wiki = Some(wiki.clone());
+    let handle = gamelib_shortcuts::add::start_steam_add(&run.ctx, &run.game, &run.settings)
+        .expect("the step starts");
+    until("the Steam step to ask the wiki", || {
+        *wiki.calls.lock().expect("calls") == 1
+    })
+    .await;
+    // The drain cancels the token, then waits for the registrant: the task gives up and releases it.
+    assert!(run
+        .ctx
+        .shutdown
+        .drain(std::time::Duration::from_secs(2))
+        .is_empty());
+    assert!(!handle.await.expect("the task did not panic"));
+    assert!(run.ui.notices().is_empty() && run.ui.dialogs().is_empty());
+    assert!(run.files.calls.lock().expect("calls").is_empty());
+}
+/// The step holds its `shortcuts-steam` name for exactly as long as it is in flight. A current-thread runtime
+/// keeps the task from reacting to the drain's cancel until the test yields, so the name is still held when
+/// the drain (no wait) looks.
+#[tokio::test]
+async fn the_steam_step_holds_its_shutdown_name_while_it_is_in_flight() {
+    let mut run = build(&template("add-linux-basic"));
+    let wiki = Arc::new(GatedWiki {
+        gate: Arc::new(tokio::sync::Notify::new()),
+        calls: Mutex::new(0),
+    });
+    run.ctx.wiki = Some(wiki.clone());
+    let handle = gamelib_shortcuts::add::start_steam_add(&run.ctx, &run.game, &run.settings)
+        .expect("the step starts");
+    until("the Steam step to ask the wiki", || {
+        *wiki.calls.lock().expect("calls") == 1
+    })
+    .await;
+    assert_eq!(
+        run.ctx.shutdown.drain(std::time::Duration::ZERO),
+        ["shortcuts-steam"]
+    );
+    assert!(!handle.await.expect("the task did not panic"));
+    assert!(run
+        .ctx
+        .shutdown
+        .drain(std::time::Duration::from_secs(1))
+        .is_empty());
+}

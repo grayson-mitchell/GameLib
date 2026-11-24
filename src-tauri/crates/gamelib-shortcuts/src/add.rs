@@ -22,8 +22,10 @@
 //! the macOS bundle is not written at all when the shell executable it would launch is unknown (the TS threw
 //! and wrote nothing).
 //!
-//! The Add-to-Steam step of the TS (`addNonSteamGame`, gated on [`steam_registration_wanted`]) joins this op in
-//! 94-20; nothing here reaches `shortcuts.vdf`.
+//! The Add-to-Steam step of the TS (`addNonSteamGame`, gated on [`steam_registration_wanted`]) is started
+//! first and not awaited, as the TS did: [`start_steam_add`] spawns it holding a `shortcuts-steam` shutdown
+//! registrant, and the op returns when its own files are written. Its outcome (a notification or an error
+//! dialog) arrives on its own (see [`crate::steam`]); it is not part of [`AddOutcome`]. A DLC starts none.
 //!
 //! With `notify: true` (the renderer path) the op raises the notification the handler raised, chosen by
 //! re-reading the disk after the work; with `notify: false` (the store managers' path) nothing is shown.
@@ -85,8 +87,7 @@ impl AddOutcome {
 }
 
 /// Whether the add also registers the game as a non-Steam game in Steam: the setting is on and the game's
-/// store is not Steam itself (a Steam game is already in Steam; 261026-c7r). Read by the Add-to-Steam step
-/// (94-20).
+/// store is not Steam itself (a Steam game is already in Steam; 261026-c7r). Read by [`start_steam_add`].
 pub fn steam_registration_wanted(game: &ShortcutGame, settings: &ShortcutSettings) -> bool {
     settings.add_steam_shortcuts && game.can_add_steam_shortcut
 }
@@ -126,8 +127,41 @@ fn display(paths: &[PathBuf]) -> Vec<String> {
         .collect()
 }
 
-/// The `shortcuts_add` op body: reads the Windows Desktop from the registry (D-12), then [`add_with_desktop`].
+/// Starts the Add-to-Steam step without waiting for it (`addNonSteamGame` was not awaited). The task holds a
+/// `shortcuts-steam` registrant from before it is spawned until it ends, and ends early when shutdown starts.
+/// `None` when no task was started: no `shortcuts.vdf` seam, or the game is not one to add (the setting is
+/// off, the store is Steam, or it is a DLC). The handle is for a caller that wants to wait; dropping it
+/// leaves the task running.
+pub fn start_steam_add(
+    ctx: &ShortcutsCtx,
+    game: &ShortcutGame,
+    settings: &ShortcutSettings,
+) -> Option<tokio::task::JoinHandle<bool>> {
+    if game.is_dlc || !steam_registration_wanted(game, settings) {
+        return None;
+    }
+    if ctx.steam_files.is_none() {
+        ctx.note("shortcuts add: Add to Steam is on but no shortcuts.vdf seam is installed");
+        return None;
+    }
+    let registrant = ctx.shutdown.register("shortcuts-steam");
+    let token = ctx.shutdown.token();
+    let task_ctx = ctx.clone();
+    let (game, settings) = (game.clone(), settings.clone());
+    Some(tokio::spawn(async move {
+        let _held = registrant;
+        tokio::select! {
+            biased;
+            _ = token.cancelled() => false,
+            added = crate::steam::steam_add(&task_ctx, &game, &settings) => added,
+        }
+    }))
+}
+
+/// The `shortcuts_add` op body: starts the Add-to-Steam step when it is wanted, reads the Windows Desktop from
+/// the registry (D-12), then [`add_with_desktop`].
 pub async fn shortcuts_add(ctx: &ShortcutsCtx, args: AddArgs) -> AddOutcome {
+    drop(start_steam_add(ctx, &args.game, &args.settings));
     let windows_desktop = windows_desktop_for(ctx).await;
     add_with_desktop(ctx, args, windows_desktop.as_deref()).await
 }
