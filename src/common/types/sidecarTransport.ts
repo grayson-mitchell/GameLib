@@ -1090,8 +1090,8 @@ export const RUST_WINE_MANAGER_REFRESH = 'wine_manager_refresh' as const
 /**
  * Phase 87 (SVC-02, 87-20): `wine_manager_install` installs one release, the whole handler (start
  * notification, `progressOfWineManager`, the sha512-checked download, the unpack, the store entry, the
- * result notification). Args: one `WineVersionInfo` (the shell decodes it strictly, the eleven keys and
- * nothing else); the shell reads `downloadProtonToSteam` and `defaultSteamPath` from the global config
+ * result notification). Args: one `WineVersionInfo` (the shell decodes it strictly: the eleven keys and
+ * nothing else, of which `isInstalled`, `hasUpdate` and `installDir` may be absent on a never-installed release); the shell reads `downloadProtonToSteam` and `defaultSteamPath` from the global config
  * itself. Resolves `'success' | 'abort' | 'error'`. The renderer cancels it with `abort(version)`.
  *
  * Long-running: listed in the sidecar's `UNBOUNDED_RUST_CHANNELS` (a download of hundreds of megabytes

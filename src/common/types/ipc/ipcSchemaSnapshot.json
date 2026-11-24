@@ -4395,7 +4395,7 @@
       "args": [
         {
           "name": "release",
-          "type": "{ version, type, date, download?, downsize?, disksize, checksum?, release_notes_link, isInstalled, hasUpdate, installDir }",
+          "type": "{ version, type, date, download?, downsize?, disksize, checksum?, release_notes_link, isInstalled?, hasUpdate?, installDir? }",
           "strict": true
         }
       ],
@@ -5556,7 +5556,7 @@
       "args": [
         {
           "name": "release",
-          "type": "{ version, type, date, download?, downsize?, disksize, checksum?, release_notes_link, isInstalled, hasUpdate, installDir }",
+          "type": "{ version, type, date, download?, downsize?, disksize, checksum?, release_notes_link, isInstalled?, hasUpdate?, installDir? }",
           "strict": true
         }
       ],
