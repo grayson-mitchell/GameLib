@@ -1770,6 +1770,7 @@ dependencies = [
  "gamelib-engine",
  "gamelib-knownfix",
  "gamelib-launch",
+ "gamelib-store",
  "gamelib-testutil",
  "gamelib-wine",
  "serde",

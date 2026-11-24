@@ -130,3 +130,165 @@ pub fn dispatch_sync(op: &str, args: &[Value], ctx: &KnownFixCtx) -> Result<Valu
         .map_err(|e| format!("{op}:no-runtime ({e})"))?
         .block_on(dispatch(op, args, ctx))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gamelib_core::clock::SystemClock;
+    use gamelib_core::shutdown::Shutdown;
+    use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
+    use gamelib_store::host::StoreHost;
+    use gamelib_testutil::FakeHome;
+    use serde_json::json;
+    use std::sync::Arc;
+
+    // The same literals `knownFixOverlayCatalogue.test.ts` pins on the TS side.
+    const ARCHIVE_URL: &str = "https://github.com/grayson-mitchell/GameLib/releases/download/overlay-gst-libav-1.24.13-x86_64/gst-libav-1.24.13-macos-x86_64.tar.gz";
+    const NOTICES_URL: &str =
+        "https://github.com/grayson-mitchell/GameLib/releases/tag/overlay-gst-libav-1.24.13-x86_64";
+
+    fn ctx(home: &FakeHome) -> KnownFixCtx {
+        let root = home.root().to_path_buf();
+        let engine = EngineCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            Platform::Linux,
+            EnginePaths {
+                app_folder: root.clone(),
+                user_data: root.clone(),
+                tools_path: root.join("tools"),
+                user_home: root.join("home"),
+                temp: root.join("temp"),
+            },
+            Shutdown::new(),
+        );
+        KnownFixCtx::new(Arc::new(engine), None, "https://relay.test", "1.2.3")
+    }
+
+    /// A future that panics when polled: the shape of an op that hits a bug.
+    fn panicking() -> impl Future<Output = Result<Value, String>> {
+        std::future::poll_fn(|_| -> Poll<Result<Value, String>> { panic!("test-only op panic") })
+    }
+
+    #[test]
+    fn the_op_table_is_sorted_and_unique() {
+        let mut sorted = OPS.to_vec();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted, OPS);
+        assert!(OPS.contains(&"knownfix_overlay_catalogue"));
+    }
+
+    #[tokio::test]
+    async fn an_unknown_op_is_named() {
+        let home = FakeHome::new("knownfix-lib-");
+        let err = dispatch("nope", &[], &ctx(&home)).await.unwrap_err();
+        assert_eq!(err, "unknown op: nope");
+    }
+
+    #[tokio::test]
+    async fn the_catalogue_op_takes_no_argument() {
+        let home = FakeHome::new("knownfix-lib-");
+        let ctx = ctx(&home);
+        let op = "knownfix_overlay_catalogue";
+        for bad in [vec![json!(1)], vec![json!({})], vec![json!(null), json!(1)]] {
+            assert_eq!(
+                dispatch(op, &bad, &ctx).await.unwrap_err(),
+                format!("{op}:bad-args"),
+                "{bad:?}"
+            );
+        }
+        let answer = dispatch(op, &[], &ctx).await.unwrap();
+        assert_eq!(answer["entries"][0]["id"], "gst-libav-1.24.13");
+        assert_eq!(
+            answer["targetEnv"]["gstreamer-plugin-path"],
+            "GST_PLUGIN_PATH"
+        );
+        // Nothing was created for a read of compiled-in data.
+        assert!(!home.root().join("overlays").exists());
+    }
+
+    #[test]
+    fn decode_takes_exactly_one_strict_argument() {
+        #[derive(serde::Deserialize, Debug)]
+        #[serde(deny_unknown_fields)]
+        struct Args {
+            #[allow(dead_code)]
+            id: String,
+        }
+        assert!(decode::<Args>("knownfix_x", &[json!({"id": "a"})]).is_ok());
+        assert_eq!(
+            decode::<Args>("knownfix_x", &[json!(1), json!(2)]).unwrap_err(),
+            "knownfix_x:bad-args"
+        );
+        assert_eq!(
+            decode::<Args>("knownfix_x", &[json!({"id": "a", "extra": 1})]).unwrap_err(),
+            "knownfix_x:bad-args"
+        );
+    }
+
+    #[test]
+    fn the_catalogue_urls_are_the_literals_the_ts_test_pins() {
+        let entry = catalogue::lookup("gst-libav-1.24.13").expect("the pinned overlay");
+        assert_eq!(catalogue::archive_url(entry), ARCHIVE_URL);
+        assert_eq!(catalogue::notices_url().unwrap(), NOTICES_URL);
+        assert_eq!(entry.files.len(), 10);
+        assert_eq!(entry.archive_size, 8_279_592);
+        assert!(catalogue::lookup("gst-libav-1.24.13 ").is_none());
+        assert!(catalogue::lookup("__proto__").is_none());
+    }
+
+    #[test]
+    fn the_paths_derive_from_the_app_folder_as_app_paths_ts_builds_them() {
+        let home = FakeHome::new("knownfix-lib-");
+        let ctx = ctx(&home);
+        let root = home.root();
+        assert_eq!(ctx.paths.fixes, root.join("fixes"));
+        assert_eq!(ctx.paths.local, root.join("fixes").join("local"));
+        assert_eq!(ctx.paths.overlays, root.join("overlays"));
+        assert_eq!(ctx.paths.bundled, None);
+        assert_eq!(ctx.relay_url, "https://relay.test");
+        assert_eq!(ctx.app_version, "1.2.3");
+    }
+
+    #[tokio::test]
+    async fn dispatch_sync_inside_a_runtime_is_wrong_thread() {
+        let home = FakeHome::new("knownfix-lib-");
+        let err = dispatch_sync("knownfix_probe", &[], &ctx(&home)).unwrap_err();
+        assert_eq!(err, "knownfix_probe:wrong-thread");
+    }
+
+    #[test]
+    fn dispatch_sync_on_a_plain_thread_answers_the_op_and_unknown_op() {
+        let home = FakeHome::new("knownfix-lib-");
+        let ctx = ctx(&home);
+        let err = dispatch_sync("nope", &[], &ctx).unwrap_err();
+        assert_eq!(err, "unknown op: nope");
+        let answer = dispatch_sync("knownfix_overlay_catalogue", &[], &ctx).unwrap();
+        assert_eq!(answer["entries"][0]["id"], "gst-libav-1.24.13");
+    }
+
+    #[tokio::test]
+    async fn a_panicking_op_answers_panic() {
+        let home = FakeHome::new("knownfix-lib-");
+        let err = guarded("knownfix_probe", &ctx(&home), panicking())
+            .await
+            .unwrap_err();
+        assert_eq!(err, "knownfix_probe:panic");
+    }
+
+    #[tokio::test]
+    async fn a_cancelled_shutdown_answers_shutdown_and_releases_its_registrant() {
+        let home = FakeHome::new("knownfix-lib-");
+        let ctx = ctx(&home);
+        ctx.engine.shutdown.token().cancel();
+        let work = async { Ok(Value::Null) };
+        let err = guarded("knownfix_probe", &ctx, work).await.unwrap_err();
+        assert_eq!(err, "knownfix_probe:shutdown");
+        assert!(ctx
+            .engine
+            .shutdown
+            .drain(std::time::Duration::from_millis(50))
+            .is_empty());
+    }
+}

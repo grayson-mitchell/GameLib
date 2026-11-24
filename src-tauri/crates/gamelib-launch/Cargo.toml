@@ -29,6 +29,8 @@ testing = ["gamelib-knownfix/testing"]
 
 [dev-dependencies]
 gamelib-launch = { path = ".", features = ["testing"] }
+# The unit tests build an `EngineCtx` over a `StoreHost`, as the CLI does.
+gamelib-store = { path = "../gamelib-store" }
 gamelib-testutil = { path = "../gamelib-testutil" }
 tempfile = "3"
 

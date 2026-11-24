@@ -107,3 +107,111 @@ pub fn dispatch_sync(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value,
         .map_err(|e| format!("{op}:no-runtime ({e})"))?
         .block_on(dispatch(op, args, ctx))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gamelib_core::clock::SystemClock;
+    use gamelib_core::shutdown::Shutdown;
+    use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
+    use gamelib_knownfix::ctx::KnownFixCtx;
+    use gamelib_store::host::StoreHost;
+    use gamelib_testutil::FakeHome;
+    use serde_json::json;
+    use std::sync::Arc;
+
+    fn ctx(home: &FakeHome) -> LaunchCtx {
+        let root = home.root().to_path_buf();
+        let engine = Arc::new(EngineCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            Platform::Linux,
+            EnginePaths {
+                app_folder: root.clone(),
+                user_data: root.clone(),
+                tools_path: root.join("tools"),
+                user_home: root.join("home"),
+                temp: root.join("temp"),
+            },
+            Shutdown::new(),
+        ));
+        let knownfix = Arc::new(KnownFixCtx::new(
+            engine.clone(),
+            None,
+            "https://relay.test",
+            "1.2.3",
+        ));
+        LaunchCtx::new(engine, knownfix)
+    }
+
+    /// A future that panics when polled: the shape of an op that hits a bug.
+    fn panicking() -> impl Future<Output = Result<Value, String>> {
+        std::future::poll_fn(|_| -> Poll<Result<Value, String>> { panic!("test-only op panic") })
+    }
+
+    #[test]
+    fn the_op_table_is_sorted_and_unique() {
+        let mut sorted = OPS.to_vec();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted, OPS);
+    }
+
+    #[tokio::test]
+    async fn every_name_is_an_unknown_op_until_88_1_adds_the_first() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        for op in ["nope", "launch_probe", "", "knownfix_overlay_catalogue"] {
+            assert_eq!(
+                dispatch(op, &[json!(1)], &ctx).await.unwrap_err(),
+                format!("unknown op: {op}")
+            );
+        }
+    }
+
+    #[test]
+    fn the_context_shares_one_engine_with_the_known_fix_context() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        assert!(Arc::ptr_eq(&ctx.engine, &ctx.knownfix.engine));
+        assert_eq!(ctx.knownfix.paths.overlays, home.root().join("overlays"));
+    }
+
+    #[tokio::test]
+    async fn dispatch_sync_inside_a_runtime_is_wrong_thread() {
+        let home = FakeHome::new("launch-lib-");
+        let err = dispatch_sync("launch_probe", &[], &ctx(&home)).unwrap_err();
+        assert_eq!(err, "launch_probe:wrong-thread");
+    }
+
+    #[test]
+    fn dispatch_sync_on_a_plain_thread_answers_unknown_op() {
+        let home = FakeHome::new("launch-lib-");
+        let err = dispatch_sync("nope", &[], &ctx(&home)).unwrap_err();
+        assert_eq!(err, "unknown op: nope");
+    }
+
+    #[tokio::test]
+    async fn a_panicking_op_answers_panic() {
+        let home = FakeHome::new("launch-lib-");
+        let err = guarded("launch_probe", &ctx(&home), panicking())
+            .await
+            .unwrap_err();
+        assert_eq!(err, "launch_probe:panic");
+    }
+
+    #[tokio::test]
+    async fn a_cancelled_shutdown_answers_shutdown_and_releases_its_registrant() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        ctx.engine.shutdown.token().cancel();
+        let work = async { Ok(Value::Null) };
+        let err = guarded("launch_probe", &ctx, work).await.unwrap_err();
+        assert_eq!(err, "launch_probe:shutdown");
+        assert!(ctx
+            .engine
+            .shutdown
+            .drain(std::time::Duration::from_millis(50))
+            .is_empty());
+    }
+}
