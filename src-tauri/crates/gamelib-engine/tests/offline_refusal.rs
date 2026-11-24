@@ -495,7 +495,7 @@ async fn the_gate_writes_its_inputs_and_verdict_when_it_refuses() {
     assert_eq!(lines.len(), 1, "gate lines: {lines:?}");
     assert!(
         lines[0].ends_with(
-            "offline gate: request-offline=true context-online=false on-bottle=true override=automatic crossover-missing=true current-pin-installed=false marker=crossover verdict=blocked:crossover-missing"
+            "offline gate: request-offline=true context-online=false on-bottle=true override=automatic crossover-missing=true current-pin-installed=false marker=crossover restore-needs-pin=false verdict=blocked:crossover-missing"
         ),
         "{}",
         lines[0]

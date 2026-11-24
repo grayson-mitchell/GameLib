@@ -41,7 +41,7 @@ use crate::config::{global_settings, read_engine_for_game, EffectiveEngine};
 use crate::ctx::{EngineCtx, Platform};
 use crate::decision::creation::{decide_creation_engine, CreationDecision};
 use crate::decision::launch::{decide_launch_engine, DecideArgs, LaunchDecision};
-use crate::decision::offline::{offline_launch_certainly_blocked, OfflineRefusalInput};
+use crate::decision::offline::{offline_launch_certainly_blocked, OfflineArm, OfflineRefusalInput};
 use crate::decision::preflight::{is_crossover_missing, CrossoverPreflight, ProbeTuning};
 use crate::engines::{
     is_bottle_provisioned, is_pinned_engine_installed, read_bottle_engine_marker_kind,
@@ -349,6 +349,39 @@ fn preflight_bin_dir(preflight: Option<&CrossoverPreflight>) -> String {
     }
 }
 
+/// What the offline gate read for one launch (87-63): both offline signals, whether the game is on a bottle,
+/// the effective engine and, when the gate applied, its inputs and its verdict.
+struct GateFacts<'a> {
+    request_offline: bool,
+    context_online: bool,
+    on_bottle: bool,
+    override_id: &'a str,
+    applied: Option<(&'a OfflineRefusalInput, Option<OfflineArm>)>,
+}
+
+/// The gate's reading as one engine-log line: words and booleans only (the override id is a closed grammar
+/// word), so no path or account name can reach `gamelib.log` through it.
+fn offline_gate_line(facts: &GateFacts<'_>) -> String {
+    let head = format!(
+        "offline gate: request-offline={} context-online={} on-bottle={} override={}",
+        facts.request_offline, facts.context_online, facts.on_bottle, facts.override_id
+    );
+    match facts.applied {
+        None => format!("{head} verdict=not-applicable"),
+        Some((input, verdict)) => {
+            let marker = input.marker_kind.map_or("none", |kind| kind.as_str());
+            let verdict = match verdict {
+                None => "proceeds".to_string(),
+                Some(arm) => format!("blocked:{}", arm.as_str()),
+            };
+            format!(
+                "{head} crossover-missing={} current-pin-installed={} marker={marker} restore-needs-pin={} verdict={verdict}",
+                input.crossover_missing, input.current_pin_installed, input.restore_needs_absent_pin
+            )
+        }
+    }
+}
+
 /// One run of the step: the context, the collaborators, the game and the lines for its launch log.
 struct Step<'a> {
     ctx: &'a EngineCtx,
@@ -369,6 +402,13 @@ impl Step<'_> {
     fn warn(&self, line: &str) {
         if let Some(log) = self.ctx.log.as_deref() {
             log.warn(&format!("Engine: {} {line}", self.key));
+        }
+    }
+
+    /// An engine-log line that is not for the game's launch log (a reading of the step's own inputs).
+    fn note(&self, line: &str) {
+        if let Some(log) = self.ctx.log.as_deref() {
+            log.info(&format!("Engine: {} {line}", self.key));
         }
     }
 
@@ -510,7 +550,10 @@ pub async fn select_engine_for_launch(
         }
     }
 
-    // G22/G25: refuse now when no branch of an offline launch can start.
+    // G22/G25: refuse now when no branch of an offline launch can start. The request's `offline` is the TS
+    // monitor's answer and `ctx.is_online()` the flag the download reads; both come from the one monitor, and
+    // the line below shows them side by side (87-63, F1: a launch the gate let through used to leave no trace).
+    let context_online = ctx.is_online();
     if on_bottle && args.offline && (effective_id == AUTOMATIC || effective_id == CROSSOVER) {
         let current_pin_installed = pins()
             .map(|table| is_pinned_engine_installed(ctx, &table.current))
@@ -523,7 +566,15 @@ pub async fn select_engine_for_launch(
             current_pin_installed,
             restore_needs_absent_pin: restore_needs_absent_pin(ctx, &bottle_name),
         };
-        if let Some(arm) = offline_launch_certainly_blocked(&input) {
+        let verdict = offline_launch_certainly_blocked(&input);
+        step.note(&offline_gate_line(&GateFacts {
+            request_offline: args.offline,
+            context_online,
+            on_bottle,
+            override_id: &effective_id,
+            applied: Some((&input, verdict)),
+        }));
+        if let Some(arm) = verdict {
             step.warn(&format!(
                 "launch blocked before pre-flight while offline ({})",
                 arm.as_str()
@@ -536,6 +587,14 @@ pub async fn select_engine_for_launch(
             );
             return step.refuse();
         }
+    } else if args.offline || !context_online {
+        step.note(&offline_gate_line(&GateFacts {
+            request_offline: args.offline,
+            context_online,
+            on_bottle,
+            override_id: &effective_id,
+            applied: None,
+        }));
     }
 
     let decide_args = DecideArgs {

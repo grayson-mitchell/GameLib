@@ -34,7 +34,10 @@
 //!   `code=3 stderr= stdout=`, and an `invalid-bottle` probe (a name the engine layer never produces for
 //!   a launch) is the inconclusive timeout of a starting title;
 //! - **the oracle's `other` switch refusal** is `invalid-bottle` (the closed reason has no `other`);
-//! - **`sameObject`** is value equality (Rust has no object identity).
+//! - **`sameObject`** is value equality (Rust has no object identity);
+//! - **the offline gate's reading line** (`Engine: <key> offline gate: ...`, 87-63) is not compared: the TS wrote
+//!   nothing when the gate let a launch through, and a fix is never mixed into a parity port (D-16).
+//!   `offline_refusal.rs` pins the line's text.
 //!
 //! A count floor lives here beside the replay, so editing the JSON alone cannot lower the bar, and an
 //! empty case list fails. POSIX only, as the TS oracle's replays are.
@@ -1152,6 +1155,15 @@ async fn replay_against_goldens(deadline: bool) -> usize {
                         .as_str()
                         .unwrap()
                         .starts_with("[engine-notice]")
+            })
+            // 87-63 (F1): the offline gate's reading of its inputs has no TS counterpart (a launch the gate
+            // let through wrote nothing, which is how F1 went undiagnosed). The oracle's logs stay as
+            // recorded (D-16); `offline_refusal.rs` pins the line.
+            .filter(|entry| {
+                !entry["message"]
+                    .as_str()
+                    .unwrap()
+                    .contains(" offline gate: ")
             })
             .cloned()
             .collect();

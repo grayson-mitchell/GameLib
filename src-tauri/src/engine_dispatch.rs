@@ -1993,6 +1993,22 @@ mod tests {
             .lines()
             .filter(|line| line.contains("launch blocked before pre-flight while offline"))
             .collect();
+        // The gate's reading of its inputs (87-63) is written whether or not it refuses: an info `[Shell]` line.
+        let reading: Vec<&str> = written
+            .lines()
+            .filter(|line| line.contains("offline gate: request-offline=true"))
+            .collect();
+        assert_eq!(reading.len(), 1, "not exactly one reading: {written:?}");
+        assert!(
+            reading[0].contains("[INFO]") && reading[0].contains("[Shell]"),
+            "{}",
+            reading[0]
+        );
+        assert!(
+            reading[0].ends_with("verdict=blocked:crossover-missing"),
+            "{}",
+            reading[0]
+        );
         assert_eq!(lines.len(), 1, "not exactly one gate line: {written:?}");
         assert!(
             lines[0].contains("[WARNING]"),
