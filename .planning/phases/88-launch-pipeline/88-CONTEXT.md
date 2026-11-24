@@ -67,7 +67,7 @@ known-fix routing (95–97), and the engine step itself (ported in 87, D-01/D-22
   `2026-11-21-ts-launched-games-die-on-gamelib-sigkill-unix` for every non-bridge launch. Bridge
   launches stay on the D-15 interim until 95–97. On Windows a Game-class tree also leaves the
   kill-on-close Job, so the game survives a crash there too.
-- **D-06:** **A graceful quit behaves exactly as before.** The same "pending operations" dialog
+- **D-06:** *(Premise corrected by D-27 — today's dialog never fires for a running game.)* **A graceful quit behaves exactly as before.** The same "pending operations" dialog
   (with `cancelId: 0`, CR-04) appears when a game is running, and Yes kills that game's process
   tree explicitly through `gamelib-proc`. No hand-rolled kill. Because Game-class trees are not in
   the sidecar group, the kill must be explicit, and the gate proves it.
@@ -160,6 +160,30 @@ known-fix routing (95–97), and the engine step itself (ported in 87, D-01/D-22
 - **D-25:** v0.11 rules: live gates are authored before coding, goldens are recorded from TS before
   porting, and the phase's last plan leaves no TS or registrations for any ported module except
   scheduled shims and resolvers.
+
+### Added after research (2026-11-24, user decisions on 88-RESEARCH open questions 1–4)
+- **D-26:** **The Rust funnel calls the TS managers through a `ManagerHooks` seam.** The funnel is
+  written against a `ManagerHooks` trait; until 91/92 it is implemented by one TS invoke channel
+  (plus one output send channel), registered in `LONG_RUNNING_CHANNELS` and
+  `UNBOUNDED_RUST_CHANNELS`. The hook covers the manager `launch()`, `syncSaves`,
+  `updateGOGPlaytime`, `forceUninstall`, `getSettings` and the settings write-back. Each hook
+  channel carries a schedule-test row with deleting phase 92. Rejected: TS sequencing Rust steps
+  (breaks D-25's single Rust owner). (Open question 1.)
+- **D-27:** **Amends D-06: quit gains a "game running" condition — a deliberate behaviour change.**
+  Research found today's quit dialog fires only for `isLocked`, a running download queue or bridge
+  hosting, never for a running game, so "exactly as before" would leave Game-class games running
+  silently. The existing pending-operations dialog (`cancelId: 0`, CR-04) gains an "a game is
+  running" condition read from D-07's Rust registry; Yes kills the game's tree through
+  `gamelib-proc`. Record it as a behaviour change, not parity. (Open question 2.)
+- **D-28:** **Ports `check_wine_before_launch` and `download_default_wine` in 88.** Both are
+  `utils.ts` rows the 82 inventory assigned to 87 that are still TS; the Rust funnel needs them.
+  `shutdownWine` (87-65's subject) and `getWineFromProton` stay scheduled TS shims. Amend
+  `82-STATE-OWNERSHIP.md` / the utils inventory in the D-24 amendment. (Open question 4.)
+- **D-29:** **Game output goes to a private capture file that Rust tails** (spawn_game gives the
+  game no pipe; legendary's login-failure classifier and the per-game log need the output). Rust
+  is the only writer of the per-game log. **D-09 stands:** capture is not resumed for a re-adopted
+  game in 88; file a todo (three triage keys) for resuming it from the capture file. (Open
+  question 3.)
 
 ### Claude's Discretion
 - The crate layout: a new `gamelib-launch` (+cli) crate, or launch modules inside `gamelib-engine`/
