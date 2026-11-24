@@ -14,7 +14,9 @@
  *   the twin's file.
  * - view (D-24): a write-through mirror of Rust's in-memory state, pinned the same way.
  *
- * `deletedBy` is the phase that deletes the row, an integer in 87..99. 87 marks an intra-phase shim
+ * `deletedBy` is the phase that deletes the row: an integer in 87..99, or an inserted decimal phase the
+ * roadmap declares (88.1, 88.2, 88.3, 90.1, 90.2 at 88-02; read from the `### Phase N.M:` headings of
+ * `.planning/ROADMAP.md`, D-30). 87 marks an intra-phase shim
  * that a TS module still alive inside Phase 87 uses; 87-56c asserts no 87 row remains
  * (`noIntraPhaseRowsLeft`), and 87-57 compares the final schedule item by item with the D-22, D-23
  * and D-24 survivor list.
@@ -76,7 +78,10 @@ interface ScheduleRow extends ShimRow {
   wiring?: readonly string[]
   /** Repo-relative non-test files that import `file`. */
   callers: readonly string[]
-  /** The phase that deletes this row, 87..99. 87 is an intra-phase shim; 87-56c asserts none remain. */
+  /**
+   * The phase that deletes this row: an integer in 87..99 or an inserted decimal phase the roadmap
+   * declares. 87 is an intra-phase shim; 87-56c asserts none remain.
+   */
   deletedBy: number
 }
 
@@ -460,7 +465,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_ENGINE_LAUNCH_ARM_DEADLINE',
     callers: LAUNCH_SHIM_IMPORTERS,
-    deletedBy: 88
+    // Last call site: launcher.ts:1161, inside `prepareWineLaunch`, which 88.1 ports (88-02, D-30).
+    deletedBy: 88.1
   },
   {
     name: 'endEngineLaunch',
@@ -1122,16 +1128,38 @@ function twinViewProblems(
   return problems
 }
 
-/** Why a row's `deletedBy` is not an integer in 87..99. */
-function deletedByProblems(schedule: readonly ScheduleRow[]): string[] {
+const ROADMAP_FILE = '.planning/ROADMAP.md'
+
+/**
+ * The legal `deletedBy` values (D-30): the integers 87..99 plus every inserted decimal phase the
+ * roadmap declares with a `### Phase N.M:` heading whose N lies in 87..99. `roadmap` is the text of
+ * `ROADMAP.md`; a missing file contributes no decimal phase.
+ */
+function allowedDeletedBy(roadmap: string): ReadonlySet<number> {
+  const allowed = new Set<number>()
+  for (let n = 87; n <= 99; n++) allowed.add(n)
+  for (const m of roadmap.matchAll(/^### Phase (\d+)\.(\d+):/gm)) {
+    const major = Number(m[1])
+    if (major >= 87 && major <= 99) allowed.add(Number(`${m[1]}.${m[2]}`))
+  }
+  return allowed
+}
+
+const ROADMAP_TEXT = existsSync(join(REPO_ROOT, ROADMAP_FILE))
+  ? readFileSync(join(REPO_ROOT, ROADMAP_FILE), 'utf8')
+  : ''
+const ALLOWED_DELETED_BY = allowedDeletedBy(ROADMAP_TEXT)
+
+/** Why a row's `deletedBy` is not a phase in 87..99 (an integer, or a decimal the roadmap declares). */
+function deletedByProblems(
+  schedule: readonly ScheduleRow[],
+  allowed: ReadonlySet<number> = ALLOWED_DELETED_BY
+): string[] {
   return schedule
-    .filter(
-      (r) =>
-        !Number.isInteger(r.deletedBy) || r.deletedBy < 87 || r.deletedBy > 99
-    )
+    .filter((r) => !allowed.has(r.deletedBy))
     .map(
       (r) =>
-        `${key(r.file, r.name)}: deletedBy ${String(r.deletedBy)} is not an integer in 87..99`
+        `${key(r.file, r.name)}: deletedBy ${String(r.deletedBy)} is not a phase in 87..99`
     )
 }
 
@@ -1221,7 +1249,7 @@ describe('engineWineShimSchedule', () => {
     }
   })
 
-  it('every row is scheduled for deletion in an integer phase 87..99', () => {
+  it('every row is scheduled for deletion in a roadmap phase in 87..99', () => {
     expect(deletedByProblems(SCHEDULE)).toEqual([])
   })
 
@@ -1605,11 +1633,35 @@ describe('engineWineShimSchedule detector (planted fixtures)', () => {
       deletedBy
     })
 
-    it('a deletedBy outside 87..99, or not an integer, fails', () => {
+    it('a deletedBy that is not a roadmap phase in 87..99 fails', () => {
       expect(deletedByProblems([row(87), row(99), row(93)])).toEqual([])
-      for (const bad of [86, 100, 0, 92.5, Number.NaN]) {
+      for (const bad of [86, 100, 0, 92.5, 88.4, 88.15, Number.NaN]) {
         expect(deletedByProblems([row(bad)])).toHaveLength(1)
       }
+      expect(deletedByProblems([row(88.4)])[0]).toMatch(
+        /deletedBy 88\.4 is not a phase in 87\.\.99/
+      )
+    })
+
+    it('an inserted decimal phase passes only when the roadmap declares it', () => {
+      expect(deletedByProblems([row(88.1)])).toEqual([])
+      expect(deletedByProblems([row(88.4)])).toHaveLength(1)
+      const fixture = allowedDeletedBy(
+        '### Phase 88.4: A planted phase (INSERTED)\n### Phase 12.3: outside the window\n'
+      )
+      expect(deletedByProblems([row(88.4)], fixture)).toEqual([])
+      expect(deletedByProblems([row(12.3)], fixture)).toHaveLength(1)
+      expect(deletedByProblems([row(88.1)], allowedDeletedBy(''))).toHaveLength(
+        1
+      )
+    })
+
+    it('the real roadmap declares the five inserted decimal phases', () => {
+      for (const d of [88.1, 88.2, 88.3, 90.1, 90.2]) {
+        expect(ALLOWED_DELETED_BY.has(d)).toBe(true)
+      }
+      expect(ALLOWED_DELETED_BY.has(34.7)).toBe(false)
+      expect(ALLOWED_DELETED_BY.has(999.2)).toBe(false)
     })
 
     it('noIntraPhaseRowsLeft fails while a row has deletedBy 87 and passes once none does', () => {
