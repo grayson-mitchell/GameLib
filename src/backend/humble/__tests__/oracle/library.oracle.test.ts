@@ -383,7 +383,9 @@ flow({
   script: async (env) => {
     await syncFuzzy(env)
     await env.ipc('humbleSetOwnershipOverride', 'cactus_steam')
-    await env.ipc('humbleGetOwnershipOverrides')
+    await env.direct('humbleGetOwnershipOverrides', [], () =>
+      env.services.library.getAllOwnershipOverrides()
+    )
     await getKeys(env)
   }
 })
@@ -395,7 +397,9 @@ flow({
     await syncFuzzy(env)
     await env.ipc('humbleSetOwnershipOverride', 'cactus_steam')
     await env.ipc('humbleClearOwnershipOverride', 'cactus_steam')
-    await env.ipc('humbleGetOwnershipOverrides')
+    await env.direct('humbleGetOwnershipOverrides', [], () =>
+      env.services.library.getAllOwnershipOverrides()
+    )
     await getKeys(env)
   }
 })
@@ -407,7 +411,9 @@ flow({
     await sync(env)
     await env.settleAppIdPass(1)
     await env.ipc('humbleSetOwnershipOverride', 'portal2_steam')
-    await env.ipc('humbleGetOwnershipOverrides')
+    await env.direct('humbleGetOwnershipOverrides', [], () =>
+      env.services.library.getAllOwnershipOverrides()
+    )
   }
 })
 flow({
@@ -416,7 +422,9 @@ flow({
   script: async (env) => {
     await sync(env)
     await env.ipc('humbleSetOwnershipOverride', 'no_such_key')
-    await env.ipc('humbleGetOwnershipOverrides')
+    await env.direct('humbleGetOwnershipOverrides', [], () =>
+      env.services.library.getAllOwnershipOverrides()
+    )
   }
 })
 
@@ -429,7 +437,9 @@ flow({
   script: async (env) => {
     await syncFuzzy(env)
     await env.ipc('humbleRecordGiftLinkOpened', 'cactus_steam')
-    await env.ipc('humbleGetGiftedAt')
+    await env.direct('humbleGetGiftedAt', [], () =>
+      env.services.library.getAllGiftedAt()
+    )
   }
 })
 flow({
@@ -441,7 +451,9 @@ flow({
     await env.settleAppIdPass(1)
     await getKeys(env)
     await env.ipc('humbleRecordGiftLinkOpened', 'framed_steam')
-    await env.ipc('humbleGetGiftedAt')
+    await env.direct('humbleGetGiftedAt', [], () =>
+      env.services.library.getAllGiftedAt()
+    )
   }
 })
 flow({
@@ -450,7 +462,9 @@ flow({
   script: async (env) => {
     await sync(env)
     await env.ipc('humbleRecordGiftLinkOpened', 'other_steam')
-    await env.ipc('humbleGetGiftedAt')
+    await env.direct('humbleGetGiftedAt', [], () =>
+      env.services.library.getAllGiftedAt()
+    )
   }
 })
 flow({
@@ -459,7 +473,9 @@ flow({
   script: async (env) => {
     await sync(env)
     await env.ipc('humbleRecordGiftLinkOpened', 'no_such_key')
-    await env.ipc('humbleGetGiftedAt')
+    await env.direct('humbleGetGiftedAt', [], () =>
+      env.services.library.getAllGiftedAt()
+    )
   }
 })
 

@@ -38,3 +38,12 @@
   packaged. The info crate's CrossOver cold-start snapshot is read from `InfoPaths.public_dir`, so a packaged build may
   look under `<root>/public` where the assets are under `<root>/build`. 94-13 loads the Humble catalog from the
   steampoll folder instead. Owner: a Phase 86 follow-up or a quick task; verify on a packaged build first.
+
+## Found and fixed by the orchestrator after 94-22
+
+- `src/backend/humble/__tests__/oracle/library.oracle.test.ts` had 8 cases red on every OS since 94-13: the
+  tracer deleted the TS `humbleGetGiftedAt` / `humbleGetOwnershipOverrides` handles (the channels are native
+  now), and the oracle's override and gift-link flows still read them through `env.ipc`, so each recorded
+  `{threw: "no handler registered ..."}`. Fixed by recording the same step through `env.direct` under the same
+  name, calling the library methods the deleted handles called (`getAllOwnershipOverrides`, `getAllGiftedAt`).
+  No golden changed. All 17 Humble and shortcuts oracle suites pass (1558 tests, 28 skipped darwin-only).
