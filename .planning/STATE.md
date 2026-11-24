@@ -5,7 +5,7 @@ milestone_name: Node Sidecar Retirement
 current_phase: 94
 current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 94-22-PLAN.md
+stopped_at: Completed 94-24-PLAN.md
 last_updated: "2026-11-24T07:28:10.080Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 94 execution started
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
-Plan: 21 of 32
-Status: Ready to execute (94-22 complete; 94-21 complete; 94-20 complete; 94-19 complete; 94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24 and 94-15 left a named pending header check for it, so 94-23 waits on it; 94-24 next; worktree-local STATE, D-02)
-Last activity: 2026-11-24 — Completed 94-22: every shortcut caller reaches Rust through a scheduled resolver in src/backend/humbleshortcuts/shortcuts.ts (the renderer's shortcutsExists, addShortcut, removeShortcut, addToSteam, removeFromSteam and isAddedToSteam, and the store managers' addShortcuts, removeShortcuts and removeNonSteamGame with the same signatures and notify false), over five new rustInvoke channels (shortcuts_add, _remove and the three _steam_ ops); the registered handle answers existsAfter and a store manager's partial add failure rejects with the TS's own message from Rust; processShortcut moved unchanged to appShellFlowRegistration.ts as registerProcessShortcut (D-27, deletedBy 98); sidecar/shortcutsFlowRegistration.ts and shortcutsFlows.test.ts are deleted with every guard (reach ledger, 66.4 latch list and owned floor 54 to 53, containment, flow and channel censuses, once-per-boot, runner slice, ipc domain floor and allowlist, ceilings) following by exactly its own contribution; the GOG product icon is resolved lazily; nine resolver rows and the registrar were scheduled in the commit that created them. Not run: the Mac live gates and the real Add to Steam on a Mac Steam (94-32). Completed 94-21 (Humble secrets owner and Rust boot migration).
+Plan: 22 of 32
+Status: Ready to execute (94-24 complete; 94-22 complete; 94-21 complete; 94-20 complete; 94-19 complete; 94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac, and its recorder is now the surviving oracle in src/backend/testUtils/shortcutsIconGeometry (deletedBy 99); 94-10, the operator live Humble capture the user deferred until after 94-24, is next, then 94-23; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-24: src/backend/shortcuts, the TS shortcuts oracle and its harness are deleted behind describe('shortcutsPortComplete') (committed red first, green in the deleting commit), with meta/backendDiCeilings/shortcuts.json, the getWikiGameInfo resolver and its schedule row; the one unrecordable piece, the macOS icon_geometry oracle, is kept cut down in testUtils/shortcutsIconGeometry as a scheduled survivor (deletedBy 99); @shockpkg/icon-encoder, sanitize-filename, tmp and @types/tmp are dropped; three quirk todos filed. Not run: the Mac live gates and the four icon_geometry goldens. Completed 94-22: every shortcut caller reaches Rust through a scheduled resolver in src/backend/humbleshortcuts/shortcuts.ts (the renderer's shortcutsExists, addShortcut, removeShortcut, addToSteam, removeFromSteam and isAddedToSteam, and the store managers' addShortcuts, removeShortcuts and removeNonSteamGame with the same signatures and notify false), over five new rustInvoke channels (shortcuts_add, _remove and the three _steam_ ops); the registered handle answers existsAfter and a store manager's partial add failure rejects with the TS's own message from Rust; processShortcut moved unchanged to appShellFlowRegistration.ts as registerProcessShortcut (D-27, deletedBy 98); sidecar/shortcutsFlowRegistration.ts and shortcutsFlows.test.ts are deleted with every guard (reach ledger, 66.4 latch list and owned floor 54 to 53, containment, flow and channel censuses, once-per-boot, runner slice, ipc domain floor and allowlist, ceilings) following by exactly its own contribution; the GOG product icon is resolved lazily; nine resolver rows and the registrar were scheduled in the commit that created them. Not run: the Mac live gates and the real Add to Steam on a Mac Steam (94-32). Completed 94-21 (Humble secrets owner and Rust boot migration).
 Progress: [█████████░] 92%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -491,6 +491,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P20 | 150min | 3 tasks | 14 files |
 | Phase 94 P21 | 95min | 3 tasks | 15 files |
 | Phase 94 P22 | 190min | 3 tasks | 57 files |
+| Phase 94 P24 | 95min | 2 tasks | 55 files |
 
 ## Accumulated Context
 
@@ -1084,6 +1085,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-22: a resolver cannot project existsAfter or reject itself (the 86 shape rule allows only const declarations and one returned call), so the registered renderer handle answers existsAfter and shortcuts_add with notify false answers a partial failure with an Err carrying the TS's own Could not write shortcuts message; notify true still resolves the outcome and raises the notice
 - [Phase 94]: 94-22: the GOG product icon is resolved lazily in the one input helper (only for an op that draws an icon, only when the install holds neither goggame ico nor support icon png, an API failure is no icon); a GOG store executable is read only for the Windows desktop add and a missing one sends none
 - [Phase 94]: 94-22: shortcutsExistOnDisk moved to src/backend/shortcuts/shortcuts/shortcuts.ts for the 94-05 oracle until 94-24; processShortcut moved unchanged to appShellFlowRegistration.ts as registerProcessShortcut with its IPC declaration moved to the app-shell domain; shortcutsFlowRegistration.ts and shortcutsFlows.test.ts are deleted with every guard following by exactly its own contribution
+- [Phase 94]: 94-24: the TS shortcuts tree and oracle were deleted behind describe('shortcutsPortComplete') (red then green); the macOS icon_geometry oracle survives cut down in src/backend/testUtils/shortcutsIconGeometry as a relocated schedule row (writeOrCompareIconGeometryGolden, callers none, deletedBy 99) so the four Mac goldens stay recordable; its todo carries the new command and a step to delete it with the recording commit
+- [Phase 94]: 94-24: getWikiGameInfo and its infoShimSchedule row are deleted (the Rust shortcuts crate reaches the wiki lookup in-process); the steamfiles TS validity replay (shortcutsReplay.test.ts) is retired with its subject and the upstream test_data copy in the crate is now the only copy; @shockpkg/icon-encoder, sanitize-filename, tmp and @types/tmp dropped, fastest-levenshtein kept
 
 ### Pending Todos
 
@@ -1366,7 +1369,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 ## Session Continuity
 
 Last session: 2026-11-24T07:28:09.934Z
-Stopped at: Completed 94-22-PLAN.md
+Stopped at: Completed 94-24-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
