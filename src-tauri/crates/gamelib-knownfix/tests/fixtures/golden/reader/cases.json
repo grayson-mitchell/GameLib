@@ -1750,5 +1750,2167 @@
         ]
       }
     ]
+  },
+  {
+    "id": "knownFixes--readknownfixes-req-34-2-05-returns-null-when-no-fix-file-exists-for-the-appname-runner-pair",
+    "title": "readKnownFixes > REQ-34.2-05 returns null when no fix file exists for the appName/runner pair",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "no-such-app",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixes--readknownfixes-req-34-2-05-returns-the-parsed-object-when-a-well-formed-fix-file-exists",
+    "title": "readKnownFixes > REQ-34.2-05 returns the parsed object when a well-formed fix file exists",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "well-formed-app",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/well-formed-app-gog.json",
+            "text": "{\"winetricks\":[\"vcrun2019\"],\"runInPrefix\":[\"setup.exe\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixes--readknownfixes-req-34-2-05-returns-null-and-logs-a-warning-when-the-file-exists-but-is-malformed-json",
+    "title": "readKnownFixes > REQ-34.2-05 returns null AND logs a warning when the file exists but is malformed JSON",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "malformed-app",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/malformed-app-gog.json",
+            "text": "{ not valid json"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixes--readknownfixes-req-34-2-05-resolves-a-different-filename-for-two-different-runners-with-the-same-appname",
+    "title": "readKnownFixes > REQ-34.2-05 resolves a different filename for two different runners with the same appName",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "shared-app",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/shared-app-gog.json",
+            "text": "{\"winetricks\":[\"gog-only-fix\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/shared-app-epic.json",
+            "text": "{\"winetricks\":[\"epic-only-fix\"]}"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "shared-app",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixes--readknownfixes-quick-261024-tny-reads-id-steam-json-for-runner-steam-never-id-undefined-json",
+    "title": "readKnownFixes > quick 261024-tny reads <id>-steam.json for runner steam, never <id>-undefined.json",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "steamapp-1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/steamapp-1-steam.json",
+            "text": "{\"winetricks\":[\"vcrun2019\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/steamapp-2-undefined.json",
+            "text": "{\"winetricks\":[\"stale\"]}"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "steamapp-2",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixes--readknownfixes-wr-06-returns-null-and-does-not-read-an-out-of-tree-file-when-appname-traverses",
+    "title": "readKnownFixes > WR-06 returns null and does NOT read an out-of-tree file when appName traverses",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "../outside-the-fixes-dir",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/outside-the-fixes-dir-gog.json",
+            "text": "{\"winetricks\":[\"pwned\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixes--readknownfixes-wr-06-returns-null-for-a-deeper-traversal-even-though-the-target-exists",
+    "title": "readKnownFixes > WR-06 returns null for a deeper traversal even though the target EXISTS",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "../../deep-escape",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/.config/deep-escape-gog.json",
+            "text": "{\"winetricks\":[\"pwned-deep\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixes--readknownfixes-wr-06-guard-does-not-reject-a-normal-appname-anti-vacuity",
+    "title": "readKnownFixes > WR-06 guard does not reject a normal appName (anti-vacuity)",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "ordinary-app",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/ordinary-app-gog.json",
+            "text": "{\"winetricks\":[\"corefonts\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixes--readknownfixes-req-34-2-05-resolves-fixespath-under-os-tmpdir-never-the-real-config-directory",
+    "title": "readKnownFixes > REQ-34.2-05 resolves fixesPath under os.tmpdir(), never the real config directory",
+    "steps": [
+      {
+        "op": "layerPaths"
+      }
+    ]
+  },
+  {
+    "id": "knownFixes--filtertier1knownfixes-launchargs-exeoverride-quick-261029-mbl-keeps-a-string-array-launchargs-including-an-empty-one",
+    "title": "filterTier1KnownFixes launchArgs/exeOverride (quick 261029-mbl) > keeps a string-array launchArgs, including an empty one",
+    "steps": [
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "launchArgs": [
+            "-dx11",
+            "--windowed"
+          ]
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "launchArgs": []
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixes--filtertier1knownfixes-launchargs-exeoverride-quick-261029-mbl-drops-launchargs-j-with-a-warning",
+    "title": "filterTier1KnownFixes launchArgs/exeOverride (quick 261029-mbl) > drops launchArgs %j with a warning",
+    "steps": [
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "launchArgs": "-dx11"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "launchArgs": [
+            1
+          ]
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "launchArgs": [
+            "-a",
+            null
+          ]
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "launchArgs": {}
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixes--filtertier1knownfixes-launchargs-exeoverride-quick-261029-mbl-keeps-exeoverride-j",
+    "title": "filterTier1KnownFixes launchArgs/exeOverride (quick 261029-mbl) > keeps exeOverride %j",
+    "steps": [
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "exeOverride": "bin/game.exe"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "exeOverride": "bin\\game.exe"
+        }
+      },
+      {
+        "op": "exeShape",
+        "values": [
+          "bin/game.exe",
+          "bin\\game.exe"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixes--filtertier1knownfixes-launchargs-exeoverride-quick-261029-mbl-drops-exeoverride-j-with-a-warning",
+    "title": "filterTier1KnownFixes launchArgs/exeOverride (quick 261029-mbl) > drops exeOverride %j with a warning",
+    "steps": [
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "exeOverride": "/abs/game.exe"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "exeOverride": "C:\\game.exe"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "exeOverride": "C:game.exe"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "exeOverride": "\\\\server\\share\\g.exe"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "exeOverride": "\\game.exe"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "exeOverride": "../game.exe"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "exeOverride": "bin/../../game.exe"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "exeOverride": "bin\\..\\..\\g.exe"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "exeOverride": ""
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "exeOverride": "a\u0000b"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "exeOverride": 5
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "app",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "exeOverride": [
+            "x"
+          ]
+        }
+      },
+      {
+        "op": "exeShape",
+        "values": [
+          "/abs/game.exe",
+          "C:\\game.exe",
+          "C:game.exe",
+          "\\\\server\\share\\g.exe",
+          "\\game.exe",
+          "../game.exe",
+          "bin/../../game.exe",
+          "bin\\..\\..\\g.exe",
+          "",
+          "a\u0000b",
+          5,
+          [
+            "x"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixes--filtertier1knownfixes-launchargs-exeoverride-quick-261029-mbl-lists-both-keys-as-tier-1-and-does-not-treat-them-as-routing",
+    "title": "filterTier1KnownFixes launchArgs/exeOverride (quick 261029-mbl) > lists both keys as tier 1 and does not treat them as routing",
+    "steps": [
+      {
+        "op": "tier1Keys"
+      },
+      {
+        "op": "routingOnly",
+        "fix": {
+          "title": "t",
+          "launchArgs": [
+            "-x"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixes-tier-1-returns-null-when-no-layer-has-a-file",
+    "title": "readKnownFixes (tier 1) > returns null when no layer has a file",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixes-tier-1-returns-the-bundled-object",
+    "title": "readKnownFixes (tier 1) > returns the bundled object",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/1-steam.json",
+            "text": "{\"title\":\"b\",\"winetricks\":[\"x\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixes-tier-1-local-wins-over-bundled-as-a-whole-file-no-per-key-merge",
+    "title": "readKnownFixes (tier 1) > local wins over bundled as a whole file (no per-key merge)",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/1-steam.json",
+            "text": "{\"title\":\"b\",\"winetricks\":[\"x\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/local/1-steam.json",
+            "text": "{\"title\":\"l\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixes-tier-1-bundled-wins-over-remote",
+    "title": "readKnownFixes (tier 1) > bundled wins over remote",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-steam.json",
+            "text": "{\"title\":\"r\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/1-steam.json",
+            "text": "{\"title\":\"b\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixes-tier-1-falls-back-to-remote-when-local-and-bundled-are-absent",
+    "title": "readKnownFixes (tier 1) > falls back to remote when local and bundled are absent",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-steam.json",
+            "text": "{\"title\":\"r\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixes-tier-1-malformed-local-warns-and-falls-through-to-bundled",
+    "title": "readKnownFixes (tier 1) > malformed local warns and falls through to bundled",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/1-steam.json",
+            "text": "{\"title\":\"b\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/local/1-steam.json",
+            "text": "{nope"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixes-tier-1-non-object-json-is-treated-as-malformed-and-falls-through",
+    "title": "readKnownFixes (tier 1) > non-object JSON is treated as malformed and falls through",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/1-steam.json",
+            "text": "{\"title\":\"b\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/local/1-steam.json",
+            "text": "[1,2]"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixes-tier-1-returns-every-tier-1-key-unchanged-and-drops-the-rest-from-a-remote-file",
+    "title": "readKnownFixes (tier 1) > returns every tier-1 key unchanged and drops the rest from a remote file",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-steam.json",
+            "text": "{\"title\":\"t\",\"envVariables\":{\"A\":\"1\"},\"winetricks\":[\"v\"],\"runInPrefix\":[\"setup.exe\"],\"notes\":{\"a\":\"b\"},\"wikiLink\":\"https://example.test\",\"launchNotice\":\"hello\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"foo\":1}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixes-tier-1-drops-tier-2-keys-from-the-s-layer-with-a-warning-naming-the-profile-json",
+    "title": "readKnownFixes (tier 1) > drops tier-2 keys from the %s layer with a warning naming the .profile.json",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "remove": [],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/1-steam.json",
+            "text": "{\"title\":\"t\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"steamSharedRedists\":[\"229007\"]}"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "remove": [
+          "<APPFOLDER>/fixes/local/1-steam.json"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/1-steam.json",
+            "text": "{\"title\":\"t\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"steamSharedRedists\":[\"229007\"]}"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "remove": [
+          "<HOME>/public/fixes/1-steam.json"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-steam.json",
+            "text": "{\"title\":\"t\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"steamSharedRedists\":[\"229007\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixes-tier-1-drops-dlloverrides-from-a-tier-1-json-in-the-s-layer-with-a-warning",
+    "title": "readKnownFixes (tier 1) > drops dllOverrides from a tier-1 .json in the %s layer with a warning",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "remove": [],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/1-steam.json",
+            "text": "{\"title\":\"t\",\"dllOverrides\":[{\"exe\":\"a.exe\",\"dlls\":{\"d3d9\":\"native\"}}]}"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "remove": [
+          "<APPFOLDER>/fixes/local/1-steam.json"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/1-steam.json",
+            "text": "{\"title\":\"t\",\"dllOverrides\":[{\"exe\":\"a.exe\",\"dlls\":{\"d3d9\":\"native\"}}]}"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "remove": [
+          "<HOME>/public/fixes/1-steam.json"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-steam.json",
+            "text": "{\"title\":\"t\",\"dllOverrides\":[{\"exe\":\"a.exe\",\"dlls\":{\"d3d9\":\"native\"}}]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixes-tier-1-drops-an-unknown-non-tier-2-key-with-a-warning-naming-the-layer",
+    "title": "readKnownFixes (tier 1) > drops an unknown non-tier-2 key with a warning naming the layer",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/1-steam.json",
+            "text": "{\"title\":\"t\",\"foo\":1}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixes-tier-1-rejects-a-traversing-appname-in-the-s-layer",
+    "title": "readKnownFixes (tier 1) > rejects a traversing appName in the %s layer",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "../../etc/x",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "remove": [],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/etc/x-steam.json",
+            "text": "{\"title\":\"evil\"}"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "../../etc/x",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "remove": [
+          "<APPFOLDER>/etc/x-steam.json"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/etc/x-steam.json",
+            "text": "{\"title\":\"evil\"}"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "../../etc/x",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "remove": [
+          "<HOME>/etc/x-steam.json"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/.config/etc/x-steam.json",
+            "text": "{\"title\":\"evil\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--filtertier1knownfixes-matches-the-reader-output-for-a-plain-object",
+    "title": "filterTier1KnownFixes > matches the reader output for a plain object",
+    "steps": [
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "envVariables": {
+            "A": "1"
+          },
+          "registry": [
+            {
+              "key": "HKLM\\Software\\X",
+              "name": "N",
+              "type": "REG_DWORD",
+              "value": 1
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--filtertier1knownfixes-returns-null-for-p",
+    "title": "filterTier1KnownFixes > returns null for %p",
+    "steps": [
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": null
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": [
+          1
+        ]
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": 3
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": "x"
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--filtertier1knownfixes-exposes-the-allow-list-without-any-tier-2-key",
+    "title": "filterTier1KnownFixes > exposes the allow-list without any tier-2 key",
+    "steps": [
+      {
+        "op": "tier1Keys"
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixprofile-tier-2-returns-null-when-no-layer-has-a-profile",
+    "title": "readKnownFixProfile (tier 2) > returns null when no layer has a profile",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixprofile-tier-2-local-wins-over-bundled",
+    "title": "readKnownFixProfile (tier 2) > local wins over bundled",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/1-steam.profile.json",
+            "text": "{\"title\":\"b\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/local/1-steam.profile.json",
+            "text": "{\"title\":\"l\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixprofile-tier-2-never-reads-a-profile-json-that-sits-only-in-the-remote-directory",
+    "title": "readKnownFixProfile (tier 2) > never reads a .profile.json that sits only in the remote directory",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-steam.profile.json",
+            "text": "{\"title\":\"r\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixprofile-tier-2-returns-title-notes-evidence-registry-and-steamsharedredists-unchanged",
+    "title": "readKnownFixProfile (tier 2) > returns title, notes, evidence, registry and steamSharedRedists unchanged",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/1-steam.profile.json",
+            "text": "{\"title\":\"t\",\"notes\":{\"a\":\"b\"},\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"steamSharedRedists\":[\"229007\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixprofile-tier-2-keeps-dlloverrides-from-the-s-layer-without-a-warning",
+    "title": "readKnownFixProfile (tier 2) > keeps dllOverrides from the %s layer without a warning",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "remove": [],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/1-steam.profile.json",
+            "text": "{\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"nvapi64\":\"disabled\"}}]}"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "remove": [
+          "<HOME>/public/fixes/1-steam.profile.json"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/1-steam.profile.json",
+            "text": "{\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"nvapi64\":\"disabled\"}}]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixprofile-tier-2-ignores-a-dlloverrides-profile-that-sits-only-in-the-remote-directory",
+    "title": "readKnownFixProfile (tier 2) > ignores a dllOverrides profile that sits only in the remote directory",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-steam.profile.json",
+            "text": "{\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"a\":\"native\"}}]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixprofile-tier-2-drops-tier-1-functional-keys-with-a-warning-naming-the-tier-1-file",
+    "title": "readKnownFixProfile (tier 2) > drops tier-1 functional keys with a warning naming the tier-1 file",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/1-steam.profile.json",
+            "text": "{\"title\":\"t\",\"envVariables\":{\"A\":\"1\"},\"winetricks\":[\"v\"],\"runInPrefix\":[\"s.exe\"],\"wikiLink\":\"x\",\"launchNotice\":\"n\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixprofile-tier-2-drops-an-unknown-key-with-a-warning",
+    "title": "readKnownFixProfile (tier 2) > drops an unknown key with a warning",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/1-steam.profile.json",
+            "text": "{\"title\":\"t\",\"foo\":1}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixprofile-tier-2-is-store-agnostic-gog-and-legendary-epic-resolve-their-own-filenames",
+    "title": "readKnownFixProfile (tier 2) > is store-agnostic: gog and legendary (epic) resolve their own filenames",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "x",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/x-gog.profile.json",
+            "text": "{\"title\":\"g\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/x-epic.profile.json",
+            "text": "{\"title\":\"e\"}"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "x",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--readknownfixprofile-tier-2-rejects-a-traversing-appname",
+    "title": "readKnownFixProfile (tier 2) > rejects a traversing appName",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "../../etc/x",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesLayered--tier-independence-takes-tier-1-from-remote-and-tier-2-from-bundled-in-the-same-launch",
+    "title": "tier independence > takes tier 1 from remote and tier 2 from bundled in the same launch",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-steam.json",
+            "text": "{\"title\":\"remote\",\"envVariables\":{\"A\":\"1\"}}"
+          },
+          {
+            "path": "<HOME>/public/fixes/1-steam.profile.json",
+            "text": "{\"title\":\"profile\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesWithLayer--readknownfixeswithlayer-d-12-returns-null-when-no-layer-has-a-file",
+    "title": "readKnownFixesWithLayer (D-12) > returns null when no layer has a file",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "77",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesWithLayer--readknownfixeswithlayer-d-12-walks-local-bundled-remote-and-matches-readknownfixes",
+    "title": "readKnownFixesWithLayer (D-12) > walks local > bundled > remote and matches readKnownFixes",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "77",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/77-steam.json",
+            "text": "{\"title\":\"T\",\"macArch\":\"32\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/77-steam.json",
+            "text": "{\"title\":\"T\",\"macArch\":\"32\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/77-steam.json",
+            "text": "{\"title\":\"T\",\"macArch\":\"32\"}"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "77",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "remove": [
+          "<APPFOLDER>/fixes/local"
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "77",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "remove": [
+          "<HOME>/public/fixes"
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "77",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "remove": [
+          "<APPFOLDER>/fixes"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-bundled-tier-1-only-bundled-no-notice",
+    "title": "readGamelibFixStatus > bundled tier-1 only -> bundled, no notice",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"title\":\"t\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-local-tier-1-only-local",
+    "title": "readGamelibFixStatus > local tier-1 only -> local",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app-steam.json",
+            "text": "{\"title\":\"t\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-bundled-tier-2-only-bundled",
+    "title": "readGamelibFixStatus > bundled tier-2 only -> bundled",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.profile.json",
+            "text": "{\"title\":\"t\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-remote-tier-1-only-null-with-or-without-launchnotice",
+    "title": "readGamelibFixStatus > remote tier-1 only -> null, with or without launchNotice",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/app-steam.json",
+            "text": "{\"title\":\"t\"}"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/app-steam.json",
+            "text": "{\"title\":\"t\",\"launchNotice\":\"hi\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-nothing-anywhere-null",
+    "title": "readGamelibFixStatus > nothing anywhere -> null",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-local-s-launchnotice-wins-over-bundled-s",
+    "title": "readGamelibFixStatus > local's launchNotice wins over bundled's",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app-steam.json",
+            "text": "{\"title\":\"l\",\"launchNotice\":\"L\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"title\":\"b\",\"launchNotice\":\"B\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-bundled-tier-2-remote-tier-1-notice-remote-text-never-surfaces",
+    "title": "readGamelibFixStatus > bundled tier-2 + remote tier-1 notice -> remote text never surfaces",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.profile.json",
+            "text": "{\"title\":\"t\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app-steam.json",
+            "text": "{\"title\":\"t\",\"launchNotice\":\"remote\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-launchnotice-p-undefined",
+    "title": "readGamelibFixStatus > launchNotice %p -> undefined",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"title\":\"t\",\"launchNotice\":\"\"}"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"title\":\"t\",\"launchNotice\":5}"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"title\":\"t\",\"launchNotice\":\"   \"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-rating-is-not-a-tier-1-key",
+    "title": "readGamelibFixStatus > rating is not a tier-1 key",
+    "steps": [
+      {
+        "op": "tier1Keys"
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-sideload-null",
+    "title": "readGamelibFixStatus > sideload -> null",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "sideload",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"title\":\"t\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-traversal-appname-null",
+    "title": "readGamelibFixStatus > traversal appName -> null",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "../../etc/passwd",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-malformed-bundled-tier-1-falls-through-to-tier-2-else-null",
+    "title": "readGamelibFixStatus > malformed bundled tier-1 falls through to tier-2, else null",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{not json"
+          }
+        ]
+      },
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.profile.json",
+            "text": "{\"title\":\"t\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-quick-261027-gtd-routing-only-tier-1-files-are-not-a-fix-macarch-only-null",
+    "title": "readGamelibFixStatus > quick 261027-gtd: routing-only tier-1 files are not a fix > macArch-only -> null",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"title\":\"t\",\"macArch\":\"32\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-quick-261027-gtd-routing-only-tier-1-files-are-not-a-fix-macarch-drm-notes-null",
+    "title": "readGamelibFixStatus > quick 261027-gtd: routing-only tier-1 files are not a fix > macArch + drm + notes -> null",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"title\":\"t\",\"notes\":{\"drm\":\"x\"},\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-quick-261027-gtd-routing-only-tier-1-files-are-not-a-fix-drm-envvariables-bundled",
+    "title": "readGamelibFixStatus > quick 261027-gtd: routing-only tier-1 files are not a fix > drm + envVariables -> bundled",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"title\":\"t\",\"drm\":\"ceg\",\"envVariables\":{\"A\":\"b\"}}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-quick-261027-gtd-routing-only-tier-1-files-are-not-a-fix-drm-launchnotice-bundled-with-the-notice",
+    "title": "readGamelibFixStatus > quick 261027-gtd: routing-only tier-1 files are not a fix > drm + launchNotice -> bundled with the notice",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"title\":\"t\",\"drm\":\"ceg\",\"launchNotice\":\"hi\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-quick-261027-gtd-routing-only-tier-1-files-are-not-a-fix-routing-only-tier-1-tier-2-profile-the-profile-still-counts",
+    "title": "readGamelibFixStatus > quick 261027-gtd: routing-only tier-1 files are not a fix > routing-only tier-1 + tier-2 profile -> the profile still counts",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"title\":\"t\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app-steam.profile.json",
+            "text": "{\"title\":\"t\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-quick-261027-gtd-routing-only-tier-1-files-are-not-a-fix-local-routing-only-shadows-a-bundled-real-fix-null",
+    "title": "readGamelibFixStatus > quick 261027-gtd: routing-only tier-1 files are not a fix > local routing-only shadows a bundled real fix -> null",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app-steam.json",
+            "text": "{\"title\":\"l\",\"macArch\":\"32\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"title\":\"b\",\"envVariables\":{\"A\":\"b\"}}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-quick-261027-gtd-routing-only-tier-1-files-are-not-a-fix-a-rejected-drm-value-filters-to-title-only-bundled",
+    "title": "readGamelibFixStatus > quick 261027-gtd: routing-only tier-1 files are not a fix > a rejected drm value filters to title-only -> bundled",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"title\":\"t\",\"drm\":\"steamstub\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-quick-261029-mbl-launchargs-exeoverride-are-fixes-not-routing-launchargs-only-bundled-file-bundled",
+    "title": "readGamelibFixStatus > quick 261029-mbl: launchArgs/exeOverride are fixes, not routing > launchArgs-only bundled file -> bundled",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"launchArgs\":[\"-x\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesGamelibStatus--readgamelibfixstatus-quick-261029-mbl-launchargs-exeoverride-are-fixes-not-routing-macarch-exeoverride-is-not-routing-only-bundled",
+    "title": "readGamelibFixStatus > quick 261029-mbl: launchArgs/exeOverride are fixes, not routing > macArch + exeOverride is not routing-only -> bundled",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app-steam.json",
+            "text": "{\"macArch\":\"32\",\"exeOverride\":\"g.exe\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesMacArch--filtertier1knownfixes-macarch-keeps-32-with-no-warning",
+    "title": "filterTier1KnownFixes macArch > keeps \"32\" with no warning",
+    "steps": [
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "bundled",
+        "parsed": {
+          "title": "T",
+          "macArch": "32"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesMacArch--filtertier1knownfixes-macarch-drops-p-with-a-warning",
+    "title": "filterTier1KnownFixes macArch > drops %p with a warning",
+    "steps": [
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "envVariables": {
+            "A": "b"
+          },
+          "macArch": "64"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "envVariables": {
+            "A": "b"
+          },
+          "macArch": 32
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "envVariables": {
+            "A": "b"
+          },
+          "macArch": "i386"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "envVariables": {
+            "A": "b"
+          },
+          "macArch": null
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "envVariables": {
+            "A": "b"
+          },
+          "macArch": ""
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesMacArch--filtertier1knownfixes-macarch-key-list-contains-macarch-and-not-platforms",
+    "title": "filterTier1KnownFixes macArch > key list contains macArch and not platforms",
+    "steps": [
+      {
+        "op": "tier1Keys"
+      }
+    ]
+  },
+  {
+    "id": "knownFixesDrm--filtertier1knownfixes-drm-keeps-ceg-with-no-warning",
+    "title": "filterTier1KnownFixes drm > keeps \"ceg\" with no warning",
+    "steps": [
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "bundled",
+        "parsed": {
+          "title": "T",
+          "drm": "ceg"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesDrm--filtertier1knownfixes-drm-the-remote-layer-admits-it",
+    "title": "filterTier1KnownFixes drm > the remote layer admits it",
+    "steps": [
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "macArch": "32",
+          "drm": "ceg"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesDrm--filtertier1knownfixes-drm-drops-p-with-exactly-one-warning",
+    "title": "filterTier1KnownFixes drm > drops %p with exactly one warning",
+    "steps": [
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "envVariables": {
+            "A": "b"
+          },
+          "drm": "CEG"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "envVariables": {
+            "A": "b"
+          },
+          "drm": "steamstub"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "envVariables": {
+            "A": "b"
+          },
+          "drm": true
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "envVariables": {
+            "A": "b"
+          },
+          "drm": null
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "envVariables": {
+            "A": "b"
+          },
+          "drm": ""
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "envVariables": {
+            "A": "b"
+          },
+          "drm": "drm-wrapped"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesDrm--filtertier1knownfixes-drm-tier1-known-fix-keys-contains-drm",
+    "title": "filterTier1KnownFixes drm > TIER1_KNOWN_FIX_KEYS contains drm",
+    "steps": [
+      {
+        "op": "tier1Keys"
+      }
+    ]
+  },
+  {
+    "id": "knownFixesOverlay--filtertier1knownfixes-steamgameoverlay-keeps-off-with-no-warning",
+    "title": "filterTier1KnownFixes steamGameOverlay > keeps \"off\" with no warning",
+    "steps": [
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "steamGameOverlay": "off"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesOverlay--filtertier1knownfixes-steamgameoverlay-drops-p-with-a-warning",
+    "title": "filterTier1KnownFixes steamGameOverlay > drops %p with a warning",
+    "steps": [
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "steamGameOverlay": "on"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "steamGameOverlay": true
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "steamGameOverlay": false
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "steamGameOverlay": "OFF"
+        }
+      },
+      {
+        "op": "filter",
+        "appName": "1",
+        "layer": "remote",
+        "parsed": {
+          "title": "T",
+          "steamGameOverlay": 0
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesOverlay--filtertier1knownfixes-steamgameoverlay-is-a-fix-not-a-routing-key",
+    "title": "filterTier1KnownFixes steamGameOverlay > is a fix, not a routing key",
+    "steps": [
+      {
+        "op": "routingOnly",
+        "fix": {
+          "title": "x",
+          "steamGameOverlay": "off"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesOverlay--filtertier1knownfixes-steamgameoverlay-is-a-tier-1-key-and-so-rejected-by-the-tier-2-allow-list",
+    "title": "filterTier1KnownFixes steamGameOverlay > is a tier-1 key (and so rejected by the tier-2 allow-list)",
+    "steps": [
+      {
+        "op": "tier1Keys"
+      }
+    ]
   }
 ]

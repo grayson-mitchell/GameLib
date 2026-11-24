@@ -1,0 +1,26 @@
+[
+  {
+    "step": 0,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app' (remote layer): 'launchArgs' must be an array of strings, ignoring \"-dx11\"."
+  },
+  {
+    "step": 1,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app' (remote layer): 'launchArgs' must be an array of strings, ignoring [1]."
+  },
+  {
+    "step": 2,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app' (remote layer): 'launchArgs' must be an array of strings, ignoring [\"-a\",null]."
+  },
+  {
+    "step": 3,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app' (remote layer): 'launchArgs' must be an array of strings, ignoring {}."
+  }
+]

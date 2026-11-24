@@ -1,0 +1,50 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "1",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "t",
+          "envVariables": {
+            "A": "1"
+          },
+          "winetricks": [
+            "v"
+          ],
+          "runInPrefix": [
+            "setup.exe"
+          ],
+          "notes": {
+            "a": "b"
+          },
+          "wikiLink": "https://example.test",
+          "launchNotice": "hello"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "t",
+            "envVariables": {
+              "A": "1"
+            },
+            "winetricks": [
+              "v"
+            ],
+            "runInPrefix": [
+              "setup.exe"
+            ],
+            "notes": {
+              "a": "b"
+            },
+            "wikiLink": "https://example.test",
+            "launchNotice": "hello"
+          },
+          "layer": "remote"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    }
+  ]
+}

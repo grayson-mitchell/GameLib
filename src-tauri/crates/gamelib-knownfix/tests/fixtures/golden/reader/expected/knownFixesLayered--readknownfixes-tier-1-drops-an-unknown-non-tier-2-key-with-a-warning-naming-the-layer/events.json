@@ -1,0 +1,20 @@
+[
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (local layer): 'foo' is not a tier-1 key, ignoring it."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for '1' (local layer): 'foo' is not a tier-1 key, ignoring it."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fixes for '1' (local layer): 'foo' is not a tier-1 key, ignoring it."
+  }
+]

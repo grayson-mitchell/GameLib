@@ -1,0 +1,7 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "text": "L: known-fix exeOverride 'launcher.exe' is not a file, using the default executable."
+  }
+]

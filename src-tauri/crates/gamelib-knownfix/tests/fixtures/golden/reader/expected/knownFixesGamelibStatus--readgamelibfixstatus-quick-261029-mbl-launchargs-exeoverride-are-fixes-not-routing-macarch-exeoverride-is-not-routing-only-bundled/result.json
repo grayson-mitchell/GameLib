@@ -1,0 +1,26 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "macArch": "32",
+          "exeOverride": "g.exe"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "macArch": "32",
+            "exeOverride": "g.exe"
+          },
+          "layer": "bundled"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": {
+          "origin": "bundled"
+        }
+      }
+    }
+  ]
+}

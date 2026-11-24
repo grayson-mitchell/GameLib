@@ -1,0 +1,4 @@
+{
+  "os-error-text": "When the exe cannot be verified the TS warns \"could not be verified (<String(error)>)\" with Node's text, for example `Error: ENOENT: no such file or directory, stat '<path>'`. A Rust io::Error prints differently (`No such file or directory (os error 2)`), so the replay compares each warning up to and including 'could not be verified (' and requires the error name ENOENT to be mapped to the platform's not-found text; every other warning and every info line is compared byte for byte.",
+  "wrong-case-spelling-is-not-recorded": "A wrong-case spelling of an existing file (BIN/GAME.EXE for bin/game.exe) is accepted on a case-insensitive volume and rejected on a case-sensitive one, so no golden holds it. mixed-case-path-with-the-exact-spelling holds a tree whose file is really spelled Data/Game.EXE and asks for exactly that."
+}

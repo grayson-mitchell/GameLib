@@ -1,0 +1,12 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "text": "L: known-fix exeOverride '' is not a relative path inside the install folder, using the default executable."
+  },
+  {
+    "step": 1,
+    "level": "warning",
+    "text": "L: known-fix exeOverride 'a\u0000b' is not a relative path inside the install folder, using the default executable."
+  }
+]

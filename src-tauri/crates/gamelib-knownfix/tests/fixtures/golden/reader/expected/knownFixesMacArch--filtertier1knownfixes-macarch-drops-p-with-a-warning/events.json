@@ -1,0 +1,32 @@
+[
+  {
+    "step": 0,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'macArch' accepts only \"32\", ignoring \"64\"."
+  },
+  {
+    "step": 1,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'macArch' accepts only \"32\", ignoring 32."
+  },
+  {
+    "step": 2,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'macArch' accepts only \"32\", ignoring \"i386\"."
+  },
+  {
+    "step": 3,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'macArch' accepts only \"32\", ignoring null."
+  },
+  {
+    "step": 4,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'macArch' accepts only \"32\", ignoring \"\"."
+  }
+]

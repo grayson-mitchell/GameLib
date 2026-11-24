@@ -1,0 +1,21 @@
+{
+  "steps": [
+    {
+      "op": "tier1Keys",
+      "keys": [
+        "title",
+        "notes",
+        "winetricks",
+        "runInPrefix",
+        "envVariables",
+        "wikiLink",
+        "launchNotice",
+        "macArch",
+        "drm",
+        "launchArgs",
+        "exeOverride",
+        "steamGameOverlay"
+      ]
+    }
+  ]
+}

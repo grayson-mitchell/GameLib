@@ -1,0 +1,10 @@
+{
+  "steps": [
+    {
+      "op": "resolve",
+      "installPath": "<HOME>/games/install",
+      "exeOverride": "linkin.exe",
+      "resolved": "<HOME>/games/install/linkin.exe"
+    }
+  ]
+}

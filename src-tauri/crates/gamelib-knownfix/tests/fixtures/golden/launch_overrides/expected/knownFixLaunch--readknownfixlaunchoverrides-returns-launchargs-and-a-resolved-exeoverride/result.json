@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "op": "overrides",
+      "appName": "a",
+      "runner": "gog",
+      "installPath": "<HOME>/games/install",
+      "overrides": {
+        "launchArgs": [
+          "-x"
+        ],
+        "exeOverride": "<HOME>/games/install/bin/game.exe"
+      }
+    }
+  ]
+}

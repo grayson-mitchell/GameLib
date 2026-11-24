@@ -1,0 +1,24 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "l",
+          "macArch": "32"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "l",
+            "macArch": "32"
+          },
+          "layer": "local"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    }
+  ]
+}

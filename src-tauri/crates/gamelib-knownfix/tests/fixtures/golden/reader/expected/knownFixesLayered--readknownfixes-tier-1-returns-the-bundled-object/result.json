@@ -1,0 +1,30 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "1",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "b",
+          "winetricks": [
+            "x"
+          ]
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "b",
+            "winetricks": [
+              "x"
+            ]
+          },
+          "layer": "bundled"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": {
+          "origin": "bundled"
+        }
+      }
+    }
+  ]
+}

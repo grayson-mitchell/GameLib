@@ -1,0 +1,26 @@
+[
+  {
+    "step": 0,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer) is not an object, ignoring."
+  },
+  {
+    "step": 1,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer) is not an object, ignoring."
+  },
+  {
+    "step": 2,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer) is not an object, ignoring."
+  },
+  {
+    "step": 3,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer) is not an object, ignoring."
+  }
+]

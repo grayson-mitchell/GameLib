@@ -1,0 +1,32 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "well-formed-app",
+      "runner": "gog",
+      "answers": {
+        "readKnownFixes": {
+          "winetricks": [
+            "vcrun2019"
+          ],
+          "runInPrefix": [
+            "setup.exe"
+          ]
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "winetricks": [
+              "vcrun2019"
+            ],
+            "runInPrefix": [
+              "setup.exe"
+            ]
+          },
+          "layer": "remote"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    }
+  ]
+}

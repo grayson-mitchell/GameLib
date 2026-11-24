@@ -1,0 +1,37 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "steamapp-1",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "winetricks": [
+            "vcrun2019"
+          ]
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "winetricks": [
+              "vcrun2019"
+            ]
+          },
+          "layer": "remote"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    },
+    {
+      "op": "read",
+      "appName": "steamapp-2",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": null,
+        "readKnownFixesWithLayer": null,
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    }
+  ]
+}

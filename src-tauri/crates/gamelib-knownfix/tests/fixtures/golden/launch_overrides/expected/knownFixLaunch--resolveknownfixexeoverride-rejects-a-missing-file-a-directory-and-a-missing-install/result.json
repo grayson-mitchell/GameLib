@@ -1,0 +1,22 @@
+{
+  "steps": [
+    {
+      "op": "resolve",
+      "installPath": "<HOME>/games/install",
+      "exeOverride": "bin/nope.exe",
+      "resolved": null
+    },
+    {
+      "op": "resolve",
+      "installPath": "<HOME>/games/install",
+      "exeOverride": "bin",
+      "resolved": null
+    },
+    {
+      "op": "resolve",
+      "installPath": "<HOME>/games/nope",
+      "exeOverride": "bin/game.exe",
+      "resolved": null
+    }
+  ]
+}

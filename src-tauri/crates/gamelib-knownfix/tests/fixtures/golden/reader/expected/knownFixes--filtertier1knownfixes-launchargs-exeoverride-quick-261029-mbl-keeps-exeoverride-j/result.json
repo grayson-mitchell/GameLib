@@ -1,0 +1,25 @@
+{
+  "steps": [
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t",
+        "exeOverride": "bin/game.exe"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t",
+        "exeOverride": "bin\\game.exe"
+      }
+    },
+    {
+      "op": "exeShape",
+      "answers": [
+        true,
+        true
+      ]
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "77",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "T",
+          "macArch": "32"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "T",
+            "macArch": "32"
+          },
+          "layer": "local"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    },
+    {
+      "op": "read",
+      "appName": "77",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "T",
+          "macArch": "32"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "T",
+            "macArch": "32"
+          },
+          "layer": "bundled"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    },
+    {
+      "op": "read",
+      "appName": "77",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "T",
+          "macArch": "32"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "T",
+            "macArch": "32"
+          },
+          "layer": "remote"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    },
+    {
+      "op": "read",
+      "appName": "77",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": null,
+        "readKnownFixesWithLayer": null,
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    }
+  ]
+}

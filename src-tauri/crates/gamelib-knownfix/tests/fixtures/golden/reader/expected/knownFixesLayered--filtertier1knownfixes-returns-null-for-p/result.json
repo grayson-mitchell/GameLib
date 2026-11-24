@@ -1,0 +1,20 @@
+{
+  "steps": [
+    {
+      "op": "filter",
+      "filtered": null
+    },
+    {
+      "op": "filter",
+      "filtered": null
+    },
+    {
+      "op": "filter",
+      "filtered": null
+    },
+    {
+      "op": "filter",
+      "filtered": null
+    }
+  ]
+}

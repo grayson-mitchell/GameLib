@@ -1,0 +1,22 @@
+{
+  "steps": [
+    {
+      "op": "resolve",
+      "installPath": "<HOME>/games/install",
+      "exeOverride": "/etc/passwd",
+      "resolved": null
+    },
+    {
+      "op": "resolve",
+      "installPath": "<HOME>/games/install",
+      "exeOverride": "../outside.exe",
+      "resolved": null
+    },
+    {
+      "op": "resolve",
+      "installPath": "<HOME>/games/install",
+      "exeOverride": "bin/../../outside.exe",
+      "resolved": null
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "1",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": null,
+        "readKnownFixesWithLayer": null,
+        "readKnownFixProfile": {
+          "title": "t",
+          "registry": [
+            {
+              "key": "HKLM\\Software\\X",
+              "name": "N",
+              "type": "REG_DWORD",
+              "value": 1
+            }
+          ]
+        },
+        "readGamelibFixStatus": {
+          "origin": "local"
+        }
+      }
+    }
+  ]
+}

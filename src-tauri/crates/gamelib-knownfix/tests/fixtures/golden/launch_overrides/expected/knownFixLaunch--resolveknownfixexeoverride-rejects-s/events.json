@@ -1,0 +1,17 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "text": "L: known-fix exeOverride '/etc/passwd' is not a relative path inside the install folder, using the default executable."
+  },
+  {
+    "step": 1,
+    "level": "warning",
+    "text": "L: known-fix exeOverride '../outside.exe' is not a relative path inside the install folder, using the default executable."
+  },
+  {
+    "step": 2,
+    "level": "warning",
+    "text": "L: known-fix exeOverride 'bin/../../outside.exe' is not a relative path inside the install folder, using the default executable."
+  }
+]

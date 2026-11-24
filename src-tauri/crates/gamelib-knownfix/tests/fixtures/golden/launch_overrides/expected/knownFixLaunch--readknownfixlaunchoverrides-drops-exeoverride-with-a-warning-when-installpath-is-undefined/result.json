@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "op": "overrides",
+      "appName": "a",
+      "runner": "gog",
+      "installPath": null,
+      "overrides": {
+        "launchArgs": [
+          "-x"
+        ],
+        "exeOverride": null
+      }
+    }
+  ]
+}

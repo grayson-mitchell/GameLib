@@ -1,0 +1,12 @@
+{
+  "steps": [
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "T",
+        "macArch": "32",
+        "drm": "ceg"
+      }
+    }
+  ]
+}

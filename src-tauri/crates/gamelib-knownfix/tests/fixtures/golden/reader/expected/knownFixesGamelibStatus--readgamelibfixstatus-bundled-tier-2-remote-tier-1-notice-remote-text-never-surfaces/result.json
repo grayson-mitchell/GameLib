@@ -1,0 +1,28 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "t",
+          "launchNotice": "remote"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "t",
+            "launchNotice": "remote"
+          },
+          "layer": "remote"
+        },
+        "readKnownFixProfile": {
+          "title": "t"
+        },
+        "readGamelibFixStatus": {
+          "origin": "bundled"
+        }
+      }
+    }
+  ]
+}

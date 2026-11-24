@@ -1,0 +1,10 @@
+{
+  "steps": [
+    {
+      "op": "layerPaths",
+      "fixesPath": "<APPFOLDER>/fixes",
+      "localFixesPath": "<APPFOLDER>/fixes/local",
+      "bundledFixesPath": "<HOME>/public/fixes"
+    }
+  ]
+}

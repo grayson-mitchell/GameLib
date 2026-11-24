@@ -1,0 +1,58 @@
+{
+  "steps": [
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "T",
+        "envVariables": {
+          "A": "b"
+        }
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "T",
+        "envVariables": {
+          "A": "b"
+        }
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "T",
+        "envVariables": {
+          "A": "b"
+        }
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "T",
+        "envVariables": {
+          "A": "b"
+        }
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "T",
+        "envVariables": {
+          "A": "b"
+        }
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "T",
+        "envVariables": {
+          "A": "b"
+        }
+      }
+    }
+  ]
+}

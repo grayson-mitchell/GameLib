@@ -1,0 +1,26 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "ordinary-app",
+      "runner": "gog",
+      "answers": {
+        "readKnownFixes": {
+          "winetricks": [
+            "corefonts"
+          ]
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "winetricks": [
+              "corefonts"
+            ]
+          },
+          "layer": "remote"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    }
+  ]
+}

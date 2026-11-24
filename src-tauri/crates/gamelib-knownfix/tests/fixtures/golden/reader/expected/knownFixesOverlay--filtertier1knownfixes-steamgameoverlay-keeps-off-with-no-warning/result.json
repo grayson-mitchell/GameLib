@@ -1,0 +1,11 @@
+{
+  "steps": [
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "T",
+        "steamGameOverlay": "off"
+      }
+    }
+  ]
+}

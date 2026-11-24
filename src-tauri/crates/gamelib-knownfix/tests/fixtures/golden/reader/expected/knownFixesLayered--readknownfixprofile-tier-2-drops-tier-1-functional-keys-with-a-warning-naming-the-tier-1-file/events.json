@@ -1,0 +1,62 @@
+[
+  {
+    "step": 0,
+    "call": "readKnownFixProfile",
+    "level": "warning",
+    "text": "Known fix profile for '1' (local layer): 'envVariables' is a tier-1 key that belongs in '1-<store>.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixProfile",
+    "level": "warning",
+    "text": "Known fix profile for '1' (local layer): 'winetricks' is a tier-1 key that belongs in '1-<store>.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixProfile",
+    "level": "warning",
+    "text": "Known fix profile for '1' (local layer): 'runInPrefix' is a tier-1 key that belongs in '1-<store>.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixProfile",
+    "level": "warning",
+    "text": "Known fix profile for '1' (local layer): 'wikiLink' is a tier-1 key that belongs in '1-<store>.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixProfile",
+    "level": "warning",
+    "text": "Known fix profile for '1' (local layer): 'launchNotice' is a tier-1 key that belongs in '1-<store>.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fix profile for '1' (local layer): 'envVariables' is a tier-1 key that belongs in '1-<store>.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fix profile for '1' (local layer): 'winetricks' is a tier-1 key that belongs in '1-<store>.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fix profile for '1' (local layer): 'runInPrefix' is a tier-1 key that belongs in '1-<store>.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fix profile for '1' (local layer): 'wikiLink' is a tier-1 key that belongs in '1-<store>.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fix profile for '1' (local layer): 'launchNotice' is a tier-1 key that belongs in '1-<store>.json', ignoring it here."
+  }
+]

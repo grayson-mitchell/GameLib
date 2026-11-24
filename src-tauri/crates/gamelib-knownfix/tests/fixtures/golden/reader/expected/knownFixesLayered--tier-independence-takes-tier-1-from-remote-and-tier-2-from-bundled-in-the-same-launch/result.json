@@ -1,0 +1,40 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "1",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "remote",
+          "envVariables": {
+            "A": "1"
+          }
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "remote",
+            "envVariables": {
+              "A": "1"
+            }
+          },
+          "layer": "remote"
+        },
+        "readKnownFixProfile": {
+          "title": "profile",
+          "registry": [
+            {
+              "key": "HKLM\\Software\\X",
+              "name": "N",
+              "type": "REG_DWORD",
+              "value": 1
+            }
+          ]
+        },
+        "readGamelibFixStatus": {
+          "origin": "bundled"
+        }
+      }
+    }
+  ]
+}

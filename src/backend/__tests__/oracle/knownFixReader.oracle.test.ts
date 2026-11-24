@@ -47,6 +47,11 @@ import {
   withInjected
 } from 'backend/testUtils/launchOracle/probes'
 import { uncoveredPairs } from 'backend/testUtils/launchOracle/pairwise'
+import {
+  assertCasesCoverTitles,
+  slug,
+  tsTestTitles
+} from 'backend/testUtils/launchOracle/census'
 import * as logger from 'backend/logger'
 import {
   filterTier1KnownFixes,
@@ -70,9 +75,20 @@ import {
 const CRATE = 'gamelib-knownfix'
 const SLICE = 'reader'
 /** The case count this plan committed; a later edit may raise it, never lower it. */
-const READER_FLOOR = 51
+const READER_FLOOR = 125
 
 const mode = engineWineOracleMode()
+
+/** The seven reader test files whose every title is a named case (D-14). */
+const READER_STEMS = [
+  'knownFixes',
+  'knownFixesLayered',
+  'knownFixesWithLayer',
+  'knownFixesGamelibStatus',
+  'knownFixesMacArch',
+  'knownFixesDrm',
+  'knownFixesOverlay'
+] as const
 
 /** One recorded log line. */
 interface LogLine {
@@ -236,6 +252,49 @@ describeSkipOnWindows('known-fix reader oracle (88-05)', () => {
   it.each(cases)('$id', async (c) => {
     const { result, events } = await recordCase(c)
     writeOrCompareGolden(CRATE, SLICE, c.id, { result, events })
+  })
+
+  describe('incident census (D-14)', () => {
+    const TESTS = join(__dirname, '..')
+    /** Titles that are not cases of this slice, each with the reason. None is a source-text gate. */
+    const NOT_PORTED: Readonly<
+      Record<string, Readonly<Record<string, string>>>
+    > = {}
+    const SEED_FILES = ['knownFixesCegSeeds', 'knownFixesMacArchSeeds'] as const
+    const SEED_REASON =
+      "a data check over the repo's public/fixes, ported as a Rust data test in 88-08"
+
+    it.each(READER_STEMS)(
+      'every title of %s.test.ts is a named case, one for one',
+      (stem) => {
+        const ids = cases
+          .filter((c) => c.id.startsWith(`${stem}--`))
+          .map((c) => c.id.slice(stem.length + 2))
+        const titles = tsTestTitles(join(TESTS, `${stem}.test.ts`))
+        assertCasesCoverTitles(ids, titles, NOT_PORTED[stem] ?? {})
+        // No case without a title either: a typo in a case title would pass the line above only by luck.
+        expect([...ids].sort()).toEqual(titles.map(slug).sort())
+      }
+    )
+
+    it.each(SEED_FILES)(
+      '%s.test.ts is listed as not ported, with the reason',
+      (stem) => {
+        const titles = tsTestTitles(join(TESTS, `${stem}.test.ts`))
+        assertCasesCoverTitles(
+          [],
+          titles,
+          Object.fromEntries(titles.map((t) => [t, SEED_REASON]))
+        )
+        expect(cases.some((c) => c.id.startsWith(`${stem}--`))).toBe(false)
+      }
+    )
+
+    it('the seven reader files hold the 74 named cases', () => {
+      expect(
+        cases.filter((c) => READER_STEMS.some((s) => c.id.startsWith(`${s}--`)))
+      ).toHaveLength(74)
+    })
   })
 
   it('records that a remote-layer file carrying tier-2 keys yields no tier-2 data', async () => {

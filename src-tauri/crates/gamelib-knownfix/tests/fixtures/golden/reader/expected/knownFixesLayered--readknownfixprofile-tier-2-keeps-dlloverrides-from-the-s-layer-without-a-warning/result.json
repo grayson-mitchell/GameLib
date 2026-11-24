@@ -1,0 +1,48 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "1",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": null,
+        "readKnownFixesWithLayer": null,
+        "readKnownFixProfile": {
+          "dllOverrides": [
+            {
+              "exe": "Game.exe",
+              "dlls": {
+                "nvapi64": "disabled"
+              }
+            }
+          ]
+        },
+        "readGamelibFixStatus": {
+          "origin": "bundled"
+        }
+      }
+    },
+    {
+      "op": "read",
+      "appName": "1",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": null,
+        "readKnownFixesWithLayer": null,
+        "readKnownFixProfile": {
+          "dllOverrides": [
+            {
+              "exe": "Game.exe",
+              "dlls": {
+                "nvapi64": "disabled"
+              }
+            }
+          ]
+        },
+        "readGamelibFixStatus": {
+          "origin": "local"
+        }
+      }
+    }
+  ]
+}

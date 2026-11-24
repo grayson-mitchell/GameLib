@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "op": "resolve",
+      "installPath": "<HOME>/games/install",
+      "exeOverride": "",
+      "resolved": null
+    },
+    {
+      "op": "resolve",
+      "installPath": "<HOME>/games/install",
+      "exeOverride": "a\u0000b",
+      "resolved": null
+    }
+  ]
+}

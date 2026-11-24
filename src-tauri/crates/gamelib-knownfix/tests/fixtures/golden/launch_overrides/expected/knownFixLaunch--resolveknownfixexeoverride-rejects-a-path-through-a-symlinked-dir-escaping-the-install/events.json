@@ -1,0 +1,7 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "text": "L: known-fix exeOverride 'linkdir/real.exe' resolves outside the install folder, using the default executable."
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "text": "L: known-fix exeOverride 'bin/nope.exe' could not be verified (Error: ENOENT: no such file or directory, stat '<HOME>/games/install/bin/nope.exe'), using the default executable."
+  },
+  {
+    "step": 1,
+    "level": "warning",
+    "text": "L: known-fix exeOverride 'bin' is not a file, using the default executable."
+  },
+  {
+    "step": 2,
+    "level": "warning",
+    "text": "L: known-fix exeOverride 'bin/game.exe' could not be verified (Error: ENOENT: no such file or directory, lstat '<HOME>/games/nope'), using the default executable."
+  }
+]

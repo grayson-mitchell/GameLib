@@ -1,0 +1,13 @@
+{
+  "steps": [
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t",
+        "envVariables": {
+          "A": "1"
+        }
+      }
+    }
+  ]
+}

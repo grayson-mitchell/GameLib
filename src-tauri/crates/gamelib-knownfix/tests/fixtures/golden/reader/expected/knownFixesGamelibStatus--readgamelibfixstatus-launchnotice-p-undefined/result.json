@@ -1,0 +1,70 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "t",
+          "launchNotice": ""
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "t",
+            "launchNotice": ""
+          },
+          "layer": "bundled"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": {
+          "origin": "bundled"
+        }
+      }
+    },
+    {
+      "op": "read",
+      "appName": "app",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "t",
+          "launchNotice": 5
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "t",
+            "launchNotice": 5
+          },
+          "layer": "bundled"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": {
+          "origin": "bundled"
+        }
+      }
+    },
+    {
+      "op": "read",
+      "appName": "app",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "t",
+          "launchNotice": "   "
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "t",
+            "launchNotice": "   "
+          },
+          "layer": "bundled"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": {
+          "origin": "bundled"
+        }
+      }
+    }
+  ]
+}

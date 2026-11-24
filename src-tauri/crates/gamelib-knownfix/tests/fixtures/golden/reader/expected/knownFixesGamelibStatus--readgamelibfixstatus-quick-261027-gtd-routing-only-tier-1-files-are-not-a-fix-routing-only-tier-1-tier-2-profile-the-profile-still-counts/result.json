@@ -1,0 +1,28 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "t",
+          "drm": "ceg"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "t",
+            "drm": "ceg"
+          },
+          "layer": "bundled"
+        },
+        "readKnownFixProfile": {
+          "title": "t"
+        },
+        "readGamelibFixStatus": {
+          "origin": "bundled"
+        }
+      }
+    }
+  ]
+}

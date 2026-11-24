@@ -1,0 +1,38 @@
+[
+  {
+    "step": 0,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'drm' accepts only \"ceg\", ignoring \"CEG\"."
+  },
+  {
+    "step": 1,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'drm' accepts only \"ceg\", ignoring \"steamstub\"."
+  },
+  {
+    "step": 2,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'drm' accepts only \"ceg\", ignoring true."
+  },
+  {
+    "step": 3,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'drm' accepts only \"ceg\", ignoring null."
+  },
+  {
+    "step": 4,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'drm' accepts only \"ceg\", ignoring \"\"."
+  },
+  {
+    "step": 5,
+    "call": "filterTier1KnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'drm' accepts only \"ceg\", ignoring \"drm-wrapped\"."
+  }
+]

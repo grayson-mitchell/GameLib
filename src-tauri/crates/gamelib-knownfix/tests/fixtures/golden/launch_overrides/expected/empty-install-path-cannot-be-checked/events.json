@@ -1,0 +1,7 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "text": "L: known-fix exeOverride 'bin/game.exe' cannot be checked without an install path, using the default executable."
+  }
+]

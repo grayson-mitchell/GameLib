@@ -1,0 +1,93 @@
+{
+  "steps": [
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "exeShape",
+      "answers": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  ]
+}

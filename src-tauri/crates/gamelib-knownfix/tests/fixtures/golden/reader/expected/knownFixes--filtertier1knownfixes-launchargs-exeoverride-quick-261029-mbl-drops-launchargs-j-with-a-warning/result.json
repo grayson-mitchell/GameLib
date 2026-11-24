@@ -1,0 +1,28 @@
+{
+  "steps": [
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t"
+      }
+    }
+  ]
+}

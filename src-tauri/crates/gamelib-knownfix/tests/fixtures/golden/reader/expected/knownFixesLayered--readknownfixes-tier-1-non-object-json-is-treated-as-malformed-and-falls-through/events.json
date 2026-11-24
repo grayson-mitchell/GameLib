@@ -1,0 +1,20 @@
+[
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (local layer) is not an object, ignoring."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for '1' (local layer) is not an object, ignoring."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fixes for '1' (local layer) is not an object, ignoring."
+  }
+]

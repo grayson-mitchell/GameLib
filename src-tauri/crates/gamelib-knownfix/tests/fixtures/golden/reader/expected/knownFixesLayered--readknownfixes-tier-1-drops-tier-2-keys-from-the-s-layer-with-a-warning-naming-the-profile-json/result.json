@@ -1,0 +1,62 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "1",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "t"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "t"
+          },
+          "layer": "local"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": {
+          "origin": "local"
+        }
+      }
+    },
+    {
+      "op": "read",
+      "appName": "1",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "t"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "t"
+          },
+          "layer": "bundled"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": {
+          "origin": "bundled"
+        }
+      }
+    },
+    {
+      "op": "read",
+      "appName": "1",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "t"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "t"
+          },
+          "layer": "remote"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    }
+  ]
+}

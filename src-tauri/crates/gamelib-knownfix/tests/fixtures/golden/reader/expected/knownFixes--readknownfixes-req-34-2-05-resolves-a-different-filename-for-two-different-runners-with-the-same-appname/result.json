@@ -1,0 +1,48 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "shared-app",
+      "runner": "gog",
+      "answers": {
+        "readKnownFixes": {
+          "winetricks": [
+            "gog-only-fix"
+          ]
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "winetricks": [
+              "gog-only-fix"
+            ]
+          },
+          "layer": "remote"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    },
+    {
+      "op": "read",
+      "appName": "shared-app",
+      "runner": "legendary",
+      "answers": {
+        "readKnownFixes": {
+          "winetricks": [
+            "epic-only-fix"
+          ]
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "winetricks": [
+              "epic-only-fix"
+            ]
+          },
+          "layer": "remote"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    }
+  ]
+}

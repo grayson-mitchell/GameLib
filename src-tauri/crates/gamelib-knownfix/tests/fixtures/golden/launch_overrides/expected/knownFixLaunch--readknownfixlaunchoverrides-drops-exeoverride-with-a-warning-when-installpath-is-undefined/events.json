@@ -1,0 +1,12 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "text": "Known fix for 'a': known-fix exeOverride 'bin/game.exe' ignored, the install path is unknown."
+  },
+  {
+    "step": 0,
+    "level": "info",
+    "text": "Known fix for 'a': known-fix launchArgs [\"-x\"], exeOverride none"
+  }
+]

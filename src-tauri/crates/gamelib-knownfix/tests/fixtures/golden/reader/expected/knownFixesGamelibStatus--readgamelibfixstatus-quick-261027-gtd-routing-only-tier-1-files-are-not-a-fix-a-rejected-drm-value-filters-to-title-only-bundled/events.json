@@ -1,0 +1,20 @@
+[
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app' (bundled layer): 'drm' accepts only \"ceg\", ignoring \"steamstub\"."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for 'app' (bundled layer): 'drm' accepts only \"ceg\", ignoring \"steamstub\"."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fixes for 'app' (bundled layer): 'drm' accepts only \"ceg\", ignoring \"steamstub\"."
+  }
+]

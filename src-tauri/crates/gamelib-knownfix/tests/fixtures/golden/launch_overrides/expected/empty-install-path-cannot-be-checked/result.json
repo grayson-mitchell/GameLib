@@ -1,0 +1,10 @@
+{
+  "steps": [
+    {
+      "op": "resolve",
+      "installPath": "",
+      "exeOverride": "bin/game.exe",
+      "resolved": null
+    }
+  ]
+}

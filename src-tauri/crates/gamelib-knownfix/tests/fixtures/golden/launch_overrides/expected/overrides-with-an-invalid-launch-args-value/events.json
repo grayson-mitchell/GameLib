@@ -1,0 +1,7 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "text": "Known fixes for 'a' (remote layer): 'launchArgs' must be an array of strings, ignoring \"not-a-list\"."
+  }
+]

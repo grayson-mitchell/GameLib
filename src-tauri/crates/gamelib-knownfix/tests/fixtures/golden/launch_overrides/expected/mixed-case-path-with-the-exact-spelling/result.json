@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "op": "resolve",
+      "installPath": "<HOME>/games/install",
+      "exeOverride": "Data/Game.EXE",
+      "resolved": "<HOME>/games/install/Data/Game.EXE"
+    },
+    {
+      "op": "resolve",
+      "installPath": "<HOME>/games/install",
+      "exeOverride": "Data\\Game.EXE",
+      "resolved": "<HOME>/games/install/Data/Game.EXE"
+    }
+  ]
+}

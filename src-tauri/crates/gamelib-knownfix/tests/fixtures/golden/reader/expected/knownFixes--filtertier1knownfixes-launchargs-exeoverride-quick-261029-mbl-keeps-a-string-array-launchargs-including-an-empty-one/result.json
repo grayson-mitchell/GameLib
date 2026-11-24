@@ -1,0 +1,21 @@
+{
+  "steps": [
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t",
+        "launchArgs": [
+          "-dx11",
+          "--windowed"
+        ]
+      }
+    },
+    {
+      "op": "filter",
+      "filtered": {
+        "title": "t",
+        "launchArgs": []
+      }
+    }
+  ]
+}

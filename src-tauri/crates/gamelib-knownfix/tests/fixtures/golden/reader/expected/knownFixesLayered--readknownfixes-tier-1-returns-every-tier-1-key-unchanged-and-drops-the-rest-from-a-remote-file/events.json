@@ -1,0 +1,26 @@
+[
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'registry' is a tier-2 key that belongs in '1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'foo' is not a tier-1 key, ignoring it."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'registry' is a tier-2 key that belongs in '1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for '1' (remote layer): 'foo' is not a tier-1 key, ignoring it."
+  }
+]

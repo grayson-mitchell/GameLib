@@ -1,0 +1,7 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "text": "Known fixes for 'a' (remote layer): 'exeOverride' must be a relative path inside the install folder, ignoring \"../outside.exe\"."
+  }
+]

@@ -1,0 +1,312 @@
+[
+  {
+    "id": "knownFixLaunch--resolveknownfixexeoverride-accepts-a-relative-file-and-returns-the-lexical-path",
+    "title": "resolveKnownFixExeOverride > accepts a relative file and returns the lexical path",
+    "steps": [
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": "bin/game.exe"
+      }
+    ]
+  },
+  {
+    "id": "knownFixLaunch--resolveknownfixexeoverride-accepts-the-backslash-form",
+    "title": "resolveKnownFixExeOverride > accepts the backslash form",
+    "steps": [
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": "bin\\game.exe"
+      }
+    ]
+  },
+  {
+    "id": "knownFixLaunch--resolveknownfixexeoverride-rejects-s",
+    "title": "resolveKnownFixExeOverride > rejects %s",
+    "steps": [
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": "/etc/passwd"
+      },
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": "../outside.exe"
+      },
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": "bin/../../outside.exe"
+      }
+    ]
+  },
+  {
+    "id": "knownFixLaunch--resolveknownfixexeoverride-rejects-a-symlinked-file-escaping-the-install",
+    "title": "resolveKnownFixExeOverride > rejects a symlinked file escaping the install",
+    "tree": [
+      {
+        "path": "<HOME>/games/install/link.exe",
+        "symlink": "<HOME>/games/outside/real.exe"
+      }
+    ],
+    "steps": [
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": "link.exe"
+      }
+    ]
+  },
+  {
+    "id": "knownFixLaunch--resolveknownfixexeoverride-rejects-a-path-through-a-symlinked-dir-escaping-the-install",
+    "title": "resolveKnownFixExeOverride > rejects a path through a symlinked dir escaping the install",
+    "tree": [
+      {
+        "path": "<HOME>/games/install/linkdir",
+        "symlink": "<HOME>/games/outside"
+      }
+    ],
+    "steps": [
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": "linkdir/real.exe"
+      }
+    ]
+  },
+  {
+    "id": "knownFixLaunch--resolveknownfixexeoverride-accepts-a-symlinked-install-root",
+    "title": "resolveKnownFixExeOverride > accepts a symlinked install root",
+    "tree": [
+      {
+        "path": "<HOME>/games/linked-install",
+        "symlink": "<HOME>/games/install"
+      }
+    ],
+    "steps": [
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/linked-install",
+        "exeOverride": "bin/game.exe"
+      }
+    ]
+  },
+  {
+    "id": "knownFixLaunch--resolveknownfixexeoverride-rejects-a-missing-file-a-directory-and-a-missing-install",
+    "title": "resolveKnownFixExeOverride > rejects a missing file, a directory and a missing install",
+    "steps": [
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": "bin/nope.exe"
+      },
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": "bin"
+      },
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/nope",
+        "exeOverride": "bin/game.exe"
+      }
+    ]
+  },
+  {
+    "id": "knownFixLaunch--readknownfixlaunchoverrides-returns-empty-overrides-with-no-fix",
+    "title": "readKnownFixLaunchOverrides > returns empty overrides with no fix",
+    "steps": [
+      {
+        "op": "overrides",
+        "appName": "a",
+        "runner": "gog",
+        "installPath": "<HOME>/games/install",
+        "seed": []
+      }
+    ]
+  },
+  {
+    "id": "knownFixLaunch--readknownfixlaunchoverrides-returns-launchargs-and-a-resolved-exeoverride",
+    "title": "readKnownFixLaunchOverrides > returns launchArgs and a resolved exeOverride",
+    "steps": [
+      {
+        "op": "overrides",
+        "appName": "a",
+        "runner": "gog",
+        "installPath": "<HOME>/games/install",
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/a-gog.json",
+            "text": "{\"title\":\"t\",\"launchArgs\":[\"-x\"],\"exeOverride\":\"bin/game.exe\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixLaunch--readknownfixlaunchoverrides-drops-exeoverride-with-a-warning-when-installpath-is-undefined",
+    "title": "readKnownFixLaunchOverrides > drops exeOverride with a warning when installPath is undefined",
+    "steps": [
+      {
+        "op": "overrides",
+        "appName": "a",
+        "runner": "gog",
+        "installPath": null,
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/a-gog.json",
+            "text": "{\"title\":\"t\",\"launchArgs\":[\"-x\"],\"exeOverride\":\"bin/game.exe\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "symlink-inside-the-install-is-accepted",
+    "steps": [
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": "linkin.exe"
+      }
+    ],
+    "tree": [
+      {
+        "path": "<HOME>/games/install/linkin.exe",
+        "symlink": "<HOME>/games/install/bin/game.exe"
+      }
+    ]
+  },
+  {
+    "id": "mixed-case-path-with-the-exact-spelling",
+    "steps": [
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": "Data/Game.EXE"
+      },
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": "Data\\Game.EXE"
+      }
+    ],
+    "tree": [
+      {
+        "path": "<HOME>/games/install/Data/Game.EXE",
+        "text": "x"
+      }
+    ]
+  },
+  {
+    "id": "directory-where-the-exe-is-named",
+    "steps": [
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": "launcher.exe"
+      }
+    ],
+    "tree": [
+      {
+        "path": "<HOME>/games/install/launcher.exe",
+        "dir": true
+      }
+    ]
+  },
+  {
+    "id": "empty-and-nul-exe-override-fail-the-shape-check",
+    "steps": [
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": ""
+      },
+      {
+        "op": "resolve",
+        "installPath": "<HOME>/games/install",
+        "exeOverride": "a\u0000b"
+      }
+    ]
+  },
+  {
+    "id": "empty-install-path-cannot-be-checked",
+    "steps": [
+      {
+        "op": "resolve",
+        "installPath": "",
+        "exeOverride": "bin/game.exe"
+      }
+    ]
+  },
+  {
+    "id": "overrides-with-an-escaping-exe-override",
+    "steps": [
+      {
+        "op": "overrides",
+        "appName": "a",
+        "runner": "gog",
+        "installPath": "<HOME>/games/install",
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/a-gog.json",
+            "text": "{\"title\":\"t\",\"exeOverride\":\"../outside.exe\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "overrides-launch-args-only-logs-no-exe",
+    "steps": [
+      {
+        "op": "overrides",
+        "appName": "a",
+        "runner": "gog",
+        "installPath": "<HOME>/games/install",
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/a-gog.json",
+            "text": "{\"title\":\"t\",\"launchArgs\":[\"-dx11\",\"--windowed\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "overrides-with-an-invalid-launch-args-value",
+    "steps": [
+      {
+        "op": "overrides",
+        "appName": "a",
+        "runner": "gog",
+        "installPath": "<HOME>/games/install",
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/a-gog.json",
+            "text": "{\"title\":\"t\",\"launchArgs\":\"not-a-list\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "overrides-launch-args-only-with-no-install-path",
+    "steps": [
+      {
+        "op": "overrides",
+        "appName": "a",
+        "runner": "gog",
+        "installPath": null,
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/a-gog.json",
+            "text": "{\"title\":\"t\",\"launchArgs\":[\"-x\"]}"
+          }
+        ]
+      }
+    ]
+  }
+]
