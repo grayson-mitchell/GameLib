@@ -19,7 +19,7 @@
  *   - write (`GAMELIB_WRITE_HUMBLE_GOLDEN=1`): answers from the case's `synthetic` responses (or,
  *     where the case has none for a request, from the recorded exchanges) and rewrites
  *     `exchanges.json` with the requests that arrived.
- *   - forward (`GAMELIB_HUMBLE_ORACLE=forward`, used only by 94-10): proxies each request to the
+ *   - forward (`GAMELIB_ORACLE_HUMBLE=forward`, used only by 94-10): proxies each request to the
  *     real https host and records the response. Opt-in by the environment, never a default.
  *
  * `exchanges.json` is the list the Rust replay reads: `{id, request: {method, target, headers,
@@ -100,12 +100,12 @@ export const fixturesRoot = (): string =>
   )
 
 /** `recorded/<slice>/<case>`: the directory holding a case's `exchanges.json` and bodies. */
-export const recordedCaseDir = (slice: string, caseId: string): string =>
+export const humbleRecordedCaseDir = (slice: string, caseId: string): string =>
   join(fixturesRoot(), 'recorded', slice, caseId)
 
 /** The mode the environment asks for. Forward wins over write when both are set. */
 export function humbleOracleMode(): WireMode {
-  if (process.env.GAMELIB_HUMBLE_ORACLE === 'forward') return 'forward'
+  if (process.env.GAMELIB_ORACLE_HUMBLE === 'forward') return 'forward'
   if (process.env.GAMELIB_WRITE_HUMBLE_GOLDEN === '1') return 'write'
   return 'replay'
 }
@@ -563,7 +563,7 @@ export async function startWireRecorder(
   options: WireRecorderOptions
 ): Promise<WireRecorder> {
   const mode = options.mode ?? humbleOracleMode()
-  const dir = recordedCaseDir(options.slice, options.caseId)
+  const dir = humbleRecordedCaseDir(options.slice, options.caseId)
   const recordedExchanges = readExchanges(dir)
   const usedRecorded = new Set<number>()
   const usedSynthetic = new Set<number>()

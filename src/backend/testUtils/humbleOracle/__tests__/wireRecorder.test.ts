@@ -18,7 +18,7 @@ import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import {
   humbleOracleMode,
   overrideFixturesRoot,
-  recordedCaseDir,
+  humbleRecordedCaseDir,
   redactHeaderValue,
   redactTarget,
   redactText,
@@ -151,7 +151,9 @@ describe('the Humble wire recorder: committed cases replay against the real TS',
       'steam-storesearch'
     ]) {
       expect(
-        existsSync(join(recordedCaseDir('wire', caseId), 'exchanges.json'))
+        existsSync(
+          join(humbleRecordedCaseDir('wire', caseId), 'exchanges.json')
+        )
       ).toBe(true)
     }
   })
@@ -199,19 +201,19 @@ describe('the Humble wire recorder: self-tests on a temporary fixtures root', ()
   it('the mode comes from the environment, forward wins over write', () => {
     const before = { ...process.env }
     try {
-      delete process.env.GAMELIB_HUMBLE_ORACLE
+      delete process.env.GAMELIB_ORACLE_HUMBLE
       delete process.env.GAMELIB_WRITE_HUMBLE_GOLDEN
       expect(humbleOracleMode()).toBe('replay')
       process.env.GAMELIB_WRITE_HUMBLE_GOLDEN = '1'
       expect(humbleOracleMode()).toBe('write')
-      process.env.GAMELIB_HUMBLE_ORACLE = 'forward'
+      process.env.GAMELIB_ORACLE_HUMBLE = 'forward'
       expect(humbleOracleMode()).toBe('forward')
     } finally {
-      process.env.GAMELIB_HUMBLE_ORACLE = before.GAMELIB_HUMBLE_ORACLE
+      process.env.GAMELIB_ORACLE_HUMBLE = before.GAMELIB_ORACLE_HUMBLE
       process.env.GAMELIB_WRITE_HUMBLE_GOLDEN =
         before.GAMELIB_WRITE_HUMBLE_GOLDEN
-      if (before.GAMELIB_HUMBLE_ORACLE === undefined) {
-        delete process.env.GAMELIB_HUMBLE_ORACLE
+      if (before.GAMELIB_ORACLE_HUMBLE === undefined) {
+        delete process.env.GAMELIB_ORACLE_HUMBLE
       }
       if (before.GAMELIB_WRITE_HUMBLE_GOLDEN === undefined) {
         delete process.env.GAMELIB_WRITE_HUMBLE_GOLDEN
@@ -277,7 +279,7 @@ describe('the Humble wire recorder: self-tests on a temporary fixtures root', ()
       () => getSessionStatus('very-secret-cookie')
     )
     const text = readFileSync(
-      join(recordedCaseDir('s', 'roundtrip'), 'exchanges.json'),
+      join(humbleRecordedCaseDir('s', 'roundtrip'), 'exchanges.json'),
       'utf8'
     )
     expect(text).not.toContain('very-secret-cookie')
@@ -351,7 +353,7 @@ describe('the Humble wire recorder: self-tests on a temporary fixtures root', ()
       await recorder.close()
     }
     const written = readFileSync(
-      join(recordedCaseDir('s', 'reveal'), 'exchanges.json'),
+      join(humbleRecordedCaseDir('s', 'reveal'), 'exchanges.json'),
       'utf8'
     )
     expect(written).not.toContain('AbCdEfGhIjKlMnOp')
@@ -395,7 +397,7 @@ describe('the Humble wire recorder: self-tests on a temporary fixtures root', ()
       }
       // The caller under test got the real answer.
       expect(body).toContain('RealGameKey12345')
-      const dir = recordedCaseDir('s', 'forward')
+      const dir = humbleRecordedCaseDir('s', 'forward')
       const text = readFileSync(join(dir, 'exchanges.json'), 'utf8')
       expect(text).not.toContain('live-secret')
       expect(text).not.toContain('server-issued')

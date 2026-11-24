@@ -23,3 +23,10 @@
   rename or a scoped allowance there.
 - `shortcutsFlows.test.ts` containment test (`knownFolder(desktop)` resolves under the real home) fails on the Windows
   host, as the Windows-local baseline note records; CI is ubuntu and passes it.
+
+  **Resolved 2026-11-24 (orchestrator, after 94-11):** both gates fail on every OS, not only Windows. The forward-mode
+  switch is renamed `GAMELIB_HUMBLE_ORACLE` -> `GAMELIB_ORACLE_HUMBLE` (it contained the `GAMELIB_HUMBLE` token the
+  D-15 no-rollback-flag scan forbids), and the Humble recorder's `recordedCaseDir` -> `humbleRecordedCaseDir` (it
+  collided with the 86 info oracle's retired identifier that `infoPortComplete` bans). 94-10-PLAN.md follows the
+  rename. **For 94-10:** its `GAMELIB_HUMBLE_REDACT_*` variables also contain `GAMELIB_HUMBLE`; read them only from
+  a file under `__tests__/` (the walk skips those), never from `testUtils/humbleOracle/*.ts`, or rename them.
