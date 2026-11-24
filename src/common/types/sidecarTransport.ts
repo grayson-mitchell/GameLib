@@ -1477,6 +1477,15 @@ export const RUST_KNOWNFIX_APPLY_REGISTRY = 'knownfix_apply_registry' as const
  */
 export const RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV =
   'knownfix_resolve_overlay_env' as const
+/**
+ * Phase 88 (SVC-03, 88-15, D-03, D-19): the opt-in report of a fix a detector found, reached through
+ * `reportDetectedFix` in `launchrust/knownFixes.ts`. `knownfix_report_detected` takes one object,
+ * `{appId, key, op, detector, enabled}` (`enabled` is the caller's `shareDetectedFixes === true` setting fact, so Rust
+ * reads no settings file), and answers the outcome word (`sent`, `disabled`, `already-sent`, ...). Nothing leaves the
+ * machine unless every gate in the crate passes; the one POST is bounded at 8 s in Rust, so it stays inside the 60 s
+ * `RUST_INVOKE_TIMEOUT_MS`.
+ */
+export const RUST_KNOWNFIX_REPORT_DETECTED = 'knownfix_report_detected' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -1876,7 +1885,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
   RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
   RUST_KNOWNFIX_APPLY_REGISTRY,
-  RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV
+  RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
+  RUST_KNOWNFIX_REPORT_DETECTED
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

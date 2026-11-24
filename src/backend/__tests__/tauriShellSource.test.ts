@@ -510,7 +510,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 88 plan 12: 189 -> 191, knownfix_launch_overrides and knownfix_fetch_remote.
     // Phase 88 plan 13: 191 -> 193, knownfix_apply_profile_registry and knownfix_profile_overlay_env.
     // Phase 88 plan 14: 193 -> 195, knownfix_apply_registry and knownfix_resolve_overlay_env.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(195)
+    // Phase 88 plan 15: 195 -> 196, knownfix_report_detected.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(196)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1053,7 +1054,10 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // Phase 88 plan 14: the Steam bridge's registry fixes and overlay env (`launchrust/knownFixes.ts` shims).
       // PROVEN: `knownfix_dispatch::tests` drives each arm's decode, not-ready and the crate's strict decode.
       'knownfix_apply_registry',
-      'knownfix_resolve_overlay_env'
+      'knownfix_resolve_overlay_env',
+      // Phase 88 plan 15: the Steam library's opt-in detected-fix report (`launchrust/knownFixes.ts` shim).
+      // PROVEN: `knownfix_dispatch::tests` drives the arm's decode, not-ready and the crate's strict decode.
+      'knownfix_report_detected'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

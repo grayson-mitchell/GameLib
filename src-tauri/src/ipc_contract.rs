@@ -218,6 +218,7 @@ pub(crate) enum RustInvokeChannel {
     KnownfixProfileOverlayEnv,
     KnownfixApplyRegistry,
     KnownfixResolveOverlayEnv,
+    KnownfixReportDetected,
 }
 
 impl RustInvokeChannel {
@@ -417,6 +418,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::KnownfixProfileOverlayEnv,
         RustInvokeChannel::KnownfixApplyRegistry,
         RustInvokeChannel::KnownfixResolveOverlayEnv,
+        RustInvokeChannel::KnownfixReportDetected,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -616,6 +618,7 @@ impl RustInvokeChannel {
             "knownfix_profile_overlay_env" => Some(RustInvokeChannel::KnownfixProfileOverlayEnv),
             "knownfix_apply_registry" => Some(RustInvokeChannel::KnownfixApplyRegistry),
             "knownfix_resolve_overlay_env" => Some(RustInvokeChannel::KnownfixResolveOverlayEnv),
+            "knownfix_report_detected" => Some(RustInvokeChannel::KnownfixReportDetected),
             _ => None,
         }
     }
@@ -817,6 +820,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::KnownfixProfileOverlayEnv => "knownfix_profile_overlay_env",
             RustInvokeChannel::KnownfixApplyRegistry => "knownfix_apply_registry",
             RustInvokeChannel::KnownfixResolveOverlayEnv => "knownfix_resolve_overlay_env",
+            RustInvokeChannel::KnownfixReportDetected => "knownfix_report_detected",
         }
     }
 }
@@ -4134,5 +4138,46 @@ impl KnownfixResolveOverlayEnvArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "knownfix_resolve_overlay_env:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "knownfix_resolve_overlay_env:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct KnownfixReportDetectedArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+    pub(crate) key: KnownfixReportDetectedArgsKey,
+    pub(crate) op: KnownfixReportDetectedArgsOp,
+    pub(crate) detector: KnownfixReportDetectedArgsDetector,
+    pub(crate) enabled: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum KnownfixReportDetectedArgsKey {
+    #[serde(rename = "macArch")]
+    MacArch,
+    #[serde(rename = "drm")]
+    Drm,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum KnownfixReportDetectedArgsOp {
+    #[serde(rename = "add")]
+    Add,
+    #[serde(rename = "remove")]
+    Remove,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum KnownfixReportDetectedArgsDetector {
+    #[serde(rename = "macho")]
+    Macho,
+    #[serde(rename = "ceg")]
+    Ceg,
+}
+
+impl KnownfixReportDetectedArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "knownfix_report_detected:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "knownfix_report_detected:bad-args".to_string())
     }
 }

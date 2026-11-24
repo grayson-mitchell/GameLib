@@ -56,7 +56,8 @@ describe('rustInvokeArgs', () => {
     // Phase 88 plan 12: 189 -> 191, knownfix_launch_overrides and knownfix_fetch_remote.
     // Phase 88 plan 13: 191 -> 193, knownfix_apply_profile_registry and knownfix_profile_overlay_env.
     // Phase 88 plan 14: 193 -> 195, knownfix_apply_registry and knownfix_resolve_overlay_env.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(195)
+    // Phase 88 plan 15: 195 -> 196, knownfix_report_detected.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(196)
   })
 
   it('parses the store-embed wire fixtures', () => {

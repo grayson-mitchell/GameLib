@@ -11,6 +11,7 @@ import {
   RUST_KNOWNFIX_FETCH_REMOTE,
   RUST_KNOWNFIX_LAUNCH_OVERRIDES,
   RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
+  RUST_KNOWNFIX_REPORT_DETECTED,
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV
 } from 'common/types/sidecarTransport'
 import type { GameSettings } from 'common/types'
@@ -26,8 +27,10 @@ import {
   fetchRemoteKnownFixes,
   knownFixProfileOverlayEnv,
   readKnownFixLaunchOverrides,
+  reportDetectedFix,
   resolveKnownFixOverlayEnv
 } from '../knownFixes'
+import type { DetectedFix } from '../knownFixes'
 
 function fakeTransport(answer: unknown): RustInvokeDeps & {
   calls: Array<[string, unknown[]]>
@@ -347,6 +350,103 @@ describe('resolveKnownFixOverlayEnv (the Steam bridge, 88-14)', () => {
     await expect(
       resolveKnownFixOverlayEnv(deps, '1', 'Steam 1', null, {})
     ).rejects.toThrow('not-ready')
+  })
+})
+
+describe('reportDetectedFix (the Steam library, 88-15)', () => {
+  const FIX: DetectedFix = {
+    appId: '220',
+    key: 'macArch',
+    op: 'add',
+    detector: 'macho'
+  }
+
+  it('sends one knownfix_report_detected call carrying the detection and the caller-held setting, and resolves the outcome word', async () => {
+    const deps = fakeTransport('sent')
+    expect(await reportDetectedFix(deps, FIX, true)).toBe('sent')
+    expect(deps.calls).toEqual([
+      [
+        RUST_KNOWNFIX_REPORT_DETECTED,
+        [
+          {
+            appId: '220',
+            key: 'macArch',
+            op: 'add',
+            detector: 'macho',
+            enabled: true
+          }
+        ]
+      ]
+    ])
+    expect(RUST_KNOWNFIX_REPORT_DETECTED).toBe('knownfix_report_detected')
+  })
+
+  it('sends the setting as it is held: a disabled report is still a call, with enabled false', async () => {
+    const deps = fakeTransport('disabled')
+    await reportDetectedFix(
+      deps,
+      { appId: '730', key: 'drm', op: 'remove', detector: 'ceg' },
+      false
+    )
+    expect(deps.calls[0]?.[1]).toEqual([
+      {
+        appId: '730',
+        key: 'drm',
+        op: 'remove',
+        detector: 'ceg',
+        enabled: false
+      }
+    ])
+    for (const [channel, args] of deps.calls) {
+      expect(channel).toBe(RUST_KNOWNFIX_REPORT_DETECTED)
+      expect(() =>
+        rustInvokeArgs[RUST_KNOWNFIX_REPORT_DETECTED].parse(args)
+      ).not.toThrow()
+    }
+  })
+
+  it('carries nothing beyond the five fields of the detection and the setting (no title, path or account)', async () => {
+    const deps = fakeTransport('sent')
+    const widened = {
+      ...FIX,
+      title: 'A Game',
+      path: '/Users/x/Library'
+    } as DetectedFix
+    await reportDetectedFix(deps, widened, true)
+    const sent = (deps.calls[0]?.[1] as Array<Record<string, unknown>>)[0]
+    expect(Object.keys(sent ?? {}).sort()).toEqual([
+      'appId',
+      'detector',
+      'enabled',
+      'key',
+      'op'
+    ])
+  })
+
+  it('rejects with the transport failure and does not catch it (the callers log it)', async () => {
+    const deps = fakeTransport(new Error('knownfix_report_detected:not-ready'))
+    await expect(reportDetectedFix(deps, FIX, true)).rejects.toThrow(
+      'not-ready'
+    )
+  })
+
+  it('has a channel schema that refuses an unknown key, op or detector, a non-boolean setting, an extra field and a wrong arity', () => {
+    const schema = rustInvokeArgs[RUST_KNOWNFIX_REPORT_DETECTED]
+    const ok = {
+      appId: '220',
+      key: 'macArch',
+      op: 'add',
+      detector: 'macho',
+      enabled: true
+    }
+    expect(schema.safeParse([ok]).success).toBe(true)
+    expect(schema.safeParse([{ ...ok, key: 'other' }]).success).toBe(false)
+    expect(schema.safeParse([{ ...ok, op: 'toggle' }]).success).toBe(false)
+    expect(schema.safeParse([{ ...ok, detector: 'other' }]).success).toBe(false)
+    expect(schema.safeParse([{ ...ok, enabled: 'yes' }]).success).toBe(false)
+    expect(schema.safeParse([{ ...ok, title: 'x' }]).success).toBe(false)
+    expect(schema.safeParse([ok, ok]).success).toBe(false)
+    expect(schema.safeParse([]).success).toBe(false)
   })
 })
 

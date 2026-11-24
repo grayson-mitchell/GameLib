@@ -324,5 +324,8 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::KnownfixResolveOverlayEnv => {
             knownfix_dispatch::rpc_knownfix_resolve_overlay_env(args)
         }
+        RustInvokeChannel::KnownfixReportDetected => {
+            knownfix_dispatch::rpc_knownfix_report_detected(args)
+        }
     }
 }

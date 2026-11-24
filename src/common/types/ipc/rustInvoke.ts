@@ -151,6 +151,7 @@ import {
   RUST_KNOWNFIX_FETCH_REMOTE,
   RUST_KNOWNFIX_LAUNCH_OVERRIDES,
   RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
+  RUST_KNOWNFIX_REPORT_DETECTED,
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
@@ -1095,6 +1096,20 @@ export const rustInvokeArgs = {
         label: z.string(),
         wineType: z.string().nullable(),
         baseValues: knownFixEnvMap('baseValues')
+      })
+      .strict()
+  ]),
+  // Phase 88 (SVC-03, 88-15, D-03, D-19): the opt-in report of a detected fix. One strict object; `key`, `op` and
+  // `detector` are the closed sets the crate parses again, `appId` is a free string (the report's own schema decides
+  // whether it is a Steam app id) and `enabled` is the caller's `shareDetectedFixes === true` fact.
+  [RUST_KNOWNFIX_REPORT_DETECTED]: z.tuple([
+    z
+      .object({
+        appId: z.string(),
+        key: z.enum(['macArch', 'drm']),
+        op: z.enum(['add', 'remove']),
+        detector: z.enum(['macho', 'ceg']),
+        enabled: z.boolean()
       })
       .strict()
   ])

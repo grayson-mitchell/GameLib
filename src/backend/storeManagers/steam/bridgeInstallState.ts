@@ -6,7 +6,7 @@ import type { SteamGameInfo } from 'common/types/steam'
  */
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { logWarning, LogPrefix } from 'backend/logger'
-import { reportDetectedFix, knownFixReportDeps } from 'backend/knownFixReport'
+import { reportDetectedFix } from 'backend/launchrust/knownFixes'
 import * as bottle from './bottle'
 import * as bridgeBottle from './bridgeBottle'
 import {
@@ -40,15 +40,21 @@ export function persistBridgeDrmSignal(
   // still reports (Pitfall 6); covers installBridgeGame and launchBridgeGame;
   // retried naturally on the next install or launch via the client's sent
   // record (D-16/D-18). Fire-and-forget, never awaited.
-  reportDetectedFix(
+  void reportDetectedFix(
+    steamGame.deps,
     {
       appId: steamGame.appId,
       key: 'drm',
       op: 'add',
       detector: 'ceg'
     },
-    knownFixReportDeps(steamGame.deps)
-  )
+    steamGame.deps.config.getSettings().shareDetectedFixes === true
+  ).catch(() => {
+    logWarning(
+      `SteamGame: known-fix report failed for appId ${steamGame.appId}`,
+      LogPrefix.Steam
+    )
+  })
   if (
     readBridgeVerdict(steamGame.deps, steamGame.appId)?.userRoute === 'bridge'
   ) {

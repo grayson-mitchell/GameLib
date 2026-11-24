@@ -168,7 +168,7 @@ const TOOLS_SHIM_IMPORTERS: readonly string[] = [
  * Every non-test importer of `launchrust/knownFixes.ts` (the check is per file, so every row of that file lists them
  * all): the three managers' `launch()` and the download manager's install-time fetch (88-12), and the shared
  * launcher's per-launch registry fixes and overlay env (88-13), and the Steam bridge's registry fixes and overlay env
- * (88-14).
+ * (88-14), and the two Steam library call sites of the opt-in detected-fix report (88-15).
  */
 const KNOWN_FIX_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/downloadmanager/utils.ts',
@@ -176,7 +176,9 @@ const KNOWN_FIX_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/gog/games.ts',
   'src/backend/storeManagers/legendary/games.ts',
   'src/backend/storeManagers/nile/games.ts',
-  'src/backend/storeManagers/steam/bridgeKnownFixes.ts'
+  'src/backend/storeManagers/steam/bridgeInstallState.ts',
+  'src/backend/storeManagers/steam/bridgeKnownFixes.ts',
+  'src/backend/storeManagers/steam/library/macArch.ts'
 ]
 /**
  * Every non-test importer of `launchrust/knownFixTwins.ts` (the check is per file, so every row of that file lists them
@@ -1128,6 +1130,18 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     file: 'src/backend/launchrust/knownFixes.ts',
     shape: 'shim',
     channel: 'RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV',
+    callers: KNOWN_FIX_SHIM_IMPORTERS,
+    deletedBy: 97
+  },
+  // 88-15 (D-03): the opt-in detected-fix report. The Steam library's two detector hooks (the CEG probe in
+  // `bridgeInstallState.persistBridgeDrmSignal`, the Mach-O check in `library/macArch.applyMacArchVerdict`) call it
+  // fire-and-forget with a logged rejection; `enabled` is their `shareDetectedFixes === true` setting fact (config is
+  // TS until 98). The bridge's launch files import bridgeInstallState, so the row goes with them in 97.
+  {
+    name: 'reportDetectedFix',
+    file: 'src/backend/launchrust/knownFixes.ts',
+    shape: 'shim',
+    channel: 'RUST_KNOWNFIX_REPORT_DETECTED',
     callers: KNOWN_FIX_SHIM_IMPORTERS,
     deletedBy: 97
   },

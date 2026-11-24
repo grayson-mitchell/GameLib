@@ -4,7 +4,7 @@ import { promptMac32WindowsReinstall } from 'backend/utils/macArch'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { formatMacArch32KnownFixEntry } from '../macArchKnownFix'
-import { reportDetectedFix, knownFixReportDeps } from 'backend/knownFixReport'
+import { reportDetectedFix } from 'backend/launchrust/knownFixes'
 import SteamGame from '../games'
 import type { ManagerDeps } from 'backend/services/types'
 import type { AcfSource } from './installRoot'
@@ -157,15 +157,21 @@ export async function applyMacArchVerdict(
     )
     // Phase 57 detector 3: fire-and-forget (void, never awaited). The client
     // gates on the setting and D-12. D-18: one-shot best effort, no retry seam.
-    reportDetectedFix(
+    void reportDetectedFix(
+      deps,
       {
         appId,
         key: 'macArch',
         op: 'remove',
         detector: 'macho'
       },
-      knownFixReportDeps(deps)
-    )
+      deps.config.getSettings().shareDetectedFixes === true
+    ).catch(() => {
+      logWarning(
+        `Steam: known-fix report failed for appId ${appId}`,
+        LogPrefix.Steam
+      )
+    })
   }
 
   if (verdict === '32') {
@@ -178,10 +184,16 @@ export async function applyMacArchVerdict(
     )
     // Phase 57 detector 1: fire-and-forget (void, never awaited). The client
     // gates on the setting and D-12. D-18: one-shot best effort, no retry seam.
-    reportDetectedFix(
+    void reportDetectedFix(
+      deps,
       { appId, key: 'macArch', op: 'add', detector: 'macho' },
-      knownFixReportDeps(deps)
-    )
+      deps.config.getSettings().shareDetectedFixes === true
+    ).catch(() => {
+      logWarning(
+        `Steam: known-fix report failed for appId ${appId}`,
+        LogPrefix.Steam
+      )
+    })
     // MAC32-03/CONTEXT D-6: decoupled — never awaited here, so this check
     // never blocks the install 'installed' badge-flip UX above.
     void promptI386Recovery(deps, appId)

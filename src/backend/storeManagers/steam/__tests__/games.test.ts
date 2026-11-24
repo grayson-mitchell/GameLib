@@ -267,7 +267,7 @@ function expectOneFailedNotice(title: string): void {
     })
   )
 }
-import { reportDetectedFix } from 'backend/knownFixReport'
+import { reportDetectedFix } from 'backend/launchrust/knownFixes'
 // The abort registry is injected into the manager deps (66.4-13): these control the
 // AbortController create/call/delete lifecycle for the native depot-download path (D-02).
 const createAbortController = jest.fn()
@@ -550,9 +550,10 @@ const resetBridgeLaunchBottles = () => gameSession.bridgeLaunchBottles.clear()
 const resetLoggedEmptyGameInfoMisses = () =>
   gameSession.loggedEmptyGameInfoMisses.clear()
 
-jest.mock('backend/knownFixReport', () => ({
-  reportDetectedFix: jest.fn(),
-  knownFixReportDeps: () => ({ post: () => undefined })
+// The shim itself is the unit under test elsewhere (launchrust/__tests__/knownFixes.shims.test.ts); here it is
+// recorded, and every test sets it to resolve in the beforeEach below (resetMocks wipes a factory implementation).
+jest.mock('backend/launchrust/knownFixes', () => ({
+  reportDetectedFix: jest.fn()
 }))
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
@@ -1066,6 +1067,8 @@ beforeEach(() => {
     status: 'ready',
     ready: true
   })
+  // The detected-fix report is a promise the call sites catch; an unset mock answers undefined and would throw there.
+  ;(reportDetectedFix as jest.Mock).mockResolvedValue('disabled')
   // Resolved "not parsed" by default; scenarios override per test.
   ;(detectSteamDrmInPe as jest.Mock).mockResolvedValue({
     parsed: false,
@@ -2621,13 +2624,14 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       )
       expect(drmPersistCall).toBeDefined()
       expect(reportDetectedFix).toHaveBeenCalledWith(
+        steamTestDeps,
         {
           appId: CEG_APP_ID,
           key: 'drm',
           op: 'add',
           detector: 'ceg'
         },
-        expect.objectContaining({ post: expect.any(Function) })
+        false
       )
 
       // Breaker armed and the CEG verdict persisted (the metadata store is a
@@ -2681,13 +2685,14 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       )
       // Phase 57: a forced-bridge title still reports (Pitfall 6).
       expect(reportDetectedFix).toHaveBeenCalledWith(
+        steamTestDeps,
         {
           appId: CEG_APP_ID,
           key: 'drm',
           op: 'add',
           detector: 'ceg'
         },
-        expect.objectContaining({ post: expect.any(Function) })
+        false
       )
     })
 
@@ -2716,6 +2721,53 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       await expect(
         new SteamGame(CEG_APP_ID, steamTestDeps).launch({} as any)
       ).resolves.toBe(false)
+    })
+
+    it('logs a rejected report with the app id only and still resolves the launch (88-15, T-88-38)', async () => {
+      ;(reportDetectedFix as jest.Mock).mockRejectedValue(
+        new Error('knownfix_report_detected:not-ready https://relay.example/x')
+      )
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'already-placed',
+        shimPath: RESOLVED_EXE_PATH,
+        drm: CEG_DRM
+      })
+
+      await expect(
+        new SteamGame(CEG_APP_ID, steamTestDeps).launch({} as any)
+      ).resolves.toBe(false)
+      await new Promise((resolve) => setImmediate(resolve))
+
+      const { logWarning } = jest.requireMock('backend/logger')
+      const failed = (logWarning as jest.Mock).mock.calls
+        .map(([message]) => String(message))
+        .filter((message) => message.includes('known-fix report failed'))
+      expect(failed).toEqual([
+        `SteamGame: known-fix report failed for appId ${CEG_APP_ID}`
+      ])
+    })
+
+    it('hands the shim the share setting as the caller holds it (88-15, T-88-37)', async () => {
+      steamTestDeps.config.setSetting('shareDetectedFixes', true, {} as never)
+      try {
+        ;(placeShimForGame as jest.Mock).mockResolvedValue({
+          status: 'already-placed',
+          shimPath: RESOLVED_EXE_PATH,
+          drm: CEG_DRM
+        })
+        await new SteamGame(CEG_APP_ID, steamTestDeps).launch({} as any)
+        expect(reportDetectedFix).toHaveBeenCalledWith(
+          steamTestDeps,
+          expect.objectContaining({ key: 'drm', detector: 'ceg' }),
+          true
+        )
+      } finally {
+        steamTestDeps.config.setSetting(
+          'shareDetectedFixes',
+          false,
+          {} as never
+        )
+      }
     })
   })
 
@@ -6202,13 +6254,14 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       )
       expect(library.get(APP_ID)?.is_installed).not.toBe(true)
       expect(reportDetectedFix).toHaveBeenCalledWith(
+        steamTestDeps,
         {
           appId: APP_ID,
           key: 'drm',
           op: 'add',
           detector: 'ceg'
         },
-        expect.objectContaining({ post: expect.any(Function) })
+        false
       )
 
       // The breaker is armed: a later install() of the same appId is routed
@@ -6245,13 +6298,14 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       expect(removePerGameBridgeBottle).not.toHaveBeenCalled()
       expect(library.get(APP_ID)?.is_installed).toBe(true)
       expect(reportDetectedFix).toHaveBeenCalledWith(
+        steamTestDeps,
         {
           appId: APP_ID,
           key: 'drm',
           op: 'add',
           detector: 'ceg'
         },
-        expect.objectContaining({ post: expect.any(Function) })
+        false
       )
     })
 

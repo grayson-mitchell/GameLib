@@ -332,6 +332,27 @@ pub(crate) fn rpc_knownfix_resolve_overlay_env(args: &[Value]) -> Result<Value, 
     resolve_overlay_env_over(knownfix_ctx(), args)
 }
 
+/// The body of the `knownfix_report_detected` arm over a given context: the generated decode (one object,
+/// `{appId, key, op, detector, enabled}`) and an arity check first, so a bad call is rejected the same fixed
+/// `<op>:bad-args` literal before and after the install and never echoes the sidecar's value, then the crate, which
+/// decodes the object strictly again, parses `key`, `op` and `detector` against their closed sets and bounds the
+/// app id (T-88-37). `enabled` is the caller's `shareDetectedFixes` setting; nothing is posted unless it is true
+/// and every gate in the crate passes.
+fn report_detected_over(ctx: Option<&Arc<KnownFixCtx>>, args: &[Value]) -> Result<Value, String> {
+    KnownfixReportDetectedArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("knownfix_report_detected:bad-args".to_string());
+    }
+    rpc_knownfix_op(ctx, "knownfix_report_detected", args)
+}
+
+/// The `knownfix_report_detected` `rustInvoke` arm (the Steam library's `reportDetectedFix` shim, 88-15): the
+/// opt-in report of a fix a detector found, answering the outcome word. The one POST is bounded at 8 s in the
+/// crate (and ended by the shutdown token), so the sidecar keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+pub(crate) fn rpc_knownfix_report_detected(args: &[Value]) -> Result<Value, String> {
+    report_detected_over(knownfix_ctx(), args)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -893,5 +914,73 @@ mod tests {
                 Ok(json!({}))
             );
         }
+    }
+
+    #[test]
+    fn report_detected_answers_not_ready_before_install_and_rejects_a_bad_call_with_a_fixed_literal(
+    ) {
+        let good = json!({
+            "appId": "220", "key": "macArch", "op": "add", "detector": "macho", "enabled": false
+        });
+        assert_eq!(
+            report_detected_over(None, std::slice::from_ref(&good)),
+            Err("knownfix_report_detected:not-ready".to_string())
+        );
+        let secret = "SECRET-DETECTOR-".repeat(10);
+        let home = FakeHome::new("knownfix-shell-");
+        let ctx = ctx_over(&home);
+        for ctx in [None, Some(&ctx)] {
+            for bad in [
+                vec![],
+                vec![good.clone(), good.clone()],
+                vec![json!("220"), json!("macArch")],
+                vec![json!({"appId": "220", "key": "macArch", "op": "add", "detector": "macho"})],
+                vec![json!({
+                    "appId": "220", "key": "macArch", "op": "add", "detector": secret, "enabled": true
+                })],
+                vec![json!({
+                    "appId": 220, "key": "macArch", "op": "add", "detector": "macho", "enabled": true
+                })],
+                vec![json!({
+                    "appId": "220", "key": "macArch", "op": "add", "detector": "macho", "enabled": "yes"
+                })],
+            ] {
+                let error = report_detected_over(ctx, &bad).unwrap_err();
+                assert_eq!(error, "knownfix_report_detected:bad-args", "{bad:?}");
+                assert!(!error.contains("SECRET"), "{error}");
+            }
+        }
+        // The crate's strict decode, closed sets and app id bound refuse what the generated decode lets through.
+        for bad in [
+            json!({"appId": "220", "key": "macArch", "op": "add", "detector": "macho", "enabled": true, "extra": 1}),
+            json!({"appId": "220", "key": "other", "op": "add", "detector": "macho", "enabled": true}),
+            json!({"appId": "220", "key": "macArch", "op": "toggle", "detector": "macho", "enabled": true}),
+            json!({"appId": "220", "key": "macArch", "op": "add", "detector": "other", "enabled": true}),
+            json!({"appId": "9".repeat(257), "key": "macArch", "op": "add", "detector": "macho", "enabled": true}),
+        ] {
+            assert_eq!(
+                report_detected_over(Some(&ctx), &[bad]),
+                Err("knownfix_report_detected:bad-args".to_string())
+            );
+        }
+    }
+
+    #[test]
+    fn report_detected_posts_nothing_when_the_caller_has_not_opted_in() {
+        let home = FakeHome::new("knownfix-shell-");
+        let ctx = ctx_over(&home);
+        // `disabled` on a Mac host, `not-mac` elsewhere: either way the outcome is a word and no request is made
+        // (the context's fetch seam is the engine's own, which this test never hands a URL).
+        let answer = report_detected_over(
+            Some(&ctx),
+            &[json!({
+                "appId": "220", "key": "macArch", "op": "add", "detector": "macho", "enabled": false
+            })],
+        )
+        .unwrap();
+        assert!(
+            answer == json!("disabled") || answer == json!("not-mac"),
+            "{answer}"
+        );
     }
 }

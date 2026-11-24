@@ -20,7 +20,7 @@ import {
   mockedFsSteamFiles
 } from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
-import { reportDetectedFix } from 'backend/knownFixReport'
+import { reportDetectedFix } from 'backend/launchrust/knownFixes'
 const sendFrontendMessage = jest.fn()
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -109,9 +109,8 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
   shortcutFiles: jest.fn()
 }))
 
-jest.mock('backend/knownFixReport', () => ({
-  reportDetectedFix: jest.fn(),
-  knownFixReportDeps: () => ({ post: () => undefined })
+jest.mock('backend/launchrust/knownFixes', () => ({
+  reportDetectedFix: jest.fn()
 }))
 
 jest.mock('backend/logger', () => ({
@@ -256,6 +255,8 @@ beforeEach(() => {
   // TypeError from calling .length on an un-mocked return value.
   jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
   jest.mocked(backfillBridgeLaunchTargets).mockResolvedValue(0)
+  // The detected-fix report is a promise the call site catches; an unset mock answers undefined and would throw there.
+  jest.mocked(reportDetectedFix).mockResolvedValue('disabled')
 })
 
 // ── MAC32-03: Mach-O classification primitives ───────────────────────────────
@@ -470,6 +471,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
 
     beforeEach(() => {
       ;(reportDetectedFix as jest.Mock).mockReset()
+      ;(reportDetectedFix as jest.Mock).mockResolvedValue('disabled')
     })
 
     it("reports a '32' verdict once as macArch add", async () => {
@@ -482,13 +484,14 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       )
       expect(reportDetectedFix).toHaveBeenCalledTimes(1)
       expect(reportDetectedFix).toHaveBeenCalledWith(
+        steamTestDeps,
         {
           appId: APP_ID,
           key: 'macArch',
           op: 'add',
           detector: 'macho'
         },
-        expect.objectContaining({ post: expect.any(Function) })
+        false
       )
     })
 
@@ -502,13 +505,14 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       )
       expect(reportDetectedFix).toHaveBeenCalledTimes(1)
       expect(reportDetectedFix).toHaveBeenCalledWith(
+        steamTestDeps,
         {
           appId: APP_ID,
           key: 'macArch',
           op: 'remove',
           detector: 'macho'
         },
-        expect.objectContaining({ post: expect.any(Function) })
+        false
       )
     })
 
@@ -552,6 +556,54 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
         'native'
       )
       expect(reportDetectedFix).not.toHaveBeenCalled()
+    })
+
+    it('hands the shim the share setting as the caller holds it (88-15, T-88-37)', async () => {
+      steamTestDeps.config.setSetting('shareDetectedFixes', true, {} as never)
+      try {
+        arrange('i386\n', {
+          art_cover: '',
+          art_square: '',
+          extra: { reqs: [] }
+        })
+        await verifyMacArchGroundTruth(
+          steamTestDeps,
+          APP_ID,
+          INSTALL_PATH,
+          'native'
+        )
+        expect(reportDetectedFix).toHaveBeenCalledWith(
+          steamTestDeps,
+          expect.objectContaining({ key: 'macArch', op: 'add' }),
+          true
+        )
+      } finally {
+        steamTestDeps.config.setSetting(
+          'shareDetectedFixes',
+          false,
+          {} as never
+        )
+      }
+    })
+
+    it('logs a rejected report with the app id only and still resolves (88-15, T-88-38)', async () => {
+      ;(reportDetectedFix as jest.Mock).mockRejectedValue(
+        new Error('knownfix_report_detected:not-ready https://relay.example/x')
+      )
+      arrange('i386\n', { art_cover: '', art_square: '', extra: { reqs: [] } })
+      await expect(
+        verifyMacArchGroundTruth(steamTestDeps, APP_ID, INSTALL_PATH, 'native')
+      ).resolves.toBeUndefined()
+      await new Promise((resolve) => setImmediate(resolve))
+      const { logWarning } = jest.requireMock<{ logWarning: jest.Mock }>(
+        'backend/logger'
+      )
+      const failed = logWarning.mock.calls
+        .map(([message]) => String(message))
+        .filter((message) => message.includes('known-fix report failed'))
+      expect(failed).toEqual([
+        `Steam: known-fix report failed for appId ${APP_ID}`
+      ])
     })
 
     it('still resolves when the hook never settles', async () => {

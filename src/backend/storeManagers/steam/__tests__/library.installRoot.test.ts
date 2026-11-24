@@ -63,7 +63,9 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
   shortcutFiles: jest.fn()
 }))
 
-jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
+jest.mock('backend/launchrust/knownFixes', () => ({
+  reportDetectedFix: jest.fn()
+}))
 
 jest.mock('backend/logger', () => ({
   logDebug: jest.fn(),

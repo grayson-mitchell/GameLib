@@ -1,10 +1,12 @@
 import type { GameSettings, Runner } from 'common/types'
+import type { KnownFixReportKey, KnownFixReportOp } from 'common/knownFixReport'
 import {
   RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
   RUST_KNOWNFIX_APPLY_REGISTRY,
   RUST_KNOWNFIX_FETCH_REMOTE,
   RUST_KNOWNFIX_LAUNCH_OVERRIDES,
   RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
+  RUST_KNOWNFIX_REPORT_DETECTED,
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV
 } from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
@@ -131,5 +133,41 @@ export async function resolveKnownFixOverlayEnv(
 ): Promise<unknown> {
   return deps.requestRustInvoke(RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV, [
     { appId, label, wineType, baseValues }
+  ])
+}
+
+/**
+ * One detection a detector hook reports: the Steam app id, the fix key and whether it is to be added or is no
+ * longer needed, and which detector found it (`macho` for the post-install Mach-O check, `ceg` for the DRM probe).
+ */
+export type DetectedFix = {
+  appId: string
+  key: KnownFixReportKey
+  op: KnownFixReportOp
+  detector: 'macho' | 'ceg'
+}
+
+/**
+ * The opt-in report of a fix a detector found (88-15, D-03). `enabled` is the caller's `shareDetectedFixes === true`
+ * setting fact: Rust reads no settings file, and nothing leaves the machine unless it is true and every gate in the
+ * crate (platform, known fix, local layer, already sent, relay URL, the report's own schema) passes. Resolves the
+ * outcome word as `unknown` (`sent`, `disabled`, `already-sent`, `retryable`, ...), because the transport is untyped;
+ * the callers fire and forget it and log a rejection. Rejects with Rust's category word when the call could not be
+ * made (an argument the crate refused, the shell not ready, the timeout). The one POST is bounded at 8 s in Rust, so
+ * the channel stays inside the sidecar's 60 s cap.
+ */
+export async function reportDetectedFix(
+  deps: RustInvokeDeps,
+  fix: DetectedFix,
+  enabled: boolean
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_KNOWNFIX_REPORT_DETECTED, [
+    {
+      appId: fix.appId,
+      key: fix.key,
+      op: fix.op,
+      detector: fix.detector,
+      enabled
+    }
   ])
 }
