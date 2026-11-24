@@ -1,0 +1,10 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "bad checksum",
+      "ok": false,
+      "message": "overlay archive: bad header checksum"
+    }
+  ]
+}

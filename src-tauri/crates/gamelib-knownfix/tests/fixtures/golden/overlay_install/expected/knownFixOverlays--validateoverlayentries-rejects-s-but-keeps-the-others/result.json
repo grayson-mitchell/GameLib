@@ -1,0 +1,162 @@
+{
+  "steps": [
+    {
+      "op": "validate",
+      "raw": [
+        "x",
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "ids": [
+        "gst-libav-1.24.13"
+      ]
+    },
+    {
+      "op": "validate",
+      "raw": [
+        {
+          "target": "gstreamer-plugin-path"
+        },
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "ids": [
+        "gst-libav-1.24.13"
+      ]
+    },
+    {
+      "op": "validate",
+      "raw": [
+        {
+          "id": 5,
+          "target": "gstreamer-plugin-path"
+        },
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "ids": [
+        "gst-libav-1.24.13"
+      ]
+    },
+    {
+      "op": "validate",
+      "raw": [
+        {
+          "id": "gst-libav-1.24.13"
+        },
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "ids": [
+        "gst-libav-1.24.13"
+      ]
+    },
+    {
+      "op": "validate",
+      "raw": [
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "dll-dir"
+        },
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "ids": [
+        "gst-libav-1.24.13"
+      ]
+    },
+    {
+      "op": "validate",
+      "raw": [
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path",
+          "url": "https://evil.example/x.tar.gz"
+        },
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "ids": [
+        "gst-libav-1.24.13"
+      ]
+    },
+    {
+      "op": "validate",
+      "raw": [
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "ids": [
+        "gst-libav-1.24.13"
+      ]
+    },
+    {
+      "op": "validate",
+      "raw": [
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path",
+          "archiveSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "ids": [
+        "gst-libav-1.24.13"
+      ]
+    },
+    {
+      "op": "validate",
+      "raw": [
+        {
+          "id": "nope",
+          "target": "gstreamer-plugin-path"
+        },
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "ids": [
+        "gst-libav-1.24.13"
+      ]
+    },
+    {
+      "op": "validate",
+      "raw": [
+        {
+          "id": "__proto__",
+          "target": "gstreamer-plugin-path"
+        },
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "ids": [
+        "gst-libav-1.24.13"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "steps": [
+    {
+      "op": "profileEnv",
+      "appName": "1",
+      "runner": "gog",
+      "settings": {
+        "wineVersion": {
+          "type": "crossover"
+        },
+        "enviromentOptions": [
+          {
+            "key": "GST_PLUGIN_PATH",
+            "value": "/opt"
+          }
+        ]
+      },
+      "tier1Env": {
+        "GST_PLUGIN_PATH": "<APPFOLDER>/overlays/gst-libav-1.24.13/lib/gstreamer-1.0"
+      },
+      "processEnv": {},
+      "result": {
+        "GST_PLUGIN_PATH": "<APPFOLDER>/overlays/gst-libav-1.24.13/lib/gstreamer-1.0"
+      },
+      "ensureCalls": [
+        {
+          "id": "gst-libav-1.24.13",
+          "label": "gog 1"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "only an unexpected path",
+      "ok": false,
+      "message": "overlay archive: unexpected path: lib/c.dylib"
+    }
+  ]
+}

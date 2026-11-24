@@ -1,0 +1,10 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "prefix evil",
+      "ok": false,
+      "message": "overlay archive: ustar prefix field is not allowed"
+    }
+  ]
+}

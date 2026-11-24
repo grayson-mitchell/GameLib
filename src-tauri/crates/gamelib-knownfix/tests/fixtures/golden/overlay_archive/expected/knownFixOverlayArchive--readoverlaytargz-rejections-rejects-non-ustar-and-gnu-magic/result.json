@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "\"\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\"",
+      "ok": false,
+      "message": "overlay archive: not a POSIX ustar entry"
+    },
+    {
+      "op": "read",
+      "label": "\"ustar \"",
+      "ok": false,
+      "message": "overlay archive: not a POSIX ustar entry"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "plain text",
+      "ok": false,
+      "message": "overlay archive: gunzip failed or exceeded 1048576 bytes (<ZLIB-MESSAGE>)"
+    },
+    {
+      "op": "read",
+      "label": "empty input",
+      "ok": false,
+      "message": "overlay archive: gunzip failed or exceeded 1048576 bytes (<ZLIB-MESSAGE>)"
+    }
+  ]
+}

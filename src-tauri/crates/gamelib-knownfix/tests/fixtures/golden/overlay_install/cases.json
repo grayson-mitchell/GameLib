@@ -1,0 +1,1013 @@
+[
+  {
+    "id": "knownFixOverlayInstall--ensureoverlayinstalled-installs-fresh-then-is-idempotent",
+    "title": "ensureOverlayInstalled > installs fresh, then is idempotent",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "ok"
+      },
+      {
+        "op": "ensure",
+        "fetch": "ok"
+      },
+      {
+        "op": "verify"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlayInstall--ensureoverlayinstalled-accepts-an-extra-root-level-file-without-fetching",
+    "title": "ensureOverlayInstalled > accepts an extra root-level file without fetching",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "ok"
+      },
+      {
+        "op": "damage",
+        "kind": "extra-root-file"
+      },
+      {
+        "op": "verify"
+      },
+      {
+        "op": "ensure",
+        "fetch": "ok"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlayInstall--ensureoverlayinstalled-with-s-is-invalid-and-gets-replaced",
+    "title": "ensureOverlayInstalled > with %s > is invalid and gets replaced",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "ok"
+      },
+      {
+        "op": "damage",
+        "kind": "extra-in-plugin-subdir"
+      },
+      {
+        "op": "verify"
+      },
+      {
+        "op": "ensure",
+        "fetch": "ok"
+      },
+      {
+        "op": "verify"
+      },
+      {
+        "op": "damage",
+        "kind": "corrupted-file"
+      },
+      {
+        "op": "verify"
+      },
+      {
+        "op": "ensure",
+        "fetch": "ok"
+      },
+      {
+        "op": "verify"
+      },
+      {
+        "op": "damage",
+        "kind": "wrong-size"
+      },
+      {
+        "op": "verify"
+      },
+      {
+        "op": "ensure",
+        "fetch": "ok"
+      },
+      {
+        "op": "verify"
+      },
+      {
+        "op": "damage",
+        "kind": "symlink-in-place-of-a-file"
+      },
+      {
+        "op": "verify"
+      },
+      {
+        "op": "ensure",
+        "fetch": "ok"
+      },
+      {
+        "op": "verify"
+      },
+      {
+        "op": "damage",
+        "kind": "lib-is-a-symlink"
+      },
+      {
+        "op": "verify"
+      },
+      {
+        "op": "ensure",
+        "fetch": "ok"
+      },
+      {
+        "op": "verify"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlayInstall--ensureoverlayinstalled-refuses-a-sha-mismatch-and-a-length-mismatch",
+    "title": "ensureOverlayInstalled > refuses a sha mismatch and a length mismatch",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "ok",
+        "pins": "zero-sha"
+      },
+      {
+        "op": "ensure",
+        "fetch": "ok",
+        "pins": "size-plus-one"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlayInstall--ensureoverlayinstalled-refuses-a-hostile-archive-whose-sha-matches-the-pin",
+    "title": "ensureOverlayInstalled > refuses a hostile archive whose sha matches the pin",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "hostile-ts-shape",
+        "pins": "hostile-ts-shape"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlayInstall--ensureoverlayinstalled-fails-open-when-the-fetch-rejects",
+    "title": "ensureOverlayInstalled > fails open when the fetch rejects",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "reject"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlayInstall--ensureoverlayinstalled-times-out-a-fetch-that-never-settles",
+    "title": "ensureOverlayInstalled > times out a fetch that never settles",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "never"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlayInstall--ensureoverlayinstalled-shares-one-fetch-between-concurrent-calls",
+    "title": "ensureOverlayInstalled > shares one fetch between concurrent calls",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "ok",
+        "calls": [
+          {
+            "boot": "A"
+          },
+          {
+            "boot": "A"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlayInstall--ensureoverlayinstalled-does-not-share-a-fetch-across-two-boots-per-instance-single-flight",
+    "title": "ensureOverlayInstalled > does not share a fetch across two boots (per-instance single-flight)",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "ok",
+        "calls": [
+          {
+            "boot": "A"
+          },
+          {
+            "boot": "B"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlayInstall--real-catalogue-pins-the-10-files-and-the-archive",
+    "title": "real catalogue > pins the 10 files and the archive",
+    "steps": [
+      {
+        "op": "catalogue"
+      }
+    ]
+  },
+  {
+    "id": "outcome-success",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "ok"
+      },
+      {
+        "op": "verify"
+      }
+    ]
+  },
+  {
+    "id": "outcome-sha-mismatch-with-the-right-length",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "wrong-bytes"
+      }
+    ]
+  },
+  {
+    "id": "outcome-download-failure",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "reject"
+      }
+    ]
+  },
+  {
+    "id": "outcome-timeout-at-the-120000-ms-deadline-and-at-a-custom-one",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "never"
+      },
+      {
+        "op": "ensure",
+        "fetch": "never",
+        "timeoutMs": 50
+      }
+    ]
+  },
+  {
+    "id": "outcome-abort-through-the-registry",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "never",
+        "abort": true
+      }
+    ]
+  },
+  {
+    "id": "outcome-hostile-archive-with-a-real-dotdot-entry",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "hostile-dotdot",
+        "pins": "hostile-dotdot"
+      }
+    ]
+  },
+  {
+    "id": "outcome-invalid-overlay-id",
+    "steps": [
+      {
+        "op": "ensure",
+        "fetch": "ok",
+        "entryId": "Bad/Id"
+      },
+      {
+        "op": "ensure",
+        "fetch": "ok",
+        "entryId": "../escape"
+      },
+      {
+        "op": "ensure",
+        "fetch": "ok",
+        "entryId": ""
+      }
+    ]
+  },
+  {
+    "id": "verify-installed-overlay-reasons",
+    "steps": [
+      {
+        "op": "verify",
+        "target": "missing"
+      },
+      {
+        "op": "ensure",
+        "fetch": "ok"
+      },
+      {
+        "op": "verify"
+      },
+      {
+        "op": "damage",
+        "kind": "extra-in-plugin-subdir"
+      },
+      {
+        "op": "verify"
+      },
+      {
+        "op": "damage",
+        "kind": "lib-is-a-symlink"
+      },
+      {
+        "op": "verify"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--validateoverlayentries-undefined-is-silent",
+    "title": "validateOverlayEntries > undefined is silent",
+    "steps": [
+      {
+        "op": "validate"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--validateoverlayentries-non-array-warns",
+    "title": "validateOverlayEntries > non-array warns",
+    "steps": [
+      {
+        "op": "validate",
+        "raw": {}
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--validateoverlayentries-accepts-a-catalogue-entry",
+    "title": "validateOverlayEntries > accepts a catalogue entry",
+    "steps": [
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--validateoverlayentries-rejects-s-but-keeps-the-others",
+    "title": "validateOverlayEntries > rejects %s but keeps the others",
+    "steps": [
+      {
+        "op": "validate",
+        "raw": [
+          "x",
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ]
+      },
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "target": "gstreamer-plugin-path"
+          },
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ]
+      },
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "id": 5,
+            "target": "gstreamer-plugin-path"
+          },
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ]
+      },
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13"
+          },
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ]
+      },
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "dll-dir"
+          },
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ]
+      },
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path",
+            "url": "https://evil.example/x.tar.gz"
+          },
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ]
+      },
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ]
+      },
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path",
+            "archiveSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ]
+      },
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "id": "nope",
+            "target": "gstreamer-plugin-path"
+          },
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ]
+      },
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "id": "__proto__",
+            "target": "gstreamer-plugin-path"
+          },
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--validateoverlayentries-keeps-a-duplicate-id-once",
+    "title": "validateOverlayEntries > keeps a duplicate id once",
+    "steps": [
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          },
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--validateoverlayentries-considers-at-most-8-entries",
+    "title": "validateOverlayEntries > considers at most 8 entries",
+    "steps": [
+      {
+        "op": "validate",
+        "raw": [
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--resolveknownfixoverlayenv-is-a-no-op-on-s",
+    "title": "resolveKnownFixOverlayEnv > is a no-op on %s",
+    "steps": [
+      {
+        "op": "resolveEnv",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ],
+        "platform": "linux",
+        "wineType": "crossover",
+        "base": {},
+        "install": "dir"
+      },
+      {
+        "op": "resolveEnv",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ],
+        "platform": "win32",
+        "wineType": "crossover",
+        "base": {},
+        "install": "dir"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--resolveknownfixoverlayenv-is-a-no-op-for-winetype-s",
+    "title": "resolveKnownFixOverlayEnv > is a no-op for wineType %s",
+    "steps": [
+      {
+        "op": "resolveEnv",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ],
+        "platform": "darwin",
+        "wineType": "wine",
+        "base": {},
+        "install": "dir"
+      },
+      {
+        "op": "resolveEnv",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ],
+        "platform": "darwin",
+        "wineType": "toolkit",
+        "base": {},
+        "install": "dir"
+      },
+      {
+        "op": "resolveEnv",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ],
+        "platform": "darwin",
+        "base": {},
+        "install": "dir"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--resolveknownfixoverlayenv-emits-gst-plugin-path-on-darwin-crossover",
+    "title": "resolveKnownFixOverlayEnv > emits GST_PLUGIN_PATH on darwin + crossover",
+    "steps": [
+      {
+        "op": "resolveEnv",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ],
+        "platform": "darwin",
+        "wineType": "crossover",
+        "base": {},
+        "install": "dir"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--resolveknownfixoverlayenv-returns-when-the-install-fails-or-throws",
+    "title": "resolveKnownFixOverlayEnv > returns {} when the install fails or throws",
+    "steps": [
+      {
+        "op": "resolveEnv",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ],
+        "platform": "darwin",
+        "wineType": "crossover",
+        "base": {},
+        "install": "null"
+      },
+      {
+        "op": "resolveEnv",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ],
+        "platform": "darwin",
+        "wineType": "crossover",
+        "base": {},
+        "install": "reject"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--resolveknownfixoverlayenv-appends-to-an-existing-value-and-warns-about-gst-plugin-path-1-0",
+    "title": "resolveKnownFixOverlayEnv > appends to an existing value and warns about GST_PLUGIN_PATH_1_0",
+    "steps": [
+      {
+        "op": "resolveEnv",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ],
+        "platform": "darwin",
+        "wineType": "crossover",
+        "base": {
+          "GST_PLUGIN_PATH": "/a",
+          "GST_PLUGIN_PATH_1_0": "/b"
+        },
+        "install": "dir"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--appendpathlist-handles-empty-bases",
+    "title": "appendPathList > handles empty bases",
+    "steps": [
+      {
+        "op": "appendPathList",
+        "dir": "/d"
+      },
+      {
+        "op": "appendPathList",
+        "existing": "",
+        "dir": "/d"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--appendpathlist-appends-with-a-colon",
+    "title": "appendPathList > appends with a colon",
+    "steps": [
+      {
+        "op": "appendPathList",
+        "existing": "a:b",
+        "dir": "/d"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--appendpathlist-does-not-duplicate-s",
+    "title": "appendPathList > does not duplicate %s",
+    "steps": [
+      {
+        "op": "appendPathList",
+        "existing": "/p:/d",
+        "dir": "/d"
+      },
+      {
+        "op": "appendPathList",
+        "existing": "/p:/d/",
+        "dir": "/d"
+      },
+      {
+        "op": "appendPathList",
+        "existing": "/p:/x/../d",
+        "dir": "/d"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--appendpathlist-drops-empty-segments",
+    "title": "appendPathList > drops empty segments",
+    "steps": [
+      {
+        "op": "appendPathList",
+        "existing": ":a::b:",
+        "dir": "/d"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--knownfixprofileoverlayenv-base-precedence-tier-1-beats-enviromentoptions-beats-process-env",
+    "title": "knownFixProfileOverlayEnv base precedence > tier-1 beats enviromentOptions beats process.env",
+    "steps": [
+      {
+        "op": "profileEnv",
+        "appName": "1",
+        "runner": "gog",
+        "settings": {
+          "wineVersion": {
+            "type": "crossover"
+          },
+          "enviromentOptions": [
+            {
+              "key": "GST_PLUGIN_PATH",
+              "value": "/opt"
+            }
+          ]
+        },
+        "tier1Env": {
+          "GST_PLUGIN_PATH": "/t1"
+        },
+        "processEnv": {
+          "GST_PLUGIN_PATH": "/proc"
+        },
+        "install": "dir",
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/1-gog.profile.json",
+            "text": "{\"overlays\":[{\"id\":\"gst-libav-1.24.13\",\"target\":\"gstreamer-plugin-path\"}]}"
+          }
+        ]
+      },
+      {
+        "op": "profileEnv",
+        "appName": "1",
+        "runner": "gog",
+        "settings": {
+          "wineVersion": {
+            "type": "crossover"
+          },
+          "enviromentOptions": [
+            {
+              "key": "GST_PLUGIN_PATH",
+              "value": "/opt"
+            }
+          ]
+        },
+        "tier1Env": {},
+        "processEnv": {
+          "GST_PLUGIN_PATH": "/proc"
+        },
+        "install": "dir"
+      },
+      {
+        "op": "profileEnv",
+        "appName": "1",
+        "runner": "gog",
+        "settings": {
+          "wineVersion": {
+            "type": "crossover"
+          },
+          "enviromentOptions": []
+        },
+        "tier1Env": {},
+        "processEnv": {
+          "GST_PLUGIN_PATH": "/proc"
+        },
+        "install": "dir"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--knownfixprofileoverlayenv-base-precedence-does-not-double-the-dir-when-tier-1-already-holds-it",
+    "title": "knownFixProfileOverlayEnv base precedence > does not double the dir when tier-1 already holds it",
+    "steps": [
+      {
+        "op": "profileEnv",
+        "appName": "1",
+        "runner": "gog",
+        "settings": {
+          "wineVersion": {
+            "type": "crossover"
+          },
+          "enviromentOptions": [
+            {
+              "key": "GST_PLUGIN_PATH",
+              "value": "/opt"
+            }
+          ]
+        },
+        "tier1Env": {
+          "GST_PLUGIN_PATH": "<APPFOLDER>/overlays/gst-libav-1.24.13/lib/gstreamer-1.0"
+        },
+        "processEnv": {},
+        "install": "dir",
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/1-gog.profile.json",
+            "text": "{\"overlays\":[{\"id\":\"gst-libav-1.24.13\",\"target\":\"gstreamer-plugin-path\"}]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--env-helpers-lastenvoption-last-match-wins",
+    "title": "env helpers > lastEnvOption: last match wins",
+    "steps": [
+      {
+        "op": "lastEnvOption",
+        "options": [
+          {
+            "key": "A",
+            "value": "1"
+          },
+          {
+            "key": "A",
+            "value": "2"
+          }
+        ],
+        "key": "A"
+      },
+      {
+        "op": "lastEnvOption",
+        "key": "A"
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--env-helpers-formatknownfixenvline-logknownfixenv",
+    "title": "env helpers > formatKnownFixEnvLine / logKnownFixEnv",
+    "steps": [
+      {
+        "op": "formatLine",
+        "entries": []
+      },
+      {
+        "op": "formatLine",
+        "entries": [
+          {
+            "key": "A",
+            "value": "1",
+            "source": "tier-1"
+          },
+          {
+            "key": "B",
+            "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "source": "overlay"
+          }
+        ]
+      },
+      {
+        "op": "logLine",
+        "label": "l",
+        "entries": []
+      },
+      {
+        "op": "logLine",
+        "label": "l",
+        "entries": [
+          {
+            "key": "A",
+            "value": "1",
+            "source": "overlay"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--env-helpers-withknownfixenv-appends-without-mutating",
+    "title": "env helpers > withKnownFixEnv appends without mutating",
+    "steps": [
+      {
+        "op": "withEnv",
+        "settings": {
+          "enviromentOptions": [
+            {
+              "key": "A",
+              "value": "1"
+            }
+          ]
+        },
+        "env": {}
+      },
+      {
+        "op": "withEnv",
+        "settings": {
+          "enviromentOptions": [
+            {
+              "key": "A",
+              "value": "1"
+            }
+          ]
+        },
+        "env": {
+          "B": "2"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--tier-boundaries-the-remote-layer-drops-overlays",
+    "title": "tier boundaries > the remote layer drops overlays",
+    "steps": [
+      {
+        "op": "filterTier1",
+        "appName": "284100",
+        "layer": "remote",
+        "parsed": {
+          "title": "t",
+          "overlays": [
+            {
+              "id": "gst-libav-1.24.13",
+              "target": "gstreamer-plugin-path"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixOverlays--tier-boundaries-the-bundled-284100-profile-validates-cleanly",
+    "title": "tier boundaries > the bundled 284100 profile validates cleanly",
+    "steps": [
+      {
+        "op": "validate",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "env-appends-the-plugin-dir-once-when-already-in-the-base",
+    "steps": [
+      {
+        "op": "resolveEnv",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ],
+        "platform": "darwin",
+        "wineType": "crossover",
+        "base": {
+          "GST_PLUGIN_PATH": "<APPFOLDER>/overlays/gst-libav-1.24.13/lib/gstreamer-1.0"
+        },
+        "install": "dir"
+      },
+      {
+        "op": "resolveEnv",
+        "raw": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ],
+        "platform": "darwin",
+        "wineType": "crossover",
+        "base": {
+          "GST_PLUGIN_PATH": "/a:<APPFOLDER>/overlays/gst-libav-1.24.13/lib/gstreamer-1.0/"
+        },
+        "install": "dir"
+      }
+    ]
+  }
+]

@@ -1,0 +1,61 @@
+{
+  "steps": [
+    {
+      "op": "verify",
+      "target": "missing",
+      "ok": false,
+      "reason": "ENOENT: no such file or directory, lstat '<APPFOLDER>/overlays/test-overlay-1'"
+    },
+    {
+      "op": "ensure",
+      "entryId": "test-overlay-1",
+      "pins": "good",
+      "fetch": "ok",
+      "timeoutMs": null,
+      "calls": [
+        {
+          "boot": "A",
+          "dir": "<APPFOLDER>/overlays/test-overlay-1"
+        }
+      ],
+      "fetches": [
+        {
+          "boot": "A",
+          "url": "https://github.com/o/r/releases/download/t/a.tar.gz",
+          "maxBytesMinusPinnedArchive": 0
+        }
+      ],
+      "signalsAbortedAfterwards": [
+        false
+      ],
+      "registryStillHolds": false,
+      "leftovers": [],
+      "escapedFileExists": false
+    },
+    {
+      "op": "verify",
+      "target": "installed",
+      "ok": true
+    },
+    {
+      "op": "damage",
+      "kind": "extra-in-plugin-subdir"
+    },
+    {
+      "op": "verify",
+      "target": "installed",
+      "ok": false,
+      "reason": "lib/gstreamer-1.0 holds unexpected files"
+    },
+    {
+      "op": "damage",
+      "kind": "lib-is-a-symlink"
+    },
+    {
+      "op": "verify",
+      "target": "installed",
+      "ok": false,
+      "reason": "<APPFOLDER>/overlays/test-overlay-1/lib is not a real directory"
+    }
+  ]
+}

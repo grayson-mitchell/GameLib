@@ -1,0 +1,22 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "unexpected",
+      "ok": false,
+      "message": "overlay archive: unexpected path: lib/c.dylib"
+    },
+    {
+      "op": "read",
+      "label": "duplicate",
+      "ok": false,
+      "message": "overlay archive: duplicate path: lib/a.dylib"
+    },
+    {
+      "op": "read",
+      "label": "missing",
+      "ok": false,
+      "message": "overlay archive: missing expected path: lib/b.dylib"
+    }
+  ]
+}

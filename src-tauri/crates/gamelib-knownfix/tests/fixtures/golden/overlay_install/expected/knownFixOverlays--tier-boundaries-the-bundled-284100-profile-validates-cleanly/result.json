@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "op": "validate",
+      "raw": [
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "ids": [
+        "gst-libav-1.24.13"
+      ]
+    }
+  ]
+}

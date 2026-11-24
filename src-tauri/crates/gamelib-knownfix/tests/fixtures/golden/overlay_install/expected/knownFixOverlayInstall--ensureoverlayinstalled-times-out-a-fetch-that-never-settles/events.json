@@ -1,0 +1,8 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay test-overlay-1 not installed (download aborted or timed out after 120000 ms); launching without it"
+  }
+]

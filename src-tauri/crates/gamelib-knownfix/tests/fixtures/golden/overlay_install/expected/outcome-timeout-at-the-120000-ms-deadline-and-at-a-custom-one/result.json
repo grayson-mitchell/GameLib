@@ -1,0 +1,56 @@
+{
+  "steps": [
+    {
+      "op": "ensure",
+      "entryId": "test-overlay-1",
+      "pins": "good",
+      "fetch": "never",
+      "timeoutMs": null,
+      "calls": [
+        {
+          "boot": "A",
+          "dir": null
+        }
+      ],
+      "fetches": [
+        {
+          "boot": "A",
+          "url": "https://github.com/o/r/releases/download/t/a.tar.gz",
+          "maxBytesMinusPinnedArchive": 0
+        }
+      ],
+      "signalsAbortedAfterwards": [
+        true
+      ],
+      "registryStillHolds": false,
+      "leftovers": [],
+      "escapedFileExists": false
+    },
+    {
+      "op": "ensure",
+      "entryId": "test-overlay-1",
+      "pins": "good",
+      "fetch": "never",
+      "timeoutMs": 50,
+      "calls": [
+        {
+          "boot": "A",
+          "dir": null
+        }
+      ],
+      "fetches": [
+        {
+          "boot": "A",
+          "url": "https://github.com/o/r/releases/download/t/a.tar.gz",
+          "maxBytesMinusPinnedArchive": 0
+        }
+      ],
+      "signalsAbortedAfterwards": [
+        true
+      ],
+      "registryStillHolds": false,
+      "leftovers": [],
+      "escapedFileExists": false
+    }
+  ]
+}

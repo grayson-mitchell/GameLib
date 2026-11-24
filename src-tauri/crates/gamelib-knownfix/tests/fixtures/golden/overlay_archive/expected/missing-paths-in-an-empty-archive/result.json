@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "zero blocks only, two expected",
+      "ok": false,
+      "message": "overlay archive: missing expected path: lib/a.dylib"
+    },
+    {
+      "op": "read",
+      "label": "zero blocks only, none expected",
+      "ok": true,
+      "files": []
+    }
+  ]
+}

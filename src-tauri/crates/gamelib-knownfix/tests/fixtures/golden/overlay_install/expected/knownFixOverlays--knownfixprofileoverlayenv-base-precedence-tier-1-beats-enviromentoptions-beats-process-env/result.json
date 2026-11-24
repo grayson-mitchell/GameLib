@@ -1,0 +1,88 @@
+{
+  "steps": [
+    {
+      "op": "profileEnv",
+      "appName": "1",
+      "runner": "gog",
+      "settings": {
+        "wineVersion": {
+          "type": "crossover"
+        },
+        "enviromentOptions": [
+          {
+            "key": "GST_PLUGIN_PATH",
+            "value": "/opt"
+          }
+        ]
+      },
+      "tier1Env": {
+        "GST_PLUGIN_PATH": "/t1"
+      },
+      "processEnv": {
+        "GST_PLUGIN_PATH": "/proc"
+      },
+      "result": {
+        "GST_PLUGIN_PATH": "/t1:<APPFOLDER>/overlays/gst-libav-1.24.13/lib/gstreamer-1.0"
+      },
+      "ensureCalls": [
+        {
+          "id": "gst-libav-1.24.13",
+          "label": "gog 1"
+        }
+      ]
+    },
+    {
+      "op": "profileEnv",
+      "appName": "1",
+      "runner": "gog",
+      "settings": {
+        "wineVersion": {
+          "type": "crossover"
+        },
+        "enviromentOptions": [
+          {
+            "key": "GST_PLUGIN_PATH",
+            "value": "/opt"
+          }
+        ]
+      },
+      "tier1Env": {},
+      "processEnv": {
+        "GST_PLUGIN_PATH": "/proc"
+      },
+      "result": {
+        "GST_PLUGIN_PATH": "/opt:<APPFOLDER>/overlays/gst-libav-1.24.13/lib/gstreamer-1.0"
+      },
+      "ensureCalls": [
+        {
+          "id": "gst-libav-1.24.13",
+          "label": "gog 1"
+        }
+      ]
+    },
+    {
+      "op": "profileEnv",
+      "appName": "1",
+      "runner": "gog",
+      "settings": {
+        "wineVersion": {
+          "type": "crossover"
+        },
+        "enviromentOptions": []
+      },
+      "tier1Env": {},
+      "processEnv": {
+        "GST_PLUGIN_PATH": "/proc"
+      },
+      "result": {
+        "GST_PLUGIN_PATH": "/proc:<APPFOLDER>/overlays/gst-libav-1.24.13/lib/gstreamer-1.0"
+      },
+      "ensureCalls": [
+        {
+          "id": "gst-libav-1.24.13",
+          "label": "gog 1"
+        }
+      ]
+    }
+  ]
+}

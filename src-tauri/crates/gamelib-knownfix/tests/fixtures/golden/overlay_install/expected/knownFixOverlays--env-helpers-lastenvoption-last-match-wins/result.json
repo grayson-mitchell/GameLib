@@ -1,0 +1,25 @@
+{
+  "steps": [
+    {
+      "op": "lastEnvOption",
+      "options": [
+        {
+          "key": "A",
+          "value": "1"
+        },
+        {
+          "key": "A",
+          "value": "2"
+        }
+      ],
+      "key": "A",
+      "result": "2"
+    },
+    {
+      "op": "lastEnvOption",
+      "options": null,
+      "key": "A",
+      "result": null
+    }
+  ]
+}

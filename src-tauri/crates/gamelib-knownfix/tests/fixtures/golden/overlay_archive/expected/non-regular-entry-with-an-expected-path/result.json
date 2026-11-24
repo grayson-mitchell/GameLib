@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "symlink named like an expected file",
+      "ok": false,
+      "message": "overlay archive: unsupported entry type '2'"
+    },
+    {
+      "op": "read",
+      "label": "directory named like an expected file",
+      "ok": false,
+      "message": "overlay archive: unsupported entry type '5'"
+    }
+  ]
+}

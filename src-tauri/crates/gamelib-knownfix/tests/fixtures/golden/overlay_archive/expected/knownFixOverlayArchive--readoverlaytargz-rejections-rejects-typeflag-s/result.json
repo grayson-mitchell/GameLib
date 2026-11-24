@@ -1,0 +1,46 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "hardlink",
+      "ok": false,
+      "message": "overlay archive: unsupported entry type '1'"
+    },
+    {
+      "op": "read",
+      "label": "symlink",
+      "ok": false,
+      "message": "overlay archive: unsupported entry type '2'"
+    },
+    {
+      "op": "read",
+      "label": "directory",
+      "ok": false,
+      "message": "overlay archive: unsupported entry type '5'"
+    },
+    {
+      "op": "read",
+      "label": "pax x",
+      "ok": false,
+      "message": "overlay archive: unsupported entry type 'x'"
+    },
+    {
+      "op": "read",
+      "label": "pax g",
+      "ok": false,
+      "message": "overlay archive: unsupported entry type 'g'"
+    },
+    {
+      "op": "read",
+      "label": "GNU long name",
+      "ok": false,
+      "message": "overlay archive: unsupported entry type 'L'"
+    },
+    {
+      "op": "read",
+      "label": "GNU long link",
+      "ok": false,
+      "message": "overlay archive: unsupported entry type 'K'"
+    }
+  ]
+}

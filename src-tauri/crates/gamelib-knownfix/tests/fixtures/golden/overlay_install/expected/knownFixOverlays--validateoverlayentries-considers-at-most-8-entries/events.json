@@ -1,0 +1,56 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: more than 8 overlays; only the first 8 are considered"
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (not an object): \"x\""
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (not an object): \"x\""
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (not an object): \"x\""
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (not an object): \"x\""
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (not an object): \"x\""
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (not an object): \"x\""
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (not an object): \"x\""
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (not an object): \"x\""
+  }
+]

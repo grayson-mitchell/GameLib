@@ -1,0 +1,24 @@
+{
+  "steps": [
+    {
+      "op": "build",
+      "label": "empty, 512 bytes, 513 bytes, 1300 bytes",
+      "error": null,
+      "size": 164,
+      "sha256": "2cf9c0566cdec1e4928da482266efe2800397f38abc530b5518ea1f7c4013f4c",
+      "tarSize": 10240,
+      "tarSha256": "01506577a88e44ca8906b036aafbb50c03e474548ed99dfd746854516581289d",
+      "base64": "H4sIAAAAAAACA+3WQQ7CIBCFYY7iBZowhLbnsaYLU2obCwtvLxrTaOtWSOT/NkPYsHh5ZDo3nQb1WzpqrH3OaDvl7fy6b9pa1EGrBMLij9f4pCrTgKJ1j/5XswtLNV36XP2Xz/6LrsXQ/xQcyqZQsn6c/S3v/vfl3Gqx/P8pjMH5c978jTV2l78h/zT5AwBWbIUAAAAAAAAA/sEdTL7ppgAoAAA="
+    },
+    {
+      "op": "build",
+      "label": "no files",
+      "error": null,
+      "size": 45,
+      "sha256": "b1dd88cdd8bf09af2539d0b345e647129d8fd55c92b6d824b6ecc53efd531028",
+      "tarSize": 10240,
+      "tarSha256": "84ff92691f909a05b224e1c56abb4864f01b4f8e3c854e4bb4c7baf1d3f6d652",
+      "base64": "H4sIAAAAAAACA+3BAQ0AAADCoPdPbQ43oAAAAAAAAAAAAIA3A5reHScAKAAA"
+    }
+  ]
+}

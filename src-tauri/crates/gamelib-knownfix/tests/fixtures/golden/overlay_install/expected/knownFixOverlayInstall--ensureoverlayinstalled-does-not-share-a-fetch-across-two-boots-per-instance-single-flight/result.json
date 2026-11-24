@@ -1,0 +1,40 @@
+{
+  "steps": [
+    {
+      "op": "ensure",
+      "entryId": "test-overlay-1",
+      "pins": "good",
+      "fetch": "ok",
+      "timeoutMs": null,
+      "calls": [
+        {
+          "boot": "A",
+          "dir": "<APPFOLDER>/overlays/test-overlay-1"
+        },
+        {
+          "boot": "B",
+          "dir": "<HOME>/overlays-b/test-overlay-1"
+        }
+      ],
+      "fetches": [
+        {
+          "boot": "A",
+          "url": "https://github.com/o/r/releases/download/t/a.tar.gz",
+          "maxBytesMinusPinnedArchive": 0
+        },
+        {
+          "boot": "B",
+          "url": "https://github.com/o/r/releases/download/t/a.tar.gz",
+          "maxBytesMinusPinnedArchive": 0
+        }
+      ],
+      "signalsAbortedAfterwards": [
+        false,
+        false
+      ],
+      "registryStillHolds": false,
+      "leftovers": [],
+      "escapedFileExists": false
+    }
+  ]
+}

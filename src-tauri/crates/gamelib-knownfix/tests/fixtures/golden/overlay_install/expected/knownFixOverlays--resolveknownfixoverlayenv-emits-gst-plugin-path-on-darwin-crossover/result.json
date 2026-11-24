@@ -1,0 +1,30 @@
+{
+  "steps": [
+    {
+      "op": "resolveEnv",
+      "raw": [
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "platform": "darwin",
+      "wineType": "crossover",
+      "base": {},
+      "install": "dir",
+      "result": {
+        "GST_PLUGIN_PATH": "<APPFOLDER>/overlays/gst-libav-1.24.13/lib/gstreamer-1.0"
+      },
+      "baseAsked": {
+        "GST_PLUGIN_PATH": null,
+        "GST_PLUGIN_PATH_1_0": null
+      },
+      "ensureCalls": [
+        {
+          "id": "gst-libav-1.24.13",
+          "label": "test"
+        }
+      ]
+    }
+  ]
+}

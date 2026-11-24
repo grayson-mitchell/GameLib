@@ -1,0 +1,39 @@
+{
+  "steps": [
+    {
+      "op": "build",
+      "label": "/abs",
+      "error": "overlay archive: absolute path: /abs"
+    },
+    {
+      "op": "build",
+      "label": "a/../b",
+      "error": "overlay archive: \"..\" path segment: a/../b"
+    },
+    {
+      "op": "build",
+      "label": "./a",
+      "error": "overlay archive: \".\" path segment: ./a"
+    },
+    {
+      "op": "build",
+      "label": "a//b",
+      "error": "overlay archive: empty path segment: a//b"
+    },
+    {
+      "op": "build",
+      "label": "a\\b",
+      "error": "overlay archive: backslash in path: a\\b"
+    },
+    {
+      "op": "build",
+      "label": "",
+      "error": "overlay archive: empty path: "
+    },
+    {
+      "op": "build",
+      "label": "duplicate",
+      "error": "overlay archive: duplicate path: x"
+    }
+  ]
+}

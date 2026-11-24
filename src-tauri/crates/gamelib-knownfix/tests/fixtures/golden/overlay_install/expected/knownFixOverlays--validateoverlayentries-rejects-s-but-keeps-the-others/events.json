@@ -1,0 +1,62 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (not an object): \"x\""
+  },
+  {
+    "step": 1,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (unknown overlay id): {\"target\":\"gstreamer-plugin-path\"}"
+  },
+  {
+    "step": 2,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (unknown overlay id): {\"id\":5,\"target\":\"gstreamer-plugin-path\"}"
+  },
+  {
+    "step": 3,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (target does not match the catalogue): {\"id\":\"gst-libav-1.24.13\"}"
+  },
+  {
+    "step": 4,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (target does not match the catalogue): {\"id\":\"gst-libav-1.24.13\",\"target\":\"dll-dir\"}"
+  },
+  {
+    "step": 5,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (unexpected key url): {\"id\":\"gst-libav-1.24.13\",\"target\":\"gstreamer-plugin-path\",\"url\":\"https://evil.example/x.tar.gz\"}"
+  },
+  {
+    "step": 6,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (unexpected key sha256): {\"id\":\"gst-libav-1.24.13\",\"target\":\"gstreamer-plugin-path\",\"sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+  },
+  {
+    "step": 7,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (unexpected key archiveSha256): {\"id\":\"gst-libav-1.24.13\",\"target\":\"gstreamer-plugin-path\",\"archiveSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+  },
+  {
+    "step": 8,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (unknown overlay id): {\"id\":\"nope\",\"target\":\"gstreamer-plugin-path\"}"
+  },
+  {
+    "step": 9,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay entry rejected (unknown overlay id): {\"id\":\"__proto__\",\"target\":\"gstreamer-plugin-path\"}"
+  }
+]

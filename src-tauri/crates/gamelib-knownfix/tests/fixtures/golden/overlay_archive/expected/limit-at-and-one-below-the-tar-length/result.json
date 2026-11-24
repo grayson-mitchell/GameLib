@@ -1,0 +1,27 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "limit equals the tar length",
+      "ok": true,
+      "files": [
+        {
+          "path": "lib/a.dylib",
+          "size": 5,
+          "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+        },
+        {
+          "path": "lib/b.dylib",
+          "size": 7,
+          "sha256": "42a19f77459c45b0218f7d21a485a8a41e3bcb4e80e6e570033c49e2fb16446a"
+        }
+      ]
+    },
+    {
+      "op": "read",
+      "label": "limit one below the tar length",
+      "ok": false,
+      "message": "overlay archive: gunzip failed or exceeded 3071 bytes (<ZLIB-MESSAGE>)"
+    }
+  ]
+}

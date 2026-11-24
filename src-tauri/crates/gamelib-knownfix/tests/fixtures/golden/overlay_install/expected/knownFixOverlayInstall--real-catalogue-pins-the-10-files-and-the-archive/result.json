@@ -1,0 +1,29 @@
+{
+  "steps": [
+    {
+      "op": "catalogue",
+      "paths": [
+        "lib/gstreamer-1.0/libgstlibav.dylib",
+        "lib/libavcodec.60.dylib",
+        "lib/libavfilter.9.dylib",
+        "lib/libavformat.60.dylib",
+        "lib/libavutil.58.dylib",
+        "lib/libbz2.1.dylib",
+        "lib/libpostproc.57.dylib",
+        "lib/libswresample.4.dylib",
+        "lib/libswscale.7.dylib",
+        "lib/libz.1.dylib"
+      ],
+      "everyFileShaIs64Hex": true,
+      "totalFileBytes": 20190752,
+      "archiveSha256": "57e5f74b66116d5074771cfc18c112a5a8b7e8b76a71b0897496e2dedbc7cced",
+      "archiveSize": 8279592,
+      "url": "https://github.com/grayson-mitchell/GameLib/releases/download/overlay-gst-libav-1.24.13-x86_64/gst-libav-1.24.13-macos-x86_64.tar.gz",
+      "pluginSubdir": "lib/gstreamer-1.0",
+      "filesInPluginSubdir": 1,
+      "tableHoldsThisEntry": true,
+      "protoLookup": null,
+      "constructorLookup": null
+    }
+  ]
+}

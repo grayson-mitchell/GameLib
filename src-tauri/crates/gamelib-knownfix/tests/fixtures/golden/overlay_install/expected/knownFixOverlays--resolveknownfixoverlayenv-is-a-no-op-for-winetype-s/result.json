@@ -1,0 +1,52 @@
+{
+  "steps": [
+    {
+      "op": "resolveEnv",
+      "raw": [
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "platform": "darwin",
+      "wineType": "wine",
+      "base": {},
+      "install": "dir",
+      "result": {},
+      "baseAsked": {},
+      "ensureCalls": []
+    },
+    {
+      "op": "resolveEnv",
+      "raw": [
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "platform": "darwin",
+      "wineType": "toolkit",
+      "base": {},
+      "install": "dir",
+      "result": {},
+      "baseAsked": {},
+      "ensureCalls": []
+    },
+    {
+      "op": "resolveEnv",
+      "raw": [
+        {
+          "id": "gst-libav-1.24.13",
+          "target": "gstreamer-plugin-path"
+        }
+      ],
+      "platform": "darwin",
+      "wineType": null,
+      "base": {},
+      "install": "dir",
+      "result": {},
+      "baseAsked": {},
+      "ensureCalls": []
+    }
+  ]
+}

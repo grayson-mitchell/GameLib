@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "op": "appendPathList",
+      "existing": null,
+      "dir": "/d",
+      "result": "/d"
+    },
+    {
+      "op": "appendPathList",
+      "existing": "",
+      "dir": "/d",
+      "result": "/d"
+    }
+  ]
+}

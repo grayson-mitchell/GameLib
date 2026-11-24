@@ -1,0 +1,14 @@
+{
+  "steps": [
+    {
+      "op": "build",
+      "label": "b, a/b, a.c and A",
+      "error": null,
+      "size": 136,
+      "sha256": "5ad5318a0f1b8fffb094d590197730cce0d4d35ab4af5fd1cfe74067ffb53736",
+      "tarSize": 10240,
+      "tarSha256": "a32f696f9e87c94c4e9be4f28c1f571c1fc9bdab24dd48a6164dba0ba21fbc98",
+      "base64": "H4sIAAAAAAACA+3WTQqAIBBA4TlKJyjNqHVHUW/Qz/2bWoXLIInmfZsJNwrDg2Z5n1PjMFxTlVP52/d5ProwSeMqvE32dYuLXik2zQLLYps/0H9f9h96T/9V9p9pwHT/XaJ/y/0nGrCsxvof/P97HfT/k/0DAAAAAAAAAACgngM8ljpaACgAAA=="
+    }
+  ]
+}

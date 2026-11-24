@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "dotdot first",
+      "ok": false,
+      "message": "overlay archive: \"..\" path segment: ../x"
+    },
+    {
+      "op": "read",
+      "label": "dotdot in the middle of an expected path",
+      "ok": false,
+      "message": "overlay archive: \"..\" path segment: lib/../lib/a.dylib"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+[
+  {
+    "step": 1,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay env failed: Error: boom; launching without it"
+  }
+]

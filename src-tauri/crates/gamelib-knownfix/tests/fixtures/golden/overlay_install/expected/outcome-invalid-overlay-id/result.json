@@ -1,0 +1,58 @@
+{
+  "steps": [
+    {
+      "op": "ensure",
+      "entryId": "Bad/Id",
+      "pins": "good",
+      "fetch": "ok",
+      "timeoutMs": null,
+      "calls": [
+        {
+          "boot": "A",
+          "dir": null
+        }
+      ],
+      "fetches": [],
+      "signalsAbortedAfterwards": [],
+      "registryStillHolds": false,
+      "leftovers": [],
+      "escapedFileExists": false
+    },
+    {
+      "op": "ensure",
+      "entryId": "../escape",
+      "pins": "good",
+      "fetch": "ok",
+      "timeoutMs": null,
+      "calls": [
+        {
+          "boot": "A",
+          "dir": null
+        }
+      ],
+      "fetches": [],
+      "signalsAbortedAfterwards": [],
+      "registryStillHolds": false,
+      "leftovers": [],
+      "escapedFileExists": false
+    },
+    {
+      "op": "ensure",
+      "entryId": "",
+      "pins": "good",
+      "fetch": "ok",
+      "timeoutMs": null,
+      "calls": [
+        {
+          "boot": "A",
+          "dir": null
+        }
+      ],
+      "fetches": [],
+      "signalsAbortedAfterwards": [],
+      "registryStillHolds": false,
+      "leftovers": [],
+      "escapedFileExists": false
+    }
+  ]
+}

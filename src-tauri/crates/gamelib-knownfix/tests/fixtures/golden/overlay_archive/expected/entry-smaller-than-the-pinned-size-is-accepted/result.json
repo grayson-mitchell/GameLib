@@ -1,0 +1,38 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "a is 3 bytes, pinned 5",
+      "ok": true,
+      "files": [
+        {
+          "path": "lib/a.dylib",
+          "size": 3,
+          "sha256": "d6a81f224bbf2f7c22baddbd5d40730eb20cfb0b3d74e10cab61788214caceb1"
+        },
+        {
+          "path": "lib/b.dylib",
+          "size": 7,
+          "sha256": "42a19f77459c45b0218f7d21a485a8a41e3bcb4e80e6e570033c49e2fb16446a"
+        }
+      ]
+    },
+    {
+      "op": "read",
+      "label": "a is empty, pinned 5",
+      "ok": true,
+      "files": [
+        {
+          "path": "lib/a.dylib",
+          "size": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "lib/b.dylib",
+          "size": 7,
+          "sha256": "42a19f77459c45b0218f7d21a485a8a41e3bcb4e80e6e570033c49e2fb16446a"
+        }
+      ]
+    }
+  ]
+}

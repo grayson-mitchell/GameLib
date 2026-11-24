@@ -1,0 +1,27 @@
+{
+  "steps": [
+    {
+      "op": "buildHeader",
+      "gzipMtime": 0,
+      "gzipOsByte": 3,
+      "tarLengthModulo10240": 0,
+      "tarSize": 10240,
+      "tarSha256": "0354cc50adaa660fb4e8ec29ff8cd7bc2fb0da14d6b91a2dc150dcb7bb2d1b65",
+      "firstEntry": {
+        "name": "lib/a.dylib",
+        "mode": "0000644",
+        "uid": "0000000",
+        "gid": "0000000",
+        "size": "00000000005",
+        "mtime": "00000000000",
+        "checksum": "007753\u0000 ",
+        "typeflag": "0",
+        "linkname": "",
+        "magic": "ustar\u0000",
+        "version": "00",
+        "unameAndGnameAreZero": true,
+        "prefixIsZero": true
+      }
+    }
+  ]
+}

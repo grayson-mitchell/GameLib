@@ -1,0 +1,8 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: overlay test-overlay-1 not installed (archive sha256 does not match the pin); launching without it"
+  }
+]

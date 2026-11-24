@@ -1,0 +1,39 @@
+{
+  "steps": [
+    {
+      "op": "build",
+      "label": "99 byte path",
+      "error": null,
+      "size": 98,
+      "sha256": "ab00b1a938728abb46480cf886303062bce177b9cdfc47ed2cb08f47258aecb4",
+      "tarSize": 10240,
+      "tarSha256": "8f587d0dae04a92368f51eff956ac2506dc40e1ba6f1d92a454f1b2dc49dc5fa",
+      "base64": "H4sIAAAAAAACA+3NPQqDQBQE4HcUj7CQXe+zhZBCCPhzfx9WIb2C5PuaGaaZ3i8XJY21npl+M7WvnvurtNpiKHGDfd36kvfxn97TPH8CAAAAAAAAAACApzkAlnck/gAoAAA="
+    },
+    {
+      "op": "build",
+      "label": "100 byte path",
+      "error": "overlay archive: path too long: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "op": "build",
+      "label": "non-ASCII",
+      "error": "overlay archive: non-ASCII path: lib/é"
+    },
+    {
+      "op": "build",
+      "label": "tab",
+      "error": "overlay archive: non-ASCII path: lib/a\tb"
+    },
+    {
+      "op": "build",
+      "label": "dot segment alone",
+      "error": "overlay archive: \".\" path segment: ."
+    },
+    {
+      "op": "build",
+      "label": "trailing slash",
+      "error": "overlay archive: empty path segment: lib/"
+    }
+  ]
+}

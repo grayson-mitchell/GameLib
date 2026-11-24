@@ -1,0 +1,10 @@
+{
+  "steps": [
+    {
+      "op": "buildPair",
+      "identical": true,
+      "size": 127,
+      "sha256": "84024d373a978ab61a6fa18c767222f40090fa83a55644118f1f9c60479f7a4d"
+    }
+  ]
+}

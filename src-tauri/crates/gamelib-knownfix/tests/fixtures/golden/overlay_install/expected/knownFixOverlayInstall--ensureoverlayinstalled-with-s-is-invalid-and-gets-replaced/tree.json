@@ -1,0 +1,72 @@
+[
+  {
+    "path": ".config",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/overlays",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/overlays/lib-moved",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/overlays/lib-moved/gstreamer-1.0",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/overlays/lib-moved/gstreamer-1.0/libplug.dylib",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "0daf0c9ca37fec6e1d5a340073fb43a19c89c50c02827c9991295f89987c7c90"
+  },
+  {
+    "path": ".config/GameLib/overlays/lib-moved/libdep.1.dylib",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "ae41cf82309521b9e587f2a73f60d94b4afa3125c4c690dc22546befc52b1059"
+  },
+  {
+    "path": ".config/GameLib/overlays/real",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "ae41cf82309521b9e587f2a73f60d94b4afa3125c4c690dc22546befc52b1059"
+  },
+  {
+    "path": ".config/GameLib/overlays/test-overlay-1",
+    "kind": "dir",
+    "mode": "0700"
+  },
+  {
+    "path": ".config/GameLib/overlays/test-overlay-1/lib",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/overlays/test-overlay-1/lib/gstreamer-1.0",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": ".config/GameLib/overlays/test-overlay-1/lib/gstreamer-1.0/libplug.dylib",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "0daf0c9ca37fec6e1d5a340073fb43a19c89c50c02827c9991295f89987c7c90"
+  },
+  {
+    "path": ".config/GameLib/overlays/test-overlay-1/lib/libdep.1.dylib",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "ae41cf82309521b9e587f2a73f60d94b4afa3125c4c690dc22546befc52b1059"
+  }
+]

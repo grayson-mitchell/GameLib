@@ -1,0 +1,34 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "absolute path",
+      "ok": false,
+      "message": "overlay archive: absolute path: /etc/x"
+    },
+    {
+      "op": "read",
+      "label": "dotdot segment",
+      "ok": false,
+      "message": "overlay archive: \"..\" path segment: lib/../x"
+    },
+    {
+      "op": "read",
+      "label": "dot segment",
+      "ok": false,
+      "message": "overlay archive: \".\" path segment: lib/./a.dylib"
+    },
+    {
+      "op": "read",
+      "label": "empty segment",
+      "ok": false,
+      "message": "overlay archive: empty path segment: lib//a.dylib"
+    },
+    {
+      "op": "read",
+      "label": "backslash",
+      "ok": false,
+      "message": "overlay archive: backslash in path: lib\\a.dylib"
+    }
+  ]
+}

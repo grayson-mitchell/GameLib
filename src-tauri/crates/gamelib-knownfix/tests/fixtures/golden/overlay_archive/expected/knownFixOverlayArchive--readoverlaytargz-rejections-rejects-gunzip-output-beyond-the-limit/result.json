@@ -1,0 +1,10 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "limit 600",
+      "ok": false,
+      "message": "overlay archive: gunzip failed or exceeded 600 bytes (<ZLIB-MESSAGE>)"
+    }
+  ]
+}

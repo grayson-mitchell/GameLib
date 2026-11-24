@@ -1,0 +1,22 @@
+{
+  "steps": [
+    {
+      "op": "filterTier1",
+      "appName": "284100",
+      "layer": "remote",
+      "parsed": {
+        "title": "t",
+        "overlays": [
+          {
+            "id": "gst-libav-1.24.13",
+            "target": "gstreamer-plugin-path"
+          }
+        ]
+      },
+      "result": {
+        "title": "t"
+      },
+      "hasOverlays": false
+    }
+  ]
+}

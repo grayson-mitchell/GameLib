@@ -1,0 +1,8 @@
+[
+  {
+    "step": 1,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "test: overlay test-overlay-1 downloaded and installed"
+  }
+]

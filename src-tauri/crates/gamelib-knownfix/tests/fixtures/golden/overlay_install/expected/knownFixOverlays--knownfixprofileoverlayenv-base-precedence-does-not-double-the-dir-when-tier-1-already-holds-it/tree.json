@@ -1,0 +1,18 @@
+[
+  {
+    "path": "public",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "public/fixes",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "public/fixes/1-gog.profile.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "fb510abbac97ede66a10b7f73e3aa258cb56b4194b44876a396666bcc34fc69e"
+  }
+]

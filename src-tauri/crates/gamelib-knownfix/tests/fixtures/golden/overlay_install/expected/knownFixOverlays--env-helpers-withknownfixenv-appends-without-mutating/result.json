@@ -1,0 +1,56 @@
+{
+  "steps": [
+    {
+      "op": "withEnv",
+      "settings": {
+        "enviromentOptions": [
+          {
+            "key": "A",
+            "value": "1"
+          }
+        ]
+      },
+      "env": {},
+      "result": {
+        "enviromentOptions": [
+          {
+            "key": "A",
+            "value": "1"
+          }
+        ]
+      },
+      "isTheSameObject": true,
+      "originalOptionCountAfter": 1,
+      "originalOptionCountBefore": 1
+    },
+    {
+      "op": "withEnv",
+      "settings": {
+        "enviromentOptions": [
+          {
+            "key": "A",
+            "value": "1"
+          }
+        ]
+      },
+      "env": {
+        "B": "2"
+      },
+      "result": {
+        "enviromentOptions": [
+          {
+            "key": "A",
+            "value": "1"
+          },
+          {
+            "key": "B",
+            "value": "2"
+          }
+        ]
+      },
+      "isTheSameObject": false,
+      "originalOptionCountAfter": 1,
+      "originalOptionCountBefore": 1
+    }
+  ]
+}

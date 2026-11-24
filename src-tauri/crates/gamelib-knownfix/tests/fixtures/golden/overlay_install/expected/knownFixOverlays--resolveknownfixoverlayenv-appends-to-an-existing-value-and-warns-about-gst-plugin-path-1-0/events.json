@@ -1,0 +1,8 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "test: GST_PLUGIN_PATH_1_0 is set and shadows GST_PLUGIN_PATH, so overlay gst-libav-1.24.13 may not be loaded"
+  }
+]

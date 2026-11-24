@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "letters in the size field",
+      "ok": false,
+      "message": "overlay archive: bad size field"
+    },
+    {
+      "op": "read",
+      "label": "empty size field",
+      "ok": false,
+      "message": "overlay archive: bad size field"
+    }
+  ]
+}

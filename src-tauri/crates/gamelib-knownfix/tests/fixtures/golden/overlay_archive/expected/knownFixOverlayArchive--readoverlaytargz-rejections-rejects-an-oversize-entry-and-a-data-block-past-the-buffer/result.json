@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "oversize entry",
+      "ok": false,
+      "message": "overlay archive: entry larger than expected: lib/a.dylib"
+    },
+    {
+      "op": "read",
+      "label": "data block past the buffer",
+      "ok": false,
+      "message": "overlay archive: truncated data for lib/a.dylib"
+    }
+  ]
+}

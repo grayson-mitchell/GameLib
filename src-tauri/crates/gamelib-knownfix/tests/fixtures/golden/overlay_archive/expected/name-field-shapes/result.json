@@ -1,0 +1,34 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "label": "non-ASCII name",
+      "ok": false,
+      "message": "overlay archive: non-ASCII path: lib/é.dylib"
+    },
+    {
+      "op": "read",
+      "label": "a name that fills the 100 byte field",
+      "ok": false,
+      "message": "overlay archive: path too long: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "op": "read",
+      "label": "a 99 byte name",
+      "ok": true,
+      "files": [
+        {
+          "path": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "size": 5,
+          "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+        }
+      ]
+    },
+    {
+      "op": "read",
+      "label": "a control character in the name",
+      "ok": false,
+      "message": "overlay archive: non-ASCII path: lib/a\tb"
+    }
+  ]
+}

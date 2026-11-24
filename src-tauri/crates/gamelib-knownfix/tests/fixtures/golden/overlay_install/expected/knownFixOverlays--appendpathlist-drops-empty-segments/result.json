@@ -1,0 +1,10 @@
+{
+  "steps": [
+    {
+      "op": "appendPathList",
+      "existing": ":a::b:",
+      "dir": "/d",
+      "result": "a:b:/d"
+    }
+  ]
+}
