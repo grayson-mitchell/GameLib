@@ -42,6 +42,7 @@ use crate::ctx::WineCtx;
 use crate::manager::{log_error, log_info, log_warn};
 use crate::wine_cmd::command::{umu_path, umu_supported};
 use crate::wine_cmd::env::GameSettingsView;
+use crate::wine_cmd::prefix::{tool_prefix, ToolPrefix};
 use crate::wine_cmd::{js_dirname, js_join, WineInstallation, WineKind};
 
 /// How long a `which` probe gets before it counts as missing.
@@ -159,16 +160,23 @@ fn make_executable(path: &Path) -> std::io::Result<()> {
     }
 }
 
-/// `getWineFromProton`: the prefix and the wine winetricks runs with. A Proton umu does not run is
-/// unpacked to its own `files/bin/wine` (or `dist/` for Proton 7 and below) with the prefix's `pfx`
-/// subdirectory; anything else is as the settings say.
+/// `getWineFromProton`: the prefix and the wine winetricks runs with. A CrossOver target runs in its
+/// bottle's directory (87-64, F3: [`tool_prefix`]), never in the stored `winePrefix`, and a bottle that
+/// is not one safe name has no prefix (`None`: nothing runs). A Proton umu does not run is unpacked to
+/// its own `files/bin/wine` (or `dist/` for Proton 7 and below) with the prefix's `pfx` subdirectory;
+/// anything else is as the settings say.
 pub fn wine_from_proton(
     session: &Session<'_>,
     settings: &GameSettingsView,
-) -> (String, WineInstallation) {
+) -> Option<(String, WineInstallation)> {
     let wine = settings.wine_version.clone();
+    match tool_prefix(session.ctx, settings) {
+        ToolPrefix::Bottle(dir) => return Some((dir, wine)),
+        ToolPrefix::UnsafeBottle => return None,
+        ToolPrefix::Stored => {}
+    }
     if wine.kind != WineKind::Proton || umu_supported(session.ctx, settings, session.host) {
-        return (settings.wine_prefix.clone(), wine);
+        return Some((settings.wine_prefix.clone(), wine));
     }
     let prefix = js_join(&[&settings.wine_prefix, "pfx"])
         .to_string_lossy()
@@ -180,7 +188,7 @@ pub fn wine_from_proton(
             continue;
         }
         let server = js_join(&[&base, dist, "bin", "wineserver"]);
-        return (
+        return Some((
             prefix,
             WineInstallation {
                 kind: WineKind::Wine,
@@ -190,7 +198,7 @@ pub fn wine_from_proton(
                     .then(|| server.to_string_lossy().into_owned()),
                 ..wine
             },
-        );
+        ));
     }
     log_error(
         session.ctx,
@@ -199,7 +207,7 @@ pub fn wine_from_proton(
             wine.name
         ),
     );
-    (settings.wine_prefix.clone(), wine)
+    Some((settings.wine_prefix.clone(), wine))
 }
 
 /// The environment winetricks runs in: the host's, the launcher's two builders, the prefix and the
@@ -633,7 +641,18 @@ pub async fn run_with_args<'a>(
         args.insert(0, "winetricks".to_string());
     }
 
-    let (prefix, wine) = wine_from_proton(session, settings);
+    let Some((prefix, wine)) = wine_from_proton(session, settings) else {
+        // T-87-112: a CrossOver bottle that is not one safe name under the Bottles root has no prefix.
+        log_error(
+            ctx,
+            &format!(
+                "Winetricks not run for {}: no usable Wine environment (invalid-bottle)",
+                target.app_name
+            ),
+        );
+        outcome.failed = Some(true);
+        return outcome;
+    };
     let mut envs = build_env(session, settings, target.app_name, &prefix, &wine);
     // Merged LAST so it wins over both platforms' (see `RunRequest::env_overrides`).
     envs.extend(env_overrides);
@@ -946,7 +965,9 @@ pub fn list_installed(session: &Session<'_>, target: &Target<'_>) -> Vec<String>
     let ToolSettings::Resolved(settings) = &target.settings else {
         return Vec::new();
     };
-    let (prefix, _) = wine_from_proton(session, settings);
+    let Some((prefix, _)) = wine_from_proton(session, settings) else {
+        return Vec::new();
+    };
     let log = js_join(&[&prefix, "winetricks.log"]);
     match std::fs::read(&log) {
         Ok(bytes) => String::from_utf8_lossy(&bytes)

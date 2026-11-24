@@ -70,8 +70,10 @@ fn bottles_root(ctx: &EngineCtx) -> String {
 
 /// The directory of `name` when it is a clean name sitting directly under the Bottles root
 /// (`sanitizeBottleName(name) === name` and `relative(root, dir) === name`). `.` passes the
-/// sanitiser and resolves to the root itself, so the containment half is what refuses it.
-fn direct_child_dir(ctx: &EngineCtx, name: &str) -> Option<String> {
+/// sanitiser and resolves to the root itself, so the containment half is what refuses it. Public
+/// (87-64) because it is the one safe way to name a bottle's directory: the Wine tools of a game take
+/// their prefix from it, never from a path in the settings.
+pub fn direct_child_dir(ctx: &EngineCtx, name: &str) -> Option<String> {
     if !is_clean_bottle_name(name) {
         return None;
     }

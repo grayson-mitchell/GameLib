@@ -371,7 +371,7 @@ async fn winetricks_for_a_plain_prefix_game_keeps_its_stored_prefix() {
 /// unavailable and nothing is spawned.
 #[tokio::test]
 async fn a_bottle_name_that_is_not_one_safe_segment_runs_nothing() {
-    for name in ["../escape", "a/b", "", ".", ".."] {
+    for name in ["../escape", "a/b", ".", "..", " padded "] {
         let rig = Rig::new(ok_output(""));
         let settings = json!({
             "winePrefix": rig.shared_prefix(),
