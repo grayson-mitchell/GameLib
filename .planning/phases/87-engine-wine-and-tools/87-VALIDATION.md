@@ -265,6 +265,62 @@ zero tests, as the earlier plans' `#![cfg(unix)]` decided (the bottle and CrossO
 | `45303966424` | `87abb588a` | windows | clippy ratchet: one new `unused_imports` (`spec_runner.rs`) | `f9f1cce2e` |
 | `45307026824` | `f9f1cce2e` | all | none: macos, windows, ubuntu all success | |
 
+## Gap closure proof (87-68)
+
+Measured by plan 87-68 Task 1, 2026-11-25, from a `git worktree add --detach` checkout (removed afterwards) with its own
+`pnpm install --frozen-lockfile`, `pnpm exec vite build`, `pnpm build:sidecar-sea` and a cold `src-tauri/target` (the repo's `post-checkout` hook
+also runs `pnpm i` and `pnpm download-helper-binaries`; the step 1 row is the explicit frozen-lockfile run on top of that). 87-58's table, copied
+verbatim, with the 87-58 counts for comparison.
+
+**Candidate head P = `4cf38d88c6009cef56b2f55193c2a5b60568077b`** (main). It is `f3a1a361d` (the post-merge conflict fix after the SUMMARYs of 87-60 to
+87-67 and 87-70) plus one commit, `4cf38d88c` `fix(87-68): baseline the jest.mock sites of the 87-67 uninstall dialog bottle toggle test`, which touches only
+`meta/backendDiCeilings/frontend-components-ui.json` (one entry, `bottleToggle.test.tsx` 6); see "Findings" below. Every step was re-run at P after that
+commit, so the proof is at one head. The gap closure is 58 commits on top of 87-60's `plan_head_before` (`b81419c02`); the unpushed range on top of
+`origin/main` (`b4ed940a4`, 87-59) is 59 commits.
+
+Ancestry: 62 distinct commit hashes found in the 87-60..87-67 and 87-70 SUMMARYs resolve in this repo and every one is an ancestor of P
+(`git merge-base --is-ancestor`, 0 exceptions).
+
+| Step | Command (as rust-test.yml / pre-push run it) | Outcome at P (87-58 at its P) |
+|------|-----------------------------------------------|-------------------------------|
+| 1 | `pnpm install --frozen-lockfile` | pass |
+| 2 | `pnpm exec vite build` | pass |
+| 3 | `pnpm build:sidecar-sea` | pass (arm64 SEA sidecar built) |
+| 4 | `cargo test -p gamelib-safety -p gamelib-testutil` | pass, 95 passed, 0 red (95) |
+| 5 | `cargo test -p gamelib-proc` | pass, 47 passed, 0 red (47) |
+| 6 | the 21-crate `cargo test -p gamelib-scan ... -p gamelib-wine-cli` step of rust-test.yml | pass, 2956 passed, 0 red, 7 ignored (2898, 7) |
+| 7 | static codec linkage (`cargo build -p gamelib-depot-cli`, `otool -L`, no lzma/zstd/zlib) | pass (macOS leg form) |
+| 8 | `cargo test -p gamelib-engine --features testing` | pass, 381 passed, 0 red (338) |
+| 9 | `cargo test -p gamelib-wine --features testing` | pass, 341 passed, 0 red (326) |
+| 10 | `cargo test --bin gamelib-shell` | pass, 870 passed, 0 red, 2 ignored (837, 2) |
+| 11 | darwin clippy ratchet: `cargo +1.99.1 clippy --workspace --all-targets --message-format=json` then `node meta/clippyRatchet.cjs --list` | pass, `PASS (darwin, toolchain 1.99.1)` |
+| 12 | `pnpm check:ipc-contract` | pass (ipc_contract.rs and ipcSchemaSnapshot.json up to date) |
+| 13 | `pnpm test` (jest, 6 projects) | pass, 1109 suites passed (6 skipped), 24298 tests passed (40 skipped), 0 red, 245 s (1108 / 24256) |
+| 14 | `pnpm smoke:exit-check -- --mode eof` | pass, `sidecarExitCheck [eof]: PASS (exit latency 19 ms)` |
+| 15 | `pnpm smoke:sidecar` | pass, built, READY written, exited 0 on stdin EOF |
+| 16 | pre-push gate set: `pnpm codecheck`, `lint`, `prettier`, `i18n --fail-on-update`, `find-deadcode`, `boundaries`, `steam-line-ceiling`, `backend-di-ceilings`, `gameinfo-narrowing-ceiling` | all nine pass (exit 0 each); lint 0 errors (828 production and 570 test warnings, the same counts as main) |
+| 17 | `pnpm planning-gates` | pass, 12/12 |
+
+The worktree was clean after the run (`git status --short` empty) and was removed with `git worktree remove`; `git worktree list` shows the main checkout and the
+worktrees that existed before.
+
+### Findings
+
+1. **A gap plan broke a pre-push gate (87-67), Rule 1.** `pnpm backend-di-ceilings` failed at `f3a1a361d`: `src/frontend/components/UI/UninstallModal/__tests__/bottleToggle.test.tsx
+   has 6 (jestMock) and no baseline entry`. 87-67's test file mocks six modules (react, react-i18next, react-router-dom, libraryState, Dialog, ToggleSwitch) in the same plain-function
+   harness as `AboutDialog.test.tsx` (5) and was not baselined. Left alone the pre-push hook would have blocked the push. Fixed on main in `4cf38d88c` the way `2679311c7`
+   (79-38) baselined new jest.mock suites; `pnpm backend-di-ceilings` and the two `backendDiCeilings` jest suites pass, and P moved to that commit.
+2. **The first full run was invalid and was discarded (proof harness, not code).** The run set `TMPDIR` to the session scratchpad, which contains the worktree. `fakeSafetyRust.test.ts`
+   "refuses to delete a path outside the OS temp dir" resolves the repo's own `src/` as inside the OS temp dir, so the fake `remove tree` performed the real delete and removed the
+   worktree's whole `src/` (2618 tracked files) during `pnpm test`; everything after it was meaningless. The deletion was located with an `fs.rmSync` trace (`fakeSafetyRust.ts:241`),
+   the worktree was restored with `git checkout -- src`, and every step was re-run with the default `TMPDIR` (`/var/folders/...`), where the repo is not inside the temp dir. Not caused by any gap plan
+   (the test and fake date from 82-05/82-19); logged in `deferred-items.md` (the test is only safe while the checkout sits outside `os.tmpdir()`).
+3. **Cold zig toolchain in a clean worktree.** `shimAbiGate`, `wireExtendedCompile` and `msvcCallbackBaseLayout` call `downloadZig()` into `.build-tools/zig` (gitignored). In a fresh worktree three suites race on one
+   `zig-0.16.0.tar.xz` download and exceed their 180 s hook timeout on this network (the tarball took 3 min 53 s alone). With the pinned zig present all three pass (the final run). `phase70PassthroughCensus` failed once on
+   `ENOENT meta/runTs.__probe__.cjs`, a transient file another suite writes while the census walks `meta/`; it passed on the re-run. Environment and load, none caused by a gap plan; logged in `deferred-items.md`.
+4. **Pre-existing reds, recorded not fixed:** the `Supply-chain audit` workflow (cargo-deny, RUSTSEC-2026-0594) and the `gamelib-depot` `tests/fetch.rs` timing tests are as recorded under "## Findings at the candidate head" item 5 and in `deferred-items.md`; the
+   depot timing tests passed in step 6 here. The known `steamLoginPollLifecycle.test.tsx` load flake did not recur.
+
 ## Signed builds (D-12)
 
 ### Phase 87 build (87-59, 2026-11-24)
