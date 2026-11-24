@@ -26,10 +26,11 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use gamelib_store::json::Json;
 use tokio::sync::watch;
 
 use crate::ctx::{HumbleCtx, HumbleLog};
-use crate::stores::{set_config_flag, ConfigFlag};
+use crate::stores::{set_config_flag, ConfigFlag, HumbleStore, StoreRead};
 
 /// How long a failed read is remembered (`KEYRING_FAILURE_MEMO_MS` in `keyringTokenStore.ts`, more than
 /// twice the shell's 45 s read bound).
@@ -245,6 +246,11 @@ impl HumbleSecrets {
                 next_id: AtomicU64::new(1),
             }),
         }
+    }
+
+    /// The source, for the migration's write and read back around the cache.
+    pub(crate) fn source(&self) -> &Arc<dyn HumbleSecretSource> {
+        &self.source
     }
 
     fn slot_state(&self, slot: HumbleSlot) -> MutexGuard<'_, SlotState> {
@@ -552,14 +558,135 @@ impl HumbleSecrets {
     }
 }
 
+// ---- The one-time plaintext-to-Keychain migration ------------------------------------------------
+
+/// What the migration did for one secret.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SecretMigration {
+    /// No plaintext copy (already migrated, or never stored): no source call.
+    NothingToMigrate,
+    /// Written, read back equal, and only then deleted from the config.
+    Migrated,
+    /// The source refused the write: the plaintext stays.
+    WriteFailed,
+    /// The read back failed: the plaintext stays.
+    ReadBackFailed,
+    /// The read back answered something else (or nothing): the plaintext stays.
+    Mismatch,
+    /// The config store could not be read or written: the plaintext stays unless it was already gone.
+    ConfigFailed,
+}
+
+impl SecretMigration {
+    fn is_failure(self) -> bool {
+        !matches!(
+            self,
+            SecretMigration::NothingToMigrate | SecretMigration::Migrated
+        )
+    }
+}
+
+/// What [`migrate_plaintext`] did, per secret. The shell logs one word for it; no value is in it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MigrationOutcome {
+    pub session: SecretMigration,
+    pub csrf: SecretMigration,
+}
+
+impl MigrationOutcome {
+    /// The one word the boot log line carries. Never a value, a length or a path.
+    pub fn label(self) -> &'static str {
+        let all = [self.session, self.csrf];
+        let failed = all.iter().any(|m| m.is_failure());
+        let moved = all.contains(&SecretMigration::Migrated);
+        match (failed, moved) {
+            (false, false) => "nothing-to-do",
+            (false, true) => "migrated",
+            (true, true) => "partial",
+            (true, false) => "failed",
+        }
+    }
+}
+
+/// Moves a legacy plaintext `sessionCookie` and `csrfToken` from the Humble config store into the
+/// Keychain, each independently, in the TS order (D-GAP-01): write the slot, drop the cache, READ IT
+/// BACK from the source (not from a cache), compare, and only on an exact match delete the config key
+/// and write `encryptionDegraded` false. A rejected write, a failed read back and a different read back
+/// all leave the plaintext in place and the user signed in, with one fixed-text warning that names the
+/// failure and never a value. A mismatch is never rounded up to success.
+///
+/// Blocking (Keychain calls): the shell runs it on a bounded blocking thread holding a shutdown
+/// registrant ([`crate::spawn_humble_migration`]). A profile with no plaintext key makes no source call.
+pub fn migrate_plaintext(ctx: &HumbleCtx) -> MigrationOutcome {
+    let store = match HumbleStore::Config.open_checked(ctx) {
+        StoreRead::Ok(store) => store,
+        _ => {
+            ctx.warn("secret migration: the config store could not be opened");
+            return MigrationOutcome {
+                session: SecretMigration::ConfigFailed,
+                csrf: SecretMigration::ConfigFailed,
+            };
+        }
+    };
+    let one = |slot: HumbleSlot| -> SecretMigration {
+        let key = slot.config_key();
+        let plaintext = match store.get(key) {
+            Some(Json::Str(text)) if !text.is_empty() => text,
+            // Absent, empty or not a string: the healthy "nothing to migrate" case.
+            _ => return SecretMigration::NothingToMigrate,
+        };
+        let source = ctx.secrets.source();
+        if source.set(slot, &plaintext).is_err() {
+            ctx.warn(&format!(
+                "secret migration ({}): the write failed, leaving the plaintext in place",
+                slot.word()
+            ));
+            return SecretMigration::WriteFailed;
+        }
+        // The write went around the owner's cache so the read back below is a real round trip; the
+        // cache must now be dropped or it would keep answering what it held before.
+        ctx.secrets.invalidate(slot);
+        match source.get(slot) {
+            Err(_) => {
+                ctx.warn(&format!(
+                    "secret migration ({}): the read back failed, leaving the plaintext in place",
+                    slot.word()
+                ));
+                return SecretMigration::ReadBackFailed;
+            }
+            Ok(read) if read.as_deref() != Some(plaintext.as_str()) => {
+                ctx.warn(&format!(
+                    "secret migration ({}): the read back did not match, leaving the plaintext in place",
+                    slot.word()
+                ));
+                return SecretMigration::Mismatch;
+            }
+            Ok(_) => {}
+        }
+        if store.remove(key).is_err()
+            || store
+                .set(ConfigFlag::EncryptionDegraded.key(), Json::Bool(false))
+                .is_err()
+        {
+            ctx.warn(&format!(
+                "secret migration ({}): the config store could not be updated",
+                slot.word()
+            ));
+            return SecretMigration::ConfigFailed;
+        }
+        SecretMigration::Migrated
+    };
+    let session = one(HumbleSlot::Session);
+    let csrf = one(HumbleSlot::Csrf);
+    MigrationOutcome { session, csrf }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stores::HumbleStore;
     use gamelib_core::clock::Clock;
     use gamelib_core::shutdown::Shutdown;
     use gamelib_store::host::StoreHost;
-    use gamelib_store::json::Json;
     use std::collections::HashMap;
     use std::sync::atomic::AtomicUsize;
     use std::time::Duration;
@@ -882,5 +1009,31 @@ mod tests {
         assert!(source.set(HumbleSlot::Session, "x").is_err());
         assert!(source.delete(HumbleSlot::Csrf).is_err());
         assert_eq!(source.available(), Ok(false));
+    }
+
+    #[test]
+    fn the_migration_with_no_config_file_makes_no_source_call_and_creates_no_file() {
+        let rig = rig();
+        let outcome = migrate_plaintext(&rig.ctx);
+        assert_eq!(outcome.label(), "nothing-to-do");
+        assert_eq!(rig.source.gets.load(Ordering::SeqCst), 0);
+        assert_eq!(rig.source.sets.load(Ordering::SeqCst), 0);
+        assert!(!rig
+            .ctx
+            .user_data
+            .join("humble_store")
+            .join("config.json")
+            .exists());
+    }
+
+    #[test]
+    fn the_migration_labels_say_what_happened_and_nothing_else() {
+        let m = |session, csrf| MigrationOutcome { session, csrf }.label();
+        use SecretMigration::*;
+        assert_eq!(m(NothingToMigrate, NothingToMigrate), "nothing-to-do");
+        assert_eq!(m(Migrated, NothingToMigrate), "migrated");
+        assert_eq!(m(WriteFailed, Migrated), "partial");
+        assert_eq!(m(Mismatch, NothingToMigrate), "failed");
+        assert_eq!(m(ConfigFailed, ConfigFailed), "failed");
     }
 }
