@@ -359,4 +359,155 @@ mod tests {
         let redactor = EngineLineRedactor::new(Some("/Users/gwen".to_string()), None);
         assert_eq!(redactor.redact("/Users/gwendolen/x"), "/Users/gwendolen/x");
     }
+
+    #[test]
+    fn a_line_with_home_account_and_args_comes_out_redacted() {
+        // The user's required test (2026-11-24): one line holding the fake HOME path, an account-shaped
+        // value and a full args line.
+        let home = gamelib_testutil::FakeHome::new("engine-redact-required-");
+        let home_text = home.root().to_string_lossy().into_owned();
+        let redactor =
+            EngineLineRedactor::new(Some(home_text.clone()), Some("quillfeather".to_string()));
+        let line = format!(
+            "bottle {home_text}/Library/Application Support/CrossOver/Bottles/x account=quillfeather args=[\"/bin/wine\",\"--bottle\",\"x\",\"C:\\\\game.exe\",\"--token=abc\"] done"
+        );
+        let out = redactor.redact(&line);
+        assert!(
+            out.contains("~/Library/Application Support/CrossOver/Bottles/x"),
+            "the home was not rendered as ~: {out}"
+        );
+        assert!(!out.contains(&home_text), "the home path survived: {out}");
+        assert!(!out.contains("quillfeather"), "the account survived: {out}");
+        for argument in ["/bin/wine", "--bottle", "game.exe", "--token", "abc"] {
+            assert!(
+                !out.contains(argument),
+                "the argument {argument} survived: {out}"
+            );
+        }
+        assert!(out.contains("args=<redacted 5>"), "no count: {out}");
+        assert!(
+            out.starts_with("bottle ~/") && out.ends_with(" done"),
+            "the fixed text was rewritten: {out}"
+        );
+    }
+
+    #[test]
+    fn the_account_name_as_a_bare_word_never_survives() {
+        let redactor =
+            EngineLineRedactor::new(Some("/Users/gwen".to_string()), Some("gwen".to_string()));
+        let out =
+            redactor.redact("saved Z:\\Users\\gwen\\Documents and C:\\Users\\GWEN\\x for gwen.");
+        assert!(!out.to_ascii_lowercase().contains("gwen"), "{out}");
+        assert!(out.contains("<user>") || out.contains('~'), "{out}");
+    }
+
+    #[test]
+    fn the_account_letters_inside_a_longer_word_are_untouched() {
+        // The ASCII word boundary: `eng` is inside `Engine`, `engine` and `lengths`, and stands alone once.
+        let redactor = EngineLineRedactor::new(None, Some("eng".to_string()));
+        assert_eq!(
+            redactor.redact("Engine: engine lengths eng"),
+            "Engine: engine lengths <user>"
+        );
+    }
+
+    #[test]
+    fn the_home_directory_name_and_the_environment_user_are_both_account_names() {
+        let redactor = EngineLineRedactor::for_home_with_user(
+            std::path::Path::new("/Users/gwendolyn"),
+            Some("gwen".to_string()),
+        );
+        let out = redactor.redact("by gwendolyn and gwen in /Users/gwendolyn/x");
+        assert_eq!(out, "by <user> and <user> in ~/x");
+    }
+
+    #[test]
+    fn a_secret_shaped_value_is_replaced_and_its_key_kept() {
+        let redactor = EngineLineRedactor::new(None, None);
+        for key in [
+            "token",
+            "access_token",
+            "refresh_token",
+            "password",
+            "secret",
+            "cookie",
+            "session",
+            "apikey",
+            "api_key",
+        ] {
+            for spelled in [key.to_string(), key.to_ascii_uppercase()] {
+                let out = redactor.redact(&format!("before {spelled}=hunter2 after"));
+                assert_eq!(out, format!("before {spelled}=<redacted> after"), "{key}");
+            }
+        }
+        assert_eq!(
+            redactor.redact("sent authorization: Bearer abc.def and more"),
+            "sent authorization: <redacted>"
+        );
+    }
+
+    #[test]
+    fn an_account_shaped_pair_is_replaced_and_its_key_kept() {
+        let redactor = EngineLineRedactor::new(None, None);
+        for key in ["account", "accountname", "login", "username"] {
+            let out = redactor.redact(&format!("a {key}=somebody b"));
+            assert_eq!(out, format!("a {key}=<redacted> b"), "{key}");
+        }
+        assert_eq!(
+            redactor.redact("a username: somebody b"),
+            "a username: <redacted> b"
+        );
+    }
+
+    #[test]
+    fn a_full_argument_line_is_replaced_by_its_count() {
+        let redactor = EngineLineRedactor::new(None, None);
+        assert_eq!(
+            redactor.redact("run args=[] done"),
+            "run args=<redacted 0> done"
+        );
+        assert_eq!(
+            redactor.redact("run argv=[\"a,b\",[1,2],\"c\\\"d\"] done"),
+            "run args=<redacted 3> done"
+        );
+        assert_eq!(
+            redactor.redact("run commandParts=[\"wine\",\"x.exe\"] done"),
+            "run args=<redacted 2> done"
+        );
+        assert_eq!(
+            redactor.redact("spawn cmd=/bin/wine x.exe --flag"),
+            "spawn args=<redacted ?>"
+        );
+        assert_eq!(
+            redactor.redact("Wine Command: /bin/wine x.exe"),
+            "args=<redacted ?>"
+        );
+    }
+
+    #[test]
+    fn a_url_keeps_its_host_and_path_and_no_query() {
+        let redactor = EngineLineRedactor::new(None, None);
+        assert_eq!(
+            redactor.redact("fetch https://host.example/a/b?x=1&y=2 now"),
+            "fetch https://host.example/a/b?<redacted> now"
+        );
+        assert_eq!(
+            redactor.redact("fetch http://host.example/a (retry)"),
+            "fetch http://host.example/a (retry)"
+        );
+    }
+
+    #[test]
+    fn a_line_longer_than_the_cap_is_cut_with_the_visible_marker() {
+        let redactor = EngineLineRedactor::new(None, None);
+        let line = "x".repeat(ENGINE_LINE_MAX + 40);
+        let out = redactor.redact(&line);
+        assert_eq!(
+            out,
+            format!(
+                "{}\u{2026}[truncated 40 bytes]",
+                "x".repeat(ENGINE_LINE_MAX)
+            )
+        );
+    }
 }
