@@ -40,18 +40,18 @@ created: "2026-11-23"
 
 | Req / SC | Behavior | Test Type | Automated Command | File Exists | Status |
 |----------|----------|-----------|-------------------|-------------|--------|
-| SVC-02 / SC1 | decision matrix, CrossOver-first, fallback to pin | Rust golden replay | `cargo test -p gamelib-engine --test golden_decision` | ✅ | ✅ green at 1e586bf8d (87-58 Task 1) |
-| SVC-02 / SC1 | launch step, deadline, process watch | Rust unit + golden | `cargo test -p gamelib-engine --test golden_launch` | ✅ | ✅ green at 1e586bf8d (87-58 Task 1) |
-| SVC-02 / SC1 | fallback download/verify/extract + events | Rust replay | `cargo test -p gamelib-engine --test golden_fallback` | ✅ | ✅ green at 1e586bf8d (87-58 Task 1) |
+| SVC-02 / SC1 | decision matrix, CrossOver-first, fallback to pin | Rust golden replay | `cargo test -p gamelib-engine --test golden_decision` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
+| SVC-02 / SC1 | launch step, deadline, process watch | Rust unit + golden | `cargo test -p gamelib-engine --test golden_launch` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
+| SVC-02 / SC1 | fallback download/verify/extract + events | Rust replay | `cargo test -p gamelib-engine --test golden_fallback` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
 | SVC-02 / SC1 | live healthy/fallback/adopt, expired trial | live gate (operator, signed build) | `87-HUMAN-UAT.md` items 1–2 | ❌ W0 (authored before coding) | ⬜ pending (live gate, 87-59) |
-| SVC-02 / SC2 | bottle create/reuse/remove, sibling-safe, markers byte-equal, newer marker kept | Rust golden + safety table | `cargo test -p gamelib-engine --test golden_bottles` | ✅ | ✅ green at 1e586bf8d (87-58 Task 1) |
-| SVC-02 / SC2 | TS pure-helper twin == Rust vectors (D-24) | Jest + Rust shared JSON | `pnpm jest src/backend/enginewine/__tests__/twinVectors.test.ts` | ✅ | ✅ green at 1e586bf8d (87-58 Task 1) |
-| SVC-02 / SC3 | wine core, discovery, wine-manager, runtimes, winetricks, DXVK/DXMT/vkd3d goldens | Rust golden replay | `cargo test -p gamelib-wine` | ✅ | ✅ green at 1e586bf8d (87-58 Task 1) |
+| SVC-02 / SC2 | bottle create/reuse/remove, sibling-safe, markers byte-equal, newer marker kept | Rust golden + safety table | `cargo test -p gamelib-engine --test golden_bottles` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
+| SVC-02 / SC2 | TS pure-helper twin == Rust vectors (D-24) | Jest + Rust shared JSON | `pnpm jest src/backend/enginewine/__tests__/twinVectors.test.ts` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
+| SVC-02 / SC3 | wine core, discovery, wine-manager, runtimes, winetricks, DXVK/DXMT/vkd3d goldens | Rust golden replay | `cargo test -p gamelib-wine` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
 | SVC-02 / SC3 | live tools and downloads | live gate item 4 | `87-HUMAN-UAT.md` | ❌ W0 | ⬜ pending (live gate, 87-59) |
-| SVC-02 / SC4 | TS and registrations deleted; only scheduled shims/resolvers/twin remain | Jest gate | `pnpm jest src/backend/__tests__/engineWinePortComplete.test.ts src/backend/__tests__/engineWineShimSchedule.test.ts` | ✅ | ✅ green at 1e586bf8d (87-58 Task 1) |
-| FND-04 | no orphan winetricks/tar/wine helper after quit | `gamelib-proc` orphan harness arm | `cargo test -p gamelib-proc` | ✅ | ✅ green at 1e586bf8d (87-58 Task 1) |
-| FND-06 | markers/notices/wine-downloader-info round trip, newer never overwritten, corrupt kept | Rust golden | `cargo test -p gamelib-engine --test roundtrip_state` | ✅ | ✅ green at 1e586bf8d (87-58 Task 1) |
-| D-14 | channel parity (OPS == constants == arms), IPC snapshot | Jest + gen | `pnpm check:ipc-contract` | ✅ | ✅ green at 1e586bf8d (87-58 Task 1) |
+| SVC-02 / SC4 | TS and registrations deleted; only scheduled shims/resolvers/twin remain | Jest gate | `pnpm jest src/backend/__tests__/engineWinePortComplete.test.ts src/backend/__tests__/engineWineShimSchedule.test.ts` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
+| FND-04 | no orphan winetricks/tar/wine helper after quit | `gamelib-proc` orphan harness arm | `cargo test -p gamelib-proc` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
+| FND-06 | markers/notices/wine-downloader-info round trip, newer never overwritten, corrupt kept | Rust golden | `cargo test -p gamelib-engine --test roundtrip_state` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
+| D-14 | channel parity (OPS == constants == arms), IPC snapshot | Jest + gen | `pnpm check:ipc-contract` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -135,6 +135,24 @@ gamelib-wine `golden_discovery`, `golden_dxmt`, `golden_dxvk`, `golden_runtimes`
 Not run here by design: `cargo check --all-targets` (Linux leg only) and the Windows/Linux legs of every step above (D-13, CI after the push).
 `cargo fmt --check -p gamelib-shell` is not part of rust-test.yml and is known to differ only on the `@generated` ipc_contract.rs.
 
+### Re-run at the final head `f9f1cce2e45ebee3712e791c6e63b6c5fb88b9fc`
+
+The three-OS CI described under "## CI proof" forced twelve further commits (all `fix(87-58)`, test-side or Windows-only except one, see "## Findings
+at the candidate head" items 3-4). The table above was measured at `1e586bf8d`; these steps were re-run at the final head, in the main working tree
+(warm target) after the worktree was removed, and the full cargo and jest proof at the final head is also the CI run `45307026824`.
+
+| Step | Outcome at `f9f1cce2e` |
+|------|------------------------|
+| `cargo test -p gamelib-safety -p gamelib-testutil` | pass, 95 passed, 0 red |
+| `cargo test -p gamelib-proc` | pass, 47 passed, 0 red |
+| `cargo test -p gamelib-engine --features testing` | pass, 338 passed, 0 red |
+| `cargo test -p gamelib-wine --features testing` | pass, 326 passed, 0 red |
+| `cargo test --bin gamelib-shell` | pass, 837 passed, 0 red, 2 ignored |
+| darwin clippy ratchet | pass, `PASS (darwin, toolchain 1.99.1)` |
+| `pnpm check:ipc-contract`, `pnpm codecheck`, `pnpm lint` | pass |
+| `pnpm test` | pass, 1108 suites passed (5 skipped), 24256 tests passed (30 skipped), 0 red |
+| the 21-crate multi-crate `cargo test` step | pass on all three CI legs (run `45307026824`); locally two gamelib-depot timing tests are red in this one invocation, see Findings item 5 |
+
 ## Findings at the candidate head
 
 1. **Darwin clippy ratchet was red at `20fc9d890`** (first run, same worktree): `clippy::cloned_ref_to_slice_refs` 10 found against a
@@ -143,6 +161,26 @@ Not run here by design: `cargo check --all-targets` (Linux leg only) and the Win
    (`std::slice::from_ref(&x)`, rustfmt-clean, test behaviour unchanged), no ceiling moved. The ratchet, `cargo test --bin gamelib-shell`
    and the whole list above were then re-run at `1e586bf8d`. This is the same class as Phase 86's R1.
 2. **Renderer boundary (D-10), literal check not met.** See "## SC4 sweep": two Phase 87 commits touch `src/frontend`, both comment-only.
+3. **Windows CI found what no macOS run could (D-13).** Pushing exposed eight classes of Windows-only reds in code that had only ever run on macOS and
+   Linux; each was fixed in its own commit and re-pushed (the operator authorised CI-fix commits): the five `gamelib-engine` `lib.rs` dispatch tests with
+   POSIX `/cx/bin` fixtures (`833fbb98a`, `#[cfg(unix)]`); `golden_config` and `golden_discovery`, whose headers already said "POSIX only" but lacked
+   `#![cfg(unix)]` (`ec957163e`); five `gamelib-wine` unit tests with POSIX `PATH` and separator fixtures (`14527ed15`); `dxvk_incidents` (`feb5c76a7`);
+   a real bug, `tools/dxvk.rs` replaced the first `~` anywhere in the wine prefix, so the 8.3 runner temp name `C:\Users\RUNNER~1\...` was rewritten
+   (`9c9fd376f`, now only a leading `~`); the Windows separator fold in six wine golden suites that also folded the registry key's backslashes (`af3ff09e9`, folds
+   only a string that holds a profile root); `ScriptedSpecRunner` matched programs byte-exactly across `/` and `\\` (`8042d7267`); `golden_wine_manager`, whose store text
+   JSON-escapes the Windows HOME (`cbd73bc3c`, `#![cfg(unix)]`); `golden_winetricks` (`f6e71594d`); two shell tests and one shell test helper
+   (`39a3b1a7c`, `87abb588a`); and an `unused_imports` the Windows clippy ratchet caught in `gamelib-proc/tests/spec_runner.rs` (`f9f1cce2e`).
+   Consequence for D-13's "goldens observed running on every leg": see "## CI proof" (the gamelib-engine goldens are compiled out on Windows).
+4. **Gating is a coverage trade, recorded not hidden.** On the Windows leg these binaries now compile to zero tests: every `gamelib-engine` golden
+   and incident suite (gated by earlier plans, plus `golden_config` here), `gamelib-wine` `golden_discovery`, `golden_wine_manager` and `dxvk_incidents`.
+   The same cases still replay on macos-latest and ubuntu-latest. `gamelib-wine` `golden_dxmt`, `golden_dxvk`, `golden_runtimes`, `golden_wine_core`
+   (16 of 18) and `golden_winetricks` do run on Windows.
+5. **Not Phase 87, deferred.** (a) The `Supply-chain audit` workflow (cargo-deny, RUSTSEC-2026-0594) is red on every push including `origin/main`
+   `4e1af5463` before this plan pushed (run `45228612462`), so it is not caused by Phase 87. (b) `gamelib-depot` `tests/fetch.rs`
+   (`a_long_outage_after_fetching_began_demotes_no_host`, `errors_before_any_success_still_demote_a_dead_host_after_a_late_start`) are 200-300 ms
+   timing tests: red once on macos-latest (run `45285696051`, green on the next push), and red in the main working tree only in the 21-crate invocation
+   on this Mac (pass alone, 4 of 4, and under `-p gamelib-depot`); `gamelib-depot` has no diff since the 87-01 base. Logged in `deferred-items.md`.
+
 
 ## SC4 sweep
 
@@ -155,7 +193,7 @@ All at P `1e586bf8d`, in the clean worktree unless stated.
 | `engineFlowRegistration.ts`, `wineToolsFlowRegistration.ts` absent | `find . -name ... -not -path ./node_modules` | no hits | pass |
 | neither `GAMELIB_ENGINE` nor `GAMELIB_WINE` in `src/` or `src-tauri/src` | `grep -rIl -E 'GAMELIB_ENGINE\|GAMELIB_WINE' src src-tauri/src` | one hit, `src/backend/__tests__/engineWinePortComplete.test.ts`, the guard itself (its `FORBIDDEN_FLAGS` constant and planted-fixture self-tests); 0 hits in `src-tauri/src` and 0 in any non-guard file | pass (the only occurrence is the detector's own text, which the gate excludes from its scan) |
 | DXMT wine-install gap (opened 87-20, closed 87-31) closed at P | `grep -c on_wine_installed src-tauri/crates/gamelib-wine/src/manager/install.rs`; `grep -c on_wine_uninstalled src-tauri/crates/gamelib-wine/src/manager/remove.rs`; `cargo test -p gamelib-wine --test golden_wine_manager` | 1; 1; golden_wine_manager passes (9 tests, within the 326 of step 9) | pass |
-| no renderer file under `src/frontend` changed since the 87-01 base | `git diff --name-only ca6cc1d43..20fc9d890 -- src/frontend` (the P-only commit touches no frontend path) | 14 files, attributed below | **literal check not met; see attribution** |
+| no renderer file under `src/frontend` changed since the 87-01 base | `git diff --name-only ca6cc1d43..20fc9d890 -- src/frontend` (the P-only commit touches no frontend path) | 14 files, attributed below | literal check not met; **D-10 accepted as met by the operator, 2026-11-24** (see below) |
 
 Attribution of the 14 `src/frontend` paths in `ca6cc1d43..P` (`git log --format='%h %s' ca6cc1d43..P -- src/frontend`, 5 commits):
 
@@ -168,9 +206,98 @@ Attribution of the 14 `src/frontend` paths in `ca6cc1d43..P` (`git log --format=
   `resolveEngineToolSettings, backend/enginewine/toolSettings.ts`). No code, import, prop or string changed; `src/preload` has no change in range.
   The rest of the phase left the renderer alone, so D-10's behaviour ("renderer is untouched") holds, but the truth as worded (no
   `src/frontend` file in the diff) does not, because stale source-path comments were corrected in two files. Raised to the operator at the
-  Task 2 checkpoint.
+  Task 2 checkpoint, who answered `Accept as met` (2026-11-24): D-10 is recorded as **met by operator acceptance**, on the evidence that the two
+  Phase 87 edits are comment-only and the other 12 files are quick 261123-pnl, not Phase 87.
 
 ## Per-task map statuses
 
 The ten automated rows of the Per-Task Verification Map are `✅ green at 1e586bf8d`; rows 4 and 8 (live gate items 1-2 and 4) stay
 `⬜ pending (live gate, 87-59)`. Status of D-13 (three-OS CI) and D-12 (signed build) is recorded by Task 3 after the operator's decision.
+
+## CI proof
+
+Collected 2026-11-24 (87-58 Task 3) with `gh run list --commit <sha>` and `gh run view <id> --json jobs`; operator decision `push-and-build` (CI-fix
+commits allowed without asking). Push 1 carried 337 commits (`4e1af5463..6d9f12f49`); each later push carried one fix commit. Immediately before push 1,
+`git diff --name-only 1e586bf8d HEAD` listed only `.planning/phases/87-engine-wine-and-tools/87-VALIDATION.md`; before each later push it listed exactly the
+one fix commit's paths (the authorised CI fix), `main..origin/main` was 0, and the pre-push hook ran every time (no `--no-verify`).
+
+**Final head `f9f1cce2e45ebee3712e791c6e63b6c5fb88b9fc`, all green:**
+
+| Workflow | Run | Result |
+|----------|-----|--------|
+| Rust test (rust-test.yml) | `45307026824` | success: `cargo-test (macos-latest)` `138153251538` success; `cargo-test (windows-latest)` `138153251909` success; `cargo-test (ubuntu-latest)` `138153252222` success |
+| Code check (codecheck.yml) | `45307026828` | success |
+| Test (test.yml) | `45307026813` | success |
+| Lint | `45307026740` | success |
+| Supply-chain audit | `45307026830` | failure, pre-existing (RUSTSEC-2026-0594 in cargo-deny; red at `4e1af5463` before this push, run `45228612462`); not one of the three required workflows, deferred |
+
+**Golden replays per leg, from the leg logs of run `45307026824`** (tests passed in each binary, read from the leg logs, whose lines interleave on macOS; `0` means the binary compiled to no tests under `cfg(unix)`):
+
+| Binary | macos-latest | windows-latest | ubuntu-latest |
+|--------|--------------|----------------|---------------|
+| gamelib-engine `golden_bottles` / `golden_decision` / `golden_fallback` / `golden_launch` / `golden_state` / `golden_switch` / `roundtrip_state` | 14 / 3 / 8 / 8 / 9 / 6 / 7 | 0 (unix-gated) | 14 / 3 / 8 / 8 / 9 / 6 / 7 |
+| gamelib-engine `golden_config`, `golden_demo_status` | 7, 2 | 0, 0 (unix-gated) | 7, 2 |
+| gamelib-engine `twin_vectors` | 12 | 9 | 12 |
+| gamelib-wine `golden_dxmt` / `golden_dxvk` / `golden_runtimes` / `golden_winetricks` | 9 / 6 / 5 / 8 | 9 / 6 / 5 / 8 | 9 / 6 / 5 / 8 |
+| gamelib-wine `golden_wine_core` | 18 | 16 | 18 |
+| gamelib-wine `golden_discovery` / `golden_wine_manager` / `dxvk_incidents` | 11 / 9 / 39 | 0 / 0 / 0 (unix-gated) | 11 / 9 / 39 |
+
+So D-13's "gamelib-engine and gamelib-wine goldens observed running on every leg" holds for **gamelib-wine on all three legs** (five golden suites plus
+two-thirds of `golden_wine_core`) and for **gamelib-engine on macos-latest and ubuntu-latest only**: on windows-latest every engine golden compiles to
+zero tests, as the earlier plans' `#![cfg(unix)]` decided (the bottle and CrossOver code is macOS-only) and as `golden_config` now matches. Windows runs
+`twin_vectors` (9) and the engine lib tests, the wine lib tests, the shell tests (clippy ratchet `PASS (win32, toolchain 1.99.1)`, every lint at its ceiling).
+
+**The route to green (every red, its cause and its fix):**
+
+| Run | Head | Leg | Red | Fix commit |
+|-----|------|-----|-----|-----------|
+| `45279040013` | `6d9f12f49` | windows | 5 engine `lib.rs` tests: `/cx/bin` is not absolute on Windows | `833fbb98a` |
+| `45281469037` | `833fbb98a` | windows | engine `golden_config`: seeded JSON with a Windows path is read as corrupt and quarantined | `ec957163e` (+ `golden_discovery`) |
+| `45283302812` | `ec957163e` | windows | 5 wine lib tests (POSIX PATH, mixed separators, vulkan helper path) | `14527ed15` |
+| `45285696051` | `14527ed15` | windows, macos | windows: 29 `dxvk_incidents`; macos: depot timing test (flake, green next push) | `feb5c76a7` |
+| `45288136386` | `feb5c76a7` | windows | `golden_dxvk`: `~` in `RUNNER~1` rewritten by `replacen('~')` | `9c9fd376f` |
+| `45290433873` | `9c9fd376f` | windows | `golden_dxvk`: separator fold also folded registry-key backslashes | `af3ff09e9` |
+| `45292773551` | `af3ff09e9` | windows | `golden_wine_core`: scripted program matched byte-exactly | `8042d7267` |
+| `45295513894` | `8042d7267` | windows | `golden_wine_manager`: JSON-escaped HOME in the store text | `cbd73bc3c` |
+| `45297645210` | `cbd73bc3c` | windows | `golden_winetricks`: mixed-separator program | `f6e71594d` |
+| `45299193209` | `f6e71594d` | windows | shell tests did not compile (`engine_with_path` is unix-only) | `39a3b1a7c` |
+| `45301731253` | `39a3b1a7c` | windows | 2 shell tests (CrossOver locate, winemac scan) | `87abb588a` |
+| `45303966424` | `87abb588a` | windows | clippy ratchet: one new `unused_imports` (`spec_runner.rs`) | `f9f1cce2e` |
+| `45307026824` | `f9f1cce2e` | all | none: macos, windows, ubuntu all success | |
+
+## Signed builds (D-12)
+
+**Operator decision at the Task 2 checkpoint (2026-11-24): `push-and-build`, with `dry_run=true`.** Exactly one dispatch was made:
+`gh workflow run release-tauri.yml --ref main -f dry_run=true`. No `dry_run=false` dispatch, no tag, no change to the `GameLib v0.11.0`, `v0.12.0` or
+`v0.10.0` draft releases (`gh release list` before and after is identical).
+
+- **Phase 87 dry-run build:** release-tauri.yml run `45279091996`, `workflow_dispatch` on `main`, headSha `6d9f12f493ed1ac41b22f272107f27b1038446b8`,
+  `GAMELIB_DRY_RUN: true`. Conclusions: `release (windows-latest, x86_64-pc-windows-msvc)` success (22:40:32Z), `release (ubuntu-22.04,
+  x86_64-unknown-linux-gnu)` success (22:33:15Z), `release (macos-latest, --target aarch64-apple-darwin, aarch64-apple-darwin)` success (22:47:24Z).
+  The macOS log shows the bundler signing (`Signing with identity "***"`, masked) and `Notarizing .../GameLib.app` -> `Notarizing Finished with status
+  Accepted for id 0f9f1f45-4aeb-4e9b-811a-aa34fac4d235`, then `Finished 2 bundles`.
+- **What a dry run does not give:** it uploads nothing (the workflow bans artifact upload; tagName and releaseName are empty), so there is **no downloadable
+  Phase 87 macOS artifact**. `codesign` Authority, TeamIdentifier, the designated requirement, `spctl -a -vv` and `xcrun stapler validate` cannot be read from
+  it, and nothing was installed over the signed Phase 86 build. The dry run proves the Phase 87 tree packages, signs and notarizes on the same
+  secrets; it does not prove the artifact's identity.
+- **Head caveat:** the dry run built `6d9f12f49`, before the Windows CI fixes. Of those, only `gamelib-wine` `tools/dxvk.rs` (`9c9fd376f`, leading-`~`
+  expansion) is shipped code; the others are `cfg(test)`, test files or the `testing` feature. A build of the final head would include it.
+
+**Phase 86 identity (the baseline), by reference to `86-VALIDATION.md` "## Signed builds (D-15)", "### Phase 86 build (86-26, 2026-11-23)":** run
+`45056179067` (`dry_run=false`, `release/v0.12` at `7c50262f4`), `Identifier=com.gamelib.shell`, `Authority=Developer ID Application: grayson mitchell
+(S7U223QWXJ)` -> `Developer ID Certification Authority` -> `Apple Root CA`, `TeamIdentifier=S7U223QWXJ`, designated requirement `identifier
+"com.gamelib.shell" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate
+leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = S7U223QWXJ` (sha256 `af622dc08488b1a2859794a68b60fdfe18f4fede01abbece63d126730527d131`),
+`spctl` accepted (Notarized Developer ID), stapled, `CDHash=06c8dcf06883e6e2ad44d47616b93e9eca7f685b`.
+
+| Property | Phase 86 build (run 45056179067) | Phase 87 build | Equal |
+|----------|----------------------------------|----------------|-------|
+| Identifier | `com.gamelib.shell` | not obtainable (dry run, no artifact) | unknown |
+| Leaf authority / TeamIdentifier | Developer ID Application: grayson mitchell (S7U223QWXJ) / `S7U223QWXJ` | not obtainable | unknown |
+| Designated requirement | the string above | not obtainable | unknown |
+| spctl / stapler | accepted, Notarized Developer ID / stapled | not obtainable (notarization itself: Accepted, id `0f9f1f45-4aeb-4e9b-811a-aa34fac4d235`) | unknown |
+
+To obtain an artifact a non-dry-run dispatch is needed, from a version-bumped release branch as 85-19 (`release/v0.10`) and 86-26 (`release/v0.12`) did,
+because a `dry_run=false` dispatch on `main` at version 0.11.0 would write into the existing `GameLib v0.11.0` draft. That was not authorised here.
+
+Gate: blocked (no artifact from a dry run)
