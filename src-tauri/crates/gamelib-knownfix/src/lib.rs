@@ -15,6 +15,7 @@ pub mod catalogue;
 pub mod ctx;
 pub mod jsvalue;
 pub mod launch;
+pub mod overlay;
 pub mod reader;
 pub mod registry;
 pub mod types;

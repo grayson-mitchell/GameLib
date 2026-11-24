@@ -29,12 +29,12 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"
 tokio-util = "0.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# Will carry the overlay pin: the archive and per-file sha256 an overlay download is checked against
-# (88-10). Already locked (gamelib-wine and gamelib-engine hash with sha2), so no new crate enters the tree.
+# The overlay pin: the archive and per-file sha256 an overlay download is checked against (88-10).
+# Already locked (gamelib-wine and gamelib-engine hash with sha2), so no new crate enters the tree.
 sha2 = "0.10"
-# Will carry the overlay archive: a `.tar.gz` is unpacked through it (88-10). Already locked
-# (gamelib-depot), so no new crate enters the tree.
-flate2 = "1"
+# The overlay archive: a `.tar.gz` is written and unpacked through it (88-10), with the zlib-rs backend
+# the other crates use. Already locked (gamelib-depot), so no new crate enters the tree.
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 
 [features]
 # Test seams: the engine's and the wine crate's scripted fakes, reached through this crate's context.
