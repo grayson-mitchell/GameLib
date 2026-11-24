@@ -1066,7 +1066,7 @@ export type InstallInfo =
   | GogInstallInfo
   | NileInstallInfo
 
-export type KnownFixRegistryView = 32 | 64
+type KnownFixRegistryView = 32 | 64
 
 interface KnownFixRegistryEntry {
   key: string

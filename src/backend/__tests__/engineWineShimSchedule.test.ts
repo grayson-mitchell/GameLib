@@ -186,9 +186,12 @@ const KNOWN_FIX_SHIM_IMPORTERS: readonly string[] = [
  * `withKnownFixEnv` (88-13), and the Steam bridge's known-fix application (the profile and launch-override reads, the
  * env lookup) and the steamclient layer install (the overlay archive reader) (88-14), and the Steam library's
  * synchronous readers (the DRM and macArch known-fix hints, the overlay launch gate, the shared-redist install)
- * (88-15).
+ * (88-15), and the two build scripts that write and verify overlay archives (`readOverlayTarGz`, `buildOverlayTarGz`),
+ * which imported the deleted TS `knownFixOverlayArchive` module until 88-16.
  */
 const KNOWN_FIX_TWIN_IMPORTERS: readonly string[] = [
+  'meta/buildOverlayArchive.ts',
+  'meta/buildSteamClientLayerArchive.ts',
   'src/backend/launcher.ts',
   'src/backend/storeManagers/steam/bridge/drm/steamclientLayerInstall.ts',
   'src/backend/storeManagers/steam/bridge/sharedRedistInstall.ts',

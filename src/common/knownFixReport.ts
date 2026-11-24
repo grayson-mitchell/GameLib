@@ -18,7 +18,7 @@ export type KnownFixReportKey = keyof typeof KNOWN_FIX_REPORT_PAIRS
 const KNOWN_FIX_REPORT_OPS = ['add', 'remove'] as const
 export type KnownFixReportOp = (typeof KNOWN_FIX_REPORT_OPS)[number]
 
-export const KNOWN_FIX_REPORT_VERSION = 1
+const KNOWN_FIX_REPORT_VERSION = 1
 
 /** Relay request body cap in bytes (D-15). */
 export const KNOWN_FIX_REPORT_MAX_BYTES = 2048

@@ -37,7 +37,7 @@ import {
 import {
   buildOverlayTarGz,
   readOverlayTarGz
-} from '../src/backend/knownFixOverlayArchive'
+} from '../src/backend/launchrust/knownFixTwins'
 import { steamclientLayerComponentId } from '../src/backend/storeManagers/steam/bridge/drm/drmPaths'
 
 const USAGE =

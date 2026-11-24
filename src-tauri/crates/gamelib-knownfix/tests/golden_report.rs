@@ -829,8 +829,8 @@ fn every_case_has_recorded_exchanges_and_every_documented_delta_names_a_case() {
     }
 }
 
-/// The `constants` case, recorded from `src/common/knownFixReport.ts` and `src/backend/knownFixReport.ts`
-/// by the oracle, is what the Rust constants must equal.
+/// The `constants` case, recorded from `src/common/knownFixReport.ts` and the TS report client (deleted in 88-16) by
+/// the oracle, is what the Rust constants must equal.
 #[test]
 fn the_constants_case_equals_the_rust_constants() {
     let recorded = read_json(&golden_dir().join("expected/constants/result.json"));
@@ -839,11 +839,12 @@ fn the_constants_case_equals_the_rust_constants() {
 }
 
 /// The same pins read straight from the shared schema source, so a change on the TS side that the golden
-/// has not been re-recorded for still fails here (the relay worker bundles that file).
+/// has not been re-recorded for still fails here (the relay worker bundles that file). The TS report client
+/// (`src/backend/knownFixReport.ts`) is gone, so the client's own constants (the relay URL, its pending sentinel,
+/// the 8 s timeout) are pinned by the recorded `constants` case above and by the asserts on the Rust values below.
 #[test]
 fn the_constants_equal_the_shared_schema_source() {
     let shared = std::fs::read_to_string(repo_file("src/common/knownFixReport.ts")).unwrap();
-    let client = std::fs::read_to_string(repo_file("src/backend/knownFixReport.ts")).unwrap();
     assert!(shared.contains("{ macArch: '32', drm: 'ceg' } as const"));
     assert_eq!(KNOWN_FIX_REPORT_PAIRS, [("macArch", "32"), ("drm", "ceg")]);
     assert!(shared.contains(&format!(
@@ -867,13 +868,6 @@ fn the_constants_equal_the_shared_schema_source() {
     assert_eq!(listed, RELAY_RESPONSE_STATUSES.len() * 2);
     assert!(shared.contains("appId: z.string().regex(/^[1-9][0-9]{0,9}$/)"));
     assert!(shared.contains("gamelibVersion: z.string().regex(/^[0-9A-Za-z.+-]{1,40}$/)"));
-    assert!(client.contains(&format!(
-        "RELAY_URL_PENDING_SENTINEL = '{RELAY_URL_PENDING_SENTINEL}'"
-    )));
-    assert!(client.contains(&format!("'{DEFAULT_RELAY_URL}'")));
-    assert!(client.contains(&format!("RELAY_TIMEOUT_MS = {}", RELAY_TIMEOUT.as_millis())));
-    assert!(client.contains("'Content-Type': 'application/json'"));
-    assert!(client.contains("maxRedirects: 0"));
     assert_eq!(RELAY_TIMEOUT, Duration::from_millis(8000));
 }
 

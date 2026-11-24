@@ -648,8 +648,6 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     'src/backend/dialog/dialog.ts',
     'src/backend/dialog/displayAck.ts',
     'src/backend/gamedetails/overrides.ts',
-    'src/backend/knownFixOverlayInstall.ts',
-    'src/backend/knownFixesFetcher.ts',
     'src/backend/launchSingleFlight.ts',
     'src/backend/macArch/recovery.ts',
     'src/backend/protocol.ts',
@@ -757,7 +755,8 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     // Phase 87 Plan 56 deleted engine/launchDeadline.ts and engine/launchEngine.ts with the TS launch step (D-06): 63 -> 61.
     // Phase 87 Plan 56c deleted engine/bottleLedger.ts, crossoverLocation.ts, engineNoticeStore.ts, engineRegistry.ts, fallbackEngine.ts,
     // launchSettings.ts and perGameBottle.ts with the engine directory (D-06): 61 -> 54.
-    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 54)
+    // Phase 88 Plan 16 deleted knownFixOverlayInstall.ts and knownFixesFetcher.ts with the TS known-fix slice (D-18, D-25): 54 -> 52.
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 52)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {

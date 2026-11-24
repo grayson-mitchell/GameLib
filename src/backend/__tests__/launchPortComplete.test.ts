@@ -24,10 +24,12 @@
  */
 import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import { findRollbackFlag, walkStripped } from 'backend/testUtils/infoPortGate'
+import type { SliceSpec } from 'backend/testUtils/portSliceGate'
 import {
   BACKEND_FILES_FLOOR,
   flagWalk,
   RUST_FILES_FLOOR,
+  runSlice,
   rustWalk,
   SCANNED_FILES_FLOOR,
   tsWalk
@@ -47,6 +49,123 @@ const crateWalk = walkStripped(['src-tauri/crates'], { ext: /\.rs$/ })
 
 /** Every file the flag scan reads: `flagWalk` plus the crates. */
 const scanned = [...flagWalk.files, ...crateWalk.files]
+
+/**
+ * 88-16, D-18, D-25 and ROADMAP 88 SC4: the known-fix sub-slice is Rust's (88-08..88-11 ported it, 88-12..88-15
+ * switched every caller onto a scheduled shim or twin). The eight TS modules, their eighteen unit tests and their five
+ * oracle tests are deleted. The goldens and the recordings the oracles wrote stay, because the Rust replays
+ * (`gamelib-knownfix/tests/golden_*.rs`) and the twins' vectors test read them. `src/common/knownFixReport.ts` (the
+ * relay worker's shared schema) and `src/common/knownFixOverlayCatalogue.{ts,json}` are shared data, not runtime TS, and
+ * `launchrust/knownFixes.ts` and `launchrust/knownFixTwins.ts` are the scheduled survivors.
+ *
+ * Two files outside the plan's list of 31 go with them because their only subject is gone: the fetch oracle's cases
+ * file (`oracle/knownFixFetch.cases.ts` imports the deleted fetcher's two base URLs and nothing else imports it).
+ * `oracle/knownFixReader.cases.ts` and `oracle/knownFixOverlay.cases.ts` stay: the twins' vectors test imports them.
+ *
+ * `forbiddenIdentifiers` is every export of the deleted modules minus the names a shim or twin carries. Candidates
+ * left out, each checked with `git grep -w` on 2026-11-25:
+ *   - the shim and twin names themselves (readKnownFixes, readKnownFixProfile, readKnownFixLaunchOverrides,
+ *     fetchRemoteKnownFixes, applyKnownFixProfileRegistry, knownFixProfileOverlayEnv, applyRegistryFixes,
+ *     resolveKnownFixOverlayEnv, reportDetectedFix, DetectedFix, lastEnvOption, formatKnownFixEnvLine, logKnownFixEnv,
+ *     withKnownFixEnv, buildOverlayTarGz, readOverlayTarGz, KnownFixPathsDeps, KnownFixLocalPathsDeps);
+ *   - TIER1_KNOWN_FIX_KEYS, isValidExeOverrideShape, filterTier1KnownFixes and resolveKnownFixExeOverride, which the
+ *     twins file carries as private helpers copied verbatim from the deleted modules;
+ *   - validateOverlayEntries, which `src/common/knownFixOverlayCatalogue.ts` (kept shared data) defines for itself.
+ */
+const KNOWN_FIX: SliceSpec = {
+  deleted: [
+    'src/backend/knownFixes.ts',
+    'src/backend/knownFixesRegistry.ts',
+    'src/backend/knownFixesFetcher.ts',
+    'src/backend/knownFixLaunch.ts',
+    'src/backend/knownFixOverlays.ts',
+    'src/backend/knownFixOverlayArchive.ts',
+    'src/backend/knownFixOverlayInstall.ts',
+    'src/backend/knownFixReport.ts',
+    'src/backend/__tests__/knownFixLaunch.test.ts',
+    'src/backend/__tests__/knownFixOverlayArchive.test.ts',
+    'src/backend/__tests__/knownFixOverlayInstall.test.ts',
+    'src/backend/__tests__/knownFixOverlays.test.ts',
+    'src/backend/__tests__/knownFixReport.test.ts',
+    'src/backend/__tests__/knownFixReportDrift.test.ts',
+    'src/backend/__tests__/knownFixReportUrl.test.ts',
+    'src/backend/__tests__/knownFixes.test.ts',
+    'src/backend/__tests__/knownFixesCegSeeds.test.ts',
+    'src/backend/__tests__/knownFixesDrm.test.ts',
+    'src/backend/__tests__/knownFixesFetcher.test.ts',
+    'src/backend/__tests__/knownFixesGamelibStatus.test.ts',
+    'src/backend/__tests__/knownFixesLayered.test.ts',
+    'src/backend/__tests__/knownFixesMacArch.test.ts',
+    'src/backend/__tests__/knownFixesMacArchSeeds.test.ts',
+    'src/backend/__tests__/knownFixesOverlay.test.ts',
+    'src/backend/__tests__/knownFixesRegistry.test.ts',
+    'src/backend/__tests__/knownFixesWithLayer.test.ts',
+    'src/backend/__tests__/oracle/knownFixReader.oracle.test.ts',
+    'src/backend/__tests__/oracle/knownFixLaunch.oracle.test.ts',
+    'src/backend/__tests__/oracle/knownFixRegistry.oracle.test.ts',
+    'src/backend/__tests__/oracle/knownFixOverlay.oracle.test.ts',
+    'src/backend/__tests__/oracle/knownFixFetch.oracle.test.ts',
+    'src/backend/__tests__/oracle/knownFixFetch.cases.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-knownfix/tests/fixtures/golden',
+    'src-tauri/crates/gamelib-knownfix/tests/fixtures/golden/reader',
+    'src-tauri/crates/gamelib-knownfix/tests/fixtures/golden/registry',
+    'src-tauri/crates/gamelib-knownfix/tests/fixtures/golden/overlay_archive',
+    'src-tauri/crates/gamelib-knownfix/tests/fixtures/golden/overlay_install',
+    'src-tauri/crates/gamelib-knownfix/tests/fixtures/golden/launch_overrides',
+    'src-tauri/crates/gamelib-knownfix/tests/fixtures/golden/fetcher',
+    'src-tauri/crates/gamelib-knownfix/tests/fixtures/golden/report',
+    'src-tauri/crates/gamelib-knownfix/tests/fixtures/recorded',
+    'src-tauri/crates/gamelib-knownfix/tests/fixtures/recorded/fetcher',
+    'src-tauri/crates/gamelib-knownfix/tests/fixtures/recorded/report',
+    'src/common/knownFixReport.ts',
+    'src/common/knownFixOverlayCatalogue.json',
+    'src/common/knownFixOverlayCatalogue.ts',
+    'src/backend/launchrust/knownFixes.ts',
+    'src/backend/launchrust/knownFixTwins.ts'
+  ],
+  forbiddenIdentifiers: [
+    'TIER1_ROUTING_KEYS',
+    'isRoutingOnlyTier1Fix',
+    'readKnownFixesWithLayer',
+    'readGamelibFixStatus',
+    'REGISTRY_FIX_TIMEOUT_MS',
+    'ValidRegistryFix',
+    'validateRegistryFixes',
+    'dllOverridesToRegistryFixes',
+    'knownFixProfileRegistryFixes',
+    'buildRegistryFixCommandParts',
+    'wineRegistryValueIsSet',
+    'knownFixPrefixDir',
+    'GAMELIB_KNOWN_FIXES_BASE',
+    'HEROIC_KNOWN_FIXES_BASE',
+    'KnownFixesGet',
+    'KnownFixesFetchDeps',
+    'OverlayEnvDeps',
+    'MAX_OVERLAY_ENTRIES',
+    'appendPathList',
+    'OverlayArchiveFetch',
+    'OverlayInstallDeps',
+    'verifyInstalledOverlay',
+    'KnownFixOverlayInstalls',
+    'createKnownFixOverlayInstalls',
+    'RELAY_URL_PENDING_SENTINEL',
+    'GAMELIB_FIX_RELAY_URL',
+    'relayUrl',
+    'ReportDeps',
+    'knownFixReportDeps',
+    'runKnownFixReport'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_KNOWNFIX',
+  manifestSlice: 'knownfix',
+  channelsFloor: 2
+}
+
+describe('knownFixPortComplete', () => {
+  runSlice(KNOWN_FIX)
+})
 
 describe('noRollbackFlag', () => {
   it('anti-vacuity: the walks read real trees', () => {

@@ -24,7 +24,7 @@ import { lookupKnownFixOverlay } from '../src/common/knownFixOverlayCatalogue'
 import {
   buildOverlayTarGz,
   readOverlayTarGz
-} from '../src/backend/knownFixOverlayArchive'
+} from '../src/backend/launchrust/knownFixTwins'
 
 const USAGE =
   'usage: pnpm build:overlay-archive --source <dir> --out <file> [--id <overlay id>]'

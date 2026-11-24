@@ -29,7 +29,7 @@ import {
   machOX8664SignatureState,
   peMachine
 } from '../buildSteamClientLayerArchive'
-import { readOverlayTarGz } from '../../src/backend/knownFixOverlayArchive'
+import { readOverlayTarGz } from '../../src/backend/launchrust/knownFixTwins'
 import { steamclientLayerComponentId } from '../../src/backend/storeManagers/steam/bridge/drm/drmPaths'
 import {
   DETOUR_BUILD_ROWS,

@@ -8,15 +8,6 @@ import { join } from 'path'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import { assertCasesCoverTitles, slug, tsTestTitles } from '../census'
 
-const REGISTRY_TEST = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  '__tests__',
-  'knownFixesRegistry.test.ts'
-)
-
 /** Writes `source` to a throwaway file inside a fake HOME and reads its titles. */
 function titlesOf(source: string): string[] {
   const scratch = createFakeHomeProfile({ prefix: 'gamelib-census-' })
@@ -108,18 +99,6 @@ describe('tsTestTitles', () => {
 
   it('throws when a title is not a string literal', () => {
     expect(() => titlesOf('it(name, () => {})')).toThrow(/title/)
-  })
-
-  it('reads every it and test of knownFixesRegistry.test.ts', () => {
-    const titles = tsTestTitles(REGISTRY_TEST)
-    expect(titles.length).toBeGreaterThanOrEqual(46)
-    expect(titles).toContain(
-      'validateRegistryFixes > warns and returns [] for a non-array'
-    )
-    expect(titles).toContain('knownFixPrefixDir > is undefined when unknown')
-    expect(
-      titles.some((t) => t.startsWith('dllOverridesToRegistryFixes > '))
-    ).toBe(true)
   })
 })
 
