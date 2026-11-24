@@ -56,8 +56,14 @@ fn ok_output(stdout: &str) -> SpecOutput {
 }
 
 impl Rig {
-    /// `winetricks_output` is what the scripted `winetricks` answers.
+    /// `winetricks` is what the scripted `winetricks` answers to any run.
     fn new(winetricks: SpecOutput) -> Rig {
+        Rig::with_scripts(winetricks, &[])
+    }
+
+    /// As [`Rig::new`], plus `winetricks` answers for exact argvs (`list-all`, one verb's run), which win
+    /// over the any-argv answer.
+    fn with_scripts(winetricks: SpecOutput, exact: &[(&[&str], SpecOutput)]) -> Rig {
         let home = FakeHome::new("tool-bottle-");
         let root = home.root().to_path_buf();
         let user_home = root.join("home");
@@ -101,13 +107,16 @@ impl Rig {
         std::fs::create_dir_all(&tools).unwrap();
         std::fs::write(tools.join("winetricks"), b"#!/bin/sh\n").unwrap();
 
-        let runner = Arc::new(
-            ScriptedSpecRunner::new(Vec::new())
-                .on_program(&tools.join("winetricks").to_string_lossy(), winetricks)
-                .on_program("which", ok_output(""))
-                .on_program(&cx_bin.join("wine").to_string_lossy(), ok_output(""))
-                .on_program(&cx_bin.join("wineserver").to_string_lossy(), ok_output("")),
-        );
+        let script = tools.join("winetricks").to_string_lossy().into_owned();
+        let mut scripted = ScriptedSpecRunner::new(Vec::new())
+            .on_program(&script, winetricks)
+            .on_program("which", ok_output(""))
+            .on_program(&cx_bin.join("wine").to_string_lossy(), ok_output(""))
+            .on_program(&cx_bin.join("wineserver").to_string_lossy(), ok_output(""));
+        for (argv, output) in exact {
+            scripted = scripted.on(&script, argv, output.clone());
+        }
+        let runner = Arc::new(scripted);
         let log = Arc::new(RecordingLog::new());
         let bin_dir = cx_bin.to_string_lossy().into_owned();
         let engine = EngineCtx::new(
@@ -404,4 +413,122 @@ async fn a_bottle_name_that_is_not_one_safe_segment_runs_nothing() {
             "{name:?}: the refusal is logged"
         );
     }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// A Winetricks failure reaches the user (87-64 Task 2). The queue is what the Winetricks tab renders: a verb
+// that did not apply is `failed` in its state, with an error line in the run's log.
+// ---------------------------------------------------------------------------------------------------------------
+
+/// The `list-all` the apply guard validates a verb against.
+const LIST_ALL: &str = "===== settings =====\n\
+fontsmooth=bgr          Enable subpixel font smoothing for BGR LCDs\n";
+
+/// 87-59's line: winetricks' `w_try` does not abort on a regedit import that found no file, so the verb's
+/// own run printed this and exited 0.
+const REGEDIT_LINE: &str =
+    "regedit: The file 'C:\\windows\\Temp\\_fontsmooth=bgr\\fontsmooth.reg' was not found";
+
+fn run_output(code: i32, stdout: &str, stderr: &str) -> SpecOutput {
+    SpecOutput {
+        code: Some(code),
+        stdout: stdout.to_string(),
+        stderr: stderr.to_string(),
+        ..SpecOutput::default()
+    }
+}
+
+/// Applies `VERB` through the queue on a rig whose verb run answers `run`, and waits for the run to end.
+/// Answers the finished queue state.
+async fn apply_through_the_queue(run: SpecOutput) -> Value {
+    let rig = Rig::with_scripts(
+        ok_output(""),
+        &[(&["list-all"], ok_output(LIST_ALL)), (&["-q", VERB], run)],
+    );
+    let settings = engine_settings(&rig.resolve().await);
+    let key = json!({"runner": RUNNER, "appName": APP});
+    let accepted = gamelib_wine::dispatch(
+        "wine_winetricks_apply",
+        &[
+            json!({"runner": RUNNER, "appName": APP, "settings": settings}),
+            json!([VERB]),
+            host_json(),
+        ],
+        &rig.ctx,
+    )
+    .await
+    .expect("the apply op answers");
+    assert_eq!(accepted["accepted"], true, "{accepted}");
+    for _ in 0..500 {
+        let state = gamelib_wine::dispatch("wine_winetricks_queue_state", &[key.clone()], &rig.ctx)
+            .await
+            .expect("the state op answers");
+        if state["run"]["status"] == "done" {
+            return state;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    panic!("the run did not end");
+}
+
+fn error_lines(state: &Value) -> Vec<String> {
+    state["run"]["log"]
+        .as_array()
+        .expect("the run has a log")
+        .iter()
+        .filter(|line| line["kind"] == "error")
+        .map(|line| line["text"].as_str().unwrap_or_default().to_string())
+        .collect()
+}
+
+#[tokio::test]
+async fn a_winetricks_run_that_exits_non_zero_ends_the_verb_failed_with_an_error_line() {
+    let state = apply_through_the_queue(run_output(
+        1,
+        "",
+        "warning: fontsmooth=bgr failed, returned status 1. Aborting.\n",
+    ))
+    .await;
+    assert_eq!(state["run"]["outcomes"][VERB], "failed", "{state}");
+    assert!(
+        !error_lines(&state).is_empty(),
+        "an error line is in the run's log: {}",
+        state["run"]["log"]
+    );
+}
+
+/// The class 87-59 saw: exit 0, and the verb's own `.reg` file was not found.
+#[tokio::test]
+async fn a_regedit_import_that_found_no_file_ends_the_verb_failed_even_on_exit_zero() {
+    let state = apply_through_the_queue(run_output(
+        0,
+        &format!("Executing w_do_call fontsmooth=bgr\n{REGEDIT_LINE}\n"),
+        "",
+    ))
+    .await;
+    assert_eq!(state["run"]["outcomes"][VERB], "failed", "{state}");
+    let errors = error_lines(&state);
+    assert!(
+        errors.iter().any(|line| line.contains("fontsmooth.reg")),
+        "the regedit line is an error line in the log: {errors:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_regedit_import_that_found_no_file_is_a_failed_install_on_the_single_verb_op_too() {
+    let rig = Rig::new(run_output(0, &format!("{REGEDIT_LINE}\n"), ""));
+    let settings = engine_settings(&rig.resolve().await);
+    assert_eq!(winetricks_install(&rig, settings).await, json!("failed"));
+}
+
+#[tokio::test]
+async fn a_clean_exit_with_ordinary_output_ends_the_verb_installed() {
+    let state = apply_through_the_queue(run_output(
+        0,
+        "Executing w_do_call fontsmooth=bgr\nUsing winetricks 20240105\n",
+        "",
+    ))
+    .await;
+    assert_eq!(state["run"]["outcomes"][VERB], "installed", "{state}");
+    assert!(error_lines(&state).is_empty(), "{}", state["run"]["log"]);
 }
