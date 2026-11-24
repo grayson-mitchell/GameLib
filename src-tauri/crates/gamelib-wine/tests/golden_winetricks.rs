@@ -572,7 +572,9 @@ impl SpecRunner for OracleRunner {
     }
 
     fn run_streamed(&self, spec: ProcSpec, mut on_chunk: ChunkSink) -> BoxFuture<SpecOutput> {
-        assert_eq!(spec.program, self.winetricks_program);
+        // On Windows the profile's path joins with `\\` where the expected one was written with `/`.
+        let same = |text: &str| text.replace('\\', "/");
+        assert_eq!(same(&spec.program), same(&self.winetricks_program));
         let script = self.next_run(&spec.argv);
         let (mut out, mut err) = (String::new(), String::new());
         for step in &script.steps {
