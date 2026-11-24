@@ -168,6 +168,19 @@ fn returned_status(trimmed: &str) -> bool {
     false
 }
 
+/// Wine's `regedit: The file '<path>' was not found`: a registry import (`regedit /S file.reg`) whose
+/// `.reg` file was not there. Winetricks' `w_try` does not abort on it and the verb's run exits 0, so the
+/// verb looked installed while its settings never reached the registry (87-59 item 4(c): `fontsmooth=bgr`
+/// printed `regedit: The file 'C:\windows\Temp\_fontsmooth=bgr\fontsmooth.reg' was not found`, exit 0, and
+/// the bottle's `user.reg` stayed as it was). A CLOSED rule (D-06 gate fix): this one form only, a quoted
+/// non-empty path between the two fixed halves, never every `err:` line of wine, which is noise.
+pub fn is_missing_regedit_file(line: &str) -> bool {
+    const HEAD: &str = "regedit: The file '";
+    const TAIL: &str = "' was not found";
+    let trimmed = js_trim(line);
+    trimmed.len() > HEAD.len() + TAIL.len() && trimmed.starts_with(HEAD) && trimmed.ends_with(TAIL)
+}
+
 /// `/^\S+ not installed! Winetricks might fail/`.
 fn dependency_missing(trimmed: &str) -> bool {
     let end = trimmed.find(is_js_whitespace).unwrap_or(trimmed.len());
@@ -306,7 +319,7 @@ pub fn classify_line(line: &str) -> Option<LogLine> {
 
     // Before `environment`: a failed `w_try` arrives behind a `warning:` prefix and must not be
     // downgraded to a generic warning.
-    if aborting(trimmed) || returned_status(trimmed) {
+    if aborting(trimmed) || returned_status(trimmed) || is_missing_regedit_file(trimmed) {
         return Some(LogLine::new(LineKind::Error, text));
     }
 
@@ -529,5 +542,28 @@ mod tests {
         let cut = split_output_chunk("", &long);
         assert_eq!(cut.lines.len(), 2);
         assert_eq!(cut.remainder.len(), 5);
+    }
+    /// 87-64 (D-06 gate fix): exactly the one form of 87-59 is a failed registry import; its neighbours
+    /// are not, and none of wine's `err:` noise is.
+    #[test]
+    fn only_the_regedit_file_not_found_form_is_a_failed_import() {
+        let line =
+            r"regedit: The file 'C:\windows\Temp\_fontsmooth=bgr\fontsmooth.reg' was not found";
+        assert!(is_missing_regedit_file(line));
+        assert!(is_missing_regedit_file(&format!("  {line}  ")));
+        assert_eq!(classify_line(line).unwrap().kind, LineKind::Error);
+        for not in [
+            "",
+            "regedit: The file '' was not found",
+            "regedit: The file 'a.reg' was found",
+            "regedit: Unable to open the file 'a.reg'",
+            "xregedit: The file 'a.reg' was not found",
+            "The file 'a.reg' was not found",
+            "err:reg:foo: The file 'a.reg' was not found",
+            "0024:err:ole:CoGetClassObject class not registered",
+            "Executing regedit /S a.reg",
+        ] {
+            assert!(!is_missing_regedit_file(not), "{not:?}");
+        }
     }
 }

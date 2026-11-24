@@ -460,9 +460,13 @@ async fn apply_through_the_queue(run: SpecOutput) -> Value {
     .expect("the apply op answers");
     assert_eq!(accepted["accepted"], true, "{accepted}");
     for _ in 0..500 {
-        let state = gamelib_wine::dispatch("wine_winetricks_queue_state", &[key.clone()], &rig.ctx)
-            .await
-            .expect("the state op answers");
+        let state = gamelib_wine::dispatch(
+            "wine_winetricks_queue_state",
+            std::slice::from_ref(&key),
+            &rig.ctx,
+        )
+        .await
+        .expect("the state op answers");
         if state["run"]["status"] == "done" {
             return state;
         }

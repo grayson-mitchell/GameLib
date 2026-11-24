@@ -28,8 +28,9 @@ use serde_json::{json, Map, Value};
 use tokio::time::{interval_at, Instant, MissedTickBehavior};
 
 use super::classify::{
-    append_log_line, classify_line, is_unsupported_wine_version, parse_unsupported_wine_version,
-    parse_wine_version_output, split_output_chunk, LineKind, LogLine, MAX_BUFFERED_LINES,
+    append_log_line, classify_line, is_missing_regedit_file, is_unsupported_wine_version,
+    parse_unsupported_wine_version, parse_wine_version_output, split_output_chunk, LineKind,
+    LogLine, MAX_BUFFERED_LINES,
 };
 use super::guard::filter_visible_catalog;
 use super::list_parse::{parse_list_all, Component};
@@ -438,6 +439,9 @@ struct RunState<'a> {
     output: Vec<String>,
     chunks_seen: bool,
     done: bool,
+    /// A line said a registry import found no file (`regedit: The file '...' was not found`): the run
+    /// did not apply its verb, whatever its exit code says (87-64, D-06 gate fix).
+    failed_import: bool,
 }
 
 impl RunState<'_> {
@@ -477,6 +481,9 @@ impl RunState<'_> {
         let Some(line) = classify_line(raw) else {
             return;
         };
+        if is_missing_regedit_file(raw) {
+            self.failed_import = true;
+        }
         match line.kind {
             LineKind::Progress | LineKind::Noise => {}
             LineKind::Info => log_info(self.ctx, &line.text),
@@ -555,13 +562,16 @@ impl RunState<'_> {
         self.handle_line(&rest);
         self.flush();
         self.done = true;
-        let failed = code != Some(0);
+        // The exit code decides (copied from the TS, D-16), and so does a failed registry import: it exits
+        // 0 (D-06 gate fix, `is_missing_regedit_file`).
+        let failed = code != Some(0) || self.failed_import;
         let mut payload = Map::new();
         payload.insert("messages".into(), json!(["Done"]));
         payload.insert("installingComponent".into(), json!(self.component));
         payload.insert("failed".into(), json!(failed));
         if failed {
             let text = match code {
+                Some(0) => "winetricks reported a registry import that found no file".to_string(),
                 Some(code) => format!("winetricks exited with code {code}"),
                 None => "winetricks exited with code null".to_string(),
             };
@@ -676,6 +686,7 @@ pub async fn run_with_args<'a>(
         output: Vec::new(),
         chunks_seen: false,
         done: false,
+        failed_import: false,
     });
     let with_state = |f: &mut dyn FnMut(&mut RunState<'_>)| {
         let mut guard = state.lock().unwrap_or_else(|e| e.into_inner());
