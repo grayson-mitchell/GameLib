@@ -53,6 +53,21 @@ pub struct KnownFixCtx {
 }
 
 impl KnownFixCtx {
+    /// A warning line through the engine's log (a headless context has none). Fixed text only: the
+    /// engine's redactor holds a line to that rule, and so does every caller.
+    pub(crate) fn log_warn(&self, line: &str) {
+        if let Some(log) = self.engine.log.as_ref() {
+            log.warn(line);
+        }
+    }
+
+    /// An info line through the engine's log.
+    pub(crate) fn log_info(&self, line: &str) {
+        if let Some(log) = self.engine.log.as_ref() {
+            log.info(line);
+        }
+    }
+
     pub fn new(
         engine: Arc<EngineCtx>,
         bundled_fixes: Option<PathBuf>,

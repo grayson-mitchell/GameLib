@@ -74,6 +74,66 @@ fn the_read_op_prints_the_local_fix_and_null_for_an_unknown_game_over_a_fake_hom
 }
 
 #[test]
+fn the_launch_overrides_op_prints_the_resolved_exe_for_a_seeded_install_over_a_fake_home() {
+    let home = FakeHome::new("knownfix-cli-");
+    let user_data = home.root().join("userData");
+    let local = user_data.join("fixes").join("local");
+    std::fs::create_dir_all(&local).unwrap();
+    std::fs::write(
+        local.join("1234-gog.json"),
+        r#"{"title":"Seeded","launchArgs":["-dx11"],"exeOverride":"bin/game.exe"}"#,
+    )
+    .unwrap();
+    let install = home.root().join("games").join("install");
+    std::fs::create_dir_all(install.join("bin")).unwrap();
+    std::fs::write(install.join("bin").join("game.exe"), "x").unwrap();
+    let run = |args: serde_json::Value| {
+        let out = cli()
+            .args(["op", "knownfix_launch_overrides"])
+            .arg(args.to_string())
+            .arg("--user-data")
+            .arg(&user_data)
+            .output()
+            .unwrap();
+        assert_eq!(out.status.code(), Some(0), "{out:?}");
+        serde_json::from_slice::<serde_json::Value>(&out.stdout).unwrap()
+    };
+    let answer = run(serde_json::json!([
+        {"appName": "1234", "runner": "gog", "installPath": install}
+    ]));
+    // The resolved path is printed: the lexical one, inside the install folder.
+    println!("resolved exe: {}", answer["exeOverride"]);
+    assert_eq!(
+        answer,
+        serde_json::json!({
+            "launchArgs": ["-dx11"],
+            "exeOverride": install.join("bin").join("game.exe"),
+        })
+    );
+    // An unknown install folder keeps the default exe; the arguments still come through.
+    let answer = run(serde_json::json!([
+        {"appName": "1234", "runner": "gog", "installPath": null}
+    ]));
+    assert_eq!(
+        answer,
+        serde_json::json!({"launchArgs": ["-dx11"], "exeOverride": null})
+    );
+    // A bad call exits 2 with a fixed literal.
+    let bad = cli()
+        .args([
+            "op",
+            "knownfix_launch_overrides",
+            r#"[{"appName":"1234","runner":"epic"}]"#,
+            "--user-data",
+        ])
+        .arg(&user_data)
+        .output()
+        .unwrap();
+    assert_eq!(bad.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&bad.stderr).contains("knownfix_launch_overrides:bad-args"));
+}
+
+#[test]
 fn an_unknown_op_exits_two_over_a_fake_home() {
     let home = FakeHome::new("knownfix-cli-");
     let out = cli()

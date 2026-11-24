@@ -92,7 +92,7 @@ fn js_trim(s: &str) -> &str {
 
 /// A path with its `.` and `..` components resolved lexically, as `path.resolve` does: nothing is read
 /// from disk and a `..` at the root stays at the root.
-fn normalize(path: &Path) -> PathBuf {
+pub(crate) fn normalize(path: &Path) -> PathBuf {
     let mut out = PathBuf::new();
     for component in path.components() {
         match component {

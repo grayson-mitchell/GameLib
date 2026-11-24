@@ -14,6 +14,7 @@
 pub mod catalogue;
 pub mod ctx;
 pub mod jsvalue;
+pub mod launch;
 pub mod reader;
 pub mod types;
 
@@ -32,6 +33,7 @@ use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
 pub const OPS: &[&str] = &[
+    "knownfix_launch_overrides",
     "knownfix_overlay_catalogue",
     "knownfix_read",
     "knownfix_status",
@@ -71,8 +73,33 @@ async fn route(op: &str, args: &[Value], ctx: &KnownFixCtx) -> Result<Value, Str
             let status = reader::read_gamelib_fix_status(ctx, &app_name, runner);
             serde_json::to_value(status).map_err(|_| format!("{op}:bad-result"))
         }
+        // What the launch path applies from a game's known fix (88-09, D-03): `launchArgs` as they are and
+        // the checked `exeOverride`. The one object argument is `{ appName, runner, installPath }`, with
+        // `installPath` null when the install folder is unknown.
+        "knownfix_launch_overrides" => {
+            let args: LaunchOverridesArgs = decode(op, args)?;
+            let runner =
+                types::Runner::parse(&args.runner).ok_or_else(|| format!("{op}:bad-args"))?;
+            let overrides = launch::read_launch_overrides(
+                ctx,
+                &args.app_name,
+                runner,
+                args.install_path.as_deref(),
+            );
+            serde_json::to_value(overrides).map_err(|_| format!("{op}:bad-result"))
+        }
         _ => Err(format!("unknown op: {op}")),
     }
+}
+
+/// The object argument of `knownfix_launch_overrides`.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct LaunchOverridesArgs {
+    app_name: String,
+    runner: String,
+    #[serde(default)]
+    install_path: Option<String>,
 }
 
 /// The `[appName, runner]` arguments of the reader ops: a string and one of the five runner names. The
@@ -87,10 +114,9 @@ fn decode_app_runner(op: &str, args: &[Value]) -> Result<(String, types::Runner)
 
 /// The one object argument of an op, decoded strictly (the arg structs deny unknown fields). The
 /// error is a fixed `<op>:bad-args`: a renderer or sidecar string never reaches it.
-// First used by the op the next plan adds; the dispatch tests exercise it today.
-#[allow(dead_code)]
 fn decode<T: serde::de::DeserializeOwned>(op: &str, args: &[Value]) -> Result<T, String> {
-    let [arg] = args else {
+    // An object only: serde would also decode a struct from a JSON array of its fields in order.
+    let [arg @ Value::Object(_)] = args else {
         return Err(format!("{op}:bad-args"));
     };
     serde_json::from_value(arg.clone()).map_err(|_| format!("{op}:bad-args"))
@@ -207,6 +233,7 @@ mod tests {
         sorted.sort_unstable();
         sorted.dedup();
         assert_eq!(sorted, OPS);
+        assert!(OPS.contains(&"knownfix_launch_overrides"));
         assert!(OPS.contains(&"knownfix_overlay_catalogue"));
         assert!(OPS.contains(&"knownfix_read"));
         assert!(OPS.contains(&"knownfix_status"));
@@ -248,6 +275,36 @@ mod tests {
                 .unwrap(),
             json!({"title": "Seeded", "winetricks": ["vcrun2019"]})
         );
+    }
+
+    #[tokio::test]
+    async fn the_launch_overrides_op_decodes_one_strict_object_and_never_echoes_input() {
+        let home = FakeHome::new("knownfix-lib-");
+        let ctx = ctx(&home);
+        let op = "knownfix_launch_overrides";
+        let secret = "SECRET-APP-".repeat(40);
+        for bad in [
+            vec![],
+            vec![json!(["a", "gog", null])],
+            vec![json!({"appName": "a", "runner": "epic", "installPath": null})],
+            vec![json!({"appName": "a", "runner": secret, "installPath": null})],
+            vec![json!({"appName": 1, "runner": "gog"})],
+            vec![json!({"appName": "a", "runner": "gog", "extra": 1})],
+            vec![json!({"appName": "a", "runner": "gog"}), json!(1)],
+        ] {
+            let err = dispatch(op, &bad, &ctx).await.unwrap_err();
+            assert_eq!(err, format!("{op}:bad-args"), "{bad:?}");
+        }
+        // No fix: empty overrides, with the install path null or absent.
+        for args in [
+            json!({"appName": "nope", "runner": "gog", "installPath": null}),
+            json!({"appName": "nope", "runner": "gog"}),
+        ] {
+            assert_eq!(
+                dispatch(op, &[args], &ctx).await.unwrap(),
+                json!({"launchArgs": [], "exeOverride": null})
+            );
+        }
     }
 
     #[tokio::test]
