@@ -206,6 +206,26 @@ pub(crate) fn rpc_knownfix_launch_overrides(args: &[Value]) -> Result<Value, Str
     launch_overrides_over(knownfix_ctx(), args)
 }
 
+/// The body of the `knownfix_fetch_remote` arm over a given context: the generated decode (one object,
+/// `{appName, runner}`, the runner one of the five names) and an arity check first, so a bad call is rejected
+/// the same fixed `<op>:bad-args` literal before and after the install and never echoes the sidecar's value,
+/// then the crate, which decodes strictly again and bounds the app name (T-88-31).
+fn fetch_remote_over(ctx: Option<&Arc<KnownFixCtx>>, args: &[Value]) -> Result<Value, String> {
+    KnownfixFetchRemoteArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("knownfix_fetch_remote:bad-args".to_string());
+    }
+    rpc_knownfix_op(ctx, "knownfix_fetch_remote", args)
+}
+
+/// The `knownfix_fetch_remote` `rustInvoke` arm (the download manager's `fetchRemoteKnownFixes` shim, 88-12):
+/// GameLib's feed, then Heroic's on a 404, answering `null` whatever happened. At most two requests of 10 s
+/// each, so the sidecar keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`; the crate's own registrant and the
+/// shutdown token bound it at exit.
+pub(crate) fn rpc_knownfix_fetch_remote(args: &[Value]) -> Result<Value, String> {
+    fetch_remote_over(knownfix_ctx(), args)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -513,5 +533,42 @@ mod tests {
             got["exeOverride"],
             json!(install.join("bin/game.exe").to_string_lossy())
         );
+    }
+
+    #[test]
+    fn fetch_remote_answers_not_ready_before_install_and_rejects_a_bad_call_with_a_fixed_literal() {
+        let good = json!({"appName": "1234", "runner": "gog"});
+        assert_eq!(
+            fetch_remote_over(None, std::slice::from_ref(&good)),
+            Err("knownfix_fetch_remote:not-ready".to_string())
+        );
+        let secret = "SECRET-RUNNER-".repeat(10);
+        let home = FakeHome::new("knownfix-shell-");
+        let ctx = ctx_over(&home);
+        for ctx in [None, Some(&ctx)] {
+            for bad in [
+                vec![],
+                vec![good.clone(), good.clone()],
+                vec![json!("1234"), json!("gog")],
+                vec![json!({"appName": "1234"})],
+                vec![json!({"appName": "1234", "runner": secret})],
+                vec![json!({"appName": 1, "runner": "gog"})],
+            ] {
+                let error = fetch_remote_over(ctx, &bad).unwrap_err();
+                assert_eq!(error, "knownfix_fetch_remote:bad-args", "{bad:?}");
+                assert!(!error.contains("SECRET"), "{error}");
+            }
+        }
+        // The crate's strict decode and name bound refuse what the generated decode lets through.
+        for bad in [
+            json!({"appName": "1234", "runner": "gog", "extra": 1}),
+            json!({"appName": "", "runner": "gog"}),
+            json!({"appName": "x".repeat(257), "runner": "gog"}),
+        ] {
+            assert_eq!(
+                fetch_remote_over(Some(&ctx), &[bad]),
+                Err("knownfix_fetch_remote:bad-args".to_string())
+            );
+        }
     }
 }

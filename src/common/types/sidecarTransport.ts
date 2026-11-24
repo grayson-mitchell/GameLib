@@ -1428,6 +1428,14 @@ export const RUST_ENGINE_FALLBACK_ENSURE = 'engine_fallback_ensure' as const
  */
 export const RUST_KNOWNFIX_LAUNCH_OVERRIDES =
   'knownfix_launch_overrides' as const
+/**
+ * Phase 88 (SVC-03, 88-12, D-01, D-19): the install-time download of a game's remote known fixes, reached
+ * through `fetchRemoteKnownFixes` in `launchrust/knownFixes.ts`. `knownfix_fetch_remote` takes one object,
+ * `{appName, runner}`, and answers `null` whatever happened (an indeterminate answer is a log line in Rust).
+ * At most two requests of 10 s each (GameLib's feed, then Heroic's on a 404), so it stays inside the 60 s
+ * `RUST_INVOKE_TIMEOUT_MS`.
+ */
+export const RUST_KNOWNFIX_FETCH_REMOTE = 'knownfix_fetch_remote' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -1822,7 +1830,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_ENGINE_NON_CROSSOVER_ENGINE,
   RUST_ENGINE_FALLBACK_ENSURE,
-  RUST_KNOWNFIX_LAUNCH_OVERRIDES
+  RUST_KNOWNFIX_LAUNCH_OVERRIDES,
+  RUST_KNOWNFIX_FETCH_REMOTE
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

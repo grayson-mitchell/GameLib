@@ -146,6 +146,7 @@ import {
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_ENGINE_NON_CROSSOVER_ENGINE,
   RUST_ENGINE_FALLBACK_ENSURE,
+  RUST_KNOWNFIX_FETCH_REMOTE,
   RUST_KNOWNFIX_LAUNCH_OVERRIDES,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
@@ -1010,6 +1011,16 @@ export const rustInvokeArgs = {
         appName: z.string(),
         runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
         installPath: z.string().nullable().optional()
+      })
+      .strict()
+  ]),
+  // Phase 88 (SVC-03, 88-12, D-19): the install-time remote fixes fetch. One strict object, `{appName, runner}`;
+  // the crate bounds the app name again (1 to 256 UTF-16 units) and the shell decodes the runner a second time.
+  [RUST_KNOWNFIX_FETCH_REMOTE]: z.tuple([
+    z
+      .object({
+        appName: z.string(),
+        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam'])
       })
       .strict()
   ])

@@ -166,9 +166,10 @@ const TOOLS_SHIM_IMPORTERS: readonly string[] = [
 ]
 /**
  * Every non-test importer of `launchrust/knownFixes.ts` (the check is per file, so every row of that file lists them
- * all): the three managers' `launch()` (88-12). The download manager's remote-fixes fetch joins them in the same plan.
+ * all): the three managers' `launch()` and the download manager's install-time fetch (88-12).
  */
 const KNOWN_FIX_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/downloadmanager/utils.ts',
   'src/backend/storeManagers/gog/games.ts',
   'src/backend/storeManagers/legendary/games.ts',
   'src/backend/storeManagers/nile/games.ts'
@@ -1064,6 +1065,16 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_KNOWNFIX_LAUNCH_OVERRIDES',
     callers: KNOWN_FIX_SHIM_IMPORTERS,
     deletedBy: 92
+  },
+  // 88-12 (D-01, D-03): the download manager's fire-and-forget remote fixes fetch at install time. It is called from
+  // `downloadmanager/utils.ts`, which the download manager's own phase (93) deletes.
+  {
+    name: 'fetchRemoteKnownFixes',
+    file: 'src/backend/launchrust/knownFixes.ts',
+    shape: 'shim',
+    channel: 'RUST_KNOWNFIX_FETCH_REMOTE',
+    callers: KNOWN_FIX_SHIM_IMPORTERS,
+    deletedBy: 93
   }
 ]
 

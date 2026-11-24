@@ -213,6 +213,7 @@ pub(crate) enum RustInvokeChannel {
     EngineNonCrossoverEngine,
     EngineFallbackEnsure,
     KnownfixLaunchOverrides,
+    KnownfixFetchRemote,
 }
 
 impl RustInvokeChannel {
@@ -407,6 +408,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineNonCrossoverEngine,
         RustInvokeChannel::EngineFallbackEnsure,
         RustInvokeChannel::KnownfixLaunchOverrides,
+        RustInvokeChannel::KnownfixFetchRemote,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -601,6 +603,7 @@ impl RustInvokeChannel {
             "engine_non_crossover_engine" => Some(RustInvokeChannel::EngineNonCrossoverEngine),
             "engine_fallback_ensure" => Some(RustInvokeChannel::EngineFallbackEnsure),
             "knownfix_launch_overrides" => Some(RustInvokeChannel::KnownfixLaunchOverrides),
+            "knownfix_fetch_remote" => Some(RustInvokeChannel::KnownfixFetchRemote),
             _ => None,
         }
     }
@@ -797,6 +800,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineNonCrossoverEngine => "engine_non_crossover_engine",
             RustInvokeChannel::EngineFallbackEnsure => "engine_fallback_ensure",
             RustInvokeChannel::KnownfixLaunchOverrides => "knownfix_launch_overrides",
+            RustInvokeChannel::KnownfixFetchRemote => "knownfix_fetch_remote",
         }
     }
 }
@@ -3986,5 +3990,33 @@ impl KnownfixLaunchOverridesArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "knownfix_launch_overrides:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "knownfix_launch_overrides:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct KnownfixFetchRemoteArgs {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) runner: KnownfixFetchRemoteArgsRunner,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum KnownfixFetchRemoteArgsRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+impl KnownfixFetchRemoteArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "knownfix_fetch_remote:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "knownfix_fetch_remote:bad-args".to_string())
     }
 }

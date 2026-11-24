@@ -5,10 +5,16 @@
  * and that the arguments pass the same zod schema the sidecar checks before the frame is written.
  */
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
-import { RUST_KNOWNFIX_LAUNCH_OVERRIDES } from 'common/types/sidecarTransport'
+import {
+  RUST_KNOWNFIX_FETCH_REMOTE,
+  RUST_KNOWNFIX_LAUNCH_OVERRIDES
+} from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
-import { readKnownFixLaunchOverrides } from '../knownFixes'
+import {
+  fetchRemoteKnownFixes,
+  readKnownFixLaunchOverrides
+} from '../knownFixes'
 
 function fakeTransport(answer: unknown): RustInvokeDeps & {
   calls: Array<[string, unknown[]]>
@@ -69,6 +75,37 @@ describe('readKnownFixLaunchOverrides', () => {
     expect(schema.safeParse([ok]).success).toBe(true)
     expect(schema.safeParse([{ ...ok, runner: 'epic' }]).success).toBe(false)
     expect(schema.safeParse([{ ...ok, extra: 1 }]).success).toBe(false)
+    expect(schema.safeParse([ok, ok]).success).toBe(false)
+    expect(schema.safeParse([]).success).toBe(false)
+  })
+})
+
+describe('fetchRemoteKnownFixes', () => {
+  it('sends one knownfix_fetch_remote call carrying the app and the runner, and resolves what Rust answered', async () => {
+    const deps = fakeTransport(null)
+    expect(await fetchRemoteKnownFixes(deps, '1207658930', 'gog')).toBeNull()
+    expect(deps.calls).toEqual([
+      [RUST_KNOWNFIX_FETCH_REMOTE, [{ appName: '1207658930', runner: 'gog' }]]
+    ])
+    expect(RUST_KNOWNFIX_FETCH_REMOTE).toBe('knownfix_fetch_remote')
+    expect(() =>
+      rustInvokeArgs[RUST_KNOWNFIX_FETCH_REMOTE].parse(deps.calls[0]?.[1])
+    ).not.toThrow()
+  })
+
+  it('rejects with the transport failure and does not catch it (the download manager logs it)', async () => {
+    const deps = fakeTransport(new Error('knownfix_fetch_remote:not-ready'))
+    await expect(fetchRemoteKnownFixes(deps, '1', 'steam')).rejects.toThrow(
+      'not-ready'
+    )
+  })
+
+  it('has a channel schema that refuses a wrong runner, an unknown key and a wrong arity', () => {
+    const schema = rustInvokeArgs[RUST_KNOWNFIX_FETCH_REMOTE]
+    const ok = { appName: 'a', runner: 'steam' }
+    expect(schema.safeParse([ok]).success).toBe(true)
+    expect(schema.safeParse([{ ...ok, runner: 'epic' }]).success).toBe(false)
+    expect(schema.safeParse([{ ...ok, installPath: null }]).success).toBe(false)
     expect(schema.safeParse([ok, ok]).success).toBe(false)
     expect(schema.safeParse([]).success).toBe(false)
   })

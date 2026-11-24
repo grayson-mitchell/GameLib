@@ -63,6 +63,8 @@ const queueDeps = {
     return appRuntime
   },
   paths: { fixesPath: '/test-fixes' },
+  // 88-12: the install-time known-fix fetch reaches Rust through the deps' rustInvoke transport.
+  requestRustInvoke: jest.fn(),
   managers: { library: libraryManagerMap },
   aborts: {
     call: (id: string) => callAbortController(id),
@@ -120,7 +122,7 @@ jest.mock('backend/storeManagers/gog/constants', () => ({
   deriveGogPaths: () => ({ gogdlConfigPath: '/mock/gogdl-config' })
 }))
 
-jest.mock('backend/knownFixesFetcher', () => ({
+jest.mock('backend/launchrust/knownFixes', () => ({
   fetchRemoteKnownFixes: jest.fn().mockResolvedValue(undefined)
 }))
 
@@ -130,7 +132,7 @@ import {
   updateQueueElement
 } from '../utils'
 import { existsSync } from 'graceful-fs'
-import { fetchRemoteKnownFixes } from 'backend/knownFixesFetcher'
+import { fetchRemoteKnownFixes } from 'backend/launchrust/knownFixes'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
 import { logWarning, logError, LogPrefix } from 'backend/logger'
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
@@ -1089,7 +1091,7 @@ describe('installQueueElement — quick 261026-avw: every store fetches known fi
     await installQueueElement(queueDeps, makeParams())
 
     expect(fetchRemoteKnownFixes).toHaveBeenCalledWith(
-      expect.anything(),
+      expect.objectContaining({ requestRustInvoke: expect.any(Function) }),
       expect.any(String),
       'steam'
     )
@@ -1111,7 +1113,7 @@ describe('installQueueElement — quick 261026-avw: every store fetches known fi
     )
 
     expect(fetchRemoteKnownFixes).toHaveBeenCalledWith(
-      expect.anything(),
+      expect.objectContaining({ requestRustInvoke: expect.any(Function) }),
       '1207658930',
       'gog'
     )

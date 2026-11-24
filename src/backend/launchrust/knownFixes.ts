@@ -1,5 +1,8 @@
 import type { Runner } from 'common/types'
-import { RUST_KNOWNFIX_LAUNCH_OVERRIDES } from 'common/types/sidecarTransport'
+import {
+  RUST_KNOWNFIX_FETCH_REMOTE,
+  RUST_KNOWNFIX_LAUNCH_OVERRIDES
+} from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
 /**
@@ -27,5 +30,21 @@ export async function readKnownFixLaunchOverrides(
 ): Promise<unknown> {
   return deps.requestRustInvoke(RUST_KNOWNFIX_LAUNCH_OVERRIDES, [
     { appName, runner, installPath }
+  ])
+}
+
+/**
+ * The install-time download of a game's remote known fixes: GameLib's feed first, then Heroic's on a 404,
+ * written filtered into the fixes folder. Resolves `null` whatever happened (an indeterminate answer is a log
+ * line in Rust, and a game with no remote fix is not a failure). Rejects with Rust's category word when the
+ * call could not be made, which the download manager logs and carries on from.
+ */
+export async function fetchRemoteKnownFixes(
+  deps: RustInvokeDeps,
+  appName: string,
+  runner: Runner
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_KNOWNFIX_FETCH_REMOTE, [
+    { appName, runner }
   ])
 }

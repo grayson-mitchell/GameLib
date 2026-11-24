@@ -16,10 +16,8 @@ import type { OnlineMonitor } from '../online_monitor'
 import pathModule from 'path'
 import { existsSync, rmSync } from 'graceful-fs'
 import type { AppPaths } from 'backend/process/context'
-import {
-  fetchRemoteKnownFixes,
-  type KnownFixesFetchDeps
-} from 'backend/knownFixesFetcher'
+import { fetchRemoteKnownFixes } from 'backend/launchrust/knownFixes'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { deriveGogPaths } from 'backend/storeManagers/gog/constants'
 import { isTimeoutError } from 'backend/storeManagers/steam/withTimeout'
 import {
@@ -51,6 +49,7 @@ type QueueElementDeps = {
   paths: Pick<AppPaths, 'appFolder' | 'toolsPath' | 'userData' | 'fixesPath'>
 } & DialogBoxDeps &
   NotifyDeps &
+  RustInvokeDeps &
   AppRuntimeSlice<'events'>
 type LibraryManagerMap = StoreManagers['library']
 
@@ -552,9 +551,10 @@ async function updateQueueElement(
 }
 
 // quick 261026-avw (decision 6): every store fetches GameLib's known-fixes repo
-// first; the fetcher owns the Heroic fallback and never rejects.
+// first; the fetch is Rust's (88-12, `knownfix_fetch_remote`), which owns the Heroic fallback and answers
+// null whatever happened. The call can still reject (the shell not ready, the timeout), hence the catch.
 function downloadFixesFor(
-  deps: KnownFixesFetchDeps,
+  deps: RustInvokeDeps,
   appName: string,
   runner: Runner
 ) {

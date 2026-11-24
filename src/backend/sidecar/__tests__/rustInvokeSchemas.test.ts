@@ -53,8 +53,8 @@ describe('rustInvokeArgs', () => {
     // Phase 87 plan 55: 183 -> 185, engine_run_tool and engine_cancel.
     // Phase 87 plan 56a: 185 -> 188, engine_resolve_tool_settings, engine_non_crossover_engine and engine_fallback_ensure.
     // Phase 87 plan 70: 188 -> 189, engine_bottle_remove_per_game.
-    // Phase 88 plan 12: 189 -> 190, knownfix_launch_overrides.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(190)
+    // Phase 88 plan 12: 189 -> 191, knownfix_launch_overrides and knownfix_fetch_remote.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(191)
   })
 
   it('parses the store-embed wire fixtures', () => {

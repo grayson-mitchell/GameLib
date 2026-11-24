@@ -309,5 +309,8 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::KnownfixLaunchOverrides => {
             knownfix_dispatch::rpc_knownfix_launch_overrides(args)
         }
+        RustInvokeChannel::KnownfixFetchRemote => {
+            knownfix_dispatch::rpc_knownfix_fetch_remote(args)
+        }
     }
 }
