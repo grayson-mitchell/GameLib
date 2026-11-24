@@ -1760,6 +1760,8 @@ mod tests {
         );
     }
 
+    // CrossOver and the Mach-O bundle layout are macOS-only; the fixtures are POSIX paths.
+    #[cfg(unix)]
     #[test]
     fn locating_crossover_prefers_the_default_locations_and_only_then_asks_spotlight() {
         let root = gamelib_testutil::FakeHome::new("engine-cx-");

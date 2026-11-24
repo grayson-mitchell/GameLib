@@ -1210,6 +1210,8 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    // CrossOver and the Mach-O bundle layout are macOS-only; the fixtures are POSIX paths.
+    #[cfg(unix)]
     #[test]
     fn the_shell_scan_answers_through_gamelib_scan_and_fails_a_bundle_with_no_winemac() {
         let home = gamelib_testutil::FakeHome::new("wine-macho-");
