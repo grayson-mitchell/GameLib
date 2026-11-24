@@ -39,7 +39,9 @@ pub const OPS: &[&str] = &[
     "knownfix_apply_registry",
     "knownfix_launch_overrides",
     "knownfix_overlay_catalogue",
+    "knownfix_profile_overlay_env",
     "knownfix_read",
+    "knownfix_resolve_overlay_env",
     "knownfix_status",
 ];
 
@@ -139,8 +141,90 @@ async fn route(op: &str, args: &[Value], ctx: &KnownFixCtx) -> Result<Value, Str
             .map_err(|e| format!("{op}:{e}"))?;
             Ok(Value::Null)
         }
+        // The overlay env of a non-Steam launch (88-10, D-03): the game's tier-2 `overlays` resolved against
+        // the base values the launcher holds, the overlay installed on demand (up to the 120 s download, so
+        // the caller's channel must not time it out). Answers the env map `{ KEY: value }`. Argument
+        // `{ appName, runner, gameSettings, tier1Env, processEnvBase }`.
+        "knownfix_profile_overlay_env" => {
+            let args: ProfileOverlayEnvArgs = decode(op, args)?;
+            let runner =
+                types::Runner::parse(&args.runner).ok_or_else(|| format!("{op}:bad-args"))?;
+            if !args.game_settings.is_object()
+                || !bounded_name(&args.app_name)
+                || args.tier1_env.len() > MAX_ENV_ENTRIES
+                || args.process_env_base.len() > MAX_ENV_ENTRIES
+            {
+                return Err(format!("{op}:bad-args"));
+            }
+            let env = overlay::env::profile_overlay_env(
+                ctx,
+                &args.app_name,
+                runner,
+                &args.game_settings,
+                &args.tier1_env,
+                &args.process_env_base,
+            )
+            .await;
+            serde_json::to_value(env).map_err(|_| format!("{op}:bad-result"))
+        }
+        // The Steam bridge's overlay env (88-10, D-03): the Steam tier-2 profile's `overlays` are read here,
+        // so the overlay data has one owner, and resolved against the caller's base values. Answers the env
+        // map. Argument `{ appId, label, wineType, baseValues }`; `baseValues` holds the target env vars
+        // and `GST_PLUGIN_PATH_1_0`, whatever has a value.
+        "knownfix_resolve_overlay_env" => {
+            let args: ResolveOverlayEnvArgs = decode(op, args)?;
+            if !bounded_name(&args.app_id)
+                || !bounded_name(&args.label)
+                || args.base_values.len() > MAX_ENV_ENTRIES
+            {
+                return Err(format!("{op}:bad-args"));
+            }
+            let overlays = reader::read_known_fix_profile(ctx, &args.app_id, types::Runner::Steam)
+                .and_then(|p| p.overlays)
+                .map(|v| jsvalue::JsValue::from_value(&v));
+            let env = overlay::env::resolve_overlay_env(
+                ctx,
+                overlays.as_ref(),
+                &args.label,
+                args.wine_type.as_deref(),
+                &args.base_values,
+                &overlay::env::CtxInstaller(ctx),
+            )
+            .await;
+            serde_json::to_value(env).map_err(|_| format!("{op}:bad-result"))
+        }
         _ => Err(format!("unknown op: {op}")),
     }
+}
+
+/// The most variables an env argument may carry.
+const MAX_ENV_ENTRIES: usize = 256;
+
+/// An app name, app id or label: 1 to 256 UTF-16 units (the bound the other ops hold their names to).
+fn bounded_name(name: &str) -> bool {
+    !name.is_empty() && name.encode_utf16().count() <= 256
+}
+
+/// The object argument of `knownfix_profile_overlay_env`.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ProfileOverlayEnvArgs {
+    app_name: String,
+    runner: String,
+    game_settings: Value,
+    tier1_env: std::collections::BTreeMap<String, String>,
+    process_env_base: std::collections::BTreeMap<String, String>,
+}
+
+/// The object argument of `knownfix_resolve_overlay_env`.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ResolveOverlayEnvArgs {
+    app_id: String,
+    label: String,
+    #[serde(default)]
+    wine_type: Option<String>,
+    base_values: std::collections::BTreeMap<String, String>,
 }
 
 /// The object argument of `knownfix_apply_profile_registry`.
@@ -308,7 +392,9 @@ mod tests {
         assert!(OPS.contains(&"knownfix_apply_registry"));
         assert!(OPS.contains(&"knownfix_launch_overrides"));
         assert!(OPS.contains(&"knownfix_overlay_catalogue"));
+        assert!(OPS.contains(&"knownfix_profile_overlay_env"));
         assert!(OPS.contains(&"knownfix_read"));
+        assert!(OPS.contains(&"knownfix_resolve_overlay_env"));
         assert!(OPS.contains(&"knownfix_status"));
     }
 
@@ -443,6 +529,89 @@ mod tests {
             dispatch("knownfix_apply_registry", &[bridge], &ctx).await,
             Ok(Value::Null)
         );
+    }
+
+    #[tokio::test]
+    async fn the_overlay_env_ops_decode_one_strict_object_and_never_echo_input() {
+        let home = FakeHome::new("knownfix-lib-");
+        let ctx = ctx(&home);
+        let secret = "SECRET-VALUE-".repeat(30);
+        let profile_ok = json!({"appName": "1", "runner": "gog", "gameSettings": {},
+            "tier1Env": {}, "processEnvBase": {}});
+        let resolve_ok =
+            json!({"appId": "9", "label": "Steam 9", "wineType": null, "baseValues": {}});
+        // A game with no profile has no overlay env: an empty map, and no download.
+        assert_eq!(
+            dispatch(
+                "knownfix_profile_overlay_env",
+                std::slice::from_ref(&profile_ok),
+                &ctx
+            )
+            .await,
+            Ok(json!({}))
+        );
+        assert_eq!(
+            dispatch(
+                "knownfix_resolve_overlay_env",
+                std::slice::from_ref(&resolve_ok),
+                &ctx
+            )
+            .await,
+            Ok(json!({}))
+        );
+        for (op, bad) in [
+            ("knownfix_profile_overlay_env", vec![]),
+            ("knownfix_profile_overlay_env", vec![json!([["1", "gog"]])]),
+            (
+                "knownfix_profile_overlay_env",
+                vec![profile_ok.clone(), profile_ok.clone()],
+            ),
+            (
+                "knownfix_profile_overlay_env",
+                vec![json!({"appName": "1", "runner": "gog", "gameSettings": {},
+                "tier1Env": {}, "processEnvBase": {}, "extra": secret})],
+            ),
+            (
+                "knownfix_profile_overlay_env",
+                vec![json!({"appName": "1", "runner": secret, "gameSettings": {},
+                "tier1Env": {}, "processEnvBase": {}})],
+            ),
+            (
+                "knownfix_profile_overlay_env",
+                vec![json!({"appName": "1", "runner": "gog", "gameSettings": [],
+                "tier1Env": {}, "processEnvBase": {}})],
+            ),
+            (
+                "knownfix_profile_overlay_env",
+                vec![json!({"appName": "1", "runner": "gog", "gameSettings": {},
+                "tier1Env": {"A": 1}, "processEnvBase": {}})],
+            ),
+            (
+                "knownfix_profile_overlay_env",
+                vec![json!({"appName": "", "runner": "gog", "gameSettings": {},
+                "tier1Env": {}, "processEnvBase": {}})],
+            ),
+            (
+                "knownfix_resolve_overlay_env",
+                vec![json!({"appId": "9", "label": "L"})],
+            ),
+            (
+                "knownfix_resolve_overlay_env",
+                vec![json!({"appId": "9", "label": "L", "baseValues": {}, "x": secret})],
+            ),
+            (
+                "knownfix_resolve_overlay_env",
+                vec![json!({"appId": "9", "label": "x".repeat(257), "baseValues": {}})],
+            ),
+            (
+                "knownfix_resolve_overlay_env",
+                vec![json!({"appId": "9", "label": "L", "baseValues": {"A": secret.len()}})],
+            ),
+        ] {
+            let err = dispatch(op, &bad, &ctx).await.unwrap_err();
+            assert_eq!(err, format!("{op}:bad-args"), "{bad:?}");
+            assert!(!err.contains("SECRET"), "{err}");
+        }
     }
 
     #[tokio::test]

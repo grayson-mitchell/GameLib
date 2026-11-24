@@ -105,7 +105,6 @@ fn load_js_cases() -> Vec<JsValue> {
     }
 }
 
-#[allow(dead_code)]
 fn is_install_case(case: &Value) -> bool {
     case["steps"]
         .as_array()
@@ -1035,7 +1034,10 @@ impl Run<'_> {
 /// The golden's warning line as the Rust side is specified to say it (`deltas.json`): a fetch that
 /// failed says what the seam's error says (`status(500)`), not axios's `HTTP 500`.
 fn expected_line(golden: &str) -> String {
-    golden.replace("not installed (HTTP 500)", "not installed (status(500))")
+    golden
+        .replace("not installed (HTTP 500)", "not installed (status(500))")
+        // A rejected entry is echoed without the URL it carried (prohibition 1, `deltas.json`).
+        .replace("https://evil.example/x.tar.gz", "<url>")
 }
 
 /// The golden's verify reason for an fs error is `ENOENT: ... lstat '<path>'`; Rust says the OS's text.
@@ -1074,6 +1076,11 @@ async fn run_case(case: &Value, js_case: &JsValue) -> (Value, Value, Value) {
         };
         steps.push(answer);
         for (level, line) in rig.log.lines().into_iter().skip(before) {
+            // Prohibition 1: a line carries ids, labels and reasons, never a URL or a path of this machine.
+            assert!(
+                !line.contains("://") && !line.contains(&*rig.root().to_string_lossy()),
+                "a log line carries a URL or a path: {line}"
+            );
             events.push(json!({
                 "step": index,
                 "level": if level == "warn" { "warning" } else { level },
@@ -1185,6 +1192,13 @@ fn the_floor_matches_the_manifest_and_an_empty_list_fails() {
     assert_eq!(folders, cases.len(), "one expected folder per case");
     let err = check_floor("golden/overlay_install cases", 0, OVERLAY_INSTALL_FLOOR).unwrap_err();
     assert!(err.contains("below the floor"), "{err}");
+}
+
+#[test]
+fn the_cases_split_into_18_install_cases_and_23_env_cases() {
+    let cases = load_cases();
+    let install = cases.iter().filter(|c| is_install_case(c)).count();
+    assert_eq!((install, cases.len() - install), (18, 23));
 }
 
 #[test]

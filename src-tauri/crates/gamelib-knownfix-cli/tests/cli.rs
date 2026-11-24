@@ -19,6 +19,8 @@ fn ops_prints_the_op_table_and_exits_zero() {
         "knownfix_apply_profile_registry",
         "knownfix_apply_registry",
         "knownfix_launch_overrides",
+        "knownfix_profile_overlay_env",
+        "knownfix_resolve_overlay_env",
     ] {
         assert!(names.contains(&op), "{op} is listed: {names:?}");
     }
@@ -56,6 +58,42 @@ fn the_registry_ops_answer_null_for_a_game_with_no_profile_and_refuse_a_bad_call
     );
     assert_eq!(bad.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&bad.stderr).contains("knownfix_apply_registry:bad-args"));
+}
+
+#[test]
+fn the_overlay_env_ops_answer_an_empty_map_for_a_game_with_no_profile_and_refuse_a_bad_call_over_a_fake_home(
+) {
+    let home = FakeHome::new("knownfix-cli-");
+    let user_data = home.root().join("userData");
+    let run = |op: &str, args: serde_json::Value| {
+        cli()
+            .args(["op", op])
+            .arg(args.to_string())
+            .arg("--user-data")
+            .arg(&user_data)
+            .output()
+            .unwrap()
+    };
+    // No tier-2 profile names an overlay, so nothing is resolved and nothing is downloaded.
+    let out = run(
+        "knownfix_profile_overlay_env",
+        serde_json::json!([{"appName": "nope", "runner": "gog", "gameSettings": {},
+            "tier1Env": {}, "processEnvBase": {}}]),
+    );
+    assert_eq!(out.status.code(), Some(0), "{out:?}");
+    assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "{}");
+    let out = run(
+        "knownfix_resolve_overlay_env",
+        serde_json::json!([{"appId": "9", "label": "Steam 9", "wineType": "crossover", "baseValues": {}}]),
+    );
+    assert_eq!(out.status.code(), Some(0), "{out:?}");
+    assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "{}");
+    let bad = run(
+        "knownfix_resolve_overlay_env",
+        serde_json::json!([{"appId": "9", "label": "Steam 9"}]),
+    );
+    assert_eq!(bad.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&bad.stderr).contains("knownfix_resolve_overlay_env:bad-args"));
 }
 
 #[test]
