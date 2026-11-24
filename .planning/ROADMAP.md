@@ -863,7 +863,7 @@ Plans:
   3. The `launchOracle` harness, pairwise generator, and the `gamelib-launch` / `gamelib-knownfix` crates exist and run in three-OS CI
   4. The known-fixes TypeScript and its registrations are deleted, leaving only scheduled shims; closes on goldens and three-OS CI, no signed build
 
-**Plans:** 14/17 plans executed in 14 waves; planned 2026-11-25 (88-02 waits for 88-01 so the live gate is committed before any code, D-25)
+**Plans:** 15/17 plans executed in 14 waves; planned 2026-11-25 (88-02 waits for 88-01 so the live gate is committed before any code, D-25)
 
 Plans:
 **Wave 1**
@@ -903,7 +903,7 @@ Plans:
 - [x] 88-14-PLAN.md — Steam bridge known-fixes on shims and twins; the TS overlay single flight leaves appRuntime
 
 **Wave 12** *(blocked on Wave 11 completion)*
-- [ ] 88-15-PLAN.md — Known-fix report on a shim; the Steam library's synchronous readers on the twins
+- [x] 88-15-PLAN.md — Known-fix report on a shim; the Steam library's synchronous readers on the twins
 
 **Wave 13** *(blocked on Wave 12 completion)*
 - [ ] 88-16-PLAN.md — Delete the known-fix TypeScript behind knownFixPortComplete (RED first) and the survivor check

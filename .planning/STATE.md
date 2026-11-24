@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 88
 current_phase_name: Launch scaffolding and known fixes
 status: executing
-stopped_at: Completed 88-14-PLAN.md
-last_updated: "2026-11-24T23:34:04.160Z"
+stopped_at: Completed 88-15-PLAN.md
+last_updated: "2026-11-24T23:48:20.876Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 88 execution started
-state_head: c77a201bc596dcf3358b1e4f75e245a0233e38b6
+state_head: 62a0722dc70e892cab303c60c970059c6724c3b6
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 88 (Launch scaffolding and known fixes) — EXECUTING
-Plan: 15 of 17
+Plan: 16 of 17
 Status: Ready to execute
 Last activity: 2026-11-25 — Phase 88 execution started
 Progress: [█████████░] 92%
@@ -495,6 +495,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88 P12 | 55 min | 2 tasks | 18 files |
 | Phase 88 P13 | 10 min | 2 tasks | 19 files |
 | Phase 88 P14 | 16min | 3 tasks | 22 files |
+| Phase 88 P15 | 35min | 2 tasks | 27 files |
 
 ## Accumulated Context
 
@@ -1092,6 +1093,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88]: 88-14: both bridge channels (knownfix_apply_registry, knownfix_resolve_overlay_env) are unbounded and the bridge awaits them through the settle helpers, so a rejected call never fails a launch
 - [Phase 88]: 88-14: the bridge calls Rust's registry and overlay ops only when its twin-read Steam tier-2 profile carries registry/dllOverrides/overlays; Rust reads the profile itself, so only appId, label, settings, bottle folder and the overlay base keys cross (T-88-35, T-88-33)
 - [Phase 88]: 88-14: the overlay single flight left appRuntime.ts (Rust's KnownFixCtx owns it); knownFixOverlays.ts names its own slice type until 88-16 deletes it
+- [Phase 88]: 88-15: the Steam detected-fix report channel (knownfix_report_detected) stays bounded (one 8 s POST); enabled is the caller's shareDetectedFixes === true boolean and the rejection log names the app id only
 
 ### Pending Todos
 
@@ -1373,8 +1375,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T23:34:01.423Z
-Stopped at: Completed 88-14-PLAN.md
+Last session: 2026-11-24T23:48:18.120Z
+Stopped at: Completed 88-15-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

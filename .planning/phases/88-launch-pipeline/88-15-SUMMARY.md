@@ -147,7 +147,7 @@ status: complete
 - The channel is bounded (the crate's one 8 s POST), so it is not in `UNBOUNDED_RUST_CHANNELS`. Census counts moved 195 to 196 (`rustInvokeSchemas.test.ts`, `tauriShellSource.test.ts` with the arm list entry and PROVEN note).
 - Seven shim rows for `launchrust/knownFixes.ts` (the new one deletedBy 97); both Steam call-site files joined `KNOWN_FIX_SHIM_IMPORTERS`, and the four Task 2 modules joined `KNOWN_FIX_TWIN_IMPORTERS`.
 - `drmKnownFix`, `macArchKnownFix`, `gameLaunchOverlay` and `bridge/sharedRedistInstall` import `readKnownFixes` / `readKnownFixProfile` and the deps types from `backend/launchrust/knownFixTwins`; the four tests' imports and mocks moved with unchanged expectations.
-- Eleven Steam tests (the nine plus `drmKnownFix`, `macArchKnownFix` and friends) no longer mock `backend/knownFixReport` or `backend/knownFixes`. New cases pin the share setting reaching the shim as `true`, a rejection being logged with only the app id, and the shim's argument shape (including that nothing beyond the five fields can cross).
+- Eleven Steam tests (seven for the report, four for the twins) no longer mock `backend/knownFixReport` or `backend/knownFixes`. New cases pin the share setting reaching the shim as `true`, a rejection being logged with only the app id, and the shim's argument shape (including that nothing beyond the five fields can cross).
 
 ## Task Commits
 
