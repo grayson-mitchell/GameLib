@@ -1419,6 +1419,15 @@ export const RUST_ENGINE_NON_CROSSOVER_ENGINE =
  * shutdown (D-17), so it joins the sidecar's unbounded list.
  */
 export const RUST_ENGINE_FALLBACK_ENSURE = 'engine_fallback_ensure' as const
+/**
+ * Phase 88 (SVC-03, 88-12, D-01, D-19): the known-fix launch overrides of a non-Steam game, reached through
+ * `readKnownFixLaunchOverrides` in `launchrust/knownFixes.ts`. `knownfix_launch_overrides` takes one object,
+ * `{appName, runner, installPath}` (`installPath` is `null` when the install folder is unknown), and answers
+ * `{launchArgs, exeOverride?}`: the fix's `launchArgs` as they are and its `exeOverride` once checked against
+ * the install folder. A disk read, so it stays inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+ */
+export const RUST_KNOWNFIX_LAUNCH_OVERRIDES =
+  'knownfix_launch_overrides' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -1812,7 +1821,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_CANCEL,
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_ENGINE_NON_CROSSOVER_ENGINE,
-  RUST_ENGINE_FALLBACK_ENSURE
+  RUST_ENGINE_FALLBACK_ENSURE,
+  RUST_KNOWNFIX_LAUNCH_OVERRIDES
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

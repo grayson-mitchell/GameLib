@@ -146,6 +146,7 @@ import {
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_ENGINE_NON_CROSSOVER_ENGINE,
   RUST_ENGINE_FALLBACK_ENSURE,
+  RUST_KNOWNFIX_LAUNCH_OVERRIDES,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -999,7 +1000,19 @@ export const rustInvokeArgs = {
   [RUST_ENGINE_NON_CROSSOVER_ENGINE]: engineOpRequest,
   // Phase 87 (87-56a, T-87-90): the pinned-engine download. One object naming a pin id (never a URL or a path) and the
   // cancel id `[A-Za-z0-9_-]{1,64}`, decoded strictly by the crate.
-  [RUST_ENGINE_FALLBACK_ENSURE]: engineOpRequest
+  [RUST_ENGINE_FALLBACK_ENSURE]: engineOpRequest,
+  // Phase 88 (SVC-03, 88-12, D-19): the known-fix launch overrides of a non-Steam game. One strict object, the
+  // fields the Rust serde decode takes with `deny_unknown_fields`; `installPath` is `null` (or absent) when the
+  // install folder is unknown. The shell decodes the same set again and the crate a third time.
+  [RUST_KNOWNFIX_LAUNCH_OVERRIDES]: z.tuple([
+    z
+      .object({
+        appName: z.string(),
+        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
+        installPath: z.string().nullable().optional()
+      })
+      .strict()
+  ])
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

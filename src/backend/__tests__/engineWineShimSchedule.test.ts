@@ -164,6 +164,15 @@ const TOOLS_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/launcher.ts',
   'src/backend/storeManagers/steam/bridgeKnownFixes.ts'
 ]
+/**
+ * Every non-test importer of `launchrust/knownFixes.ts` (the check is per file, so every row of that file lists them
+ * all): the three managers' `launch()` (88-12). The download manager's remote-fixes fetch joins them in the same plan.
+ */
+const KNOWN_FIX_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/storeManagers/gog/games.ts',
+  'src/backend/storeManagers/legendary/games.ts',
+  'src/backend/storeManagers/nile/games.ts'
+]
 /** Every non-test importer of `enginewine/bottles.ts` (the check is per file, so every row of that file lists them all). */
 const BOTTLES_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
@@ -1044,6 +1053,17 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     vectors: 'src/backend/enginewine/__tests__/twinVectors.test.ts',
     callers: ENGINE_TWIN_IMPORTERS,
     deletedBy: 98
+  },
+  // 88-12 (D-01, D-03): the known-fix shims. The managers keep their `launch()` until 91 and 92 and read the game's
+  // known-fix launch overrides from Rust through this shim (legendary leaves in 91, gog and nile in 92, so the row goes
+  // with the last of them); `settleKnownFixLaunchOverrides` narrows the untyped answer. `callers` is every importer.
+  {
+    name: 'readKnownFixLaunchOverrides',
+    file: 'src/backend/launchrust/knownFixes.ts',
+    shape: 'shim',
+    channel: 'RUST_KNOWNFIX_LAUNCH_OVERRIDES',
+    callers: KNOWN_FIX_SHIM_IMPORTERS,
+    deletedBy: 92
   }
 ]
 

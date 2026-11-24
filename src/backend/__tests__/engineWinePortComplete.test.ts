@@ -915,7 +915,12 @@ describe('engineWineSurvivors', () => {
     shape: r.shape,
     ...(r.wiring ? { wiring: r.wiring } : {})
   })
-  const actual: Survivor[] = SCHEDULE.map(asSurvivor)
+  // Phase 88 schedules its own shims under `src/backend/launchrust/` in the same SCHEDULE (88-12). This table is Phase
+  // 87's final survivor list, so it compares the rows outside that directory; the launch rows are pinned by
+  // `engineWineShimSchedule.test.ts` (shape, channel, callers, `deletedBy`) and by 88's own port-complete gates.
+  const actual: Survivor[] = SCHEDULE.filter(
+    (r) => !r.file.startsWith('src/backend/launchrust/')
+  ).map(asSurvivor)
   const survivorFiles = [...new Set(EXPECTED_SURVIVORS.map((r) => r.file))]
   const names = (rows: readonly Survivor[]): string[] =>
     rows.map((r) => r.name).sort()

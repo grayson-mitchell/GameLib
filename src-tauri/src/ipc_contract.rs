@@ -212,6 +212,7 @@ pub(crate) enum RustInvokeChannel {
     EngineResolveToolSettings,
     EngineNonCrossoverEngine,
     EngineFallbackEnsure,
+    KnownfixLaunchOverrides,
 }
 
 impl RustInvokeChannel {
@@ -405,6 +406,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineResolveToolSettings,
         RustInvokeChannel::EngineNonCrossoverEngine,
         RustInvokeChannel::EngineFallbackEnsure,
+        RustInvokeChannel::KnownfixLaunchOverrides,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -598,6 +600,7 @@ impl RustInvokeChannel {
             "engine_resolve_tool_settings" => Some(RustInvokeChannel::EngineResolveToolSettings),
             "engine_non_crossover_engine" => Some(RustInvokeChannel::EngineNonCrossoverEngine),
             "engine_fallback_ensure" => Some(RustInvokeChannel::EngineFallbackEnsure),
+            "knownfix_launch_overrides" => Some(RustInvokeChannel::KnownfixLaunchOverrides),
             _ => None,
         }
     }
@@ -793,6 +796,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineResolveToolSettings => "engine_resolve_tool_settings",
             RustInvokeChannel::EngineNonCrossoverEngine => "engine_non_crossover_engine",
             RustInvokeChannel::EngineFallbackEnsure => "engine_fallback_ensure",
+            RustInvokeChannel::KnownfixLaunchOverrides => "knownfix_launch_overrides",
         }
     }
 }
@@ -3951,5 +3955,36 @@ impl EngineFallbackEnsureArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let request = serde_json::from_value(args.first().ok_or_else(|| "engine_fallback_ensure:bad-args".to_string())?.clone()).map_err(|_| "engine_fallback_ensure:bad-args".to_string())?;
         Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct KnownfixLaunchOverridesArgs {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) runner: KnownfixLaunchOverridesArgsRunner,
+    #[serde(rename = "installPath")]
+    #[serde(default)]
+    pub(crate) install_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum KnownfixLaunchOverridesArgsRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+impl KnownfixLaunchOverridesArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "knownfix_launch_overrides:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "knownfix_launch_overrides:bad-args".to_string())
     }
 }

@@ -85,7 +85,8 @@ import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import { checkInstalledMacArch } from 'backend/macArch/recovery'
 import type { LongLivedHandle } from 'backend/process/types'
 
-import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
+import { readKnownFixLaunchOverrides } from 'backend/launchrust/knownFixes'
+import { settleKnownFixLaunchOverrides } from 'backend/knownFixLaunchReply'
 import type LogWriter from 'backend/logger/targetWriter'
 import { engineKeyFor } from 'backend/enginewine/twin'
 import { launchSettingsFor } from 'backend/launchEngineStep'
@@ -665,11 +666,14 @@ export default class GOGGame implements Game {
 
     // Known-fix launchArgs / exeOverride (quick 261029-mbl). Precedence:
     // altExe > user targetExe > known-fix exeOverride > default.
-    const knownFix = readKnownFixLaunchOverrides(
-      this.deps,
+    const knownFix = await settleKnownFixLaunchOverrides(
       this.id,
-      'gog',
-      gameInfo.install.install_path
+      readKnownFixLaunchOverrides(
+        this.deps,
+        this.id,
+        'gog',
+        gameInfo.install.install_path
+      )
     )
     if (knownFix.exeOverride) {
       if (exeOverrideFlag.length) {

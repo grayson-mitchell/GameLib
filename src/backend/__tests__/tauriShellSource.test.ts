@@ -481,7 +481,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 156 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 190 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
     // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
@@ -507,7 +507,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 87 plan 55: 183 -> 185, engine_run_tool and engine_cancel.
     // Phase 87 plan 56a: 185 -> 188, engine_resolve_tool_settings, engine_non_crossover_engine and engine_fallback_ensure.
     // Phase 87 plan 70: 188 -> 189, engine_bottle_remove_per_game.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(189)
+    // Phase 88 plan 12: 189 -> 190, knownfix_launch_overrides.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(190)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1036,7 +1037,10 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'engine_fallback_ensure',
       // Phase 87 plan 70: the per-game bottle removal (`enginewine/bottles.ts` removeGameBottle shim). PROVEN:
       // `engine_dispatch::tests` drives the arm on a FakeHome context (removed, sibling intact).
-      'engine_bottle_remove_per_game'
+      'engine_bottle_remove_per_game',
+      // Phase 88 plan 12: the managers' known-fix launch overrides (`launchrust/knownFixes.ts` shim). PROVEN:
+      // `knownfix_dispatch::tests` drives the arm's decode, not-ready and a seeded read.
+      'knownfix_launch_overrides'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

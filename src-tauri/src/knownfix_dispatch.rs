@@ -174,6 +174,38 @@ pub(crate) fn get_gamelib_fix_status(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> 
     ))
 }
 
+/// Runs `op` over `args` for a `rustInvoke` arm. These arms run on the dispatcher's worker thread, never
+/// inside a runtime, so the crate's own `dispatch_sync` drives the op there. `ctx` is the installed context,
+/// passed in so a test drives this over its own; before [`install`] the answer is `<op>:not-ready`.
+fn rpc_knownfix_op(
+    ctx: Option<&Arc<KnownFixCtx>>,
+    op: &'static str,
+    args: &[Value],
+) -> Result<Value, String> {
+    let ctx = ctx.ok_or_else(|| format!("{op}:not-ready"))?;
+    gamelib_knownfix::dispatch_sync(op, args, ctx)
+}
+
+/// The body of the `knownfix_launch_overrides` arm over a given context: the generated decode (one object,
+/// `{appName, runner, installPath}`, the runner one of the five names) and an arity check first, so a bad
+/// call is rejected the same fixed `<op>:bad-args` literal before and after the install and never echoes the
+/// sidecar's value, then the crate, which decodes the object strictly again and refuses an `exeOverride` that
+/// resolves outside the install folder (T-88-31).
+fn launch_overrides_over(ctx: Option<&Arc<KnownFixCtx>>, args: &[Value]) -> Result<Value, String> {
+    KnownfixLaunchOverridesArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("knownfix_launch_overrides:bad-args".to_string());
+    }
+    rpc_knownfix_op(ctx, "knownfix_launch_overrides", args)
+}
+
+/// The `knownfix_launch_overrides` `rustInvoke` arm (the managers' `readKnownFixLaunchOverrides` shim,
+/// 88-12): what a non-Steam launch applies from the game's known fix, `{launchArgs, exeOverride?}`. A disk
+/// read, so the sidecar keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+pub(crate) fn rpc_knownfix_launch_overrides(args: &[Value]) -> Result<Value, String> {
+    launch_overrides_over(knownfix_ctx(), args)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -407,5 +439,79 @@ mod tests {
         );
         // Sideload has no store word, so the probe answers null for it.
         assert_eq!(ask("1234", "sideload"), Ok(Value::Null));
+    }
+
+    #[test]
+    fn launch_overrides_answers_not_ready_before_install_and_rejects_a_bad_call_with_a_fixed_literal(
+    ) {
+        let good = json!({"appName": "1234", "runner": "gog", "installPath": null});
+        // No context yet: a well-formed call is not ready.
+        assert_eq!(
+            launch_overrides_over(None, std::slice::from_ref(&good)),
+            Err("knownfix_launch_overrides:not-ready".to_string())
+        );
+        // A bad call is the same fixed literal with or without a context, and never echoes the input.
+        let secret = "SECRET-RUNNER-".repeat(10);
+        let home = FakeHome::new("knownfix-shell-");
+        let ctx = ctx_over(&home);
+        for ctx in [None, Some(&ctx)] {
+            for bad in [
+                vec![],
+                vec![good.clone(), good.clone()],
+                vec![json!("1234"), json!("gog")],
+                vec![json!({"runner": "gog", "installPath": null})],
+                vec![json!({"appName": "1234", "runner": secret, "installPath": null})],
+                vec![json!({"appName": 1, "runner": "gog", "installPath": null})],
+            ] {
+                let error = launch_overrides_over(ctx, &bad).unwrap_err();
+                assert_eq!(error, "knownfix_launch_overrides:bad-args", "{bad:?}");
+                assert!(!error.contains("SECRET"), "{error}");
+            }
+        }
+    }
+
+    #[test]
+    fn launch_overrides_answers_the_launch_args_and_a_checked_exe_override_over_a_context() {
+        let home = FakeHome::new("knownfix-shell-");
+        let ctx = ctx_over(&home);
+        let ask = |install: Value| {
+            launch_overrides_over(
+                Some(&ctx),
+                &[json!({"appName": "1234", "runner": "gog", "installPath": install})],
+            )
+        };
+        // No fix: nothing to apply.
+        assert_eq!(
+            ask(Value::Null),
+            Ok(json!({"launchArgs": [], "exeOverride": null}))
+        );
+        let bundled = ctx.paths.bundled.clone().unwrap();
+        std::fs::create_dir_all(&bundled).unwrap();
+        std::fs::write(
+            bundled.join("1234-gog.json"),
+            r#"{"launchArgs":["-windowed"],"exeOverride":"bin/game.exe"}"#,
+        )
+        .unwrap();
+        // The install folder is unknown: the args stay, the exe override is ignored.
+        assert_eq!(
+            ask(Value::Null),
+            Ok(json!({"launchArgs": ["-windowed"], "exeOverride": null}))
+        );
+        // An absent `installPath` is the same as `null`.
+        assert_eq!(
+            launch_overrides_over(Some(&ctx), &[json!({"appName": "1234", "runner": "gog"})]),
+            Ok(json!({"launchArgs": ["-windowed"], "exeOverride": null}))
+        );
+        // A real file inside the install folder is answered as the lexical path; one outside is dropped.
+        let install = home.root().join("games").join("g1234");
+        std::fs::create_dir_all(install.join("bin")).unwrap();
+        std::fs::write(install.join("bin").join("game.exe"), b"MZ").unwrap();
+        let install_text = install.to_string_lossy().into_owned();
+        let got = ask(json!(install_text)).unwrap();
+        assert_eq!(got["launchArgs"], json!(["-windowed"]));
+        assert_eq!(
+            got["exeOverride"],
+            json!(install.join("bin/game.exe").to_string_lossy())
+        );
     }
 }

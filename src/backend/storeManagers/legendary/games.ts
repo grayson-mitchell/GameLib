@@ -35,7 +35,8 @@ import { join } from 'path'
 import { removeNonSteamGame } from '../../shortcuts/nonesteamgame/nonesteamgame'
 import shlex from 'shlex'
 import { legendaryLaunchArgumentFields } from '../runnerLaunchArgv'
-import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
+import { readKnownFixLaunchOverrides } from 'backend/launchrust/knownFixes'
+import { settleKnownFixLaunchOverrides } from 'backend/knownFixLaunchReply'
 import { t } from 'i18next'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
 import { createBoundedOutputCapture } from 'backend/utils/boundedOutputCapture'
@@ -1100,11 +1101,14 @@ export default class LegendaryGame implements Game {
         : undefined
 
     // Known-fix launchArgs / exeOverride (quick 261029-mbl).
-    const knownFix = readKnownFixLaunchOverrides(
-      this.deps,
+    const knownFix = await settleKnownFixLaunchOverrides(
       this.appName,
-      'legendary',
-      gameInfo.install.install_path
+      readKnownFixLaunchOverrides(
+        this.deps,
+        this.appName,
+        'legendary',
+        gameInfo.install.install_path
+      )
     )
     const command: LegendaryCommand = {
       subcommand: 'launch',
