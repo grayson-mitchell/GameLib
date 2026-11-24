@@ -185,6 +185,31 @@ known-fix routing (95–97), and the engine step itself (ported in 87, D-01/D-22
   game in 88; file a todo (three triage keys) for resuming it from the capture file. (Open
   question 3.)
 
+### Split (2026-11-25, user-approved at plan time)
+- **D-30:** **Phase 88 is split into four sub-phases run in order: 88 (launch scaffolding and
+  known fixes), 88.1 (builders and prepare steps), 88.2 (command runner and game processes),
+  88.3 (launch funnel, re-adoption and the live gate).** Reason: ~55–60 plans at 87 density
+  exceed one planning context, and the unexecuted 87 gap plans (87-63/64/65/70) edit the files
+  88 must cite exactly. All four share this CONTEXT, `88-RESEARCH.md`, `88-PATTERNS.md` and
+  `88-VALIDATION.md`, and go straight to `/gsd-plan-phase` with no separate discuss; each is
+  planned just before it runs. Each records its own goldens from TS before porting (D-11/D-25),
+  deletes its own slice's TS and registrations (D-18) and rebases onto main before its deletion
+  plan. **Gate model (adapts D-16/D-17):** 88, 88.1 and 88.2 close on goldens plus three-OS CI,
+  with no signed build or operator session (the 90 D-03 shape); 88.3 builds the signed Phase 88
+  build and runs `88-HUMAN-UAT.md` over the signed 87 gap build. `88-HUMAN-UAT.md` and the
+  `82-STATE-OWNERSHIP.md` amendment are authored in sub-phase 88's first wave. **Interim states:**
+  until 88.3 the TS per-game `LogWriter` stays the only rotator (88.1 prepare ops return log lines
+  as data; 88.2's capture tail writes non-rotating batches); the D-27 quit condition lands in
+  88.2, the same sub-phase that makes games Game-class. Downstream: 89 and 91 depend on 88.3.
+  The planner's per-sub-phase scope and decision mapping is in the split recommendation recorded
+  in `88-DISCUSSION-LOG.md`.
+- **D-31:** **Re-adoption and quit-kill semantics (RESEARCH open question 7).** A launch record
+  matches by pid plus start stamp first, then by a live process group/session the stamp proves
+  (the Wine loader exits about 1 s after launch, so leader-only matching would drop live
+  CrossOver games). On a quit-kill (D-27 "Yes"), playtime is recorded at the kill and the record
+  is marked so the next boot runs the after-launch script in a bounded, Registrant-held task —
+  nothing unbounded runs inside the 5 s `ExitBudget`. — **Reversibility:** reversible.
+
 ### Claude's Discretion
 - The crate layout: a new `gamelib-launch` (+cli) crate, or launch modules inside `gamelib-engine`/
   `gamelib-wine`, keeping 87 D-04's one-way dependency. Known-fixes may be its own crate.

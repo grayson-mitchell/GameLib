@@ -189,7 +189,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 85: Store host, config and versioned migrations** — 25/25 plans in 20 waves (the D-03 deletion split into four plans for context budget); completed 2026-11-22
 - [x] **Phase 86: Pure leaf services** — 27/27 plans in 21 waves (26 + 1 gap closure); completed 2026-11-23
 - [ ] **Phase 87: Engine, Wine and tools** — 59 plans in 38 waves; planned 2026-11-23 (executes after Phase 86 closes)
-- [ ] **Phase 88: Launch pipeline** — not planned
+- [ ] **Phase 88: Launch scaffolding and known fixes** — not planned (SVC-03 part 1 of 4; split 2026-11-25, 88-CONTEXT D-30)
+- [ ] **Phase 88.1: Launch builders and prepare steps** — not planned
+- [ ] **Phase 88.2: Command runner and game processes** — not planned
+- [ ] **Phase 88.3: Launch funnel, re-adoption and the live gate** — not planned (runs the Phase 88 live gate)
 - [ ] **Phase 89: Steam library state** — not planned
 - [ ] **Phase 90: Steam services and TypeScript depot path** — not planned (session, sign-in and redeem; split 2026-11-24, 90-CONTEXT D-01)
 - [ ] **Phase 90.1: Steam install, update, uninstall and the depot path** — not planned
@@ -318,8 +321,8 @@ Milestone v0.11 Node Sidecar Retirement. Planned 2026-11-17 alongside v0.10; sta
 
 **Lanes** (set 2026-11-24 from the research's own dependency rules and a check of the TS imports; each lane runs in its own worktree):
 
-- **Lane A — Steam (sets the pace):** 87 → 88 → 89 → 90 → 90.1 → 90.2 → 95 → 96 → 97
-- **Lane B — runners:** after 88: 91 → 92 → 93 (93 also waits for 90.1, because the download queue calls Steam install code: `cancelDelete`, `queueHeadRevalidation`, `gameRequirements`)
+- **Lane A — Steam (sets the pace):** 87 → 88 → 88.1 → 88.2 → 88.3 → 89 → 90 → 90.1 → 90.2 → 95 → 96 → 97
+- **Lane B — runners:** after 88.3: 91 → 92 → 93 (93 also waits for 90.1, because the download queue calls Steam install code: `cancelDelete`, `queueHeadRevalidation`, `gameRequirements`)
 - **Lane C — Humble and shortcuts:** 94, startable now (Humble imports only Steam *types*; shortcuts use `process/context` and the Rust steamfiles)
 - **Join:** 98 after 93, 94 and 97; then 99.
 
@@ -848,28 +851,78 @@ Plans:
 - Two-profile rule: every golden runs on an isolated createFakeHomeProfile(); no case reads the real HOME
 - D-25 (c): `callTool` (winecfg, runExe) and `runWineCommandForGame` spawn in Rust as `SpawnClass::Helper`; the GOG offline-installer check, `pushGameToLibrary` and the final `gameStatusUpdate done` stay in the TS registration glue after the resolver returns, in the TS order
 
-### Phase 88: Launch pipeline
+### Phase 88: Launch scaffolding and known fixes
 
-**Goal**: Launching any game builds the same command line and environment from Rust.
-**Requirements**: SVC-03
-**Depends on**: Phase 87
-**Research flag**: Needs deeper research (golden argv/env traces recorded from TS first)
+**Goal**: Known-fixes run from Rust, and the shared launch scaffolding (crates, reference-trace harness, ownership amendment, live-gate contract) is in place for 88.1–88.3.
+**Requirements**: SVC-03 (part 1 of 4; split 2026-11-25, `88-CONTEXT.md` D-30, which also governs 88.1–88.3 and shares 88-RESEARCH / PATTERNS / VALIDATION)
+**Depends on**: Phase 87 (its coding plans run after the 87 gap-closure code plans land; the authoring plan may run earlier)
+**Research flag**: Done (`88-RESEARCH.md`, shared by 88–88.3)
 **Success Criteria** (what must be TRUE):
-  1. For native, Wine/Proton/CrossOver, gamescope/mangohud, known-fix overlay and pre/post-script launches, the Rust command line and environment match golden traces recorded from the TypeScript
-  2. A game launched from the UI starts and runs on macOS, Windows and Linux with a single in-flight launch per game
-  3. Anti-cheat handling at launch and the remaining `utils.ts` pieces behave as before
-  4. `launcher.ts`, `commandRunner`, known-fixes and the replaced `utils.ts` code and their registrations are deleted in this phase
+  1. Known-fix overlay, reader, registry, archive and fetch behaviour match golden traces recorded from the TypeScript
+  2. `88-HUMAN-UAT.md` (the four D-17 items) and the `82-STATE-OWNERSHIP.md` amendment (D-24, D-28, deferrals) are authored before any coding plan
+  3. The `launchOracle` harness, pairwise generator, and the `gamelib-launch` / `gamelib-knownfix` crates exist and run in three-OS CI
+  4. The known-fixes TypeScript and its registrations are deleted, leaving only scheduled shims; closes on goldens and three-OS CI, no signed build
 
 **Plans:** 0 plans
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 88 to break down)
 
+### Phase 88.1: Launch builders and prepare steps (INSERTED)
+
+**Goal**: The launch env, wrapper and gamescope builders and the prepare steps run from Rust.
+**Requirements**: SVC-03 (part 2 of 4; D-30)
+**Depends on**: Phase 88
+**Research flag**: Done (shared `88-RESEARCH.md`)
+**Success Criteria** (what must be TRUE):
+  1. Env, wrapper, gamescope and known-fix-env builders and `prepare_launch` / `prepare_wine_launch` match golden traces across the pairwise matrix
+  2. Anti-cheat at launch, `check_wine_before_launch`, `download_default_wine` (D-28), `isMacSonomaOrHigher`, `isEpicServiceOffline`, `removeQuoteIfNecessary` and system info behave as before
+  3. The builder TS, `gamescopeCommand.ts`, `utils/systeminfo` and the replaced `utils.ts` rows are deleted; closes on goldens, three-OS CI and a Linux stub-gamescope smoke
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 88.1 to break down)
+
+### Phase 88.2: Command runner and game processes (INSERTED)
+
+**Goal**: Runner commands and game processes spawn from Rust, games outlive a GameLib crash, and a graceful quit asks before ending a running game.
+**Requirements**: SVC-03 (part 3 of 4; D-30)
+**Depends on**: Phase 88.1
+**Research flag**: Done (shared `88-RESEARCH.md`)
+**Success Criteria** (what must be TRUE):
+  1. Runner commands, redaction and streamed output match golden traces; Windows quoting matches Node against a real exe
+  2. Games spawn as `SpawnClass::Game` writing a private capture file Rust tails (D-29); `gamelib-proc` gains Windows start time, a non-kill-on-close Game job and a stamp-checked tree kill, with orphan-harness arms on three OS
+  3. The quit dialog gains a "game running" condition (D-27, a recorded behaviour change) read from the Rust running-game registry
+  4. `commandRunner.ts` is deleted; closes on goldens, three-OS CI and a stub-game smoke (launch, quit-kill, survival of parent SIGKILL)
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 88.2 to break down)
+
+### Phase 88.3: Launch funnel, re-adoption and the live gate (INSERTED)
+
+**Goal**: Launching any game builds the same command line and environment from Rust end to end, through one Rust launch funnel, and a game that survived a crash is re-adopted.
+**Requirements**: SVC-03 (part 4 of 4; D-30)
+**Depends on**: Phase 88.2
+**Research flag**: Done (shared `88-RESEARCH.md`)
+**Success Criteria** (what must be TRUE):
+  1. The Rust funnel over `ManagerHooks` (D-26) matches the TS funnel transcript, with a single in-flight launch per game
+  2. A game that survived a GameLib crash is re-adopted on next boot (D-08..D-10); a quit-killed game's playtime is recorded at the kill and its after-script runs at next boot (D-31)
+  3. A game launched from the UI starts and runs on macOS (live, signed 88.3 build over the signed 87 gap build) and on Windows and Linux (CI plus Phase 99)
+  4. `launcher.ts` and every remaining ported TS and registration are deleted, leaving only scheduled shims
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 88.3 to break down)
+
 ### Phase 89: Steam library state
 
 **Goal**: Steam library state, game sessions and update detection live in one Rust owner, and the TypeScript poll event machinery is gone.
 **Requirements**: STM-01
-**Depends on**: Phase 88
+**Depends on**: Phase 88.3
 **Research flag**: Needs deeper research (Phase 80 open warnings A-WR-01, A-WR-02 and the poison-event cap resolved first or inside)
 **Success Criteria** (what must be TRUE):
   1. The Steam library, installed state, game sessions and update-available badges update live in the UI with no TypeScript state owner
@@ -937,7 +990,7 @@ Plans:
 
 **Goal**: Epic sign-in, library and game management run from Rust over the bundled legendary binary.
 **Requirements**: STO-01
-**Depends on**: Phase 88 (Lane B; needs `enginewine` from 87 and `knownFixLaunch` from 88, nothing from Steam)
+**Depends on**: Phase 88.3 (Lane B; needs `enginewine` from 87, and the in-process funnel, `ManagerHooks` and `knownFixLaunch` from 88–88.3, nothing from Steam)
 **Research flag**: Needs deeper research (external binary output formats, Windows process-tree kill and quoting; parsers first with real captured transcripts)
 **Success Criteria** (what must be TRUE):
   1. A user can sign in to Epic and see their library, and install, update, repair, move and uninstall a game

@@ -546,21 +546,36 @@
     {
       "number": "85",
       "name": "Store host, config and versioned migrations",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "86",
       "name": "Pure leaf services",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "87",
       "name": "Engine, Wine and tools",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "88",
-      "name": "Launch pipeline",
+      "name": "Launch scaffolding and known fixes",
+      "status": "pending"
+    },
+    {
+      "number": "88.1",
+      "name": "Launch builders and prepare steps",
+      "status": "pending"
+    },
+    {
+      "number": "88.2",
+      "name": "Command runner and game processes",
+      "status": "pending"
+    },
+    {
+      "number": "88.3",
+      "name": "Launch funnel, re-adoption and the live gate",
       "status": "pending"
     },
     {
@@ -571,6 +586,16 @@
     {
       "number": "90",
       "name": "Steam services and TypeScript depot path",
+      "status": "pending"
+    },
+    {
+      "number": "90.1",
+      "name": "Steam install, update, uninstall and the depot path",
+      "status": "pending"
+    },
+    {
+      "number": "90.2",
+      "name": "Steam launch, Mac Steam adoption and the router",
       "status": "pending"
     },
     {
@@ -632,7 +657,7 @@
   "next": {
     "command": "/gsd-progress --next",
     "label": "Advance to the next step",
-    "reason": "Phase 29 of 45 · 100% · executing"
+    "reason": "Phase 31 of 49 · 100% · executing"
   },
-  "updated_at": "2026-11-21T21:55:42.056Z"
+  "updated_at": "2026-11-24T16:22:16.935Z"
 }

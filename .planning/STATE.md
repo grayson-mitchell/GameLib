@@ -535,6 +535,11 @@ Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archi
 - Phase 94 edited: edited fields: depends_on 93 -> 86 (Lane C); v0.11 lane map added 2026-11-24
 - Phase 95 edited: edited fields: research note: runs in Lane A beside 91-93; v0.11 lane map added 2026-11-24
 - Phase 98 edited: edited fields: depends_on 94, 97 -> 93, 94, 97; v0.11 lane map added 2026-11-24
+- Phase 88 split at plan time (2026-11-25, 88-CONTEXT D-30): 88 renamed "Launch scaffolding and known fixes" (SVC-03 part 1 of 4)
+- Phase 88.1 inserted after Phase 88: Launch builders and prepare steps (D-30, SVC-03 part 2 of 4)
+- Phase 88.2 inserted after Phase 88.1: Command runner and game processes (D-30, SVC-03 part 3 of 4)
+- Phase 88.3 inserted after Phase 88.2: Launch funnel, re-adoption and the live gate (D-30, SVC-03 part 4 of 4)
+- Phases 89 and 91 edited: depends_on 88 -> 88.3; Lane A and Lane B lane map updated (2026-11-25)
 
 ### Decisions
 
