@@ -40,6 +40,40 @@ fn the_overlay_catalogue_op_prints_the_shared_json_over_a_fake_home() {
 }
 
 #[test]
+fn the_read_op_prints_the_local_fix_and_null_for_an_unknown_game_over_a_fake_home() {
+    let home = FakeHome::new("knownfix-cli-");
+    let user_data = home.root().join("userData");
+    let local = user_data.join("fixes").join("local");
+    std::fs::create_dir_all(&local).unwrap();
+    std::fs::write(
+        local.join("1234-gog.json"),
+        r#"{"title":"Seeded","winetricks":["vcrun2019"],"registry":[]}"#,
+    )
+    .unwrap();
+    let run = |args: &str| {
+        let out = cli()
+            .args(["op", "knownfix_read", args, "--user-data"])
+            .arg(&user_data)
+            .output()
+            .unwrap();
+        assert_eq!(out.status.code(), Some(0), "{out:?}");
+        serde_json::from_slice::<serde_json::Value>(&out.stdout).unwrap()
+    };
+    assert_eq!(
+        run(r#"["1234","gog"]"#),
+        serde_json::json!({"title": "Seeded", "winetricks": ["vcrun2019"]})
+    );
+    assert_eq!(run(r#"["9999","gog"]"#), serde_json::Value::Null);
+    let bad = cli()
+        .args(["op", "knownfix_read", r#"["1234","epic"]"#, "--user-data"])
+        .arg(&user_data)
+        .output()
+        .unwrap();
+    assert_eq!(bad.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&bad.stderr).contains("knownfix_read:bad-args"));
+}
+
+#[test]
 fn an_unknown_op_exits_two_over_a_fake_home() {
     let home = FakeHome::new("knownfix-cli-");
     let out = cli()

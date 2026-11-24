@@ -7,6 +7,11 @@ use std::sync::Arc;
 
 use gamelib_engine::ctx::EngineCtx;
 
+/// The deployed known-fix relay (`GAMELIB_FIX_RELAY_URL` of `src/backend/knownFixReport.ts`). The shell
+/// hands this to [`KnownFixCtx`] unless `GAMELIB_FIX_RELAY_URL` is set, so the crate itself reads no
+/// environment.
+pub const DEFAULT_RELAY_URL: &str = "https://gamelib-fix-relay.gamelib.workers.dev/v1/reports";
+
 /// The directories of the known-fix layers, as `process/appPaths.ts` builds them from the app folder
 /// (`fixesPath`, `localFixesPath`, `knownFixOverlaysPath`) plus the bundled layer the shell passes in.
 #[derive(Debug, Clone, PartialEq, Eq)]

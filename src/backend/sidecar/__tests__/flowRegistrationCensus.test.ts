@@ -103,7 +103,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // `getStoreSearchDeals`, `getItadSteamGids`, `itad.getKeyStatus`, `itad.setApiKey`) are native
   // `info` channels.
   // Phase 86 Plan 22 (D-17): invoke 7 -> 6 -- `getWikiGameInfo` is a native `info` channel.
-  'enrichmentFlowRegistration.ts': { invoke: 6, send: 0 },
+  // Phase 88 Plan 08 (D-19): invoke 6 -> 5 -- `getKnownFixes` is a native `knownfix` channel.
+  'enrichmentFlowRegistration.ts': { invoke: 5, send: 0 },
   // Phase 34.6 Plan 08 (2026-08-24): new module — the 8 EOS overlay channels ported
   // byte-equivalently from eos_overlay/ipc_handler.ts (all invoke-kind, D-09).
   'eosOverlayFlowRegistration.ts': { invoke: 8, send: 0 },

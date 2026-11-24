@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import type { GamelibFixStatus, KnowFixesInfo } from '../../types'
+import type { GamelibFixStatus } from '../../types'
 import type { CatalogProduct } from '../discounts'
 import type { RunsForMeState } from '../../runsForMe'
 import {
@@ -29,7 +29,8 @@ const localeSettings = z.strictObject({
 })
 
 export const enrichmentAsyncArgs = {
-  getKnownFixes: z.tuple([appName, runnerArg()]),
+  // Phase 88 (88-08, D-19): `getKnownFixes` is a native `knownfix` channel (`nativeChannels.json`), so it has
+  // no zod entry here; its bounds live in the Rust decode.
   getGamelibFixStatus: z.tuple([appName, runnerArg()]),
   getRunsForMeMap: noArgs,
   setRunsForMe: z.tuple([runsForMePayload]),
@@ -46,7 +47,6 @@ export const enrichmentAsyncArgs = {
 }
 
 interface EnrichmentAsyncReturns {
-  getKnownFixes: KnowFixesInfo | null
   getGamelibFixStatus: Promise<GamelibFixStatus | null>
   getRunsForMeMap: Promise<Record<string, RunsForMeState>>
   setRunsForMe: Promise<Record<string, RunsForMeState>>

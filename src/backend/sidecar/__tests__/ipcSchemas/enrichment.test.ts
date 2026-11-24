@@ -10,10 +10,6 @@ const noArgs = { valid: [[]], invalid: [['x']] }
 const locale = { countryCode: 'US', locale: 'en-US', currencyCode: 'USD' }
 
 const table: FixtureTable<typeof enrichmentAsyncArgs> = {
-  getKnownFixes: {
-    valid: [['abc', 'gog']],
-    invalid: [[], ['abc'], ['abc', 'epic'], ['', 'gog']]
-  },
   getGamelibFixStatus: {
     valid: [['abc', 'steam']],
     invalid: [[], ['abc', 1]]
@@ -40,9 +36,9 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
 }
 
 describe('enrichment channel schemas', () => {
-  it('has a fixture for every key (6 total)', () => {
+  it('has a fixture for every key (5 total)', () => {
     expectFixtureCoverage(enrichmentAsyncArgs, table)
-    expect(Object.keys(enrichmentAsyncArgs).length).toBe(6)
+    expect(Object.keys(enrichmentAsyncArgs).length).toBe(5)
   })
   runFixtureTable(enrichmentAsyncArgs, table)
 

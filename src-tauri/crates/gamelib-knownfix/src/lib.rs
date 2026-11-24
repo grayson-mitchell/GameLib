@@ -13,6 +13,9 @@
 
 pub mod catalogue;
 pub mod ctx;
+pub mod jsvalue;
+pub mod reader;
+pub mod types;
 
 /// The cancel token a long op takes, re-exported so the shell, which owns the renderer's cancel, needs
 /// no `tokio-util` of its own.
@@ -28,7 +31,7 @@ use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
-pub const OPS: &[&str] = &["knownfix_overlay_catalogue"];
+pub const OPS: &[&str] = &["knownfix_overlay_catalogue", "knownfix_read"];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a shutdown, a wrong thread or a
 /// panic (`<op>:panic`).
@@ -40,7 +43,7 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &KnownFixCtx) -> Result<Val
 }
 
 /// Each plan adds its arms here, in step with `OPS`.
-async fn route(op: &str, args: &[Value], _ctx: &KnownFixCtx) -> Result<Value, String> {
+async fn route(op: &str, args: &[Value], ctx: &KnownFixCtx) -> Result<Value, String> {
     match op {
         // The overlay catalogue the signed app pins (D-03): the shared JSON, parsed once.
         "knownfix_overlay_catalogue" => {
@@ -50,8 +53,25 @@ async fn route(op: &str, args: &[Value], _ctx: &KnownFixCtx) -> Result<Value, St
             let catalogue = catalogue::catalogue().map_err(|e| format!("{op}:{e}"))?;
             serde_json::to_value(catalogue).map_err(|_| format!("{op}:bad-result"))
         }
+        // The tier-1 fix for one game (88-08, D-03): local > bundled > remote, allow-listed. `null` when
+        // no layer holds a usable file. Arguments `[appName, runner]`.
+        "knownfix_read" => {
+            let (app_name, runner) = decode_app_runner(op, args)?;
+            let found = reader::read_known_fixes(ctx, &app_name, runner);
+            serde_json::to_value(found).map_err(|_| format!("{op}:bad-result"))
+        }
         _ => Err(format!("unknown op: {op}")),
     }
+}
+
+/// The `[appName, runner]` arguments of the reader ops: a string and one of the five runner names. The
+/// error is a fixed `<op>:bad-args`; the renderer's value never reaches it.
+fn decode_app_runner(op: &str, args: &[Value]) -> Result<(String, types::Runner), String> {
+    let [Value::String(app_name), Value::String(runner)] = args else {
+        return Err(format!("{op}:bad-args"));
+    };
+    let runner = types::Runner::parse(runner).ok_or_else(|| format!("{op}:bad-args"))?;
+    Ok((app_name.clone(), runner))
 }
 
 /// The one object argument of an op, decoded strictly (the arg structs deny unknown fields). The
@@ -177,6 +197,45 @@ mod tests {
         sorted.dedup();
         assert_eq!(sorted, OPS);
         assert!(OPS.contains(&"knownfix_overlay_catalogue"));
+        assert!(OPS.contains(&"knownfix_read"));
+    }
+
+    #[tokio::test]
+    async fn the_read_op_decodes_app_name_and_runner_and_answers_null_or_the_fix() {
+        let home = FakeHome::new("knownfix-lib-");
+        let ctx = ctx(&home);
+        let op = "knownfix_read";
+        // A rejected argument is a fixed literal that never echoes the input.
+        let secret = "SECRET-APP-".repeat(40);
+        for bad in [
+            vec![],
+            vec![json!("a")],
+            vec![json!("a"), json!("epic")],
+            vec![json!("a"), json!(secret)],
+            vec![json!(1), json!("gog")],
+            vec![json!("a"), json!("gog"), json!("gog")],
+            vec![json!({"appName": "a", "runner": "gog"})],
+        ] {
+            let err = dispatch(op, &bad, &ctx).await.unwrap_err();
+            assert_eq!(err, format!("{op}:bad-args"), "{bad:?}");
+        }
+        assert_eq!(
+            dispatch(op, &[json!("nope"), json!("gog")], &ctx).await,
+            Ok(Value::Null)
+        );
+        let dir = ctx.paths.local.clone();
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("1234-gog.json"),
+            r#"{"title":"Seeded","winetricks":["vcrun2019"],"registry":[]}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            dispatch(op, &[json!("1234"), json!("gog")], &ctx)
+                .await
+                .unwrap(),
+            json!({"title": "Seeded", "winetricks": ["vcrun2019"]})
+        );
     }
 
     #[tokio::test]

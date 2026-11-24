@@ -13,9 +13,7 @@
  *   Electron homes):
  *     - (Phase 86, 86-22) `getWikiGameInfo` is now a native `info` channel.
  *     - (Phase 86, 86-12) `getAnticheatInfo` is now a native `info` channel.
- *     - `getKnownFixes` -> `backend/knownFixes.ts`'s
- *       `readKnownFixes(appName, runner)` (Plan 34.2-03 extraction;
- *       registered at `main.ts:1615` today)
+ *     - (Phase 88, 88-08) `getKnownFixes` is now a native `knownfix` channel.
  *     - `getGamelibFixStatus` -> `backend/knownFixes.ts`'s
  *       `readGamelibFixStatus(appName, runner)` (quick 261027-ch9; brand new,
  *       local + bundled layers only)
@@ -110,7 +108,7 @@ import type { MiscRuntimeSlice } from 'backend/miscRuntime'
 import type { FrontendMessageDeps } from '../host/frontendMessage'
 import type { AppInfo } from '../process/context'
 import type { IpcRegistry } from './ipcRegistry'
-import { readGamelibFixStatus, readKnownFixes } from '../knownFixes'
+import { readGamelibFixStatus } from '../knownFixes'
 import { getCrossoverIndex } from '../info/crossover'
 import { getRunsForMeMap, setRunsForMeByUser } from '../runsForMe'
 import { getGogDiscounts } from '../info/discounts'
@@ -170,7 +168,7 @@ const RUNS_FOR_ME_RUNNERS: readonly string[] = Object.freeze([
 ] as const)
 
 /**
- * Registers the 6 enrichment channels. Called once from `handlers.ts`
+ * Registers the 5 enrichment channels. Called once from `handlers.ts`
  * — this module owns no side effects at import time beyond the imports
  * above; the caller decides when registration onto the handler registry
  * happens.
@@ -185,11 +183,9 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   // `<appFolder>/areweanticheatyet.json`, so it is no longer registered here and has one owner. The
   // D-07 rider on it (null for Steam titles and for everything on Windows) now lives in Rust.
 
-  deps.ipc.handle(
-    'getKnownFixes',
-    async (_event: unknown, ...args: unknown[]) =>
-      readKnownFixes(deps, args[0] as string, args[1] as Runner)
-  )
+  // Phase 88 (88-08, D-19): `getKnownFixes` is a native `knownfix` channel served by Rust
+  // (`knownfix_read`, `nativeChannels.json`), so it is no longer registered here and has one owner. The TS
+  // reader stays for the sidecar's own synchronous launch callers until their ports (88.1 and later).
 
   // Quick 261027-ch9: GameLib row on the game page. Local + bundled only.
   deps.ipc.handle(

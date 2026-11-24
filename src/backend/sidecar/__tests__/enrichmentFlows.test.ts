@@ -442,33 +442,13 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
   // shapes, caches and stale-serve behaviour are proven against the 86-07 goldens in
   // `gamelib-info`'s `golden_storeSearch.rs`, not through the sidecar. ──────────────────────────
 
-  // ── REQ-34.2-11: getKnownFixes ────────────────────────────────────────────
-  describe('REQ-34.2-11 getKnownFixes (invoke)', () => {
-    it('REQ-34.2-11 returns the parsed fixture written under the tmp fixesPath', async () => {
-      const fixture = { winetricks: ['vcrun2019'], runInPrefix: ['setup.exe'] }
-      writeFileSync(
-        join(fixesPath, 'known-fixes-app-gog.json'),
-        JSON.stringify(fixture)
-      )
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'gkf-1', 'getKnownFixes', ['known-fixes-app', 'gog'])
-      await flush()
-
-      const response = findResponse(frames, 'gkf-1')
-      expect(response?.ok).toBe(true)
-      expect(response?.result).toEqual(fixture)
-    })
-
-    it('REQ-34.2-11 returns null when no fix file exists for the appName/runner pair', async () => {
-      const { input, frames } = boot()
-      writeInvoke(input, 'gkf-2', 'getKnownFixes', ['no-such-app', 'gog'])
-      await flush()
-
-      const response = findResponse(frames, 'gkf-2')
-      expect(response?.ok).toBe(true)
-      expect(response?.result).toBeNull()
-    })
+  // ── Phase 88 (88-08, D-19, D-23): `getKnownFixes` is a native `knownfix` channel served by Rust
+  // (`knownfix_read`). The three layers, the allow-list and the traversal refusal are pinned by
+  // `gamelib-knownfix`'s `golden_reader.rs` and the argument bounds by the native manifest vectors, so the
+  // sidecar no longer registers it. ────────────────────────────────────────────────────────────────────
+  it('Phase 88 (D-19) getKnownFixes is a native `knownfix` channel: the sidecar no longer registers it', () => {
+    boot()
+    expect(handlerRegistry.has('getKnownFixes')).toBe(false)
   })
 
   // ── quick 261027-ch9: getGamelibFixStatus ──────────────────────────────────
@@ -706,8 +686,8 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
   // ── REQ-34.2-14 / SEAM Invariant B ──────────────────────────────────────────
   describe('REQ-34.2-14/SEAM Invariant B', () => {
     const ALL_7_CHANNELS: [string, unknown[]][] = [
-      ['getKnownFixes', ['app-x', 'gog']],
       ['getCrossoverIndex', []]
+      // `getKnownFixes` left this list in Phase 88 Plan 08 (D-19): it is a native `knownfix` channel.
       // `getWikiGameInfo` left this list in Phase 86 Plan 22 (D-17): it is a native `info` channel.
       // `removeRecent` left this list in Phase 86 Plan 08 (D-17): it is a native `info` channel.
       // `searchStores`, `getStoreSearchDeals` and `getItadSteamGids` left it in Phase 86 Plan 16 (D-17),

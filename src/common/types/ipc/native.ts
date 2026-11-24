@@ -8,6 +8,7 @@
  */
 import type {
   AntiCheatInfo,
+  KnowFixesInfo,
   Runner,
   RuntimeName,
   UploadedLogData,
@@ -214,6 +215,16 @@ export interface NativeAsync {
   dismissEngineNotice: (
     dismissal: EngineNoticeDismissal
   ) => Promise<{ ok: boolean }>
+  // Phase 88 (88-08, D-19, D-23): the tier-1 known fix for one game, answered by the Rust `knownfix` slice
+  // (`gamelib-knownfix`'s `knownfix_read`): `<appName>-<store>.json` from the local layer, then the bundled
+  // one, then the downloaded one, the first file that parses to an object winning whole-file, filtered to
+  // the 12 tier-1 keys. `null` when no layer has a usable file, and for an `appName` that resolves outside
+  // a layer directory (WR-06, a fixed warning and no read). The app name is 1 to 256 UTF-16 units and the
+  // runner one of the five names; anything else rejects with the invalid-args marker.
+  getKnownFixes: (
+    appName: string,
+    runner: Runner
+  ) => Promise<KnowFixesInfo | null>
 }
 
 export interface NativeSync {

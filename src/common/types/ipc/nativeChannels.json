@@ -2002,6 +2002,46 @@
         [{ "kind": "untested-crossover", "build": "27.0.0.1", "extra": 1 }],
         [{ "kind": "no-crossover" }, {}]
       ]
+    },
+    "getKnownFixes": {
+      "kind": "invoke",
+      "slice": "knownfix",
+      "args": [
+        {
+          "name": "appName",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "runner",
+          "type": "string",
+          "pattern": "^(legendary|gog|sideload|nile|steam)$"
+        }
+      ],
+      "returns": "KnowFixesInfo | null",
+      "valid": [
+        ["1234", "gog"],
+        ["Fortnite", "legendary"],
+        ["620", "steam"],
+        ["a", "nile"],
+        ["a", "sideload"]
+      ],
+      "invalid": [
+        [],
+        ["1234"],
+        ["1234", "gog", "gog"],
+        ["1234", "epic"],
+        ["1234", "GOG"],
+        ["1234", ""],
+        ["", "gog"],
+        [1, "gog"],
+        [null, "gog"],
+        ["1234", 1],
+        ["1234", null],
+        [{ "appName": "1234", "runner": "gog" }]
+      ]
     }
   }
 }

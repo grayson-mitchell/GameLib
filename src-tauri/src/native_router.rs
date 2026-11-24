@@ -20,6 +20,7 @@
 use crate::engine_dispatch;
 use crate::info_dispatch;
 use crate::ipc_contract::{IPC_INVALID_ARGS, IPC_INVALID_ARGS_MARKER};
+use crate::knownfix_dispatch;
 use crate::log_dispatch;
 use crate::log_upload::{self, PasteClient};
 use crate::native_handlers;
@@ -365,6 +366,12 @@ pub(crate) const WINE_SLICE: &str = "wine";
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) const ENGINE_SLICE: &str = "engine";
 
+/// The slice that owns the known-fix channels in `nativeChannels.json` (Phase 88): invoke channels only,
+/// so it has no send queue; the handler runs the `gamelib-knownfix` op on the blocking pool. Named here,
+/// with the other slices, for the manifest-slice test.
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) const KNOWNFIX_SLICE: &str = "knownfix";
+
 /// Run one queued send on its slice worker: the channel picks the handler.
 fn run_send_job(ctx: &Arc<NativeCtx>, job: NativeSendJob) -> Result<(), String> {
     match (job.channel, job.payload) {
@@ -538,6 +545,10 @@ impl NativeRouter {
             "dismissEngineNotice",
             engine_dispatch::dismiss_engine_notice,
         );
+        // Phase 88 (88-08, D-19): the renderer's known-fix lookup, run by the `knownfix` slice over the
+        // crate's `knownfix_read` (local > bundled > remote, allow-listed). The sidecar no longer
+        // registers `getKnownFixes` (one owner).
+        invoke.insert("getKnownFixes", knownfix_dispatch::get_known_fixes);
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -973,6 +984,28 @@ mod tests {
             );
         }
         assert!(!router.queues.contains_key(ENGINE_SLICE));
+    }
+
+    #[test]
+    fn native_manifest_knownfix_channels_are_registered_in_the_knownfix_slice() {
+        let m = manifest();
+        let channels = m["channels"].as_object().expect("channels object");
+        let router = router();
+        let knownfix: Vec<&str> = channels
+            .iter()
+            .filter(|(_, spec)| spec["slice"] == KNOWNFIX_SLICE)
+            .map(|(name, _)| name.as_str())
+            .collect();
+        assert!(knownfix.contains(&"getKnownFixes"), "{knownfix:?}");
+        for name in knownfix {
+            // The knownfix slice is invoke-only: no send queue exists for it.
+            assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");
+            assert!(
+                router.invoke_handler(name).is_some(),
+                "{name} has no handler"
+            );
+        }
+        assert!(!router.queues.contains_key(KNOWNFIX_SLICE));
     }
 
     #[test]
