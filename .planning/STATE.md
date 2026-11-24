@@ -5,7 +5,7 @@ milestone_name: Node Sidecar Retirement
 current_phase: 94
 current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 94-13-PLAN.md
+stopped_at: Completed 94-14-PLAN.md (partial, icon_geometry pending Mac goldens)
 last_updated: "2026-11-24T03:45:49.710Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 94 execution started
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
-Plan: 12 of 32
-Status: Ready to execute (94-13 complete; 94-14 next, wave 5, but it is held until the four macOS icon_geometry goldens exist; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24; worktree-local STATE, D-02)
-Last activity: 2026-11-24 — Completed 94-13 (the Humble native read tracer: humbleGetGiftedAt and humbleGetOwnershipOverrides are native humble channels answered by Rust from the StoreHost and replay the eight recorded TS reads; the TS handles are deleted and four census counts move; the Humble context carries its emitter, log, UI and catalog seams)
+Plan: 13 of 32
+Status: Ready to execute (94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24; 94-15 next, wave 6; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-14 (partial): the macOS .app writer (run.sh, Info.plist, centred-crop icns, proof-guarded Desktop symlink) and the Linux .desktop writer replay all 132 text goldens and the four add-side clear deltas; the icon_geometry golden replay is #[ignore]d pending 94-07 Mac goldens
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -482,6 +482,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P12 | 75min | 2 tasks | 7 files |
 | Phase 94 P11 | 37min | 2 tasks | 32 files |
 | Phase 94 P13 | 95min | 2 tasks | 22 files |
+| Phase 94 P14 | 100min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -1037,6 +1038,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-09: the digest date is pinned to en-US in the golden (the TS renders the host default locale) and i18next escapes its slashes (1&#x2F;2&#x2F;2027) in the OS notification: the Rust digest must choose to replicate or fix
 - [Phase 94]: 94-09: a dead cookie API (zero cookies from the first read) aborts the watch with error on the first tick; the 10-minute deadline is reached only by a live jar with no candidate or a window that never opens
 - [Phase 94]: 94-09: Catalog::t_unescaped is for the one dialog row the TS renders with escapeValue false, flagged per row in rendered.json; plural suffixes stay unported because the en count keys equal the base key
+- [Phase 94]: 94-14: user decision: run 94-14 although the 94-07 icon_geometry goldens are not recorded (they need a Mac); the golden comparison is an explicit #[ignore] with a guard that fails once the goldens exist while it is still ignored; no geometry value is hand-typed
+- [Phase 94]: 94-14: the 94-05 quoting defect (run.sh apostrophe, unencoded Linux Exec=) is reproduced byte for byte, not fixed, because the goldens pin the bytes; the fix stays with its todo
+- [Phase 94]: 94-14: the Desktop clear is a std::fs delete guarded by proof.rs (a symlink to exactly the Applications bundle, or a bundle with run.sh marker, gamelib://launch and a plist naming run.sh); anything else is left and reported Unproven, matching the 94-07 deltas
 - [Phase 94]: 94-12: classifier time values are i64 ms with a caller-supplied fixed-offset LocalZone (jiff::Timestamp cannot hold V8's range); host-zone source is for 94-15
 - [Phase 94]: 94-12: classify reads an order-preserving JsValue because Object.keys order is asserted and serde_json preserve_order is forbidden
 - [Phase 94]: 94-11: shortcutsExists is answered by Rust through resolveShortcutsExists; the TS handle is deleted in the same commit and the oracle now drives the exported shortcutsExistOnDisk, so the exists goldens still compare against the TS predicate until 94-22
