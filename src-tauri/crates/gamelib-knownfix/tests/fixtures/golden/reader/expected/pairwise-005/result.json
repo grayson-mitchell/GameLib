@@ -1,0 +1,39 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app1",
+      "runner": "legendary",
+      "answers": {
+        "readKnownFixes": null,
+        "readKnownFixesWithLayer": null,
+        "readKnownFixProfile": {
+          "title": "local profile",
+          "evidence": "todo.md",
+          "registry": [
+            {
+              "key": "HKLM\\Software\\X",
+              "name": "N",
+              "type": "REG_DWORD",
+              "value": 1
+            }
+          ],
+          "dllOverrides": [
+            {
+              "exe": "Game.exe",
+              "dlls": {
+                "d3d9": "native"
+              }
+            }
+          ],
+          "steamSharedRedists": [
+            "229007"
+          ]
+        },
+        "readGamelibFixStatus": {
+          "origin": "local"
+        }
+      }
+    }
+  ]
+}

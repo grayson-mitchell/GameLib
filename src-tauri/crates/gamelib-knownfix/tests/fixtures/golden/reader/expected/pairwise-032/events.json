@@ -1,0 +1,98 @@
+[
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes could not be applied (local layer), ignoring.\n<PARSER-MESSAGE>"
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (bundled layer): 'registry' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (bundled layer): 'dllOverrides' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (bundled layer): 'overlays' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (bundled layer): 'shimFeatures' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes could not be applied (local layer), ignoring.\n<PARSER-MESSAGE>"
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (bundled layer): 'registry' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (bundled layer): 'dllOverrides' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (bundled layer): 'overlays' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (bundled layer): 'shimFeatures' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixProfile",
+    "level": "warning",
+    "text": "Known fixes could not be applied (local layer), ignoring.\n<PARSER-MESSAGE>"
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fixes could not be applied (local layer), ignoring.\n<PARSER-MESSAGE>"
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (bundled layer): 'registry' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (bundled layer): 'dllOverrides' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (bundled layer): 'overlays' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (bundled layer): 'shimFeatures' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  }
+]

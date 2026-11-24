@@ -1,0 +1,64 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app1",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "remote",
+          "notes": {
+            "a": "b"
+          },
+          "winetricks": [
+            "x"
+          ],
+          "runInPrefix": [
+            "setup.exe"
+          ],
+          "envVariables": {
+            "A": "1"
+          },
+          "wikiLink": "https://example.test",
+          "launchNotice": "hello",
+          "macArch": "32",
+          "drm": "ceg",
+          "launchArgs": [
+            "-x"
+          ],
+          "exeOverride": "bin/game.exe",
+          "steamGameOverlay": "off"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "remote",
+            "notes": {
+              "a": "b"
+            },
+            "winetricks": [
+              "x"
+            ],
+            "runInPrefix": [
+              "setup.exe"
+            ],
+            "envVariables": {
+              "A": "1"
+            },
+            "wikiLink": "https://example.test",
+            "launchNotice": "hello",
+            "macArch": "32",
+            "drm": "ceg",
+            "launchArgs": [
+              "-x"
+            ],
+            "exeOverride": "bin/game.exe",
+            "steamGameOverlay": "off"
+          },
+          "layer": "remote"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    }
+  ]
+}

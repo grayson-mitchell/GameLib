@@ -1,0 +1,26 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app1",
+      "runner": "sideload",
+      "answers": {
+        "readKnownFixes": {
+          "title": "local routing",
+          "macArch": "32",
+          "drm": "ceg"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "local routing",
+            "macArch": "32",
+            "drm": "ceg"
+          },
+          "layer": "local"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    }
+  ]
+}

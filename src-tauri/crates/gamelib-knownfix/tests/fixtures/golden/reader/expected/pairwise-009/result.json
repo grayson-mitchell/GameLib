@@ -1,0 +1,26 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app1",
+      "runner": "gog",
+      "answers": {
+        "readKnownFixes": {
+          "title": "bundled routing",
+          "macArch": "32",
+          "drm": "ceg"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "bundled routing",
+            "macArch": "32",
+            "drm": "ceg"
+          },
+          "layer": "bundled"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    }
+  ]
+}

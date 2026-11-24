@@ -1,0 +1,30 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app1",
+      "runner": "nile",
+      "answers": {
+        "readKnownFixes": {
+          "title": "remote fix",
+          "winetricks": [
+            "remote-vcrun"
+          ],
+          "launchNotice": "remote notice"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "remote fix",
+            "winetricks": [
+              "remote-vcrun"
+            ],
+            "launchNotice": "remote notice"
+          },
+          "layer": "remote"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    }
+  ]
+}

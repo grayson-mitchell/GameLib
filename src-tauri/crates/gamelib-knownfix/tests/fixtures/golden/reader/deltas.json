@@ -1,0 +1,4 @@
+{
+  "malformed-json-parser-message": "The warning for a malformed fix file is 'Known fixes could not be applied (<layer> layer), ignoring.\\n<message>' and the text after 'ignoring.\\n' is the JSON parser's own message, which differs between V8 and serde_json (and between Node versions). The golden records that text as the token <PARSER-MESSAGE>; the replay compares the line up to and including 'ignoring.\\n' and requires a non-empty message after it.",
+  "backslash-appname-is-host-dependent": "traversal-backslash was recorded on a POSIX host, where a backslash is an ordinary filename character: the lookup stays inside the layer directory, finds no file and warns nothing. On Windows a backslash is a separator and `..\\x` resolves outside the layer, so the Windows leg of the replay expects the 'resolved outside the known-fixes directory' warning and a null answer instead. The POSIX legs replay the golden as recorded."
+}

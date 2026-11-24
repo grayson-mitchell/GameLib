@@ -1,0 +1,52 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app1",
+      "runner": "steam",
+      "answers": {
+        "readKnownFixes": {
+          "title": "remote mixed",
+          "winetricks": [
+            "remote-vcrun"
+          ]
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "remote mixed",
+            "winetricks": [
+              "remote-vcrun"
+            ]
+          },
+          "layer": "remote"
+        },
+        "readKnownFixProfile": {
+          "title": "bundled profile",
+          "evidence": "todo.md",
+          "registry": [
+            {
+              "key": "HKLM\\Software\\X",
+              "name": "N",
+              "type": "REG_DWORD",
+              "value": 1
+            }
+          ],
+          "dllOverrides": [
+            {
+              "exe": "Game.exe",
+              "dlls": {
+                "d3d9": "native"
+              }
+            }
+          ],
+          "steamSharedRedists": [
+            "229007"
+          ]
+        },
+        "readGamelibFixStatus": {
+          "origin": "bundled"
+        }
+      }
+    }
+  ]
+}

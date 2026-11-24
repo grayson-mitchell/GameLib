@@ -1,0 +1,28 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app1",
+      "runner": "sideload",
+      "answers": {
+        "readKnownFixes": {
+          "title": "sideload fix",
+          "winetricks": [
+            "x"
+          ]
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "sideload fix",
+            "winetricks": [
+              "x"
+            ]
+          },
+          "layer": "bundled"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'platforms' is not a tier-1 key, ignoring it."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'rating' is not a tier-1 key, ignoring it."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'command' is not a tier-1 key, ignoring it."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'platforms' is not a tier-1 key, ignoring it."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'rating' is not a tier-1 key, ignoring it."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'command' is not a tier-1 key, ignoring it."
+  }
+]

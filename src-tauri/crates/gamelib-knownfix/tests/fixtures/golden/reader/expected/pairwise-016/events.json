@@ -1,0 +1,8 @@
+[
+  {
+    "step": 0,
+    "call": "readKnownFixProfile",
+    "level": "warning",
+    "text": "Known fixes could not be applied (bundled layer), ignoring.\n<PARSER-MESSAGE>"
+  }
+]

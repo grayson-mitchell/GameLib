@@ -1,0 +1,54 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app1",
+      "runner": "gog",
+      "answers": {
+        "readKnownFixes": {
+          "title": "remote fix",
+          "winetricks": [
+            "remote-vcrun"
+          ],
+          "launchNotice": "remote notice"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "remote fix",
+            "winetricks": [
+              "remote-vcrun"
+            ],
+            "launchNotice": "remote notice"
+          },
+          "layer": "remote"
+        },
+        "readKnownFixProfile": {
+          "title": "bundled profile",
+          "evidence": "todo.md",
+          "registry": [
+            {
+              "key": "HKLM\\Software\\X",
+              "name": "N",
+              "type": "REG_DWORD",
+              "value": 1
+            }
+          ],
+          "dllOverrides": [
+            {
+              "exe": "Game.exe",
+              "dlls": {
+                "d3d9": "native"
+              }
+            }
+          ],
+          "steamSharedRedists": [
+            "229007"
+          ]
+        },
+        "readGamelibFixStatus": {
+          "origin": "bundled"
+        }
+      }
+    }
+  ]
+}

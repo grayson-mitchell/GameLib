@@ -1,0 +1,30 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app1",
+      "runner": "sideload",
+      "answers": {
+        "readKnownFixes": {
+          "title": "local fix",
+          "winetricks": [
+            "local-vcrun"
+          ],
+          "launchNotice": "local notice"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "local fix",
+            "winetricks": [
+              "local-vcrun"
+            ],
+            "launchNotice": "local notice"
+          },
+          "layer": "local"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": null
+      }
+    }
+  ]
+}

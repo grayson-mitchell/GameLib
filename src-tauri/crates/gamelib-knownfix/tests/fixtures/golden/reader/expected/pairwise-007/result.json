@@ -1,0 +1,33 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app1",
+      "runner": "gog",
+      "answers": {
+        "readKnownFixes": {
+          "title": "bundled fix",
+          "winetricks": [
+            "bundled-vcrun"
+          ],
+          "launchNotice": "bundled notice"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "bundled fix",
+            "winetricks": [
+              "bundled-vcrun"
+            ],
+            "launchNotice": "bundled notice"
+          },
+          "layer": "bundled"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": {
+          "origin": "bundled",
+          "launchNotice": "bundled notice"
+        }
+      }
+    }
+  ]
+}

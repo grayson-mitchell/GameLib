@@ -1,0 +1,74 @@
+[
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'registry' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'dllOverrides' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'overlays' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'shimFeatures' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'steamSharedRedists' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'evidence' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'registry' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'dllOverrides' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'overlays' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'shimFeatures' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'steamSharedRedists' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'evidence' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  }
+]

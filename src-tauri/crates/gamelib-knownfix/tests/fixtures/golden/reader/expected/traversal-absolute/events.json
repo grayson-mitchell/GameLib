@@ -1,0 +1,74 @@
+[
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes lookup for '<HOME>/outside/x' resolved outside the known-fixes directory, ignoring."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes lookup for '<HOME>/outside/x' resolved outside the known-fixes directory, ignoring."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixes",
+    "level": "warning",
+    "text": "Known fixes lookup for '<HOME>/outside/x' resolved outside the known-fixes directory, ignoring."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes lookup for '<HOME>/outside/x' resolved outside the known-fixes directory, ignoring."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes lookup for '<HOME>/outside/x' resolved outside the known-fixes directory, ignoring."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixesWithLayer",
+    "level": "warning",
+    "text": "Known fixes lookup for '<HOME>/outside/x' resolved outside the known-fixes directory, ignoring."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixProfile",
+    "level": "warning",
+    "text": "Known fixes lookup for '<HOME>/outside/x' resolved outside the known-fixes directory, ignoring."
+  },
+  {
+    "step": 0,
+    "call": "readKnownFixProfile",
+    "level": "warning",
+    "text": "Known fixes lookup for '<HOME>/outside/x' resolved outside the known-fixes directory, ignoring."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fixes lookup for '<HOME>/outside/x' resolved outside the known-fixes directory, ignoring."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fixes lookup for '<HOME>/outside/x' resolved outside the known-fixes directory, ignoring."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fixes lookup for '<HOME>/outside/x' resolved outside the known-fixes directory, ignoring."
+  },
+  {
+    "step": 0,
+    "call": "readGamelibFixStatus",
+    "level": "warning",
+    "text": "Known fixes lookup for '<HOME>/outside/x' resolved outside the known-fixes directory, ignoring."
+  }
+]

@@ -1,0 +1,1754 @@
+[
+  {
+    "id": "pairwise-001",
+    "axes": {
+      "runner": "legendary",
+      "local": "absent",
+      "bundled": "absent",
+      "remote": "absent"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": []
+      }
+    ]
+  },
+  {
+    "id": "pairwise-002",
+    "axes": {
+      "runner": "legendary",
+      "local": "valid",
+      "bundled": "valid",
+      "remote": "valid"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-epic.json",
+            "text": "{\"title\":\"local fix\",\"winetricks\":[\"local-vcrun\"],\"launchNotice\":\"local notice\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-epic.json",
+            "text": "{\"title\":\"bundled fix\",\"winetricks\":[\"bundled-vcrun\"],\"launchNotice\":\"bundled notice\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.json",
+            "text": "{\"title\":\"remote fix\",\"winetricks\":[\"remote-vcrun\"],\"launchNotice\":\"remote notice\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-003",
+    "axes": {
+      "runner": "legendary",
+      "local": "malformed",
+      "bundled": "malformed",
+      "remote": "malformed"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-epic.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-epic.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-epic.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-epic.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.profile.json",
+            "text": "{ not json"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-004",
+    "axes": {
+      "runner": "legendary",
+      "local": "routing-only",
+      "bundled": "routing-only",
+      "remote": "routing-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-epic.json",
+            "text": "{\"title\":\"local routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-epic.json",
+            "text": "{\"title\":\"bundled routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.json",
+            "text": "{\"title\":\"remote routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-005",
+    "axes": {
+      "runner": "legendary",
+      "local": "tier-2-only",
+      "bundled": "tier-2-only",
+      "remote": "tier-2-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-epic.profile.json",
+            "text": "{\"title\":\"local profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-epic.profile.json",
+            "text": "{\"title\":\"bundled profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.profile.json",
+            "text": "{\"title\":\"remote profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-006",
+    "axes": {
+      "runner": "legendary",
+      "local": "tier-2-in-tier-1",
+      "bundled": "tier-2-in-tier-1",
+      "remote": "tier-2-in-tier-1"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-epic.json",
+            "text": "{\"title\":\"local mixed\",\"winetricks\":[\"local-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-epic.json",
+            "text": "{\"title\":\"bundled mixed\",\"winetricks\":[\"bundled-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.json",
+            "text": "{\"title\":\"remote mixed\",\"winetricks\":[\"remote-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-007",
+    "axes": {
+      "runner": "gog",
+      "local": "absent",
+      "bundled": "valid",
+      "remote": "malformed"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app1-gog.json",
+            "text": "{\"title\":\"bundled fix\",\"winetricks\":[\"bundled-vcrun\"],\"launchNotice\":\"bundled notice\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-gog.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-gog.profile.json",
+            "text": "{ not json"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-008",
+    "axes": {
+      "runner": "gog",
+      "local": "valid",
+      "bundled": "absent",
+      "remote": "routing-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+            "text": "{\"title\":\"local fix\",\"winetricks\":[\"local-vcrun\"],\"launchNotice\":\"local notice\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-gog.json",
+            "text": "{\"title\":\"remote routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-009",
+    "axes": {
+      "runner": "gog",
+      "local": "malformed",
+      "bundled": "routing-only",
+      "remote": "absent"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-gog.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-gog.json",
+            "text": "{\"title\":\"bundled routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-010",
+    "axes": {
+      "runner": "gog",
+      "local": "routing-only",
+      "bundled": "malformed",
+      "remote": "valid"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+            "text": "{\"title\":\"local routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-gog.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-gog.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-gog.json",
+            "text": "{\"title\":\"remote fix\",\"winetricks\":[\"remote-vcrun\"],\"launchNotice\":\"remote notice\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-011",
+    "axes": {
+      "runner": "nile",
+      "local": "absent",
+      "bundled": "malformed",
+      "remote": "routing-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "nile",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app1-amazon.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-amazon.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-amazon.json",
+            "text": "{\"title\":\"remote routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-012",
+    "axes": {
+      "runner": "nile",
+      "local": "valid",
+      "bundled": "routing-only",
+      "remote": "malformed"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "nile",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-amazon.json",
+            "text": "{\"title\":\"local fix\",\"winetricks\":[\"local-vcrun\"],\"launchNotice\":\"local notice\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-amazon.json",
+            "text": "{\"title\":\"bundled routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-amazon.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-amazon.profile.json",
+            "text": "{ not json"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-013",
+    "axes": {
+      "runner": "nile",
+      "local": "malformed",
+      "bundled": "absent",
+      "remote": "valid"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "nile",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-amazon.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-amazon.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-amazon.json",
+            "text": "{\"title\":\"remote fix\",\"winetricks\":[\"remote-vcrun\"],\"launchNotice\":\"remote notice\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-014",
+    "axes": {
+      "runner": "nile",
+      "local": "routing-only",
+      "bundled": "valid",
+      "remote": "absent"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "nile",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-amazon.json",
+            "text": "{\"title\":\"local routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-amazon.json",
+            "text": "{\"title\":\"bundled fix\",\"winetricks\":[\"bundled-vcrun\"],\"launchNotice\":\"bundled notice\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-015",
+    "axes": {
+      "runner": "sideload",
+      "local": "absent",
+      "bundled": "routing-only",
+      "remote": "valid"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "sideload",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app1-undefined.json",
+            "text": "{\"title\":\"bundled routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-undefined.json",
+            "text": "{\"title\":\"remote fix\",\"winetricks\":[\"remote-vcrun\"],\"launchNotice\":\"remote notice\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-016",
+    "axes": {
+      "runner": "sideload",
+      "local": "valid",
+      "bundled": "malformed",
+      "remote": "absent"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "sideload",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-undefined.json",
+            "text": "{\"title\":\"local fix\",\"winetricks\":[\"local-vcrun\"],\"launchNotice\":\"local notice\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-undefined.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-undefined.profile.json",
+            "text": "{ not json"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-017",
+    "axes": {
+      "runner": "sideload",
+      "local": "malformed",
+      "bundled": "valid",
+      "remote": "routing-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "sideload",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-undefined.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-undefined.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-undefined.json",
+            "text": "{\"title\":\"bundled fix\",\"winetricks\":[\"bundled-vcrun\"],\"launchNotice\":\"bundled notice\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-undefined.json",
+            "text": "{\"title\":\"remote routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-018",
+    "axes": {
+      "runner": "sideload",
+      "local": "routing-only",
+      "bundled": "absent",
+      "remote": "malformed"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "sideload",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-undefined.json",
+            "text": "{\"title\":\"local routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-undefined.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-undefined.profile.json",
+            "text": "{ not json"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-019",
+    "axes": {
+      "runner": "steam",
+      "local": "absent",
+      "bundled": "tier-2-only",
+      "remote": "tier-2-in-tier-1"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app1-steam.profile.json",
+            "text": "{\"title\":\"bundled profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-steam.json",
+            "text": "{\"title\":\"remote mixed\",\"winetricks\":[\"remote-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-020",
+    "axes": {
+      "runner": "steam",
+      "local": "valid",
+      "bundled": "tier-2-in-tier-1",
+      "remote": "tier-2-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-steam.json",
+            "text": "{\"title\":\"local fix\",\"winetricks\":[\"local-vcrun\"],\"launchNotice\":\"local notice\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-steam.json",
+            "text": "{\"title\":\"bundled mixed\",\"winetricks\":[\"bundled-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-steam.profile.json",
+            "text": "{\"title\":\"remote profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-021",
+    "axes": {
+      "runner": "gog",
+      "local": "tier-2-only",
+      "bundled": "absent",
+      "remote": "tier-2-in-tier-1"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-gog.profile.json",
+            "text": "{\"title\":\"local profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-gog.json",
+            "text": "{\"title\":\"remote mixed\",\"winetricks\":[\"remote-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-022",
+    "axes": {
+      "runner": "gog",
+      "local": "tier-2-in-tier-1",
+      "bundled": "absent",
+      "remote": "tier-2-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+            "text": "{\"title\":\"local mixed\",\"winetricks\":[\"local-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-gog.profile.json",
+            "text": "{\"title\":\"remote profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-023",
+    "axes": {
+      "runner": "nile",
+      "local": "tier-2-only",
+      "bundled": "tier-2-in-tier-1",
+      "remote": "absent"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "nile",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-amazon.profile.json",
+            "text": "{\"title\":\"local profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-amazon.json",
+            "text": "{\"title\":\"bundled mixed\",\"winetricks\":[\"bundled-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-024",
+    "axes": {
+      "runner": "nile",
+      "local": "tier-2-in-tier-1",
+      "bundled": "tier-2-only",
+      "remote": "absent"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "nile",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-amazon.json",
+            "text": "{\"title\":\"local mixed\",\"winetricks\":[\"local-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-amazon.profile.json",
+            "text": "{\"title\":\"bundled profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-025",
+    "axes": {
+      "runner": "steam",
+      "local": "tier-2-only",
+      "bundled": "valid",
+      "remote": "valid"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-steam.profile.json",
+            "text": "{\"title\":\"local profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-steam.json",
+            "text": "{\"title\":\"bundled fix\",\"winetricks\":[\"bundled-vcrun\"],\"launchNotice\":\"bundled notice\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-steam.json",
+            "text": "{\"title\":\"remote fix\",\"winetricks\":[\"remote-vcrun\"],\"launchNotice\":\"remote notice\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-026",
+    "axes": {
+      "runner": "steam",
+      "local": "tier-2-in-tier-1",
+      "bundled": "malformed",
+      "remote": "malformed"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-steam.json",
+            "text": "{\"title\":\"local mixed\",\"winetricks\":[\"local-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-steam.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-steam.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-steam.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-steam.profile.json",
+            "text": "{ not json"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-027",
+    "axes": {
+      "runner": "sideload",
+      "local": "absent",
+      "bundled": "tier-2-in-tier-1",
+      "remote": "tier-2-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "sideload",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app1-undefined.json",
+            "text": "{\"title\":\"bundled mixed\",\"winetricks\":[\"bundled-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-undefined.profile.json",
+            "text": "{\"title\":\"remote profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-028",
+    "axes": {
+      "runner": "sideload",
+      "local": "valid",
+      "bundled": "tier-2-only",
+      "remote": "tier-2-in-tier-1"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "sideload",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-undefined.json",
+            "text": "{\"title\":\"local fix\",\"winetricks\":[\"local-vcrun\"],\"launchNotice\":\"local notice\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-undefined.profile.json",
+            "text": "{\"title\":\"bundled profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-undefined.json",
+            "text": "{\"title\":\"remote mixed\",\"winetricks\":[\"remote-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-029",
+    "axes": {
+      "runner": "steam",
+      "local": "malformed",
+      "bundled": "routing-only",
+      "remote": "tier-2-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-steam.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-steam.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-steam.json",
+            "text": "{\"title\":\"bundled routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-steam.profile.json",
+            "text": "{\"title\":\"remote profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-030",
+    "axes": {
+      "runner": "steam",
+      "local": "routing-only",
+      "bundled": "tier-2-only",
+      "remote": "routing-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-steam.json",
+            "text": "{\"title\":\"local routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-steam.profile.json",
+            "text": "{\"title\":\"bundled profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-steam.json",
+            "text": "{\"title\":\"remote routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-031",
+    "axes": {
+      "runner": "gog",
+      "local": "malformed",
+      "bundled": "tier-2-only",
+      "remote": "valid"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-gog.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-gog.profile.json",
+            "text": "{\"title\":\"bundled profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-gog.json",
+            "text": "{\"title\":\"remote fix\",\"winetricks\":[\"remote-vcrun\"],\"launchNotice\":\"remote notice\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-032",
+    "axes": {
+      "runner": "gog",
+      "local": "malformed",
+      "bundled": "tier-2-in-tier-1",
+      "remote": "valid"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-gog.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-gog.json",
+            "text": "{\"title\":\"bundled mixed\",\"winetricks\":[\"bundled-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-gog.json",
+            "text": "{\"title\":\"remote fix\",\"winetricks\":[\"remote-vcrun\"],\"launchNotice\":\"remote notice\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-033",
+    "axes": {
+      "runner": "nile",
+      "local": "malformed",
+      "bundled": "valid",
+      "remote": "tier-2-in-tier-1"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "nile",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-amazon.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-amazon.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-amazon.json",
+            "text": "{\"title\":\"bundled fix\",\"winetricks\":[\"bundled-vcrun\"],\"launchNotice\":\"bundled notice\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-amazon.json",
+            "text": "{\"title\":\"remote mixed\",\"winetricks\":[\"remote-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-034",
+    "axes": {
+      "runner": "nile",
+      "local": "routing-only",
+      "bundled": "valid",
+      "remote": "tier-2-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "nile",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-amazon.json",
+            "text": "{\"title\":\"local routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-amazon.json",
+            "text": "{\"title\":\"bundled fix\",\"winetricks\":[\"bundled-vcrun\"],\"launchNotice\":\"bundled notice\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-amazon.profile.json",
+            "text": "{\"title\":\"remote profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-035",
+    "axes": {
+      "runner": "sideload",
+      "local": "tier-2-only",
+      "bundled": "malformed",
+      "remote": "malformed"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "sideload",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-undefined.profile.json",
+            "text": "{\"title\":\"local profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-undefined.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-undefined.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-undefined.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-undefined.profile.json",
+            "text": "{ not json"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-036",
+    "axes": {
+      "runner": "sideload",
+      "local": "tier-2-in-tier-1",
+      "bundled": "valid",
+      "remote": "valid"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "sideload",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-undefined.json",
+            "text": "{\"title\":\"local mixed\",\"winetricks\":[\"local-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-undefined.json",
+            "text": "{\"title\":\"bundled fix\",\"winetricks\":[\"bundled-vcrun\"],\"launchNotice\":\"bundled notice\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-undefined.json",
+            "text": "{\"title\":\"remote fix\",\"winetricks\":[\"remote-vcrun\"],\"launchNotice\":\"remote notice\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-037",
+    "axes": {
+      "runner": "legendary",
+      "local": "routing-only",
+      "bundled": "malformed",
+      "remote": "tier-2-in-tier-1"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-epic.json",
+            "text": "{\"title\":\"local routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-epic.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-epic.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.json",
+            "text": "{\"title\":\"remote mixed\",\"winetricks\":[\"remote-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-038",
+    "axes": {
+      "runner": "legendary",
+      "local": "routing-only",
+      "bundled": "tier-2-in-tier-1",
+      "remote": "malformed"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-epic.json",
+            "text": "{\"title\":\"local routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-epic.json",
+            "text": "{\"title\":\"bundled mixed\",\"winetricks\":[\"bundled-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.profile.json",
+            "text": "{ not json"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-039",
+    "axes": {
+      "runner": "legendary",
+      "local": "tier-2-only",
+      "bundled": "routing-only",
+      "remote": "routing-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-epic.profile.json",
+            "text": "{\"title\":\"local profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-epic.json",
+            "text": "{\"title\":\"bundled routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.json",
+            "text": "{\"title\":\"remote routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-040",
+    "axes": {
+      "runner": "legendary",
+      "local": "tier-2-in-tier-1",
+      "bundled": "routing-only",
+      "remote": "routing-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/app1-epic.json",
+            "text": "{\"title\":\"local mixed\",\"winetricks\":[\"local-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-epic.json",
+            "text": "{\"title\":\"bundled routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.json",
+            "text": "{\"title\":\"remote routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-041",
+    "axes": {
+      "runner": "steam",
+      "local": "absent",
+      "bundled": "absent",
+      "remote": "absent"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": []
+      }
+    ]
+  },
+  {
+    "id": "pairwise-042",
+    "axes": {
+      "runner": "legendary",
+      "local": "absent",
+      "bundled": "malformed",
+      "remote": "tier-2-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app1-epic.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<HOME>/public/fixes/app1-epic.profile.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.profile.json",
+            "text": "{\"title\":\"remote profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-043",
+    "axes": {
+      "runner": "legendary",
+      "local": "absent",
+      "bundled": "routing-only",
+      "remote": "tier-2-in-tier-1"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app1-epic.json",
+            "text": "{\"title\":\"bundled routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.json",
+            "text": "{\"title\":\"remote mixed\",\"winetricks\":[\"remote-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-044",
+    "axes": {
+      "runner": "legendary",
+      "local": "absent",
+      "bundled": "tier-2-only",
+      "remote": "malformed"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app1-epic.profile.json",
+            "text": "{\"title\":\"bundled profile\",\"evidence\":\"todo.md\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"steamSharedRedists\":[\"229007\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.json",
+            "text": "{ not json"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.profile.json",
+            "text": "{ not json"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pairwise-045",
+    "axes": {
+      "runner": "legendary",
+      "local": "absent",
+      "bundled": "tier-2-in-tier-1",
+      "remote": "routing-only"
+    },
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "legendary",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app1-epic.json",
+            "text": "{\"title\":\"bundled mixed\",\"winetricks\":[\"bundled-vcrun\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-epic.json",
+            "text": "{\"title\":\"remote routing\",\"macArch\":\"32\",\"drm\":\"ceg\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "traversal-dotdot",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "../x",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/x-gog.json",
+            "text": "{\"title\":\"escaped from local\",\"winetricks\":[\"pwned\"]}"
+          },
+          {
+            "path": "<HOME>/public/x-gog.json",
+            "text": "{\"title\":\"escaped from bundled\",\"winetricks\":[\"pwned\"]}"
+          },
+          {
+            "path": "<APPFOLDER>/x-gog.json",
+            "text": "{\"title\":\"escaped from remote\",\"winetricks\":[\"pwned\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "traversal-backslash",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "..\\x",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "traversal-absolute",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "<HOME>/outside/x",
+        "runner": "gog",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/outside/x-gog.json",
+            "text": "{\"title\":\"absolute\",\"winetricks\":[\"pwned\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "remote-tier-2-keys-yield-no-tier-2-data",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/app1-steam.json",
+            "text": "{\"title\":\"remote\",\"winetricks\":[\"x\"],\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"],\"steamSharedRedists\":[\"229007\"],\"evidence\":\"todo.md\"}"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/app1-steam.profile.json",
+            "text": "{\"title\":\"remote profile\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"shimFeatures\":[\"f1\"]}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "remote-keys-outside-the-allow-list-are-dropped",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "steam",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/app1-steam.json",
+            "text": "{\"title\":\"remote\",\"notes\":{\"a\":\"b\"},\"winetricks\":[\"x\"],\"runInPrefix\":[\"setup.exe\"],\"envVariables\":{\"A\":\"1\"},\"wikiLink\":\"https://example.test\",\"launchNotice\":\"hello\",\"macArch\":\"32\",\"drm\":\"ceg\",\"launchArgs\":[\"-x\"],\"exeOverride\":\"bin/game.exe\",\"steamGameOverlay\":\"off\",\"platforms\":[\"mac\"],\"rating\":\"gold\",\"command\":\"rm -rf /\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sideload-reads-the-undefined-store-file",
+    "steps": [
+      {
+        "op": "read",
+        "appName": "app1",
+        "runner": "sideload",
+        "calls": [
+          "readKnownFixes",
+          "readKnownFixesWithLayer",
+          "readKnownFixProfile",
+          "readGamelibFixStatus"
+        ],
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/app1-undefined.json",
+            "text": "{\"title\":\"sideload fix\",\"winetricks\":[\"x\"]}"
+          }
+        ]
+      }
+    ]
+  }
+]

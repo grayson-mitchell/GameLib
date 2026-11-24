@@ -206,8 +206,8 @@ export function expandPlaceholders(
   return out
 }
 
-/** Writes a case's starting state into the profile. */
-function seedProfile(
+/** Writes a case's starting state into the profile (a multi-step case seeds again between steps). */
+export function seedProfile(
   profile: EngineOracleProfile,
   seed: readonly SeedEntry[]
 ): void {

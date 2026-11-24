@@ -1,0 +1,33 @@
+{
+  "steps": [
+    {
+      "op": "read",
+      "appName": "app1",
+      "runner": "gog",
+      "answers": {
+        "readKnownFixes": {
+          "title": "local fix",
+          "winetricks": [
+            "local-vcrun"
+          ],
+          "launchNotice": "local notice"
+        },
+        "readKnownFixesWithLayer": {
+          "fix": {
+            "title": "local fix",
+            "winetricks": [
+              "local-vcrun"
+            ],
+            "launchNotice": "local notice"
+          },
+          "layer": "local"
+        },
+        "readKnownFixProfile": null,
+        "readGamelibFixStatus": {
+          "origin": "local",
+          "launchNotice": "local notice"
+        }
+      }
+    }
+  ]
+}
