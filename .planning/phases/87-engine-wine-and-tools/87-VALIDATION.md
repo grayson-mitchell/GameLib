@@ -321,6 +321,52 @@ worktrees that existed before.
 4. **Pre-existing reds, recorded not fixed:** the `Supply-chain audit` workflow (cargo-deny, RUSTSEC-2026-0594) and the `gamelib-depot` `tests/fetch.rs` timing tests are as recorded under "## Findings at the candidate head" item 5 and in `deferred-items.md`; the
    depot timing tests passed in step 6 here. The known `steamLoginPollLifecycle.test.tsx` load flake did not recur.
 
+## CI proof (gap closure)
+
+Collected 2026-11-25 (87-68 Task 3) with `gh run list --commit <sha>`, `gh run view <id> --json jobs` and the job logs. Operator decision at the Task 2 checkpoint, recorded verbatim:
+**`push-and-build`** ("Push and dispatch now; allow follow-up CI-fix commits within this plan without asking again", asked through the orchestrator's question dialog on
+2026-11-24, before this plan was dispatched). `gh release list` before: 11 entries (drafts `GameLib v0.13.0`, `v0.12.0`, `v0.11.0`, `v0.10.0`, `v0.8.0` and the standing pre-releases); `origin/main`
+was `b4ed940a4` (87-59) and `main` 60 commits ahead.
+
+**Push 1** carried 60 commits (`b4ed940a4..9dda41aaa`). Immediately before it, `git diff --name-only 4cf38d88c HEAD` (P to HEAD) listed only `.planning/phases/87-engine-wine-and-tools/87-VALIDATION.md` and
+`deferred-items.md`, `origin/main` was not ahead (`main..origin/main` 0), and the pre-push hook ran all nine checks (no `--no-verify`; the push output shows the hook's graphify refresh, which runs only when
+every check passed).
+
+**One CI red, one fix:** run `45447603838` at `9dda41aaa`: ubuntu-latest and macos-latest green, `cargo-test (windows-latest)` red in `cargo test --bin gamelib-shell` (833 passed, 2 failed):
+`engine_log::tests::a_crate_line_written_during_an_op_reaches_gamelib_log_as_a_shell_warning` and `...a_crate_line_with_no_logger_installed_writes_nothing_and_does_not_panic` panicked
+`the op answers: "engine_bottle_kill_wineserver:bad-args"` (`engine_log.rs:599`, `:645`). Cause: 87-61's two tests pass `"/cx/bin/wineserver"`, which is not an absolute path on Windows, and the op refuses a
+relative `wineserverBin` before it reads the bottle name; the same class as 87-58's `/cx/bin` fixes (`833fbb98a`). Fixed in `07b194604` (`fix(87-68)`: a `cfg!(windows)` absolute path helper, the tests still run on every leg).
+**Push 2** (`9dda41aaa..07b194604`): `git diff --name-only 4cf38d88c HEAD` listed exactly `src-tauri/src/engine_log.rs` (the authorised CI fix) and nothing else outside `.planning/`; `main..origin/main` was 0; the pre-push hook ran again.
+
+**Final head `07b194604c8b982ae3f1b4b45ea0ecdd45b97909`** — see the table; the shipped code at this head equals P `4cf38d88c` plus the test-only `engine_log.rs` change (no production line changed after the clean-worktree proof).
+
+| Workflow | Run | Result |
+|----------|-----|--------|
+| Rust test (rust-test.yml) | `45451701819` | success: `cargo-test (macos-latest)` `138650244730` success; `cargo-test (windows-latest)` `138650245299` success; `cargo-test (ubuntu-latest)` `138650245738` success |
+| Code check (codecheck.yml) | `45451703623` | success |
+| Test (test.yml) | `45451702048` | success |
+| Lint | `45451701683` | success |
+| Supply-chain audit | `45451702304` | failure, pre-existing (RUSTSEC-2026-0594 in cargo-deny; red on every push since before 87-58, run `45228612462`); not one of the three required workflows, deferred (see `deferred-items.md` 87-58) |
+
+Per-leg results of the platform steps, from the leg logs: `cargo test --bin gamelib-shell` 870 passed / 2 ignored (macos-latest), 835 passed / 4 ignored (windows-latest), 854 passed / 3 ignored (ubuntu-latest), 0 failed on all three;
+clippy ratchet `PASS (darwin, toolchain 1.99.1)` and `PASS (win32, toolchain 1.99.1)` (Linux runs no clippy by design); every `test result` line of the whole job log reads `ok` (sum of passed: 3968 macos, 3589 windows, 3950 ubuntu; 0 failed).
+
+**Golden replays per leg** (tests run in each binary, from the leg logs of run `45451701819`; each `Running` line is paired with its own `running N tests` line because stdout and stderr interleave; `0` means the binary compiled to no tests under `cfg(unix)`):
+
+| Binary | macos-latest | windows-latest | ubuntu-latest |
+|--------|--------------|----------------|---------------|
+| gamelib-engine `golden_bottles` / `golden_decision` / `golden_fallback` / `golden_launch` / `golden_state` / `golden_switch` / `roundtrip_state` | 14 / 3 / 8 / 8 / 9 / 6 / 7 | 0 (unix-gated) | 14 / 3 / 8 / 8 / 9 / 6 / 7 |
+| gamelib-engine `golden_config`, `golden_demo_status` | 7, 2 | 0, 0 (unix-gated) | 7, 2 |
+| gamelib-engine `bottle_removal` (87-66), `decision_incidents`, `offline_refusal` (87-63), `run_tool_arms`, `switch_incidents` | 26, 26, 17, 6, 4 | 0, 0, 0, 0, 0 (unix-gated) | 26, 26, 17, 6, 4 |
+| gamelib-engine `twin_vectors` | 12 | 9 | 12 |
+| gamelib-wine `golden_dxmt` / `golden_dxvk` / `golden_runtimes` / `golden_winetricks` | 9 / 6 / 5 / 8 | 9 / 6 / 5 / 8 | 9 / 6 / 5 / 8 |
+| gamelib-wine `golden_wine_core` | 18 | 16 | 18 |
+| gamelib-wine `golden_discovery` / `golden_wine_manager` / `dxvk_incidents` / `tool_bottle_target` (87-64) | 11 / 10 / 39 / 13 | 0 / 0 / 0 / 0 (unix-gated) | 11 / 10 / 39 / 13 |
+| gamelib-wine `run_for_game_guard` / `winetricks_pure` | 25 / 27 | 25 / 27 | 25 / 27 |
+
+D-13's "gamelib-engine and gamelib-wine goldens observed running on every leg" holds as in 87-58: for **gamelib-wine on all three legs** (the Winetricks, DXVK, DXMT and runtime goldens, the per-game guard and the pure winetricks suite
+run on Windows too) and for **gamelib-engine on macos-latest and ubuntu-latest only**, because the bottle and CrossOver code is macOS-only and every engine golden is `#![cfg(unix)]`; Windows runs `twin_vectors` (9), the engine and wine lib tests and the shell tests.
+
 ## Signed builds (D-12)
 
 ### Phase 87 build (87-59, 2026-11-24)
