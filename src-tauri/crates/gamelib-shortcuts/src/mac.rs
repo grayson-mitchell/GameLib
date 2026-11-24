@@ -128,10 +128,11 @@ pub fn write_mac_app(
 }
 
 /// Converts `icon_png` into `resources/shortcut.icns`; false (iconless) when there is none or it
-/// cannot be converted.
+/// cannot be converted. The shortcut survives an unobtainable icon (D-04).
 fn write_icon(icon_png: Option<&Path>, resources: &Path) -> bool {
-    let _ = (icon_png, resources);
-    false
+    icon_png.is_some_and(|icon| {
+        crate::icns::png_to_icns(icon, &resources.join("shortcut.icns")).is_ok()
+    })
 }
 
 /// Whether `path` is inside `root`, lexically (both come from the shell and the sanitized title).

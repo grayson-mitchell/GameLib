@@ -286,7 +286,19 @@ fn diff_tree(
                             String::from_utf8_lossy(want_bytes)
                         ));
                     }
-                } else if !e.opaque {
+                } else if e.opaque {
+                    // Opaque: not byte-compared (the encoder differs), but it must be an icns with
+                    // the one raw `ic11` element (structure and geometry: tests/icns.rs).
+                    match icns::IconFamily::read(bytes.as_slice()) {
+                        Ok(family) if family.elements.len() == 1 => {}
+                        Ok(family) => diffs.push(format!(
+                            "{}: icns holds {} elements, not one",
+                            e.key,
+                            family.elements.len()
+                        )),
+                        Err(error) => diffs.push(format!("{}: not an icns: {error}", e.key)),
+                    }
+                } else {
                     diffs.push(format!("{}: golden has neither bytes nor opaque", e.key));
                 }
                 #[cfg(unix)]
@@ -457,6 +469,11 @@ fn darwin_iconless_text_goldens_replay_byte_for_byte() {
 }
 
 #[test]
+fn darwin_with_icon_text_goldens_replay_byte_for_byte() {
+    replay_bucket("darwin", true, replay_darwin);
+}
+
+#[test]
 fn the_buckets_partition_the_manifest() {
     let cases = text_cases();
     let count = |platform: &str, icon: bool| {
@@ -479,7 +496,6 @@ fn the_subshell_hostile_run_sh_is_byte_identical() {
         .iter()
         .filter(|(_, c)| {
             platform_of(c) == "darwin"
-                && !with_icon(c)
                 && (c["input"]["appName"]
                     .as_str()
                     .unwrap_or("")
