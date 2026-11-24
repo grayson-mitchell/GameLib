@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 88
 current_phase_name: Launch scaffolding and known fixes
 status: executing
-stopped_at: Completed 88-10-PLAN.md
-last_updated: "2026-11-24T22:07:48.942Z"
+stopped_at: Completed 88-11-PLAN.md
+last_updated: "2026-11-24T22:43:13.595Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 88 execution started
-state_head: 2dd48b88ee65499c24478fb45727870896705890
+state_head: 63c053f39ed0e8f41ee78d00b6612802c7c11908
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 88 (Launch scaffolding and known fixes) — EXECUTING
-Plan: 11 of 17
+Plan: 12 of 17
 Status: Ready to execute
 Last activity: 2026-11-25 — Phase 88 execution started
 Progress: [█████████░] 92%
@@ -491,6 +491,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88 P08 | 30 min | 3 tasks | 21 files |
 | Phase 88 P09 | 24 min | 3 tasks | 15 files |
 | Phase 88 P10 | 75min | 3 tasks | 12 files |
+| Phase 88 P11 | 24 min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -1079,6 +1080,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88]: knownfix_launch_overrides, knownfix_apply_profile_registry and knownfix_apply_registry take one strict object arg (decode requires a JSON object, since serde also decodes a struct from an array) and answer fixed bad-args and not-ready literals
 - [Phase 88]: 88-10: the overlay archive download is EngineCtx.fetch.get (the seam has no maxBytes): the install holds the body to the pinned archive size after the seam's 16 MiB cap, and refuses an overlay pinned above 16 MiB
 - [Phase 88]: 88-10: a rejected overlays entry is echoed into the log with any scheme:// run replaced by <url> (prohibition 1 wins over the TS text); the skipped-overlay debug line is not written because EngineLog has no debug level
+- [Phase 88]: [88-11] Remote known-fixes files are written in the fetched body's key order (JSON.stringify(filtered, null, 2), no trailing newline), not the allow-list's, so the bytes equal the TS's and a rolled-back build still reads the cache
+- [Phase 88]: [88-11] gamelib-engine Fetch gained POST additively through FetchRequest data (method, body, follow_redirects), not a trait method; ReqwestFetch holds a second no-redirect client and Replay pins a POST body byte for byte without printing it
+- [Phase 88]: [88-11] The report's abort-all is the shutdown token, the in-flight table is a drop-guarded set on KnownFixCtx, and the post is bounded by both the request timeout and an 8 s tokio timeout; ReportEnv makes the error outcome reachable
+- [Phase 88]: [88-11] Fetcher and report log lines name the file, a source label and a status or category, never a URL, header, body or path; the fetcher sends the GameLib User-Agent where axios sent its default, and the replay adds that header to a temp copy of each recorded case
 
 ### Pending Todos
 
@@ -1360,8 +1365,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T22:07:46.116Z
-Stopped at: Completed 88-10-PLAN.md
+Last session: 2026-11-24T22:42:52.993Z
+Stopped at: Completed 88-11-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
