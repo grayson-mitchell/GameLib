@@ -10,6 +10,7 @@ import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { createRealRunner } from 'backend/testUtils/realRunner'
 import type { GameInfo, GameSettings } from 'common/types'
 import type { SpawnAsync } from '../spawnAsync'
+import type { RequestRustInvoke } from '..'
 import { extractFiles, moveOnUnix, moveOnWindows, shutdownWine } from '../utils'
 import * as logger from '../logger'
 
@@ -159,11 +160,34 @@ describe('shutdownWine', () => {
     wineVersion: { wineserver: '/wine/wineserver' }
   } as unknown as GameSettings
   const commandRunner = { runWineCommand: jest.fn() }
+  const noRust = jest.fn()
+  const rustReplying = (reply: unknown) =>
+    jest.fn(async () => reply) as unknown as RequestRustInvoke
+
+  /** The CrossOver launch overlay: the stored prefix stays, the bottle is named only in `wineCrossoverBottle`. */
+  const crossoverSettings = (
+    over: Record<string, unknown> = {},
+    version: Record<string, unknown> = {}
+  ) =>
+    ({
+      winePrefix: '/home/Games/GameLib/Prefixes/shared',
+      wineCrossoverBottle: 'GameLib-legendary-x',
+      wineVersion: {
+        type: 'crossover',
+        wineserver: '/cx/bin/wineserver',
+        bin: '/cx/bin/wine',
+        ...version
+      },
+      ...over
+    }) as unknown as GameSettings
 
   it('awaits spawnAsync(wineserver, -k) with the prefix env and a 15 000 ms timeout', async () => {
     const { spawnAsync, calls } = recordingSpawn()
 
-    await shutdownWine({ spawnAsync, commandRunner }, settings)
+    await shutdownWine(
+      { spawnAsync, commandRunner, requestRustInvoke: noRust },
+      settings
+    )
 
     expect(calls).toEqual([
       [
@@ -172,15 +196,44 @@ describe('shutdownWine', () => {
         { env: { WINEPREFIX: '/prefix' }, timeout: 15_000 }
       ]
     ])
+    expect(noRust).not.toHaveBeenCalled()
   })
 
   it('a timed-out wineserver -k logs a warning and does not throw', async () => {
     const { spawnAsync } = recordingSpawn({}, { timedOut: true })
 
     await expect(
-      shutdownWine({ spawnAsync, commandRunner }, settings)
+      shutdownWine(
+        { spawnAsync, commandRunner, requestRustInvoke: noRust },
+        settings
+      )
     ).resolves.toBeUndefined()
     expect(warn).toHaveBeenCalledTimes(1)
+  })
+
+  it('a CrossOver bottle overlay kills that bottle wineserver through Rust, never the stored prefix', async () => {
+    const { spawnAsync, calls } = recordingSpawn()
+    const requestRustInvoke = rustReplying(true)
+
+    await shutdownWine(
+      { spawnAsync, commandRunner, requestRustInvoke },
+      crossoverSettings()
+    )
+
+    expect(calls).toEqual([])
+    expect(requestRustInvoke).toHaveBeenCalledTimes(1)
+    expect(requestRustInvoke).toHaveBeenCalledWith(
+      'engine_bottle_kill_wineserver',
+      [
+        {
+          bottleName: 'GameLib-legendary-x',
+          wineserverBin: '/cx/bin/wineserver',
+          extraEnv: { CX_ROOT: '/cx', CX_BOTTLE: 'GameLib-legendary-x' },
+          timeoutMs: 15_000
+        }
+      ]
+    )
+    expect(warn).not.toHaveBeenCalled()
   })
 })
 
