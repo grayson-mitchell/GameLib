@@ -248,6 +248,9 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::EngineBottleRemoveCreated => {
             engine_dispatch::rpc_bottle_remove_created(args)
         }
+        RustInvokeChannel::EngineBottleRemovePerGame => {
+            engine_dispatch::rpc_bottle_remove_per_game(args)
+        }
         RustInvokeChannel::EngineBottleReconcileMarker => {
             engine_dispatch::rpc_bottle_reconcile_marker(args)
         }

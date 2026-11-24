@@ -754,6 +754,7 @@ engine_op_arms! {
     rpc_bottle_cancel_create => "engine_bottle_cancel_create",
     rpc_bottle_kill_wineserver => "engine_bottle_kill_wineserver",
     rpc_bottle_remove_created => "engine_bottle_remove_created",
+    rpc_bottle_remove_per_game => "engine_bottle_remove_per_game",
     rpc_bottle_reconcile_marker => "engine_bottle_reconcile_marker",
     rpc_bottle_record_pinned => "engine_bottle_record_pinned",
     rpc_bottle_record_crossover => "engine_bottle_record_crossover",
@@ -1249,6 +1250,7 @@ mod tests {
             (rpc_bottle_cancel_create, "engine_bottle_cancel_create"),
             (rpc_bottle_kill_wineserver, "engine_bottle_kill_wineserver"),
             (rpc_bottle_remove_created, "engine_bottle_remove_created"),
+            (rpc_bottle_remove_per_game, "engine_bottle_remove_per_game"),
             (
                 rpc_bottle_reconcile_marker,
                 "engine_bottle_reconcile_marker",
@@ -1302,6 +1304,48 @@ mod tests {
                 "{op}"
             );
         }
+    }
+
+    /// 87-70: the channel's frame reaches the crate op over a shell context built on a fake home. The arm is
+    /// `rpc_engine_op`, which hands the one object to `gamelib_engine::dispatch_sync` over the installed context;
+    /// the global context cannot be installed in a unit test, so the same call is made over a context of the
+    /// test's own. A game whose stored bottle is its per-game name loses that bottle and only that one.
+    #[test]
+    fn the_remove_per_game_channel_removes_the_games_own_bottle_and_nothing_else() {
+        assert!(RustInvokeChannel::from_name("engine_bottle_remove_per_game").is_some());
+        let home = gamelib_testutil::FakeHome::new("engine-remove-per-game-");
+        let engine = engine_over_fake_home(&home);
+        let bottles = engine
+            .paths
+            .user_home
+            .join(gamelib_engine::bottles::paths::BOTTLES_REL);
+        for name in ["GameLib-gog-1234", "GameLib-gog-5678"] {
+            std::fs::create_dir_all(bottles.join(name).join("drive_c")).unwrap();
+            std::fs::write(bottles.join(name).join("system.reg"), name).unwrap();
+        }
+        let frame = serde_json::json!({
+            "runner": "gog",
+            "appName": "1234",
+            "stored": {"wineCrossoverBottle": "GameLib-gog-1234"},
+            "knownInstalls": [],
+            "selfKey": "gog:1234",
+            "protectedRoots": [],
+        });
+        let reply =
+            gamelib_engine::dispatch_sync("engine_bottle_remove_per_game", &[frame], &engine)
+                .unwrap();
+        if cfg!(target_os = "macos") {
+            assert_eq!(reply, serde_json::json!({"outcome": "removed"}));
+            assert!(!bottles.join("GameLib-gog-1234").exists());
+        } else {
+            // A per-game bottle is a CrossOver (macOS) thing: elsewhere nothing is a target.
+            assert_eq!(reply, serde_json::json!({"outcome": "not-bottle-backed"}));
+            assert!(bottles.join("GameLib-gog-1234").exists());
+        }
+        assert_eq!(
+            std::fs::read_to_string(bottles.join("GameLib-gog-5678").join("system.reg")).unwrap(),
+            "GameLib-gog-5678"
+        );
     }
 
     #[test]

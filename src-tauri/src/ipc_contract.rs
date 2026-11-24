@@ -184,6 +184,7 @@ pub(crate) enum RustInvokeChannel {
     EngineBottleCancelCreate,
     EngineBottleKillWineserver,
     EngineBottleRemoveCreated,
+    EngineBottleRemovePerGame,
     EngineBottleReconcileMarker,
     EngineBottleRecordPinned,
     EngineBottleRecordCrossover,
@@ -376,6 +377,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineBottleCancelCreate,
         RustInvokeChannel::EngineBottleKillWineserver,
         RustInvokeChannel::EngineBottleRemoveCreated,
+        RustInvokeChannel::EngineBottleRemovePerGame,
         RustInvokeChannel::EngineBottleReconcileMarker,
         RustInvokeChannel::EngineBottleRecordPinned,
         RustInvokeChannel::EngineBottleRecordCrossover,
@@ -568,6 +570,7 @@ impl RustInvokeChannel {
             "engine_bottle_cancel_create" => Some(RustInvokeChannel::EngineBottleCancelCreate),
             "engine_bottle_kill_wineserver" => Some(RustInvokeChannel::EngineBottleKillWineserver),
             "engine_bottle_remove_created" => Some(RustInvokeChannel::EngineBottleRemoveCreated),
+            "engine_bottle_remove_per_game" => Some(RustInvokeChannel::EngineBottleRemovePerGame),
             "engine_bottle_reconcile_marker" => Some(RustInvokeChannel::EngineBottleReconcileMarker),
             "engine_bottle_record_pinned" => Some(RustInvokeChannel::EngineBottleRecordPinned),
             "engine_bottle_record_crossover" => Some(RustInvokeChannel::EngineBottleRecordCrossover),
@@ -762,6 +765,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineBottleCancelCreate => "engine_bottle_cancel_create",
             RustInvokeChannel::EngineBottleKillWineserver => "engine_bottle_kill_wineserver",
             RustInvokeChannel::EngineBottleRemoveCreated => "engine_bottle_remove_created",
+            RustInvokeChannel::EngineBottleRemovePerGame => "engine_bottle_remove_per_game",
             RustInvokeChannel::EngineBottleReconcileMarker => "engine_bottle_reconcile_marker",
             RustInvokeChannel::EngineBottleRecordPinned => "engine_bottle_record_pinned",
             RustInvokeChannel::EngineBottleRecordCrossover => "engine_bottle_record_crossover",
@@ -3608,6 +3612,18 @@ pub(crate) struct EngineBottleRemoveCreatedArgs {
 impl EngineBottleRemoveCreatedArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let request = serde_json::from_value(args.first().ok_or_else(|| "engine_bottle_remove_created:bad-args".to_string())?.clone()).map_err(|_| "engine_bottle_remove_created:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EngineBottleRemovePerGameArgs {
+    pub(crate) request: Value,
+}
+
+impl EngineBottleRemovePerGameArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_bottle_remove_per_game:bad-args".to_string())?.clone()).map_err(|_| "engine_bottle_remove_per_game:bad-args".to_string())?;
         Ok(Self { request })
     }
 }

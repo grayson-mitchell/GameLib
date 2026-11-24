@@ -1278,7 +1278,9 @@ export const RUST_ENGINE_SET_ONLINE = 'engine_set_online' as const
  * `engine_selection_clear` and the two `engine_ledger_*` ops write the registry and the running-games ledger the
  * switch reads. Reply shapes: prepare `{ok, changed, selection?}` or `{ok: false, reason, detail}`; the creation
  * `{status, error?, errorCode?, createdHere?}`; the stop, the removal, the record ops, the clear and the mark-running
- * a boolean; the reconcile `'crossover' | 'pinned' | null`; the mark-stopped `null`.
+ * a boolean; the reconcile `'crossover' | 'pinned' | null`; the mark-stopped `null`. The per-game removal (87-70)
+ * takes `{runner, appName, stored, knownInstalls, selfKey, protectedRoots}` and answers
+ * `{outcome: 'removed' | 'not-bottle-backed' | 'refused' | 'failed', reason?, otherKey?}`.
  */
 export const RUST_ENGINE_BOTTLE_PREPARE = 'engine_bottle_prepare' as const
 export const RUST_ENGINE_BOTTLE_CREATE_FALLBACK =
@@ -1289,6 +1291,8 @@ export const RUST_ENGINE_BOTTLE_KILL_WINESERVER =
   'engine_bottle_kill_wineserver' as const
 export const RUST_ENGINE_BOTTLE_REMOVE_CREATED =
   'engine_bottle_remove_created' as const
+export const RUST_ENGINE_BOTTLE_REMOVE_PER_GAME =
+  'engine_bottle_remove_per_game' as const
 export const RUST_ENGINE_BOTTLE_RECONCILE_MARKER =
   'engine_bottle_reconcile_marker' as const
 export const RUST_ENGINE_BOTTLE_RECORD_PINNED =
@@ -1781,6 +1785,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_BOTTLE_CANCEL_CREATE,
   RUST_ENGINE_BOTTLE_KILL_WINESERVER,
   RUST_ENGINE_BOTTLE_REMOVE_CREATED,
+  RUST_ENGINE_BOTTLE_REMOVE_PER_GAME,
   RUST_ENGINE_BOTTLE_RECONCILE_MARKER,
   RUST_ENGINE_BOTTLE_RECORD_PINNED,
   RUST_ENGINE_BOTTLE_RECORD_CROSSOVER,
