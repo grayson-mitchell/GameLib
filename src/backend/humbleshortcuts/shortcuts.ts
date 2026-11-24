@@ -155,7 +155,7 @@ async function shortcutInputs(
     addSteamShortcuts: Boolean(config.addSteamShortcuts),
     defaultSteamPath: text(config.defaultSteamPath)
   }
-  const isGog = isStore(info, 'gog')
+  const isGog = isStore(info.runner, 'gog')
   const drawsIcon =
     op === 'steamAdd' ||
     (op === 'add' &&
