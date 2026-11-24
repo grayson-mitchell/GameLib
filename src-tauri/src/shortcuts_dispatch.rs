@@ -27,7 +27,10 @@ use gamelib_core::clock::SystemClock;
 use gamelib_core::emitter::FrontendEmitter;
 use gamelib_i18n::Catalog;
 use gamelib_proc::spec::SpecProcRunner;
-use gamelib_shortcuts::ctx::{Platform, ShortcutPaths, ShortcutsCtx, ShortcutsLog, ShortcutsUi};
+use gamelib_shortcuts::ctx::{
+    ApplyResult, Platform, PortableExe, ShortcutPaths, ShortcutsCtx, ShortcutsLog,
+    ShortcutsMutation, ShortcutsSummary, ShortcutsUi, SteamShortcutsFile,
+};
 use gamelib_shortcuts::http::ReqwestHttp;
 use gamelib_store::host::StoreHost;
 
@@ -209,6 +212,66 @@ fn load_catalog(locales_dir: &Path, language: Option<&str>) -> Arc<Catalog> {
     Arc::new(Catalog::load(locales_dir, language.unwrap_or("en")))
 }
 
+/// Steam's `shortcuts.vdf` for the crate (D-09 item 4): the `gamelib-steamfiles` read and apply the
+/// `steamfiles_shortcuts_read` and `steamfiles_shortcuts_apply` channels run, called in-process, so a write
+/// is the one atomic temp-and-rename edit and this crate never writes the file itself (T-94-36). The crate's
+/// types carry the same JSON the channels do.
+pub(crate) struct ShellSteamShortcutsFile;
+
+impl ShellSteamShortcutsFile {
+    fn call(op: &str, args: Value) -> Result<Value, String> {
+        gamelib_steamfiles::dispatch(op, &[args])
+    }
+}
+
+/// A path as the UTF-8 text the steamfiles channels take; a path that is not UTF-8 is not Steam's.
+fn utf8_path(path: &Path) -> Result<&str, String> {
+    path.to_str()
+        .ok_or_else(|| "shortcuts.vdf path is not UTF-8".to_string())
+}
+
+impl SteamShortcutsFile for ShellSteamShortcutsFile {
+    fn read(&self, path: &Path) -> Result<ShortcutsSummary, String> {
+        let answer = Self::call(
+            "steamfiles_shortcuts_read",
+            serde_json::json!({ "path": utf8_path(path)? }),
+        )?;
+        serde_json::from_value(answer)
+            .map_err(|_| "steamfiles_shortcuts_read:bad-answer".to_string())
+    }
+
+    fn apply(&self, path: &Path, mutation: &ShortcutsMutation) -> Result<ApplyResult, String> {
+        let mutation = serde_json::to_value(mutation)
+            .map_err(|_| "steamfiles_shortcuts_apply:bad-args".to_string())?;
+        let answer = Self::call(
+            "steamfiles_shortcuts_apply",
+            serde_json::json!({ "path": utf8_path(path)?, "mutation": mutation }),
+        )?;
+        serde_json::from_value(answer)
+            .map_err(|_| "steamfiles_shortcuts_apply:bad-answer".to_string())
+    }
+}
+
+/// How GameLib was started, as a Steam shortcut needs it: the Flatpak id (`FLATPAK_ID`), the AppImage path
+/// (`APPIMAGE`) and the portable Windows build's executable and folder (`PORTABLE_EXECUTABLE_FILE` and
+/// `PORTABLE_EXECUTABLE_DIR`, both or neither). An empty value counts as unset, as the TS `Boolean(env.X)` did.
+type LaunchEnv = (Option<String>, Option<String>, Option<PortableExe>);
+
+fn launch_env_from(get: impl Fn(&str) -> Option<String>) -> LaunchEnv {
+    let non_empty = |name: &str| get(name).filter(|value| !value.is_empty());
+    let portable = match (
+        non_empty("PORTABLE_EXECUTABLE_FILE"),
+        non_empty("PORTABLE_EXECUTABLE_DIR"),
+    ) {
+        (Some(file), Some(dir)) => Some(PortableExe {
+            file: PathBuf::from(file),
+            dir: PathBuf::from(dir),
+        }),
+        _ => None,
+    };
+    (non_empty("FLATPAK_ID"), non_empty("APPIMAGE"), portable)
+}
+
 /// Builds the context from its parts. Split from [`install`] so a unit test can build one on a fake
 /// home. Nothing here spawns, connects or waits.
 pub(crate) fn build_ctx(
@@ -254,13 +317,17 @@ pub(crate) fn install(app: &AppHandle, user_data: &Path) {
         cwd: std::env::current_dir().unwrap_or_default(),
         user_home,
     };
+    let (flatpak_id, appimage, portable_exe) = launch_env_from(|name| std::env::var(name).ok());
     let ctx = build_ctx(
         Arc::clone(store_boot::host()),
         platform,
         paths,
         expansion_env(platform),
         gamelib_core::shutdown::global().clone(),
-    );
+    )
+    .with_steam_files(Arc::new(ShellSteamShortcutsFile))
+    .with_launch_env(flatpak_id, appimage, portable_exe)
+    .with_user_data(user_data.to_path_buf());
     let emitter: Arc<dyn FrontendEmitter> =
         Arc::new(steampoll_dispatch::TauriFrontendEmitter(app.clone()));
     // The same locales folder and language the steampoll host and the Humble notices render from.
@@ -529,6 +596,178 @@ mod tests {
                 None
             );
         }
+    }
+
+    use gamelib_shortcuts::ctx::EntryField;
+
+    fn steam_entry(title: &str) -> Vec<EntryField> {
+        let string = |key: &str, value: &str| EntryField::String {
+            key: key.to_string(),
+            value: value.to_string(),
+        };
+        vec![
+            string("AppName", title),
+            string("Exe", "\"/bin/true\""),
+            string("LaunchOptions", "--no-gui"),
+            EntryField::Int32 {
+                key: "appid".to_string(),
+                value: -5,
+            },
+        ]
+    }
+
+    #[test]
+    fn the_shell_shortcuts_file_reads_adds_and_removes_through_steamfiles() {
+        let home = FakeHome::new("gamelib-shortcuts-dispatch-");
+        let file = home.root().join("config").join("shortcuts.vdf");
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        let seam = ShellSteamShortcutsFile;
+        // No file yet: the read says so, and the add creates it.
+        assert!(!seam.read(&file).unwrap().exists);
+        let add = ShortcutsMutation::Add {
+            entry: steam_entry("Game One"),
+            create_if_missing: true,
+        };
+        let written = seam.apply(&file, &add).unwrap();
+        assert!(written.written && !written.already_present);
+        let summary = seam.read(&file).unwrap();
+        assert!(summary.exists && summary.parsed && summary.root_is_list);
+        assert_eq!(summary.entries.len(), 1);
+        assert_eq!(summary.entries[0].app_name.as_deref(), Some("Game One"));
+        assert!(summary.entries[0].has_exe && summary.entries[0].has_launch_options);
+        // The same title again is not written twice.
+        let again = seam.apply(&file, &add).unwrap();
+        assert!(!again.written && again.already_present);
+        assert_eq!(seam.read(&file).unwrap().entries.len(), 1);
+        // A removal names the entry it took out, for the grid art.
+        let removal = ShortcutsMutation::Remove {
+            app_name: "Game One".to_string(),
+        };
+        let removed = seam.apply(&file, &removal).unwrap();
+        assert!(removed.written && removed.matched);
+        assert_eq!(removed.removed_exe.as_deref(), Some("\"/bin/true\""));
+        assert_eq!(removed.removed_app_name.as_deref(), Some("Game One"));
+        assert!(seam.read(&file).unwrap().entries.is_empty());
+    }
+
+    #[test]
+    fn the_shell_shortcuts_file_reports_a_corrupt_file_and_never_rewrites_it() {
+        let home = FakeHome::new("gamelib-shortcuts-dispatch-");
+        let file = home.root().join("shortcuts.vdf");
+        std::fs::write(&file, b"this is not a shortcuts file").unwrap();
+        let seam = ShellSteamShortcutsFile;
+        let summary = seam.read(&file).unwrap();
+        assert!(summary.exists && !summary.parsed);
+        assert!(summary.read_error.as_deref().unwrap().starts_with("parse:"));
+        let add = ShortcutsMutation::Add {
+            entry: steam_entry("Game"),
+            create_if_missing: true,
+        };
+        let result = seam.apply(&file, &add).unwrap();
+        assert!(!result.written);
+        assert_eq!(
+            std::fs::read(&file).unwrap(),
+            b"this is not a shortcuts file"
+        );
+    }
+
+    /// The whole Add to Steam, "is it in Steam" and Remove from Steam over the real `gamelib-steamfiles`
+    /// edit, on a fake Steam tree: the shortcut is in the file the next read sees, the crate's ops agree with
+    /// it, and a removal takes it out.
+    #[test]
+    fn add_to_steam_writes_and_remove_takes_out_a_real_shortcuts_file() {
+        let home = FakeHome::new("gamelib-shortcuts-dispatch-");
+        let steam = home.root().join("Steam");
+        let config = steam.join("userdata").join("1001").join("config");
+        std::fs::create_dir_all(&config).unwrap();
+        std::fs::create_dir_all(home.root().join("icons")).unwrap();
+        let (ui, calls) = recording_ui();
+        let ctx = test_ctx(&home, Platform::Linux)
+            .with_steam_files(Arc::new(ShellSteamShortcutsFile))
+            .with_ui(Arc::new(ui));
+        let args = vec![json!({
+            "game": {
+                "appName": "game-one", "runner": "legendary", "title": "Game One", "isDlc": false,
+                "canAddSteamShortcut": true
+            },
+            "settings": {
+                "addDesktopShortcuts": false, "addStartMenuShortcuts": false,
+                "addSteamShortcuts": true, "defaultSteamPath": steam.to_string_lossy()
+            }
+        })];
+        let ask = |op: &str| gamelib_shortcuts::dispatch_sync(op, &args, &ctx);
+        assert_eq!(ask("shortcuts_steam_is_added"), Ok(json!(false)));
+        // No info service is installed in this test binary: the lookup finds no Steam id, the add goes on.
+        assert!(info_ctx().is_none());
+        assert_eq!(ask("shortcuts_steam_add"), Ok(json!(true)));
+        let summary = ShellSteamShortcutsFile
+            .read(&config.join("shortcuts.vdf"))
+            .unwrap();
+        assert_eq!(summary.entries.len(), 1);
+        assert_eq!(summary.entries[0].app_name.as_deref(), Some("Game One"));
+        assert!(summary.entries[0]
+            .launch_options
+            .as_deref()
+            .unwrap()
+            .contains("gamelib://launch?appName=game-one&runner=legendary"));
+        assert_eq!(ask("shortcuts_steam_is_added"), Ok(json!(true)));
+        // The transparent logo is the one grid file that needs no download.
+        let logos: Vec<_> = std::fs::read_dir(config.join("grid"))
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(logos.len(), 1);
+        assert!(logos[0].ends_with("_logo.jpg"));
+        assert_eq!(ask("shortcuts_steam_remove"), Ok(Value::Null));
+        assert_eq!(ask("shortcuts_steam_is_added"), Ok(json!(false)));
+        assert!(ShellSteamShortcutsFile
+            .read(&config.join("shortcuts.vdf"))
+            .unwrap()
+            .entries
+            .is_empty());
+        assert_eq!(
+            std::fs::read_dir(config.join("grid")).unwrap().count(),
+            0,
+            "the art named by the removed entry's ids is gone"
+        );
+        let said = calls.lock().unwrap().clone();
+        assert_eq!(said.len(), 2, "{said:?}");
+        assert!(said[0].starts_with("notify Added to Steam|Game One was successfully added"));
+        assert!(said[1].starts_with("notify Removed from Steam|Game One was successfully removed"));
+    }
+
+    #[test]
+    fn the_launch_environment_counts_an_empty_value_as_unset_and_needs_both_portable_paths() {
+        let env = |pairs: &'static [(&'static str, &'static str)]| {
+            launch_env_from(move |name| {
+                pairs
+                    .iter()
+                    .find(|(k, _)| *k == name)
+                    .map(|(_, v)| (*v).to_string())
+            })
+        };
+        assert_eq!(env(&[]), (None, None, None));
+        assert_eq!(
+            env(&[("FLATPAK_ID", "org.example.App"), ("APPIMAGE", "")]),
+            (Some("org.example.App".to_string()), None, None)
+        );
+        assert_eq!(
+            env(&[("APPIMAGE", "/opt/GameLib.AppImage")]).1.as_deref(),
+            Some("/opt/GameLib.AppImage")
+        );
+        assert_eq!(env(&[("PORTABLE_EXECUTABLE_FILE", "C:\\p\\g.exe")]).2, None);
+        let both = env(&[
+            ("PORTABLE_EXECUTABLE_FILE", "C:\\p\\g.exe"),
+            ("PORTABLE_EXECUTABLE_DIR", "C:\\p"),
+        ]);
+        assert_eq!(
+            both.2,
+            Some(PortableExe {
+                file: PathBuf::from("C:\\p\\g.exe"),
+                dir: PathBuf::from("C:\\p"),
+            })
+        );
     }
 
     /// Every notification and dialog a [`ShellShortcutsUi`] was asked for, one line each.

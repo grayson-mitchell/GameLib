@@ -21,6 +21,13 @@ pub struct ShortcutGame {
     /// `gameInfo.art_square`: the icon source on macOS and Linux. Absent, `null` and `""` are the same.
     #[serde(default)]
     pub art_square: Option<String>,
+    /// `gameInfo.art_cover`: the Steam grid header when no Steam id is known (Add to Steam only).
+    #[serde(default)]
+    pub art_cover: Option<String>,
+    /// `gameInfo.art_logo` when the game has one: the Steam grid logo when no Steam id is known
+    /// (Add to Steam only).
+    #[serde(default)]
+    pub art_logo: Option<String>,
     /// `gameInfo.install.install_path` when the install has one.
     #[serde(default)]
     pub install_path: Option<String>,
@@ -47,7 +54,7 @@ pub struct ShortcutGame {
 pub struct ShortcutSettings {
     pub add_desktop_shortcuts: bool,
     pub add_start_menu_shortcuts: bool,
-    /// Whether the add also adds the game to Steam (the Add-to-Steam step joins `shortcuts_add` in 94-20).
+    /// Whether the add also adds the game to Steam (the Add-to-Steam step of `shortcuts_add`).
     pub add_steam_shortcuts: bool,
     /// `defaultSteamPath`, read by the Add-to-Steam step only.
     #[serde(default)]
@@ -72,6 +79,7 @@ mod tests {
         assert_eq!(game.title, "T");
         assert!(!game.is_dlc && game.can_add_steam_shortcut);
         assert!(game.art_square.is_none() && game.gog_product_icon.is_none());
+        assert!(game.art_cover.is_none() && game.art_logo.is_none());
     }
 
     #[test]

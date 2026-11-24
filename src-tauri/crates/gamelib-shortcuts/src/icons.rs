@@ -133,7 +133,18 @@ pub async fn get_icon(ctx: &ShortcutsCtx, input: &IconInput) -> Option<PathBuf> 
 
 /// Downloads `url` to `dest`, atomically. `true` only when the file is in place.
 async fn download_image(ctx: &ShortcutsCtx, url: &str, dest: &Path) -> bool {
-    let _registrant = ctx.shutdown.register("shortcuts-icon");
+    download_to(ctx, url, dest, "shortcuts-icon").await
+}
+
+/// [`download_image`] under the shutdown name `holder`: the registrant is held for exactly the download,
+/// and a shutdown that starts meanwhile gives it up. The Steam grid art (`shortcuts-steam-art`) shares it.
+pub(crate) async fn download_to(
+    ctx: &ShortcutsCtx,
+    url: &str,
+    dest: &Path,
+    holder: &'static str,
+) -> bool {
+    let _registrant = ctx.shutdown.register(holder);
     let token = ctx.shutdown.token();
     let request = Request::get(url, DOWNLOAD_TIMEOUT).max_body(MAX_ICON_BYTES);
     let answered = tokio::select! {

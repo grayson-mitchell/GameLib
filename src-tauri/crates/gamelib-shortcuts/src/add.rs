@@ -109,7 +109,7 @@ impl Attempts {
     }
 }
 
-fn icon_input(game: &ShortcutGame) -> IconInput {
+pub(crate) fn icon_input(game: &ShortcutGame) -> IconInput {
     IconInput {
         app_name: game.app_name.clone(),
         art_square: game.art_square.clone(),

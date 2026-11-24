@@ -1,14 +1,15 @@
 //! What every op is handed. The crate reads no environment variable and no profile path of its own:
 //! the shell builds one `ShortcutsCtx` and every op takes `&ShortcutsCtx`. Later plans add fields.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use gamelib_core::clock::Clock;
-use gamelib_core::process::SpecRunner;
+use gamelib_core::process::{BoxFuture, SpecRunner};
 use gamelib_core::shutdown::Shutdown;
 use gamelib_i18n::Catalog;
 use gamelib_store::host::StoreHost;
+use serde::{Deserialize, Serialize};
 
 use crate::http::{Http, NoHttp};
 
@@ -67,8 +68,97 @@ pub trait ShortcutsUi: Send + Sync {
     fn show_dialog(&self, title: &str, body: &str, kind: &str);
 }
 
+/// One Steam `shortcuts.vdf` entry as the shell's `gamelib-steamfiles` summary reports it. The JSON is the one
+/// the `steamfiles_shortcuts_read` channel carries; this crate owns its own mirror because it depends on no
+/// other service crate.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EntrySummary {
+    pub index_key: String,
+    pub app_name: Option<String>,
+    pub exe: Option<String>,
+    pub launch_options: Option<String>,
+    pub has_app_name: bool,
+    pub has_exe: bool,
+    pub has_launch_options: bool,
+}
+
+/// What reading one `shortcuts.vdf` found (the `steamfiles_shortcuts_read` answer).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShortcutsSummary {
+    pub exists: bool,
+    pub parsed: bool,
+    pub read_error: Option<String>,
+    pub has_shortcuts_root: bool,
+    pub root_is_list: bool,
+    pub entries: Vec<EntrySummary>,
+}
+
+/// One typed field of a new shortcut entry (the `steamfiles_shortcuts_apply` `entry` array).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+pub enum EntryField {
+    String { key: String, value: String },
+    Int32 { key: String, value: i64 },
+}
+
+/// The described edit `steamfiles_shortcuts_apply` takes: add one entry, or remove the first entry whose
+/// `AppName` equals `app_name` exactly.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "camelCase")]
+pub enum ShortcutsMutation {
+    Add {
+        entry: Vec<EntryField>,
+        #[serde(rename = "createIfMissing")]
+        create_if_missing: bool,
+    },
+    Remove {
+        #[serde(rename = "appName")]
+        app_name: String,
+    },
+}
+
+/// What applying one edit did (the `steamfiles_shortcuts_apply` answer).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplyResult {
+    pub written: bool,
+    pub read_error: Option<String>,
+    pub already_present: bool,
+    pub matched: bool,
+    pub index_key: Option<String>,
+    pub removed_exe: Option<String>,
+    pub removed_app_name: Option<String>,
+}
+
+/// The only way this crate reaches Steam's `shortcuts.vdf` (D-09 item 4). The shell implements it over the
+/// `gamelib-steamfiles` read and apply functions the `steamfiles_shortcuts_*` channels use, so a write is
+/// the one atomic temp-and-rename write; this crate never writes the file itself and depends on neither
+/// `gamelib-steamfiles` nor `gamelib-info`. `Err` is a failed call (the TS's thrown `rustInvoke`), whose text
+/// is shown to the operator as it is.
+pub trait SteamShortcutsFile: Send + Sync {
+    fn read(&self, path: &Path) -> Result<ShortcutsSummary, String>;
+    fn apply(&self, path: &Path, mutation: &ShortcutsMutation) -> Result<ApplyResult, String>;
+}
+
+/// The Steam app id of a game, from the wiki lookup the shell runs over `gamelib-info` (`info_wiki_get`).
+/// A lookup that failed is `None` (WR-42: the shortcut is still written, with no Steam id).
+pub trait WikiLookup: Send + Sync {
+    fn steam_id(&self, title: &str, app_name: &str, runner: &str) -> BoxFuture<Option<String>>;
+}
+
+/// The portable Windows build's own executable and folder (`PORTABLE_EXECUTABLE_FILE` and
+/// `PORTABLE_EXECUTABLE_DIR`), supplied by the shell.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PortableExe {
+    pub file: PathBuf,
+    pub dir: PathBuf,
+}
+
 /// Everything an op needs from outside the crate. Fields are public so the shell can fill the ones a
 /// later plan adds; [`ShortcutsCtx::new`] gives each a neutral default.
+#[derive(Clone)]
 pub struct ShortcutsCtx {
     /// The one owner of every store file (Phase 85). A store is opened through it, never by file I/O
     /// of this crate's own.
@@ -104,6 +194,20 @@ pub struct ShortcutsCtx {
     /// user's language. `None`: every notice renders its English default, which is also what a missing
     /// key renders.
     pub catalog: Option<Arc<Catalog>>,
+    /// Steam's `shortcuts.vdf` (Add to Steam, 94-20). `None` headless: the Steam ops answer `<op>:not-ready`.
+    pub steam_files: Option<Arc<dyn SteamShortcutsFile>>,
+    /// The wiki Steam-id lookup. `None` is a lookup that found nothing.
+    pub wiki: Option<Arc<dyn WikiLookup>>,
+    /// The Flatpak app id when GameLib runs as a Flatpak (`FLATPAK_ID`): a Steam shortcut then launches
+    /// `flatpak run <id>`.
+    pub flatpak_id: Option<String>,
+    /// `$APPIMAGE` when GameLib runs as an AppImage: the program a Steam shortcut launches off Windows.
+    pub appimage: Option<String>,
+    /// The portable Windows build's executable and folder: what a Steam shortcut launches on Windows.
+    pub portable_exe: Option<PortableExe>,
+    /// The user-data folder (`<it>/store/timestamp.json` holds each game's `lastPlayed`). `None`: every
+    /// game reads as never played.
+    pub user_data: Option<PathBuf>,
 }
 
 impl ShortcutsCtx {
@@ -127,6 +231,12 @@ impl ShortcutsCtx {
             log: None,
             ui: None,
             catalog: None,
+            steam_files: None,
+            wiki: None,
+            flatpak_id: None,
+            appimage: None,
+            portable_exe: None,
+            user_data: None,
         }
     }
 
@@ -181,6 +291,37 @@ impl ShortcutsCtx {
     /// Installs the catalog notice text is rendered through.
     pub fn with_catalog(mut self, catalog: Arc<Catalog>) -> ShortcutsCtx {
         self.catalog = Some(catalog);
+        self
+    }
+
+    /// Installs the `shortcuts.vdf` seam.
+    pub fn with_steam_files(mut self, files: Arc<dyn SteamShortcutsFile>) -> ShortcutsCtx {
+        self.steam_files = Some(files);
+        self
+    }
+
+    /// Installs the wiki Steam-id lookup.
+    pub fn with_wiki(mut self, wiki: Arc<dyn WikiLookup>) -> ShortcutsCtx {
+        self.wiki = Some(wiki);
+        self
+    }
+
+    /// Sets how GameLib was started, for the program and arguments a Steam shortcut launches.
+    pub fn with_launch_env(
+        mut self,
+        flatpak_id: Option<String>,
+        appimage: Option<String>,
+        portable_exe: Option<PortableExe>,
+    ) -> ShortcutsCtx {
+        self.flatpak_id = flatpak_id;
+        self.appimage = appimage;
+        self.portable_exe = portable_exe;
+        self
+    }
+
+    /// Sets the user-data folder the `timestamp` store lives under.
+    pub fn with_user_data(mut self, dir: PathBuf) -> ShortcutsCtx {
+        self.user_data = Some(dir);
         self
     }
 

@@ -25,6 +25,7 @@ pub mod proof;
 pub mod registry;
 pub mod remove;
 pub mod sanitize;
+pub mod steam;
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
 pub mod windows;
@@ -39,7 +40,14 @@ use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell. Keep sorted; each plan adds its own.
-pub const OPS: &[&str] = &["shortcuts_add", "shortcuts_exist", "shortcuts_remove"];
+pub const OPS: &[&str] = &[
+    "shortcuts_add",
+    "shortcuts_exist",
+    "shortcuts_remove",
+    "shortcuts_steam_add",
+    "shortcuts_steam_is_added",
+    "shortcuts_steam_remove",
+];
 
 /// The runner names a game can belong to, as the renderer and the sidecar spell them.
 const RUNNERS: &[&str] = &["gog", "legendary", "nile", "sideload", "steam"];
@@ -117,8 +125,50 @@ async fn route(op: &str, args: &[Value], ctx: &ShortcutsCtx) -> Result<Value, St
             let args: remove::RemoveArgs = decode(op, args)?;
             to_value(op, remove::shortcuts_remove(ctx, args).await)
         }
+        "shortcuts_steam_add" => {
+            let args = steam_args(op, args)?;
+            require_steam(op, ctx)?;
+            Ok(Value::Bool(
+                steam::steam_add(ctx, &args.game, &args.settings).await,
+            ))
+        }
+        "shortcuts_steam_remove" => {
+            let args = steam_args(op, args)?;
+            require_steam(op, ctx)?;
+            steam::steam_remove(ctx, &args.game, &args.settings);
+            Ok(Value::Null)
+        }
+        "shortcuts_steam_is_added" => {
+            let args = steam_args(op, args)?;
+            require_steam(op, ctx)?;
+            Ok(Value::Bool(steam::steam_is_added(
+                ctx,
+                &args.game,
+                &args.settings,
+            )))
+        }
         _ => Err(format!("unknown op: {op}")),
     }
+}
+
+/// The game and settings of a Steam op, with the same name checks as `shortcuts_add`: a game is looked up by
+/// its title and launched by its app name under a known runner. `is_added` is the one op a game with no
+/// title may ask (the library's `{}` sentinel): it answers `false`.
+fn steam_args(op: &str, args: &[Value]) -> Result<steam::SteamArgs, String> {
+    let args: steam::SteamArgs = decode(op, args)?;
+    let title_ok = !args.game.title.is_empty() || op == "shortcuts_steam_is_added";
+    if args.game.app_name.is_empty() || !title_ok || !RUNNERS.contains(&args.game.runner.as_str()) {
+        return Err(format!("{op}:bad-args"));
+    }
+    Ok(args)
+}
+
+/// A Steam op needs the shell's `shortcuts.vdf` seam; a context without one is not ready.
+fn require_steam(op: &str, ctx: &ShortcutsCtx) -> Result<(), String> {
+    if ctx.steam_files.is_none() {
+        return Err(format!("{op}:not-ready"));
+    }
+    Ok(())
 }
 
 /// An op's outcome as the JSON the shell answers with.
