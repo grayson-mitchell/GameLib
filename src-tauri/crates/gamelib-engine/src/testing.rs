@@ -183,12 +183,12 @@ impl ScriptedSpecRunner {
 
     fn answer(&self, spec: &ProcSpec) -> SpecOutput {
         let mut scripts = lock(&self.scripts);
-        let exact = scripts
-            .iter()
-            .position(|s| s.program == spec.program && s.argv.as_deref() == Some(&spec.argv[..]));
+        let exact = scripts.iter().position(|s| {
+            same_program(&s.program, &spec.program) && s.argv.as_deref() == Some(&spec.argv[..])
+        });
         let any = scripts
             .iter()
-            .position(|s| s.program == spec.program && s.argv.is_none());
+            .position(|s| same_program(&s.program, &spec.program) && s.argv.is_none());
         match exact.or(any) {
             Some(i) => {
                 let outputs = &mut scripts[i].outputs;
@@ -232,6 +232,13 @@ impl ScriptedSpecRunner {
 
 /// What a scripted runner's stderr starts with when no script matched the spawn.
 const UNSCRIPTED: &str = "scripted runner: no script for";
+
+/// Whether a scripted program is the program a spawn named. On Windows a path built from a fake
+/// HOME joins with `\\` where a script was written with `/`, and both name one file.
+fn same_program(scripted: &str, spawned: &str) -> bool {
+    scripted == spawned
+        || (cfg!(windows) && scripted.replace('\\', "/") == spawned.replace('\\', "/"))
+}
 
 impl SpecRunner for ScriptedSpecRunner {
     fn run(&self, spec: ProcSpec, on_line: Option<LineSink>) -> BoxFuture<SpecOutput> {
