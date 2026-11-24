@@ -1,0 +1,50 @@
+[package]
+name = "gamelib-knownfix"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+# Tauri-free known-fix services (Phase 88, SVC-03): the profile layers, the overlay catalogue and the
+# fix resolution the launch path applies. No `tauri`, no `keyring`, no environment reads (the relay URL
+# and the app version arrive as values). May depend on `gamelib-engine` and `gamelib-wine`; neither of
+# them ever depends on this crate (D-04 one-way rule, proven by `cargo tree`).
+gamelib-engine = { path = "../gamelib-engine" }
+gamelib-wine = { path = "../gamelib-wine" }
+gamelib-core = { path = "../gamelib-core" }
+# Persisted state goes through the one store owner (Phase 85), never file I/O of this crate's own.
+gamelib-store = { path = "../gamelib-store" }
+# Every child process goes through `gamelib-proc`.
+gamelib-proc = { path = "../gamelib-proc" }
+# Destructive deletes (an overlay directory) are guarded by `gamelib-safety`.
+gamelib-safety = { path = "../gamelib-safety" }
+# The wine crate's feature set: `rt-multi-thread` because the shell calls `dispatch_sync` from several
+# plain worker threads; `process`, `fs` and `io-util` for the overlay install that follows.
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "process", "fs", "io-util"] }
+# The `Shutdown` token type; the version gamelib-core already locks.
+tokio-util = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Will carry the overlay pin: the archive and per-file sha256 an overlay download is checked against
+# (88-10). Already locked (gamelib-wine and gamelib-engine hash with sha2), so no new crate enters the tree.
+sha2 = "0.10"
+# Will carry the overlay archive: a `.tar.gz` is unpacked through it (88-10). Already locked
+# (gamelib-depot), so no new crate enters the tree.
+flate2 = "1"
+
+[features]
+# Test seams: the engine's and the wine crate's scripted fakes, reached through this crate's context.
+testing = ["gamelib-engine/testing", "gamelib-wine/testing"]
+
+[dev-dependencies]
+gamelib-knownfix = { path = ".", features = ["testing"] }
+gamelib-testutil = { path = "../gamelib-testutil" }
+tempfile = "3"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"

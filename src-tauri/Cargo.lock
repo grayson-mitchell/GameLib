@@ -1730,6 +1730,69 @@ dependencies = [
 ]
 
 [[package]]
+name = "gamelib-knownfix"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "gamelib-core",
+ "gamelib-engine",
+ "gamelib-knownfix",
+ "gamelib-proc",
+ "gamelib-safety",
+ "gamelib-store",
+ "gamelib-testutil",
+ "gamelib-wine",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
+name = "gamelib-knownfix-cli"
+version = "0.1.0"
+dependencies = [
+ "gamelib-core",
+ "gamelib-engine",
+ "gamelib-knownfix",
+ "gamelib-store",
+ "gamelib-testutil",
+ "serde_json",
+]
+
+[[package]]
+name = "gamelib-launch"
+version = "0.1.0"
+dependencies = [
+ "gamelib-core",
+ "gamelib-engine",
+ "gamelib-knownfix",
+ "gamelib-launch",
+ "gamelib-testutil",
+ "gamelib-wine",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
+name = "gamelib-launch-cli"
+version = "0.1.0"
+dependencies = [
+ "gamelib-core",
+ "gamelib-engine",
+ "gamelib-knownfix",
+ "gamelib-launch",
+ "gamelib-store",
+ "gamelib-testutil",
+ "serde_json",
+]
+
+[[package]]
 name = "gamelib-log"
 version = "0.1.0"
 dependencies = [
@@ -1798,6 +1861,8 @@ dependencies = [
  "gamelib-engine",
  "gamelib-i18n",
  "gamelib-info",
+ "gamelib-knownfix",
+ "gamelib-launch",
  "gamelib-log",
  "gamelib-proc",
  "gamelib-safety",

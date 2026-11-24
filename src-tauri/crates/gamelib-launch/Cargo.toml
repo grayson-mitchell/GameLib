@@ -1,0 +1,37 @@
+[package]
+name = "gamelib-launch"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+# Tauri-free launch services (Phase 88, SVC-03): the launch builders, the runner spawn, the funnel and
+# re-adoption (88.1 to 88.3). No `tauri`, no `keyring`, no environment reads. May depend on
+# `gamelib-engine`, `gamelib-wine` and `gamelib-knownfix`; none of them ever depends on this crate.
+gamelib-engine = { path = "../gamelib-engine" }
+gamelib-wine = { path = "../gamelib-wine" }
+gamelib-knownfix = { path = "../gamelib-knownfix" }
+gamelib-core = { path = "../gamelib-core" }
+# Same feature set as the wine crate (the shell calls `dispatch_sync` from plain worker threads).
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "process", "fs", "io-util"] }
+# The `Shutdown` token type; the version gamelib-core already locks.
+tokio-util = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+# Test seams: the known-fix crate's (and through it the engine's and wine's) scripted fakes.
+testing = ["gamelib-knownfix/testing"]
+
+[dev-dependencies]
+gamelib-launch = { path = ".", features = ["testing"] }
+gamelib-testutil = { path = "../gamelib-testutil" }
+tempfile = "3"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"

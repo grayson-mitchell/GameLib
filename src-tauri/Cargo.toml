@@ -26,6 +26,12 @@ gamelib-info = { path = "crates/gamelib-info" }
 # that follow. `gamelib-wine` may depend on `gamelib-engine`; never the reverse (D-04).
 gamelib-engine = { path = "crates/gamelib-engine" }
 gamelib-wine = { path = "crates/gamelib-wine" }
+# Phase 88 (SVC-03): Tauri-free known-fix and launch services (the profile layers, the overlay catalogue;
+# the launch builders, runner spawn, funnel and re-adoption), behind the knownfix_* and launch_* arms from
+# the plans that follow. `gamelib-launch` may depend on `gamelib-knownfix`, `gamelib-wine` and
+# `gamelib-engine`; none of them ever depends on it (D-04).
+gamelib-knownfix = { path = "crates/gamelib-knownfix" }
+gamelib-launch = { path = "crates/gamelib-launch" }
 # Phase 83 (FND-04, D-11): spawn classes, the Windows kill-on-close Job, group kill and the
 # SIGKILL reaper (`--gamelib-reaper`, dispatched first in `fn main`). Already pinned in Cargo.lock.
 gamelib-proc = { path = "crates/gamelib-proc" }
@@ -498,5 +504,9 @@ members = [
   "crates/gamelib-engine-cli",
   "crates/gamelib-wine",
   "crates/gamelib-wine-cli",
+  "crates/gamelib-knownfix",
+  "crates/gamelib-knownfix-cli",
+  "crates/gamelib-launch",
+  "crates/gamelib-launch-cli",
 ]
 resolver = "2"
