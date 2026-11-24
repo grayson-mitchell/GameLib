@@ -743,6 +743,23 @@ mod tests {
 
     // ---------------------------------------------------------------- the query encoding
 
+    /// What reaches the wire is the `url` crate's spelling of the query, not axios's: it percent-encodes
+    /// an apostrophe (`%27`) where axios sent it literally. A server decodes both the same, which is
+    /// why `Replay` compares the query as decoded pairs; this pins the difference so a change in either
+    /// library shows up here and not as a mystery in a live request.
+    #[test]
+    fn the_url_crate_spells_an_apostrophe_in_the_query_differently_from_axios() {
+        let query = axios_query(&[("term", "Baldur's Gate")]);
+        assert_eq!(query, "term=Baldur's+Gate");
+        let url = url::Url::parse(&format!("https://x.test/?{query}")).unwrap();
+        assert_eq!(url.query(), Some("term=Baldur%27s+Gate"));
+        let decoded: Vec<(String, String)> = url
+            .query_pairs()
+            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+            .collect();
+        assert_eq!(decoded, [("term".to_string(), "Baldur's Gate".to_string())]);
+    }
+
     #[test]
     fn axios_query_encodes_as_axios_does() {
         assert_eq!(
