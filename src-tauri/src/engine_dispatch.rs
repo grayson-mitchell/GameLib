@@ -1875,4 +1875,141 @@ mod tests {
             )
         );
     }
+
+    /// 87-63 (F1): the offline gate's refusal, driven through the shell's own context (its log, its
+    /// unreachable network) with the request `launcher.ts` sends for the 87-59 game: with the app offline, the
+    /// pinned engine absent and CrossOver missing, the step is refused before the decision, and the gate's
+    /// warning reaches `gamelib.log` as a `[WARNING]` `[Shell]` line (the engine log of 87-61). macOS only:
+    /// the engine layer applies to non-Steam launches on macOS alone.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn an_offline_launch_with_no_engine_is_refused_and_the_gate_warning_reaches_gamelib_log() {
+        use std::time::Duration;
+
+        struct FixedNow;
+        impl gamelib_core::clock::Clock for FixedNow {
+            fn now_ms(&self) -> u64 {
+                1_795_133_109_000
+            }
+        }
+        struct Utc;
+        impl gamelib_log::writer::TzOffset for Utc {
+            fn offset_minutes(&self, _epoch_ms: u64) -> i32 {
+                0
+            }
+        }
+
+        let home = gamelib_testutil::FakeHome::new("engine-offline-refusal-");
+        let root = home.root().to_string_lossy().into_owned();
+        let platform = gamelib_core::paths::Platform::current();
+        let logger = Arc::new(gamelib_log::writer::Logger::start(
+            gamelib_log::writer::LogConfig {
+                platform,
+                user_data: gamelib_core::paths::join(platform, &root, &["userData"]),
+                log_dir: root.clone(),
+                clock: Arc::new(FixedNow),
+                tz: Arc::new(Utc),
+            },
+        ));
+        let sink_logger = Arc::clone(&logger);
+        let log = crate::engine_log::ShellEngineLog::for_home(home.root()).with_sink(Box::new(
+            move |level, line| crate::shell_log_at_to(Some(&sink_logger), level, line),
+        ));
+
+        let emitter: Arc<dyn FrontendEmitter> = Arc::new(gamelib_engine::sinks::NullEmitter);
+        let mut ctx = build_ctx(
+            Arc::new(gamelib_store::host::StoreHost::new()),
+            &home.root().join("userData"),
+            home.root().to_path_buf(),
+            home.root().join("tmp"),
+            Arc::clone(&emitter),
+            Arc::new(ShellEngineUi::silent(emitter)),
+            gamelib_core::shutdown::Shutdown::new(),
+        )
+        .with_log(Arc::new(log));
+        // The machine running the test may have CrossOver in /Applications: look nowhere.
+        ctx.crossover_locator =
+            gamelib_engine::crossover::locate::CrossoverLocator::with_system_applications(
+                home.root()
+                    .join("no-system-applications")
+                    .to_string_lossy()
+                    .into_owned(),
+            );
+
+        const APP: &str = "54f7949350c949c6a2c47f12e7b15636";
+        let bottle = gamelib_engine::game_engine::per_game_bottle_name("legendary", APP)
+            .expect("a clean per-game bottle name");
+        // The game's own bottle exists with a crossover marker; the stored config names the Automatic engine.
+        let bottle_dir = home
+            .root()
+            .join("Library/Application Support/CrossOver/Bottles")
+            .join(&bottle);
+        std::fs::create_dir_all(&bottle_dir).unwrap();
+        std::fs::write(bottle_dir.join("cxbottle.conf"), b"").unwrap();
+        std::fs::write(
+            bottle_dir.join(".gamelib-engine.json"),
+            br#"{"kind":"crossover","id":"crossover","wineserverBin":"/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver","version":1}"#,
+        )
+        .unwrap();
+        let user_data = home.root().join("userData");
+        std::fs::create_dir_all(user_data.join("GamesConfig")).unwrap();
+        std::fs::write(
+            user_data.join("GamesConfig").join(format!("{APP}.json")),
+            serde_json::to_vec(&serde_json::json!({ APP: {
+                "engineOverride": "automatic",
+                "wineCrossoverBottle": bottle,
+            }}))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::create_dir_all(user_data.join("tools/steam-engines")).unwrap();
+
+        let reply = gamelib_engine::dispatch_sync(
+            "engine_launch_select",
+            &[serde_json::json!({
+                "runner": "legendary",
+                "appName": APP,
+                "title": "Trash Goblin",
+                "platform": "Windows",
+                "isNative": false,
+                "settings": {
+                    "wineVersion": {"type": "wine", "name": "Default Wine - Not Found", "bin": ""},
+                    "wineCrossoverBottle": bottle,
+                    "winePrefix": home.root().join("Games/GameLib/Prefixes/shared").to_string_lossy(),
+                    "engineOverride": "automatic",
+                },
+                "offline": true,
+            })],
+            &ctx,
+        )
+        .expect("the step answers");
+        assert_eq!(reply["kind"], "refused", "reply: {reply}");
+
+        assert!(logger.flush(Duration::from_secs(10)), "flush timed out");
+        let written =
+            std::fs::read_to_string(gamelib_core::paths::join(platform, &root, &["gamelib.log"]))
+                .unwrap_or_default();
+        let lines: Vec<&str> = written
+            .lines()
+            .filter(|line| line.contains("launch blocked before pre-flight while offline"))
+            .collect();
+        assert_eq!(lines.len(), 1, "not exactly one gate line: {written:?}");
+        assert!(
+            lines[0].contains("[WARNING]"),
+            "not a warning: {}",
+            lines[0]
+        );
+        assert!(
+            lines[0].contains("[Shell]"),
+            "not a shell line: {}",
+            lines[0]
+        );
+        assert!(
+            lines[0].ends_with(
+                &format!("Engine: legendary:{APP} launch blocked before pre-flight while offline (crossover-missing)")
+            ),
+            "the gate's text is missing: {}",
+            lines[0]
+        );
+    }
 }
