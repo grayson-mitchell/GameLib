@@ -18,6 +18,7 @@ pub mod js_date;
 pub mod js_value;
 pub mod stores;
 pub mod title_match;
+pub mod user_agent;
 
 use ctx::HumbleCtx;
 use serde_json::Value;
