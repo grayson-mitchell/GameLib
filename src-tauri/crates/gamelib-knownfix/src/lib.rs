@@ -19,6 +19,7 @@ pub mod overlay;
 pub mod reader;
 pub mod registry;
 pub mod remote;
+pub mod report;
 pub mod types;
 
 /// The cancel token a long op takes, re-exported so the shell, which owns the renderer's cancel, needs
@@ -43,6 +44,7 @@ pub const OPS: &[&str] = &[
     "knownfix_overlay_catalogue",
     "knownfix_profile_overlay_env",
     "knownfix_read",
+    "knownfix_report_detected",
     "knownfix_resolve_overlay_env",
     "knownfix_status",
 ];
@@ -208,6 +210,31 @@ async fn route(op: &str, args: &[Value], ctx: &KnownFixCtx) -> Result<Value, Str
             remote::fetch_remote_known_fixes(ctx, &args.app_name, runner).await;
             Ok(Value::Null)
         }
+        // The opt-in report of a fix a detector found (88-11, D-03): `enabled` is the user's
+        // `shareDetectedFixes` setting as the caller read it. Answers the outcome word (`sent`, `disabled`,
+        // `retryable`, ...); the relay is posted to only when every gate passes. Argument
+        // `{ appId, key, op, detector, enabled }`.
+        "knownfix_report_detected" => {
+            let args: ReportDetectedArgs = decode(op, args)?;
+            let (Some(key), Some(report_op), Some(detector)) = (
+                report::ReportKey::parse(&args.key),
+                report::ReportOp::parse(&args.op),
+                report::Detector::parse(&args.detector),
+            ) else {
+                return Err(format!("{op}:bad-args"));
+            };
+            if args.app_id.encode_utf16().count() > 256 {
+                return Err(format!("{op}:bad-args"));
+            }
+            let fix = report::DetectedFix {
+                app_id: args.app_id,
+                key,
+                op: report_op,
+                detector,
+            };
+            let outcome = report::run_known_fix_report(ctx, &fix, args.enabled).await;
+            Ok(Value::String(outcome.as_str().to_string()))
+        }
         _ => Err(format!("unknown op: {op}")),
     }
 }
@@ -218,6 +245,18 @@ const MAX_ENV_ENTRIES: usize = 256;
 /// An app name, app id or label: 1 to 256 UTF-16 units (the bound the other ops hold their names to).
 fn bounded_name(name: &str) -> bool {
     !name.is_empty() && name.encode_utf16().count() <= 256
+}
+
+/// The object argument of `knownfix_report_detected`. `appId` is a free string here: the report's own
+/// schema decides whether it is one (`invalid`).
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ReportDetectedArgs {
+    app_id: String,
+    key: String,
+    op: String,
+    detector: String,
+    enabled: bool,
 }
 
 /// The object argument of `knownfix_fetch_remote`.
@@ -418,6 +457,7 @@ mod tests {
         assert!(OPS.contains(&"knownfix_overlay_catalogue"));
         assert!(OPS.contains(&"knownfix_profile_overlay_env"));
         assert!(OPS.contains(&"knownfix_read"));
+        assert!(OPS.contains(&"knownfix_report_detected"));
         assert!(OPS.contains(&"knownfix_resolve_overlay_env"));
         assert!(OPS.contains(&"knownfix_status"));
     }

@@ -2,7 +2,7 @@
 //! only this crate needs and the two values the shell resolves for it. The crate reads no environment
 //! variable and no profile path of its own.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -112,6 +112,62 @@ impl OverlayInstalls {
     }
 }
 
+/// The known-fix reports being sent right now, by the TS abort id `known-fix-report:<appId>:<key>:<op>`
+/// (88-11, `aborts.has` / `aborts.create` in `runKnownFixReport`): a second report for the same
+/// `(appId, key, op)` while one is in flight answers `in-flight` instead of posting twice. The entry goes
+/// when the report's work ends, however it ends, so a cancelled or dropped report cannot leave one
+/// behind. One table per context; cloning gives another handle on the same table.
+#[derive(Clone, Default)]
+pub struct ReportsInFlight {
+    ids: Arc<Mutex<HashSet<String>>>,
+}
+
+impl ReportsInFlight {
+    fn table(&self) -> std::sync::MutexGuard<'_, HashSet<String>> {
+        self.ids.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    fn id_of(sent_key: &str) -> String {
+        format!("known-fix-report:{sent_key}")
+    }
+
+    /// Whether the report with this sent-record key (`<appId>:<key>:<op>`) is in flight.
+    pub fn holds(&self, sent_key: &str) -> bool {
+        self.table().contains(&ReportsInFlight::id_of(sent_key))
+    }
+
+    /// How many reports are in flight.
+    pub fn len(&self) -> usize {
+        self.table().len()
+    }
+
+    /// Whether no report is in flight.
+    pub fn is_empty(&self) -> bool {
+        self.table().is_empty()
+    }
+
+    /// Marks `sent_key` in flight; `None` when it already is. The entry is released when the claim drops.
+    pub(crate) fn claim(&self, sent_key: &str) -> Option<ReportClaim> {
+        let id = ReportsInFlight::id_of(sent_key);
+        self.table().insert(id.clone()).then(|| ReportClaim {
+            table: self.clone(),
+            id,
+        })
+    }
+}
+
+/// One report's place in [`ReportsInFlight`]; dropping it frees the place.
+pub(crate) struct ReportClaim {
+    table: ReportsInFlight,
+    id: String,
+}
+
+impl Drop for ReportClaim {
+    fn drop(&mut self) {
+        self.table.table().remove(&self.id);
+    }
+}
+
 /// The shell (or the CLI) builds one `KnownFixCtx` and every op takes `&KnownFixCtx`. Cloning gives
 /// another handle on the same engine context.
 #[derive(Clone)]
@@ -131,6 +187,8 @@ pub struct KnownFixCtx {
     pub wine_host: WineHost,
     /// The overlay installs in flight (88-10, D-21): one download per overlay however many launches ask.
     pub overlay_installs: OverlayInstalls,
+    /// The opt-in reports in flight (88-11): one post per `(appId, key, op)` at a time.
+    pub report_in_flight: ReportsInFlight,
 }
 
 impl KnownFixCtx {
@@ -164,6 +222,7 @@ impl KnownFixCtx {
             wine: None,
             wine_host: WineHost::default(),
             overlay_installs: OverlayInstalls::new(),
+            report_in_flight: ReportsInFlight::default(),
         }
     }
 
