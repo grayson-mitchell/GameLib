@@ -28,8 +28,8 @@ use serde_json::Value;
 use crate::ctx::KnownFixCtx;
 use crate::jsvalue::JsValue;
 use crate::types::{
-    FixLayer, KnownFixesInfo, LayeredFix, Runner, DESCRIPTIVE_KEYS, TIER1_KNOWN_FIX_KEYS,
-    TIER1_ROUTING_KEYS, TIER2_PROFILE_KEYS,
+    FixLayer, GamelibFixStatus, KnownFixProfile, KnownFixesInfo, LayeredFix, Runner,
+    DESCRIPTIVE_KEYS, TIER1_KNOWN_FIX_KEYS, TIER1_ROUTING_KEYS, TIER2_PROFILE_KEYS,
 };
 
 const TIER1_FILE_SUFFIX: &str = ".json";
@@ -305,6 +305,33 @@ pub fn read_known_fixes(
     runner: Runner,
 ) -> Option<KnownFixesInfo> {
     walk_tier1(ctx, app_name, runner).map(|found| found.fix)
+}
+
+/// RED stub (88-08 task 2): replaced by the real reader in the next commit.
+pub fn read_known_fixes_with_layer(
+    _ctx: &KnownFixCtx,
+    _app_name: &str,
+    _runner: Runner,
+) -> Option<LayeredFix> {
+    None
+}
+
+/// RED stub (88-08 task 2): replaced by the real reader in the next commit.
+pub fn read_known_fix_profile(
+    _ctx: &KnownFixCtx,
+    _app_name: &str,
+    _runner: Runner,
+) -> Option<KnownFixProfile> {
+    None
+}
+
+/// RED stub (88-08 task 2): replaced by the real probe in the next commit.
+pub fn read_gamelib_fix_status(
+    _ctx: &KnownFixCtx,
+    _app_name: &str,
+    _runner: Runner,
+) -> Option<GamelibFixStatus> {
+    None
 }
 
 #[cfg(test)]
