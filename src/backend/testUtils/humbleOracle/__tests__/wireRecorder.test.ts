@@ -9,6 +9,7 @@
  */
 import axios from 'axios'
 import { createServer } from 'http'
+import { gzipSync } from 'zlib'
 import type { AddressInfo } from 'net'
 import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
@@ -360,19 +361,28 @@ describe('the Humble wire recorder: self-tests on a temporary fixtures root', ()
   })
 
   it('forward mode proxies to the named upstream and records the redacted response', async () => {
+    const seen: { origin?: string; referer?: string; encoding?: string }[] = []
     const upstream = createServer((req, res) => {
+      seen.push({
+        origin: req.headers.origin,
+        referer: req.headers.referer,
+        encoding: req.headers['accept-encoding']
+      })
       res.setHeader('content-type', 'application/json')
+      res.setHeader('content-encoding', 'gzip')
       res.setHeader(
         'set-cookie',
         '_simpleauth_sess=server-issued; Path=/; HttpOnly'
       )
       res.setHeader('x-cdn-edge', 'colo-123')
       res.end(
-        JSON.stringify({
-          gamekey: 'RealGameKey12345',
-          email: 'me@example.test',
-          ok: req.url
-        })
+        gzipSync(
+          JSON.stringify({
+            gamekey: 'RealGameKey12345',
+            email: 'me@example.test',
+            ok: req.url
+          })
+        )
       )
     })
     await new Promise<void>((resolve) =>
@@ -389,12 +399,29 @@ describe('the Humble wire recorder: self-tests on a temporary fixtures root', ()
       let body = ''
       try {
         const response = await fetch(`${recorder.baseUrl}/api/probe`, {
-          headers: { cookie: '_simpleauth_sess=live-secret' }
+          headers: {
+            cookie: '_simpleauth_sess=live-secret',
+            origin: recorder.baseUrl,
+            referer: `${recorder.baseUrl}/home/library`,
+            'accept-encoding': 'gzip'
+          }
         })
         body = await response.text()
+        // What the real host chose to do with its answer is kept beside the recording.
+        expect(recorder.upstream).toEqual([
+          { status: 200, contentEncoding: 'gzip' }
+        ])
       } finally {
         await recorder.close()
       }
+      // The host saw itself, not the recorder, and was asked as the client asked.
+      expect(seen).toEqual([
+        {
+          origin,
+          referer: `${origin}/home/library`,
+          encoding: 'gzip'
+        }
+      ])
       // The caller under test got the real answer.
       expect(body).toContain('RealGameKey12345')
       const dir = humbleRecordedCaseDir('s', 'forward')

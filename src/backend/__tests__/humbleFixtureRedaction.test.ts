@@ -16,6 +16,14 @@
  *   - a macOS, Linux or Windows home path naming an account.
  * A failure names the file and the rule, never the value.
  *
+ * `recorded/real/` (94-10, T-94-19) is the one directory that holds a capture of the operator's
+ * real account. The rules above cover it with the rest of the tree. Beyond them: a cookie header
+ * of ANY name must carry only `REDACTED` values (the real session sets cookies no synthetic case
+ * knows the name of), and when the operator hands the test their literal account name and email
+ * through the environment (capture time only, never written to a file) every byte under
+ * `recorded/real/` is searched for them, and a finding names the file and which of the two it
+ * was, never the value.
+ *
  * It imports no slice module, so it outlives every TypeScript deletion in Phase 94. The scan as a
  * whole is held to a floor, and later golden plans only raise it.
  */
@@ -23,6 +31,10 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs'
 import { dirname, join, relative } from 'path'
 import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
+import {
+  literalsFrom,
+  scanForLiterals
+} from 'backend/testUtils/humbleOracle/literalScan'
 
 const FIXTURES_ROOT = join(
   __dirname,
@@ -53,6 +65,8 @@ interface Rule {
   pattern: RegExp
   /** Whether a captured value is acceptable. */
   ok: (value: string) => boolean
+  /** When present, judges the whole match instead of `ok` judging group 1. */
+  judge?: (match: RegExpMatchArray) => boolean
 }
 
 const isRedacted = (value: string): boolean => value === 'REDACTED'
@@ -74,12 +88,32 @@ const field = (names: string): RegExp =>
 const looksLikeRealGamekey = (value: string): boolean =>
   /^[A-Za-z0-9]{12,}$/.test(value)
 
+/**
+ * The cookie pairs of a `Cookie` header value (all of them) or a `Set-Cookie` one (the first pair
+ * only: the rest are attributes such as `Path` and `Expires`). Each value must be `REDACTED`.
+ */
+const cookiePairsRedacted = (name: string, value: string): boolean => {
+  const pairs = value.split(';')
+  const judged = name.toLowerCase() === 'cookie' ? pairs : pairs.slice(0, 1)
+  return judged.every((pair) => {
+    const eq = pair.indexOf('=')
+    return eq < 0 || pair.slice(eq + 1).trim() === 'REDACTED'
+  })
+}
+
 const RULES: Rule[] = [
   {
     name: 'cookie value',
     pattern:
       /\b(?:_simpleauth_sess|ory_session_[A-Za-z0-9_-]*|__cf_bm|cf_clearance|csrf[A-Za-z0-9_-]*)=([^;\s"'\\,]+)/gi,
     ok: isRedacted
+  },
+  {
+    name: 'cookie header value of any name',
+    // A header pair `["Cookie", "a=b; c=d"]`; the rule judges name and value together.
+    pattern: /\[\s*"(cookie|set-cookie)"\s*,\s*"([^"]*)"/gi,
+    ok: () => true,
+    judge: (match) => cookiePairsRedacted(match[1] ?? '', match[2] ?? '')
   },
   {
     name: 'CSRF or authorization header value',
@@ -150,7 +184,7 @@ function findViolations(text: string): string[] {
   const broken: string[] = []
   for (const rule of RULES) {
     for (const match of text.matchAll(rule.pattern)) {
-      if (!rule.ok(match[1] ?? '')) {
+      if (!(rule.judge ? rule.judge(match) : rule.ok(match[1] ?? ''))) {
         broken.push(rule.name)
         break
       }
@@ -187,11 +221,99 @@ function scanTree(root: string): { files: number; offenders: string[] } {
   return { files: files.length, offenders }
 }
 
+/** `recorded/real`: the operator's one real capture (94-10). It may not exist yet. */
+const REAL_DIR = join(FIXTURES_ROOT, 'recorded', 'real')
+
 describe('Phase 94 Humble fixture redaction scan', () => {
   it('no committed Humble fixture carries a secret or an identity', () => {
     const { files, offenders } = scanTree(FIXTURES_ROOT)
     assertAtOrAboveFloor('Phase 94 Humble fixtures scanned', files, FILE_FLOOR)
     expect(offenders).toEqual([])
+  })
+
+  describe('recorded/real: the operator account capture (94-10, T-94-19)', () => {
+    it('carries no secret or identity the rules can name', () => {
+      // An absent directory scans nothing: the capture is committed by a later task.
+      expect(scanTree(REAL_DIR).offenders).toEqual([])
+    })
+
+    it("holds neither the operator's account name nor their email, when the environment supplies them", () => {
+      const literals = literalsFrom(
+        process.env.GAMELIB_HUMBLE_REDACT_ACCOUNT,
+        process.env.GAMELIB_HUMBLE_REDACT_EMAIL
+      )
+      if (literals.length === 0) {
+        console.info(
+          'humbleFixtureRedaction: the account and email literals are not supplied, so only the pattern rules ran over recorded/real'
+        )
+        return
+      }
+      // A literal scan over nothing would pass for the wrong reason.
+      const { files, findings } = scanForLiterals(REAL_DIR, literals)
+      expect(files).toBeGreaterThan(0)
+      expect(findings).toEqual([])
+    })
+
+    it('a planted account name or email in a walked tree is found and named without its value', () => {
+      const profile = createFakeHomeProfile({ prefix: 'gamelib-redaction-' })
+      try {
+        const root = join(profile.root, 'real')
+        mkdirSync(join(root, 'sync'), { recursive: true })
+        writeFileSync(
+          join(root, 'sync', 'body-1.html'),
+          '<p>Welcome back, Some Person</p>'
+        )
+        writeFileSync(
+          join(root, 'sync', 'body-2.json'),
+          '{"next":"/u/some.person%40mail.test/library"}'
+        )
+        writeFileSync(join(root, 'clean.txt'), 'Someone else entirely')
+        const literals = literalsFrom('Some Person', 'some.person@mail.test')
+        const { files, findings } = scanForLiterals(root, literals)
+        expect(files).toBe(3)
+        expect(findings.sort()).toEqual([
+          'sync/body-1.html: account',
+          'sync/body-2.json: email'
+        ])
+        expect(findings.join()).not.toContain('Some Person')
+        expect(findings.join()).not.toContain('some.person')
+      } finally {
+        profile.dispose()
+      }
+    })
+
+    it('an account name inside a longer word is not a match, a blank literal is not scanned', () => {
+      const profile = createFakeHomeProfile({ prefix: 'gamelib-redaction-' })
+      try {
+        writeFileSync(join(profile.root, 'a.txt'), 'bobbing and weaving; Bob!')
+        expect(
+          scanForLiterals(profile.root, literalsFrom('bob', undefined)).findings
+        ).toEqual(['a.txt: account'])
+        writeFileSync(join(profile.root, 'a.txt'), 'bobbing and weaving')
+        expect(
+          scanForLiterals(profile.root, literalsFrom('bob', undefined)).findings
+        ).toEqual([])
+        expect(literalsFrom('  ', '')).toEqual([])
+      } finally {
+        profile.dispose()
+      }
+    })
+
+    it('a planted cookie of any name fails, REDACTED values and set-cookie attributes do not', () => {
+      expect(findViolations('["Cookie","tracker=abc123"]')).toEqual([
+        'cookie header value of any name'
+      ])
+      expect(findViolations('["Cookie","a=REDACTED; tracker=abc123"]')).toEqual(
+        ['cookie header value of any name']
+      )
+      expect(findViolations('["Cookie","a=REDACTED; b=REDACTED"]')).toEqual([])
+      expect(
+        findViolations('["set-cookie","tracker=abc123; Path=/; HttpOnly"]')
+      ).toEqual(['cookie header value of any name'])
+      expect(
+        findViolations('["set-cookie","tracker=REDACTED; Path=/; Secure"]')
+      ).toEqual([])
+    })
   })
 
   it('an empty fixture tree fails the floor', () => {
@@ -289,7 +411,11 @@ describe('Phase 94 Humble fixture redaction scan', () => {
         )
         const { files, offenders } = scanTree(root)
         expect(files).toBe(2)
-        expect(offenders).toEqual(['recorded/s/c/exchanges.json: cookie value'])
+        // Both rules name it: the specific cookie rule and the any-name cookie header rule.
+        expect(offenders).toEqual([
+          'recorded/s/c/exchanges.json: cookie value',
+          'recorded/s/c/exchanges.json: cookie header value of any name'
+        ])
         expect(offenders.join()).not.toContain('hunter2')
       } finally {
         profile.dispose()

@@ -20,7 +20,13 @@
  *     where the case has none for a request, from the recorded exchanges) and rewrites
  *     `exchanges.json` with the requests that arrived.
  *   - forward (`GAMELIB_ORACLE_HUMBLE=forward`, used only by 94-10): proxies each request to the
- *     real https host and records the response. Opt-in by the environment, never a default.
+ *     real https host and records the response. Opt-in by the environment, never a default. The
+ *     request goes upstream as the client sent it, with the recorder's own origin put back to the
+ *     upstream one in every header value (an `Origin` or `Referer` naming 127.0.0.1 would be
+ *     refused by a Next.js server action) and `Accept-Encoding` passed through, so the host
+ *     answers as it would a real client. What the host said about its own response (`status`,
+ *     `Content-Encoding`) is kept on `WireRecorder.upstream`, not in `exchanges.json`: a recorded
+ *     body is stored decoded, so a replayed `Content-Encoding` would be a lie.
  *
  * `exchanges.json` is the list the Rust replay reads: `{id, request: {method, target, headers,
  * body?, multipart?}, response: {status, headers, bodyFile?}}`. Header lists are `[name, value]`
@@ -309,11 +315,23 @@ export interface WireRecorderOptions {
   upstream?: (target: string) => string
 }
 
+/** What the real host said about one forwarded response. Forward mode only. */
+export interface UpstreamObservation {
+  status: number
+  /** The `Content-Encoding` the host answered with, lower-cased; `null` when it sent none. */
+  contentEncoding: string | null
+}
+
 export interface WireRecorder {
   /** `http://127.0.0.1:<port>`: what `pointHumbleAt` and `pointSteamStoreSearchAt` take. */
   readonly baseUrl: string
   /** Every request as it arrived, in order (normalised and redacted). */
   readonly requests: readonly RecordedRequest[]
+  /**
+   * Forward mode: `upstream[i]` is what the real host answered request `i` with (`null` when the
+   * forward failed). Empty in the other modes.
+   */
+  readonly upstream: readonly (UpstreamObservation | null)[]
   /** What went wrong so far (an unmatched or differing request). Empty when all is well. */
   readonly failures: readonly string[]
   /** Stops the server, writes the recording in write and forward mode, throws on a failure. */
@@ -499,7 +517,8 @@ function sendResponse(
 async function forwardRequest(
   req: IncomingMessage,
   body: Buffer,
-  origin: string
+  origin: string,
+  baseUrl: string
 ): Promise<{ status: number; headers: [string, string][]; body: Buffer }> {
   const headers = new Headers()
   for (let i = 0; i + 1 < req.rawHeaders.length; i += 2) {
@@ -510,13 +529,16 @@ async function forwardRequest(
       lower === 'x-oracle-upstream' ||
       lower === 'content-length' ||
       lower === 'connection' ||
-      lower === 'transfer-encoding' ||
-      // The proxy hands the body back as bytes: ask for it uncompressed.
-      lower === 'accept-encoding'
+      lower === 'transfer-encoding'
     ) {
       continue
     }
-    headers.append(name, req.rawHeaders[i + 1] ?? '')
+    // `Origin` and `Referer` name the recorder; the host must see itself. `Accept-Encoding` goes
+    // through as sent: fetch decodes the body, and the host's own choice is read off the response.
+    headers.append(
+      name,
+      (req.rawHeaders[i + 1] ?? '').split(baseUrl).join(origin)
+    )
   }
   const real = await fetch(`${origin}${req.url ?? '/'}`, {
     method: req.method,
@@ -568,6 +590,7 @@ export async function startWireRecorder(
   const usedRecorded = new Set<number>()
   const usedSynthetic = new Set<number>()
   const requests: RecordedRequest[] = []
+  const upstream: (UpstreamObservation | null)[] = []
   const failures: string[] = []
   const written: { exchange: Exchange; body?: Buffer; ext: string }[] = []
   const upstreamOf = options.upstream ?? defaultUpstream
@@ -585,7 +608,7 @@ export async function startWireRecorder(
         ? header
         : upstreamOf(req.url ?? '/')
     const recorded = recordRequest(req, body, baseUrl, origin)
-    requests.push(recorded)
+    const slot = requests.push(recorded) - 1
     const fail = (message: string): void => {
       failures.push(message)
       sendResponse(
@@ -598,7 +621,14 @@ export async function startWireRecorder(
 
     if (mode === 'forward') {
       try {
-        const real = await forwardRequest(req, body, origin)
+        const real = await forwardRequest(req, body, origin, baseUrl)
+        upstream[slot] = {
+          status: real.status,
+          contentEncoding:
+            real.headers
+              .find(([n]) => n.toLowerCase() === 'content-encoding')?.[1]
+              ?.toLowerCase() ?? null
+        }
         const contentType =
           real.headers.find(([n]) => n.toLowerCase() === 'content-type')?.[1] ??
           ''
@@ -745,6 +775,7 @@ export async function startWireRecorder(
       return baseUrl
     },
     requests,
+    upstream,
     failures,
     async close() {
       await new Promise<void>((resolve) => {
