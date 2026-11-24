@@ -7,6 +7,7 @@ use std::sync::Arc;
 use gamelib_core::clock::Clock;
 use gamelib_core::emitter::FrontendEmitter;
 use gamelib_core::shutdown::Shutdown;
+use gamelib_i18n::Catalog;
 use gamelib_store::host::StoreHost;
 use serde_json::Value;
 
@@ -35,6 +36,18 @@ pub trait HumbleLog: Send + Sync + 'static {
     fn error(&self, line: &str);
 }
 
+/// What an op says to the user and to the sidecar, as a seam the shell implements. The crate has no
+/// window or notification API of its own; [`HumbleCtx::ui`] is `None` for a headless run, which then
+/// notifies nobody and writes to no sidecar.
+pub trait HumbleUi: Send + Sync + 'static {
+    /// A system notification: no window raise, no modal.
+    fn notify(&self, title: &str, body: &str);
+
+    /// A `kind: "send"` frame for the sidecar over its IPC channel (a Rust op telling a TypeScript
+    /// owner that state moved). Dropped when there is no sidecar.
+    fn send_to_sidecar(&self, channel: &str, args: Vec<Value>);
+}
+
 /// Everything an op needs from outside the crate. Fields are public so the shell can fill the ones a
 /// later plan adds; [`HumbleCtx::new`] gives each a neutral default.
 pub struct HumbleCtx {
@@ -53,6 +66,10 @@ pub struct HumbleCtx {
     pub emitter: Arc<dyn FrontendEmitter>,
     /// The diagnostic log; `None` is silent (a headless run).
     pub log: Option<Arc<dyn HumbleLog>>,
+    /// Notifications and sidecar frames; `None` is silent (a headless run).
+    pub ui: Option<Arc<dyn HumbleUi>>,
+    /// The i18n catalog notice text is rendered through; `None` renders each notice's default text.
+    pub catalog: Option<Arc<Catalog>>,
 }
 
 impl HumbleCtx {
@@ -71,6 +88,8 @@ impl HumbleCtx {
             shutdown,
             emitter: Arc::new(NullEmitter),
             log: None,
+            ui: None,
+            catalog: None,
         }
     }
 
@@ -86,10 +105,154 @@ impl HumbleCtx {
         self
     }
 
+    /// The window-facing surface.
+    pub fn with_ui(mut self, ui: Arc<dyn HumbleUi>) -> HumbleCtx {
+        self.ui = Some(ui);
+        self
+    }
+
+    /// The catalog notice text is rendered through.
+    pub fn with_catalog(mut self, catalog: Arc<Catalog>) -> HumbleCtx {
+        self.catalog = Some(catalog);
+        self
+    }
+
+    /// Writes an info line when a log is set. `line` must be fixed text (see [`HumbleLog`]).
+    pub fn info(&self, line: &str) {
+        if let Some(log) = &self.log {
+            log.info(line);
+        }
+    }
+
     /// Writes a warning line when a log is set. `line` must be fixed text (see [`HumbleLog`]).
     pub fn warn(&self, line: &str) {
         if let Some(log) = &self.log {
             log.warn(line);
         }
+    }
+
+    /// Writes an error line when a log is set. `line` must be fixed text (see [`HumbleLog`]).
+    pub fn error(&self, line: &str) {
+        if let Some(log) = &self.log {
+            log.error(line);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gamelib_core::clock::SystemClock;
+    use std::sync::Mutex;
+
+    #[derive(Default)]
+    struct RecordingLog(Mutex<Vec<String>>);
+
+    impl HumbleLog for RecordingLog {
+        fn info(&self, line: &str) {
+            self.0.lock().unwrap().push(format!("info {line}"));
+        }
+        fn warn(&self, line: &str) {
+            self.0.lock().unwrap().push(format!("warn {line}"));
+        }
+        fn error(&self, line: &str) {
+            self.0.lock().unwrap().push(format!("error {line}"));
+        }
+    }
+
+    /// Records every UI call as text.
+    #[derive(Default)]
+    struct RecordingUi(Mutex<Vec<String>>);
+
+    impl HumbleUi for RecordingUi {
+        fn notify(&self, title: &str, body: &str) {
+            self.0
+                .lock()
+                .unwrap()
+                .push(format!("notify {title}|{body}"));
+        }
+        fn send_to_sidecar(&self, channel: &str, args: Vec<Value>) {
+            self.0
+                .lock()
+                .unwrap()
+                .push(format!("sidecar {channel} {}", Value::Array(args)));
+        }
+    }
+
+    fn base(user_data: PathBuf) -> HumbleCtx {
+        HumbleCtx::new(
+            Arc::new(StoreHost::new()),
+            user_data,
+            Arc::new(SystemClock),
+            Platform::Linux,
+            Shutdown::new(),
+        )
+    }
+
+    #[test]
+    fn a_context_with_a_null_emitter_a_recording_log_and_no_catalog_builds_without_touching_disk() {
+        let user_data = std::env::temp_dir().join("gamelib-humble-ctx-never-created");
+        assert!(!user_data.exists());
+        let log = Arc::new(RecordingLog::default());
+        let ctx = base(user_data.clone()).with_log(log.clone());
+        assert!(ctx.catalog.is_none() && ctx.ui.is_none());
+        // The default emitter swallows a push.
+        ctx.emitter.emit("humbleKeysUpdated", vec![Value::Null]);
+        ctx.info("sync started");
+        ctx.warn("sync denied");
+        ctx.error("store unreadable");
+        assert_eq!(
+            *log.0.lock().unwrap(),
+            [
+                "info sync started",
+                "warn sync denied",
+                "error store unreadable"
+            ]
+        );
+        assert!(!user_data.exists(), "building a context created a path");
+    }
+
+    #[test]
+    fn a_context_without_a_log_or_ui_is_silent() {
+        let ctx = base(PathBuf::new());
+        ctx.info("a");
+        ctx.warn("b");
+        ctx.error("c");
+        assert!(ctx.log.is_none() && ctx.ui.is_none());
+    }
+
+    #[test]
+    fn the_ui_seam_carries_a_notification_and_a_sidecar_frame() {
+        let ui = Arc::new(RecordingUi::default());
+        let ctx = base(PathBuf::new()).with_ui(ui.clone());
+        let ui_ref = ctx.ui.as_ref().expect("the ui was set");
+        ui_ref.notify("Humble", "A key expires soon");
+        ui_ref.send_to_sidecar("humbleSettled", vec![Value::from(1)]);
+        assert_eq!(
+            *ui.0.lock().unwrap(),
+            [
+                "notify Humble|A key expires soon",
+                "sidecar humbleSettled [1]"
+            ]
+        );
+    }
+
+    #[test]
+    fn a_catalog_can_be_attached_and_renders_a_default_for_an_unknown_key() {
+        let catalog = Arc::new(Catalog::load(
+            &std::env::temp_dir().join("gamelib-humble-no-locales"),
+            "en",
+        ));
+        let ctx = base(PathBuf::new()).with_catalog(catalog);
+        let params = serde_json::json!({ "name": "Ada" })
+            .as_object()
+            .cloned()
+            .unwrap_or_default();
+        let text = ctx.catalog.as_ref().expect("the catalog was set").t(
+            "no.such.key",
+            "Hello {{name}}",
+            &params,
+        );
+        assert_eq!(text, "Hello Ada");
     }
 }

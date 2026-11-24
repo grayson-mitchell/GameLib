@@ -112,10 +112,17 @@ where
     let mut work = CatchUnwind(work);
     tokio::select! {
         biased;
-        _ = token.cancelled() => Err(format!("{op}:shutdown")),
+        _ = token.cancelled() => {
+            // Fixed text: the op name and a category, never an argument (T-94-24).
+            ctx.warn(&format!("{op}: stopped by shutdown"));
+            Err(format!("{op}:shutdown"))
+        }
         done = &mut work => match done {
             Ok(result) => result,
-            Err(()) => Err(format!("{op}:panic")),
+            Err(()) => {
+                ctx.warn(&format!("{op}: panicked"));
+                Err(format!("{op}:panic"))
+            }
         },
     }
 }
@@ -274,6 +281,66 @@ mod tests {
         assert_eq!(done, Ok(json!(1)));
         // Nothing still held: the drain finds no name to wait on.
         assert!(shutdown.drain(Duration::from_millis(50)).is_empty());
+    }
+
+    /// Records every line the crate wrote.
+    #[derive(Default)]
+    struct RecordingLog(std::sync::Mutex<Vec<String>>);
+
+    impl ctx::HumbleLog for RecordingLog {
+        fn info(&self, line: &str) {
+            self.0.lock().unwrap().push(format!("info {line}"));
+        }
+        fn warn(&self, line: &str) {
+            self.0.lock().unwrap().push(format!("warn {line}"));
+        }
+        fn error(&self, line: &str) {
+            self.0.lock().unwrap().push(format!("error {line}"));
+        }
+    }
+
+    /// The values a log line must never carry (T-94-24).
+    const SECRETS: [&str; 3] = [
+        "https://www.humblebundle.com/api/v1/order/GKSECRET?key=SECRET-KEY-VALUE",
+        "_simpleauth_sess=SECRET-COOKIE-VALUE",
+        "ABCDE-FGHIJ-KLMNO",
+    ];
+
+    #[tokio::test]
+    async fn a_log_line_an_op_writes_is_fixed_text_with_no_url_cookie_or_key() {
+        let log = Arc::new(RecordingLog::default());
+        let args: Vec<Value> = SECRETS.iter().map(|s| json!({ "value": s })).collect();
+
+        // A panicking op writes a line.
+        let panicking = ctx(Shutdown::new()).with_log(log.clone());
+        let got = dispatch("humble_test_panic", &args, &panicking).await;
+        assert_eq!(got, Err("humble_test_panic:panic".to_string()));
+
+        // An op refused by shutdown writes a line.
+        let shutdown = Shutdown::new();
+        assert!(shutdown.drain(Duration::ZERO).is_empty());
+        let stopped = ctx(shutdown).with_log(log.clone());
+        let got = dispatch("humble_test_echo", &args, &stopped).await;
+        assert_eq!(got, Err("humble_test_echo:shutdown".to_string()));
+
+        // A refused argument writes none, and its error is fixed text too.
+        let refused = ctx(Shutdown::new()).with_log(log.clone());
+        let got = dispatch("humble_get_gifted_at", &args, &refused).await;
+        assert_eq!(got, Err("humble_get_gifted_at:bad-args".to_string()));
+
+        let lines = log.0.lock().unwrap().clone();
+        assert_eq!(
+            lines,
+            [
+                "warn humble_test_panic: panicked",
+                "warn humble_test_echo: stopped by shutdown"
+            ]
+        );
+        for line in &lines {
+            for secret in SECRETS {
+                assert!(!line.contains(secret), "{line} carries a secret");
+            }
+        }
     }
 
     #[test]

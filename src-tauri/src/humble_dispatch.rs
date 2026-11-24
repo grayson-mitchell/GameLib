@@ -13,6 +13,11 @@
 //! reads the two stores through the StoreHost; the TypeScript library still writes them through the
 //! sidecar's mirror, so each file has one writer.
 //!
+//! D-20 seams: the context also carries the crate's [`HumbleUi`] ([`ShellHumbleUi`]: the OS notification
+//! through `notification_show::show_notification` and a `kind: "send"` frame to the sidecar through
+//! `engine_dispatch::send_frame_to_sidecar`, the same delivery paths the engine uses) and the i18n
+//! [`Catalog`], loaded once at install from the bundled `locales` folder in the user's language.
+//!
 //! T-28-04 / T-94-23 / T-94-24: nothing here formats an argument into a log line or an error.
 
 use super::*;
@@ -21,7 +26,8 @@ use std::path::Path;
 
 use gamelib_core::clock::SystemClock;
 use gamelib_core::emitter::FrontendEmitter;
-use gamelib_humble::ctx::{HumbleCtx, HumbleLog, Platform};
+use gamelib_humble::ctx::{HumbleCtx, HumbleLog, HumbleUi, Platform};
+use gamelib_i18n::Catalog;
 use gamelib_store::host::StoreHost;
 
 /// The one context, set once by [`install`].
@@ -72,6 +78,67 @@ impl HumbleLog for ShellHumbleLog {
     }
 }
 
+/// One way the shell reaches the operator or the sidecar, as a plain function so a test can record
+/// what the [`ShellHumbleUi`] did without an `AppHandle`.
+type NotifySink = Box<dyn Fn(&str, &str) + Send + Sync>;
+type SidecarSink = Box<dyn Fn(&str, Vec<Value>) + Send + Sync>;
+
+/// The shell's [`HumbleUi`] (D-20): what a Humble op says to the operator and to the sidecar.
+///
+/// - `notify` is the OS notification through `notification_show::show_notification`, the one delivery
+///   path `Notification.show()`, the steampoll host and the engine share, with the title and body
+///   unchanged.
+/// - `send_to_sidecar` is a `kind: "send"` frame written to the sidecar's stdin
+///   (`engine_dispatch::send_frame_to_sidecar`); with no sidecar (not yet spawned, or gone) it is
+///   dropped, as `sidecar_send` treats a dead pipe.
+///
+/// Nothing here logs a title, a body or an argument (a title can carry a game name).
+pub(crate) struct ShellHumbleUi {
+    notify: NotifySink,
+    sidecar: SidecarSink,
+}
+
+impl ShellHumbleUi {
+    /// The production sinks over the app handle and the sidecar's state.
+    pub(crate) fn for_app(app: &AppHandle) -> ShellHumbleUi {
+        let notify_app = app.clone();
+        ShellHumbleUi {
+            notify: Box::new(move |title, body| {
+                if notification_show::show_notification(&notify_app, Some(title), Some(body))
+                    .is_err()
+                {
+                    shell_log("humble notification could not be shown");
+                }
+            }),
+            sidecar: Box::new(engine_dispatch::send_frame_to_sidecar),
+        }
+    }
+
+    /// A UI whose sinks are the given functions, for a test.
+    #[cfg(test)]
+    pub(crate) fn with_sinks(notify: NotifySink, sidecar: SidecarSink) -> ShellHumbleUi {
+        ShellHumbleUi { notify, sidecar }
+    }
+}
+
+impl HumbleUi for ShellHumbleUi {
+    fn notify(&self, title: &str, body: &str) {
+        (self.notify)(title, body);
+    }
+
+    fn send_to_sidecar(&self, channel: &str, args: Vec<Value>) {
+        (self.sidecar)(channel, args);
+    }
+}
+
+/// The catalog notice text is rendered through, loaded from `locales_dir` in `language` (a shipped
+/// code or BCP-47 tag; `en` when `None`). It never fails: a missing or malformed file leaves the
+/// catalog empty and every notice renders its default text. Read once at install, so a language
+/// changed while GameLib runs reaches Humble notices on the next start.
+pub(crate) fn load_catalog(locales_dir: &Path, language: Option<&str>) -> Arc<Catalog> {
+    Arc::new(Catalog::load(locales_dir, language.unwrap_or("en")))
+}
+
 /// Builds the context from its parts. Split from [`install`] so a unit test can build one over a fake
 /// home. Nothing here spawns, connects or waits.
 pub(crate) fn build_ctx(
@@ -96,14 +163,23 @@ pub(crate) fn build_ctx(
 /// Builds the one context and stores it. Called from `run_setup` after the store host opened and
 /// before the sidecar is spawned. A second call is ignored (the first context stays).
 pub(crate) fn install(app: &AppHandle, user_data: &Path) {
-    let ctx = build_ctx(
+    let mut ctx = build_ctx(
         Arc::clone(store_boot::host()),
         user_data,
         platform(),
         Arc::new(steampoll_dispatch::TauriFrontendEmitter(app.clone())),
         Arc::new(ShellHumbleLog),
         gamelib_core::shutdown::global().clone(),
-    );
+    )
+    .with_ui(Arc::new(ShellHumbleUi::for_app(app)));
+    // The same locales folder and language the steampoll host renders its notifications from.
+    let (app_root, asset_dir) = steampoll_dispatch::app_root_and_asset_dir(app);
+    let language = gamelib_steampoll::profile::SidecarProfile::current()
+        .and_then(|profile| profile.language());
+    ctx.catalog = Some(load_catalog(
+        &app_root.join(asset_dir).join("locales"),
+        language.as_deref(),
+    ));
     let _ = HUMBLE_CTX.set(Arc::new(ctx));
 }
 
@@ -309,6 +385,92 @@ mod tests {
         // Building touched neither the emitter, the log nor the disk.
         assert!(emitter.0.lock().unwrap().is_empty());
         assert!(log.0.lock().unwrap().is_empty());
+        assert!(std::fs::read_dir(home.root()).unwrap().next().is_none());
+    }
+
+    /// Every `(title, body)` and `(channel, args)` a [`ShellHumbleUi`] was asked for.
+    type UiCalls = Arc<Mutex<Vec<String>>>;
+
+    fn recording_ui() -> (ShellHumbleUi, UiCalls) {
+        let calls: UiCalls = Arc::new(Mutex::new(Vec::new()));
+        let (notified, sent) = (Arc::clone(&calls), Arc::clone(&calls));
+        let ui = ShellHumbleUi::with_sinks(
+            Box::new(move |title, body| {
+                notified
+                    .lock()
+                    .unwrap()
+                    .push(format!("notify {title}|{body}"));
+            }),
+            Box::new(move |channel, args| {
+                sent.lock()
+                    .unwrap()
+                    .push(format!("sidecar {channel} {}", Value::Array(args)));
+            }),
+        );
+        (ui, calls)
+    }
+
+    #[test]
+    fn the_shell_ui_passes_a_notification_and_a_sidecar_frame_to_its_sinks_unchanged() {
+        let (ui, calls) = recording_ui();
+        ui.notify("Humble Bundle", "A key expires soon");
+        ui.send_to_sidecar("humbleKeysUpdated", vec![json!([{ "n": 1 }])]);
+        assert_eq!(
+            *calls.lock().unwrap(),
+            [
+                "notify Humble Bundle|A key expires soon",
+                "sidecar humbleKeysUpdated [[{\"n\":1}]]"
+            ]
+        );
+    }
+
+    #[test]
+    fn the_context_carries_the_shell_ui_and_the_catalog() {
+        let home = FakeHome::new("humble-dispatch-seams-");
+        let (ui, calls) = recording_ui();
+        let locales = home.root().join("locales").join("en");
+        std::fs::create_dir_all(&locales).unwrap();
+        std::fs::write(
+            locales.join("gamelib.json"),
+            "{\"humble\": {\"expiring\": \"{{title}} is expiring\"}}",
+        )
+        .unwrap();
+        let mut ctx = build_ctx(
+            Arc::new(StoreHost::new()),
+            home.root(),
+            Platform::Linux,
+            Arc::new(RecordingEmitter::default()),
+            Arc::new(RecordingLog::default()),
+            Shutdown::new(),
+        )
+        .with_ui(Arc::new(ui));
+        ctx.catalog = Some(load_catalog(&home.root().join("locales"), None));
+        let catalog = ctx.catalog.as_ref().expect("the catalog was loaded");
+        let params = json!({ "title": "Portal" }).as_object().cloned().unwrap();
+        // A key in the bundle is rendered; one that is not falls back to its default.
+        assert_eq!(
+            catalog.t("gamelib:humble.expiring", "x", &params),
+            "Portal is expiring"
+        );
+        assert_eq!(
+            catalog.t("gamelib:humble.absent", "Hi {{title}}", &params),
+            "Hi Portal"
+        );
+        let ui = ctx.ui.as_ref().expect("the ui was set");
+        ui.notify("t", "b");
+        assert_eq!(*calls.lock().unwrap(), ["notify t|b"]);
+    }
+
+    #[test]
+    fn a_catalog_from_a_missing_folder_is_empty_and_never_fails() {
+        let home = FakeHome::new("humble-dispatch-nocatalog-");
+        let catalog = load_catalog(&home.root().join("no-such-locales"), Some("de"));
+        let params = serde_json::Map::new();
+        assert_eq!(
+            catalog.t("any.key", "Default text", &params),
+            "Default text"
+        );
+        // Loading read a folder that is not there and created nothing.
         assert!(std::fs::read_dir(home.root()).unwrap().next().is_none());
     }
 

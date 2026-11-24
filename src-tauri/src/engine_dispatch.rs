@@ -186,7 +186,7 @@ impl EngineUi for ShellEngineUi {
 
 /// Writes one `kind: "send"` frame to the sidecar, if there is one. A dead pipe is the sidecar being
 /// gone, which its EOF handling owns, so the failure is not reported here.
-fn send_frame_to_sidecar(channel: &str, args: Vec<Value>) {
+pub(crate) fn send_frame_to_sidecar(channel: &str, args: Vec<Value>) {
     let Some(state) = store_dispatch::sidecar_state() else {
         return;
     };
