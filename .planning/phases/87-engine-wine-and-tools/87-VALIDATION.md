@@ -267,6 +267,57 @@ zero tests, as the earlier plans' `#![cfg(unix)]` decided (the bottle and CrossO
 
 ## Signed builds (D-12)
 
+### Phase 87 build (87-59, 2026-11-24)
+
+The operator chose `Cut a signed build` after 87-58 recorded the dry run as `blocked`. Same workflow (`release-tauri.yml`), same Apple secrets, run with
+`dry_run=false` from a version-bumped release branch, as 85-19 (`release/v0.10`) and 86-26 (`release/v0.12`) did. Exactly one dispatch was made.
+
+- **Source:** branch `release/v0.13` at `8a0096baee3a6ea347fd477e9178d464b443ae24` = `main` at `65b47bfa1` (contains every Phase 87 source commit and
+  `f9f1cce2e`, the shipped `tools/dxvk.rs` leading-`~` fix; `origin/main` was equal to it) + `8a0096bae` `chore(87-59): bump version to 0.13.0` (package.json,
+  src-tauri/Cargo.toml, src-tauri/tauri.conf.json and the `gamelib-shell` entry of src-tauri/Cargo.lock, one line each). 0.13.0 is strictly greater than the
+  shipped Phase 86 build (0.12.0, run `45056179067`). The branch was cut in a separate worktree, so the main checkout never left `main`.
+- **Run:** release-tauri.yml `45314401170`, `workflow_dispatch` on `release/v0.13`, headSha `8a0096baee3a6ea347fd477e9178d464b443ae24`, `dry_run=false`.
+  Leg conclusions: `release (ubuntu-22.04, x86_64-unknown-linux-gnu)` success (02:55:09Z), `release (windows-latest, x86_64-pc-windows-msvc)` success
+  (02:55:54Z), `release (macos-latest, --target aarch64-apple-darwin, aarch64-apple-darwin)` success (02:59:09Z).
+- **Artifact:** draft release `GameLib v0.13.0` (tag `v0.13.0`, draft and prerelease, NOT published; target `8a0096bae`; 8 assets: the aarch64 app tar and
+  dmg, the AppImage, the NSIS setup, their `.sig` files and `latest.json`). The `v0.10.0`, `v0.11.0` and `v0.12.0` drafts are untouched (the newest asset
+  of v0.12.0 is still 2026-11-22T18:57:25Z, of v0.11.0 2026-11-22T03:23:25Z; each still holds its 8 assets). Downloaded with
+  `gh release download v0.13.0 -p 'GameLib_0.13.0_aarch64.app.tar.gz' -p 'GameLib_0.13.0_aarch64.dmg'` into the session scratchpad:
+  - `GameLib_0.13.0_aarch64.app.tar.gz` (101111510 bytes), sha256 `a48937edd93b760b41bdd60c67896a04f04d8dc73b39baa86b683e53af94027c`
+  - `GameLib_0.13.0_aarch64.dmg` (100002164 bytes), sha256 `0b24d7897a33789b730d1ce9140d1e523f46215fdbd3598c313136c0e325ec4a`
+  - The checks below ran on `GameLib.app` extracted from the app tar (like with like with the 85 and 86 records). `CFBundleShortVersionString` = `0.13.0`.
+    Nothing was installed, opened or launched by this plan's executor.
+- **`codesign -dv --verbose=4 GameLib.app`:** `Identifier=com.gamelib.shell`; `Format=app bundle with Mach-O thin (arm64)`; `Authority=Developer ID
+  Application: grayson mitchell (S7U223QWXJ)` -> `Developer ID Certification Authority` -> `Apple Root CA`; `TeamIdentifier=S7U223QWXJ`; `Timestamp=24 Nov 2026
+  at 3:56:24 PM` (local); flags `0x10000(runtime)`; `Notarization Ticket=stapled`; `CDHash=18d7ea76c1f0758325b0976c643496d28c3b861d`. `codesign --verify
+  --deep --strict` passes.
+- **Designated requirement (`codesign -d -r-`):** `identifier "com.gamelib.shell" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6]
+  /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = S7U223QWXJ`
+- **`spctl -a -vv GameLib.app`:** `accepted`, `source=Notarized Developer ID`, `origin=Developer ID Application: grayson mitchell (S7U223QWXJ)`.
+- **`xcrun stapler validate GameLib.app`:** stapled (`The validate action worked!`).
+- **Install-over source on this Mac (read-only check):** `/Applications/GameLib.app` is `0.12.0` with `CDHash=06c8dcf06883e6e2ad44d47616b93e9eca7f685b`, the Phase 86
+  build's CDHash recorded in 86-VALIDATION.md, so the signed Phase 86 build is what the gate upgrades from.
+
+**Comparison with the Phase 86 build (baseline):**
+
+| Property | Phase 86 build (run 45056179067, `/Applications` read now) | Phase 87 build (run 45314401170) | Equal |
+|----------|------------------------------------------------------------|----------------------------------|-------|
+| Identifier | `com.gamelib.shell` | `com.gamelib.shell` | yes |
+| Leaf authority | Developer ID Application: grayson mitchell (S7U223QWXJ) | same | yes |
+| Chain | Developer ID Certification Authority -> Apple Root CA | same | yes |
+| TeamIdentifier | `S7U223QWXJ` | `S7U223QWXJ` | yes |
+| Designated requirement | the string in 86-VALIDATION.md | byte-identical (compared by script on the installed 86 app and the 87 app: both `codesign -d -r-` `designated =>` lines hash to sha256 `68d712d0b6d7e715a10a8e79e81b6a50faf2098af411591169238f56d7888b91`) | yes |
+| spctl | accepted, Notarized Developer ID | accepted, Notarized Developer ID | yes |
+| stapler | stapled | stapled | yes |
+| Version | 0.12.0 | 0.13.0 | differs, as intended (an upgrade) |
+| CDHash | `06c8dcf0...` | `18d7ea76...` | differs, as expected for a different build; the Keychain ACL binds to the designated requirement |
+
+The identities match, so the gate is `pending`: the live gate is owed by 87-59 Task 2.
+
+Gate: pending (identities match: signed Phase 87 build v0.13.0, run 45314401170, `release/v0.13` at 8a0096bae, same Identifier, Developer ID leaf, TeamIdentifier S7U223QWXJ and byte-identical designated requirement as the signed Phase 86 build v0.12.0, run 45056179067; both notarized and stapled)
+
+#### Superseded: the 87-58 dry run (kept for the record)
+
 **Operator decision at the Task 2 checkpoint (2026-11-24): `push-and-build`, with `dry_run=true`.** Exactly one dispatch was made:
 `gh workflow run release-tauri.yml --ref main -f dry_run=true`. No `dry_run=false` dispatch, no tag, no change to the `GameLib v0.11.0`, `v0.12.0` or
 `v0.10.0` draft releases (`gh release list` before and after is identical).
@@ -300,4 +351,4 @@ leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.
 To obtain an artifact a non-dry-run dispatch is needed, from a version-bumped release branch as 85-19 (`release/v0.10`) and 86-26 (`release/v0.12`) did,
 because a `dry_run=false` dispatch on `main` at version 0.11.0 would write into the existing `GameLib v0.11.0` draft. That was not authorised here.
 
-Gate: blocked (no artifact from a dry run)
+(87-58 recorded `Gate: blocked (no artifact from a dry run)`; superseded by the line above.)
