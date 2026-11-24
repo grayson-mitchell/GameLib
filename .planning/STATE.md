@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-70-PLAN.md
-last_updated: "2026-11-24T12:01:09.660Z"
+stopped_at: Completed 87-67-PLAN.md
+last_updated: "2026-11-24T12:08:05.664Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 87 execution started
-state_head: 563718f8cf09e3d5d1bc764377b5a87757c83289
+state_head: 216df4c62bfdc71d6a3856d993bb95d0e298459a
 progress:
   total_phases: 22
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 71 of 73
+Plan: 72 of 73
 Status: Ready to execute
 Last activity: 2026-11-24 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -479,6 +479,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P63 | 23 min | 3 tasks | 6 files |
 | Phase 87 P66 | 15min | 2 tasks | 4 files |
 | Phase 87 P70 | 15 min | 2 tasks | 10 files |
+| Phase 87 P67 | 30 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -1038,6 +1039,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-66: per-game bottle removal target is per_game_bottle_name and only when stored wineCrossoverBottle equals it; a link at the bottle's place spawns nothing (wineserver stop and cxbottle would follow it)
 - [Phase 87]: 87-70: removeGameBottle is a scheduled survivor with deletedBy 98 (no ROADMAP section names uninstaller.ts); the user's 2026-11-24 gap decision 5 authorises the extra EXPECTED_SURVIVORS row (78)
 - [Phase 87]: 87-70: crate-only bottle refusal words (in-use, unsafe-name) read as bad-reply in the closed remove-bottle notice vocabulary; widening it is left to 87-67
+- [Phase 87]: 87-67: uninstall-dialog catalogue keys live in the gamelib namespace (gamelib:uninstall.removeBottle*), because the churn guard forbids changes to upstream catalogues such as gamepage.json
+- [Phase 87]: 87-67: disabled ToggleSwitch label and box use --border-color (4.36/3.73/3.61 against the dialog surface in midnightMirage/gruvbox_dark/dracula); shared component, so every disabled toggle changes
 
 ### Pending Todos
 
@@ -1319,8 +1322,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T12:01:06.823Z
-Stopped at: Completed 87-70-PLAN.md
+Last session: 2026-11-24T12:08:02.967Z
+Stopped at: Completed 87-67-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
