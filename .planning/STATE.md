@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 88
 current_phase_name: Launch scaffolding and known fixes
 status: executing
-stopped_at: Completed 88-07-PLAN.md
-last_updated: "2026-11-24T20:43:18.231Z"
+stopped_at: Completed 88-08-PLAN.md
+last_updated: "2026-11-24T21:11:10.007Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 88 execution started
-state_head: 1c30c4b429e7c36bf9dad0dcd3be06dd4dbe0763
+state_head: df8b7294d49790f505a5277636e0522a626bbc95
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 88 (Launch scaffolding and known fixes) — EXECUTING
-Plan: 8 of 17
+Plan: 9 of 17
 Status: Ready to execute
 Last activity: 2026-11-25 — Phase 88 execution started
 Progress: [█████████░] 92%
@@ -488,6 +488,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88 P05 | 40 min | 2 tasks | 8 files |
 | Phase 88 P06 | 18 min | 3 tasks | 12 files |
 | Phase 88 P07 | 10 min | 2 tasks | 8 files |
+| Phase 88 P08 | 30 min | 3 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -1067,6 +1068,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88]: 88-06: the TS hostile-archive install test fails on the ustar magic, not ../x; recorded as found plus a well-formed ../x case; quirks filed as todos (D-20)
 - [Phase 88]: 88-07: the fetcher timeout lives in the default axios client, so it is recorded as a via-default case; the report oracle uses the real knownFixReportDeps and answers only axios.post
 - [Phase 88]: 88-07: GoldenCapture.requests may carry a request object, so the report's requests.json holds URL, headers, JSON body, 8000 ms timeout and no-redirects in one entry
+- [Phase 88]: 88-08: KnownFixesInfo and KnownFixProfile keep each key's JSON value (Option<Value>), not narrowed Rust types, because the reader goldens keep an unchecked allow-listed value such as launchNotice 5 (D-20)
+- [Phase 88]: 88-08: known-fix files parse into an order-preserving JsValue (jsvalue.rs) so warnings follow Object.entries order; serde_json preserve_order stays off workspace-wide
+- [Phase 88]: 88-08: getKnownFixes and getGamelibFixStatus are native knownfix channels over knownfix_read and knownfix_status; the shell reads GAMELIB_FIX_RELAY_URL once with the crate's DEFAULT_RELAY_URL as fallback
 
 ### Pending Todos
 
@@ -1348,8 +1352,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T20:43:15.482Z
-Stopped at: Completed 88-07-PLAN.md
+Last session: 2026-11-24T21:11:07.250Z
+Stopped at: Completed 88-08-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
