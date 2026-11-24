@@ -2,8 +2,8 @@
  * The boot-owned app runtime (66.4-17, D-05).
  *
  * The launch / known-fixes long tail's former module-level state (the backend
- * event bus, the frontend-ready flag, the launch single-flight table,
- * the known-fix overlay install single-flight) lives in per-file `createX()` closures. The CrossOver
+ * event bus, the frontend-ready flag, the launch single-flight table) lives in per-file `createX()` closures.
+ * The known-fix overlay install single-flight left this bundle in 88-14: Rust's `KnownFixCtx` owns it. The CrossOver
  * index fetch layer and lookups were Rust's from 86-19 and left this bundle with the TS module (86-24).
  * This bundle builds one of each, once per boot, in the 'app-runtime' boot step, and consumers reach it through `Pick<AppRuntime, ...>` slices (D-01).
  *
@@ -13,8 +13,6 @@
 import type { FrontendMessageDeps } from 'backend/host/frontendMessage'
 import { createBackendEvents } from './backend_events'
 import type { BackendEventBus } from './backend_events'
-import { createKnownFixOverlayInstalls } from './knownFixOverlayInstall'
-import type { KnownFixOverlayInstalls } from './knownFixOverlayInstall'
 import { createLaunchFlights } from './launchSingleFlight'
 import type { LaunchFlights } from './launchSingleFlight'
 import { createProtocolState } from './protocol'
@@ -27,16 +25,13 @@ export interface AppRuntime {
   protocol: ProtocolState
   /** The per `runner:appName` launch single-flight table. */
   launchFlights: LaunchFlights
-  /** The known-fix overlay install single-flight table. */
-  overlayInstalls: KnownFixOverlayInstalls
 }
 
 export function createAppRuntime(): AppRuntime {
   return {
     events: createBackendEvents(),
     protocol: createProtocolState(),
-    launchFlights: createLaunchFlights(),
-    overlayInstalls: createKnownFixOverlayInstalls()
+    launchFlights: createLaunchFlights()
   }
 }
 

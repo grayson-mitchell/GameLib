@@ -22,12 +22,22 @@ import {
 } from 'common/knownFixOverlayCatalogue'
 import { readKnownFixProfile } from 'backend/knownFixes'
 import { logDebug, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import type { AppRuntimeSlice } from 'backend/appRuntime'
-import type { OverlayInstallDeps } from 'backend/knownFixOverlayInstall'
+import type {
+  KnownFixOverlayInstalls,
+  OverlayInstallDeps
+} from 'backend/knownFixOverlayInstall'
 
-/** What an overlay install reads: the abort registry, the overlays root and this boot's install single-flight. */
-export type OverlayEnvDeps = OverlayInstallDeps &
-  AppRuntimeSlice<'overlayInstalls'>
+/**
+ * The install single-flight an overlay env resolution joins. The boot's app runtime no longer carries it (88-14:
+ * the overlay single flight is Rust's, in `KnownFixCtx`), so this module, which 88-16 deletes with the rest of the
+ * TS known-fix modules, names the slice itself.
+ */
+interface OverlayInstallsSlice {
+  appRuntime: { overlayInstalls: KnownFixOverlayInstalls }
+}
+
+/** What an overlay install reads: the abort registry, the overlays root and an install single-flight. */
+export type OverlayEnvDeps = OverlayInstallDeps & OverlayInstallsSlice
 
 export const MAX_OVERLAY_ENTRIES = 8
 const MAX_LOGGED_VALUE = 512
@@ -185,7 +195,7 @@ export async function resolveKnownFixOverlayEnv(
 /** Overlay env for a non-Steam launch; precedence mirrors the runner commandEnv. */
 export async function knownFixProfileOverlayEnv(
   deps: Pick<OverlayInstallDeps, 'aborts'> &
-    AppRuntimeSlice<'overlayInstalls'> & {
+    OverlayInstallsSlice & {
       paths: Pick<
         AppPaths,
         'knownFixOverlaysPath' | 'bundledFixesPath' | 'localFixesPath'

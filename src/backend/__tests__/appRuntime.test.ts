@@ -1,6 +1,6 @@
 /**
- * 66.4-17: the boot-owned app runtime. Two runtimes share nothing (event bus, launch flights,
- * overlay installs); launch single-flight joins per instance; the frontend-ready flag flips once per
+ * 66.4-17: the boot-owned app runtime. Two runtimes share nothing (event bus, launch flights);
+ * launch single-flight joins per instance; the frontend-ready flag flips once per
  * instance; construction arms nothing. (The CrossOver index fetch layer and memo it once held are
  * Rust's, 86-19, and their cases moved with the TS module, 86-24.)
  */

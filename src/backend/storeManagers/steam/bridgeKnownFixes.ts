@@ -49,7 +49,7 @@
  * continues, so it can never mark the bridge failed for the session.
  */
 
-import type { AppRuntimeSlice, StatusUpdateDeps } from 'backend/appRuntime'
+import type { StatusUpdateDeps } from 'backend/appRuntime'
 import type { RustInvokeDeps } from '../../host/rustInvokeDeps'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { AppPaths } from 'backend/process/context'
@@ -179,7 +179,6 @@ async function gameMakerGraphicsDefault(
 /** What the bridge known-fix applier reaches through a slice (66.1 R3). */
 export type BridgeKnownFixDeps = Pick<ManagerDeps, 'commandRunner'> &
   StatusUpdateDeps &
-  AppRuntimeSlice<'overlayInstalls'> &
   RustInvokeDeps & {
     paths: AppPaths
     aborts: Pick<AbortRegistry, 'create' | 'delete'>
