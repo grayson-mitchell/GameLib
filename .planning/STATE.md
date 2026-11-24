@@ -5,17 +5,17 @@ milestone_name: Node Sidecar Retirement
 current_phase: 94
 current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 94-20-PLAN.md
-last_updated: "2026-11-24T12:00:00.000Z"
+stopped_at: Completed 94-21-PLAN.md
+last_updated: "2026-11-24T06:45:59.817Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 94 execution started
-state_head: 7527139cb8710e2bbbdbb86cdeeb744a3af4ebcd
+state_head: 2d58b6de1aa404df375d28d798b2b68206556995
 progress:
-  total_phases: 22
+  total_phases: 25
   completed_phases: 23
-  total_plans: 209
+  total_plans: 237
   completed_plans: 531
-  percent: 100
+  percent: 92
 ---
 
 # Project State
@@ -77,10 +77,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
-Plan: 19 of 32
-Status: Ready to execute (94-20 complete; 94-19 complete; 94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24 and 94-15 left a named pending header check for it; 94-21 next, wave 9; worktree-local STATE, D-02)
-Last activity: 2026-11-24 — Completed 94-20: Add to Steam, Remove from Steam and isAddedToSteam run in Rust with the TS ids (CRC-32 over exe + name), entry fields, grid art and messages, writing shortcuts.vdf only through the shell steamfiles seam (the crate depends on neither gamelib-steamfiles nor gamelib-info), replaying all 86 steam goldens (ids 9, add 54, isAdded 9, remove 14) with three recorded differences asserted exactly; shortcuts_add starts the Steam step without awaiting it under a shortcuts-steam registrant and the wiki Steam id comes through a shell seam over info_wiki_get; no caller reaches the ops before 94-22. Before that, 94-19: all eleven Humble files read and written through the Rust StoreHost by typed views that keep unknown fields, replaying byte for byte against the 94-08 TS state goldens (an unchanged write-back, a forced persist and restore, the sync timestamp, the minute-later library rewrite, the legacy backfill), a corrupt user-state file Unreadable and never reset with the host's aside copy holding the original bytes, and clear_on_disconnect clearing exactly the config, library and sync files against 94-09's disconnect golden; no caller reaches the layer before 94-25
-Progress: [██████████] 100%
+Plan: 20 of 32
+Status: Ready to execute (94-21 complete; 94-20 complete; 94-19 complete; 94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24 and 94-15 left a named pending header check for it; 94-22 next; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-21: the Humble session cookie and CSRF token are owned by Rust (process-lifetime cache, in-flight dedupe, 120 s failure memo, epoch fence, invalidate-before-write) over the unchanged humble-session and humble-csrf keyring slots through the shared account-keyed Keychain core in info_secrets.rs, plus a dev-vault source under GAMELIB_DEV_SECRET_VAULT=1 and tauri::is_dev(); all 23 TS secrets goldens replay (calls, answers, call times, cold-cache-before-call, results, keyring contents, warning counts, exact config bytes); the plaintext-to-Keychain migration moved to Rust boot in one commit (a humble-migration registrant, 10 s bound, one outcome word; skipped under the dev vault) and the TS boot no longer migrates; no real Keychain was touched, the signed no-new-prompt proof is owed to the 94-32 live gate. Completed 94-20: Add to Steam, Remove from Steam and isAddedToSteam run in Rust with the TS ids (CRC-32 over exe + name), entry fields, grid art and messages, writing shortcuts.vdf only through the shell steamfiles seam (the crate depends on neither gamelib-steamfiles nor gamelib-info), replaying all 86 steam goldens (ids 9, add 54, isAdded 9, remove 14) with three recorded differences asserted exactly; shortcuts_add starts the Steam step without awaiting it under a shortcuts-steam registrant and the wiki Steam id comes through a shell seam over info_wiki_get; no caller reaches the ops before 94-22. Before that, 94-19: all eleven Humble files read and written through the Rust StoreHost by typed views that keep unknown fields, replaying byte for byte against the 94-08 TS state goldens (an unchanged write-back, a forced persist and restore, the sync timestamp, the minute-later library rewrite, the legacy backfill), a corrupt user-state file Unreadable and never reset with the host's aside copy holding the original bytes, and clear_on_disconnect clearing exactly the config, library and sync files against 94-09's disconnect golden; no caller reaches the layer before 94-25
+Progress: [█████████░] 92%
 
 ## Native-Install Arc Phase Map (21–25)
 
@@ -489,6 +489,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P18 | 170min | 3 tasks | 13 files |
 | Phase 94 P19 | 75min | 2 tasks | 3 files |
 | Phase 94 P20 | 150min | 3 tasks | 14 files |
+| Phase 94 P21 | 95min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -1077,6 +1078,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-20: the crate reaches Steam shortcuts.vdf only through the SteamShortcutsFile trait, which the shell implements over gamelib_steamfiles::dispatch (the steamfiles_shortcuts_read and _apply channels own code, one atomic temp-and-rename write per edit); the crate depends on neither gamelib-steamfiles nor gamelib-info (cargo tree 0, dev-dependencies included), and the Steam id comes through the WikiLookup trait over info_wiki_get
 - [Phase 94]: 94-20: an unparseable lastPlayed means now (the TS sent LastPlayTime null, which the real steamfiles write rejects, so it failed the whole add); LaunchOptions keeps the app name and runner unencoded as the golden requires and removal is by title with no creation proof as the goldens require; both are filed as todos (D-20), not changed
 - [Phase 94]: 94-20: caller contract for 94-22: the resolver passes game {appName, runner, title, isDlc, artSquare, artCover, artLogo, canAddSteamShortcut, installPath, gogProductIcon} and settings with defaultSteamPath to shortcuts_add and the three shortcuts_steam_* ops (no rpc channel exists yet); the shell passes FLATPAK_ID as read (the TS wrote the constant com.heroicgameslauncher.hgl); result notifications HTML-escape the game title as i18next does, the error dialog does not
+- [Phase 94]: 94-21: the Humble secret owner is Rust over the unchanged humble-session and humble-csrf slots, through the shared account-keyed Keychain core in info_secrets.rs (same service, accounts via keyring_account, one bounded read), and a dev-vault source over the shared vault file with one process-wide read-modify-write mutex; it replays all 23 TS secrets goldens driven by the goldens' own recorded keyring calls, answers and call times, and the real Keychain is only provable at the 94-32 signed live gate
+- [Phase 94]: 94-21: the plaintext migration is Rust boot work (a humble-migration registrant, 10 s bound, one outcome word) and the TS boot no longer migrates; a dev-vault run never migrates (the TS vault arm was exclusive), and the TS migration survives only as the oracle's reference copy (humble/__tests__/oracle/legacyMigration.ts) so the 94-09 goldens still regenerate, deleted with the oracle by 94-30
 
 ### Pending Todos
 
@@ -1359,7 +1362,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 ## Session Continuity
 
 Last session: 2026-11-24T09:30:00.000Z
-Stopped at: Completed 94-20-PLAN.md
+Stopped at: Completed 94-21-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
