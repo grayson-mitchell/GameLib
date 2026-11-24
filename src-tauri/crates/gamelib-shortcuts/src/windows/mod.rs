@@ -2,4 +2,5 @@
 //! on Linux and macOS CI too; only a spawn of `powershell.exe` needs Windows, and that goes through the
 //! injected `SpecRunner`.
 
+pub mod icon;
 pub mod lnk;

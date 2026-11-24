@@ -13,6 +13,7 @@
 
 use std::collections::BTreeMap;
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
@@ -21,6 +22,10 @@ use gamelib_core::process::{BoxFuture, LineSink, ProcSpec, SpecOutput, SpecRunne
 use gamelib_shortcuts::launch_url::launch_url;
 use gamelib_shortcuts::registry::{read_windows_shell_folder, WindowsShellFolder};
 use gamelib_shortcuts::testing::{RecordedSpawn, ScriptedRunner};
+use gamelib_shortcuts::windows::icon::{
+    resolve_windows_shortcut_icon, resolve_with, DirItem, EntryKind, IconFs, IconGame, IconSource,
+    RealFs,
+};
 use gamelib_shortcuts::windows::lnk::{
     write_windows_shortcut, ShortcutDetails, POWERSHELL_ARGS, WRITE_SHORTCUT_SCRIPT,
 };
@@ -478,6 +483,180 @@ fn the_constants_are_the_recorded_spawn() {
         strings(&spawn["argv"])
     );
     assert_eq!(spawn["stdin"].as_str(), Some(WRITE_SHORTCUT_SCRIPT));
+}
+
+// ------------------------------------------------------------------------------- the icon chain
+
+/// The oracle's `readdir` spy: the install root lists `filler` fake files first, then the real entries
+/// sorted by name; every other directory is the real one. Reads are cut at `limit` like the real seam.
+struct FillerFs {
+    root: PathBuf,
+    filler: usize,
+}
+
+impl IconFs for FillerFs {
+    fn read_dir(&self, dir: &Path, limit: usize) -> io::Result<Vec<DirItem>> {
+        if dir != self.root {
+            return RealFs.read_dir(dir, limit);
+        }
+        let mut real = RealFs.read_dir(dir, usize::MAX)?;
+        real.sort_by(|a, b| a.name.encode_utf16().cmp(b.name.encode_utf16()));
+        let filler = (0..self.filler).map(|i| DirItem {
+            name: format!("filler-{i:05}.dat"),
+            kind: EntryKind::File,
+        });
+        Ok(filler.chain(real).take(limit).collect())
+    }
+
+    fn file_len(&self, path: &Path) -> io::Result<u64> {
+        RealFs.file_len(path)
+    }
+
+    fn is_file(&self, path: &Path) -> bool {
+        RealFs.is_file(path)
+    }
+}
+
+/// The golden's path form: the profile as `<HOME>`, the Windows separator.
+fn windows_form(path: &Path, home: &Path) -> String {
+    let text = path.to_string_lossy().into_owned();
+    let home = home.to_string_lossy();
+    let rest = text.strip_prefix(home.as_ref()).unwrap_or(&text);
+    let prefix = if rest.len() == text.len() {
+        ""
+    } else {
+        "<HOME>"
+    };
+    format!("{prefix}{rest}").replace('/', "\\")
+}
+
+#[test]
+fn the_icon_chain_replays_every_icon_golden() {
+    let slice = load("windows");
+    let cases = slice.family("icon");
+    assert!(cases.len() >= 30, "only {} icon goldens", cases.len());
+    let mut failures = Vec::new();
+    let mut by_source: BTreeMap<String, usize> = BTreeMap::new();
+    for (id, case) in &cases {
+        let input = &case["input"];
+        let home = FakeHome::new("gamelib-icon-");
+        let games = home.root().join("Games");
+        let install_root = input["installDirectory"]
+            .as_str()
+            .map(|dir| games.join(dir));
+        if let Some(root) = &install_root {
+            fs::create_dir_all(root).expect("install root");
+            for (relative, size) in input["files"].as_object().expect("files") {
+                let target = root.join(relative.trim_end_matches('/'));
+                if relative.ends_with('/') {
+                    fs::create_dir_all(&target).expect("a directory");
+                } else {
+                    fs::create_dir_all(target.parent().expect("parent")).expect("parents");
+                    fs::write(&target, vec![0u8; size.as_u64().expect("a size") as usize])
+                        .expect("a file");
+                }
+            }
+        }
+        let shell = match input["shell"].as_str().expect("shell") {
+            "file" => {
+                let path = home.root().join("gamelib-shell.exe");
+                fs::write(&path, [0u8; 8]).expect("shell exe");
+                Some(path)
+            }
+            "not-exe" => {
+                let path = home.root().join("gamelib-shell");
+                fs::write(&path, [0u8; 8]).expect("shell file");
+                Some(path)
+            }
+            "missing" => Some(home.root().join("gamelib-shell-missing.exe")),
+            // The oracle's getter threw: the shell has no exe.
+            "throws" => None,
+            other => panic!("{id}: shell kind {other}"),
+        };
+        let store_executable =
+            input["storeExecutable"]
+                .as_str()
+                .map(|value| match value.strip_prefix("abs:") {
+                    Some(file) => {
+                        let path = games.join(file);
+                        fs::create_dir_all(&games).expect("games");
+                        fs::write(&path, [0u8; 10]).expect("the absolute store exe");
+                        path.to_string_lossy().into_owned()
+                    }
+                    None => value.to_string(),
+                });
+        let game = IconGame {
+            title: input["title"].as_str().expect("title").to_string(),
+            install_path: install_root.clone(),
+            store_executable,
+        };
+        let filler = input["injectedEntriesBeforeTheRealOnes"]
+            .as_u64()
+            .unwrap_or(0) as usize;
+        let got = match &install_root {
+            Some(root) if filler > 0 => resolve_with(
+                &FillerFs {
+                    root: root.clone(),
+                    filler,
+                },
+                &game,
+                shell.as_deref(),
+            ),
+            _ => resolve_with(&RealFs, &game, shell.as_deref()),
+        };
+        match (got, case["answer"].as_object()) {
+            (None, None) => {}
+            (Some(icon), Some(want)) => {
+                *by_source
+                    .entry(icon.source.as_str().to_string())
+                    .or_default() += 1;
+                let got_path = windows_form(&icon.icon, home.root());
+                let want_path = want["icon"].as_str().expect("an icon path");
+                if got_path != want_path
+                    || i64::from(icon.icon_index) != want["iconIndex"].as_i64().unwrap_or(-1)
+                    || Some(icon.source.as_str()) != want["source"].as_str()
+                {
+                    failures.push(format!(
+                        "{id}: {got_path} ({}) want {want_path} ({})",
+                        icon.source.as_str(),
+                        want["source"]
+                    ));
+                }
+            }
+            (got, want) => failures.push(format!("{id}: {got:?} want {want:?}")),
+        }
+    }
+    println!("icon goldens replayed: {} {by_source:?}", cases.len());
+    // The chain is exercised at every link, not only the first.
+    for source in ["store-executable", "install-dir", "gamelib-shell"] {
+        assert!(
+            by_source.contains_key(source),
+            "no golden resolved to {source}"
+        );
+    }
+    assert!(
+        failures.is_empty(),
+        "icon mismatches:\n{}",
+        failures.join("\n")
+    );
+}
+
+#[tokio::test]
+async fn the_async_wrapper_scans_on_the_blocking_pool() {
+    let home = FakeHome::new("gamelib-icon-async-");
+    let root = home.root().join("Zeta");
+    fs::create_dir_all(&root).expect("root");
+    fs::write(root.join("Zeta.exe"), [0u8; 4]).expect("exe");
+    let game = IconGame {
+        title: "Zeta".to_string(),
+        install_path: Some(root.clone()),
+        store_executable: None,
+    };
+    let icon = resolve_windows_shortcut_icon(game, None)
+        .await
+        .expect("the install scan finds the exe");
+    assert_eq!(icon.icon, root.join("Zeta.exe"));
+    assert_eq!(icon.source, IconSource::InstallDir);
 }
 
 // ------------------------------------------------------------------------- the real PowerShell
