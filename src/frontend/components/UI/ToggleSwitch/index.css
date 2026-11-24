@@ -40,7 +40,9 @@
   color: var(--text-default);
 }
 
-.toggleSwitchWrapper:hover span {
+/* Enabled toggles only: a disabled one must not change on hover, and this rule used to set its
+   label to --background (87-67). */
+.hiddenCheckbox:not([disabled]) + .toggleSwitchWrapper:hover span {
   transition: 350ms;
   color: var(--background);
 }
@@ -55,13 +57,19 @@
   color: var(--accent);
 }
 
+/* Disabled label and box use --border-color, not --icon-disabled (87-67). --icon-disabled is
+   --neutral-03 in midnightMirage, 1.26:1 against the dialog surface, and is declared by no rule in
+   dracula, so there the disabled rules did not resolve at all. --border-color is the theme-neutral
+   mid grey that themeTokens.test.ts already holds to 3:1 against --modal-background in every theme
+   (measured 4.36 midnightMirage, 3.73 gruvbox_dark, 3.61 dracula). It stays distinguishable from
+   --text-default. ToggleSwitch/__tests__/disabledContrast.test.ts proves the three themes. */
 .hiddenCheckbox[disabled] + .toggleSwitchWrapper {
-  color: var(--icon-disabled);
+  color: var(--border-color);
   cursor: not-allowed;
 }
 
 .hiddenCheckbox[disabled] + .toggleSwitchWrapper:before {
-  border-color: var(--icon-disabled);
+  border-color: var(--border-color);
 }
 
 /* fade in and out animation */
