@@ -33,6 +33,7 @@ use crate::types::{
 };
 
 const TIER1_FILE_SUFFIX: &str = ".json";
+const TIER2_FILE_SUFFIX: &str = ".profile.json";
 
 /// The longest ignored value a warning echoes, in characters. A downloaded file could carry a very long
 /// value for a key that is shape-checked; the log line keeps its start.
@@ -307,30 +308,127 @@ pub fn read_known_fixes(
     walk_tier1(ctx, app_name, runner).map(|found| found.fix)
 }
 
-/// RED stub (88-08 task 2): replaced by the real reader in the next commit.
+/// Like [`read_known_fixes`], but also reports which layer won. The client skip rule of the report
+/// sender (D-12) must skip a report when the winning layer is `local` (a user-private override).
 pub fn read_known_fixes_with_layer(
-    _ctx: &KnownFixCtx,
-    _app_name: &str,
-    _runner: Runner,
+    ctx: &KnownFixCtx,
+    app_name: &str,
+    runner: Runner,
 ) -> Option<LayeredFix> {
-    None
+    walk_tier1(ctx, app_name, runner)
 }
 
-/// RED stub (88-08 task 2): replaced by the real reader in the next commit.
-pub fn read_known_fix_profile(
-    _ctx: &KnownFixCtx,
-    _app_name: &str,
-    _runner: Runner,
+/// The tier-2 validator: copies only the eight profile keys, warning for every key it drops (a tier-1
+/// key belongs in `<id>-<store>.json`). `None` for a parsed value that is not an object.
+pub fn filter_tier2_profile(
+    ctx: &KnownFixCtx,
+    app_name: &str,
+    layer_label: &str,
+    parsed: &JsValue,
 ) -> Option<KnownFixProfile> {
+    let JsValue::Object(entries) = parsed else {
+        warn(
+            ctx,
+            format!(
+                "Known fix profile for '{app_name}' ({layer_label} layer) is not an object, ignoring."
+            ),
+        );
+        return None;
+    };
+    let mut out = KnownFixProfile::default();
+    for (key, value) in entries {
+        let key = key.as_str();
+        if TIER2_PROFILE_KEYS.contains(&key) {
+            out.set(key, value.to_value());
+        } else if TIER1_KNOWN_FIX_KEYS.contains(&key) {
+            warn(
+                ctx,
+                format!(
+                    "Known fix profile for '{app_name}' ({layer_label} layer): '{key}' is a tier-1 key that belongs in '{app_name}-<store>.json', ignoring it here."
+                ),
+            );
+        } else {
+            warn(
+                ctx,
+                format!(
+                    "Known fix profile for '{app_name}' ({layer_label} layer): '{key}' is not a tier-2 key, ignoring it."
+                ),
+            );
+        }
+    }
+    Some(out)
+}
+
+/// The local and bundled layers, in that order: the layers tier 2 and the status probe read. The remote
+/// directory is deliberately not here (prohibition 6).
+fn local_layers(ctx: &KnownFixCtx) -> Vec<(FixLayer, &Path)> {
+    let mut layers = vec![(FixLayer::Local, ctx.paths.local.as_path())];
+    if let Some(bundled) = ctx.paths.bundled.as_deref() {
+        layers.push((FixLayer::Bundled, bundled));
+    }
+    layers
+}
+
+/// Tier 2: `<appName>-<store>.profile.json`, local > bundled ONLY. The remote directory is not in the
+/// layer list, so no input can make this read a downloaded profile.
+pub fn read_known_fix_profile(
+    ctx: &KnownFixCtx,
+    app_name: &str,
+    runner: Runner,
+) -> Option<KnownFixProfile> {
+    for (layer, dir) in local_layers(ctx) {
+        let Some(parsed) = read_within(ctx, dir, app_name, runner, TIER2_FILE_SUFFIX, layer) else {
+            continue;
+        };
+        if let Some(profile) = filter_tier2_profile(ctx, app_name, layer.as_str(), &parsed) {
+            return Some(profile);
+        }
+    }
     None
 }
 
-/// RED stub (88-08 task 2): replaced by the real probe in the next commit.
+/// What the game page's GameLib row shows: does a local or bundled fix of either tier exist? Tier 1
+/// first, then tier 2; the remote layer never counts. The launch notice comes from the winning tier-1
+/// file only, trimmed. A tier-1 file that carries only routing keys (`macArch`, `drm`) does not count:
+/// it shadows the lower layer's tier-1 file whole-file, so the probe goes on to the tier-2 profiles.
+/// `sideload` has no store word, so it answers `None`.
 pub fn read_gamelib_fix_status(
-    _ctx: &KnownFixCtx,
-    _app_name: &str,
-    _runner: Runner,
+    ctx: &KnownFixCtx,
+    app_name: &str,
+    runner: Runner,
 ) -> Option<GamelibFixStatus> {
+    store_suffix(runner)?;
+    for (layer, dir) in local_layers(ctx) {
+        let Some(parsed) = read_within(ctx, dir, app_name, runner, TIER1_FILE_SUFFIX, layer) else {
+            continue;
+        };
+        let Some(filtered) = filter_tier1_known_fixes(ctx, app_name, layer.as_str(), &parsed)
+        else {
+            continue;
+        };
+        if is_routing_only_tier1_fix(&filtered) {
+            break;
+        }
+        let notice = match &filtered.launch_notice {
+            Some(Value::String(text)) => js_trim(text).to_string(),
+            _ => String::new(),
+        };
+        return Some(GamelibFixStatus {
+            origin: layer,
+            launch_notice: (!notice.is_empty()).then_some(notice),
+        });
+    }
+    for (layer, dir) in local_layers(ctx) {
+        let Some(parsed) = read_within(ctx, dir, app_name, runner, TIER2_FILE_SUFFIX, layer) else {
+            continue;
+        };
+        if filter_tier2_profile(ctx, app_name, layer.as_str(), &parsed).is_some() {
+            return Some(GamelibFixStatus {
+                origin: layer,
+                launch_notice: None,
+            });
+        }
+    }
     None
 }
 

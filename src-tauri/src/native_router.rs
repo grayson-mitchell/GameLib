@@ -549,6 +549,12 @@ impl NativeRouter {
         // crate's `knownfix_read` (local > bundled > remote, allow-listed). The sidecar no longer
         // registers `getKnownFixes` (one owner).
         invoke.insert("getKnownFixes", knownfix_dispatch::get_known_fixes);
+        // Phase 88 (88-08, D-19): the game page's GameLib row, the same slice, over `knownfix_status`
+        // (local and bundled layers only). The sidecar no longer registers `getGamelibFixStatus`.
+        invoke.insert(
+            "getGamelibFixStatus",
+            knownfix_dispatch::get_gamelib_fix_status,
+        );
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
         invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
@@ -997,6 +1003,7 @@ mod tests {
             .map(|(name, _)| name.as_str())
             .collect();
         assert!(knownfix.contains(&"getKnownFixes"), "{knownfix:?}");
+        assert!(knownfix.contains(&"getGamelibFixStatus"), "{knownfix:?}");
         for name in knownfix {
             // The knownfix slice is invoke-only: no send queue exists for it.
             assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");

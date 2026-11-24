@@ -10,10 +10,6 @@ const noArgs = { valid: [[]], invalid: [['x']] }
 const locale = { countryCode: 'US', locale: 'en-US', currencyCode: 'USD' }
 
 const table: FixtureTable<typeof enrichmentAsyncArgs> = {
-  getGamelibFixStatus: {
-    valid: [['abc', 'steam']],
-    invalid: [[], ['abc', 1]]
-  },
   getRunsForMeMap: noArgs,
   setRunsForMe: {
     valid: [[{ appName: 'a', runner: 'gog', on: true }]],
@@ -36,9 +32,9 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
 }
 
 describe('enrichment channel schemas', () => {
-  it('has a fixture for every key (5 total)', () => {
+  it('has a fixture for every key (4 total)', () => {
     expectFixtureCoverage(enrichmentAsyncArgs, table)
-    expect(Object.keys(enrichmentAsyncArgs).length).toBe(5)
+    expect(Object.keys(enrichmentAsyncArgs).length).toBe(4)
   })
   runFixtureTable(enrichmentAsyncArgs, table)
 

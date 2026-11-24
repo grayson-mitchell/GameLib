@@ -14,9 +14,7 @@
  *     - (Phase 86, 86-22) `getWikiGameInfo` is now a native `info` channel.
  *     - (Phase 86, 86-12) `getAnticheatInfo` is now a native `info` channel.
  *     - (Phase 88, 88-08) `getKnownFixes` is now a native `knownfix` channel.
- *     - `getGamelibFixStatus` -> `backend/knownFixes.ts`'s
- *       `readGamelibFixStatus(appName, runner)` (quick 261027-ch9; brand new,
- *       local + bundled layers only)
+ *     - (Phase 88, 88-08) `getGamelibFixStatus` is now a native `knownfix` channel.
  *     - `getRunsForMeMap` / `setRunsForMe` -> `runsForMe/index.ts`'s
  *       `getRunsForMeMap()` / `setRunsForMeByUser(appName, runner, on)`
  *       (quick 261029-mkz; brand new, backend-persisted per-game override)
@@ -108,7 +106,6 @@ import type { MiscRuntimeSlice } from 'backend/miscRuntime'
 import type { FrontendMessageDeps } from '../host/frontendMessage'
 import type { AppInfo } from '../process/context'
 import type { IpcRegistry } from './ipcRegistry'
-import { readGamelibFixStatus } from '../knownFixes'
 import { getCrossoverIndex } from '../info/crossover'
 import { getRunsForMeMap, setRunsForMeByUser } from '../runsForMe'
 import { getGogDiscounts } from '../info/discounts'
@@ -132,6 +129,11 @@ export interface EnrichmentFlowDeps
   infoCaches?: unknown
   /** The GOG credential cache and path roots the discounts handler reads (66.4-10). */
   gogRuntime: Pick<ManagerDeps['gogRuntime'], 'credentials'>
+  /**
+   * `fixesPath`, `bundledFixesPath` and `localFixesPath` are read by nothing here since Phase 88 Plan 08
+   * (D-19): the known-fix readers behind `getKnownFixes` and `getGamelibFixStatus` are Rust's. Inert; the
+   * foreign-dirty `sidecar/handlers.ts` still passes them. OWED: drop them once `handlers.ts` is clean.
+   */
   paths: Pick<
     ManagerDeps['paths'],
     | 'appFolder'
@@ -168,7 +170,7 @@ const RUNS_FOR_ME_RUNNERS: readonly string[] = Object.freeze([
 ] as const)
 
 /**
- * Registers the 5 enrichment channels. Called once from `handlers.ts`
+ * Registers the 4 enrichment channels. Called once from `handlers.ts`
  * — this module owns no side effects at import time beyond the imports
  * above; the caller decides when registration onto the handler registry
  * happens.
@@ -187,12 +189,8 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   // (`knownfix_read`, `nativeChannels.json`), so it is no longer registered here and has one owner. The TS
   // reader stays for the sidecar's own synchronous launch callers until their ports (88.1 and later).
 
-  // Quick 261027-ch9: GameLib row on the game page. Local + bundled only.
-  deps.ipc.handle(
-    'getGamelibFixStatus',
-    async (_event: unknown, ...args: unknown[]) =>
-      readGamelibFixStatus(deps, args[0] as string, args[1] as Runner)
-  )
+  // Phase 88 (88-08, D-19): `getGamelibFixStatus` (quick 261027-ch9, the game page's GameLib row) is a native
+  // `knownfix` channel served by Rust (`knownfix_status`), so it is no longer registered here and has one owner.
 
   // Quick 261029-mkz: per-game "Runs for me" override. Untrusted payload:
   // validated before any write (T-mkz-01).

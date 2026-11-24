@@ -31,7 +31,11 @@ use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
-pub const OPS: &[&str] = &["knownfix_overlay_catalogue", "knownfix_read"];
+pub const OPS: &[&str] = &[
+    "knownfix_overlay_catalogue",
+    "knownfix_read",
+    "knownfix_status",
+];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a shutdown, a wrong thread or a
 /// panic (`<op>:panic`).
@@ -59,6 +63,13 @@ async fn route(op: &str, args: &[Value], ctx: &KnownFixCtx) -> Result<Value, Str
             let (app_name, runner) = decode_app_runner(op, args)?;
             let found = reader::read_known_fixes(ctx, &app_name, runner);
             serde_json::to_value(found).map_err(|_| format!("{op}:bad-result"))
+        }
+        // What the game page's GameLib row shows (88-08, D-03): local and bundled layers only, tier 1 then
+        // tier 2. `null` when neither holds a fix. Arguments `[appName, runner]`.
+        "knownfix_status" => {
+            let (app_name, runner) = decode_app_runner(op, args)?;
+            let status = reader::read_gamelib_fix_status(ctx, &app_name, runner);
+            serde_json::to_value(status).map_err(|_| format!("{op}:bad-result"))
         }
         _ => Err(format!("unknown op: {op}")),
     }
@@ -198,6 +209,7 @@ mod tests {
         assert_eq!(sorted, OPS);
         assert!(OPS.contains(&"knownfix_overlay_catalogue"));
         assert!(OPS.contains(&"knownfix_read"));
+        assert!(OPS.contains(&"knownfix_status"));
     }
 
     #[tokio::test]
@@ -235,6 +247,48 @@ mod tests {
                 .await
                 .unwrap(),
             json!({"title": "Seeded", "winetricks": ["vcrun2019"]})
+        );
+    }
+
+    #[tokio::test]
+    async fn the_status_op_decodes_like_the_read_op_and_answers_the_origin_or_null() {
+        let home = FakeHome::new("knownfix-lib-");
+        let ctx = ctx(&home);
+        let op = "knownfix_status";
+        for bad in [
+            vec![],
+            vec![json!("a")],
+            vec![json!("a"), json!("epic")],
+            vec![json!(1), json!("gog")],
+        ] {
+            assert_eq!(
+                dispatch(op, &bad, &ctx).await.unwrap_err(),
+                format!("{op}:bad-args"),
+                "{bad:?}"
+            );
+        }
+        assert_eq!(
+            dispatch(op, &[json!("1234"), json!("gog")], &ctx).await,
+            Ok(Value::Null)
+        );
+        // The remote layer never counts.
+        std::fs::create_dir_all(&ctx.paths.fixes).unwrap();
+        std::fs::write(ctx.paths.fixes.join("1234-gog.json"), r#"{"title":"r"}"#).unwrap();
+        assert_eq!(
+            dispatch(op, &[json!("1234"), json!("gog")], &ctx).await,
+            Ok(Value::Null)
+        );
+        std::fs::create_dir_all(&ctx.paths.local).unwrap();
+        std::fs::write(
+            ctx.paths.local.join("1234-gog.json"),
+            r#"{"title":"l","launchNotice":" hi "}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            dispatch(op, &[json!("1234"), json!("gog")], &ctx)
+                .await
+                .unwrap(),
+            json!({"origin": "local", "launchNotice": "hi"})
         );
     }
 

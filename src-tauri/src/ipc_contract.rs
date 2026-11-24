@@ -1057,6 +1057,7 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "getAnticheatInfo",
     "getDefaultEngine",
     "getGameMetadataOverride",
+    "getGamelibFixStatus",
     "getHeroicVersion",
     "getItadSteamGids",
     "getKnownFixes",

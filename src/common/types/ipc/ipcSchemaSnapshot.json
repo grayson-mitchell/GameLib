@@ -1374,30 +1374,22 @@
     {
       "channel": "getGamelibFixStatus",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256
-          },
-          {
-            "type": "string",
-            "enum": [
-              "legendary",
-              "gog",
-              "sideload",
-              "nile",
-              "steam"
-            ]
-          }
-        ],
-        "items": false,
-        "minItems": 2,
-        "maxItems": 2
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "appName",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "runner",
+          "type": "string",
+          "pattern": "^(legendary|gog|sideload|nile|steam)$"
+        }
+      ],
+      "returns": "GamelibFixStatus | null"
     },
     {
       "channel": "getGogDiscounts",

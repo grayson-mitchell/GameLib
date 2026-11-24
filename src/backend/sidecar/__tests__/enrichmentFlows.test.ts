@@ -194,14 +194,7 @@ import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 // Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
 // and the boot's own stores share one file-cell table, as the old module-level registry did.
 let testRoot = createTestStoreRoot()
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync
-} from 'fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'fs'
 import { join, relative, resolve, isAbsolute } from 'path'
 import { tmpdir } from 'os'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
@@ -451,42 +444,13 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     expect(handlerRegistry.has('getKnownFixes')).toBe(false)
   })
 
-  // ── quick 261027-ch9: getGamelibFixStatus ──────────────────────────────────
-  describe('quick 261027-ch9 getGamelibFixStatus (invoke)', () => {
-    it('returns null for a fix present only in the remote fixesPath', async () => {
-      writeFileSync(
-        join(fixesPath, 'gfs-remote-app-gog.json'),
-        JSON.stringify({ title: 'x', launchNotice: 'remote text' })
-      )
-      const { input, frames } = boot()
-      writeInvoke(input, 'gfs-1', 'getGamelibFixStatus', [
-        'gfs-remote-app',
-        'gog'
-      ])
-      await flush()
-
-      const response = findResponse(frames, 'gfs-1')
-      expect(response?.ok).toBe(true)
-      expect(response?.result).toBeNull()
-    })
-
-    it('returns origin local for a fix under the local layer', async () => {
-      mkdirSync(join(fixesPath, 'local'), { recursive: true })
-      writeFileSync(
-        join(fixesPath, 'local', 'gfs-local-app-gog.json'),
-        JSON.stringify({ title: 'x' })
-      )
-      const { input, frames } = boot()
-      writeInvoke(input, 'gfs-2', 'getGamelibFixStatus', [
-        'gfs-local-app',
-        'gog'
-      ])
-      await flush()
-
-      const response = findResponse(frames, 'gfs-2')
-      expect(response?.ok).toBe(true)
-      expect(response?.result).toEqual({ origin: 'local' })
-    })
+  // ── Phase 88 (88-08, D-19, D-23): `getGamelibFixStatus` (quick 261027-ch9) is a native `knownfix` channel
+  // served by Rust (`knownfix_status`): the remote layer never counts, a routing-only tier-1 file does not
+  // count, and the launch notice is trimmed. Those rules are pinned by `gamelib-knownfix`'s
+  // `golden_reader.rs`, so the sidecar no longer registers it. ───────────────────────────────────────────
+  it('Phase 88 (D-19) getGamelibFixStatus is a native `knownfix` channel: the sidecar no longer registers it', () => {
+    boot()
+    expect(handlerRegistry.has('getGamelibFixStatus')).toBe(false)
   })
 
   // ── quick 261029-mkz: Runs for me override ─────────────────────────────────

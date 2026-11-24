@@ -8,6 +8,7 @@
  */
 import type {
   AntiCheatInfo,
+  GamelibFixStatus,
   KnowFixesInfo,
   Runner,
   RuntimeName,
@@ -225,6 +226,14 @@ export interface NativeAsync {
     appName: string,
     runner: Runner
   ) => Promise<KnowFixesInfo | null>
+  // Phase 88 (88-08, D-19, D-23): what the game page's GameLib row shows, answered by the Rust `knownfix` slice
+  // (`knownfix_status`): `{ origin }` plus the winning tier-1 file's trimmed `launchNotice`, or `null`. Local and
+  // bundled layers only, tier 1 then tier 2; the remote layer never counts, and a tier-1 file carrying only
+  // routing keys (`macArch`, `drm`) does not count. Same argument decode as `getKnownFixes`.
+  getGamelibFixStatus: (
+    appName: string,
+    runner: Runner
+  ) => Promise<GamelibFixStatus | null>
 }
 
 export interface NativeSync {

@@ -1,6 +1,5 @@
 import { z } from 'zod'
 
-import type { GamelibFixStatus } from '../../types'
 import type { CatalogProduct } from '../discounts'
 import type { RunsForMeState } from '../../runsForMe'
 import {
@@ -29,9 +28,8 @@ const localeSettings = z.strictObject({
 })
 
 export const enrichmentAsyncArgs = {
-  // Phase 88 (88-08, D-19): `getKnownFixes` is a native `knownfix` channel (`nativeChannels.json`), so it has
-  // no zod entry here; its bounds live in the Rust decode.
-  getGamelibFixStatus: z.tuple([appName, runnerArg()]),
+  // Phase 88 (88-08, D-19): `getKnownFixes` and `getGamelibFixStatus` are native `knownfix` channels
+  // (`nativeChannels.json`), so they have no zod entry here; their bounds live in the Rust decode.
   getRunsForMeMap: noArgs,
   setRunsForMe: z.tuple([runsForMePayload]),
   // Phase 19 (Plan 06): bulk CrossOver-rating resolver (D-11/D-16).
@@ -47,7 +45,6 @@ export const enrichmentAsyncArgs = {
 }
 
 interface EnrichmentAsyncReturns {
-  getGamelibFixStatus: Promise<GamelibFixStatus | null>
   getRunsForMeMap: Promise<Record<string, RunsForMeState>>
   setRunsForMe: Promise<Record<string, RunsForMeState>>
   // `number` = matched rating, `null` = eligible & consulted with no record, key-absent =

@@ -134,6 +134,19 @@ pub(crate) fn get_known_fixes(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeF
     ))
 }
 
+/// The native `getGamelibFixStatus` handler (slice `knownfix`, D-19): what the game page's GameLib row
+/// shows, `{ origin, launchNotice? }` or `null`, answered by `knownfix_status` (local and bundled layers
+/// only, tier 1 then tier 2; the remote layer never counts).
+pub(crate) fn get_gamelib_fix_status(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(game_channel(
+        knownfix_ctx().cloned(),
+        "getGamelibFixStatus",
+        "knownfix_status",
+        "getGamelibFixStatus: the lookup did not finish",
+        args,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -224,6 +237,11 @@ mod tests {
             vec![json!("1234"), json!("gog")],
         ));
         assert_eq!(not_ready, Err("getKnownFixes: not ready".to_string()));
+        let not_ready = tauri::async_runtime::block_on(get_gamelib_fix_status(
+            Arc::clone(&router_ctx),
+            vec![json!("1234"), json!("gog")],
+        ));
+        assert_eq!(not_ready, Err("getGamelibFixStatus: not ready".to_string()));
         let secret = "SECRET-RUNNER-".repeat(40);
         for bad in [
             tauri::async_runtime::block_on(get_known_fixes(
@@ -231,6 +249,14 @@ mod tests {
                 vec![json!("1234"), json!(secret)],
             )),
             tauri::async_runtime::block_on(get_known_fixes(Arc::clone(&router_ctx), vec![])),
+            tauri::async_runtime::block_on(get_gamelib_fix_status(
+                Arc::clone(&router_ctx),
+                vec![json!("1234"), json!(secret)],
+            )),
+            tauri::async_runtime::block_on(get_gamelib_fix_status(
+                Arc::clone(&router_ctx),
+                vec![json!(5), json!("gog")],
+            )),
         ] {
             let error = bad.unwrap_err();
             assert!(
@@ -277,5 +303,41 @@ mod tests {
         assert_eq!(ask("../x", "gog"), Ok(Value::Null));
         // The same file is not reachable by a name that stays inside the layer either.
         assert_eq!(ask("x", "gog"), Ok(json!({"title": "escaped"})));
+    }
+
+    #[test]
+    fn get_gamelib_fix_status_answers_null_the_local_origin_and_never_counts_the_remote_layer() {
+        let home = FakeHome::new("knownfix-shell-");
+        let ctx = ctx_over(&home);
+        let ask = |app: &str, runner: &str| {
+            tauri::async_runtime::block_on(game_channel(
+                Some(Arc::clone(&ctx)),
+                "getGamelibFixStatus",
+                "knownfix_status",
+                "getGamelibFixStatus: the lookup did not finish",
+                vec![json!(app), json!(runner)],
+            ))
+        };
+        assert_eq!(ask("1234", "gog"), Ok(Value::Null));
+        // A fix that exists only in the remote layer is not a GameLib fix.
+        std::fs::create_dir_all(&ctx.paths.fixes).unwrap();
+        std::fs::write(
+            ctx.paths.fixes.join("1234-gog.json"),
+            r#"{"title":"remote"}"#,
+        )
+        .unwrap();
+        assert_eq!(ask("1234", "gog"), Ok(Value::Null));
+        std::fs::create_dir_all(&ctx.paths.local).unwrap();
+        std::fs::write(
+            ctx.paths.local.join("1234-gog.json"),
+            r#"{"title":"local","launchNotice":"  Needs a restart.  "}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            ask("1234", "gog"),
+            Ok(json!({"origin": "local", "launchNotice": "Needs a restart."}))
+        );
+        // Sideload has no store word, so the probe answers null for it.
+        assert_eq!(ask("1234", "sideload"), Ok(Value::Null));
     }
 }
