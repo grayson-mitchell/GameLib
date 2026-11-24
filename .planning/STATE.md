@@ -5,7 +5,7 @@ milestone_name: Node Sidecar Retirement
 current_phase: 94
 current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 94-14-PLAN.md (partial, icon_geometry pending Mac goldens)
+stopped_at: Completed 94-15-PLAN.md
 last_updated: "2026-11-24T03:45:49.710Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 94 execution started
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
-Plan: 13 of 32
-Status: Ready to execute (94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24; 94-15 next, wave 6; worktree-local STATE, D-02)
-Last activity: 2026-11-24 — Completed 94-14 (partial): the macOS .app writer (run.sh, Info.plist, centred-crop icns, proof-guarded Desktop symlink) and the Linux .desktop writer replay all 132 text goldens and the four add-side clear deltas; the icon_geometry golden replay is #[ignore]d pending 94-07 Mac goldens
+Plan: 14 of 32
+Status: Ready to execute (94-15 complete; 94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24 and 94-15 left a named pending header check for it; 94-16 next, wave 6; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-15: the Humble HTTP seam (no redirect on a Humble request, ordered multipart, a Replay pinned to the 94-06 wire recordings), the Steam app-id resolver under the shutdown contract replaying its 11 goldens, the fuzzy title match replaying the 101 shared vectors and the dedup replaying its 61 goldens
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -483,6 +483,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P11 | 37min | 2 tasks | 32 files |
 | Phase 94 P13 | 95min | 2 tasks | 22 files |
 | Phase 94 P14 | 100min | 3 tasks | 9 files |
+| Phase 94 P15 | 150min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -1041,6 +1042,11 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-14: user decision: run 94-14 although the 94-07 icon_geometry goldens are not recorded (they need a Mac); the golden comparison is an explicit #[ignore] with a guard that fails once the goldens exist while it is still ignored; no geometry value is hand-typed
 - [Phase 94]: 94-14: the 94-05 quoting defect (run.sh apostrophe, unencoded Linux Exec=) is reproduced byte for byte, not fixed, because the goldens pin the bytes; the fix stays with its todo
 - [Phase 94]: 94-14: the Desktop clear is a std::fs delete guarded by proof.rs (a symlink to exactly the Applications bundle, or a bundle with run.sh marker, gamelib://launch and a plist naming run.sh); anything else is left and reported Unproven, matching the 94-07 deltas
+- [Phase 94]: 94-15: host zone: HumbleCtx carries a HostZone seam (the UTC offset at an instant) and local_zone_at; the shell answers it from the system zone (gamelib_log::SystemTz); the library port classifies with the offset now, one hour off for a zone-less or date-only expiry across a daylight-saving change; the exact form (classify taking a zone lookup) stays in the todo
+- [Phase 94]: 94-15: fuzzy match ratio is 1.0 - d as f64 / max_len as f64 over ASCII-normalised titles compared with >=, the guards measure raw length in UTF-16 units with the first argument shorter on a tie; the 101 shared vectors (three at exactly 0.85) are the one source for both languages
+- [Phase 94]: 94-15: no Humble request follows a redirect (Policy::none client, follow_redirects false by default); the Steam store search opts in as axios did because it carries no credential
+- [Phase 94]: 94-15: Replay pins decoded query pairs, nine request headers and the multipart field order against the 94-06 recordings; REDACTED matches any non-empty live value; the url crate encodes an apostrophe as %27 where axios did not (pinned by a test)
+- [Phase 94]: 94-15: a resolver pass holds one humble-appid shutdown registrant and races the token on every gap and on the request in flight (the plan named only the gaps); the real-capture header check is #[ignore]d pending 94-10
 - [Phase 94]: 94-12: classifier time values are i64 ms with a caller-supplied fixed-offset LocalZone (jiff::Timestamp cannot hold V8's range); host-zone source is for 94-15
 - [Phase 94]: 94-12: classify reads an order-preserving JsValue because Object.keys order is asserted and serde_json preserve_order is forbidden
 - [Phase 94]: 94-11: shortcutsExists is answered by Rust through resolveShortcutsExists; the TS handle is deleted in the same commit and the oracle now drives the exported shortcutsExistOnDisk, so the exists goldens still compare against the TS predicate until 94-22
@@ -1331,7 +1337,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 ## Session Continuity
 
 Last session: 2026-11-24T03:45:49.577Z
-Stopped at: Completed 94-13-PLAN.md
+Stopped at: Completed 94-15-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
