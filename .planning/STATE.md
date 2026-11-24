@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-61-PLAN.md
-last_updated: "2026-11-24T10:31:48.169Z"
+stopped_at: Completed 87-62-PLAN.md
+last_updated: "2026-11-24T10:47:28.301Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 87 execution started
-state_head: 2630e7779bbf1e7b2a22cd2d73f21a6a88450c94
+state_head: bd2242a39efbceb1e519a4739be96c7cc3dc318f
 progress:
   total_phases: 22
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 65 of 73
+Plan: 66 of 73
 Status: Ready to execute
 Last activity: 2026-11-24 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -473,6 +473,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P59 | 6h25m | 3 tasks | 3 files |
 | Phase 87 P60 | 4 min | 3 tasks | 7 files |
 | Phase 87 P61 | 12 min | 3 tasks | 6 files |
+| Phase 87 P62 | 20 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -1023,6 +1024,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-61: the engine log writes through a literal shell_log_at(level, &redacted) call so the category-only gate can require the redactor's output at the call site
 - [Phase 87]: 87-61: the redactor removes the home and account name plus secret/account pairs, argument lines, URL userinfo/query and caps a line at 512 UTF-16 units; other absolute paths and game keys stay (87-69 item 2 is the live check)
 - [Phase 87]: 87-61: gamelib_log::sanitize::truncate_utf16 is now pub so the shell reuses the one cut rule
+- [Phase 87]: 87-62: a never-installed wine entry's three state keys (isInstalled, hasUpdate, installDir) are defaulted at parse, not normalized at the store (store bytes are D-07 state); the install ignores the renderer's installDir (V5)
+- [Phase 87]: 87-62: wineVersionsUpdated is queued behind the store host's pending change events (StoreHost::post in build_ctx), so the renderer snapshot is patched before the Wine Manager list re-reads it (F4 root cause: push/notify ordering)
 
 ### Pending Todos
 
@@ -1304,8 +1307,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T10:31:45.516Z
-Stopped at: Completed 87-61-PLAN.md
+Last session: 2026-11-24T10:47:25.592Z
+Stopped at: Completed 87-62-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
