@@ -235,6 +235,68 @@ describe('shutdownWine', () => {
     )
     expect(warn).not.toHaveBeenCalled()
   })
+
+  it('a false reply from the CrossOver kill logs one warning and resolves', async () => {
+    const { spawnAsync } = recordingSpawn()
+
+    await expect(
+      shutdownWine(
+        {
+          spawnAsync,
+          commandRunner,
+          requestRustInvoke: rustReplying(false)
+        },
+        crossoverSettings()
+      )
+    ).resolves.toBeUndefined()
+    expect(warn).toHaveBeenCalledTimes(1)
+  })
+
+  it('a rejected CrossOver kill logs one warning and does not throw out of stop()', async () => {
+    const { spawnAsync } = recordingSpawn()
+    const requestRustInvoke = jest.fn(async () => {
+      throw new Error('invalid bottle name')
+    }) as unknown as RequestRustInvoke
+
+    await expect(
+      shutdownWine(
+        { spawnAsync, commandRunner, requestRustInvoke },
+        crossoverSettings()
+      )
+    ).resolves.toBeUndefined()
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(String(warn.mock.calls[0]?.[0])).not.toContain('GameLib-legendary-x')
+  })
+
+  it.each([
+    ['an empty bottle name', { wineCrossoverBottle: '' }, {}],
+    ['no wineserver', {}, { wineserver: undefined }]
+  ])(
+    'a crossover overlay with %s keeps the current spawn or wineboot path',
+    async (_name, over, version) => {
+      const { spawnAsync, calls } = recordingSpawn()
+      const runWineCommand = jest.fn()
+      const requestRustInvoke = jest.fn()
+
+      await shutdownWine(
+        {
+          spawnAsync,
+          commandRunner: { runWineCommand },
+          requestRustInvoke: requestRustInvoke as unknown as RequestRustInvoke
+        },
+        crossoverSettings(over, version)
+      )
+
+      expect(requestRustInvoke).not.toHaveBeenCalled()
+      if ('wineserver' in version) {
+        expect(calls).toEqual([])
+        expect(runWineCommand).toHaveBeenCalledTimes(1)
+      } else {
+        expect(calls).toHaveLength(1)
+        expect(runWineCommand).not.toHaveBeenCalled()
+      }
+    }
+  )
 })
 
 describe('extractFiles', () => {
