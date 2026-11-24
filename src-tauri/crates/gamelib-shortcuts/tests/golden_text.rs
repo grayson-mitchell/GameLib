@@ -21,6 +21,7 @@ use std::path::{Path, PathBuf};
 
 use gamelib_shortcuts::ctx::{Platform, ShortcutPaths};
 use gamelib_shortcuts::launch_url::launch_url;
+use gamelib_shortcuts::linux::{write_desktop_file, DESKTOP_COPY_MODE};
 use gamelib_shortcuts::mac::{link_desktop, write_mac_app, DesktopRefused};
 use gamelib_shortcuts::paths::shortcut_files;
 use gamelib_testutil::FakeHome;
@@ -209,7 +210,6 @@ fn umasked(probe_dir: &Path, requested: u32) -> u32 {
 
 /// How a golden's recorded mode is checked on disk.
 #[derive(Clone, Copy)]
-#[allow(dead_code)] // `Umasked` is used by the Linux replay
 enum ModeRule {
     /// `chmod`: the recorded mode exactly (macOS `run.sh`).
     Exact,
@@ -404,6 +404,67 @@ fn replay_darwin(id: &str, case: &Value) -> Result<bool, String> {
     }
 }
 
+/// One Linux text case: what `addShortcuts` does on linux, then the tree comparison.
+fn replay_linux(id: &str, case: &Value) -> Result<bool, String> {
+    let profile = Profile::new();
+    let input = &case["input"];
+    let title = input["title"].as_str().expect("title");
+    let app_name = input["appName"].as_str().expect("appName");
+    let runner = input["runner"].as_str().expect("runner");
+    let from_menu = input["fromMenu"].as_bool().unwrap_or(false);
+    // The oracle's profile has both folders; the TS does not create them.
+    fs::create_dir_all(profile.paths.linux_desktop()).expect("the Desktop folder");
+    fs::create_dir_all(profile.root().join(".local/share/applications")).expect("applications");
+    // The TS builds the icon path by template string, so the separator before the file is `/`.
+    let icon = input["withIcon"].as_bool().unwrap_or(false).then(|| {
+        PathBuf::from(format!(
+            "{}/{app_name}.jpg",
+            profile.paths.icon_folder.display()
+        ))
+    });
+
+    let (desktop_file, menu_file) = shortcut_files(Platform::Linux, &profile.paths, title, None);
+    let (desktop_file, menu_file) = (desktop_file.expect("desktop"), menu_file.expect("menu"));
+    if setting(input, "addDesktopShortcuts") || from_menu {
+        write_desktop_file(
+            &desktop_file,
+            title,
+            app_name,
+            runner,
+            icon.as_deref(),
+            Some(DESKTOP_COPY_MODE),
+        )
+        .map_err(|e| format!("{id}: the Desktop copy failed: {e}"))?;
+    }
+    if setting(input, "addStartMenuShortcuts") || from_menu {
+        write_desktop_file(&menu_file, title, app_name, runner, icon.as_deref(), None)
+            .map_err(|e| format!("{id}: the applications copy failed: {e}"))?;
+    }
+
+    let mut diffs = Vec::new();
+    for (base, entries) in case["tree"].as_object().expect("a tree") {
+        diffs.extend(diff_tree(
+            &profile,
+            base,
+            entries.as_array().expect("tree entries"),
+            ModeRule::Umasked,
+            false,
+        ));
+    }
+    if diffs.is_empty() {
+        Ok(false)
+    } else {
+        Err(format!(
+            "{id}:
+  {}",
+            diffs.join(
+                "
+  "
+            )
+        ))
+    }
+}
+
 /// The icon file a with-icon case pre-created in the oracle, as a decodable file here. `None` for
 /// an iconless case.
 fn icon_for(profile: &Profile, input: &Value, app_name: &str) -> Option<PathBuf> {
@@ -471,6 +532,16 @@ fn darwin_iconless_text_goldens_replay_byte_for_byte() {
 #[test]
 fn darwin_with_icon_text_goldens_replay_byte_for_byte() {
     replay_bucket("darwin", true, replay_darwin);
+}
+
+#[test]
+fn linux_iconless_text_goldens_replay_byte_for_byte() {
+    replay_bucket("linux", false, replay_linux);
+}
+
+#[test]
+fn linux_with_icon_text_goldens_replay_byte_for_byte() {
+    replay_bucket("linux", true, replay_linux);
 }
 
 #[test]
