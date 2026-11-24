@@ -863,7 +863,7 @@ Plans:
   3. The `launchOracle` harness, pairwise generator, and the `gamelib-launch` / `gamelib-knownfix` crates exist and run in three-OS CI
   4. The known-fixes TypeScript and its registrations are deleted, leaving only scheduled shims; closes on goldens and three-OS CI, no signed build
 
-**Plans:** 11/17 plans executed in 14 waves; planned 2026-11-25 (88-02 waits for 88-01 so the live gate is committed before any code, D-25)
+**Plans:** 12/17 plans executed in 14 waves; planned 2026-11-25 (88-02 waits for 88-01 so the live gate is committed before any code, D-25)
 
 Plans:
 **Wave 1**
@@ -894,7 +894,7 @@ Plans:
 - [x] 88-11-PLAN.md — Rust remote-fixes fetcher and report client, additive POST on gamelib-engine's Fetch
 
 **Wave 9** *(blocked on Wave 8 completion)*
-- [ ] 88-12-PLAN.md — rustInvoke known-fix channels; managers' launch overrides and the download manager's fetch on shims
+- [x] 88-12-PLAN.md — rustInvoke known-fix channels; managers' launch overrides and the download manager's fetch on shims
 
 **Wave 10** *(blocked on Wave 9 completion)*
 - [ ] 88-13-PLAN.md — Launcher registry fixes and overlay env on unbounded shims; synchronous twins with golden vectors
